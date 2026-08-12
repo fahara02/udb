@@ -8,10 +8,11 @@ release line was tagged.
 ## [0.5.6] - 2026-08-13
 
 Patch release fixing three PostgreSQL data-plane defects reported from
-production, one of which silently violated a declared unique key. No
-wire-protocol change; `^0.5.5` consumers should upgrade — and any consumer
-upserting a partitioned entity should read the first entry closely, because the
-fix converts a silent data-integrity failure into a refusal.
+production — one of which silently violated a declared unique key — plus two
+internally-found gaps in the write boundary and the migration manifest. No
+wire-protocol change; `^0.5.5` consumers should upgrade. Any consumer upserting
+a partitioned entity should read the first entry closely, because the fix
+converts a silent data-integrity failure into a refusal.
 
 ### Fixed
 - **A PostGIS point can be written through `Update`.** The binder classified
@@ -49,6 +50,29 @@ fix converts a silent data-integrity failure into a refusal.
   unsaveable either way. A write placeholder is now cast to its declared column
   type whenever the bound value carries no type of its own, and an empty array
   takes its element type from that cast.
+- **A native integer survives the protobuf wire boundary on every backend.**
+  `google.protobuf.Value` carries one numeric kind (double), so a client sending
+  a native integer arrived as `25.0` and every backend's binder saw a float
+  where an `INTEGER` column was declared. v0.5.5 fixed this at the PostgreSQL
+  binder alone; the integer is now recovered at the wire boundary, so MySQL,
+  MSSQL, SQLite, MongoDB and Qdrant agree with PostgreSQL and both mutation
+  verbs mean the same thing by a native integer. Only exactly-representable
+  values inside JSON's interoperable safe-integer range are recovered — anything
+  larger stays a float and still fails closed, where the documented
+  decimal-string form covers the full `int64` range. Note for `JSONB` columns: a
+  payload of `25.0` now stores as `25`, because protobuf cannot distinguish the
+  two on the wire.
+- **Native services own their migrations again.** The migration manifest
+  resolved a schema's owning service through a hardcoded switch that mapped 8 of
+  the 20 `udb_*` schemas the native protos declare. The other twelve — backup,
+  config, control, embedding, idp, lock, metering, scheduler, search, vault,
+  webhook and workflow — resolved to no owner and were filtered out. Their
+  tables were still created, because bootstrap DDL is generated from the
+  unfiltered schema set, but the diff/apply engine and the ledger manifest never
+  saw them: schema evolution went unmanaged and `udb plan` / `drift` /
+  `manifest-export` produced a manifest missing those tables. Owners now resolve
+  from the descriptor-derived service registry, so adding a native service no
+  longer requires extending a switch for its tables to migrate.
 
 ## [0.5.5] - 2026-08-11
 
