@@ -32,6 +32,18 @@ use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 /// LIKE-concat idiom.
 struct Postgres;
 
+/// Cast a Postgres placeholder to its target column type, for callers outside
+/// the IR compiler.
+///
+/// The legacy `Update` planner emits its own SQL (there is no bridged Update
+/// emitter), so without this it bound a bare `$n` for column types that have no
+/// assignment cast from `text` and failed with SQLSTATE 42804 — geography being
+/// the reported case. Sharing the one classifier keeps the two write verbs from
+/// drifting: whatever Upsert casts, Update casts identically.
+pub(crate) fn cast_placeholder_to_column_type(column_sql_type: &str, placeholder: &str) -> String {
+    <Postgres as SqlDialect>::cast_compare_placeholder(column_sql_type, placeholder)
+}
+
 impl SqlDialect for Postgres {
     fn quote(ident: &str) -> String {
         format!("\"{ident}\"")

@@ -81,14 +81,18 @@ async fn dp_pool(dsn: &str) -> sqlx::PgPool {
 /// Install a dev security profile so `security_from_request` takes the header
 /// credential path (no JWT/mTLS). Same fields the in-tree `install_test_security`
 /// helper sets for the unit served-path tests.
-fn install_dp_security() {
-    SecurityConfig::install_global(SecurityConfig {
+fn dp_test_security() -> SecurityConfig {
+    SecurityConfig {
         tls_required: false,
         service_identity_required: false,
         mtls_required: false,
         allow_header_scopes: true,
         ..SecurityConfig::default()
-    });
+    }
+}
+
+fn install_dp_security() {
+    SecurityConfig::install_global(dp_test_security());
 }
 
 /// Build a live served DataBrokerService: a real PG-backed runtime pointed at
@@ -98,6 +102,12 @@ fn install_dp_security() {
 async fn dp_service(dsn: &str, manifest: CatalogManifest) -> DataBrokerService {
     let mut config = UdbConfig::from_env();
     config.primary.direct_dsn = dsn.to_string();
+    // `DataBrokerRuntime::from_config` installs `config.security` globally.
+    // Keep the served-path harness explicit here: otherwise `from_env()` can
+    // silently restore enterprise/mTLS posture after `install_dp_security`,
+    // and every bare in-process request fails before reaching the handler the
+    // regression is meant to exercise.
+    config.security = dp_test_security();
     let runtime = DataBrokerRuntime::from_config(config).await;
     let lifecycle = Arc::new(RwLock::new(FsmState::Completed));
     let metrics: Arc<dyn MetricsRecorder> = Arc::new(PrometheusMetrics::new().expect("metrics"));
@@ -112,7 +122,7 @@ fn with_ctx<T>(message: T, tenant: &str) -> Request<T> {
     let md = req.metadata_mut();
     md.insert("x-tenant-id", tenant.parse().unwrap());
     md.insert("x-purpose", "admin".parse().unwrap());
-    md.insert("x-scopes", "udb:admin".parse().unwrap());
+    md.insert("x-scopes", "udb:admin,udb:read,udb:write".parse().unwrap());
     req
 }
 
@@ -243,6 +253,236 @@ async fn served_select_rows(
         .await
         .expect("served Select must succeed")
         .into_inner()
+}
+
+/// A protobuf Struct carries every numeric value as f64. The served Update
+/// boundary must recover exactly representable integer semantics before the
+/// PostgreSQL binder validates an INTEGER column.
+///
+/// Revert-proof: reverting `prost_value_to_json` to `JsonValue::from(f64)`
+/// makes the `attempts: 0` Update fail with `expected integer, got 0.0`.
+#[tokio::test]
+async fn served_update_accepts_protobuf_integer_number_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        eprintln!("data-plane live DSN unset — skipping protobuf integer Update");
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool)
+        .await
+        .expect("bootstrap system catalog");
+
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    let tenant = Uuid::new_v4().to_string();
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".counters \
+         (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, attempts INTEGER NOT NULL)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create counters");
+
+    const MSG: &str = "acme.dp.v1.Counter";
+    let mut table = ManifestTable {
+        proto_package: "acme.dp.v1".to_string(),
+        message_name: "Counter".to_string(),
+        schema: schema.clone(),
+        table: "counters".to_string(),
+        primary_key: vec!["id".to_string()],
+        table_security: ManifestTableSecurity {
+            tenant_column: "tenant_id".to_string(),
+            ..ManifestTableSecurity::default()
+        },
+        ..ManifestTable::default()
+    };
+    table.columns = vec![
+        col("id", "TEXT", true),
+        col("tenant_id", "TEXT", false),
+        col("attempts", "INTEGER", false),
+    ];
+    let svc = dp_service(
+        &dsn,
+        CatalogManifest {
+            tables: vec![table],
+            ..CatalogManifest::default()
+        },
+    )
+    .await;
+    let id = format!("counter-{}", Uuid::new_v4().simple());
+
+    served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant, "attempts": 7}),
+        "",
+    )
+    .await
+    .expect("seed integer row");
+
+    let updated = served_update(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant}),
+        json!({"attempts": 0}),
+    )
+    .await
+    .expect("served Update must preserve integer semantics");
+    assert_eq!(updated.affected_rows, 1);
+
+    let rows = served_select_rows(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant}),
+        false,
+    )
+    .await;
+    let record: serde_json::Value =
+        serde_json::from_slice(&rows.records_json[0]).expect("decode updated integer row");
+    assert_eq!(record["attempts"].as_i64(), Some(0));
+
+    teardown(&pool, &schema, &tenant).await;
+}
+
+/// A PostGIS geography declaration contains `POINT`, but it is not an integer
+/// column. The served Update binder used to classify SQL types with
+/// `sql_type.contains("INT")`, route EWKB through the integer parser, and reject
+/// every map move with `expected integer, got "<ewkb>"`.
+///
+/// Fixing that classifier alone is NOT sufficient: geography has no assignment
+/// cast from a bound `text` parameter either, so the value must also carry a
+/// declared parameter type or the Update fails to plan with SQLSTATE 42804.
+/// `INET` is asserted alongside it because it shares that second defect exactly —
+/// Upsert gets the IR compiler's `$n::INET` cast, but Update has no bridged
+/// emitter and binds through `bind_one`.
+///
+/// This drives the exact public DataBroker Update path and verifies the
+/// committed point through PostGIS, so a unit-only type-classifier fix cannot
+/// make the regression green.
+#[tokio::test]
+async fn served_update_binds_geography_as_text_not_integer_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        eprintln!("data-plane live DSN unset — skipping geography Update");
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool)
+        .await
+        .expect("bootstrap system catalog");
+    sqlx::query("CREATE EXTENSION IF NOT EXISTS postgis")
+        .execute(&pool)
+        .await
+        .expect("PostGIS is required for the declared geography capability");
+
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    let tenant = Uuid::new_v4().to_string();
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".places \
+         (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, \
+          location GEOGRAPHY(POINT,4326) NOT NULL, \
+          last_seen_ip INET)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create geography table");
+
+    const MSG: &str = "acme.dp.v1.Place";
+    let mut table = ManifestTable {
+        proto_package: "acme.dp.v1".to_string(),
+        message_name: "Place".to_string(),
+        schema: schema.clone(),
+        table: "places".to_string(),
+        primary_key: vec!["id".to_string()],
+        table_security: ManifestTableSecurity {
+            tenant_column: "tenant_id".to_string(),
+            ..ManifestTableSecurity::default()
+        },
+        ..ManifestTable::default()
+    };
+    table.columns = vec![
+        col("id", "TEXT", true),
+        col("tenant_id", "TEXT", false),
+        col("location", "GEOGRAPHY(POINT,4326)", false),
+        col("last_seen_ip", "INET", false),
+    ];
+    let svc = dp_service(
+        &dsn,
+        CatalogManifest {
+            tables: vec![table],
+            ..CatalogManifest::default()
+        },
+    )
+    .await;
+    let id = format!("place-{}", Uuid::new_v4().simple());
+    let original = "0101000020e6100000fc1873d7129a564080b74082e2c73740";
+    let moved = "0101000020e6100000f2d24d62109a5640f46c567daecc3740";
+
+    served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({
+            "id": id,
+            "tenant_id": tenant,
+            "location": original,
+            "last_seen_ip": "10.1.2.3",
+        }),
+        "",
+    )
+    .await
+    .expect("seed geography row");
+
+    let updated = served_update(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant}),
+        json!({"location": moved, "last_seen_ip": "10.4.5.6"}),
+    )
+    .await
+    .expect("served Update must bind EWKB as a declared geography parameter");
+    assert_eq!(updated.affected_rows, 1);
+
+    let (longitude, latitude, last_seen_ip): (f64, f64, String) = sqlx::query_as(&format!(
+        "SELECT ST_X(location::geometry), ST_Y(location::geometry), host(last_seen_ip) \
+         FROM \"{schema}\".places WHERE id = $1 AND tenant_id = $2"
+    ))
+    .bind(&id)
+    .bind(&tenant)
+    .fetch_one(&pool)
+    .await
+    .expect("read committed geography point");
+    assert!((longitude - 90.40725).abs() < 0.000001);
+    assert!((latitude - 23.7995375).abs() < 0.000001);
+    assert_eq!(last_seen_ip, "10.4.5.6");
+
+    // The move must be readable through the served path too, not just via a
+    // direct PostGIS query: the read side hex-encodes the raw EWKB.
+    let rows = served_select_rows(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant}),
+        false,
+    )
+    .await;
+    let record: serde_json::Value =
+        serde_json::from_slice(&rows.records_json[0]).expect("decode updated geography row");
+    assert_eq!(
+        record["location"].as_str().map(str::to_ascii_lowercase),
+        Some(moved.to_string())
+    );
+    assert_eq!(record["last_seen_ip"].as_str(), Some("10.4.5.6"));
+
+    teardown(&pool, &schema, &tenant).await;
 }
 
 // ── #6 (CRITICAL) idempotency-input-mismatch, threading #1 replay ordering ─────

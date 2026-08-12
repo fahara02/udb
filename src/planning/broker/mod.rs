@@ -1220,6 +1220,10 @@ pub fn build_update_plan(
     let mut set_fragments: Vec<String> = Vec::new();
     let mut parameter_columns: Vec<String> = Vec::new();
     let mut next_param = 1usize;
+    // `$n::TYPE` is Postgres syntax; every other SQL backend keeps the bare
+    // placeholder it emits today.
+    let update_casts_placeholders =
+        effective_sql_backend(&request.context) == BackendKind::Postgres;
     // NORMALIZE-then-SORT: the executor rebuilds the bind-value order from the
     // normalized physical column names (BTreeMap iteration), so the plan must
     // order SET parameters by the NORMALIZED name — sorting raw keys would
@@ -1235,7 +1239,24 @@ pub fn build_update_plan(
             ));
             continue;
         }
-        set_fragments.push(format!("{} = ${next_param}", qi(&normalized)));
+        // Cast the assignment placeholder to the target column type, exactly as
+        // the Postgres IR compiler does for the bridged SELECT/UPSERT/DELETE
+        // paths. `Update` has no bridged emitter, so without this a column type
+        // with no assignment cast from a bound `text` parameter — PostGIS
+        // `GEOGRAPHY`/`GEOMETRY`, `INET`/`CIDR`/`MACADDR` — fails the statement
+        // with SQLSTATE 42804, which is what made every served point move fail.
+        // Sharing one classifier keeps Update and Upsert from drifting apart.
+        let placeholder = format!("${next_param}");
+        let placeholder = match column_sql_type(table, &normalized) {
+            Some(sql_type) if update_casts_placeholders => {
+                crate::ir::compile::postgres::cast_placeholder_to_column_type(
+                    sql_type,
+                    &placeholder,
+                )
+            }
+            _ => placeholder,
+        };
+        set_fragments.push(format!("{} = {placeholder}", qi(&normalized)));
         parameter_columns.push(normalized);
         next_param += 1;
     }
@@ -1961,6 +1982,15 @@ fn is_operator(value: &str) -> bool {
 
 fn tenant_column(table: &ManifestTable) -> String {
     resolve_tenant_column(table).unwrap_or_default().to_string()
+}
+
+/// The declared SQL type of a PHYSICAL column name, for placeholder casting.
+fn column_sql_type<'a>(table: &'a ManifestTable, column_name: &str) -> Option<&'a str> {
+    table
+        .columns
+        .iter()
+        .find(|column| column.column_name == column_name)
+        .map(|column| column.sql_type.as_str())
 }
 
 /// Resolve the project-isolation column for a table: the proto-declared
@@ -2770,6 +2800,61 @@ mod tests {
             !allowed.errors.iter().any(|e| e.contains("hr:write")),
             "carrying the table scope must clear the error: {:?}",
             allowed.errors
+        );
+    }
+
+    /// PostGIS `GEOGRAPHY` and `INET` have a canonical TEXT input form but no
+    /// assignment cast from a bound `text` parameter. Upsert gets the cast from
+    /// the IR compiler; Update has no bridged emitter, so the planner must emit
+    /// it here or the statement dies with SQLSTATE 42804 and every served point
+    /// move fails.
+    #[test]
+    fn update_plan_casts_placeholders_for_types_without_a_text_assignment_cast() {
+        let mut manifest = update_test_manifest();
+        let mut location = test_column("location");
+        location.sql_type = "GEOGRAPHY(POINT,4326)".to_string();
+        let mut last_seen_ip = test_column("last_seen_ip");
+        last_seen_ip.sql_type = "INET".to_string();
+        manifest.tables[0].columns.push(location);
+        manifest.tables[0].columns.push(last_seen_ip);
+
+        let plan = build_update_plan(
+            &manifest,
+            &UpdatePlanRequest {
+                context: RequestContext {
+                    tenant_id: "t1".to_string(),
+                    purpose: "unit-test".to_string(),
+                    scopes: vec!["udb:write".to_string()],
+                    ..RequestContext::default()
+                },
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({"id": "w1", "tenant_id": "t1"}),
+                changes: json!({
+                    "location": "0101000020e6100000fc1873d7129a564080b74082e2c73740",
+                    "last_seen_ip": "10.1.2.3",
+                    "status": "closed",
+                }),
+                increments: vec![],
+                return_record: false,
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert!(
+            plan.sql.contains("\"location\" = $2::GEOGRAPHY"),
+            "geography assignment must be cast: {}",
+            plan.sql
+        );
+        assert!(
+            plan.sql.contains("\"last_seen_ip\" = $1::INET"),
+            "inet assignment must be cast: {}",
+            plan.sql
+        );
+        // A plain TEXT column keeps its bare placeholder — the cast is applied
+        // only where PostgreSQL actually needs one.
+        assert!(
+            plan.sql.contains("\"status\" = $3,") || plan.sql.contains("\"status\" = $3 "),
+            "text assignment must stay uncast: {}",
+            plan.sql
         );
     }
 

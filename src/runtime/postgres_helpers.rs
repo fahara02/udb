@@ -89,6 +89,61 @@ fn postgres_json_f64(field: &str, value: &JsonValue) -> Result<f64, tonic::Statu
         })
 }
 
+/// The bare type name of an uppercased SQL declaration, with any parameter
+/// list, array suffix or trailing modifier removed: `GEOGRAPHY(POINT,4326)` and
+/// `BIGINT[]` reduce to `GEOGRAPHY` and `BIGINT`.
+fn postgres_base_sql_type(sql_type: &str) -> &str {
+    sql_type
+        .trim()
+        .split(|character: char| character == '(' || character == '[' || character.is_whitespace())
+        .next()
+        .unwrap_or_default()
+}
+
+/// Whether a declared PostgreSQL type is an integer scalar (or integer array).
+///
+/// Type dispatch must classify the base type token, never search the complete
+/// declaration. `GEOGRAPHY(POINT,4326)` contains the letters `INT` inside
+/// `POINT`; substring matching therefore sent a valid EWKB string through the
+/// integer parser and made every served geography Update fail.
+fn postgres_is_integer_type(sql_type: &str) -> bool {
+    matches!(
+        postgres_base_sql_type(sql_type),
+        "SMALLINT"
+            | "INT2"
+            | "INTEGER"
+            | "INT"
+            | "INT4"
+            | "BIGINT"
+            | "INT8"
+            | "SMALLSERIAL"
+            | "SERIAL2"
+            | "SERIAL"
+            | "SERIAL4"
+            | "BIGSERIAL"
+            | "SERIAL8"
+    )
+}
+
+/// Whether a column's declared type has a canonical TEXT input form but NO
+/// assignment cast from a bound `text` parameter, so its placeholder must carry
+/// a `::TYPE` cast in the emitted SQL.
+///
+/// This mirrors the class the Postgres IR compiler casts with
+/// `cast_compare_placeholder` (`$n::GEOGRAPHY`, `$n::INET`, …). Binding such a
+/// value as a plain Rust `String` fails to PLAN with SQLSTATE 42804 ("column is
+/// of type geography but expression is of type text"); naming the concrete type
+/// to sqlx instead trades that for SQLSTATE 22P03, because sqlx sends parameters
+/// in BINARY format and PostgreSQL would hand the client's hex-EWKB *text* to
+/// `geography_recv`. The cast is what makes the server apply the type's own TEXT
+/// input function, so the value stays a text bind here.
+fn postgres_type_needs_sql_cast(sql_type: &str) -> bool {
+    matches!(
+        postgres_base_sql_type(sql_type),
+        "GEOGRAPHY" | "GEOMETRY" | "INET" | "CIDR" | "MACADDR" | "MACADDR8"
+    )
+}
+
 // ── Transaction plan execution ────────────────────────────────────────────────
 
 pub(crate) async fn execute_tx_plan(
@@ -506,7 +561,7 @@ pub(crate) fn bind_one<'q>(
             }
             return Ok(query.bind(arr));
         }
-        if sql_type.contains("INT") || sql_type.contains("SERIAL") {
+        if postgres_is_integer_type(&sql_type) {
             let mut arr: Vec<i64> = Vec::with_capacity(items.len());
             for item in items {
                 arr.push(postgres_json_i64("value", item)?);
@@ -640,6 +695,29 @@ pub(crate) fn bind_one<'q>(
         };
     }
 
+    // PostGIS spatial and network-address columns take the text bind below, but
+    // ONLY because their placeholder carries a `::TYPE` cast in the emitted SQL
+    // (see `postgres_type_needs_sql_cast`). A NULL must still bind as a text
+    // NULL rather than the typed NULLs chosen further down, so that
+    // `$n::GEOGRAPHY` receives something it can cast.
+    if postgres_type_needs_sql_cast(&sql_type) {
+        return match value {
+            JsonValue::Null => Ok(query.bind(Option::<String>::None)),
+            JsonValue::String(raw) if raw.trim().is_empty() => {
+                Ok(query.bind(Option::<String>::None))
+            }
+            JsonValue::String(raw) => Ok(query.bind(strip_nul(raw))),
+            _ => Err(postgres_invalid_field(
+                "value",
+                "value must be a string or null",
+                format!(
+                    "{} value must be a string or null",
+                    postgres_base_sql_type(&sql_type).to_ascii_lowercase()
+                ),
+            )),
+        };
+    }
+
     // Remaining scalar types. A NULL binds as the matching nullable Rust type so
     // the parameter's Postgres type is unambiguous (bool/int/float each get a
     // typed NULL; text/varchar/enum accept a plain text NULL).
@@ -647,8 +725,7 @@ pub(crate) fn bind_one<'q>(
         if sql_type.contains("BOOL") {
             return Ok(query.bind(Option::<bool>::None));
         }
-        if sql_type.contains("INT") || sql_type.contains("BIGSERIAL") || sql_type.contains("SERIAL")
-        {
+        if postgres_is_integer_type(&sql_type) {
             return Ok(query.bind(Option::<i64>::None));
         }
         if sql_type.contains("REAL")
@@ -664,7 +741,7 @@ pub(crate) fn bind_one<'q>(
     if sql_type.contains("BOOL") {
         return Ok(query.bind(value.as_bool().unwrap_or(false)));
     }
-    if sql_type.contains("INT") || sql_type.contains("BIGSERIAL") || sql_type.contains("SERIAL") {
+    if postgres_is_integer_type(&sql_type) {
         return Ok(query.bind(postgres_json_i64("value", value)?));
     }
     if sql_type.contains("REAL")
@@ -824,6 +901,195 @@ mod tests {
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
     use serde_json::json;
 
+    #[test]
+    fn geography_point_is_not_classified_as_an_integer_type() {
+        // Every supported integer spelling, scalar and array, still classifies.
+        for integer in [
+            "SMALLINT",
+            "INT2",
+            "INTEGER",
+            "INT",
+            "INT4",
+            "BIGINT",
+            "INT8",
+            "SMALLSERIAL",
+            "SERIAL2",
+            "SERIAL",
+            "SERIAL4",
+            "BIGSERIAL",
+            "SERIAL8",
+            "BIGINT[]",
+            "INTEGER NOT NULL",
+        ] {
+            assert!(
+                postgres_is_integer_type(integer),
+                "{integer} must classify as an integer type"
+            );
+        }
+
+        // The defect: these all contain `INT` but are not integer columns.
+        for other in [
+            "GEOGRAPHY(POINT,4326)",
+            "GEOMETRY(POINT,4326)",
+            "GEOMETRY(MULTIPOINT,4326)",
+            "GEOGRAPHY(POINT,4326)[]",
+            "POINT",
+            "INTERVAL",
+        ] {
+            assert!(
+                !postgres_is_integer_type(other),
+                "{other} must not classify as an integer type"
+            );
+        }
+    }
+
+    /// `Update` has no bridged IR emitter, so its SQL comes from the planner and
+    /// its values bind through `bind_one`. Both halves must agree: the planner
+    /// casts the placeholder (`$n::GEOGRAPHY`) and this binder must hand that
+    /// cast a TEXT value, never a typed NULL or a stringified number.
+    #[test]
+    fn no_text_cast_columns_bind_as_text_for_their_sql_cast() {
+        for declaration in [
+            "GEOGRAPHY(POINT,4326)",
+            "GEOGRAPHY",
+            "GEOMETRY(POINT,4326)",
+            "INET",
+            "CIDR",
+            "MACADDR",
+            "MACADDR8",
+        ] {
+            assert!(
+                postgres_type_needs_sql_cast(declaration),
+                "{declaration} must be bound for a SQL cast"
+            );
+        }
+        // Handled natively by the branches above — must keep those binds.
+        for other in [
+            "TEXT",
+            "INTEGER",
+            "JSONB",
+            "UUID",
+            "TIMESTAMPTZ",
+            "DATE",
+            "BYTEA",
+        ] {
+            assert!(!postgres_type_needs_sql_cast(other), "{other}");
+        }
+
+        // A geography column must never reach the plain-text fallback, and a
+        // non-string payload fails closed rather than being stringified.
+        let mut geography = col("location");
+        geography.sql_type = "GEOGRAPHY(POINT,4326)".to_string();
+        for value in [
+            json!("0101000020e6100000fc1873d7129a564080b74082e2c73740"),
+            json!("SRID=4326;POINT(90.40725 23.7995375)"),
+            json!(null),
+            json!(""),
+        ] {
+            assert!(
+                bind_one(sqlx::query("SELECT $1"), Some(&geography), &value).is_ok(),
+                "geography must bind {value}"
+            );
+        }
+        let err = expect_status(bind_one(
+            sqlx::query("SELECT $1"),
+            Some(&geography),
+            &json!(42),
+        ));
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(err.message(), "geography value must be a string or null");
+    }
+
+    /// BINDING GUARD for the geography Update fix — runs on every build, with no
+    /// live database.
+    ///
+    /// The fix has two halves that must stay in sync:
+    ///   1. the planner casts the assignment placeholder (`$n::GEOGRAPHY`), and
+    ///   2. this binder hands that cast a TEXT value.
+    ///
+    /// Change either half alone and the served Update silently breaks again —
+    /// SQLSTATE 42804 if the cast is dropped, SQLSTATE 22P03 if the bind stops
+    /// being text — and only a PostGIS-enabled live run would notice. This test
+    /// fails the build the moment they disagree.
+    #[test]
+    fn every_text_bound_column_type_is_cast_by_the_update_planner() {
+        for declaration in [
+            "GEOGRAPHY(POINT,4326)",
+            "GEOMETRY(POINT,4326)",
+            "GEOGRAPHY",
+            "GEOMETRY",
+            "INET",
+            "CIDR",
+            "MACADDR",
+            "MACADDR8",
+        ] {
+            assert!(
+                postgres_type_needs_sql_cast(declaration),
+                "{declaration} must bind as text"
+            );
+            let rendered =
+                crate::ir::compile::postgres::cast_placeholder_to_column_type(declaration, "$1");
+            assert_ne!(
+                rendered, "$1",
+                "{declaration} binds as text, so the planner MUST cast its placeholder \
+                 or the served Update fails with SQLSTATE 42804"
+            );
+            assert_eq!(
+                rendered,
+                format!(
+                    "$1::{}",
+                    postgres_base_sql_type(&declaration.to_ascii_uppercase())
+                ),
+                "the cast must name the column's base type"
+            );
+        }
+    }
+
+    /// SOURCE RATCHET: the defect was a substring type classifier
+    /// (`sql_type.contains("INT")` matching the `INT` inside `POINT`). Classify
+    /// the base type token instead. This fails the build if substring
+    /// classification is reintroduced for the integer/serial family.
+    #[test]
+    fn integer_dispatch_never_returns_to_substring_matching() {
+        // Scan the PRODUCTION half only. `include_str!` yields the raw file, so
+        // the patterns this test names would otherwise match themselves.
+        let production = include_str!("postgres_helpers.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("production half of the module");
+        for forbidden in [
+            "contains(\"INT\")",
+            "contains(\"INTEGER\")",
+            "contains(\"INT2\")",
+            "contains(\"INT4\")",
+            "contains(\"INT8\")",
+            "contains(\"SERIAL\")",
+            "contains(\"BIGSERIAL\")",
+            "contains(\"GEOGRAPHY\")",
+            "contains(\"GEOMETRY\")",
+        ] {
+            assert!(
+                !production.contains(forbidden),
+                "{forbidden} is a substring type classifier, and \
+                 `GEOGRAPHY(POINT,4326)` contains `INT` inside `POINT`. Use \
+                 postgres_base_sql_type() and match the base type token instead."
+            );
+        }
+    }
+
+    /// The cast is only correct if the value arrives as TEXT. A typed NULL would
+    /// make `$n::GEOGRAPHY` fail, so NULL must bind as a text NULL here.
+    #[test]
+    fn cast_bound_columns_bind_null_as_text_not_as_a_typed_null() {
+        let mut inet = col("last_seen_ip");
+        inet.sql_type = "INET".to_string();
+        for value in [json!(null), json!("")] {
+            assert!(
+                bind_one(sqlx::query("SELECT $1::INET"), Some(&inet), &value).is_ok(),
+                "inet must bind {value} as a castable text null"
+            );
+        }
+    }
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status
             .metadata()
