@@ -192,3 +192,83 @@ fn empty_project_context_detector_matches_the_real_patterns() {
         0
     );
 }
+
+/// BLUNDER GUARD 1: a file that CONSUMES `context.project_id` must not build a
+/// tenant-only context.
+///
+/// I flipped 51 call sites to `tenant_only_native_service_context` using the
+/// wrong test — "does the ENTITY declare a project column?" — when the question
+/// that decides it is "does anything here CONSUME the project?". Four services
+/// did: `search_service` resolves its source table through
+/// `resolve_source_tenant_column(&context.project_id, ..)`, and vault/backup/lock
+/// stamp outbox events with it, where an EMPTY stamp is broader than a real one
+/// (the CDC scope check lets an empty event project through to any
+/// project-scoped subscriber). Emptying the project there was a regression
+/// wearing the shape of a fix.
+#[test]
+fn a_file_consuming_the_project_does_not_build_a_tenant_only_context() {
+    let root = service_dir();
+    let mut files = Vec::new();
+    rust_sources(&root, &mut files);
+    let mut problems = Vec::new();
+    for file in &files {
+        let Ok(source) = std::fs::read_to_string(file) else {
+            continue;
+        };
+        let rel = file
+            .strip_prefix(&root)
+            .unwrap_or(file)
+            .to_string_lossy()
+            .replace('\', "/");
+        if rel == "native_helpers.rs" || rel == "native_context_posture_tests.rs" {
+            continue;
+        }
+        // Only count a REAL consumer: `context.project_id` read somewhere in the
+        // file, not merely the identifier appearing in a comment.
+        let consumes = source.contains("context.project_id") || source.contains("ctx.project_id");
+        let tenant_only = source.contains("tenant_only_native_service_context(");
+        if consumes && tenant_only {
+            problems.push(format!(
+                "  {rel}: reads context.project_id AND builds a tenant-only context — \
+                 the project it consumes will be empty"
+            ));
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "tenant-only context in a file that consumes the project:\n{}\n\nUse \
+         `project_scoped_native_service_context` when the service consumes the project for \
+         routing or event stamping, even if the ENTITY carries no project column — the query \
+         predicate is inert in that case, but the routing and the event stamp are not.",
+        problems.join("\n")
+    );
+}
+
+/// BLUNDER GUARD 2: a startup guard that REFUSES must name its own way out.
+///
+/// The unappliable-backend-delta guard shipped as a deadlock: the diff is
+/// computed against the STORED manifest, which only advances after a successful
+/// start, so reconciling the store by hand never cleared the condition and the
+/// broker refused forever. Worse, its message advised exactly that impossible
+/// reconciliation. A refusal an operator cannot clear is not fail-closed, it is
+/// a brick.
+#[test]
+fn the_unappliable_backend_delta_refusal_names_its_recovery_path() {
+    let lifecycle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("src/control/lifecycle.rs");
+    let source = std::fs::read_to_string(&lifecycle).expect("read lifecycle.rs");
+    assert!(
+        source.contains("backend_delta_unappliable"),
+        "the unappliable-backend-delta guard is gone; delete this test with it"
+    );
+    assert!(
+        source.contains("ACK_MANUAL_BACKEND_RECONCILIATION_ENV"),
+        "the refusal must reference the acknowledgement variable that clears it, so the \
+         operator is told how to recover instead of being left to revert the proto change"
+    );
+    assert!(
+        source.contains("UDB_ACK_MANUAL_BACKEND_RECONCILIATION"),
+        "the acknowledgement variable must be named in-source so it is greppable from an \
+         error message seen in production"
+    );
+}
