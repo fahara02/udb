@@ -550,7 +550,43 @@ pub(crate) fn render_delta_operation(
         // creation is handled by pg_partman at runtime)
         ChangeKind::CreatePartition | ChangeKind::AttachPartition
         | ChangeKind::DetachPartition | ChangeKind::DropPartition => String::new(),
-        _ => String::new(),
+
+        // ── Deliberately no relational DDL ───────────────────────────────────
+        // There is NO wildcard arm below on purpose. A `_ => String::new()`
+        // used to sit here, which meant any ChangeKind without an arm rendered
+        // to EMPTY SQL with no error, no warning and no record — the mechanism
+        // by which an approved operation could vanish while the migration
+        // reported success. Enumerating every remaining variant makes adding a
+        // new ChangeKind a COMPILE ERROR until someone decides how it renders.
+
+        // Informational audit records, never DDL. `generate_delta_sql` already
+        // filters HintWarning out before grouping; the rest carry no statement.
+        ChangeKind::HintWarning | ChangeKind::ValidationError => String::new(),
+
+        // Emitted as their own artifacts by `generate_delta_sql`'s grouping
+        // pass (see the AddSchema/CreateStore handling there), not per-op here.
+        ChangeKind::AddSchema => String::new(),
+
+        // Review marker only: the RLS effect is carried by the policies
+        // `derive_security_rls_policies` derives from `table_security`, which
+        // render through CreatePolicy/DropPolicy. Rendering DDL here too would
+        // duplicate them.
+        ChangeKind::AlterTableSecurity => String::new(),
+
+        // Non-relational backend operations (Qdrant / MongoDB / Neo4j /
+        // ClickHouse / S3 / MinIO). They have no relational SQL by definition,
+        // so an empty string is honest HERE — but note that no executor applies
+        // them either, so an approved backend delta is currently accepted and
+        // never performed. Tracked in
+        // bug_reports/2026-08-13-v056-approved-backend-deltas-never-executed.md;
+        // fixing that belongs in the apply path, not in this renderer.
+        ChangeKind::CreateStore | ChangeKind::UpdateStore | ChangeKind::DropStore
+        | ChangeKind::CreateCollection | ChangeKind::UpdateCollection
+        | ChangeKind::DropCollection | ChangeKind::UpdateValidator
+        | ChangeKind::CreateConstraint | ChangeKind::UpdateConstraint
+        | ChangeKind::DropConstraint | ChangeKind::ChangeTableEngine
+        | ChangeKind::CreateBucket | ChangeKind::UpdateLifecyclePolicy
+        | ChangeKind::DropBucket => String::new(),
     }
 }
 

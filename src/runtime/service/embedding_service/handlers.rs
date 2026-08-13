@@ -18,8 +18,8 @@ use crate::proto::udb::core::embedding::services::v1 as embedding_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_next_page_token, native_offset_page_window,
-    native_service_context, non_empty_json, validate_request_tenant,
+    admit_on as native_admit_on, native_next_page_token, native_offset_page_window, non_empty_json,
+    project_scoped_native_service_context, validate_request_tenant,
 };
 use super::EmbeddingServiceImpl;
 use super::config::{
@@ -140,7 +140,7 @@ pub(crate) async fn register_source(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
 
     // FAIL CLOSED: resolve the source table's tenant column via the shared
     // catalog resolver. No tenant column ⇒ no source registration.
@@ -337,7 +337,7 @@ pub(crate) async fn list_sources(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let page_window = native_offset_page_window(
         1,
         req.page_size,
@@ -405,7 +405,7 @@ pub(crate) async fn delete_source(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
 
     let stored = runtime
         .native_entity_read_for_service(
@@ -515,7 +515,7 @@ pub(crate) async fn backfill(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
 
     let stored = runtime
         .native_entity_read_for_service(

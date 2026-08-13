@@ -19,7 +19,7 @@ use crate::runtime::tenant_movement::{
 
 use super::super::native_helpers::{
     MAX_LIST_ROWS, admit_on as native_admit_on, native_next_page_token_for_total,
-    native_offset_page_window, native_service_context, non_empty_json, parse_uuid,
+    native_offset_page_window, non_empty_json, parse_uuid, tenant_only_native_service_context,
     update_mask_allows, update_mask_path_set, validate_request_tenant,
 };
 use super::TenantServiceImpl;
@@ -391,7 +391,7 @@ pub(crate) async fn get_tenant(
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let runtime = svc.require_runtime()?;
     let mut rows = runtime
         .native_entity_read_for_service("tenant", &context, tenant_read_by_id(&tenant_id))
@@ -624,7 +624,7 @@ pub(crate) async fn get_tenant_config(
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let runtime = svc.require_runtime()?;
     let rows = runtime
         .native_entity_read_for_service(
@@ -669,7 +669,7 @@ pub(crate) async fn update_tenant_config(
         ));
     }
     let kind = config_type_to_db(&req.r#type, "STRING")?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let runtime = svc.require_runtime()?;
     let existing = runtime
         .native_entity_read_for_service(

@@ -24,7 +24,8 @@ use crate::proto::udb::core::vault::services::v1 as vault_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, non_empty_json, validate_request_tenant,
+    admit_on as native_admit_on, non_empty_json, tenant_only_native_service_context,
+    validate_request_tenant,
 };
 use super::VaultServiceImpl;
 use super::config::{
@@ -92,7 +93,7 @@ pub(crate) async fn put_secret(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -196,7 +197,7 @@ pub(crate) async fn get_secret(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -261,7 +262,7 @@ pub(crate) async fn list_secrets(
         None,
     )
     .await?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let pool = svc
         .pg_pool
         .as_ref()
@@ -384,7 +385,7 @@ pub(crate) async fn delete_secret(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -464,7 +465,7 @@ pub(crate) async fn undelete_secret(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -563,7 +564,7 @@ pub(crate) async fn destroy_secret(
     // misconfigured deployment fails closed with the runtime capability detail
     // (rather than a bare "no pool") before touching the store.
     svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let pool = svc
         .pg_pool
         .as_ref()
@@ -640,7 +641,7 @@ pub(crate) async fn create_transit_key(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let existing = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -715,7 +716,7 @@ pub(crate) async fn rotate_transit_key(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -815,7 +816,7 @@ pub(crate) async fn encrypt(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -886,7 +887,7 @@ pub(crate) async fn decrypt(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -971,7 +972,7 @@ pub(crate) async fn batch_encrypt(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1054,7 +1055,7 @@ pub(crate) async fn batch_decrypt(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1139,7 +1140,7 @@ pub(crate) async fn generate_data_key(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1216,7 +1217,7 @@ pub(crate) async fn rewrap(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1291,7 +1292,7 @@ pub(crate) async fn get_transit_public_key(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1360,7 +1361,7 @@ pub(crate) async fn sign(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1445,7 +1446,7 @@ pub(crate) async fn verify(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1522,7 +1523,7 @@ pub(crate) async fn hmac(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1646,7 +1647,7 @@ pub(crate) async fn generate_database_credentials(
     )
     .await?;
 
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let metadata_json = serde_json::json!({
         "role_name": &role_name,
         "parent_role": &role_config.parent_role,

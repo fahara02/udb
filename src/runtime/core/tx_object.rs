@@ -468,7 +468,18 @@ impl DataBrokerRuntime {
                         filter: filter.clone(),
                     },
                 );
-                let bind_values = filter_bind_values(&filter);
+                // This apply loop executes planner SQL directly — it never
+                // consults the bridged neutral-IR emitter and never installs the
+                // request GUC — so the plan's verified tenant/project predicates
+                // are this path's ONLY isolation boundary. Without binding them a
+                // BeginTx delete naming a foreign tenant deletes that tenant's
+                // rows and reports success.
+                let mut bind_values = filter_bind_values(&filter);
+                bind_values.extend(
+                    plan.context_parameter_values
+                        .iter()
+                        .map(|value| JsonValue::String(value.clone())),
+                );
                 let affected = execute_tx_plan(
                     &mut tx,
                     manifest,

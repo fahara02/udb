@@ -16,43 +16,17 @@
 //! benchmark caught it. The cure is `tenant_only_native_service_context`, which
 //! deliberately does not consult the header.
 //!
-//! This is a RATCHET, not a ban: the remaining call sites are recorded per file below.
-//! Adding one to a file fails this test; removing one (by moving to the tenant-only
-//! context, or by passing a real project) requires lowering its number here. Either way
-//! the change is deliberate and reviewed instead of silent. Run `cargo test` to check.
+//! This is a TABOO, not a ratchet. The pattern is banned outright and the per-file
+//! allowance list is GONE — all 77 recorded call sites were migrated. Every handler now
+//! states its intent in the call it makes: `project_scoped_native_service_context` when
+//! the entity really is project-scoped, `tenant_only_native_service_context` when it is
+//! not. The project a query is scoped to is never again decided by an argument that
+//! reads as "none". Run `cargo test` to check.
+//!
+//! Keeping the allowance list would have kept the defect: a ratchet only stops the 78th
+//! site, it never fixes the 77 that are already there.
 
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-
-/// Per-file count of `native_service_context(&metadata, &<tenant>, "")` call sites,
-/// relative to `src/runtime/service/`. A file absent from this map must have ZERO.
-///
-/// Lower a number when a handler moves to `tenant_only_native_service_context`; never
-/// raise one without confirming the entity really is project-scoped AND that callers
-/// always send a project id the column's type accepts.
-fn allowed_empty_project_contexts() -> BTreeMap<&'static str, usize> {
-    BTreeMap::from([
-        ("analytics_service/handlers.rs", 4),
-        ("asset_service/handlers.rs", 2),
-        ("backup_service/export.rs", 1),
-        ("backup_service/handlers.rs", 6),
-        ("backup_service/import.rs", 2),
-        ("cache_service/events.rs", 1),
-        ("embedding_service/documents.rs", 2),
-        ("embedding_service/handlers.rs", 4),
-        ("embedding_service/jobs.rs", 2),
-        ("embedding_service/registry.rs", 5),
-        ("embedding_service/reports.rs", 2),
-        ("embedding_service/retrieval.rs", 2),
-        ("lock_service/handlers.rs", 5),
-        ("metering_service/handlers.rs", 1),
-        ("notification_service/handlers.rs", 5),
-        ("search_service/handlers.rs", 5),
-        ("tenant_service/handlers.rs", 3),
-        ("vault_service/handlers.rs", 19),
-        ("webrtc_service/mod.rs", 6),
-    ])
-}
 
 fn service_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("src/runtime/service")
@@ -78,6 +52,17 @@ fn rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
 fn count_empty_project_contexts(source: &str) -> usize {
     source
         .match_indices("native_service_context(")
+        // Both cures END WITH this identifier, so a bare substring match fires
+        // inside `tenant_only_native_service_context(&metadata, "")` — where the
+        // trailing empty literal is the TENANT argument, not a project. Require a
+        // real word boundary so only the three-argument function is inspected.
+        .filter(|(start, _)| {
+            *start == 0
+                || !source[..*start]
+                    .chars()
+                    .next_back()
+                    .is_some_and(|c| c.is_alphanumeric() || c == '_')
+        })
         .filter(|(start, _)| {
             let tail = &source[*start..];
             // The call ends at the first ');' — an empty project literal immediately
@@ -105,8 +90,7 @@ fn native_reads_do_not_silently_inherit_the_header_project() {
         root.display()
     );
 
-    let allowed = allowed_empty_project_contexts();
-    let mut actual: BTreeMap<String, usize> = BTreeMap::new();
+    let mut offenders = Vec::new();
     for file in &files {
         let source = match std::fs::read_to_string(file) {
             Ok(source) => source,
@@ -124,42 +108,25 @@ fn native_reads_do_not_silently_inherit_the_header_project() {
         }
         let count = count_empty_project_contexts(&source);
         if count > 0 {
-            actual.insert(rel, count);
-        }
-    }
-
-    let mut problems = Vec::new();
-    for (file, count) in &actual {
-        let budget = allowed.get(file.as_str()).copied().unwrap_or(0);
-        if *count > budget {
-            problems.push(format!(
-                "  {file}: {count} call site(s), budget {budget} — a NEW \
-                 `native_service_context(.., \"\")` was added. If the entity is not \
-                 project-scoped use `tenant_only_native_service_context`; otherwise pass \
-                 a real project id and raise the budget deliberately."
-            ));
-        }
-    }
-    for (file, budget) in &allowed {
-        let count = actual.get(*file).copied().unwrap_or(0);
-        if count < *budget {
-            problems.push(format!(
-                "  {file}: {count} call site(s), budget {budget} — the ratchet improved. \
-                 Lower the budget in allowed_empty_project_contexts() to lock the gain in."
-            ));
+            offenders.push(format!("  {rel}: {count} call site(s)"));
         }
     }
 
     assert!(
-        problems.is_empty(),
-        "native-service context posture drifted:\n{}\n\nWhy this matters: \
-         `native_service_context` falls back to the x-udb-project-id header when the \
-         project argument is empty, and the native entity layer applies that project as \
-         a query predicate. On a UUID-typed project_id column a human project code fails \
-         the bind (INVALID_ARGUMENT); on a textual one it silently filters out rows the \
-         caller owns (NOT_FOUND). Unit tests send no project header, so neither shows up \
-         until live multi-project traffic hits it.",
-        problems.join("\n")
+        offenders.is_empty(),
+        "`native_service_context(.., \"\")` is BANNED; found it in:\n{}\n\nUse \
+         `project_scoped_native_service_context(&metadata, &tenant)` when the entity is \
+         project-scoped, or `tenant_only_native_service_context(&metadata, &tenant)` when \
+         it is not. There is no allowance list to add to.\n\nWhy this matters: the empty \
+         project argument falls back to the x-udb-project-id REQUEST HEADER, and the \
+         native entity layer applies the result as a query predicate. On a UUID-typed \
+         project_id column a human project code fails the bind (INVALID_ARGUMENT); on a \
+         textual one it silently filters out rows the caller owns (NOT_FOUND); and for a \
+         bearer token carrying no project claim the tower's header/claim equality check \
+         does not fire, so the header alone chooses which project is read. Unit tests \
+         send no project header, so none of it shows up until live multi-project traffic \
+         hits it.",
+        offenders.join("\n")
     );
 }
 
@@ -190,6 +157,37 @@ fn empty_project_context_detector_matches_the_real_patterns() {
     assert_eq!(
         count_empty_project_contexts(
             r#"let context = tenant_only_native_service_context(&metadata, &tenant);"#
+        ),
+        0
+    );
+    // Both cures END WITH the banned identifier as a substring, which is how the
+    // detector finds calls at all — so prove neither trips it. If this ever fails,
+    // the ban would fire on the very call sites it tells people to migrate to.
+    assert_eq!(
+        count_empty_project_contexts(
+            r#"let context = project_scoped_native_service_context(&metadata, &tenant_id);"#
+        ),
+        0
+    );
+    assert_eq!(
+        count_empty_project_contexts(
+            "let context = project_scoped_native_service_context(\n    &metadata,\n    &tenant_id,\n);"
+        ),
+        0
+    );
+    // REGRESSION: a two-argument cure whose LAST argument is an empty literal is
+    // passing an empty TENANT, not a project. A bare substring match flagged it
+    // as the banned three-argument call and sent people to "fix" a cure with the
+    // cure. Only a real word boundary distinguishes them.
+    assert_eq!(
+        count_empty_project_contexts(
+            r#"let context = tenant_only_native_service_context(&metadata, "");"#
+        ),
+        0
+    );
+    assert_eq!(
+        count_empty_project_contexts(
+            r#"let context = project_scoped_native_service_context(&metadata, "");"#
         ),
         0
     );

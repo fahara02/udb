@@ -19,7 +19,8 @@ use crate::runtime::tenant_movement::{
 };
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, parse_uuid, validate_request_tenant,
+    admit_on as native_admit_on, parse_uuid, tenant_only_native_service_context,
+    validate_request_tenant,
 };
 use super::BackupServiceImpl;
 use super::config::{KIND_BACKUP, MANIFEST_SUFFIX, TOPIC_BACKUP_COMPLETED};
@@ -68,7 +69,7 @@ pub(crate) async fn start_tenant_backup(
     // The verified-tenant context carries project/correlation from request
     // metadata; the actual export mechanics live in the shared internal routine
     // so a background driver can fire the SAME backup without an inbound request.
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let response = run_tenant_backup(
         svc,
         &tenant_id,

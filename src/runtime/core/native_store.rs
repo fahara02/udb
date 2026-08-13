@@ -304,6 +304,56 @@ impl DataBrokerRuntime {
         }
     }
 
+    /// Extract ONE scalar aggregate measure by its alias.
+    ///
+    /// An ungrouped aggregate always yields exactly one row, so a missing row
+    /// or a missing alias is a shape defect — not an empty measure. Defaulting
+    /// it to 0 makes a broken aggregate indistinguishable from a genuine zero,
+    /// which hides the failure from every caller (a quota check reads it as
+    /// "nothing used yet" and admits the write) and leaves the underlying
+    /// defect un-diagnosable from its symptom. Fail closed instead.
+    ///
+    /// SQL NULL is the one legitimate empty result: `SUM` over zero rows is
+    /// NULL, which genuinely means 0.
+    fn native_entity_scalar_i64(
+        rows: &[serde_json::Value],
+        alias: &str,
+    ) -> Result<i64, tonic::Status> {
+        let Some(row) = rows.first() else {
+            return Err(native_store_internal_status(
+                "native_entity_aggregate_shape",
+                format!(
+                    "ungrouped aggregate returned no row; expected exactly one carrying '{alias}'"
+                ),
+            ));
+        };
+        let Some(value) = row.get(alias) else {
+            return Err(native_store_internal_status(
+                "native_entity_aggregate_shape",
+                format!("aggregate row carries no '{alias}' measure"),
+            ));
+        };
+        match value {
+            serde_json::Value::Null => Ok(0),
+            serde_json::Value::Number(number) => number.as_i64().ok_or_else(|| {
+                native_store_internal_status(
+                    "native_entity_aggregate_shape",
+                    format!("aggregate '{alias}' is not representable as i64: {number}"),
+                )
+            }),
+            serde_json::Value::String(text) => text.trim().parse::<i64>().map_err(|err| {
+                native_store_internal_status(
+                    "native_entity_aggregate_shape",
+                    format!("aggregate '{alias}' is not a valid integer: {err}"),
+                )
+            }),
+            other => Err(native_store_internal_status(
+                "native_entity_aggregate_shape",
+                format!("aggregate '{alias}' has unexpected JSON type: {other}"),
+            )),
+        }
+    }
+
     fn native_entity_mutation_result(
         result_json: &str,
     ) -> Result<(u64, Vec<serde_json::Value>), tonic::Status> {
@@ -727,15 +777,7 @@ impl DataBrokerRuntime {
         let rows = self
             .native_entity_aggregate_for_service(service_id, context, op)
             .await?;
-        Ok(rows
-            .first()
-            .and_then(|row| row.get("total_count"))
-            .and_then(|value| match value {
-                serde_json::Value::Number(number) => number.as_i64(),
-                serde_json::Value::String(value) => value.parse::<i64>().ok(),
-                _ => None,
-            })
-            .unwrap_or(0))
+        Self::native_entity_scalar_i64(&rows, "total_count")
     }
 
     /// Sum an integer `field` across native entities matching `filter` (per-tenant
@@ -765,15 +807,7 @@ impl DataBrokerRuntime {
         let rows = self
             .native_entity_aggregate_for_service(service_id, context, op)
             .await?;
-        Ok(rows
-            .first()
-            .and_then(|row| row.get("total_sum"))
-            .and_then(|value| match value {
-                serde_json::Value::Number(number) => number.as_i64(),
-                serde_json::Value::String(value) => value.parse::<i64>().ok(),
-                _ => None,
-            })
-            .unwrap_or(0))
+        Self::native_entity_scalar_i64(&rows, "total_sum")
     }
 
     /// Acquire a portable per-tenant advisory lease on the default canonical store —

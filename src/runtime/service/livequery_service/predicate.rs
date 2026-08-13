@@ -380,11 +380,37 @@ pub(crate) fn filter_matches_row(filter: &LogicalFilter, row: &serde_json::Value
 }
 
 /// Build a `Change` frame from a CDC envelope and its parsed payload.
+/// Replace `masked_columns` in a row image with the same `***MASKED***`
+/// placeholder the relational read path uses.
+///
+/// LiveQuery forwarded the raw CDC row image, so a subscriber holding only
+/// `udb:stream` received every `is_pii` column of every row that changed in its
+/// tenant — continuously, and in clear text — while the same principal's
+/// `Select` masked them. Tenant/project scoping was already correct; this was
+/// purely the masking layer being absent.
+pub(crate) fn mask_row(
+    mut row: serde_json::Value,
+    masked_columns: &[String],
+) -> serde_json::Value {
+    if masked_columns.is_empty() {
+        return row;
+    }
+    if let Some(map) = row.as_object_mut() {
+        for name in masked_columns {
+            if let Some(slot) = map.get_mut(name.as_str()) {
+                *slot = serde_json::Value::String("***MASKED***".to_string());
+            }
+        }
+    }
+    row
+}
+
 pub(crate) fn change_frame(
     envelope: &crate::cdc::CdcEnvelope,
     payload: &serde_json::Value,
+    masked_columns: &[String],
 ) -> lq_pb::SubscribeResponse {
-    let row = change_row(payload);
+    let row = mask_row(change_row(payload), masked_columns);
     let change = lq_pb::LiveQueryChange {
         op: change_op(&envelope.topic, payload) as i32,
         row_json: serde_json::to_string(&row).unwrap_or_else(|_| "{}".to_string()),

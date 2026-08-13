@@ -818,7 +818,7 @@ impl DataBrokerRuntime {
         let mut record_set = rows_to_record_set(
             rows,
             Some(table),
-            &plan.masked_columns,
+            crate::runtime::core::PiiMasking::ClientVisible,
             &context,
             self.encryption.as_ref(),
             &self.encryption_metrics,
@@ -972,7 +972,10 @@ impl DataBrokerRuntime {
         let record_set = rows_to_record_set(
             rows,
             None,
-            &[],
+            // Fused rows carry `{Message}__{column}` aliases, so the plan hands
+            // back the mask set already in those names. Passing `&[]` here used
+            // to return every PII column of every joined table in clear text.
+            crate::runtime::core::PiiMasking::ClientVisibleAliased(&plan.masked_columns),
             &context,
             self.encryption.as_ref(),
             &self.encryption_metrics,
@@ -1144,7 +1147,7 @@ impl DataBrokerRuntime {
                     let record_set = rows_to_record_set(
                         vec![row],
                         Some(table),
-                        &[],
+                        crate::runtime::core::PiiMasking::ClientVisible,
                         &context,
                         self.encryption.as_ref(),
                         &self.encryption_metrics,
@@ -1436,7 +1439,9 @@ impl DataBrokerRuntime {
         let record_set = rows_to_record_set(
             vec![row],
             Some(table),
-            &[],
+            // Internal comparison against stored state: masking here would fail
+            // every compare-and-swap on a PII column. Never returned to a client.
+            crate::runtime::core::PiiMasking::InternalUnmasked,
             context,
             self.encryption.as_ref(),
             &self.encryption_metrics,
@@ -1769,7 +1774,17 @@ impl DataBrokerRuntime {
             &crate::planning::broker::column_resolver(table),
             &filter,
         );
-        let values = filter_bind_values(&normalized_filter);
+        let mut values = filter_bind_values(&normalized_filter);
+        // Planner-path only (the bridged arm binds its own compiled params): the
+        // bridged emitter DECLINES every soft-delete table, so those deletes
+        // always land on `plan.sql`. Bind the verified tenant/project values the
+        // plan appended, or a filter naming a foreign tenant would tombstone
+        // that tenant's row.
+        values.extend(
+            plan.context_parameter_values
+                .iter()
+                .map(|value| JsonValue::String(value.clone())),
+        );
         let query = match bridged.as_ref() {
             Some(stmt) => bind_typed_generic_pg_params(
                 sqlx::query(&stmt.sql),
@@ -2120,12 +2135,18 @@ impl DataBrokerRuntime {
             .collect();
         values.extend(increments.iter().map(|(_, delta)| serde_json::json!(delta)));
         values.extend(filter_bind_values(&normalized_filter));
-        // RLS1: build_update_plan appends a defense-in-depth caller-tenant
-        // backstop param beyond the change/increment/filter values; bind it to
-        // the VERIFIED context tenant so a foreign-tenant filter matches 0 rows.
-        if plan.parameter_columns.len() == values.len() + 1 {
-            values.push(JsonValue::String(context.tenant_id.clone()));
-        }
+        // The plan appends VERIFIED tenant/project isolation predicates beyond
+        // the change/increment/filter values, and hands back exactly the values
+        // to bind for them in placeholder order, so a foreign tenant or project
+        // in the caller's filter matches 0 rows. Binding these is not optional —
+        // the plan's SQL already references the placeholders. (The old
+        // `len() == values.len() + 1` guard silently bound nothing whenever the
+        // count did not match.)
+        values.extend(
+            plan.context_parameter_values
+                .iter()
+                .map(|value| JsonValue::String(value.clone())),
+        );
         let query = bind_values(
             sqlx::query(&plan.sql),
             table,
@@ -2146,7 +2167,7 @@ impl DataBrokerRuntime {
                 let record_set = rows_to_record_set(
                     rows,
                     Some(table),
-                    &[],
+                    crate::runtime::core::PiiMasking::ClientVisible,
                     context,
                     self.encryption.as_ref(),
                     &self.encryption_metrics,
@@ -2793,7 +2814,9 @@ impl DataBrokerRuntime {
         let record_set = rows_to_record_set(
             vec![row],
             Some(table),
-            &[],
+            // Bulk CAS precondition: same internal-comparison contract as the
+            // single-row CAS above.
+            crate::runtime::core::PiiMasking::InternalUnmasked,
             context,
             self.encryption.as_ref(),
             &self.encryption_metrics,

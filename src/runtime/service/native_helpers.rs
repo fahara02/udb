@@ -457,17 +457,37 @@ pub(crate) fn validate_request_tenant(
     validate_request_scope(metadata, request_tenant_id, "")
 }
 
+/// Resolve the request's tenant, VALIDATED CLAIM FIRST. The tower requires
+/// `x-tenant-id` to equal the claim tenant with no empty-claim exemption, so
+/// the two can never disagree on an authenticated request; consulting the claim
+/// first means this stays true even if that gate is ever relaxed. The header
+/// remains the source on the in-process loopback path, where no claim context
+/// is installed and there is no bearer to smuggle.
 pub(crate) fn metadata_tenant_id(metadata: &MetadataMap) -> Option<String> {
-    metadata_value(metadata, "x-tenant-id")
-        .map(ToString::to_string)
-        .or_else(claim_context_tenant_id)
+    claim_context_tenant_id()
+        .or_else(|| metadata_value(metadata, "x-tenant-id").map(ToString::to_string))
 }
 
+/// Resolve the request's project, VALIDATED CLAIM FIRST.
+///
+/// The method-security tower rejects a project header that contradicts a
+/// non-empty claim project, so the two agree whenever the token is
+/// project-scoped. They can still diverge when the token carries NO project
+/// claim, and this helper's result is compiled into an isolation predicate
+/// (`context_predicates`) — so the claim is consulted first and the header is
+/// only a fallback for a token that does not name a project at all. That keeps
+/// a tenant-scoped token's ability to select a project, while making it
+/// impossible for a header to displace a project the caller actually proved.
+///
+/// Note the deliberate asymmetry with the tenant equivalent: `x-tenant-id` must
+/// equal the claim tenant with no empty-claim exemption, so tenant selection by
+/// header is not possible at all.
 pub(crate) fn metadata_project_id(metadata: &MetadataMap) -> Option<String> {
-    metadata_value(metadata, "x-udb-project-id")
-        .or_else(|| metadata_value(metadata, "x-project-id"))
-        .map(ToString::to_string)
-        .or_else(claim_context_project_id)
+    claim_context_project_id().or_else(|| {
+        metadata_value(metadata, "x-udb-project-id")
+            .or_else(|| metadata_value(metadata, "x-project-id"))
+            .map(ToString::to_string)
+    })
 }
 
 /// The one request-context builder for native services (P6.1). Empty `project_id`
@@ -488,6 +508,33 @@ pub(crate) fn native_service_context(
         } else {
             project_id.to_string()
         },
+        correlation_id: metadata
+            .get("x-correlation-id")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or_default()
+            .to_string(),
+        ..crate::RequestContext::default()
+    }
+}
+
+/// Build a native context for a PROJECT-SCOPED entity, resolving the project
+/// from the validated request scope ([`metadata_project_id`]: claim first,
+/// header only for a token that names no project).
+///
+/// This is the explicit spelling of what `native_service_context(md, tenant,
+/// "")` used to do implicitly. That empty-string literal is now banned outright
+/// (see `native_context_posture_tests`): it read as "no project" while actually
+/// meaning "infer one, possibly from a request header", and the difference
+/// shipped three silent read defects. Choosing between this and
+/// [`tenant_only_native_service_context`] is now a decision each handler states
+/// rather than one the argument list hides.
+pub(crate) fn project_scoped_native_service_context(
+    metadata: &MetadataMap,
+    tenant_id: &str,
+) -> crate::RequestContext {
+    crate::RequestContext {
+        tenant_id: tenant_id.to_string(),
+        project_id: metadata_project_id(metadata).unwrap_or_default(),
         correlation_id: metadata
             .get("x-correlation-id")
             .and_then(|value| value.to_str().ok())

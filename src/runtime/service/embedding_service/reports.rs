@@ -5,7 +5,7 @@ use crate::proto::udb::core::embedding::services::v1 as embedding_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, validate_request_tenant,
+    admit_on as native_admit_on, project_scoped_native_service_context, validate_request_tenant,
 };
 use super::EmbeddingServiceImpl;
 use super::config::{MAX_EMBEDDING_REPORT_BATCH, STATUS_ACTIVE, TOPIC_METERED};
@@ -54,7 +54,7 @@ async fn process_report(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(metadata, &tenant_id);
     let work = if req.work_item_id.trim().is_empty() {
         None
     } else {
@@ -429,7 +429,7 @@ pub(crate) async fn report_embedding_failure(
     svc.metrics
         .inc_embedding_work(if result.dead { "dead" } else { "retry" });
     if result.dead {
-        let context = native_service_context(&metadata, req.tenant_id.trim(), "");
+        let context = project_scoped_native_service_context(&metadata, req.tenant_id.trim());
         svc.emit_source_event(
             super::config::TOPIC_WORK_DEAD_LETTER,
             req.tenant_id.trim(),

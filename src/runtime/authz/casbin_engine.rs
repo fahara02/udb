@@ -53,7 +53,7 @@ g = _, _
 e = some(where (p_eft == allow)) && !some(where (p_eft == deny))
 
 [matchers]
-m = (p.sub == "*" || g(r.sub, p.sub)) && (p.dom == "*" || p.dom == "" || r.dom == p.dom) && (p.obj == "*" || keyMatch2(r.obj, p.obj)) && (p.act == "*" || r.act == p.act || keyMatch2(r.act, p.act))
+m = (p.sub == "*" || r.sub == p.sub || g(r.sub, p.sub)) && (p.dom == "*" || p.dom == "" || r.dom == p.dom) && (p.obj == "*" || keyMatch2(r.obj, p.obj)) && (p.act == "*" || r.act == p.act || keyMatch2(r.act, p.act))
 "#;
 
 /// Empty selector → Casbin wildcard token.
@@ -274,10 +274,11 @@ impl AuthzSnapshot {
         // Candidate request subjects (item 16): the cached enforcer is shared
         // across principals, so the per-principal `subject → role` /
         // `subject → identity` grouping links are no longer baked into it.
-        // Enforcing each candidate token as `r.sub` is equivalent under the
-        // fixed `g = _, _` token contract: the prior loader only ever added
-        // one-level links from the subject, and Casbin's role manager resolves
-        // `g(a, b)` to `a == b` when no links are loaded.
+        // Enforce every verified identity directly. The cached enforcer is
+        // deliberately principal-free and therefore carries no subject links;
+        // exact subject/service-identity policies are matched by
+        // `r.sub == p.sub`, while `g(r.sub, p.sub)` remains available to an
+        // operator model that supplies role-manager relationships.
         let identities = principal.identities();
         let mut request_subjects: Vec<String> = vec![subject.clone()];
         for id in &identities {
@@ -616,6 +617,60 @@ mod tests {
             .casbin_authorize(&query(&bob, &resource, "data.select", &attrs))
             .await;
         assert!(!bob_deny.allowed);
+    }
+
+    #[tokio::test]
+    async fn casbin_direct_service_identity_policy_allows_service_account() {
+        let mut snap = AuthzSnapshot::default();
+        snap.version = "v1".to_string();
+        snap.policies.push(AuthzPolicy {
+            id: "authn-upsert".to_string(),
+            effect: Effect::Allow,
+            subject: "ambucore.authn".to_string(),
+            tenant: "tenant-1".to_string(),
+            project: "ambulife".to_string(),
+            action: "Upsert".to_string(),
+            resource: "ambulife.authn.entity.v1.User".to_string(),
+            required_scopes: vec!["udb:write".to_string()],
+            ..Default::default()
+        });
+
+        // A service-account token has a concrete user subject. Authorization
+        // must still evaluate the verified service identity carried beside it.
+        let service_account = Principal {
+            principal_id: "user-uuid".to_string(),
+            subject: "user-uuid".to_string(),
+            user_id: "user-uuid".to_string(),
+            service_identity: "ambucore.authn".to_string(),
+            tenant_id: "tenant-1".to_string(),
+            project_id: "ambulife".to_string(),
+            scopes: vec!["udb:write".to_string()],
+            ..Default::default()
+        };
+        let attrs = BTreeMap::new();
+        let resource = ResourceRef::message("ambulife.authn.entity.v1.User");
+
+        let decision = snap
+            .casbin_authorize(&query(&service_account, &resource, "Upsert", &attrs))
+            .await;
+        assert!(
+            decision.allowed,
+            "an exact service-identity policy must authorize its service account: {}",
+            decision.deny_reason
+        );
+        assert_eq!(decision.matched_policy_ids, vec!["authn-upsert"]);
+
+        let other_service = Principal {
+            service_identity: "ambucore.partner".to_string(),
+            ..service_account
+        };
+        assert!(
+            !snap
+                .casbin_authorize(&query(&other_service, &resource, "Upsert", &attrs))
+                .await
+                .allowed,
+            "an unrelated service identity must remain denied"
+        );
     }
 
     #[tokio::test]

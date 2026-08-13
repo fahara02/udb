@@ -9,7 +9,7 @@ use crate::proto::{VectorHybridSearchRequest, VectorPoint, VectorSearchRequest, 
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, validate_request_tenant,
+    admit_on as native_admit_on, project_scoped_native_service_context, validate_request_tenant,
 };
 use super::EmbeddingServiceImpl;
 use super::config::{
@@ -299,7 +299,7 @@ pub(crate) async fn retrieve(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let source = runtime
         .native_entity_read_for_service(
             "embedding",
@@ -682,7 +682,7 @@ pub(crate) async fn report_retrieval_evaluation(
         None,
     )
     .await?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let evaluation_failed = !req.error.trim().is_empty();
     svc.emit_source_event(
         TOPIC_RETRIEVAL_EVALUATED,

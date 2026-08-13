@@ -5,7 +5,7 @@ use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
     admit_on as native_admit_on, native_next_page_token, native_offset_page_window,
-    native_service_context, validate_request_tenant,
+    project_scoped_native_service_context, validate_request_tenant,
 };
 use super::EmbeddingServiceImpl;
 use super::config::EMBEDDING_WORK_EMITTER_BATCH;
@@ -44,7 +44,7 @@ pub(crate) async fn get_embedding_job_status(
         None,
     )
     .await?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let row = svc
         .require_runtime()?
         .native_entity_read_for_service(
@@ -114,7 +114,7 @@ pub(crate) async fn list_embedding_work_items(
         None,
     )
     .await?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let page = native_offset_page_window(
         1,
         req.page_size,

@@ -26,8 +26,9 @@ use uuid::Uuid;
 
 use super::native_helpers::{
     admit_on as native_admit_on, emit_payload_event, native_next_page_token,
-    native_next_page_token_for_total, native_offset_page_window, native_service_context,
-    update_mask_allows, update_mask_path_set, validate_request_tenant,
+    native_next_page_token_for_total, native_offset_page_window,
+    tenant_only_native_service_context, update_mask_allows, update_mask_path_set,
+    validate_request_tenant,
 };
 use crate::ir::{
     ComparisonOp, ConflictStrategy, LogicalFilter, LogicalPagination, LogicalProjection,
@@ -2120,7 +2121,7 @@ impl RoomService for WebrtcServiceImpl {
         let _admit = self.admit(&req.tenant_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let room_id = Uuid::new_v4().to_string();
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         // Typed native-entity insert (extend_udb.md P4): the row (incl. its JSONB
         // `config` + UUID columns) compiles through the IR and dispatches to the
         // proto-bound backend — no bespoke SQL. `Error` conflict = plain INSERT.
@@ -2167,7 +2168,7 @@ impl RoomService for WebrtcServiceImpl {
         let _admit = self.admit_read(&req.tenant_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let room_id = parse_uuid("room_id", &req.room_id)?.to_string();
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let room = self
             .require_runtime()?
             .native_entity_read_for_service(
@@ -2918,7 +2919,7 @@ impl PeerService for WebrtcServiceImpl {
         let _admit = self.admit_read(&req.tenant_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let peer_id = parse_uuid("peer_id", &req.peer_id)?.to_string();
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let peer = self
             .require_runtime()?
             .native_entity_read_for_service(
@@ -2955,7 +2956,7 @@ impl PeerService for WebrtcServiceImpl {
         // Validated/normalized into the short DB token before it reaches the IR
         // filter ("" = no state filter), preserving the raw path's semantics.
         let state_filter = peer_state_to_db(&req.state, "")?;
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let page_window = native_offset_page_window(1, req.page_size, &req.page_token, 50);
         let peers = self
             .require_runtime()?
@@ -3008,7 +3009,7 @@ impl TrackService for WebrtcServiceImpl {
         let track_id = Uuid::new_v4().to_string();
         let kind = track_kind_to_db(&req.kind, "VIDEO")?;
         let tenant_str = tenant_id.to_string();
-        let context = native_service_context(&metadata, &tenant_str, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_str);
         // Typed native-entity insert (extend_udb.md P4): the track row incl. its
         // JSONB settings/metadata + UUID columns compiles through the IR and
         // dispatches to the proto-bound backend. The peer-membership gate above
@@ -3154,7 +3155,7 @@ impl TrackService for WebrtcServiceImpl {
         // raw path which only applied it when non-empty.
         let kind_filter = track_kind_to_db(&req.kind, "")?;
         let peer_filter = req.peer_id.trim().to_string();
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let page_window = native_offset_page_window(1, req.page_size, &req.page_token, 50);
         let tracks = self
             .require_runtime()?

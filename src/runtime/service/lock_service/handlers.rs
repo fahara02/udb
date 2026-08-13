@@ -16,8 +16,8 @@ use crate::runtime::DataBrokerRuntime;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_next_page_token, native_offset_page_window,
-    native_service_context, non_empty_json, validate_request_tenant,
+    admit_on as native_admit_on, native_next_page_token, native_offset_page_window, non_empty_json,
+    tenant_only_native_service_context, validate_request_tenant,
 };
 use super::LockServiceImpl;
 use super::config::{
@@ -85,7 +85,7 @@ pub(crate) async fn acquire_lock(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let ttl_seconds = resolve_ttl_seconds(req.lease_ttl_seconds);
 
     // Existing durable row (if any) for this (tenant, lock_name).
@@ -207,7 +207,7 @@ pub(crate) async fn renew_lock(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let ttl_seconds = resolve_ttl_seconds(req.lease_ttl_seconds);
 
     let stored = runtime
@@ -309,7 +309,7 @@ pub(crate) async fn release_lock(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let stored = runtime
         .native_entity_read_for_service("lock", &context, lock_read_by_name(&tenant_id, &lock_name))
@@ -403,7 +403,7 @@ pub(crate) async fn get_lock(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let lock = runtime
         .native_entity_read_for_service(
             "lock",
@@ -443,7 +443,7 @@ pub(crate) async fn list_locks(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let locks = runtime
         .native_entity_read_for_service(
             "lock",
