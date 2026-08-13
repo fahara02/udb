@@ -567,6 +567,7 @@ RELEASE_LEAF_WORKFLOWS = (
     "release-typescript-sdk.yml",
     "release-python-sdk.yml",
     "release-csharp-sdk.yml",
+    "release-go-sdk.yml",
     "release-packagist.yml",
 )
 
@@ -598,6 +599,8 @@ RELEASE_ORCHESTRATOR_REQUIREMENTS = (
     ("uses: ./.github/workflows/release-python-sdk.yml", "Python reusable workflow"),
     ("publish-csharp:", "C# publisher job"),
     ("uses: ./.github/workflows/release-csharp-sdk.yml", "C# reusable workflow"),
+    ("publish-go:", "Go module tag publisher job"),
+    ("uses: ./.github/workflows/release-go-sdk.yml", "Go module tag reusable workflow"),
     ("publish-packagist:", "Packagist publisher job"),
     ("uses: ./.github/workflows/release-packagist.yml", "Packagist reusable workflow"),
 )
@@ -1033,6 +1036,21 @@ RELEASE_PUBLISHER_LEAF_REQUIREMENTS = {
         ("uses: NuGet/login@v1", "NuGet trusted publishing login"),
         ("dotnet nuget push ./nupkg/*.nupkg", "NuGet push"),
         ("--skip-duplicate", "NuGet duplicate skip"),
+    ),
+    # The Go publisher pushes no package: the `sdk/go/vX.Y.Z` tag IS the release,
+    # because `go get` cannot resolve a module in a repository sub-directory
+    # without it. These needles pin the parts whose loss would republish the
+    # original bug (an absent or dishonest tag) or break immutability.
+    "release-go-sdk.yml": (
+        ("contents: write", "Go module tag push permission"),
+        ("component: sdk-go", "Go version guard component"),
+        ("id: existing", "existing module tag lookup step id"),
+        ('refs/tags/${TAG}^{}', "annotated tag peeled to its commit for comparison"),
+        ("Module versions are immutable", "refuses to move an existing module tag"),
+        ("if: steps.existing.outputs.exists != 'true'", "tag creation skip-if-existing"),
+        ('git tag -a "${TAG}" "${GITHUB_SHA}"', "annotated tag at the release commit"),
+        ('git push origin "refs/tags/${TAG}"', "module tag push"),
+        ("https://proxy.golang.org", "Go module proxy warm"),
     ),
     "release-packagist.yml": (
         ("validate-php-sdk:", "PHP validation job"),
@@ -4590,6 +4608,7 @@ def check_release_topology(root: Path = ROOT) -> list[str]:
         "publish-ts",
         "publish-py",
         "publish-csharp",
+        "publish-go",
         "publish-packagist",
     ):
         match = re.search(
@@ -6252,6 +6271,10 @@ jobs:
     needs: build-binaries
     uses: ./.github/workflows/release-csharp-sdk.yml
     secrets: inherit
+  publish-go:
+    needs: build-binaries
+    uses: ./.github/workflows/release-go-sdk.yml
+    secrets: inherit
   publish-packagist:
     needs: build-binaries
     uses: ./.github/workflows/release-packagist.yml
@@ -6378,6 +6401,32 @@ jobs:
             --api-key "${NUGET_API_KEY}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+"""
+        release_go_publisher_good = """name: Release Go module tag
+on:
+  workflow_call:
+jobs:
+  tag-go-module:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/version-guard
+        with:
+          component: sdk-go
+      - id: existing
+        run: |
+          refs="$(git ls-remote --tags origin)"
+          peeled="$(printf '%s\\n' "${refs}" | awk -v r="refs/tags/${TAG}^{}" '$2 == r { print $1 }')"
+          echo "::error::Module versions are immutable once the proxy has served them."
+      - if: steps.existing.outputs.exists != 'true'
+        run: |
+          git tag -a "${TAG}" "${GITHUB_SHA}" -m "UDB Go SDK"
+          git push origin "refs/tags/${TAG}"
+      - run: |
+          export GOPROXY="https://proxy.golang.org,direct"
+          go get "github.com/fahara02/udb/sdk/go@v${VERSION}"
 """
         release_packagist_publisher_good = """name: Release Packagist
 on:
@@ -8704,6 +8753,7 @@ jobs:
         (wf / "release-typescript-sdk.yml").write_text(release_typescript_publisher_good, encoding="utf-8")
         (wf / "release-python-sdk.yml").write_text(release_python_publisher_good, encoding="utf-8")
         (wf / "release-csharp-sdk.yml").write_text(release_csharp_publisher_good, encoding="utf-8")
+        (wf / "release-go-sdk.yml").write_text(release_go_publisher_good, encoding="utf-8")
         (wf / "release-packagist.yml").write_text(release_packagist_publisher_good, encoding="utf-8")
         (wf / "cleanup-packages.yml").write_text(cleanup_packages_good, encoding="utf-8")
         (wf / "ci.yml").write_text(ci_good, encoding="utf-8")
