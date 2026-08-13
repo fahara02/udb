@@ -14,7 +14,7 @@ use crate::proto::udb::core::backup::services::v1 as backup_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, non_empty_json, tenant_only_native_service_context,
+    admit_on as native_admit_on, non_empty_json, project_scoped_native_service_context,
     validate_request_tenant,
 };
 use super::BackupServiceImpl;
@@ -47,7 +47,7 @@ pub(crate) async fn list_backups(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let limit = clamp_limit(req.page_size);
     let offset = parse_offset(&req.page_token);
     let kind = match req.kind.trim() {
@@ -91,7 +91,7 @@ pub(crate) async fn get_backup(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let run = runtime
         .native_entity_read_for_service("backup", &context, run_read_by_id(&tenant_id, &backup_id))
         .await?
@@ -211,7 +211,7 @@ pub(crate) async fn put_backup_policy(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
 
     // Reuse the existing policy id on update so the upsert is in place.
     let existing = runtime
@@ -317,7 +317,7 @@ pub(crate) async fn get_backup_policy(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let policy = runtime
         .native_entity_read_for_service(
             "backup",
@@ -358,7 +358,7 @@ pub(crate) async fn list_backup_policies(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let limit = clamp_limit(req.page_size);
     let offset = parse_offset(&req.page_token);
     let rows = runtime
@@ -401,7 +401,7 @@ pub(crate) async fn delete_backup_policy(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     runtime
         .native_entity_delete_for_service(
             "backup",

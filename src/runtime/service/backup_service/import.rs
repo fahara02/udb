@@ -23,7 +23,7 @@ use crate::runtime::tenant_movement::{
 };
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, parse_uuid, tenant_only_native_service_context,
+    admit_on as native_admit_on, parse_uuid, project_scoped_native_service_context,
     validate_request_tenant,
 };
 use super::BackupServiceImpl;
@@ -350,10 +350,10 @@ pub(crate) async fn restore_tenant(
     let manifest = svc.require_manifest()?;
     let _ = parse_uuid("source_tenant_id", &source_tenant_id)?;
     let _ = parse_uuid("target_tenant_id", &target_tenant_id)?;
-    let context = tenant_only_native_service_context(&metadata, &target_tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &target_tenant_id);
 
     // Resolve the source run's object prefix from the durable journal.
-    let source_ctx = tenant_only_native_service_context(&metadata, &source_tenant_id);
+    let source_ctx = project_scoped_native_service_context(&metadata, &source_tenant_id);
     let run = runtime
         .native_entity_read_for_service(
             "backup",

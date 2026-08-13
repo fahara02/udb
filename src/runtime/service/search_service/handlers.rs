@@ -18,7 +18,7 @@ use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
     admit_on as native_admit_on, native_next_page_token, native_next_page_token_for_total,
-    native_offset_page_window, non_empty_json, tenant_only_native_service_context,
+    native_offset_page_window, non_empty_json, project_scoped_native_service_context,
     validate_request_tenant,
 };
 use super::SearchServiceImpl;
@@ -253,7 +253,7 @@ pub(crate) async fn create_index(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
 
     // FAIL CLOSED: resolve the source table's tenant column via the shared
     // catalog resolver. No tenant column ⇒ no index.
@@ -408,7 +408,7 @@ pub(crate) async fn delete_index(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
 
     let stored = runtime
         .native_entity_read_for_service(
@@ -492,7 +492,7 @@ pub(crate) async fn list_indexes(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let page_window = native_offset_page_window(
         1,
         req.page_size,
@@ -554,7 +554,7 @@ pub(crate) async fn search(
     .await?;
     let runtime = svc.require_runtime()?;
     let catalog = svc.require_catalog()?;
-    let mut context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
     context.scopes.push("udb:vector:read".to_string());
     // Honor the declared SearchMode: reject a request whose inputs contradict the
     // mode (e.g. VECTOR mode with no vector). UNSPECIFIED infers from the inputs
@@ -812,7 +812,7 @@ pub(crate) async fn reindex(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
 
     let stored = runtime
         .native_entity_read_for_service(
