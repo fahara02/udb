@@ -116,6 +116,26 @@ fn generate_startup_delta(
     }
 }
 
+/// Operator assertion that a backend change UDB cannot apply itself has been
+/// reconciled by hand, so startup may record the new manifest as current.
+pub(crate) const ACK_MANUAL_BACKEND_RECONCILIATION_ENV: &str =
+    "UDB_ACK_MANUAL_BACKEND_RECONCILIATION";
+
+/// Whether the operator has acknowledged manual reconciliation of backend
+/// changes with no executor. Deliberately opt-in and explicit: it lets the
+/// manifest advance past a change UDB did not perform, so it must never be
+/// implied by a broader "degraded startup" switch.
+fn manual_backend_reconciliation_acknowledged() -> bool {
+    matches!(
+        std::env::var(ACK_MANUAL_BACKEND_RECONCILIATION_ENV)
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase()
+            .as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
 const REVIEW_REQUIRED_SQL_ARTIFACT_MARKER: &str = "UDB:sql_artifact_requires_review=true";
 
 fn sql_artifact_requires_review(content: &str) -> bool {
@@ -1579,18 +1599,42 @@ async fn run_startup_lifecycle_core(
                 .map(|change| format!("{:?} {}.{}", change.kind, change.schema, change.table))
                 .collect();
             if !unappliable.is_empty() {
-                return Err(fail(
-                    runtime,
-                    &mut report,
-                    "backend_delta_unappliable",
-                    format!(
-                        "the manifest requires backend changes UDB cannot apply automatically \
-                         ({}); applying the rest would record this manifest as current while the \
-                         store keeps its previous geometry. Reconcile the backend by hand (or \
-                         revert the proto change), then restart.",
+                // RECOVERY PATH. The diff is derived prior-manifest → current
+                // manifest, and the stored manifest only advances after a
+                // SUCCESSFUL startup — so reconciling the store by hand does not
+                // clear this condition on its own, and refusing unconditionally
+                // would deadlock the broker until the proto change was reverted.
+                // The operator asserts "I have reconciled the backend myself" by
+                // setting the ack variable; startup then proceeds, the manifest
+                // advances, and the condition clears permanently. The assertion
+                // is recorded as a warning so it shows up in the startup report
+                // rather than being an invisible override.
+                if manual_backend_reconciliation_acknowledged() {
+                    report.warnings.push(format!(
+                        "operator acknowledged manual backend reconciliation for changes UDB \
+                         cannot apply ({}); recording the new manifest as current. Verify the \
+                         store geometry matches the proto — nothing re-checks it after this.",
                         unappliable.join(", ")
-                    ),
-                ));
+                    ));
+                } else {
+                    return Err(fail(
+                        runtime,
+                        &mut report,
+                        "backend_delta_unappliable",
+                        format!(
+                            "the manifest requires backend changes UDB cannot apply automatically \
+                             ({}). Applying the rest would record this manifest as current while \
+                             the store keeps its previous geometry, and the next boot would \
+                             fast-start over the divergence. Either revert the proto change, or \
+                             reconcile the store by hand and set {}=true to acknowledge it — \
+                             hand-reconciliation alone does NOT clear this, because the diff is \
+                             computed against the stored manifest, which only advances on a \
+                             successful start.",
+                            unappliable.join(", "),
+                            ACK_MANUAL_BACKEND_RECONCILIATION_ENV
+                        ),
+                    ));
+                }
             }
 
             // The approval decision and the Blocked-op rejection were made ONCE,

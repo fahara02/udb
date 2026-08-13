@@ -158,7 +158,7 @@ graph LR
 - **src/control/auto_alter.rs** — types: `RepairKind`, `RepairDecision`, `RepairPlan`, `LintInput` · fns: `is_auto_safe`, `as_str`, `tier`, `schema`, `auto_safe_decisions`, `review_decisions`, `plan_repairs`
 - **src/control/engine.rs** — types: `FsmState`, `RuntimeStateSnapshot`, `EngineError`, `Engine` · fns: `as_str`, `from_str`, `valid_transitions`, `can_transition_to`, `is_terminal`, `new`, `new_auto_id`, `transition`, `fail`, `recover`, `reset_to_idle`, `snapshot` · consts: `MAX_RETRIES`, `PG_ADVISORY_LOCK_KEY`, `ALL`, `VARIANT_COUNT`
 - **src/control/executor.rs** — traits: `ProvisioningExecutor` · types: `ExecutionReport`, `FakeProvisioningExecutor` · fns: `passed`, `apply_plan`, `verify_plan`, `repair_plan`
-- **src/control/lifecycle.rs** — types: `StartupLifecycleReport`, `MigrationMetricOperation` · fns: `run_startup_lifecycle`
+- **src/control/lifecycle.rs** — types: `StartupLifecycleReport`, `MigrationMetricOperation` · fns: `run_startup_lifecycle` · consts: `ACK_MANUAL_BACKEND_RECONCILIATION_ENV`
 - **src/control/mod.rs** — (no public items)
 - **src/control/notification.rs** — types: `NotificationEvent`, `WebhookPayload`, `NotificationConfig` · fns: `as_str`, `from_str`, `new`, `wants_event`, `completed_payload`, `failed_payload`, `blocked_payload`
 - **src/control/plan_approval.rs** — types: `PlanOperation`, `ExportedPlan`, `PlanMatchResult`, `ApprovalSignature`, `ApprovedPlan`, `ApprovalConfig`, `ApprovalError`, `ApprovalFreshness` · fns: `build_exported_plan`, `is_match`, `describe`, `plan_matches_current_diff`, `op_fingerprint`, `current_unix_ms`, `from_env`, `requires_signed_plan`, `compute_signature`, `create`, `freshness`, `verify`, `ready_to_apply`
