@@ -219,7 +219,7 @@ fn a_file_consuming_the_project_does_not_build_a_tenant_only_context() {
             .strip_prefix(&root)
             .unwrap_or(file)
             .to_string_lossy()
-            .replace('\', "/");
+            .replace('\\', "/");
         if rel == "native_helpers.rs" || rel == "native_context_posture_tests.rs" {
             continue;
         }
@@ -254,8 +254,8 @@ fn a_file_consuming_the_project_does_not_build_a_tenant_only_context() {
 /// a brick.
 #[test]
 fn the_unappliable_backend_delta_refusal_names_its_recovery_path() {
-    let lifecycle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("src/control/lifecycle.rs");
+    let lifecycle =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/control/lifecycle.rs");
     let source = std::fs::read_to_string(&lifecycle).expect("read lifecycle.rs");
     assert!(
         source.contains("backend_delta_unappliable"),
