@@ -98,7 +98,10 @@ pub(crate) async fn run_delta_forward(
                 continue;
             }
         }
-        match tx.send(Ok(change_frame(&envelope, &payload, &masked_columns))).await {
+        match tx
+            .send(Ok(change_frame(&envelope, &payload, &masked_columns)))
+            .await
+        {
             Ok(()) => metrics.record_livequery_delta_forwarded(&tenant_id),
             Err(_) => {
                 ended = true;

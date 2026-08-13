@@ -388,10 +388,7 @@ pub(crate) fn filter_matches_row(filter: &LogicalFilter, row: &serde_json::Value
 /// tenant — continuously, and in clear text — while the same principal's
 /// `Select` masked them. Tenant/project scoping was already correct; this was
 /// purely the masking layer being absent.
-pub(crate) fn mask_row(
-    mut row: serde_json::Value,
-    masked_columns: &[String],
-) -> serde_json::Value {
+pub(crate) fn mask_row(mut row: serde_json::Value, masked_columns: &[String]) -> serde_json::Value {
     if masked_columns.is_empty() {
         return row;
     }

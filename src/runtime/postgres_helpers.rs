@@ -316,7 +316,10 @@ pub(crate) fn build_join_fusion_sql(
             && let Some(name) = crate::generation::sql::resolve_project_column(table)
             && let Some(column) = table.columns.iter().find(|c| c.column_name == name)
         {
-            bindings.push((column.clone(), JsonValue::String(context.project_id.clone())));
+            bindings.push((
+                column.clone(),
+                JsonValue::String(context.project_id.clone()),
+            ));
             predicates.push(format!(
                 "{}.{} = ${}",
                 qi_runtime(&aliases[table_idx]),

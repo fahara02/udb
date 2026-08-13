@@ -3315,7 +3315,13 @@ mod tests {
         assert_eq!(plan.errors, Vec::<String>::new());
         assert_eq!(
             plan.sql,
-            "UPDATE \"public\".\"widgets\" SET \"deleted_at\" = NOW() WHERE (\"id\" = $1 AND \"tenant_id\" = $2)"
+            // The trailing `AND "tenant_id" = $3` is the VERIFIED caller tenant
+            // appended by `append_verified_scope_predicates`. The caller's own
+            // `tenant_id` in the filter ($2) is attacker-controlled — presence of
+            // the column was the only thing checked — so the soft-delete
+            // tombstone, which the bridged emitter always declines and therefore
+            // always lands on this SQL, carries the backstop too.
+            "UPDATE \"public\".\"widgets\" SET \"deleted_at\" = NOW() WHERE (\"id\" = $1 AND \"tenant_id\" = $2) AND \"tenant_id\" = $3"
         );
         assert!(
             !plan.sql.to_ascii_uppercase().contains("DELETE FROM"),
@@ -4304,8 +4310,14 @@ mod tests {
         param_cols.sort();
         assert_eq!(
             param_cols,
-            vec!["status".to_string(), "tenant_id".to_string()],
-            "legacy planner filters on exactly the caller columns (inter-column order is a map-iteration artifact)"
+            vec![
+                "status".to_string(),
+                "tenant_id".to_string(),
+                "tenant_id".to_string()
+            ],
+            "legacy planner binds the caller columns PLUS the appended verified-tenant \
+             backstop — the same shape the IR compiler produces, which is exactly what makes \
+             this an A-B parity assertion (inter-column order is a map-iteration artifact)"
         );
         assert_eq!(
             compiled_params.len(),
