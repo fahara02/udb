@@ -1260,6 +1260,11 @@ mod tests {
     fn ctx() -> RequestContext {
         RequestContext {
             tenant_id: "acme".to_string(),
+            // Join fusion now enforces the same context contract as every other
+            // read (purpose + udb:read + per-table required_scope). This fixture
+            // predates those checks, when a fused read demanded only a tenant.
+            purpose: "test".to_string(),
+            scopes: vec!["udb:read".to_string()],
             ..RequestContext::default()
         }
     }

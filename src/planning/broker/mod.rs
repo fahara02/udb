@@ -3328,7 +3328,8 @@ mod tests {
             "soft-delete must never physically DELETE: {}",
             plan.sql
         );
-        assert_eq!(plan.parameter_columns, ["id", "tenant_id"]);
+        // Third entry is the appended verified-tenant backstop bind.
+        assert_eq!(plan.parameter_columns, ["id", "tenant_id", "tenant_id"]);
         assert_eq!(plan.operation, "delete");
         assert_eq!(plan.audit_event_type, "udb.sql.delete");
     }
