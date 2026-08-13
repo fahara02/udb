@@ -30,6 +30,15 @@ refuses to start instead of recording itself as done.
 - **The migration plan shows the SQL that will run.** `udb plan` rendered its
   artifacts with the unattended generator, so an operator approved a plan whose
   SQL omitted the destructive DDL `serve` would then execute.
+- **New operator control: `UDB_ACK_MANUAL_BACKEND_RECONCILIATION`.** Set it to
+  `true` to assert that a backend change UDB cannot apply itself has been
+  reconciled by hand; startup then proceeds and records the new manifest, and
+  the assertion is reported as a startup warning rather than applied silently.
+  This is the recovery path for the refusal below, and it is required: the diff
+  is computed against the STORED manifest, which only advances after a
+  successful start, so reconciling the store by hand does NOT clear the refusal
+  on its own. It is deliberately independent of `allow_degraded_backend_startup`
+  — degraded backend health must never imply "the operator fixed the schema".
 - **A migration that cannot be applied refuses to start.** The approval gate
   validates the canonical change set (relational **plus** Qdrant / MongoDB /
   Neo4j / ClickHouse / S3), but the executor recomputed the relational half
