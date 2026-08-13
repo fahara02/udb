@@ -20,7 +20,14 @@ name: Release
 #        ├──► publish-ts        (release-typescript-sdk.yml)│ each needs build-binaries,
 #        ├──► publish-py        (release-python-sdk.yml)    │ each secrets: inherit
 #        ├──► publish-csharp    (release-csharp-sdk.yml)    │
+#        ├──► publish-go        (release-go-sdk.yml)        │
 #        └──► publish-packagist (release-packagist.yml)     ┘
+#
+# publish-go is the odd one: it publishes to no registry. `sdk/go` is its own Go
+# module, and `go get` resolves a module in a sub-directory ONLY via a
+# `sdk/go/vX.Y.Z` tag, so creating that tag IS the Go release. It sat outside
+# this graph as a manual step until it was missed for 0.5.4 and 0.5.5, leaving
+# Go consumers pinned to 0.5.3 with every job green.
 #
 # Single-artifact-system (15.A.2): docker (and the perf benchmark) consume the
 # published RELEASE ASSET via `gh release download` — the broker is compiled once
@@ -160,6 +167,16 @@ jobs:
       contents: read
       id-token: write
     uses: ./.github/workflows/release-csharp-sdk.yml
+    secrets: inherit
+
+  # No registry to push to — the `sdk/go/vX.Y.Z` tag IS the published artifact,
+  # hence `contents: write` where the other publishers only read.
+  publish-go:
+    name: publish-go
+    needs: build-binaries
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-go-sdk.yml
     secrets: inherit
 
   publish-packagist:

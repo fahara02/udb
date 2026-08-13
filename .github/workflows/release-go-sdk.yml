@@ -1,0 +1,167 @@
+name: Release · Go module tag
+
+# Reusable publisher invoked by `release.yml` after the release binaries are
+# built.
+#
+# WHY THIS EXISTS: `sdk/go` is its OWN Go module (`module
+# github.com/fahara02/udb/sdk/go`), and the Go toolchain resolves a module in a
+# repository sub-directory only through a tag NAMED FOR THAT SUB-DIRECTORY --
+# `sdk/go/vX.Y.Z`. The broker's own `vX.Y.Z` tag is invisible to `go get`. So
+# unlike every other SDK, nothing gets published here: creating that tag IS the
+# release. Before this workflow existed the tag was a manual step, it was
+# silently missed for 0.5.4 and 0.5.5, and Go consumers stayed pinned to 0.5.3
+# while every other ecosystem moved -- with no failing job anywhere to say so.
+#
+# Runs after build-binaries because the Go SDK ships a launcher
+# (`cmd/udb/main.go`) that downloads the release asset for its pinned version.
+# Tagging before the assets exist would publish a module that cannot bootstrap.
+#
+# Nothing needs a token beyond `github.token`: the tag is pushed to this same
+# repository, and the Go module proxy picks it up from there on first request.
+#
+# Rollback: module versions are IMMUTABLE once the proxy has served them (it
+# caches by content hash, and sum.golang.org records the hash forever). A bad
+# tag is corrected by releasing a NEW version, never by moving this one -- which
+# is why an existing tag at a different commit fails the job instead of being
+# force-updated.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected UDB release version, for example 0.5.6"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  tag-go-module:
+    name: tag sdk/go module
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://pkg.go.dev/github.com/fahara02/udb/sdk/go
+    permissions:
+      # Pushing the `sdk/go/v*` tag is the whole job.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Only the release commit is needed: the tag points at GITHUB_SHA, and
+          # any pre-existing tag is compared by SHA from `git ls-remote` without
+          # having the object locally.
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          go: "true"
+          node: "true"
+
+      # Guards BOTH halves of the tag's honesty in one step: the release version
+      # equals versions.json `sdk-go`, and check-versions.mjs asserts the
+      # constants baked into the module itself -- `udbVersion` in
+      # sdk/go/cmd/udb/main.go (which asset the launcher downloads) and
+      # `SDKVersion` in sdk/go/udbclient/generated_client.go -- agree with it. A
+      # module tagged vX.Y.Z that fetches some other version's binary is worse
+      # than an absent tag.
+      - uses: ./.github/actions/version-guard
+        with:
+          component: sdk-go
+          dispatch-version: ${{ github.event.inputs.version }}
+
+      - name: Resolve release version and module tag
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${{ github.event.inputs.version }}"
+          fi
+          if [ -z "${version}" ]; then
+            echo "::error::No release version: not a v*.*.* tag run and no dispatch input."
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=sdk/go/v${version}" >> "$GITHUB_OUTPUT"
+          echo "Go module tag: sdk/go/v${version} -> ${GITHUB_SHA}"
+
+      - name: Check whether the module tag already exists
+        id: existing
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Read every tag once and match ref names exactly. `ls-remote` patterns
+          # are tail-matched globs, and the tag name contains slashes, so exact
+          # awk comparison is the unambiguous way to ask "does THIS ref exist".
+          refs="$(git ls-remote --tags origin)"
+          # An annotated tag reports two lines: the tag object, then the peeled
+          # commit under `^{}`. The peeled line is the one to compare against
+          # GITHUB_SHA.
+          peeled="$(printf '%s\n' "${refs}" | awk -v r="refs/tags/${TAG}^{}" '$2 == r { print $1 }')"
+          direct="$(printf '%s\n' "${refs}" | awk -v r="refs/tags/${TAG}" '$2 == r { print $1 }')"
+
+          if [ -z "${direct}" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "${TAG} does not exist yet; it will be created."
+            exit 0
+          fi
+
+          target="${peeled:-${direct}}"
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+          if [ "${target}" != "${GITHUB_SHA}" ]; then
+            echo "::error::${TAG} already exists at ${target} but this release is ${GITHUB_SHA}. Module versions are immutable once the proxy has served them; moving the tag would leave consumers with a cached tree that no longer matches. Release a new version instead."
+            exit 1
+          fi
+          echo "${TAG} already points at ${GITHUB_SHA}; nothing to create (re-run is a no-op)."
+
+      - name: Create and push the module tag
+        if: steps.existing.outputs.exists != 'true'
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.email "idea3d.faruk@gmail.com"
+          git config user.name "fahara02"
+          git tag -a "${TAG}" "${GITHUB_SHA}" -m "UDB Go SDK v${VERSION}
+
+          Go module tag for github.com/fahara02/udb/sdk/go, pointing at the
+          v${VERSION} release commit. Pairs with release v${VERSION}."
+          git push origin "refs/tags/${TAG}"
+          echo "Pushed ${TAG} -> ${GITHUB_SHA}"
+
+      - name: Warm the Go module proxy
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          # proxy.golang.org fetches a version the first time somebody asks for
+          # it. Asking here means the first REAL `go get` after the release is a
+          # cache hit instead of a cold VCS fetch, and -- more useful -- a
+          # failure surfaces in this job rather than in a consumer's build.
+          # Best-effort by design: the proxy is eventually consistent with a
+          # just-pushed tag, and `go get` works regardless of whether this warms.
+          module="github.com/fahara02/udb/sdk/go@v${VERSION}"
+          workdir="$(mktemp -d)"
+          cd "${workdir}"
+          go mod init udb-proxy-warm >/dev/null
+          export GOPROXY="https://proxy.golang.org,direct"
+          export GOFLAGS=-mod=mod
+          for attempt in 1 2 3 4 5; do
+            if go get "${module}"; then
+              echo "Proxy serves ${module} (attempt ${attempt})."
+              exit 0
+            fi
+            echo "Proxy does not see ${module} yet (attempt ${attempt}); waiting."
+            sleep 20
+          done
+          echo "::warning::proxy.golang.org has not picked up ${module} yet. The tag is pushed, so 'go get ${module}' will still resolve once the proxy fetches it on first request."

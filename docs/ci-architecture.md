@@ -205,7 +205,12 @@ Current source evidence:
   matrix jobs, the full plugin feature matrix, static SDK jobs, `Proto (buf)`,
   `SDK conformance (all languages)`, scaffold/docs/version jobs, `smoke`, and
   the displayed live job `Native services + canonical stores (live)`; release
-  includes the orchestrator/fanout jobs through `publish-packagist`; release
+  includes the orchestrator/fanout jobs through `publish-packagist`, and
+  `publish-go / tag sdk/go module` — the Go SDK publishes to no registry, so
+  that job's `sdk/go/vX.Y.Z` tag is the only evidence Go consumers can resolve
+  the release at all. That job entered the graph after v0.5.6, so auditing
+  v0.5.6 or earlier reports it missing; those tags were created by hand and are
+  verified with `git ls-remote --tags origin 'sdk/go/*'` instead. Release
   dry-run evidence must be a `release-binaries.yml` `workflow_dispatch` run
   with `Version guard`, `Vendored ffmpeg guard`, and build jobs for
   `udb-linux-amd64`, `udb-windows-amd64.exe`, `udb-darwin-arm64`,

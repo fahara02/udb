@@ -144,6 +144,7 @@ const releaseFanoutJobs = [
   "publish-ts",
   "publish-py",
   "publish-csharp",
+  "publish-go",
   "publish-packagist",
 ];
 
@@ -154,6 +155,7 @@ const releaseLeafWorkflows = [
   "release-typescript-sdk.yml",
   "release-python-sdk.yml",
   "release-csharp-sdk.yml",
+  "release-go-sdk.yml",
   "release-packagist.yml",
 ];
 
@@ -164,6 +166,7 @@ const releaseJobWorkflow = {
   "publish-ts": "release-typescript-sdk.yml",
   "publish-py": "release-python-sdk.yml",
   "publish-csharp": "release-csharp-sdk.yml",
+  "publish-go": "release-go-sdk.yml",
   "publish-packagist": "release-packagist.yml",
 };
 
@@ -175,6 +178,9 @@ const releaseGraphEdges = [
   ["publish-ts", "build-binaries"],
   ["publish-py", "build-binaries"],
   ["publish-csharp", "build-binaries"],
+  // The Go SDK ships a launcher that downloads the release asset, so its module
+  // tag must not exist before build-binaries has published one.
+  ["publish-go", "build-binaries"],
   ["publish-packagist", "build-binaries"],
 ];
 

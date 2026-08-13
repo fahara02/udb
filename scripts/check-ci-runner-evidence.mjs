@@ -164,6 +164,11 @@ const REQUIRED_JOBS = {
     "publish-ts / Build and publish @udb_plus/sdk",
     "publish-py / Build and publish udb-client",
     "publish-csharp / Build and publish Udb.Client + Udb.Cli",
+    // The Go SDK publishes nothing to a registry — the `sdk/go/vX.Y.Z` module
+    // tag IS its release, so this job is the only evidence Go consumers can
+    // resolve the version at all. It was a manual step through 0.5.6 and was
+    // missed twice; auditing it is what keeps it from going quiet again.
+    "publish-go / tag sdk/go module",
     "publish-packagist / composer validate",
     "publish-packagist / Split + push to udb-laravel satellite",
     "publish-packagist / Notify Packagist",
@@ -192,6 +197,7 @@ const RELEASE_PUBLISH_BUDGET_JOBS = [
   "publish-ts / Build and publish @udb_plus/sdk",
   "publish-py / Build and publish udb-client",
   "publish-csharp / Build and publish Udb.Client + Udb.Cli",
+  "publish-go / tag sdk/go module",
   "publish-packagist / composer validate",
   "publish-packagist / Split + push to udb-laravel satellite",
   "publish-packagist / Notify Packagist",
