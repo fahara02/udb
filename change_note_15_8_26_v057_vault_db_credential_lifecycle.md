@@ -114,3 +114,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   six languages, the native manifest/docs, OpenAPI, and benchmark rows. The
   temporary workflow is removed in the same commit as those authoritative
   outputs and is not part of the permanent CI surface.
+- Final combined CI run `31842157652` generated the correct Python replay-safe
+  map but found its exact-set regression fixture still listed only the former
+  four RPCs. The fixture now includes and directly asserts both project-bound
+  Vault issuance and single-lease revoke; emergency revoke remains non-retryable.
