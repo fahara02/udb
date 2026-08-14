@@ -95,3 +95,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   that the public proto comments did not explicitly state the implemented proof
   boundary. Issuance and revoke now document tenant/project/caller binding,
   their request dedup key, and same-transaction durable replay behavior.
+- Bootstrap CI run `31839695217` passed API inventory, idempotency, retry, and
+  error-detail posture, then found only the generated HTTP-style report's former
+  291-operation count. The report is refreshed to 293 operations with zero
+  route-style exceptions and zero operation-ID collisions.
