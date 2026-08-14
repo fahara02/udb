@@ -54,9 +54,7 @@ fn resolved_scheduler_project_scope(
 /// caller must match the durable ScheduledJob owner exactly.
 pub(crate) fn project_scope_predicate(m: &NativeModel, bind: &str) -> String {
     let project_id = m.q("project_id");
-    format!(
-        "(NULLIF({bind}, '')::UUID IS NULL OR {project_id} = NULLIF({bind}, '')::UUID)"
-    )
+    format!("(NULLIF({bind}, '')::UUID IS NULL OR {project_id} = NULLIF({bind}, '')::UUID)")
 }
 
 /// Create a scheduled job. FIRE-ONLY SEMANTICS: when the job is due, the

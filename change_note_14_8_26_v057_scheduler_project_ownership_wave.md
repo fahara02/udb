@@ -31,4 +31,5 @@ Status: source complete; GitHub CI pending
 - Fast call-site audit and pre-stage `git diff --check`: passed.
 - Local Cargo build/test: deliberately not run because the operator required
   CI-only compilation and testing due local hardware limits.
-- GitHub CI: pending after the isolated Scheduler commit is pushed.
+- GitHub CI: run `31826321762` returned a formatting-only quick-gate failure;
+  its exact three-file rustfmt diff was applied and replacement CI is pending.

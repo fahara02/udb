@@ -87,14 +87,7 @@ async fn live_postgres_scheduler_project_ownership_isolation() {
     let project_b = Uuid::new_v4().to_string();
 
     let job_a = create_job(&svc, &tenant_id, &project_a, "", "project-a-job").await;
-    let job_b = create_job(
-        &svc,
-        &tenant_id,
-        &project_b,
-        &project_b,
-        "project-b-job",
-    )
-    .await;
+    let job_b = create_job(&svc, &tenant_id, &project_b, &project_b, "project-b-job").await;
 
     let got_a = svc
         .get_job(scheduler_project_request(

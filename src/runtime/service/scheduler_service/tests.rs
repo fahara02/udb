@@ -97,10 +97,9 @@ async fn get_job_rejects_non_uuid_project_authority_before_pool_access() {
     request
         .metadata_mut()
         .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
-    request.metadata_mut().insert(
-        "x-udb-project-id",
-        MetadataValue::from_static("not-a-uuid"),
-    );
+    request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("not-a-uuid"));
 
     let err = svc
         .get_job(request)

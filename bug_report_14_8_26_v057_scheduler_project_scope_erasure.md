@@ -84,3 +84,6 @@ finding does not invalidate those properties.
   three mutations, tenant-wide compatibility, and pause-event project lineage.
 - Per operator direction, no local Cargo build or test was run. GitHub CI and
   the ignored live Postgres regression remain pending.
+- Initial GitHub CI run `31826321762` reached quick gate and returned only three
+  rustfmt diffs in the new Scheduler source/tests. The exact CI diff was applied;
+  replacement CI remains pending.
