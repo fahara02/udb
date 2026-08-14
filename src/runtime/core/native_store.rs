@@ -182,16 +182,18 @@ impl DataBrokerRuntime {
         tonic::Status,
     > {
         let backend = native_store_backend_for_service(service_id, &context.project_id);
+        // A service may resolve one physical target before beginning a compound
+        // raw-SQL + typed-native operation. Honour that internal pin so every
+        // step lands on the same database instance. Native service contexts do
+        // not copy the caller's x-udb-target-instance header, so this cannot be
+        // used to override the service-owned store binding from the wire.
         let selected_instance = if context.target_instance.trim().is_empty() {
             self.choose_instance_name_for_project(backend, write, &context.project_id)
         } else {
-            Some(context.target_instance.trim().to_string())
+            Some(context.target_instance.trim())
         };
-        let target = self.backend_executor_for_project(
-            backend,
-            selected_instance,
-            &context.project_id,
-        )?;
+        let target =
+            self.backend_executor_for_project(backend, selected_instance, &context.project_id)?;
         let kind = crate::backend::BackendKind::from_token(&target.backend).ok_or_else(|| {
             native_store_capability_status(
                 target.backend.clone(),

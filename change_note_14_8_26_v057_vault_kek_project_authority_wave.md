@@ -47,3 +47,14 @@ Date: 2026-08-14
 - A trusted tenant-bound credential broker or database-native authorization
   design, followed by idempotent issuance/recovery, public revoke/revoke-all,
   durable revocation events, reconciliation states, and failure-injection tests.
+
+## CI follow-up
+
+- GitHub CI run `31817914608` reached the quick gate and reported one mechanical
+  `rustfmt` line-wrapping difference in `src/runtime/core/native_store.rs`.
+- The same focused correction preserves the selected-instance value as the
+  borrowed `Option<&str>` required by `backend_executor_for_project`; the first
+  commit's isolated staging reconstruction had converted it to an incompatible
+  owned `Option<String>`.
+- No local build or test was run for this follow-up. The replacement GitHub CI
+  run remains the compilation and test authority.
