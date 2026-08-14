@@ -659,7 +659,7 @@ graph LR
 - **src/runtime/service/embedding_service/vector_store.rs** — traits: `VectorStore` · types: `RuntimeVectorStore` · fns: `for_routing`, `for_model`
 - **src/runtime/service/embedding_service/workers.rs** — Leader-owned background passes (change-driven work emit / backfill / vector teardown) for the native `EmbeddingService`, plus the CDC-envelope decoders and the shared vector-delete seam. Extracted verbatim from the fo… · fns: `embedding_work_jobs_sql`, `embedding_teardown_jobs_sql`, `embedding_teardown_point_ids_sql`, `backfill_read_context`, `backfill_select_request`, `source_change_row`, `source_change_row_pk`, `source_change_is_delete`, `parse_source_text_fields`, `run_embedding_work_emitter_once`, `extract_source_text`
 
-### runtime/service/live_tests  (15 files)
+### runtime/service/live_tests  (16 files)
 
 - **src/runtime/service/live_tests/asset_image_live.rs** — Live verification of the asset THUMBNAIL byte-step (feature `asset-image`): a source image is stored in the object store, an asset wraps it, and a THUMBNAIL pipeline fetches → resizes → stores a derived object. Requir…
 - **src/runtime/service/live_tests/asset_live.rs** — (no public items)
@@ -674,8 +674,9 @@ graph LR
 - **src/runtime/service/live_tests/storage_live.rs** — (no public items)
 - **src/runtime/service/live_tests/storage_object_live.rs** — Live MinIO verification of the object-byte path the storage service uses for `DeleteFile` / orphan-reaper GC (`DataBrokerRuntime::*_object_backend_target` + `object_request_json`). Proves put → get → delete → get-fail…
 - **src/runtime/service/live_tests/storage_object_tenant_iso_live.rs** — OBJ1/2/3 — LIVE tenant-isolation of the SERVED data-plane OBJECT path. Reproduces the customer-reported cross-tenant object leak against a REAL S3/MinIO. Every served object entrypoint physically namespaces the object…
-- **src/runtime/service/live_tests/support.rs** — fns: `live_pg_dsn`, `live_native_service_db_lock`, `live_pg_pool`, `cleanup_native_service_db`, `migrate_native_service_db`, `live_runtime`, `storage_service`, `scheduler_service`, `asset_service`, `search_service`, `webrtc_service`, `lock_service`, `put_storage_object`, `seed_storage_file`, `assert_create_then_get`, `assert_native_table_columns`
+- **src/runtime/service/live_tests/support.rs** — fns: `live_pg_dsn`, `live_native_service_db_lock`, `live_pg_pool`, `cleanup_native_service_db`, `migrate_native_service_db`, `reset_native_outbox`, `live_runtime`, `storage_service`, `scheduler_service`, `workflow_service`, `asset_service`, `search_service`, `webrtc_service`, `lock_service`, `put_storage_object`, `seed_storage_file`, `assert_create_then_get`, `assert_native_table_columns`
 - **src/runtime/service/live_tests/webrtc_live.rs** — (no public items)
+- **src/runtime/service/live_tests/workflow_live.rs** — (no public items)
 
 ### runtime/service/livequery_service  (8 files)
 

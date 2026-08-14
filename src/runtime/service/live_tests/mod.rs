@@ -21,3 +21,4 @@ mod storage_object_live;
 mod storage_object_tenant_iso_live;
 mod support;
 mod webrtc_live;
+mod workflow_live;

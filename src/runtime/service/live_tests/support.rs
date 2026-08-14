@@ -6,6 +6,7 @@ use crate::runtime::service::native_helpers::DEFAULT_OBJECT_BUCKET;
 use crate::runtime::service::scheduler_service::SchedulerServiceImpl;
 use crate::runtime::service::storage_service::StorageServiceImpl;
 use crate::runtime::service::webrtc_service::WebrtcServiceImpl;
+use crate::runtime::service::workflow_service::WorkflowServiceImpl;
 use crate::runtime::{DataBrokerRuntime, native_catalog};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
@@ -110,6 +111,26 @@ pub(super) async fn migrate_native_service_db(pool: &sqlx::PgPool) {
     }
 }
 
+pub(super) async fn reset_native_outbox(pool: &sqlx::PgPool) {
+    sqlx::query("CREATE SCHEMA IF NOT EXISTS udb_system")
+        .execute(pool)
+        .await
+        .expect("create udb_system schema");
+    sqlx::query("DROP TABLE IF EXISTS udb_system.outbox_events CASCADE")
+        .execute(pool)
+        .await
+        .expect("drop native-service test outbox");
+    sqlx::query(
+        "CREATE TABLE udb_system.outbox_events ( \
+            event_seq BIGSERIAL PRIMARY KEY, event_id UUID NOT NULL UNIQUE, \
+            topic TEXT NOT NULL, partition_key TEXT NOT NULL DEFAULT '', \
+            payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW() )",
+    )
+    .execute(pool)
+    .await
+    .expect("create native-service test outbox");
+}
+
 pub(super) async fn live_runtime() -> Arc<DataBrokerRuntime> {
     Arc::new(DataBrokerRuntime::from_config(live_native_config()).await)
 }
@@ -140,6 +161,10 @@ pub(super) async fn storage_service(_pool: sqlx::PgPool) -> StorageServiceImpl {
 
 pub(super) async fn scheduler_service(_pool: sqlx::PgPool) -> SchedulerServiceImpl {
     native_broker_service().await.build_scheduler_service()
+}
+
+pub(super) async fn workflow_service(_pool: sqlx::PgPool) -> WorkflowServiceImpl {
+    native_broker_service().await.build_workflow_service()
 }
 
 pub(super) async fn asset_service(_pool: sqlx::PgPool) -> AssetServiceImpl {

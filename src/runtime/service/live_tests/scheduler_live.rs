@@ -26,26 +26,6 @@ fn assert_cross_project_not_found<T>(result: Result<T, Status>, operation: &str)
     assert_eq!(status.code(), Code::NotFound, "{operation}: {status}");
 }
 
-async fn ensure_scheduler_outbox(pool: &sqlx::PgPool) {
-    sqlx::query("CREATE SCHEMA IF NOT EXISTS udb_system")
-        .execute(pool)
-        .await
-        .expect("create udb_system schema");
-    sqlx::query("DROP TABLE IF EXISTS udb_system.outbox_events CASCADE")
-        .execute(pool)
-        .await
-        .expect("drop scheduler test outbox");
-    sqlx::query(
-        "CREATE TABLE udb_system.outbox_events ( \
-            event_seq BIGSERIAL PRIMARY KEY, event_id UUID NOT NULL UNIQUE, \
-            topic TEXT NOT NULL, partition_key TEXT NOT NULL DEFAULT '', \
-            payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW() )",
-    )
-    .execute(pool)
-    .await
-    .expect("create scheduler test outbox");
-}
-
 async fn create_job(
     svc: &crate::runtime::service::scheduler_service::SchedulerServiceImpl,
     tenant_id: &str,
@@ -78,7 +58,7 @@ async fn live_postgres_scheduler_project_ownership_isolation() {
     let _guard = live_native_service_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
-    ensure_scheduler_outbox(&pool).await;
+    reset_native_outbox(&pool).await;
     let svc = scheduler_service(pool.clone())
         .await
         .with_outbox(Some(OUTBOX_RELATION.to_string()));
