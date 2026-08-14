@@ -83,3 +83,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   the pre-generation Go metadata still marked issuance non-replay-safe and did
   not contain either revoke RPC. Those three descriptor-derived rows are seeded
   to match the proto contract and will be replaced by full CI-binary SDK output.
+- Bootstrap CI run `31839123140` passed retry parity and found the generated
+  benchmark manifest still at 379 RPCs. The manifest now carries both revoke
+  operations plus the current project/idempotency-bound issuance request, so
+  benchmark coverage documentation can be regenerated at 381 RPCs.

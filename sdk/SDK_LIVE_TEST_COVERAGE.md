@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 379 RPCs across 28 services.
+Current generated RPC surface: 381 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -57,7 +57,7 @@ do not yet publish per-RPC live benchmark results.
 | TenantService | 8 | 3 | 3 | 2 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
-| VaultService | 20 | 6 | 13 | 1 | 0 |
+| VaultService | 22 | 6 | 13 | 3 | 0 |
 | WebhookService | 6 | 3 | 2 | 1 | 0 |
 | WorkflowService | 5 | 2 | 2 | 1 | 0 |
 
@@ -422,6 +422,7 @@ benchmark harnesses.
 | VaultService | `VaultService/Decrypt` | `decrypt` | `vaultDecrypt` | READ_ONLY | vault.md |
 | VaultService | `VaultService/DeleteSecret` | `delete_secret` | `deleteSecret` | MUTATION | vault.md |
 | VaultService | `VaultService/DestroySecret` | `destroy_secret` | `destroySecret` | DESTRUCTIVE | vault.md |
+| VaultService | `VaultService/EmergencyRevokeDatabaseCredentials` | `emergency_revoke_database_credentials` | `emergencyRevokeDatabaseCredentials` | DESTRUCTIVE | vault.md |
 | VaultService | `VaultService/Encrypt` | `encrypt` | `vaultEncrypt` | MUTATION | vault.md |
 | VaultService | `VaultService/GenerateDatabaseCredentials` | `generate_database_credentials` | `generateDatabaseCredentials` | MUTATION | vault.md |
 | VaultService | `VaultService/GenerateDataKey` | `generate_data_key` | `vaultGenerateDataKey` | MUTATION | vault.md |
@@ -430,6 +431,7 @@ benchmark harnesses.
 | VaultService | `VaultService/Hmac` | `hmac` | `vaultHmac` | MUTATION | vault.md |
 | VaultService | `VaultService/ListSecrets` | `list_secrets` | `listSecrets` | READ_ONLY | vault.md |
 | VaultService | `VaultService/PutSecret` | `put_secret` | `putSecret` | MUTATION | vault.md |
+| VaultService | `VaultService/RevokeDatabaseCredentials` | `revoke_database_credentials` | `revokeDatabaseCredentials` | DESTRUCTIVE | vault.md |
 | VaultService | `VaultService/Rewrap` | `rewrap` | `vaultRewrap` | MUTATION | vault.md |
 | VaultService | `VaultService/RotateTransitKey` | `rotate_transit_key` | `rotateTransitKey` | MUTATION | vault.md |
 | VaultService | `VaultService/SealStatus` | `seal_status` | `vaultSealStatus` | READ_ONLY | vault.md |

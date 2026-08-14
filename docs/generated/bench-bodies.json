@@ -4040,8 +4040,32 @@
     "operation_id": "generateDatabaseCredentials",
     "op_kind": "MUTATION",
     "request_msg": "GenerateDatabaseCredentialsRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"role_name\": \"<seed:vault_db_role>\", \"ttl_seconds\": 900 }`",
-    "notes": "requests the seeded dynamic database role."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"default\", \"role_name\": \"<seed:vault_db_role>\", \"ttl_seconds\": 900, \"idempotency_key\": \"<seed:vault_db_idempotency_key>\" }`",
+    "notes": "requests the seeded dynamic database role with replay-safe recovery."
+  },
+  {
+    "file": "vault.md",
+    "rpc": "RevokeDatabaseCredentials",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/RevokeDatabaseCredentials",
+    "api_alias": "revoke_database_credentials",
+    "operation_id": "revokeDatabaseCredentials",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "RevokeDatabaseCredentialsRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"default\", \"lease_id\": \"<seed:vault_db_lease_id>\", \"reason\": \"benchmark cleanup\" }`",
+    "notes": "terminates sessions and revokes one seeded lease."
+  },
+  {
+    "file": "vault.md",
+    "rpc": "EmergencyRevokeDatabaseCredentials",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/EmergencyRevokeDatabaseCredentials",
+    "api_alias": "emergency_revoke_database_credentials",
+    "operation_id": "emergencyRevokeDatabaseCredentials",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "EmergencyRevokeDatabaseCredentialsRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"default\", \"reason\": \"benchmark emergency cleanup\", \"confirmation_token\": \"<seed:tenant_id>:default\" }`",
+    "notes": "durably marks and revokes every non-terminal lease in the exact tenant/project."
   },
   {
     "file": "vault.md",
