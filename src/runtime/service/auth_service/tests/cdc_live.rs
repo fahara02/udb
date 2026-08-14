@@ -526,7 +526,7 @@ async fn live_served_cdc_stream_revalidates_bearer_api_key_and_policy() {
         jwt_public_key: Some(include_str!("../../../testdata/jwt_rs256_public.pem").to_string()),
         ..crate::runtime::security::SecurityConfig::default()
     };
-    crate::runtime::security::SecurityConfig::install_global(security);
+    crate::runtime::security::SecurityConfig::install_global(security.clone());
     super::super::install_data_plane_credential_resolvers(
         pool.clone(),
         &crate::runtime::authn::AuthnConfig {
@@ -561,6 +561,11 @@ async fn live_served_cdc_stream_revalidates_bearer_api_key_and_policy() {
                 direct_dsn: live_pg_dsn(),
                 ..crate::runtime::config::DbConfig::default()
             },
+            // Runtime construction republishes `config.security` as the process
+            // authority. Carry the same verifier used above; leaving the default
+            // here would erase the test JWT key after minting the token and make
+            // the served layer reject a valid bearer before CDC is reached.
+            security,
             ..crate::runtime::config::UdbConfig::default()
         })
         .await;

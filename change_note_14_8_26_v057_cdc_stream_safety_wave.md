@@ -74,6 +74,13 @@ This change wave corrects the served `DataBroker.PublishCDC` path for:
   formatting output and deliberately does not run Cargo locally. Its
   postgres-only slim build and Clippy job passed before the replacement push;
   replacement CI remains the full compile/test authority.
+- Replacement standard CI `31832696224`: passed across Linux, Windows, slim,
+  Clippy, SDK, library-test, and drift-guard jobs.
+- Isolated Postgres/Kafka run `31833649489`: the live harness compiled, but the
+  test failed before opening CDC because runtime construction overwrote the
+  explicitly installed JWT test verifier with `UdbConfig::default().security`.
+  The live test now passes its signer/verifier into that runtime config as the
+  same canonical authority; replacement live execution remains pending.
 
 ### Historical 2026-08-14 checks
 

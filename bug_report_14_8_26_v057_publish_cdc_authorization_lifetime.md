@@ -93,3 +93,13 @@ continues receiving newly published events after its access has been withdrawn.
   command was used. The same run's postgres-only slim build and Clippy job passed
   before the replacement push; replacement-run full compilation and tests remain
   pending.
+- Replacement GitHub CI `31832696224` passed the complete standard matrix,
+  including Linux/Windows all-target builds, test/bench compilation, the UDB
+  library suite, slim postgres build, Clippy, SDKs, and drift guards.
+- The first isolated live run `31833649489` compiled the live harness and started
+  the real dependency stack, then failed before CDC admission because
+  `DataBrokerRuntime::from_config` republished the test's default security block
+  and erased the JWT verifier installed before token minting. The test now carries
+  the same explicit signer/verifier config into runtime construction. A
+  replacement isolated live run is pending; no stream-revocation pass is claimed
+  from the failed run.
