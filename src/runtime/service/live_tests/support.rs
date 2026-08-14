@@ -3,6 +3,7 @@ use crate::runtime::core::setup_data::object_request_json;
 use crate::runtime::service::DataBrokerService;
 use crate::runtime::service::asset_service::AssetServiceImpl;
 use crate::runtime::service::native_helpers::DEFAULT_OBJECT_BUCKET;
+use crate::runtime::service::scheduler_service::SchedulerServiceImpl;
 use crate::runtime::service::storage_service::StorageServiceImpl;
 use crate::runtime::service::webrtc_service::WebrtcServiceImpl;
 use crate::runtime::{DataBrokerRuntime, native_catalog};
@@ -135,6 +136,10 @@ fn live_native_config() -> UdbConfig {
 
 pub(super) async fn storage_service(_pool: sqlx::PgPool) -> StorageServiceImpl {
     native_broker_service().await.build_storage_service()
+}
+
+pub(super) async fn scheduler_service(_pool: sqlx::PgPool) -> SchedulerServiceImpl {
+    native_broker_service().await.build_scheduler_service()
 }
 
 pub(super) async fn asset_service(_pool: sqlx::PgPool) -> AssetServiceImpl {

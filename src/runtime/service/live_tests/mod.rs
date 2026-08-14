@@ -11,6 +11,7 @@ mod asset_vector_live;
 mod data_plane_live;
 mod data_plane_tenant_rls_live;
 mod native_events_live;
+mod scheduler_live;
 #[cfg(feature = "http-client")]
 mod search_tenant_iso_live;
 mod storage_live;
