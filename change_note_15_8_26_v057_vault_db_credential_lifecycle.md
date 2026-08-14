@@ -79,3 +79,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   recognized and requested the corresponding generated Vault benchmark rows.
   The destructive rows use explicit project-bound seeded leases and the
   tenant/project confirmation token; they remain opt-in benchmark fixtures.
+- Bootstrap CI run `31838911067` advanced to retry-contract parity and found
+  the pre-generation Go metadata still marked issuance non-replay-safe and did
+  not contain either revoke RPC. Those three descriptor-derived rows are seeded
+  to match the proto contract and will be replaced by full CI-binary SDK output.
