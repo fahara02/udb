@@ -126,3 +126,13 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   then found Go/TypeScript manifest fixtures lacked the two new seed references.
   Their full-surface and hydration tests now provide and assert the issuance
   idempotency key and revoke lease ID, eliminating both no-body gaps.
+- Final combined CI run `31842747425` compiled every Ubuntu target, compiled all
+  tests and benches, and passed the complete UDB library suite before the native
+  contract-diff gate correctly rejected 11 intentional Vault contract changes
+  against the 4.1.0 baseline. The independent native contract major is therefore
+  bumped to 5.0.0 and the descriptor baseline is regenerated from the CI-built
+  broker; this is an explicit compatibility boundary, not a suppressed gate.
+- Baseline regeneration remains CI-only. A temporary branch-scoped workflow
+  downloads the broker artifact produced by run `31842747425`, emits the exact
+  embedded `FileDescriptorSet`, and returns only a binary Git patch. The
+  temporary workflow is removed together with the committed baseline output.
