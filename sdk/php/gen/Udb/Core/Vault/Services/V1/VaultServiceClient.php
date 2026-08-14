@@ -284,6 +284,40 @@ class VaultServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Revoke one lease in the authenticated tenant/project. The durable state is
+     * moved to REVOKING before physical session fencing and becomes REVOKED only
+     * after the generated role is proven absent. Replays are naturally idempotent.
+     * @param \Udb\Core\Vault\Services\V1\RevokeDatabaseCredentialsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Vault\Services\V1\RevokeDatabaseCredentialsResponse>
+     */
+    public function RevokeDatabaseCredentials(\Udb\Core\Vault\Services\V1\RevokeDatabaseCredentialsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials',
+        $argument,
+        ['\Udb\Core\Vault\Services\V1\RevokeDatabaseCredentialsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Emergency kill-switch for every non-terminal lease in exactly one verified
+     * tenant/project. A confirmation token bound to both scope dimensions prevents
+     * an accidental tenant-wide or cross-project credential wipe.
+     * @param \Udb\Core\Vault\Services\V1\EmergencyRevokeDatabaseCredentialsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Vault\Services\V1\EmergencyRevokeDatabaseCredentialsResponse>
+     */
+    public function EmergencyRevokeDatabaseCredentials(\Udb\Core\Vault\Services\V1\EmergencyRevokeDatabaseCredentialsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials',
+        $argument,
+        ['\Udb\Core\Vault\Services\V1\EmergencyRevokeDatabaseCredentialsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
      * encrypt data locally) AND wrapped under the named transit key (store this and
      * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit

@@ -2571,12 +2571,19 @@ func (x *SealStatusResponse) GetError() *v1.ApiError {
 }
 
 type GenerateDatabaseCredentialsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	RoleName      string                 `protobuf:"bytes,2,opt,name=role_name,json=roleName,proto3" json:"role_name,omitempty"`
-	TtlSeconds    int32                  `protobuf:"varint,3,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	TenantId   string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	RoleName   string                 `protobuf:"bytes,2,opt,name=role_name,json=roleName,proto3" json:"role_name,omitempty"`
+	TtlSeconds int32                  `protobuf:"varint,3,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
+	// Must match the verified project claim/header. Empty resolves to the
+	// canonical default project, never to an arbitrary catalog fallback.
+	ProjectId string `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Required caller-supplied replay key. Reusing it with identical authoritative
+	// inputs returns the original KEK-protected credential response; reusing it
+	// with different inputs is an ABORTED conflict.
+	IdempotencyKey string `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GenerateDatabaseCredentialsRequest) Reset() {
@@ -2630,6 +2637,20 @@ func (x *GenerateDatabaseCredentialsRequest) GetTtlSeconds() int32 {
 	return 0
 }
 
+func (x *GenerateDatabaseCredentialsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *GenerateDatabaseCredentialsRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
 type GenerateDatabaseCredentialsResponse struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Username        string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
@@ -2638,6 +2659,8 @@ type GenerateDatabaseCredentialsResponse struct {
 	LeaseTtlSeconds int32                  `protobuf:"varint,4,opt,name=lease_ttl_seconds,json=leaseTtlSeconds,proto3" json:"lease_ttl_seconds,omitempty"`
 	Message         string                 `protobuf:"bytes,5,opt,name=message,proto3" json:"message,omitempty"`
 	Error           *v1.ApiError           `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	Replayed        bool                   `protobuf:"varint,7,opt,name=replayed,proto3" json:"replayed,omitempty"`
+	State           string                 `protobuf:"bytes,8,opt,name=state,proto3" json:"state,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2708,6 +2731,317 @@ func (x *GenerateDatabaseCredentialsResponse) GetMessage() string {
 }
 
 func (x *GenerateDatabaseCredentialsResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+func (x *GenerateDatabaseCredentialsResponse) GetReplayed() bool {
+	if x != nil {
+		return x.Replayed
+	}
+	return false
+}
+
+func (x *GenerateDatabaseCredentialsResponse) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+type RevokeDatabaseCredentialsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	LeaseId       string                 `protobuf:"bytes,3,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeDatabaseCredentialsRequest) Reset() {
+	*x = RevokeDatabaseCredentialsRequest{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeDatabaseCredentialsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeDatabaseCredentialsRequest) ProtoMessage() {}
+
+func (x *RevokeDatabaseCredentialsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeDatabaseCredentialsRequest.ProtoReflect.Descriptor instead.
+func (*RevokeDatabaseCredentialsRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *RevokeDatabaseCredentialsRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *RevokeDatabaseCredentialsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *RevokeDatabaseCredentialsRequest) GetLeaseId() string {
+	if x != nil {
+		return x.LeaseId
+	}
+	return ""
+}
+
+func (x *RevokeDatabaseCredentialsRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type RevokeDatabaseCredentialsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LeaseId       string                 `protobuf:"bytes,1,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
+	State         string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	Replayed      bool                   `protobuf:"varint,3,opt,name=replayed,proto3" json:"replayed,omitempty"`
+	OperationId   string                 `protobuf:"bytes,4,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	Message       string                 `protobuf:"bytes,5,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeDatabaseCredentialsResponse) Reset() {
+	*x = RevokeDatabaseCredentialsResponse{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeDatabaseCredentialsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeDatabaseCredentialsResponse) ProtoMessage() {}
+
+func (x *RevokeDatabaseCredentialsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeDatabaseCredentialsResponse.ProtoReflect.Descriptor instead.
+func (*RevokeDatabaseCredentialsResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *RevokeDatabaseCredentialsResponse) GetLeaseId() string {
+	if x != nil {
+		return x.LeaseId
+	}
+	return ""
+}
+
+func (x *RevokeDatabaseCredentialsResponse) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *RevokeDatabaseCredentialsResponse) GetReplayed() bool {
+	if x != nil {
+		return x.Replayed
+	}
+	return false
+}
+
+func (x *RevokeDatabaseCredentialsResponse) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *RevokeDatabaseCredentialsResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *RevokeDatabaseCredentialsResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type EmergencyRevokeDatabaseCredentialsRequest struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Reason    string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	// Required exact value "<tenant_id>:<resolved-project_id>".
+	ConfirmationToken string `protobuf:"bytes,4,opt,name=confirmation_token,json=confirmationToken,proto3" json:"confirmation_token,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsRequest) Reset() {
+	*x = EmergencyRevokeDatabaseCredentialsRequest{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmergencyRevokeDatabaseCredentialsRequest) ProtoMessage() {}
+
+func (x *EmergencyRevokeDatabaseCredentialsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmergencyRevokeDatabaseCredentialsRequest.ProtoReflect.Descriptor instead.
+func (*EmergencyRevokeDatabaseCredentialsRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsRequest) GetConfirmationToken() string {
+	if x != nil {
+		return x.ConfirmationToken
+	}
+	return ""
+}
+
+type EmergencyRevokeDatabaseCredentialsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OperationId   string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	MatchedCount  int64                  `protobuf:"varint,2,opt,name=matched_count,json=matchedCount,proto3" json:"matched_count,omitempty"`
+	RevokedCount  int64                  `protobuf:"varint,3,opt,name=revoked_count,json=revokedCount,proto3" json:"revoked_count,omitempty"`
+	Message       string                 `protobuf:"bytes,5,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsResponse) Reset() {
+	*x = EmergencyRevokeDatabaseCredentialsResponse{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmergencyRevokeDatabaseCredentialsResponse) ProtoMessage() {}
+
+func (x *EmergencyRevokeDatabaseCredentialsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmergencyRevokeDatabaseCredentialsResponse.ProtoReflect.Descriptor instead.
+func (*EmergencyRevokeDatabaseCredentialsResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsResponse) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsResponse) GetMatchedCount() int64 {
+	if x != nil {
+		return x.MatchedCount
+	}
+	return 0
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsResponse) GetRevokedCount() int64 {
+	if x != nil {
+		return x.RevokedCount
+	}
+	return 0
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeDatabaseCredentialsResponse) GetError() *v1.ApiError {
 	if x != nil {
 		return x.Error
 	}
@@ -2931,19 +3265,49 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"\x06sealed\x18\x01 \x01(\bR\x06sealed\x12%\n" +
 	"\x0ekek_configured\x18\x02 \x01(\bR\rkekConfigured\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\x9d\x01\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xe5\x01\n" +
 	"\"GenerateDatabaseCredentialsRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
 	"\trole_name\x18\x02 \x01(\tR\broleName\x12\x1f\n" +
 	"\vttl_seconds\x18\x03 \x01(\x05R\n" +
-	"ttlSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xb6\x02\n" +
+	"ttlSeconds\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\x12'\n" +
+	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xe8\x02\n" +
 	"#GenerateDatabaseCredentialsResponse\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12@\n" +
 	"\bpassword\x18\x02 \x01(\tB$\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x8a\xb7\x18\x18\b\x03\x10\x03\x18\x03:\bvault-dbJ\x06tenantR\bpassword\x12\x19\n" +
 	"\blease_id\x18\x03 \x01(\tR\aleaseId\x12*\n" +
 	"\x11lease_ttl_seconds\x18\x04 \x01(\x05R\x0fleaseTtlSeconds\x12\x18\n" +
 	"\amessage\x18\x05 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x012\xa8@\n" +
+	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12\x1a\n" +
+	"\breplayed\x18\a \x01(\bR\breplayed\x12\x14\n" +
+	"\x05state\x18\b \x01(\tR\x05state:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xaf\x01\n" +
+	" RevokeDatabaseCredentialsRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x19\n" +
+	"\blease_id\x18\x03 \x01(\tR\aleaseId\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xff\x01\n" +
+	"!RevokeDatabaseCredentialsResponse\x12\x19\n" +
+	"\blease_id\x18\x01 \x01(\tR\aleaseId\x12\x14\n" +
+	"\x05state\x18\x02 \x01(\tR\x05state\x12\x1a\n" +
+	"\breplayed\x18\x03 \x01(\bR\breplayed\x12!\n" +
+	"\foperation_id\x18\x04 \x01(\tR\voperationId\x12\x18\n" +
+	"\amessage\x18\x05 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xcc\x01\n" +
+	")EmergencyRevokeDatabaseCredentialsRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\x12-\n" +
+	"\x12confirmation_token\x18\x04 \x01(\tR\x11confirmationToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05vaultP\x01\"\x8b\x02\n" +
+	"*EmergencyRevokeDatabaseCredentialsResponse\x12!\n" +
+	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12#\n" +
+	"\rmatched_count\x18\x02 \x01(\x03R\fmatchedCount\x12#\n" +
+	"\rrevoked_count\x18\x03 \x01(\x03R\frevokedCount\x12\x18\n" +
+	"\amessage\x18\x05 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05vaultP\x01J\x04\b\x04\x10\x052\xd7L\n" +
 	"\fVaultService\x12\x9f\x03\n" +
 	"\tPutSecret\x12,.udb.core.vault.services.v1.PutSecretRequest\x1a-.udb.core.vault.services.v1.PutSecretResponse\"\xb4\x02\xca\xf3\x182\b\x02\x1a\x14udb:vault:put-secret \x01J\x02\x01\x02j\x0fvault.PutSecret\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18/\b\x01\x12\n" +
 	"put_secret\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\tputSecret\xea\xf3\x18V\n" +
@@ -2986,9 +3350,23 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/vault/transit:hmac\x12\xce\x02\n" +
 	"\n" +
 	"SealStatus\x12-.udb.core.vault.services.v1.SealStatusRequest\x1a..udb.core.vault.services.v1.SealStatusResponse\"\xe0\x01\xca\xf3\x184\b\x02\x1a\x15udb:vault:seal-status \x01J\x02\x01\x02j\x10vault.SealStatus\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\vseal_status\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x0fvaultSealStatus\xf2\xf3\x18?\n" +
-	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/vault/seal-status\x12\xc8\x03\n" +
-	"\x1bGenerateDatabaseCredentials\x12>.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest\x1a?.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse\"\xa7\x02\xca\xf3\x18Q\b\x02\x1a!udb:vault:generate-db-credentials \x01J\x02\x01\x02j!vault.GenerateDatabaseCredentials\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18T\b\x01\x12\x1dgenerate_database_credentials\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x1bgenerateDatabaseCredentials\xf2\xf3\x18?\n" +
-	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/vault/database/credentials\x12\x82\x03\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/vault/seal-status\x12\xa1\x05\n" +
+	"\x1bGenerateDatabaseCredentials\x12>.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest\x1a?.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse\"\x80\x04\xca\xf3\x18a\b\x02\x1a!udb:vault:generate-db-credentials \x01J\x02\x01\x02j!vault.GenerateDatabaseCredentials\x82\x01\n" +
+	"project_id\x88\x01\x01\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18T\b\x01\x12\x1dgenerate_database_credentials\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x1bgenerateDatabaseCredentials\xea\xf3\x18o\n" +
+	"!vault.GenerateDatabaseCredentials\x12!udb.vault.db_credential.issued.v1\x1a\blease_id\"\x06strict*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x92\xf4\x181\n" +
+	"\x16VaultDbCredentialLease\x1a\x06ACTIVE\"\aREVOKED\"\x06FAILED\x9a\xf4\x18\x1d\n" +
+	"\x0fidempotency_key\x1a\breplayed \x01\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/vault/database/credentials\x12\xbc\x05\n" +
+	"\x19RevokeDatabaseCredentials\x12<.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest\x1a=.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse\"\xa1\x04\xca\xf3\x18]\b\x02\x1a\x1fudb:vault:revoke-db-credentials \x01J\x02\x01\x02j\x1fvault.RevokeDatabaseCredentials\x82\x01\n" +
+	"project_id\x88\x01\x01\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18P\b\x01\x12\x1brevoke_database_credentials\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x19revokeDatabaseCredentials\xea\xf3\x18n\n" +
+	"\x1fvault.RevokeDatabaseCredentials\x12\"udb.vault.db_credential.revoked.v1\x1a\blease_id\"\x06strict*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x92\xf4\x18P\n" +
+	"\x16VaultDbCredentialLease\x12\bSTARTING\x12\x06ACTIVE\x12\bREVOKING\x12\x06FAILED\x1a\aREVOKED\"\aREVOKED0\x01\x9a\xf4\x18\x16\n" +
+	"\blease_id\x1a\breplayed \x01\x82\xd3\xe4\x93\x025:\x01*\"0/v1/vault/database/credentials/{lease_id}:revoke\x12\x94\x05\n" +
+	"\"EmergencyRevokeDatabaseCredentials\x12E.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest\x1aF.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse\"\xde\x03\xca\xf3\x18m\b\x02\x1a)udb:vault:emergency-revoke-db-credentials \x01J\x02\x01\x02j(vault.EmergencyRevokeDatabaseCredentials\x82\x01\n" +
+	"project_id\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18c\b\x01\x12%emergency_revoke_database_credentials\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05vaultP\x01Z\"emergencyRevokeDatabaseCredentials\xea\xf3\x18w\n" +
+	"(vault.EmergencyRevokeDatabaseCredentials\x12\"udb.vault.db_credential.revoked.v1\x1a\blease_id\"\x06strict*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x024:\x01*\"//v1/vault/database/credentials:emergency-revoke\x12\x82\x03\n" +
 	"\x0fGenerateDataKey\x122.udb.core.vault.services.v1.GenerateDataKeyRequest\x1a3.udb.core.vault.services.v1.GenerateDataKeyResponse\"\x85\x02\xca\xf3\x18?\b\x02\x1a\x1budb:vault:generate-data-key \x01J\x02\x01\x02j\x15vault.GenerateDataKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18A\b\x01\x12\x11generate_data_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x14vaultGenerateDataKey\xf2\xf3\x18?\n" +
 	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02&:\x01*\"!/v1/vault/transit:generateDataKey\x12\xb6\x02\n" +
 	"\x06Rewrap\x12).udb.core.vault.services.v1.RewrapRequest\x1a*.udb.core.vault.services.v1.RewrapResponse\"\xd4\x01\xca\xf3\x18+\b\x02\x1a\x10udb:vault:rewrap \x01J\x02\x01\x02j\fvault.Rewrap\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18-\b\x01\x12\x06rewrap\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\vvaultRewrap\xf2\xf3\x18?\n" +
@@ -3016,120 +3394,130 @@ func file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP() []byte {
 	return file_udb_core_vault_services_v1_vault_service_proto_rawDescData
 }
 
-var file_udb_core_vault_services_v1_vault_service_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
+var file_udb_core_vault_services_v1_vault_service_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
 var file_udb_core_vault_services_v1_vault_service_proto_goTypes = []any{
-	(*PutSecretRequest)(nil),                    // 0: udb.core.vault.services.v1.PutSecretRequest
-	(*PutSecretResponse)(nil),                   // 1: udb.core.vault.services.v1.PutSecretResponse
-	(*GetSecretRequest)(nil),                    // 2: udb.core.vault.services.v1.GetSecretRequest
-	(*GetSecretResponse)(nil),                   // 3: udb.core.vault.services.v1.GetSecretResponse
-	(*ListSecretsRequest)(nil),                  // 4: udb.core.vault.services.v1.ListSecretsRequest
-	(*SecretSummary)(nil),                       // 5: udb.core.vault.services.v1.SecretSummary
-	(*ListSecretsResponse)(nil),                 // 6: udb.core.vault.services.v1.ListSecretsResponse
-	(*DeleteSecretRequest)(nil),                 // 7: udb.core.vault.services.v1.DeleteSecretRequest
-	(*DeleteSecretResponse)(nil),                // 8: udb.core.vault.services.v1.DeleteSecretResponse
-	(*UndeleteSecretRequest)(nil),               // 9: udb.core.vault.services.v1.UndeleteSecretRequest
-	(*UndeleteSecretResponse)(nil),              // 10: udb.core.vault.services.v1.UndeleteSecretResponse
-	(*DestroySecretRequest)(nil),                // 11: udb.core.vault.services.v1.DestroySecretRequest
-	(*DestroySecretResponse)(nil),               // 12: udb.core.vault.services.v1.DestroySecretResponse
-	(*CreateTransitKeyRequest)(nil),             // 13: udb.core.vault.services.v1.CreateTransitKeyRequest
-	(*CreateTransitKeyResponse)(nil),            // 14: udb.core.vault.services.v1.CreateTransitKeyResponse
-	(*RotateTransitKeyRequest)(nil),             // 15: udb.core.vault.services.v1.RotateTransitKeyRequest
-	(*RotateTransitKeyResponse)(nil),            // 16: udb.core.vault.services.v1.RotateTransitKeyResponse
-	(*EncryptRequest)(nil),                      // 17: udb.core.vault.services.v1.EncryptRequest
-	(*EncryptResponse)(nil),                     // 18: udb.core.vault.services.v1.EncryptResponse
-	(*DecryptRequest)(nil),                      // 19: udb.core.vault.services.v1.DecryptRequest
-	(*DecryptResponse)(nil),                     // 20: udb.core.vault.services.v1.DecryptResponse
-	(*GenerateDataKeyRequest)(nil),              // 21: udb.core.vault.services.v1.GenerateDataKeyRequest
-	(*GenerateDataKeyResponse)(nil),             // 22: udb.core.vault.services.v1.GenerateDataKeyResponse
-	(*RewrapRequest)(nil),                       // 23: udb.core.vault.services.v1.RewrapRequest
-	(*RewrapResponse)(nil),                      // 24: udb.core.vault.services.v1.RewrapResponse
-	(*GetTransitPublicKeyRequest)(nil),          // 25: udb.core.vault.services.v1.GetTransitPublicKeyRequest
-	(*TransitPublicKey)(nil),                    // 26: udb.core.vault.services.v1.TransitPublicKey
-	(*GetTransitPublicKeyResponse)(nil),         // 27: udb.core.vault.services.v1.GetTransitPublicKeyResponse
-	(*BatchEncryptRequest)(nil),                 // 28: udb.core.vault.services.v1.BatchEncryptRequest
-	(*BatchEncryptResponse)(nil),                // 29: udb.core.vault.services.v1.BatchEncryptResponse
-	(*BatchDecryptRequest)(nil),                 // 30: udb.core.vault.services.v1.BatchDecryptRequest
-	(*BatchDecryptResponse)(nil),                // 31: udb.core.vault.services.v1.BatchDecryptResponse
-	(*SignRequest)(nil),                         // 32: udb.core.vault.services.v1.SignRequest
-	(*SignResponse)(nil),                        // 33: udb.core.vault.services.v1.SignResponse
-	(*VerifyRequest)(nil),                       // 34: udb.core.vault.services.v1.VerifyRequest
-	(*VerifyResponse)(nil),                      // 35: udb.core.vault.services.v1.VerifyResponse
-	(*HmacRequest)(nil),                         // 36: udb.core.vault.services.v1.HmacRequest
-	(*HmacResponse)(nil),                        // 37: udb.core.vault.services.v1.HmacResponse
-	(*SealStatusRequest)(nil),                   // 38: udb.core.vault.services.v1.SealStatusRequest
-	(*SealStatusResponse)(nil),                  // 39: udb.core.vault.services.v1.SealStatusResponse
-	(*GenerateDatabaseCredentialsRequest)(nil),  // 40: udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest
-	(*GenerateDatabaseCredentialsResponse)(nil), // 41: udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse
-	(*v1.ApiError)(nil),                         // 42: udb.core.common.v1.ApiError
+	(*PutSecretRequest)(nil),                           // 0: udb.core.vault.services.v1.PutSecretRequest
+	(*PutSecretResponse)(nil),                          // 1: udb.core.vault.services.v1.PutSecretResponse
+	(*GetSecretRequest)(nil),                           // 2: udb.core.vault.services.v1.GetSecretRequest
+	(*GetSecretResponse)(nil),                          // 3: udb.core.vault.services.v1.GetSecretResponse
+	(*ListSecretsRequest)(nil),                         // 4: udb.core.vault.services.v1.ListSecretsRequest
+	(*SecretSummary)(nil),                              // 5: udb.core.vault.services.v1.SecretSummary
+	(*ListSecretsResponse)(nil),                        // 6: udb.core.vault.services.v1.ListSecretsResponse
+	(*DeleteSecretRequest)(nil),                        // 7: udb.core.vault.services.v1.DeleteSecretRequest
+	(*DeleteSecretResponse)(nil),                       // 8: udb.core.vault.services.v1.DeleteSecretResponse
+	(*UndeleteSecretRequest)(nil),                      // 9: udb.core.vault.services.v1.UndeleteSecretRequest
+	(*UndeleteSecretResponse)(nil),                     // 10: udb.core.vault.services.v1.UndeleteSecretResponse
+	(*DestroySecretRequest)(nil),                       // 11: udb.core.vault.services.v1.DestroySecretRequest
+	(*DestroySecretResponse)(nil),                      // 12: udb.core.vault.services.v1.DestroySecretResponse
+	(*CreateTransitKeyRequest)(nil),                    // 13: udb.core.vault.services.v1.CreateTransitKeyRequest
+	(*CreateTransitKeyResponse)(nil),                   // 14: udb.core.vault.services.v1.CreateTransitKeyResponse
+	(*RotateTransitKeyRequest)(nil),                    // 15: udb.core.vault.services.v1.RotateTransitKeyRequest
+	(*RotateTransitKeyResponse)(nil),                   // 16: udb.core.vault.services.v1.RotateTransitKeyResponse
+	(*EncryptRequest)(nil),                             // 17: udb.core.vault.services.v1.EncryptRequest
+	(*EncryptResponse)(nil),                            // 18: udb.core.vault.services.v1.EncryptResponse
+	(*DecryptRequest)(nil),                             // 19: udb.core.vault.services.v1.DecryptRequest
+	(*DecryptResponse)(nil),                            // 20: udb.core.vault.services.v1.DecryptResponse
+	(*GenerateDataKeyRequest)(nil),                     // 21: udb.core.vault.services.v1.GenerateDataKeyRequest
+	(*GenerateDataKeyResponse)(nil),                    // 22: udb.core.vault.services.v1.GenerateDataKeyResponse
+	(*RewrapRequest)(nil),                              // 23: udb.core.vault.services.v1.RewrapRequest
+	(*RewrapResponse)(nil),                             // 24: udb.core.vault.services.v1.RewrapResponse
+	(*GetTransitPublicKeyRequest)(nil),                 // 25: udb.core.vault.services.v1.GetTransitPublicKeyRequest
+	(*TransitPublicKey)(nil),                           // 26: udb.core.vault.services.v1.TransitPublicKey
+	(*GetTransitPublicKeyResponse)(nil),                // 27: udb.core.vault.services.v1.GetTransitPublicKeyResponse
+	(*BatchEncryptRequest)(nil),                        // 28: udb.core.vault.services.v1.BatchEncryptRequest
+	(*BatchEncryptResponse)(nil),                       // 29: udb.core.vault.services.v1.BatchEncryptResponse
+	(*BatchDecryptRequest)(nil),                        // 30: udb.core.vault.services.v1.BatchDecryptRequest
+	(*BatchDecryptResponse)(nil),                       // 31: udb.core.vault.services.v1.BatchDecryptResponse
+	(*SignRequest)(nil),                                // 32: udb.core.vault.services.v1.SignRequest
+	(*SignResponse)(nil),                               // 33: udb.core.vault.services.v1.SignResponse
+	(*VerifyRequest)(nil),                              // 34: udb.core.vault.services.v1.VerifyRequest
+	(*VerifyResponse)(nil),                             // 35: udb.core.vault.services.v1.VerifyResponse
+	(*HmacRequest)(nil),                                // 36: udb.core.vault.services.v1.HmacRequest
+	(*HmacResponse)(nil),                               // 37: udb.core.vault.services.v1.HmacResponse
+	(*SealStatusRequest)(nil),                          // 38: udb.core.vault.services.v1.SealStatusRequest
+	(*SealStatusResponse)(nil),                         // 39: udb.core.vault.services.v1.SealStatusResponse
+	(*GenerateDatabaseCredentialsRequest)(nil),         // 40: udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest
+	(*GenerateDatabaseCredentialsResponse)(nil),        // 41: udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse
+	(*RevokeDatabaseCredentialsRequest)(nil),           // 42: udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest
+	(*RevokeDatabaseCredentialsResponse)(nil),          // 43: udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse
+	(*EmergencyRevokeDatabaseCredentialsRequest)(nil),  // 44: udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest
+	(*EmergencyRevokeDatabaseCredentialsResponse)(nil), // 45: udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse
+	(*v1.ApiError)(nil),                                // 46: udb.core.common.v1.ApiError
 }
 var file_udb_core_vault_services_v1_vault_service_proto_depIdxs = []int32{
-	42, // 0: udb.core.vault.services.v1.PutSecretResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 1: udb.core.vault.services.v1.GetSecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 0: udb.core.vault.services.v1.PutSecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 1: udb.core.vault.services.v1.GetSecretResponse.error:type_name -> udb.core.common.v1.ApiError
 	5,  // 2: udb.core.vault.services.v1.ListSecretsResponse.secrets:type_name -> udb.core.vault.services.v1.SecretSummary
-	42, // 3: udb.core.vault.services.v1.ListSecretsResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 4: udb.core.vault.services.v1.DeleteSecretResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 5: udb.core.vault.services.v1.UndeleteSecretResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 6: udb.core.vault.services.v1.DestroySecretResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 7: udb.core.vault.services.v1.CreateTransitKeyResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 8: udb.core.vault.services.v1.RotateTransitKeyResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 9: udb.core.vault.services.v1.EncryptResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 10: udb.core.vault.services.v1.DecryptResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 11: udb.core.vault.services.v1.GenerateDataKeyResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 12: udb.core.vault.services.v1.RewrapResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 3: udb.core.vault.services.v1.ListSecretsResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 4: udb.core.vault.services.v1.DeleteSecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 5: udb.core.vault.services.v1.UndeleteSecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 6: udb.core.vault.services.v1.DestroySecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 7: udb.core.vault.services.v1.CreateTransitKeyResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 8: udb.core.vault.services.v1.RotateTransitKeyResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 9: udb.core.vault.services.v1.EncryptResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 10: udb.core.vault.services.v1.DecryptResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 11: udb.core.vault.services.v1.GenerateDataKeyResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 12: udb.core.vault.services.v1.RewrapResponse.error:type_name -> udb.core.common.v1.ApiError
 	26, // 13: udb.core.vault.services.v1.GetTransitPublicKeyResponse.public_keys:type_name -> udb.core.vault.services.v1.TransitPublicKey
-	42, // 14: udb.core.vault.services.v1.GetTransitPublicKeyResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 15: udb.core.vault.services.v1.BatchEncryptResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 16: udb.core.vault.services.v1.BatchDecryptResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 17: udb.core.vault.services.v1.SignResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 18: udb.core.vault.services.v1.VerifyResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 19: udb.core.vault.services.v1.HmacResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 20: udb.core.vault.services.v1.SealStatusResponse.error:type_name -> udb.core.common.v1.ApiError
-	42, // 21: udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 22: udb.core.vault.services.v1.VaultService.PutSecret:input_type -> udb.core.vault.services.v1.PutSecretRequest
-	2,  // 23: udb.core.vault.services.v1.VaultService.GetSecret:input_type -> udb.core.vault.services.v1.GetSecretRequest
-	4,  // 24: udb.core.vault.services.v1.VaultService.ListSecrets:input_type -> udb.core.vault.services.v1.ListSecretsRequest
-	7,  // 25: udb.core.vault.services.v1.VaultService.DeleteSecret:input_type -> udb.core.vault.services.v1.DeleteSecretRequest
-	9,  // 26: udb.core.vault.services.v1.VaultService.UndeleteSecret:input_type -> udb.core.vault.services.v1.UndeleteSecretRequest
-	11, // 27: udb.core.vault.services.v1.VaultService.DestroySecret:input_type -> udb.core.vault.services.v1.DestroySecretRequest
-	13, // 28: udb.core.vault.services.v1.VaultService.CreateTransitKey:input_type -> udb.core.vault.services.v1.CreateTransitKeyRequest
-	15, // 29: udb.core.vault.services.v1.VaultService.RotateTransitKey:input_type -> udb.core.vault.services.v1.RotateTransitKeyRequest
-	17, // 30: udb.core.vault.services.v1.VaultService.Encrypt:input_type -> udb.core.vault.services.v1.EncryptRequest
-	19, // 31: udb.core.vault.services.v1.VaultService.Decrypt:input_type -> udb.core.vault.services.v1.DecryptRequest
-	32, // 32: udb.core.vault.services.v1.VaultService.Sign:input_type -> udb.core.vault.services.v1.SignRequest
-	34, // 33: udb.core.vault.services.v1.VaultService.Verify:input_type -> udb.core.vault.services.v1.VerifyRequest
-	36, // 34: udb.core.vault.services.v1.VaultService.Hmac:input_type -> udb.core.vault.services.v1.HmacRequest
-	38, // 35: udb.core.vault.services.v1.VaultService.SealStatus:input_type -> udb.core.vault.services.v1.SealStatusRequest
-	40, // 36: udb.core.vault.services.v1.VaultService.GenerateDatabaseCredentials:input_type -> udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest
-	21, // 37: udb.core.vault.services.v1.VaultService.GenerateDataKey:input_type -> udb.core.vault.services.v1.GenerateDataKeyRequest
-	23, // 38: udb.core.vault.services.v1.VaultService.Rewrap:input_type -> udb.core.vault.services.v1.RewrapRequest
-	25, // 39: udb.core.vault.services.v1.VaultService.GetTransitPublicKey:input_type -> udb.core.vault.services.v1.GetTransitPublicKeyRequest
-	28, // 40: udb.core.vault.services.v1.VaultService.BatchEncrypt:input_type -> udb.core.vault.services.v1.BatchEncryptRequest
-	30, // 41: udb.core.vault.services.v1.VaultService.BatchDecrypt:input_type -> udb.core.vault.services.v1.BatchDecryptRequest
-	1,  // 42: udb.core.vault.services.v1.VaultService.PutSecret:output_type -> udb.core.vault.services.v1.PutSecretResponse
-	3,  // 43: udb.core.vault.services.v1.VaultService.GetSecret:output_type -> udb.core.vault.services.v1.GetSecretResponse
-	6,  // 44: udb.core.vault.services.v1.VaultService.ListSecrets:output_type -> udb.core.vault.services.v1.ListSecretsResponse
-	8,  // 45: udb.core.vault.services.v1.VaultService.DeleteSecret:output_type -> udb.core.vault.services.v1.DeleteSecretResponse
-	10, // 46: udb.core.vault.services.v1.VaultService.UndeleteSecret:output_type -> udb.core.vault.services.v1.UndeleteSecretResponse
-	12, // 47: udb.core.vault.services.v1.VaultService.DestroySecret:output_type -> udb.core.vault.services.v1.DestroySecretResponse
-	14, // 48: udb.core.vault.services.v1.VaultService.CreateTransitKey:output_type -> udb.core.vault.services.v1.CreateTransitKeyResponse
-	16, // 49: udb.core.vault.services.v1.VaultService.RotateTransitKey:output_type -> udb.core.vault.services.v1.RotateTransitKeyResponse
-	18, // 50: udb.core.vault.services.v1.VaultService.Encrypt:output_type -> udb.core.vault.services.v1.EncryptResponse
-	20, // 51: udb.core.vault.services.v1.VaultService.Decrypt:output_type -> udb.core.vault.services.v1.DecryptResponse
-	33, // 52: udb.core.vault.services.v1.VaultService.Sign:output_type -> udb.core.vault.services.v1.SignResponse
-	35, // 53: udb.core.vault.services.v1.VaultService.Verify:output_type -> udb.core.vault.services.v1.VerifyResponse
-	37, // 54: udb.core.vault.services.v1.VaultService.Hmac:output_type -> udb.core.vault.services.v1.HmacResponse
-	39, // 55: udb.core.vault.services.v1.VaultService.SealStatus:output_type -> udb.core.vault.services.v1.SealStatusResponse
-	41, // 56: udb.core.vault.services.v1.VaultService.GenerateDatabaseCredentials:output_type -> udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse
-	22, // 57: udb.core.vault.services.v1.VaultService.GenerateDataKey:output_type -> udb.core.vault.services.v1.GenerateDataKeyResponse
-	24, // 58: udb.core.vault.services.v1.VaultService.Rewrap:output_type -> udb.core.vault.services.v1.RewrapResponse
-	27, // 59: udb.core.vault.services.v1.VaultService.GetTransitPublicKey:output_type -> udb.core.vault.services.v1.GetTransitPublicKeyResponse
-	29, // 60: udb.core.vault.services.v1.VaultService.BatchEncrypt:output_type -> udb.core.vault.services.v1.BatchEncryptResponse
-	31, // 61: udb.core.vault.services.v1.VaultService.BatchDecrypt:output_type -> udb.core.vault.services.v1.BatchDecryptResponse
-	42, // [42:62] is the sub-list for method output_type
-	22, // [22:42] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	46, // 14: udb.core.vault.services.v1.GetTransitPublicKeyResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 15: udb.core.vault.services.v1.BatchEncryptResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 16: udb.core.vault.services.v1.BatchDecryptResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 17: udb.core.vault.services.v1.SignResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 18: udb.core.vault.services.v1.VerifyResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 19: udb.core.vault.services.v1.HmacResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 20: udb.core.vault.services.v1.SealStatusResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 21: udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 22: udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.error:type_name -> udb.core.common.v1.ApiError
+	46, // 23: udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 24: udb.core.vault.services.v1.VaultService.PutSecret:input_type -> udb.core.vault.services.v1.PutSecretRequest
+	2,  // 25: udb.core.vault.services.v1.VaultService.GetSecret:input_type -> udb.core.vault.services.v1.GetSecretRequest
+	4,  // 26: udb.core.vault.services.v1.VaultService.ListSecrets:input_type -> udb.core.vault.services.v1.ListSecretsRequest
+	7,  // 27: udb.core.vault.services.v1.VaultService.DeleteSecret:input_type -> udb.core.vault.services.v1.DeleteSecretRequest
+	9,  // 28: udb.core.vault.services.v1.VaultService.UndeleteSecret:input_type -> udb.core.vault.services.v1.UndeleteSecretRequest
+	11, // 29: udb.core.vault.services.v1.VaultService.DestroySecret:input_type -> udb.core.vault.services.v1.DestroySecretRequest
+	13, // 30: udb.core.vault.services.v1.VaultService.CreateTransitKey:input_type -> udb.core.vault.services.v1.CreateTransitKeyRequest
+	15, // 31: udb.core.vault.services.v1.VaultService.RotateTransitKey:input_type -> udb.core.vault.services.v1.RotateTransitKeyRequest
+	17, // 32: udb.core.vault.services.v1.VaultService.Encrypt:input_type -> udb.core.vault.services.v1.EncryptRequest
+	19, // 33: udb.core.vault.services.v1.VaultService.Decrypt:input_type -> udb.core.vault.services.v1.DecryptRequest
+	32, // 34: udb.core.vault.services.v1.VaultService.Sign:input_type -> udb.core.vault.services.v1.SignRequest
+	34, // 35: udb.core.vault.services.v1.VaultService.Verify:input_type -> udb.core.vault.services.v1.VerifyRequest
+	36, // 36: udb.core.vault.services.v1.VaultService.Hmac:input_type -> udb.core.vault.services.v1.HmacRequest
+	38, // 37: udb.core.vault.services.v1.VaultService.SealStatus:input_type -> udb.core.vault.services.v1.SealStatusRequest
+	40, // 38: udb.core.vault.services.v1.VaultService.GenerateDatabaseCredentials:input_type -> udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest
+	42, // 39: udb.core.vault.services.v1.VaultService.RevokeDatabaseCredentials:input_type -> udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest
+	44, // 40: udb.core.vault.services.v1.VaultService.EmergencyRevokeDatabaseCredentials:input_type -> udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest
+	21, // 41: udb.core.vault.services.v1.VaultService.GenerateDataKey:input_type -> udb.core.vault.services.v1.GenerateDataKeyRequest
+	23, // 42: udb.core.vault.services.v1.VaultService.Rewrap:input_type -> udb.core.vault.services.v1.RewrapRequest
+	25, // 43: udb.core.vault.services.v1.VaultService.GetTransitPublicKey:input_type -> udb.core.vault.services.v1.GetTransitPublicKeyRequest
+	28, // 44: udb.core.vault.services.v1.VaultService.BatchEncrypt:input_type -> udb.core.vault.services.v1.BatchEncryptRequest
+	30, // 45: udb.core.vault.services.v1.VaultService.BatchDecrypt:input_type -> udb.core.vault.services.v1.BatchDecryptRequest
+	1,  // 46: udb.core.vault.services.v1.VaultService.PutSecret:output_type -> udb.core.vault.services.v1.PutSecretResponse
+	3,  // 47: udb.core.vault.services.v1.VaultService.GetSecret:output_type -> udb.core.vault.services.v1.GetSecretResponse
+	6,  // 48: udb.core.vault.services.v1.VaultService.ListSecrets:output_type -> udb.core.vault.services.v1.ListSecretsResponse
+	8,  // 49: udb.core.vault.services.v1.VaultService.DeleteSecret:output_type -> udb.core.vault.services.v1.DeleteSecretResponse
+	10, // 50: udb.core.vault.services.v1.VaultService.UndeleteSecret:output_type -> udb.core.vault.services.v1.UndeleteSecretResponse
+	12, // 51: udb.core.vault.services.v1.VaultService.DestroySecret:output_type -> udb.core.vault.services.v1.DestroySecretResponse
+	14, // 52: udb.core.vault.services.v1.VaultService.CreateTransitKey:output_type -> udb.core.vault.services.v1.CreateTransitKeyResponse
+	16, // 53: udb.core.vault.services.v1.VaultService.RotateTransitKey:output_type -> udb.core.vault.services.v1.RotateTransitKeyResponse
+	18, // 54: udb.core.vault.services.v1.VaultService.Encrypt:output_type -> udb.core.vault.services.v1.EncryptResponse
+	20, // 55: udb.core.vault.services.v1.VaultService.Decrypt:output_type -> udb.core.vault.services.v1.DecryptResponse
+	33, // 56: udb.core.vault.services.v1.VaultService.Sign:output_type -> udb.core.vault.services.v1.SignResponse
+	35, // 57: udb.core.vault.services.v1.VaultService.Verify:output_type -> udb.core.vault.services.v1.VerifyResponse
+	37, // 58: udb.core.vault.services.v1.VaultService.Hmac:output_type -> udb.core.vault.services.v1.HmacResponse
+	39, // 59: udb.core.vault.services.v1.VaultService.SealStatus:output_type -> udb.core.vault.services.v1.SealStatusResponse
+	41, // 60: udb.core.vault.services.v1.VaultService.GenerateDatabaseCredentials:output_type -> udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse
+	43, // 61: udb.core.vault.services.v1.VaultService.RevokeDatabaseCredentials:output_type -> udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse
+	45, // 62: udb.core.vault.services.v1.VaultService.EmergencyRevokeDatabaseCredentials:output_type -> udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse
+	22, // 63: udb.core.vault.services.v1.VaultService.GenerateDataKey:output_type -> udb.core.vault.services.v1.GenerateDataKeyResponse
+	24, // 64: udb.core.vault.services.v1.VaultService.Rewrap:output_type -> udb.core.vault.services.v1.RewrapResponse
+	27, // 65: udb.core.vault.services.v1.VaultService.GetTransitPublicKey:output_type -> udb.core.vault.services.v1.GetTransitPublicKeyResponse
+	29, // 66: udb.core.vault.services.v1.VaultService.BatchEncrypt:output_type -> udb.core.vault.services.v1.BatchEncryptResponse
+	31, // 67: udb.core.vault.services.v1.VaultService.BatchDecrypt:output_type -> udb.core.vault.services.v1.BatchDecryptResponse
+	46, // [46:68] is the sub-list for method output_type
+	24, // [24:46] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_vault_services_v1_vault_service_proto_init() }
@@ -3143,7 +3531,7 @@ func file_udb_core_vault_services_v1_vault_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_vault_services_v1_vault_service_proto_rawDesc), len(file_udb_core_vault_services_v1_vault_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   42,
+			NumMessages:   46,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

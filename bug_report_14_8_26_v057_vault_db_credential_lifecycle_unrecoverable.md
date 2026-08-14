@@ -97,9 +97,10 @@ responses. Those items and the listed live failure-injection tests remain open.
   and strict-outbox atomic rollback.
 
 No local Cargo, build, or test command was run for this full wave, per operator
-instruction. GitHub CI must compile and execute the live filter before the fix is
-called verified. Additive proto changes also require CI-generated native
-contract, OpenAPI, and SDK artifact refresh before merge.
+instruction. The repository-pinned Buf, SDK, OpenAPI, and codebase-map generators
+refreshed their committed artifacts. GitHub CI must still compile, render and
+verify the native contract/docs, and execute the live filter before the fix is
+called verified.
 
 ## Verification log
 

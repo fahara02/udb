@@ -19,26 +19,28 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	VaultService_PutSecret_FullMethodName                   = "/udb.core.vault.services.v1.VaultService/PutSecret"
-	VaultService_GetSecret_FullMethodName                   = "/udb.core.vault.services.v1.VaultService/GetSecret"
-	VaultService_ListSecrets_FullMethodName                 = "/udb.core.vault.services.v1.VaultService/ListSecrets"
-	VaultService_DeleteSecret_FullMethodName                = "/udb.core.vault.services.v1.VaultService/DeleteSecret"
-	VaultService_UndeleteSecret_FullMethodName              = "/udb.core.vault.services.v1.VaultService/UndeleteSecret"
-	VaultService_DestroySecret_FullMethodName               = "/udb.core.vault.services.v1.VaultService/DestroySecret"
-	VaultService_CreateTransitKey_FullMethodName            = "/udb.core.vault.services.v1.VaultService/CreateTransitKey"
-	VaultService_RotateTransitKey_FullMethodName            = "/udb.core.vault.services.v1.VaultService/RotateTransitKey"
-	VaultService_Encrypt_FullMethodName                     = "/udb.core.vault.services.v1.VaultService/Encrypt"
-	VaultService_Decrypt_FullMethodName                     = "/udb.core.vault.services.v1.VaultService/Decrypt"
-	VaultService_Sign_FullMethodName                        = "/udb.core.vault.services.v1.VaultService/Sign"
-	VaultService_Verify_FullMethodName                      = "/udb.core.vault.services.v1.VaultService/Verify"
-	VaultService_Hmac_FullMethodName                        = "/udb.core.vault.services.v1.VaultService/Hmac"
-	VaultService_SealStatus_FullMethodName                  = "/udb.core.vault.services.v1.VaultService/SealStatus"
-	VaultService_GenerateDatabaseCredentials_FullMethodName = "/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials"
-	VaultService_GenerateDataKey_FullMethodName             = "/udb.core.vault.services.v1.VaultService/GenerateDataKey"
-	VaultService_Rewrap_FullMethodName                      = "/udb.core.vault.services.v1.VaultService/Rewrap"
-	VaultService_GetTransitPublicKey_FullMethodName         = "/udb.core.vault.services.v1.VaultService/GetTransitPublicKey"
-	VaultService_BatchEncrypt_FullMethodName                = "/udb.core.vault.services.v1.VaultService/BatchEncrypt"
-	VaultService_BatchDecrypt_FullMethodName                = "/udb.core.vault.services.v1.VaultService/BatchDecrypt"
+	VaultService_PutSecret_FullMethodName                          = "/udb.core.vault.services.v1.VaultService/PutSecret"
+	VaultService_GetSecret_FullMethodName                          = "/udb.core.vault.services.v1.VaultService/GetSecret"
+	VaultService_ListSecrets_FullMethodName                        = "/udb.core.vault.services.v1.VaultService/ListSecrets"
+	VaultService_DeleteSecret_FullMethodName                       = "/udb.core.vault.services.v1.VaultService/DeleteSecret"
+	VaultService_UndeleteSecret_FullMethodName                     = "/udb.core.vault.services.v1.VaultService/UndeleteSecret"
+	VaultService_DestroySecret_FullMethodName                      = "/udb.core.vault.services.v1.VaultService/DestroySecret"
+	VaultService_CreateTransitKey_FullMethodName                   = "/udb.core.vault.services.v1.VaultService/CreateTransitKey"
+	VaultService_RotateTransitKey_FullMethodName                   = "/udb.core.vault.services.v1.VaultService/RotateTransitKey"
+	VaultService_Encrypt_FullMethodName                            = "/udb.core.vault.services.v1.VaultService/Encrypt"
+	VaultService_Decrypt_FullMethodName                            = "/udb.core.vault.services.v1.VaultService/Decrypt"
+	VaultService_Sign_FullMethodName                               = "/udb.core.vault.services.v1.VaultService/Sign"
+	VaultService_Verify_FullMethodName                             = "/udb.core.vault.services.v1.VaultService/Verify"
+	VaultService_Hmac_FullMethodName                               = "/udb.core.vault.services.v1.VaultService/Hmac"
+	VaultService_SealStatus_FullMethodName                         = "/udb.core.vault.services.v1.VaultService/SealStatus"
+	VaultService_GenerateDatabaseCredentials_FullMethodName        = "/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials"
+	VaultService_RevokeDatabaseCredentials_FullMethodName          = "/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials"
+	VaultService_EmergencyRevokeDatabaseCredentials_FullMethodName = "/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials"
+	VaultService_GenerateDataKey_FullMethodName                    = "/udb.core.vault.services.v1.VaultService/GenerateDataKey"
+	VaultService_Rewrap_FullMethodName                             = "/udb.core.vault.services.v1.VaultService/Rewrap"
+	VaultService_GetTransitPublicKey_FullMethodName                = "/udb.core.vault.services.v1.VaultService/GetTransitPublicKey"
+	VaultService_BatchEncrypt_FullMethodName                       = "/udb.core.vault.services.v1.VaultService/BatchEncrypt"
+	VaultService_BatchDecrypt_FullMethodName                       = "/udb.core.vault.services.v1.VaultService/BatchDecrypt"
 )
 
 // VaultServiceClient is the client API for VaultService service.
@@ -111,6 +113,14 @@ type VaultServiceClient interface {
 	// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
 	// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
 	GenerateDatabaseCredentials(ctx context.Context, in *GenerateDatabaseCredentialsRequest, opts ...grpc.CallOption) (*GenerateDatabaseCredentialsResponse, error)
+	// Revoke one lease in the authenticated tenant/project. The durable state is
+	// moved to REVOKING before physical session fencing and becomes REVOKED only
+	// after the generated role is proven absent. Replays are naturally idempotent.
+	RevokeDatabaseCredentials(ctx context.Context, in *RevokeDatabaseCredentialsRequest, opts ...grpc.CallOption) (*RevokeDatabaseCredentialsResponse, error)
+	// Emergency kill-switch for every non-terminal lease in exactly one verified
+	// tenant/project. A confirmation token bound to both scope dimensions prevents
+	// an accidental tenant-wide or cross-project credential wipe.
+	EmergencyRevokeDatabaseCredentials(ctx context.Context, in *EmergencyRevokeDatabaseCredentialsRequest, opts ...grpc.CallOption) (*EmergencyRevokeDatabaseCredentialsResponse, error)
 	// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
 	// encrypt data locally) AND wrapped under the named transit key (store this and
 	// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
@@ -294,6 +304,26 @@ func (c *vaultServiceClient) GenerateDatabaseCredentials(ctx context.Context, in
 	return out, nil
 }
 
+func (c *vaultServiceClient) RevokeDatabaseCredentials(ctx context.Context, in *RevokeDatabaseCredentialsRequest, opts ...grpc.CallOption) (*RevokeDatabaseCredentialsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeDatabaseCredentialsResponse)
+	err := c.cc.Invoke(ctx, VaultService_RevokeDatabaseCredentials_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vaultServiceClient) EmergencyRevokeDatabaseCredentials(ctx context.Context, in *EmergencyRevokeDatabaseCredentialsRequest, opts ...grpc.CallOption) (*EmergencyRevokeDatabaseCredentialsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EmergencyRevokeDatabaseCredentialsResponse)
+	err := c.cc.Invoke(ctx, VaultService_EmergencyRevokeDatabaseCredentials_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *vaultServiceClient) GenerateDataKey(ctx context.Context, in *GenerateDataKeyRequest, opts ...grpc.CallOption) (*GenerateDataKeyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GenerateDataKeyResponse)
@@ -414,6 +444,14 @@ type VaultServiceServer interface {
 	// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
 	// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
 	GenerateDatabaseCredentials(context.Context, *GenerateDatabaseCredentialsRequest) (*GenerateDatabaseCredentialsResponse, error)
+	// Revoke one lease in the authenticated tenant/project. The durable state is
+	// moved to REVOKING before physical session fencing and becomes REVOKED only
+	// after the generated role is proven absent. Replays are naturally idempotent.
+	RevokeDatabaseCredentials(context.Context, *RevokeDatabaseCredentialsRequest) (*RevokeDatabaseCredentialsResponse, error)
+	// Emergency kill-switch for every non-terminal lease in exactly one verified
+	// tenant/project. A confirmation token bound to both scope dimensions prevents
+	// an accidental tenant-wide or cross-project credential wipe.
+	EmergencyRevokeDatabaseCredentials(context.Context, *EmergencyRevokeDatabaseCredentialsRequest) (*EmergencyRevokeDatabaseCredentialsResponse, error)
 	// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
 	// encrypt data locally) AND wrapped under the named transit key (store this and
 	// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
@@ -490,6 +528,12 @@ func (UnimplementedVaultServiceServer) SealStatus(context.Context, *SealStatusRe
 }
 func (UnimplementedVaultServiceServer) GenerateDatabaseCredentials(context.Context, *GenerateDatabaseCredentialsRequest) (*GenerateDatabaseCredentialsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GenerateDatabaseCredentials not implemented")
+}
+func (UnimplementedVaultServiceServer) RevokeDatabaseCredentials(context.Context, *RevokeDatabaseCredentialsRequest) (*RevokeDatabaseCredentialsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeDatabaseCredentials not implemented")
+}
+func (UnimplementedVaultServiceServer) EmergencyRevokeDatabaseCredentials(context.Context, *EmergencyRevokeDatabaseCredentialsRequest) (*EmergencyRevokeDatabaseCredentialsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EmergencyRevokeDatabaseCredentials not implemented")
 }
 func (UnimplementedVaultServiceServer) GenerateDataKey(context.Context, *GenerateDataKeyRequest) (*GenerateDataKeyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GenerateDataKey not implemented")
@@ -796,6 +840,42 @@ func _VaultService_GenerateDatabaseCredentials_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VaultService_RevokeDatabaseCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeDatabaseCredentialsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VaultServiceServer).RevokeDatabaseCredentials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VaultService_RevokeDatabaseCredentials_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VaultServiceServer).RevokeDatabaseCredentials(ctx, req.(*RevokeDatabaseCredentialsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VaultService_EmergencyRevokeDatabaseCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EmergencyRevokeDatabaseCredentialsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VaultServiceServer).EmergencyRevokeDatabaseCredentials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VaultService_EmergencyRevokeDatabaseCredentials_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VaultServiceServer).EmergencyRevokeDatabaseCredentials(ctx, req.(*EmergencyRevokeDatabaseCredentialsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _VaultService_GenerateDataKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GenerateDataKeyRequest)
 	if err := dec(in); err != nil {
@@ -952,6 +1032,14 @@ var VaultService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateDatabaseCredentials",
 			Handler:    _VaultService_GenerateDatabaseCredentials_Handler,
+		},
+		{
+			MethodName: "RevokeDatabaseCredentials",
+			Handler:    _VaultService_RevokeDatabaseCredentials_Handler,
+		},
+		{
+			MethodName: "EmergencyRevokeDatabaseCredentials",
+			Handler:    _VaultService_EmergencyRevokeDatabaseCredentials_Handler,
 		},
 		{
 			MethodName: "GenerateDataKey",

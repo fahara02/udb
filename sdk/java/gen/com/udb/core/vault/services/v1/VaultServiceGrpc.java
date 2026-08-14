@@ -490,6 +490,68 @@ public final class VaultServiceGrpc {
     return getGenerateDatabaseCredentialsMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest,
+      com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse> getRevokeDatabaseCredentialsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RevokeDatabaseCredentials",
+      requestType = com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest.class,
+      responseType = com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest,
+      com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse> getRevokeDatabaseCredentialsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest, com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse> getRevokeDatabaseCredentialsMethod;
+    if ((getRevokeDatabaseCredentialsMethod = VaultServiceGrpc.getRevokeDatabaseCredentialsMethod) == null) {
+      synchronized (VaultServiceGrpc.class) {
+        if ((getRevokeDatabaseCredentialsMethod = VaultServiceGrpc.getRevokeDatabaseCredentialsMethod) == null) {
+          VaultServiceGrpc.getRevokeDatabaseCredentialsMethod = getRevokeDatabaseCredentialsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest, com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RevokeDatabaseCredentials"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new VaultServiceMethodDescriptorSupplier("RevokeDatabaseCredentials"))
+              .build();
+        }
+      }
+    }
+    return getRevokeDatabaseCredentialsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest,
+      com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse> getEmergencyRevokeDatabaseCredentialsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "EmergencyRevokeDatabaseCredentials",
+      requestType = com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest.class,
+      responseType = com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest,
+      com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse> getEmergencyRevokeDatabaseCredentialsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest, com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse> getEmergencyRevokeDatabaseCredentialsMethod;
+    if ((getEmergencyRevokeDatabaseCredentialsMethod = VaultServiceGrpc.getEmergencyRevokeDatabaseCredentialsMethod) == null) {
+      synchronized (VaultServiceGrpc.class) {
+        if ((getEmergencyRevokeDatabaseCredentialsMethod = VaultServiceGrpc.getEmergencyRevokeDatabaseCredentialsMethod) == null) {
+          VaultServiceGrpc.getEmergencyRevokeDatabaseCredentialsMethod = getEmergencyRevokeDatabaseCredentialsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest, com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "EmergencyRevokeDatabaseCredentials"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new VaultServiceMethodDescriptorSupplier("EmergencyRevokeDatabaseCredentials"))
+              .build();
+        }
+      }
+    }
+    return getEmergencyRevokeDatabaseCredentialsMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.GenerateDataKeyRequest,
       com.udb.core.vault.services.v1.GenerateDataKeyResponse> getGenerateDataKeyMethod;
 
@@ -896,6 +958,30 @@ public final class VaultServiceGrpc {
 
     /**
      * <pre>
+     * Revoke one lease in the authenticated tenant/project. The durable state is
+     * moved to REVOKING before physical session fencing and becomes REVOKED only
+     * after the generated role is proven absent. Replays are naturally idempotent.
+     * </pre>
+     */
+    default void revokeDatabaseCredentials(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRevokeDatabaseCredentialsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Emergency kill-switch for every non-terminal lease in exactly one verified
+     * tenant/project. A confirmation token bound to both scope dimensions prevents
+     * an accidental tenant-wide or cross-project credential wipe.
+     * </pre>
+     */
+    default void emergencyRevokeDatabaseCredentials(com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getEmergencyRevokeDatabaseCredentialsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
      * encrypt data locally) AND wrapped under the named transit key (store this and
      * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
@@ -1201,6 +1287,32 @@ public final class VaultServiceGrpc {
 
     /**
      * <pre>
+     * Revoke one lease in the authenticated tenant/project. The durable state is
+     * moved to REVOKING before physical session fencing and becomes REVOKED only
+     * after the generated role is proven absent. Replays are naturally idempotent.
+     * </pre>
+     */
+    public void revokeDatabaseCredentials(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRevokeDatabaseCredentialsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Emergency kill-switch for every non-terminal lease in exactly one verified
+     * tenant/project. A confirmation token bound to both scope dimensions prevents
+     * an accidental tenant-wide or cross-project credential wipe.
+     * </pre>
+     */
+    public void emergencyRevokeDatabaseCredentials(com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getEmergencyRevokeDatabaseCredentialsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
      * encrypt data locally) AND wrapped under the named transit key (store this and
      * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
@@ -1472,6 +1584,30 @@ public final class VaultServiceGrpc {
 
     /**
      * <pre>
+     * Revoke one lease in the authenticated tenant/project. The durable state is
+     * moved to REVOKING before physical session fencing and becomes REVOKED only
+     * after the generated role is proven absent. Replays are naturally idempotent.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse revokeDatabaseCredentials(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRevokeDatabaseCredentialsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Emergency kill-switch for every non-terminal lease in exactly one verified
+     * tenant/project. A confirmation token bound to both scope dimensions prevents
+     * an accidental tenant-wide or cross-project credential wipe.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse emergencyRevokeDatabaseCredentials(com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getEmergencyRevokeDatabaseCredentialsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
      * encrypt data locally) AND wrapped under the named transit key (store this and
      * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
@@ -1734,6 +1870,30 @@ public final class VaultServiceGrpc {
     public com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse generateDatabaseCredentials(com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGenerateDatabaseCredentialsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke one lease in the authenticated tenant/project. The durable state is
+     * moved to REVOKING before physical session fencing and becomes REVOKED only
+     * after the generated role is proven absent. Replays are naturally idempotent.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse revokeDatabaseCredentials(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRevokeDatabaseCredentialsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Emergency kill-switch for every non-terminal lease in exactly one verified
+     * tenant/project. A confirmation token bound to both scope dimensions prevents
+     * an accidental tenant-wide or cross-project credential wipe.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse emergencyRevokeDatabaseCredentials(com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getEmergencyRevokeDatabaseCredentialsMethod(), getCallOptions(), request);
     }
 
     /**
@@ -2019,6 +2179,32 @@ public final class VaultServiceGrpc {
 
     /**
      * <pre>
+     * Revoke one lease in the authenticated tenant/project. The durable state is
+     * moved to REVOKING before physical session fencing and becomes REVOKED only
+     * after the generated role is proven absent. Replays are naturally idempotent.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse> revokeDatabaseCredentials(
+        com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRevokeDatabaseCredentialsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Emergency kill-switch for every non-terminal lease in exactly one verified
+     * tenant/project. A confirmation token bound to both scope dimensions prevents
+     * an accidental tenant-wide or cross-project credential wipe.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse> emergencyRevokeDatabaseCredentials(
+        com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getEmergencyRevokeDatabaseCredentialsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
      * encrypt data locally) AND wrapped under the named transit key (store this and
      * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
@@ -2101,11 +2287,13 @@ public final class VaultServiceGrpc {
   private static final int METHODID_HMAC = 12;
   private static final int METHODID_SEAL_STATUS = 13;
   private static final int METHODID_GENERATE_DATABASE_CREDENTIALS = 14;
-  private static final int METHODID_GENERATE_DATA_KEY = 15;
-  private static final int METHODID_REWRAP = 16;
-  private static final int METHODID_GET_TRANSIT_PUBLIC_KEY = 17;
-  private static final int METHODID_BATCH_ENCRYPT = 18;
-  private static final int METHODID_BATCH_DECRYPT = 19;
+  private static final int METHODID_REVOKE_DATABASE_CREDENTIALS = 15;
+  private static final int METHODID_EMERGENCY_REVOKE_DATABASE_CREDENTIALS = 16;
+  private static final int METHODID_GENERATE_DATA_KEY = 17;
+  private static final int METHODID_REWRAP = 18;
+  private static final int METHODID_GET_TRANSIT_PUBLIC_KEY = 19;
+  private static final int METHODID_BATCH_ENCRYPT = 20;
+  private static final int METHODID_BATCH_DECRYPT = 21;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -2183,6 +2371,14 @@ public final class VaultServiceGrpc {
         case METHODID_GENERATE_DATABASE_CREDENTIALS:
           serviceImpl.generateDatabaseCredentials((com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse>) responseObserver);
+          break;
+        case METHODID_REVOKE_DATABASE_CREDENTIALS:
+          serviceImpl.revokeDatabaseCredentials((com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse>) responseObserver);
+          break;
+        case METHODID_EMERGENCY_REVOKE_DATABASE_CREDENTIALS:
+          serviceImpl.emergencyRevokeDatabaseCredentials((com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse>) responseObserver);
           break;
         case METHODID_GENERATE_DATA_KEY:
           serviceImpl.generateDataKey((com.udb.core.vault.services.v1.GenerateDataKeyRequest) request,
@@ -2328,6 +2524,20 @@ public final class VaultServiceGrpc {
               com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse>(
                 service, METHODID_GENERATE_DATABASE_CREDENTIALS)))
         .addMethod(
+          getRevokeDatabaseCredentialsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest,
+              com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse>(
+                service, METHODID_REVOKE_DATABASE_CREDENTIALS)))
+        .addMethod(
+          getEmergencyRevokeDatabaseCredentialsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest,
+              com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse>(
+                service, METHODID_EMERGENCY_REVOKE_DATABASE_CREDENTIALS)))
+        .addMethod(
           getGenerateDataKeyMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -2425,6 +2635,8 @@ public final class VaultServiceGrpc {
               .addMethod(getHmacMethod())
               .addMethod(getSealStatusMethod())
               .addMethod(getGenerateDatabaseCredentialsMethod())
+              .addMethod(getRevokeDatabaseCredentialsMethod())
+              .addMethod(getEmergencyRevokeDatabaseCredentialsMethod())
               .addMethod(getGenerateDataKeyMethod())
               .addMethod(getRewrapMethod())
               .addMethod(getGetTransitPublicKeyMethod())

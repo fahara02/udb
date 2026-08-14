@@ -10,12 +10,12 @@ package com.udb.core.vault.entity.v1;
  * ---------------------------------------------------------------------------
  * VaultDbCredentialLease — one short-lived database login minted by Vault.
  *
- * The password is returned only in GenerateDatabaseCredentialsResponse and is
- * never stored. The durable row tracks the generated username, tenant, configured
- * role alias, parent Postgres role, and expiry so WORKER_VAULT_LEASE_REAPER can
- * revoke/drop the login after its lease expires. RLS scopes rows to the current
- * tenant; operators should grant the parent role only the privileges that alias
- * is allowed to delegate.
+ * The password is returned only in GenerateDatabaseCredentialsResponse. A
+ * master-KEK-wrapped recovery envelope is stored so an authenticated replay of
+ * the same idempotent request can recover the original one-time response without
+ * creating a second login. The durable STARTING/ACTIVE/REVOKING/REVOKED/FAILED
+ * state machine lets WORKER_VAULT_LEASE_REAPER reconcile every split boundary.
+ * RLS scopes rows to the current tenant and project.
  * ---------------------------------------------------------------------------
  * </pre>
  *
@@ -49,6 +49,14 @@ private static final long serialVersionUID = 0L;
     backend_ = "";
     state_ = "";
     metadataJson_ = "";
+    projectId_ = "";
+    idempotencyKey_ = "";
+    requestHash_ = "";
+    credentialCiphertext_ = "";
+    targetInstance_ = "";
+    lastError_ = "";
+    revokeReason_ = "";
+    revocationOperationId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -406,7 +414,9 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object state_ = "";
   /**
    * <pre>
-   * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+   * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+   * plus FAILED rows with a pending revocation, is owned by the reconciliation
+   * worker. REVOKED is set only after session termination and role-absence proof.
    * </pre>
    *
    * <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -427,7 +437,9 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+   * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+   * plus FAILED rows with a pending revocation, is owned by the reconciliation
+   * worker. REVOKED is set only after session termination and role-absence proof.
    * </pre>
    *
    * <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -487,6 +499,386 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int PROJECT_ID_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object projectId_ = "";
+  /**
+   * <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The projectId.
+   */
+  @java.lang.Override
+  public java.lang.String getProjectId() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      projectId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for projectId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getProjectIdBytes() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      projectId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int IDEMPOTENCY_KEY_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object idempotencyKey_ = "";
+  /**
+   * <pre>
+   * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+   * response-loss replay can never mint a second physical login.
+   * </pre>
+   *
+   * <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The idempotencyKey.
+   */
+  @java.lang.Override
+  public java.lang.String getIdempotencyKey() {
+    java.lang.Object ref = idempotencyKey_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      idempotencyKey_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+   * response-loss replay can never mint a second physical login.
+   * </pre>
+   *
+   * <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for idempotencyKey.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getIdempotencyKeyBytes() {
+    java.lang.Object ref = idempotencyKey_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      idempotencyKey_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REQUEST_HASH_FIELD_NUMBER = 14;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object requestHash_ = "";
+  /**
+   * <pre>
+   * Hash of every authority-relevant issuance input; the same idempotency key
+   * with different inputs is a conflict, never a replay.
+   * </pre>
+   *
+   * <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The requestHash.
+   */
+  @java.lang.Override
+  public java.lang.String getRequestHash() {
+    java.lang.Object ref = requestHash_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      requestHash_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Hash of every authority-relevant issuance input; the same idempotency key
+   * with different inputs is a conflict, never a replay.
+   * </pre>
+   *
+   * <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for requestHash.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRequestHashBytes() {
+    java.lang.Object ref = requestHash_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      requestHash_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int CREDENTIAL_CIPHERTEXT_FIELD_NUMBER = 15;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object credentialCiphertext_ = "";
+  /**
+   * <pre>
+   * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+   * only be selected by the trusted recovery path and never appears in normal
+   * entity/SDK output, logs, CDC payloads, or audit events.
+   * </pre>
+   *
+   * <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The credentialCiphertext.
+   */
+  @java.lang.Override
+  public java.lang.String getCredentialCiphertext() {
+    java.lang.Object ref = credentialCiphertext_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      credentialCiphertext_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+   * only be selected by the trusted recovery path and never appears in normal
+   * entity/SDK output, logs, CDC payloads, or audit events.
+   * </pre>
+   *
+   * <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for credentialCiphertext.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCredentialCiphertextBytes() {
+    java.lang.Object ref = credentialCiphertext_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      credentialCiphertext_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int TARGET_INSTANCE_FIELD_NUMBER = 16;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object targetInstance_ = "";
+  /**
+   * <pre>
+   * Immutable physical authority selected at issuance. Reconciliation must use
+   * this exact instance and fails closed if it is no longer routable.
+   * </pre>
+   *
+   * <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The targetInstance.
+   */
+  @java.lang.Override
+  public java.lang.String getTargetInstance() {
+    java.lang.Object ref = targetInstance_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      targetInstance_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Immutable physical authority selected at issuance. Reconciliation must use
+   * this exact instance and fails closed if it is no longer routable.
+   * </pre>
+   *
+   * <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for targetInstance.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTargetInstanceBytes() {
+    java.lang.Object ref = targetInstance_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      targetInstance_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int LAST_ERROR_FIELD_NUMBER = 17;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object lastError_ = "";
+  /**
+   * <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The lastError.
+   */
+  @java.lang.Override
+  public java.lang.String getLastError() {
+    java.lang.Object ref = lastError_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      lastError_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for lastError.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getLastErrorBytes() {
+    java.lang.Object ref = lastError_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      lastError_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REVOKE_REASON_FIELD_NUMBER = 18;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object revokeReason_ = "";
+  /**
+   * <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The revokeReason.
+   */
+  @java.lang.Override
+  public java.lang.String getRevokeReason() {
+    java.lang.Object ref = revokeReason_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      revokeReason_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for revokeReason.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRevokeReasonBytes() {
+    java.lang.Object ref = revokeReason_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      revokeReason_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REVOCATION_OPERATION_ID_FIELD_NUMBER = 19;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object revocationOperationId_ = "";
+  /**
+   * <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The revocationOperationId.
+   */
+  @java.lang.Override
+  public java.lang.String getRevocationOperationId() {
+    java.lang.Object ref = revocationOperationId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      revocationOperationId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for revocationOperationId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRevocationOperationIdBytes() {
+    java.lang.Object ref = revocationOperationId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      revocationOperationId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REVOCATION_REQUESTED_AT_FIELD_NUMBER = 20;
+  private com.google.protobuf.Timestamp revocationRequestedAt_;
+  /**
+   * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return Whether the revocationRequestedAt field is set.
+   */
+  @java.lang.Override
+  public boolean hasRevocationRequestedAt() {
+    return ((bitField0_ & 0x00000008) != 0);
+  }
+  /**
+   * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The revocationRequestedAt.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getRevocationRequestedAt() {
+    return revocationRequestedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : revocationRequestedAt_;
+  }
+  /**
+   * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getRevocationRequestedAtOrBuilder() {
+    return revocationRequestedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : revocationRequestedAt_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -534,6 +926,33 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 11, metadataJson_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, projectId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, idempotencyKey_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(requestHash_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 14, requestHash_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(credentialCiphertext_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 15, credentialCiphertext_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(targetInstance_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 16, targetInstance_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(lastError_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 17, lastError_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revokeReason_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 18, revokeReason_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revocationOperationId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 19, revocationOperationId_);
+    }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      output.writeMessage(20, getRevocationRequestedAt());
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -578,6 +997,34 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(11, metadataJson_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, projectId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, idempotencyKey_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(requestHash_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(14, requestHash_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(credentialCiphertext_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(15, credentialCiphertext_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(targetInstance_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(16, targetInstance_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(lastError_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(17, lastError_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revokeReason_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(18, revokeReason_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revocationOperationId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(19, revocationOperationId_);
+    }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(20, getRevocationRequestedAt());
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -625,6 +1072,27 @@ private static final long serialVersionUID = 0L;
         .equals(other.getState())) return false;
     if (!getMetadataJson()
         .equals(other.getMetadataJson())) return false;
+    if (!getProjectId()
+        .equals(other.getProjectId())) return false;
+    if (!getIdempotencyKey()
+        .equals(other.getIdempotencyKey())) return false;
+    if (!getRequestHash()
+        .equals(other.getRequestHash())) return false;
+    if (!getCredentialCiphertext()
+        .equals(other.getCredentialCiphertext())) return false;
+    if (!getTargetInstance()
+        .equals(other.getTargetInstance())) return false;
+    if (!getLastError()
+        .equals(other.getLastError())) return false;
+    if (!getRevokeReason()
+        .equals(other.getRevokeReason())) return false;
+    if (!getRevocationOperationId()
+        .equals(other.getRevocationOperationId())) return false;
+    if (hasRevocationRequestedAt() != other.hasRevocationRequestedAt()) return false;
+    if (hasRevocationRequestedAt()) {
+      if (!getRevocationRequestedAt()
+          .equals(other.getRevocationRequestedAt())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -664,6 +1132,26 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getState().hashCode();
     hash = (37 * hash) + METADATA_JSON_FIELD_NUMBER;
     hash = (53 * hash) + getMetadataJson().hashCode();
+    hash = (37 * hash) + PROJECT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getProjectId().hashCode();
+    hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
+    hash = (53 * hash) + getIdempotencyKey().hashCode();
+    hash = (37 * hash) + REQUEST_HASH_FIELD_NUMBER;
+    hash = (53 * hash) + getRequestHash().hashCode();
+    hash = (37 * hash) + CREDENTIAL_CIPHERTEXT_FIELD_NUMBER;
+    hash = (53 * hash) + getCredentialCiphertext().hashCode();
+    hash = (37 * hash) + TARGET_INSTANCE_FIELD_NUMBER;
+    hash = (53 * hash) + getTargetInstance().hashCode();
+    hash = (37 * hash) + LAST_ERROR_FIELD_NUMBER;
+    hash = (53 * hash) + getLastError().hashCode();
+    hash = (37 * hash) + REVOKE_REASON_FIELD_NUMBER;
+    hash = (53 * hash) + getRevokeReason().hashCode();
+    hash = (37 * hash) + REVOCATION_OPERATION_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getRevocationOperationId().hashCode();
+    if (hasRevocationRequestedAt()) {
+      hash = (37 * hash) + REVOCATION_REQUESTED_AT_FIELD_NUMBER;
+      hash = (53 * hash) + getRevocationRequestedAt().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -766,12 +1254,12 @@ private static final long serialVersionUID = 0L;
    * ---------------------------------------------------------------------------
    * VaultDbCredentialLease — one short-lived database login minted by Vault.
    *
-   * The password is returned only in GenerateDatabaseCredentialsResponse and is
-   * never stored. The durable row tracks the generated username, tenant, configured
-   * role alias, parent Postgres role, and expiry so WORKER_VAULT_LEASE_REAPER can
-   * revoke/drop the login after its lease expires. RLS scopes rows to the current
-   * tenant; operators should grant the parent role only the privileges that alias
-   * is allowed to delegate.
+   * The password is returned only in GenerateDatabaseCredentialsResponse. A
+   * master-KEK-wrapped recovery envelope is stored so an authenticated replay of
+   * the same idempotent request can recover the original one-time response without
+   * creating a second login. The durable STARTING/ACTIVE/REVOKING/REVOKED/FAILED
+   * state machine lets WORKER_VAULT_LEASE_REAPER reconcile every split boundary.
+   * RLS scopes rows to the current tenant and project.
    * ---------------------------------------------------------------------------
    * </pre>
    *
@@ -810,6 +1298,7 @@ private static final long serialVersionUID = 0L;
         internalGetIssuedAtFieldBuilder();
         internalGetExpiresAtFieldBuilder();
         internalGetRevokedAtFieldBuilder();
+        internalGetRevocationRequestedAtFieldBuilder();
       }
     }
     @java.lang.Override
@@ -839,6 +1328,19 @@ private static final long serialVersionUID = 0L;
       }
       state_ = "";
       metadataJson_ = "";
+      projectId_ = "";
+      idempotencyKey_ = "";
+      requestHash_ = "";
+      credentialCiphertext_ = "";
+      targetInstance_ = "";
+      lastError_ = "";
+      revokeReason_ = "";
+      revocationOperationId_ = "";
+      revocationRequestedAt_ = null;
+      if (revocationRequestedAtBuilder_ != null) {
+        revocationRequestedAtBuilder_.dispose();
+        revocationRequestedAtBuilder_ = null;
+      }
       return this;
     }
 
@@ -915,6 +1417,36 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000400) != 0)) {
         result.metadataJson_ = metadataJson_;
       }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.projectId_ = projectId_;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.idempotencyKey_ = idempotencyKey_;
+      }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.requestHash_ = requestHash_;
+      }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.credentialCiphertext_ = credentialCiphertext_;
+      }
+      if (((from_bitField0_ & 0x00008000) != 0)) {
+        result.targetInstance_ = targetInstance_;
+      }
+      if (((from_bitField0_ & 0x00010000) != 0)) {
+        result.lastError_ = lastError_;
+      }
+      if (((from_bitField0_ & 0x00020000) != 0)) {
+        result.revokeReason_ = revokeReason_;
+      }
+      if (((from_bitField0_ & 0x00040000) != 0)) {
+        result.revocationOperationId_ = revocationOperationId_;
+      }
+      if (((from_bitField0_ & 0x00080000) != 0)) {
+        result.revocationRequestedAt_ = revocationRequestedAtBuilder_ == null
+            ? revocationRequestedAt_
+            : revocationRequestedAtBuilder_.build();
+        to_bitField0_ |= 0x00000008;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -978,6 +1510,49 @@ private static final long serialVersionUID = 0L;
         metadataJson_ = other.metadataJson_;
         bitField0_ |= 0x00000400;
         onChanged();
+      }
+      if (!other.getProjectId().isEmpty()) {
+        projectId_ = other.projectId_;
+        bitField0_ |= 0x00000800;
+        onChanged();
+      }
+      if (!other.getIdempotencyKey().isEmpty()) {
+        idempotencyKey_ = other.idempotencyKey_;
+        bitField0_ |= 0x00001000;
+        onChanged();
+      }
+      if (!other.getRequestHash().isEmpty()) {
+        requestHash_ = other.requestHash_;
+        bitField0_ |= 0x00002000;
+        onChanged();
+      }
+      if (!other.getCredentialCiphertext().isEmpty()) {
+        credentialCiphertext_ = other.credentialCiphertext_;
+        bitField0_ |= 0x00004000;
+        onChanged();
+      }
+      if (!other.getTargetInstance().isEmpty()) {
+        targetInstance_ = other.targetInstance_;
+        bitField0_ |= 0x00008000;
+        onChanged();
+      }
+      if (!other.getLastError().isEmpty()) {
+        lastError_ = other.lastError_;
+        bitField0_ |= 0x00010000;
+        onChanged();
+      }
+      if (!other.getRevokeReason().isEmpty()) {
+        revokeReason_ = other.revokeReason_;
+        bitField0_ |= 0x00020000;
+        onChanged();
+      }
+      if (!other.getRevocationOperationId().isEmpty()) {
+        revocationOperationId_ = other.revocationOperationId_;
+        bitField0_ |= 0x00040000;
+        onChanged();
+      }
+      if (other.hasRevocationRequestedAt()) {
+        mergeRevocationRequestedAt(other.getRevocationRequestedAt());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1066,6 +1641,53 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000400;
               break;
             } // case 90
+            case 98: {
+              projectId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
+            case 106: {
+              idempotencyKey_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 106
+            case 114: {
+              requestHash_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 114
+            case 122: {
+              credentialCiphertext_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 122
+            case 130: {
+              targetInstance_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00008000;
+              break;
+            } // case 130
+            case 138: {
+              lastError_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00010000;
+              break;
+            } // case 138
+            case 146: {
+              revokeReason_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00020000;
+              break;
+            } // case 146
+            case 154: {
+              revocationOperationId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00040000;
+              break;
+            } // case 154
+            case 162: {
+              input.readMessage(
+                  internalGetRevocationRequestedAtFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00080000;
+              break;
+            } // case 162
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1941,7 +2563,9 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object state_ = "";
     /**
      * <pre>
-     * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+     * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+     * plus FAILED rows with a pending revocation, is owned by the reconciliation
+     * worker. REVOKED is set only after session termination and role-absence proof.
      * </pre>
      *
      * <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1961,7 +2585,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+     * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+     * plus FAILED rows with a pending revocation, is owned by the reconciliation
+     * worker. REVOKED is set only after session termination and role-absence proof.
      * </pre>
      *
      * <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1982,7 +2608,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+     * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+     * plus FAILED rows with a pending revocation, is owned by the reconciliation
+     * worker. REVOKED is set only after session termination and role-absence proof.
      * </pre>
      *
      * <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1999,7 +2627,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+     * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+     * plus FAILED rows with a pending revocation, is owned by the reconciliation
+     * worker. REVOKED is set only after session termination and role-absence proof.
      * </pre>
      *
      * <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2013,7 +2643,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+     * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+     * plus FAILED rows with a pending revocation, is owned by the reconciliation
+     * worker. REVOKED is set only after session termination and role-absence proof.
      * </pre>
      *
      * <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2100,6 +2732,808 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000400;
       onChanged();
       return this;
+    }
+
+    private java.lang.Object projectId_ = "";
+    /**
+     * <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The projectId.
+     */
+    public java.lang.String getProjectId() {
+      java.lang.Object ref = projectId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        projectId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for projectId.
+     */
+    public com.google.protobuf.ByteString
+        getProjectIdBytes() {
+      java.lang.Object ref = projectId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        projectId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      projectId_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProjectId() {
+      projectId_ = getDefaultInstance().getProjectId();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      projectId_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object idempotencyKey_ = "";
+    /**
+     * <pre>
+     * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+     * response-loss replay can never mint a second physical login.
+     * </pre>
+     *
+     * <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The idempotencyKey.
+     */
+    public java.lang.String getIdempotencyKey() {
+      java.lang.Object ref = idempotencyKey_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        idempotencyKey_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+     * response-loss replay can never mint a second physical login.
+     * </pre>
+     *
+     * <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for idempotencyKey.
+     */
+    public com.google.protobuf.ByteString
+        getIdempotencyKeyBytes() {
+      java.lang.Object ref = idempotencyKey_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        idempotencyKey_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+     * response-loss replay can never mint a second physical login.
+     * </pre>
+     *
+     * <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The idempotencyKey to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIdempotencyKey(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      idempotencyKey_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+     * response-loss replay can never mint a second physical login.
+     * </pre>
+     *
+     * <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIdempotencyKey() {
+      idempotencyKey_ = getDefaultInstance().getIdempotencyKey();
+      bitField0_ = (bitField0_ & ~0x00001000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+     * response-loss replay can never mint a second physical login.
+     * </pre>
+     *
+     * <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for idempotencyKey to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIdempotencyKeyBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      idempotencyKey_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object requestHash_ = "";
+    /**
+     * <pre>
+     * Hash of every authority-relevant issuance input; the same idempotency key
+     * with different inputs is a conflict, never a replay.
+     * </pre>
+     *
+     * <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The requestHash.
+     */
+    public java.lang.String getRequestHash() {
+      java.lang.Object ref = requestHash_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        requestHash_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Hash of every authority-relevant issuance input; the same idempotency key
+     * with different inputs is a conflict, never a replay.
+     * </pre>
+     *
+     * <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for requestHash.
+     */
+    public com.google.protobuf.ByteString
+        getRequestHashBytes() {
+      java.lang.Object ref = requestHash_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        requestHash_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Hash of every authority-relevant issuance input; the same idempotency key
+     * with different inputs is a conflict, never a replay.
+     * </pre>
+     *
+     * <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The requestHash to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRequestHash(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      requestHash_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Hash of every authority-relevant issuance input; the same idempotency key
+     * with different inputs is a conflict, never a replay.
+     * </pre>
+     *
+     * <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRequestHash() {
+      requestHash_ = getDefaultInstance().getRequestHash();
+      bitField0_ = (bitField0_ & ~0x00002000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Hash of every authority-relevant issuance input; the same idempotency key
+     * with different inputs is a conflict, never a replay.
+     * </pre>
+     *
+     * <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for requestHash to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRequestHashBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      requestHash_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object credentialCiphertext_ = "";
+    /**
+     * <pre>
+     * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+     * only be selected by the trusted recovery path and never appears in normal
+     * entity/SDK output, logs, CDC payloads, or audit events.
+     * </pre>
+     *
+     * <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The credentialCiphertext.
+     */
+    public java.lang.String getCredentialCiphertext() {
+      java.lang.Object ref = credentialCiphertext_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        credentialCiphertext_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+     * only be selected by the trusted recovery path and never appears in normal
+     * entity/SDK output, logs, CDC payloads, or audit events.
+     * </pre>
+     *
+     * <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for credentialCiphertext.
+     */
+    public com.google.protobuf.ByteString
+        getCredentialCiphertextBytes() {
+      java.lang.Object ref = credentialCiphertext_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        credentialCiphertext_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+     * only be selected by the trusted recovery path and never appears in normal
+     * entity/SDK output, logs, CDC payloads, or audit events.
+     * </pre>
+     *
+     * <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The credentialCiphertext to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCredentialCiphertext(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      credentialCiphertext_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+     * only be selected by the trusted recovery path and never appears in normal
+     * entity/SDK output, logs, CDC payloads, or audit events.
+     * </pre>
+     *
+     * <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCredentialCiphertext() {
+      credentialCiphertext_ = getDefaultInstance().getCredentialCiphertext();
+      bitField0_ = (bitField0_ & ~0x00004000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+     * only be selected by the trusted recovery path and never appears in normal
+     * entity/SDK output, logs, CDC payloads, or audit events.
+     * </pre>
+     *
+     * <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for credentialCiphertext to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCredentialCiphertextBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      credentialCiphertext_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object targetInstance_ = "";
+    /**
+     * <pre>
+     * Immutable physical authority selected at issuance. Reconciliation must use
+     * this exact instance and fails closed if it is no longer routable.
+     * </pre>
+     *
+     * <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The targetInstance.
+     */
+    public java.lang.String getTargetInstance() {
+      java.lang.Object ref = targetInstance_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        targetInstance_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Immutable physical authority selected at issuance. Reconciliation must use
+     * this exact instance and fails closed if it is no longer routable.
+     * </pre>
+     *
+     * <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for targetInstance.
+     */
+    public com.google.protobuf.ByteString
+        getTargetInstanceBytes() {
+      java.lang.Object ref = targetInstance_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        targetInstance_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Immutable physical authority selected at issuance. Reconciliation must use
+     * this exact instance and fails closed if it is no longer routable.
+     * </pre>
+     *
+     * <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The targetInstance to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTargetInstance(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      targetInstance_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Immutable physical authority selected at issuance. Reconciliation must use
+     * this exact instance and fails closed if it is no longer routable.
+     * </pre>
+     *
+     * <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTargetInstance() {
+      targetInstance_ = getDefaultInstance().getTargetInstance();
+      bitField0_ = (bitField0_ & ~0x00008000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Immutable physical authority selected at issuance. Reconciliation must use
+     * this exact instance and fails closed if it is no longer routable.
+     * </pre>
+     *
+     * <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for targetInstance to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTargetInstanceBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      targetInstance_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object lastError_ = "";
+    /**
+     * <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The lastError.
+     */
+    public java.lang.String getLastError() {
+      java.lang.Object ref = lastError_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        lastError_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for lastError.
+     */
+    public com.google.protobuf.ByteString
+        getLastErrorBytes() {
+      java.lang.Object ref = lastError_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        lastError_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The lastError to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLastError(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      lastError_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLastError() {
+      lastError_ = getDefaultInstance().getLastError();
+      bitField0_ = (bitField0_ & ~0x00010000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for lastError to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLastErrorBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      lastError_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object revokeReason_ = "";
+    /**
+     * <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The revokeReason.
+     */
+    public java.lang.String getRevokeReason() {
+      java.lang.Object ref = revokeReason_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        revokeReason_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for revokeReason.
+     */
+    public com.google.protobuf.ByteString
+        getRevokeReasonBytes() {
+      java.lang.Object ref = revokeReason_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        revokeReason_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The revokeReason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRevokeReason(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      revokeReason_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRevokeReason() {
+      revokeReason_ = getDefaultInstance().getRevokeReason();
+      bitField0_ = (bitField0_ & ~0x00020000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for revokeReason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRevokeReasonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      revokeReason_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object revocationOperationId_ = "";
+    /**
+     * <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The revocationOperationId.
+     */
+    public java.lang.String getRevocationOperationId() {
+      java.lang.Object ref = revocationOperationId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        revocationOperationId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for revocationOperationId.
+     */
+    public com.google.protobuf.ByteString
+        getRevocationOperationIdBytes() {
+      java.lang.Object ref = revocationOperationId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        revocationOperationId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The revocationOperationId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRevocationOperationId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      revocationOperationId_ = value;
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRevocationOperationId() {
+      revocationOperationId_ = getDefaultInstance().getRevocationOperationId();
+      bitField0_ = (bitField0_ & ~0x00040000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for revocationOperationId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRevocationOperationIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      revocationOperationId_ = value;
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp revocationRequestedAt_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> revocationRequestedAtBuilder_;
+    /**
+     * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return Whether the revocationRequestedAt field is set.
+     */
+    public boolean hasRevocationRequestedAt() {
+      return ((bitField0_ & 0x00080000) != 0);
+    }
+    /**
+     * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The revocationRequestedAt.
+     */
+    public com.google.protobuf.Timestamp getRevocationRequestedAt() {
+      if (revocationRequestedAtBuilder_ == null) {
+        return revocationRequestedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : revocationRequestedAt_;
+      } else {
+        return revocationRequestedAtBuilder_.getMessage();
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder setRevocationRequestedAt(com.google.protobuf.Timestamp value) {
+      if (revocationRequestedAtBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        revocationRequestedAt_ = value;
+      } else {
+        revocationRequestedAtBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00080000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder setRevocationRequestedAt(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (revocationRequestedAtBuilder_ == null) {
+        revocationRequestedAt_ = builderForValue.build();
+      } else {
+        revocationRequestedAtBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00080000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder mergeRevocationRequestedAt(com.google.protobuf.Timestamp value) {
+      if (revocationRequestedAtBuilder_ == null) {
+        if (((bitField0_ & 0x00080000) != 0) &&
+          revocationRequestedAt_ != null &&
+          revocationRequestedAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getRevocationRequestedAtBuilder().mergeFrom(value);
+        } else {
+          revocationRequestedAt_ = value;
+        }
+      } else {
+        revocationRequestedAtBuilder_.mergeFrom(value);
+      }
+      if (revocationRequestedAt_ != null) {
+        bitField0_ |= 0x00080000;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder clearRevocationRequestedAt() {
+      bitField0_ = (bitField0_ & ~0x00080000);
+      revocationRequestedAt_ = null;
+      if (revocationRequestedAtBuilder_ != null) {
+        revocationRequestedAtBuilder_.dispose();
+        revocationRequestedAtBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getRevocationRequestedAtBuilder() {
+      bitField0_ |= 0x00080000;
+      onChanged();
+      return internalGetRevocationRequestedAtFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getRevocationRequestedAtOrBuilder() {
+      if (revocationRequestedAtBuilder_ != null) {
+        return revocationRequestedAtBuilder_.getMessageOrBuilder();
+      } else {
+        return revocationRequestedAt_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : revocationRequestedAt_;
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
+        internalGetRevocationRequestedAtFieldBuilder() {
+      if (revocationRequestedAtBuilder_ == null) {
+        revocationRequestedAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getRevocationRequestedAt(),
+                getParentForChildren(),
+                isClean());
+        revocationRequestedAt_ = null;
+      }
+      return revocationRequestedAtBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.vault.entity.v1.VaultDbCredentialLease)

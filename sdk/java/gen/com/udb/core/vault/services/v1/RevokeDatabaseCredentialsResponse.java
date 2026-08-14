@@ -6,13 +6,13 @@
 package com.udb.core.vault.services.v1;
 
 /**
- * Protobuf type {@code udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse}
+ * Protobuf type {@code udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse}
  */
 @com.google.protobuf.Generated
-public final class GenerateDatabaseCredentialsResponse extends
+public final class RevokeDatabaseCredentialsResponse extends
     com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse)
-    GenerateDatabaseCredentialsResponseOrBuilder {
+    // @@protoc_insertion_point(message_implements:udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse)
+    RevokeDatabaseCredentialsResponseOrBuilder {
 private static final long serialVersionUID = 0L;
   static {
     com.google.protobuf.RuntimeVersion.validateProtobufGencodeVersion(
@@ -21,117 +21,38 @@ private static final long serialVersionUID = 0L;
       /* minor= */ 31,
       /* patch= */ 1,
       /* suffix= */ "",
-      GenerateDatabaseCredentialsResponse.class.getName());
+      RevokeDatabaseCredentialsResponse.class.getName());
   }
-  // Use GenerateDatabaseCredentialsResponse.newBuilder() to construct.
-  private GenerateDatabaseCredentialsResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+  // Use RevokeDatabaseCredentialsResponse.newBuilder() to construct.
+  private RevokeDatabaseCredentialsResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
     super(builder);
   }
-  private GenerateDatabaseCredentialsResponse() {
-    username_ = "";
-    password_ = "";
+  private RevokeDatabaseCredentialsResponse() {
     leaseId_ = "";
-    message_ = "";
     state_ = "";
+    operationId_ = "";
+    message_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse_descriptor;
+    return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse_fieldAccessorTable
+    return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.class, com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.Builder.class);
+            com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.class, com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.Builder.class);
   }
 
   private int bitField0_;
-  public static final int USERNAME_FIELD_NUMBER = 1;
-  @SuppressWarnings("serial")
-  private volatile java.lang.Object username_ = "";
-  /**
-   * <code>string username = 1 [json_name = "username"];</code>
-   * @return The username.
-   */
-  @java.lang.Override
-  public java.lang.String getUsername() {
-    java.lang.Object ref = username_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      username_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string username = 1 [json_name = "username"];</code>
-   * @return The bytes for username.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getUsernameBytes() {
-    java.lang.Object ref = username_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      username_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int PASSWORD_FIELD_NUMBER = 2;
-  @SuppressWarnings("serial")
-  private volatile java.lang.Object password_ = "";
-  /**
-   * <code>string password = 2 [json_name = "password", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
-   * @return The password.
-   */
-  @java.lang.Override
-  public java.lang.String getPassword() {
-    java.lang.Object ref = password_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      password_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string password = 2 [json_name = "password", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
-   * @return The bytes for password.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getPasswordBytes() {
-    java.lang.Object ref = password_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      password_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int LEASE_ID_FIELD_NUMBER = 3;
+  public static final int LEASE_ID_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object leaseId_ = "";
   /**
-   * <code>string lease_id = 3 [json_name = "leaseId"];</code>
+   * <code>string lease_id = 1 [json_name = "leaseId"];</code>
    * @return The leaseId.
    */
   @java.lang.Override
@@ -148,7 +69,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string lease_id = 3 [json_name = "leaseId"];</code>
+   * <code>string lease_id = 1 [json_name = "leaseId"];</code>
    * @return The bytes for leaseId.
    */
   @java.lang.Override
@@ -166,15 +87,93 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int LEASE_TTL_SECONDS_FIELD_NUMBER = 4;
-  private int leaseTtlSeconds_ = 0;
+  public static final int STATE_FIELD_NUMBER = 2;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object state_ = "";
   /**
-   * <code>int32 lease_ttl_seconds = 4 [json_name = "leaseTtlSeconds"];</code>
-   * @return The leaseTtlSeconds.
+   * <code>string state = 2 [json_name = "state"];</code>
+   * @return The state.
    */
   @java.lang.Override
-  public int getLeaseTtlSeconds() {
-    return leaseTtlSeconds_;
+  public java.lang.String getState() {
+    java.lang.Object ref = state_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      state_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string state = 2 [json_name = "state"];</code>
+   * @return The bytes for state.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getStateBytes() {
+    java.lang.Object ref = state_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      state_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REPLAYED_FIELD_NUMBER = 3;
+  private boolean replayed_ = false;
+  /**
+   * <code>bool replayed = 3 [json_name = "replayed"];</code>
+   * @return The replayed.
+   */
+  @java.lang.Override
+  public boolean getReplayed() {
+    return replayed_;
+  }
+
+  public static final int OPERATION_ID_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object operationId_ = "";
+  /**
+   * <code>string operation_id = 4 [json_name = "operationId"];</code>
+   * @return The operationId.
+   */
+  @java.lang.Override
+  public java.lang.String getOperationId() {
+    java.lang.Object ref = operationId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      operationId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string operation_id = 4 [json_name = "operationId"];</code>
+   * @return The bytes for operationId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getOperationIdBytes() {
+    java.lang.Object ref = operationId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      operationId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
   }
 
   public static final int MESSAGE_FIELD_NUMBER = 5;
@@ -242,56 +241,6 @@ private static final long serialVersionUID = 0L;
     return error_ == null ? com.udb.core.common.v1.ApiError.getDefaultInstance() : error_;
   }
 
-  public static final int REPLAYED_FIELD_NUMBER = 7;
-  private boolean replayed_ = false;
-  /**
-   * <code>bool replayed = 7 [json_name = "replayed"];</code>
-   * @return The replayed.
-   */
-  @java.lang.Override
-  public boolean getReplayed() {
-    return replayed_;
-  }
-
-  public static final int STATE_FIELD_NUMBER = 8;
-  @SuppressWarnings("serial")
-  private volatile java.lang.Object state_ = "";
-  /**
-   * <code>string state = 8 [json_name = "state"];</code>
-   * @return The state.
-   */
-  @java.lang.Override
-  public java.lang.String getState() {
-    java.lang.Object ref = state_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      state_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string state = 8 [json_name = "state"];</code>
-   * @return The bytes for state.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getStateBytes() {
-    java.lang.Object ref = state_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      state_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -306,29 +255,23 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(username_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 1, username_);
-    }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(password_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 2, password_);
-    }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(leaseId_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 3, leaseId_);
+      com.google.protobuf.GeneratedMessage.writeString(output, 1, leaseId_);
     }
-    if (leaseTtlSeconds_ != 0) {
-      output.writeInt32(4, leaseTtlSeconds_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(state_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 2, state_);
+    }
+    if (replayed_ != false) {
+      output.writeBool(3, replayed_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(operationId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, operationId_);
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(message_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 5, message_);
     }
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(6, getError());
-    }
-    if (replayed_ != false) {
-      output.writeBool(7, replayed_);
-    }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(state_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 8, state_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -339,18 +282,18 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(username_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(1, username_);
-    }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(password_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(2, password_);
-    }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(leaseId_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(3, leaseId_);
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(1, leaseId_);
     }
-    if (leaseTtlSeconds_ != 0) {
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(state_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(2, state_);
+    }
+    if (replayed_ != false) {
       size += com.google.protobuf.CodedOutputStream
-        .computeInt32Size(4, leaseTtlSeconds_);
+        .computeBoolSize(3, replayed_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(operationId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, operationId_);
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(message_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(5, message_);
@@ -358,13 +301,6 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(6, getError());
-    }
-    if (replayed_ != false) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeBoolSize(7, replayed_);
-    }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(state_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(8, state_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -376,19 +312,19 @@ private static final long serialVersionUID = 0L;
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse)) {
+    if (!(obj instanceof com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse)) {
       return super.equals(obj);
     }
-    com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse other = (com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse) obj;
+    com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse other = (com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse) obj;
 
-    if (!getUsername()
-        .equals(other.getUsername())) return false;
-    if (!getPassword()
-        .equals(other.getPassword())) return false;
     if (!getLeaseId()
         .equals(other.getLeaseId())) return false;
-    if (getLeaseTtlSeconds()
-        != other.getLeaseTtlSeconds()) return false;
+    if (!getState()
+        .equals(other.getState())) return false;
+    if (getReplayed()
+        != other.getReplayed()) return false;
+    if (!getOperationId()
+        .equals(other.getOperationId())) return false;
     if (!getMessage()
         .equals(other.getMessage())) return false;
     if (hasError() != other.hasError()) return false;
@@ -396,10 +332,6 @@ private static final long serialVersionUID = 0L;
       if (!getError()
           .equals(other.getError())) return false;
     }
-    if (getReplayed()
-        != other.getReplayed()) return false;
-    if (!getState()
-        .equals(other.getState())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -411,68 +343,64 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + USERNAME_FIELD_NUMBER;
-    hash = (53 * hash) + getUsername().hashCode();
-    hash = (37 * hash) + PASSWORD_FIELD_NUMBER;
-    hash = (53 * hash) + getPassword().hashCode();
     hash = (37 * hash) + LEASE_ID_FIELD_NUMBER;
     hash = (53 * hash) + getLeaseId().hashCode();
-    hash = (37 * hash) + LEASE_TTL_SECONDS_FIELD_NUMBER;
-    hash = (53 * hash) + getLeaseTtlSeconds();
+    hash = (37 * hash) + STATE_FIELD_NUMBER;
+    hash = (53 * hash) + getState().hashCode();
+    hash = (37 * hash) + REPLAYED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getReplayed());
+    hash = (37 * hash) + OPERATION_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getOperationId().hashCode();
     hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
     hash = (53 * hash) + getMessage().hashCode();
     if (hasError()) {
       hash = (37 * hash) + ERROR_FIELD_NUMBER;
       hash = (53 * hash) + getError().hashCode();
     }
-    hash = (37 * hash) + REPLAYED_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getReplayed());
-    hash = (37 * hash) + STATE_FIELD_NUMBER;
-    hash = (53 * hash) + getState().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
   }
 
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(byte[] data)
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(java.io.InputStream input)
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -480,26 +408,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseDelimitedFrom(java.io.InputStream input)
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseDelimitedFrom(
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse parseFrom(
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -512,7 +440,7 @@ private static final long serialVersionUID = 0L;
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse prototype) {
+  public static Builder newBuilder(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
   @java.lang.Override
@@ -528,26 +456,26 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse}
+   * Protobuf type {@code udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse)
-      com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponseOrBuilder {
+      // @@protoc_insertion_point(builder_implements:udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse)
+      com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponseOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse_descriptor;
+      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse_fieldAccessorTable
+      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.class, com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.Builder.class);
+              com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.class, com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.Builder.class);
     }
 
-    // Construct using com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.newBuilder()
+    // Construct using com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
@@ -567,35 +495,33 @@ private static final long serialVersionUID = 0L;
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
-      username_ = "";
-      password_ = "";
       leaseId_ = "";
-      leaseTtlSeconds_ = 0;
+      state_ = "";
+      replayed_ = false;
+      operationId_ = "";
       message_ = "";
       error_ = null;
       if (errorBuilder_ != null) {
         errorBuilder_.dispose();
         errorBuilder_ = null;
       }
-      replayed_ = false;
-      state_ = "";
       return this;
     }
 
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse_descriptor;
+      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse_descriptor;
     }
 
     @java.lang.Override
-    public com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse getDefaultInstanceForType() {
-      return com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.getDefaultInstance();
+    public com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse getDefaultInstanceForType() {
+      return com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.getDefaultInstance();
     }
 
     @java.lang.Override
-    public com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse build() {
-      com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse result = buildPartial();
+    public com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse build() {
+      com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
@@ -603,26 +529,26 @@ private static final long serialVersionUID = 0L;
     }
 
     @java.lang.Override
-    public com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse buildPartial() {
-      com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse result = new com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse(this);
+    public com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse buildPartial() {
+      com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse result = new com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse(this);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartial0(com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse result) {
+    private void buildPartial0(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse result) {
       int from_bitField0_ = bitField0_;
       if (((from_bitField0_ & 0x00000001) != 0)) {
-        result.username_ = username_;
-      }
-      if (((from_bitField0_ & 0x00000002) != 0)) {
-        result.password_ = password_;
-      }
-      if (((from_bitField0_ & 0x00000004) != 0)) {
         result.leaseId_ = leaseId_;
       }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.state_ = state_;
+      }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.replayed_ = replayed_;
+      }
       if (((from_bitField0_ & 0x00000008) != 0)) {
-        result.leaseTtlSeconds_ = leaseTtlSeconds_;
+        result.operationId_ = operationId_;
       }
       if (((from_bitField0_ & 0x00000010) != 0)) {
         result.message_ = message_;
@@ -634,44 +560,38 @@ private static final long serialVersionUID = 0L;
             : errorBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
-      if (((from_bitField0_ & 0x00000040) != 0)) {
-        result.replayed_ = replayed_;
-      }
-      if (((from_bitField0_ & 0x00000080) != 0)) {
-        result.state_ = state_;
-      }
       result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse) {
-        return mergeFrom((com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse)other);
+      if (other instanceof com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse) {
+        return mergeFrom((com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse other) {
-      if (other == com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.getDefaultInstance()) return this;
-      if (!other.getUsername().isEmpty()) {
-        username_ = other.username_;
+    public Builder mergeFrom(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse other) {
+      if (other == com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse.getDefaultInstance()) return this;
+      if (!other.getLeaseId().isEmpty()) {
+        leaseId_ = other.leaseId_;
         bitField0_ |= 0x00000001;
         onChanged();
       }
-      if (!other.getPassword().isEmpty()) {
-        password_ = other.password_;
+      if (!other.getState().isEmpty()) {
+        state_ = other.state_;
         bitField0_ |= 0x00000002;
         onChanged();
       }
-      if (!other.getLeaseId().isEmpty()) {
-        leaseId_ = other.leaseId_;
-        bitField0_ |= 0x00000004;
-        onChanged();
+      if (other.getReplayed() != false) {
+        setReplayed(other.getReplayed());
       }
-      if (other.getLeaseTtlSeconds() != 0) {
-        setLeaseTtlSeconds(other.getLeaseTtlSeconds());
+      if (!other.getOperationId().isEmpty()) {
+        operationId_ = other.operationId_;
+        bitField0_ |= 0x00000008;
+        onChanged();
       }
       if (!other.getMessage().isEmpty()) {
         message_ = other.message_;
@@ -680,14 +600,6 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasError()) {
         mergeError(other.getError());
-      }
-      if (other.getReplayed() != false) {
-        setReplayed(other.getReplayed());
-      }
-      if (!other.getState().isEmpty()) {
-        state_ = other.state_;
-        bitField0_ |= 0x00000080;
-        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -716,25 +628,25 @@ private static final long serialVersionUID = 0L;
               done = true;
               break;
             case 10: {
-              username_ = input.readStringRequireUtf8();
+              leaseId_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000001;
               break;
             } // case 10
             case 18: {
-              password_ = input.readStringRequireUtf8();
+              state_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000002;
               break;
             } // case 18
-            case 26: {
-              leaseId_ = input.readStringRequireUtf8();
+            case 24: {
+              replayed_ = input.readBool();
               bitField0_ |= 0x00000004;
               break;
-            } // case 26
-            case 32: {
-              leaseTtlSeconds_ = input.readInt32();
+            } // case 24
+            case 34: {
+              operationId_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000008;
               break;
-            } // case 32
+            } // case 34
             case 42: {
               message_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000010;
@@ -747,16 +659,6 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 50
-            case 56: {
-              replayed_ = input.readBool();
-              bitField0_ |= 0x00000040;
-              break;
-            } // case 56
-            case 66: {
-              state_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000080;
-              break;
-            } // case 66
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -774,153 +676,9 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.lang.Object username_ = "";
-    /**
-     * <code>string username = 1 [json_name = "username"];</code>
-     * @return The username.
-     */
-    public java.lang.String getUsername() {
-      java.lang.Object ref = username_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        username_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string username = 1 [json_name = "username"];</code>
-     * @return The bytes for username.
-     */
-    public com.google.protobuf.ByteString
-        getUsernameBytes() {
-      java.lang.Object ref = username_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        username_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string username = 1 [json_name = "username"];</code>
-     * @param value The username to set.
-     * @return This builder for chaining.
-     */
-    public Builder setUsername(
-        java.lang.String value) {
-      if (value == null) { throw new NullPointerException(); }
-      username_ = value;
-      bitField0_ |= 0x00000001;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string username = 1 [json_name = "username"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearUsername() {
-      username_ = getDefaultInstance().getUsername();
-      bitField0_ = (bitField0_ & ~0x00000001);
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string username = 1 [json_name = "username"];</code>
-     * @param value The bytes for username to set.
-     * @return This builder for chaining.
-     */
-    public Builder setUsernameBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) { throw new NullPointerException(); }
-      checkByteStringIsUtf8(value);
-      username_ = value;
-      bitField0_ |= 0x00000001;
-      onChanged();
-      return this;
-    }
-
-    private java.lang.Object password_ = "";
-    /**
-     * <code>string password = 2 [json_name = "password", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
-     * @return The password.
-     */
-    public java.lang.String getPassword() {
-      java.lang.Object ref = password_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        password_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string password = 2 [json_name = "password", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
-     * @return The bytes for password.
-     */
-    public com.google.protobuf.ByteString
-        getPasswordBytes() {
-      java.lang.Object ref = password_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        password_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string password = 2 [json_name = "password", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
-     * @param value The password to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPassword(
-        java.lang.String value) {
-      if (value == null) { throw new NullPointerException(); }
-      password_ = value;
-      bitField0_ |= 0x00000002;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string password = 2 [json_name = "password", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearPassword() {
-      password_ = getDefaultInstance().getPassword();
-      bitField0_ = (bitField0_ & ~0x00000002);
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string password = 2 [json_name = "password", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
-     * @param value The bytes for password to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPasswordBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) { throw new NullPointerException(); }
-      checkByteStringIsUtf8(value);
-      password_ = value;
-      bitField0_ |= 0x00000002;
-      onChanged();
-      return this;
-    }
-
     private java.lang.Object leaseId_ = "";
     /**
-     * <code>string lease_id = 3 [json_name = "leaseId"];</code>
+     * <code>string lease_id = 1 [json_name = "leaseId"];</code>
      * @return The leaseId.
      */
     public java.lang.String getLeaseId() {
@@ -936,7 +694,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string lease_id = 3 [json_name = "leaseId"];</code>
+     * <code>string lease_id = 1 [json_name = "leaseId"];</code>
      * @return The bytes for leaseId.
      */
     public com.google.protobuf.ByteString
@@ -953,7 +711,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string lease_id = 3 [json_name = "leaseId"];</code>
+     * <code>string lease_id = 1 [json_name = "leaseId"];</code>
      * @param value The leaseId to set.
      * @return This builder for chaining.
      */
@@ -961,22 +719,22 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       leaseId_ = value;
-      bitField0_ |= 0x00000004;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
     /**
-     * <code>string lease_id = 3 [json_name = "leaseId"];</code>
+     * <code>string lease_id = 1 [json_name = "leaseId"];</code>
      * @return This builder for chaining.
      */
     public Builder clearLeaseId() {
       leaseId_ = getDefaultInstance().getLeaseId();
-      bitField0_ = (bitField0_ & ~0x00000004);
+      bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
     }
     /**
-     * <code>string lease_id = 3 [json_name = "leaseId"];</code>
+     * <code>string lease_id = 1 [json_name = "leaseId"];</code>
      * @param value The bytes for leaseId to set.
      * @return This builder for chaining.
      */
@@ -985,39 +743,183 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       leaseId_ = value;
-      bitField0_ |= 0x00000004;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
 
-    private int leaseTtlSeconds_ ;
+    private java.lang.Object state_ = "";
     /**
-     * <code>int32 lease_ttl_seconds = 4 [json_name = "leaseTtlSeconds"];</code>
-     * @return The leaseTtlSeconds.
+     * <code>string state = 2 [json_name = "state"];</code>
+     * @return The state.
      */
-    @java.lang.Override
-    public int getLeaseTtlSeconds() {
-      return leaseTtlSeconds_;
+    public java.lang.String getState() {
+      java.lang.Object ref = state_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        state_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
     }
     /**
-     * <code>int32 lease_ttl_seconds = 4 [json_name = "leaseTtlSeconds"];</code>
-     * @param value The leaseTtlSeconds to set.
+     * <code>string state = 2 [json_name = "state"];</code>
+     * @return The bytes for state.
+     */
+    public com.google.protobuf.ByteString
+        getStateBytes() {
+      java.lang.Object ref = state_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        state_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string state = 2 [json_name = "state"];</code>
+     * @param value The state to set.
      * @return This builder for chaining.
      */
-    public Builder setLeaseTtlSeconds(int value) {
+    public Builder setState(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      state_ = value;
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string state = 2 [json_name = "state"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearState() {
+      state_ = getDefaultInstance().getState();
+      bitField0_ = (bitField0_ & ~0x00000002);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string state = 2 [json_name = "state"];</code>
+     * @param value The bytes for state to set.
+     * @return This builder for chaining.
+     */
+    public Builder setStateBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      state_ = value;
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
 
-      leaseTtlSeconds_ = value;
+    private boolean replayed_ ;
+    /**
+     * <code>bool replayed = 3 [json_name = "replayed"];</code>
+     * @return The replayed.
+     */
+    @java.lang.Override
+    public boolean getReplayed() {
+      return replayed_;
+    }
+    /**
+     * <code>bool replayed = 3 [json_name = "replayed"];</code>
+     * @param value The replayed to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReplayed(boolean value) {
+
+      replayed_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool replayed = 3 [json_name = "replayed"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReplayed() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      replayed_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object operationId_ = "";
+    /**
+     * <code>string operation_id = 4 [json_name = "operationId"];</code>
+     * @return The operationId.
+     */
+    public java.lang.String getOperationId() {
+      java.lang.Object ref = operationId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        operationId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string operation_id = 4 [json_name = "operationId"];</code>
+     * @return The bytes for operationId.
+     */
+    public com.google.protobuf.ByteString
+        getOperationIdBytes() {
+      java.lang.Object ref = operationId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        operationId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string operation_id = 4 [json_name = "operationId"];</code>
+     * @param value The operationId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOperationId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      operationId_ = value;
       bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
     /**
-     * <code>int32 lease_ttl_seconds = 4 [json_name = "leaseTtlSeconds"];</code>
+     * <code>string operation_id = 4 [json_name = "operationId"];</code>
      * @return This builder for chaining.
      */
-    public Builder clearLeaseTtlSeconds() {
+    public Builder clearOperationId() {
+      operationId_ = getDefaultInstance().getOperationId();
       bitField0_ = (bitField0_ & ~0x00000008);
-      leaseTtlSeconds_ = 0;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string operation_id = 4 [json_name = "operationId"];</code>
+     * @param value The bytes for operationId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOperationIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      operationId_ = value;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -1215,127 +1117,23 @@ private static final long serialVersionUID = 0L;
       return errorBuilder_;
     }
 
-    private boolean replayed_ ;
-    /**
-     * <code>bool replayed = 7 [json_name = "replayed"];</code>
-     * @return The replayed.
-     */
-    @java.lang.Override
-    public boolean getReplayed() {
-      return replayed_;
-    }
-    /**
-     * <code>bool replayed = 7 [json_name = "replayed"];</code>
-     * @param value The replayed to set.
-     * @return This builder for chaining.
-     */
-    public Builder setReplayed(boolean value) {
-
-      replayed_ = value;
-      bitField0_ |= 0x00000040;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>bool replayed = 7 [json_name = "replayed"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearReplayed() {
-      bitField0_ = (bitField0_ & ~0x00000040);
-      replayed_ = false;
-      onChanged();
-      return this;
-    }
-
-    private java.lang.Object state_ = "";
-    /**
-     * <code>string state = 8 [json_name = "state"];</code>
-     * @return The state.
-     */
-    public java.lang.String getState() {
-      java.lang.Object ref = state_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        state_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string state = 8 [json_name = "state"];</code>
-     * @return The bytes for state.
-     */
-    public com.google.protobuf.ByteString
-        getStateBytes() {
-      java.lang.Object ref = state_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        state_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string state = 8 [json_name = "state"];</code>
-     * @param value The state to set.
-     * @return This builder for chaining.
-     */
-    public Builder setState(
-        java.lang.String value) {
-      if (value == null) { throw new NullPointerException(); }
-      state_ = value;
-      bitField0_ |= 0x00000080;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string state = 8 [json_name = "state"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearState() {
-      state_ = getDefaultInstance().getState();
-      bitField0_ = (bitField0_ & ~0x00000080);
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string state = 8 [json_name = "state"];</code>
-     * @param value The bytes for state to set.
-     * @return This builder for chaining.
-     */
-    public Builder setStateBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) { throw new NullPointerException(); }
-      checkByteStringIsUtf8(value);
-      state_ = value;
-      bitField0_ |= 0x00000080;
-      onChanged();
-      return this;
-    }
-
-    // @@protoc_insertion_point(builder_scope:udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse)
+    // @@protoc_insertion_point(builder_scope:udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse)
   }
 
-  // @@protoc_insertion_point(class_scope:udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse)
-  private static final com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse)
+  private static final com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse();
+    DEFAULT_INSTANCE = new com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse();
   }
 
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse getDefaultInstance() {
+  public static com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<GenerateDatabaseCredentialsResponse>
-      PARSER = new com.google.protobuf.AbstractParser<GenerateDatabaseCredentialsResponse>() {
+  private static final com.google.protobuf.Parser<RevokeDatabaseCredentialsResponse>
+      PARSER = new com.google.protobuf.AbstractParser<RevokeDatabaseCredentialsResponse>() {
     @java.lang.Override
-    public GenerateDatabaseCredentialsResponse parsePartialFrom(
+    public RevokeDatabaseCredentialsResponse parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1354,17 +1152,17 @@ private static final long serialVersionUID = 0L;
     }
   };
 
-  public static com.google.protobuf.Parser<GenerateDatabaseCredentialsResponse> parser() {
+  public static com.google.protobuf.Parser<RevokeDatabaseCredentialsResponse> parser() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.google.protobuf.Parser<GenerateDatabaseCredentialsResponse> getParserForType() {
+  public com.google.protobuf.Parser<RevokeDatabaseCredentialsResponse> getParserForType() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse getDefaultInstanceForType() {
+  public com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

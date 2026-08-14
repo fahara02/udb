@@ -1,7 +1,7 @@
 # UDB v0.5.7 Vault database-credential lifecycle correction
 
 Date: 2026-08-15
-Status: implemented; GitHub CI and generated protocol artifacts pending
+Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
 
 ## Changed
 
@@ -38,6 +38,11 @@ Status: implemented; GitHub CI and generated protocol artifacts pending
 
 - No local Cargo, build, or test command was run because the operator required
   CI-only verification.
+- `buf generate --include-imports`, `openapi-postprocess.mjs`, and
+  `sdk-codegen-postprocess.mjs` refreshed the additive Vault SDK and OpenAPI
+  artifacts with the repository-pinned generators. The codebase map was also
+  regenerated. These are deterministic source-generation steps, not local
+  compilation or test evidence.
 - Required live filter:
   `vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_change`
   with `UDB_LIVE_AUTH_TESTS=1`, the CI Vault authority JSON, Postgres, and a real

@@ -6,13 +6,13 @@
 package com.udb.core.vault.services.v1;
 
 /**
- * Protobuf type {@code udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest}
+ * Protobuf type {@code udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest}
  */
 @com.google.protobuf.Generated
-public final class GenerateDatabaseCredentialsRequest extends
+public final class EmergencyRevokeDatabaseCredentialsRequest extends
     com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest)
-    GenerateDatabaseCredentialsRequestOrBuilder {
+    // @@protoc_insertion_point(message_implements:udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest)
+    EmergencyRevokeDatabaseCredentialsRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   static {
     com.google.protobuf.RuntimeVersion.validateProtobufGencodeVersion(
@@ -21,30 +21,30 @@ private static final long serialVersionUID = 0L;
       /* minor= */ 31,
       /* patch= */ 1,
       /* suffix= */ "",
-      GenerateDatabaseCredentialsRequest.class.getName());
+      EmergencyRevokeDatabaseCredentialsRequest.class.getName());
   }
-  // Use GenerateDatabaseCredentialsRequest.newBuilder() to construct.
-  private GenerateDatabaseCredentialsRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+  // Use EmergencyRevokeDatabaseCredentialsRequest.newBuilder() to construct.
+  private EmergencyRevokeDatabaseCredentialsRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
     super(builder);
   }
-  private GenerateDatabaseCredentialsRequest() {
+  private EmergencyRevokeDatabaseCredentialsRequest() {
     tenantId_ = "";
-    roleName_ = "";
     projectId_ = "";
-    idempotencyKey_ = "";
+    reason_ = "";
+    confirmationToken_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest_descriptor;
+    return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest_fieldAccessorTable
+    return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest.class, com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest.Builder.class);
+            com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest.class, com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest.Builder.class);
   }
 
   public static final int TENANT_ID_FIELD_NUMBER = 1;
@@ -86,66 +86,11 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int ROLE_NAME_FIELD_NUMBER = 2;
-  @SuppressWarnings("serial")
-  private volatile java.lang.Object roleName_ = "";
-  /**
-   * <code>string role_name = 2 [json_name = "roleName"];</code>
-   * @return The roleName.
-   */
-  @java.lang.Override
-  public java.lang.String getRoleName() {
-    java.lang.Object ref = roleName_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      roleName_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string role_name = 2 [json_name = "roleName"];</code>
-   * @return The bytes for roleName.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getRoleNameBytes() {
-    java.lang.Object ref = roleName_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      roleName_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int TTL_SECONDS_FIELD_NUMBER = 3;
-  private int ttlSeconds_ = 0;
-  /**
-   * <code>int32 ttl_seconds = 3 [json_name = "ttlSeconds"];</code>
-   * @return The ttlSeconds.
-   */
-  @java.lang.Override
-  public int getTtlSeconds() {
-    return ttlSeconds_;
-  }
-
-  public static final int PROJECT_ID_FIELD_NUMBER = 4;
+  public static final int PROJECT_ID_FIELD_NUMBER = 2;
   @SuppressWarnings("serial")
   private volatile java.lang.Object projectId_ = "";
   /**
-   * <pre>
-   * Must match the verified project claim/header. Empty resolves to the
-   * canonical default project, never to an arbitrary catalog fallback.
-   * </pre>
-   *
-   * <code>string project_id = 4 [json_name = "projectId"];</code>
+   * <code>string project_id = 2 [json_name = "projectId"];</code>
    * @return The projectId.
    */
   @java.lang.Override
@@ -162,12 +107,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Must match the verified project claim/header. Empty resolves to the
-   * canonical default project, never to an arbitrary catalog fallback.
-   * </pre>
-   *
-   * <code>string project_id = 4 [json_name = "projectId"];</code>
+   * <code>string project_id = 2 [json_name = "projectId"];</code>
    * @return The bytes for projectId.
    */
   @java.lang.Override
@@ -185,51 +125,86 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int IDEMPOTENCY_KEY_FIELD_NUMBER = 5;
+  public static final int REASON_FIELD_NUMBER = 3;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object idempotencyKey_ = "";
+  private volatile java.lang.Object reason_ = "";
   /**
-   * <pre>
-   * Required caller-supplied replay key. Reusing it with identical authoritative
-   * inputs returns the original KEK-protected credential response; reusing it
-   * with different inputs is an ABORTED conflict.
-   * </pre>
-   *
-   * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
-   * @return The idempotencyKey.
+   * <code>string reason = 3 [json_name = "reason"];</code>
+   * @return The reason.
    */
   @java.lang.Override
-  public java.lang.String getIdempotencyKey() {
-    java.lang.Object ref = idempotencyKey_;
+  public java.lang.String getReason() {
+    java.lang.Object ref = reason_;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
       com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
-      idempotencyKey_ = s;
+      reason_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string reason = 3 [json_name = "reason"];</code>
+   * @return The bytes for reason.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getReasonBytes() {
+    java.lang.Object ref = reason_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      reason_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int CONFIRMATION_TOKEN_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object confirmationToken_ = "";
+  /**
+   * <pre>
+   * Required exact value "&lt;tenant_id&gt;:&lt;resolved-project_id&gt;".
+   * </pre>
+   *
+   * <code>string confirmation_token = 4 [json_name = "confirmationToken"];</code>
+   * @return The confirmationToken.
+   */
+  @java.lang.Override
+  public java.lang.String getConfirmationToken() {
+    java.lang.Object ref = confirmationToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      confirmationToken_ = s;
       return s;
     }
   }
   /**
    * <pre>
-   * Required caller-supplied replay key. Reusing it with identical authoritative
-   * inputs returns the original KEK-protected credential response; reusing it
-   * with different inputs is an ABORTED conflict.
+   * Required exact value "&lt;tenant_id&gt;:&lt;resolved-project_id&gt;".
    * </pre>
    *
-   * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
-   * @return The bytes for idempotencyKey.
+   * <code>string confirmation_token = 4 [json_name = "confirmationToken"];</code>
+   * @return The bytes for confirmationToken.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getIdempotencyKeyBytes() {
-    java.lang.Object ref = idempotencyKey_;
+      getConfirmationTokenBytes() {
+    java.lang.Object ref = confirmationToken_;
     if (ref instanceof java.lang.String) {
       com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
-      idempotencyKey_ = b;
+      confirmationToken_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -253,17 +228,14 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 1, tenantId_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(roleName_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 2, roleName_);
-    }
-    if (ttlSeconds_ != 0) {
-      output.writeInt32(3, ttlSeconds_);
-    }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 4, projectId_);
+      com.google.protobuf.GeneratedMessage.writeString(output, 2, projectId_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 5, idempotencyKey_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reason_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 3, reason_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(confirmationToken_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, confirmationToken_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -277,18 +249,14 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(1, tenantId_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(roleName_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(2, roleName_);
-    }
-    if (ttlSeconds_ != 0) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeInt32Size(3, ttlSeconds_);
-    }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, projectId_);
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(2, projectId_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, idempotencyKey_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reason_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(3, reason_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(confirmationToken_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, confirmationToken_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -300,21 +268,19 @@ private static final long serialVersionUID = 0L;
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest)) {
+    if (!(obj instanceof com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest)) {
       return super.equals(obj);
     }
-    com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest other = (com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest) obj;
+    com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest other = (com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest) obj;
 
     if (!getTenantId()
         .equals(other.getTenantId())) return false;
-    if (!getRoleName()
-        .equals(other.getRoleName())) return false;
-    if (getTtlSeconds()
-        != other.getTtlSeconds()) return false;
     if (!getProjectId()
         .equals(other.getProjectId())) return false;
-    if (!getIdempotencyKey()
-        .equals(other.getIdempotencyKey())) return false;
+    if (!getReason()
+        .equals(other.getReason())) return false;
+    if (!getConfirmationToken()
+        .equals(other.getConfirmationToken())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -328,57 +294,55 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + TENANT_ID_FIELD_NUMBER;
     hash = (53 * hash) + getTenantId().hashCode();
-    hash = (37 * hash) + ROLE_NAME_FIELD_NUMBER;
-    hash = (53 * hash) + getRoleName().hashCode();
-    hash = (37 * hash) + TTL_SECONDS_FIELD_NUMBER;
-    hash = (53 * hash) + getTtlSeconds();
     hash = (37 * hash) + PROJECT_ID_FIELD_NUMBER;
     hash = (53 * hash) + getProjectId().hashCode();
-    hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
-    hash = (53 * hash) + getIdempotencyKey().hashCode();
+    hash = (37 * hash) + REASON_FIELD_NUMBER;
+    hash = (53 * hash) + getReason().hashCode();
+    hash = (37 * hash) + CONFIRMATION_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + getConfirmationToken().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
   }
 
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(byte[] data)
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(java.io.InputStream input)
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -386,26 +350,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseDelimitedFrom(java.io.InputStream input)
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseDelimitedFrom(
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest parseFrom(
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -418,7 +382,7 @@ private static final long serialVersionUID = 0L;
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest prototype) {
+  public static Builder newBuilder(com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
   @java.lang.Override
@@ -434,26 +398,26 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest}
+   * Protobuf type {@code udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest)
-      com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequestOrBuilder {
+      // @@protoc_insertion_point(builder_implements:udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest)
+      com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest_descriptor;
+      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest_fieldAccessorTable
+      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest.class, com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest.Builder.class);
+              com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest.class, com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest.Builder.class);
     }
 
-    // Construct using com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest.newBuilder()
+    // Construct using com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest.newBuilder()
     private Builder() {
 
     }
@@ -468,27 +432,26 @@ private static final long serialVersionUID = 0L;
       super.clear();
       bitField0_ = 0;
       tenantId_ = "";
-      roleName_ = "";
-      ttlSeconds_ = 0;
       projectId_ = "";
-      idempotencyKey_ = "";
+      reason_ = "";
+      confirmationToken_ = "";
       return this;
     }
 
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest_descriptor;
+      return com.udb.core.vault.services.v1.VaultServiceProto.internal_static_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsRequest_descriptor;
     }
 
     @java.lang.Override
-    public com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest getDefaultInstanceForType() {
-      return com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest.getDefaultInstance();
+    public com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest getDefaultInstanceForType() {
+      return com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest.getDefaultInstance();
     }
 
     @java.lang.Override
-    public com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest build() {
-      com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest result = buildPartial();
+    public com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest build() {
+      com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
@@ -496,65 +459,59 @@ private static final long serialVersionUID = 0L;
     }
 
     @java.lang.Override
-    public com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest buildPartial() {
-      com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest result = new com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest(this);
+    public com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest buildPartial() {
+      com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest result = new com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest(this);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartial0(com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest result) {
+    private void buildPartial0(com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest result) {
       int from_bitField0_ = bitField0_;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.tenantId_ = tenantId_;
       }
       if (((from_bitField0_ & 0x00000002) != 0)) {
-        result.roleName_ = roleName_;
-      }
-      if (((from_bitField0_ & 0x00000004) != 0)) {
-        result.ttlSeconds_ = ttlSeconds_;
-      }
-      if (((from_bitField0_ & 0x00000008) != 0)) {
         result.projectId_ = projectId_;
       }
-      if (((from_bitField0_ & 0x00000010) != 0)) {
-        result.idempotencyKey_ = idempotencyKey_;
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.reason_ = reason_;
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.confirmationToken_ = confirmationToken_;
       }
     }
 
     @java.lang.Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest) {
-        return mergeFrom((com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest)other);
+      if (other instanceof com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest) {
+        return mergeFrom((com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest other) {
-      if (other == com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest.getDefaultInstance()) return this;
+    public Builder mergeFrom(com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest other) {
+      if (other == com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest.getDefaultInstance()) return this;
       if (!other.getTenantId().isEmpty()) {
         tenantId_ = other.tenantId_;
         bitField0_ |= 0x00000001;
         onChanged();
       }
-      if (!other.getRoleName().isEmpty()) {
-        roleName_ = other.roleName_;
+      if (!other.getProjectId().isEmpty()) {
+        projectId_ = other.projectId_;
         bitField0_ |= 0x00000002;
         onChanged();
       }
-      if (other.getTtlSeconds() != 0) {
-        setTtlSeconds(other.getTtlSeconds());
-      }
-      if (!other.getProjectId().isEmpty()) {
-        projectId_ = other.projectId_;
-        bitField0_ |= 0x00000008;
+      if (!other.getReason().isEmpty()) {
+        reason_ = other.reason_;
+        bitField0_ |= 0x00000004;
         onChanged();
       }
-      if (!other.getIdempotencyKey().isEmpty()) {
-        idempotencyKey_ = other.idempotencyKey_;
-        bitField0_ |= 0x00000010;
+      if (!other.getConfirmationToken().isEmpty()) {
+        confirmationToken_ = other.confirmationToken_;
+        bitField0_ |= 0x00000008;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -589,25 +546,20 @@ private static final long serialVersionUID = 0L;
               break;
             } // case 10
             case 18: {
-              roleName_ = input.readStringRequireUtf8();
+              projectId_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000002;
               break;
             } // case 18
-            case 24: {
-              ttlSeconds_ = input.readInt32();
+            case 26: {
+              reason_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000004;
               break;
-            } // case 24
+            } // case 26
             case 34: {
-              projectId_ = input.readStringRequireUtf8();
+              confirmationToken_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000008;
               break;
             } // case 34
-            case 42: {
-              idempotencyKey_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000010;
-              break;
-            } // case 42
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -697,118 +649,9 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object roleName_ = "";
-    /**
-     * <code>string role_name = 2 [json_name = "roleName"];</code>
-     * @return The roleName.
-     */
-    public java.lang.String getRoleName() {
-      java.lang.Object ref = roleName_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        roleName_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string role_name = 2 [json_name = "roleName"];</code>
-     * @return The bytes for roleName.
-     */
-    public com.google.protobuf.ByteString
-        getRoleNameBytes() {
-      java.lang.Object ref = roleName_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        roleName_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string role_name = 2 [json_name = "roleName"];</code>
-     * @param value The roleName to set.
-     * @return This builder for chaining.
-     */
-    public Builder setRoleName(
-        java.lang.String value) {
-      if (value == null) { throw new NullPointerException(); }
-      roleName_ = value;
-      bitField0_ |= 0x00000002;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string role_name = 2 [json_name = "roleName"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearRoleName() {
-      roleName_ = getDefaultInstance().getRoleName();
-      bitField0_ = (bitField0_ & ~0x00000002);
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string role_name = 2 [json_name = "roleName"];</code>
-     * @param value The bytes for roleName to set.
-     * @return This builder for chaining.
-     */
-    public Builder setRoleNameBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) { throw new NullPointerException(); }
-      checkByteStringIsUtf8(value);
-      roleName_ = value;
-      bitField0_ |= 0x00000002;
-      onChanged();
-      return this;
-    }
-
-    private int ttlSeconds_ ;
-    /**
-     * <code>int32 ttl_seconds = 3 [json_name = "ttlSeconds"];</code>
-     * @return The ttlSeconds.
-     */
-    @java.lang.Override
-    public int getTtlSeconds() {
-      return ttlSeconds_;
-    }
-    /**
-     * <code>int32 ttl_seconds = 3 [json_name = "ttlSeconds"];</code>
-     * @param value The ttlSeconds to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTtlSeconds(int value) {
-
-      ttlSeconds_ = value;
-      bitField0_ |= 0x00000004;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>int32 ttl_seconds = 3 [json_name = "ttlSeconds"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearTtlSeconds() {
-      bitField0_ = (bitField0_ & ~0x00000004);
-      ttlSeconds_ = 0;
-      onChanged();
-      return this;
-    }
-
     private java.lang.Object projectId_ = "";
     /**
-     * <pre>
-     * Must match the verified project claim/header. Empty resolves to the
-     * canonical default project, never to an arbitrary catalog fallback.
-     * </pre>
-     *
-     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * <code>string project_id = 2 [json_name = "projectId"];</code>
      * @return The projectId.
      */
     public java.lang.String getProjectId() {
@@ -824,12 +667,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Must match the verified project claim/header. Empty resolves to the
-     * canonical default project, never to an arbitrary catalog fallback.
-     * </pre>
-     *
-     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * <code>string project_id = 2 [json_name = "projectId"];</code>
      * @return The bytes for projectId.
      */
     public com.google.protobuf.ByteString
@@ -846,12 +684,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Must match the verified project claim/header. Empty resolves to the
-     * canonical default project, never to an arbitrary catalog fallback.
-     * </pre>
-     *
-     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * <code>string project_id = 2 [json_name = "projectId"];</code>
      * @param value The projectId to set.
      * @return This builder for chaining.
      */
@@ -859,32 +692,22 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       projectId_ = value;
-      bitField0_ |= 0x00000008;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
     /**
-     * <pre>
-     * Must match the verified project claim/header. Empty resolves to the
-     * canonical default project, never to an arbitrary catalog fallback.
-     * </pre>
-     *
-     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * <code>string project_id = 2 [json_name = "projectId"];</code>
      * @return This builder for chaining.
      */
     public Builder clearProjectId() {
       projectId_ = getDefaultInstance().getProjectId();
-      bitField0_ = (bitField0_ & ~0x00000008);
+      bitField0_ = (bitField0_ & ~0x00000002);
       onChanged();
       return this;
     }
     /**
-     * <pre>
-     * Must match the verified project claim/header. Empty resolves to the
-     * canonical default project, never to an arbitrary catalog fallback.
-     * </pre>
-     *
-     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * <code>string project_id = 2 [json_name = "projectId"];</code>
      * @param value The bytes for projectId to set.
      * @return This builder for chaining.
      */
@@ -893,29 +716,99 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       projectId_ = value;
-      bitField0_ |= 0x00000008;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
 
-    private java.lang.Object idempotencyKey_ = "";
+    private java.lang.Object reason_ = "";
     /**
-     * <pre>
-     * Required caller-supplied replay key. Reusing it with identical authoritative
-     * inputs returns the original KEK-protected credential response; reusing it
-     * with different inputs is an ABORTED conflict.
-     * </pre>
-     *
-     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
-     * @return The idempotencyKey.
+     * <code>string reason = 3 [json_name = "reason"];</code>
+     * @return The reason.
      */
-    public java.lang.String getIdempotencyKey() {
-      java.lang.Object ref = idempotencyKey_;
+    public java.lang.String getReason() {
+      java.lang.Object ref = reason_;
       if (!(ref instanceof java.lang.String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        idempotencyKey_ = s;
+        reason_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string reason = 3 [json_name = "reason"];</code>
+     * @return The bytes for reason.
+     */
+    public com.google.protobuf.ByteString
+        getReasonBytes() {
+      java.lang.Object ref = reason_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        reason_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string reason = 3 [json_name = "reason"];</code>
+     * @param value The reason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReason(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      reason_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string reason = 3 [json_name = "reason"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReason() {
+      reason_ = getDefaultInstance().getReason();
+      bitField0_ = (bitField0_ & ~0x00000004);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string reason = 3 [json_name = "reason"];</code>
+     * @param value The bytes for reason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReasonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      reason_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object confirmationToken_ = "";
+    /**
+     * <pre>
+     * Required exact value "&lt;tenant_id&gt;:&lt;resolved-project_id&gt;".
+     * </pre>
+     *
+     * <code>string confirmation_token = 4 [json_name = "confirmationToken"];</code>
+     * @return The confirmationToken.
+     */
+    public java.lang.String getConfirmationToken() {
+      java.lang.Object ref = confirmationToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        confirmationToken_ = s;
         return s;
       } else {
         return (java.lang.String) ref;
@@ -923,22 +816,20 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Required caller-supplied replay key. Reusing it with identical authoritative
-     * inputs returns the original KEK-protected credential response; reusing it
-     * with different inputs is an ABORTED conflict.
+     * Required exact value "&lt;tenant_id&gt;:&lt;resolved-project_id&gt;".
      * </pre>
      *
-     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
-     * @return The bytes for idempotencyKey.
+     * <code>string confirmation_token = 4 [json_name = "confirmationToken"];</code>
+     * @return The bytes for confirmationToken.
      */
     public com.google.protobuf.ByteString
-        getIdempotencyKeyBytes() {
-      java.lang.Object ref = idempotencyKey_;
+        getConfirmationTokenBytes() {
+      java.lang.Object ref = confirmationToken_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        idempotencyKey_ = b;
+        confirmationToken_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
@@ -946,77 +837,71 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Required caller-supplied replay key. Reusing it with identical authoritative
-     * inputs returns the original KEK-protected credential response; reusing it
-     * with different inputs is an ABORTED conflict.
+     * Required exact value "&lt;tenant_id&gt;:&lt;resolved-project_id&gt;".
      * </pre>
      *
-     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
-     * @param value The idempotencyKey to set.
+     * <code>string confirmation_token = 4 [json_name = "confirmationToken"];</code>
+     * @param value The confirmationToken to set.
      * @return This builder for chaining.
      */
-    public Builder setIdempotencyKey(
+    public Builder setConfirmationToken(
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
-      idempotencyKey_ = value;
-      bitField0_ |= 0x00000010;
+      confirmationToken_ = value;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
     /**
      * <pre>
-     * Required caller-supplied replay key. Reusing it with identical authoritative
-     * inputs returns the original KEK-protected credential response; reusing it
-     * with different inputs is an ABORTED conflict.
+     * Required exact value "&lt;tenant_id&gt;:&lt;resolved-project_id&gt;".
      * </pre>
      *
-     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+     * <code>string confirmation_token = 4 [json_name = "confirmationToken"];</code>
      * @return This builder for chaining.
      */
-    public Builder clearIdempotencyKey() {
-      idempotencyKey_ = getDefaultInstance().getIdempotencyKey();
-      bitField0_ = (bitField0_ & ~0x00000010);
+    public Builder clearConfirmationToken() {
+      confirmationToken_ = getDefaultInstance().getConfirmationToken();
+      bitField0_ = (bitField0_ & ~0x00000008);
       onChanged();
       return this;
     }
     /**
      * <pre>
-     * Required caller-supplied replay key. Reusing it with identical authoritative
-     * inputs returns the original KEK-protected credential response; reusing it
-     * with different inputs is an ABORTED conflict.
+     * Required exact value "&lt;tenant_id&gt;:&lt;resolved-project_id&gt;".
      * </pre>
      *
-     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
-     * @param value The bytes for idempotencyKey to set.
+     * <code>string confirmation_token = 4 [json_name = "confirmationToken"];</code>
+     * @param value The bytes for confirmationToken to set.
      * @return This builder for chaining.
      */
-    public Builder setIdempotencyKeyBytes(
+    public Builder setConfirmationTokenBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
-      idempotencyKey_ = value;
-      bitField0_ |= 0x00000010;
+      confirmationToken_ = value;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest)
+    // @@protoc_insertion_point(builder_scope:udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest)
-  private static final com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest)
+  private static final com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest();
+    DEFAULT_INSTANCE = new com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest();
   }
 
-  public static com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest getDefaultInstance() {
+  public static com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<GenerateDatabaseCredentialsRequest>
-      PARSER = new com.google.protobuf.AbstractParser<GenerateDatabaseCredentialsRequest>() {
+  private static final com.google.protobuf.Parser<EmergencyRevokeDatabaseCredentialsRequest>
+      PARSER = new com.google.protobuf.AbstractParser<EmergencyRevokeDatabaseCredentialsRequest>() {
     @java.lang.Override
-    public GenerateDatabaseCredentialsRequest parsePartialFrom(
+    public EmergencyRevokeDatabaseCredentialsRequest parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1035,17 +920,17 @@ private static final long serialVersionUID = 0L;
     }
   };
 
-  public static com.google.protobuf.Parser<GenerateDatabaseCredentialsRequest> parser() {
+  public static com.google.protobuf.Parser<EmergencyRevokeDatabaseCredentialsRequest> parser() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.google.protobuf.Parser<GenerateDatabaseCredentialsRequest> getParserForType() {
+  public com.google.protobuf.Parser<EmergencyRevokeDatabaseCredentialsRequest> getParserForType() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest getDefaultInstanceForType() {
+  public com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

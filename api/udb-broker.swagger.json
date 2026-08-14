@@ -39037,6 +39037,272 @@
         "x-udb-operation-kind": "mutation"
       }
     },
+    "/v1/vault/database/credentials/{leaseId}:revoke": {
+      "post": {
+        "summary": "Revoke one lease in the authenticated tenant/project. The durable state is\nmoved to REVOKING before physical session fencing and becomes REVOKED only\nafter the generated role is proven absent. Replays are naturally idempotent.",
+        "operationId": "VaultService_RevokeDatabaseCredentials",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RevokeDatabaseCredentialsResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "leaseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VaultServiceRevokeDatabaseCredentialsBody"
+            }
+          }
+        ],
+        "tags": [
+          "VaultService"
+        ]
+      }
+    },
+    "/v1/vault/database/credentials:emergency-revoke": {
+      "post": {
+        "summary": "Emergency kill-switch for every non-terminal lease in exactly one verified\ntenant/project. A confirmation token bound to both scope dimensions prevents\nan accidental tenant-wide or cross-project credential wipe.",
+        "operationId": "VaultService_EmergencyRevokeDatabaseCredentials",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EmergencyRevokeDatabaseCredentialsResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1EmergencyRevokeDatabaseCredentialsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "VaultService"
+        ]
+      }
+    },
     "/v1/vault/seal-status": {
       "get": {
         "summary": "Report whether the vault is sealed (master key unavailable). Always answers,\neven when sealed, so operators can diagnose a sealed vault.",
@@ -47417,6 +47683,20 @@
         }
       }
     },
+    "VaultServiceRevokeDatabaseCredentialsBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
     "WebhookServiceUpdateEndpointBody": {
       "type": "object",
       "properties": {
@@ -50919,6 +51199,46 @@
         }
       }
     },
+    "v1EmergencyRevokeDatabaseCredentialsRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "confirmationToken": {
+          "type": "string",
+          "description": "Required exact value \"<tenant_id>:<resolved-project_id>\"."
+        }
+      }
+    },
+    "v1EmergencyRevokeDatabaseCredentialsResponse": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "type": "string"
+        },
+        "matchedCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "revokedCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError"
+        }
+      }
+    },
     "v1EmergencyRevokeRequest": {
       "type": "object",
       "properties": {
@@ -51598,6 +51918,14 @@
         "ttlSeconds": {
           "type": "integer",
           "format": "int32"
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Must match the verified project claim/header. Empty resolves to the\ncanonical default project, never to an arbitrary catalog fallback."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Required caller-supplied replay key. Reusing it with identical authoritative\ninputs returns the original KEK-protected credential response; reusing it\nwith different inputs is an ABORTED conflict."
         }
       }
     },
@@ -51622,6 +51950,12 @@
         },
         "error": {
           "$ref": "#/definitions/v1ApiError"
+        },
+        "replayed": {
+          "type": "boolean"
+        },
+        "state": {
+          "type": "string"
         }
       }
     },
@@ -56769,6 +57103,29 @@
         "error": {
           "$ref": "#/definitions/v1ApiError",
           "title": "Error information if operation failed"
+        }
+      }
+    },
+    "v1RevokeDatabaseCredentialsResponse": {
+      "type": "object",
+      "properties": {
+        "leaseId": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "replayed": {
+          "type": "boolean"
+        },
+        "operationId": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError"
         }
       }
     },

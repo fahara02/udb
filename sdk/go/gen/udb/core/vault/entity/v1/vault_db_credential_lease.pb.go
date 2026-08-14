@@ -26,12 +26,12 @@ const (
 // ---------------------------------------------------------------------------
 // VaultDbCredentialLease — one short-lived database login minted by Vault.
 //
-// The password is returned only in GenerateDatabaseCredentialsResponse and is
-// never stored. The durable row tracks the generated username, tenant, configured
-// role alias, parent Postgres role, and expiry so WORKER_VAULT_LEASE_REAPER can
-// revoke/drop the login after its lease expires. RLS scopes rows to the current
-// tenant; operators should grant the parent role only the privileges that alias
-// is allowed to delegate.
+// The password is returned only in GenerateDatabaseCredentialsResponse. A
+// master-KEK-wrapped recovery envelope is stored so an authenticated replay of
+// the same idempotent request can recover the original one-time response without
+// creating a second login. The durable STARTING/ACTIVE/REVOKING/REVOKED/FAILED
+// state machine lets WORKER_VAULT_LEASE_REAPER reconcile every split boundary.
+// RLS scopes rows to the current tenant and project.
 // ---------------------------------------------------------------------------
 type VaultDbCredentialLease struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
@@ -47,11 +47,31 @@ type VaultDbCredentialLease struct {
 	IssuedAt   *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
 	ExpiresAt  *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	RevokedAt  *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=revoked_at,json=revokedAt,proto3" json:"revoked_at,omitempty"`
-	// ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
-	State         string `protobuf:"bytes,10,opt,name=state,proto3" json:"state,omitempty"`
-	MetadataJson  string `protobuf:"bytes,11,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+	// plus FAILED rows with a pending revocation, is owned by the reconciliation
+	// worker. REVOKED is set only after session termination and role-absence proof.
+	State        string `protobuf:"bytes,10,opt,name=state,proto3" json:"state,omitempty"`
+	MetadataJson string `protobuf:"bytes,11,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
+	ProjectId    string `protobuf:"bytes,12,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Caller-supplied idempotency key. Its unique scope is tenant+project so a
+	// response-loss replay can never mint a second physical login.
+	IdempotencyKey string `protobuf:"bytes,13,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	// Hash of every authority-relevant issuance input; the same idempotency key
+	// with different inputs is a conflict, never a replay.
+	RequestHash string `protobuf:"bytes,14,opt,name=request_hash,json=requestHash,proto3" json:"request_hash,omitempty"`
+	// Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+	// only be selected by the trusted recovery path and never appears in normal
+	// entity/SDK output, logs, CDC payloads, or audit events.
+	CredentialCiphertext string `protobuf:"bytes,15,opt,name=credential_ciphertext,json=credentialCiphertext,proto3" json:"credential_ciphertext,omitempty"`
+	// Immutable physical authority selected at issuance. Reconciliation must use
+	// this exact instance and fails closed if it is no longer routable.
+	TargetInstance        string                 `protobuf:"bytes,16,opt,name=target_instance,json=targetInstance,proto3" json:"target_instance,omitempty"`
+	LastError             string                 `protobuf:"bytes,17,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	RevokeReason          string                 `protobuf:"bytes,18,opt,name=revoke_reason,json=revokeReason,proto3" json:"revoke_reason,omitempty"`
+	RevocationOperationId string                 `protobuf:"bytes,19,opt,name=revocation_operation_id,json=revocationOperationId,proto3" json:"revocation_operation_id,omitempty"`
+	RevocationRequestedAt *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=revocation_requested_at,json=revocationRequestedAt,proto3" json:"revocation_requested_at,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *VaultDbCredentialLease) Reset() {
@@ -161,11 +181,74 @@ func (x *VaultDbCredentialLease) GetMetadataJson() string {
 	return ""
 }
 
+func (x *VaultDbCredentialLease) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *VaultDbCredentialLease) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *VaultDbCredentialLease) GetRequestHash() string {
+	if x != nil {
+		return x.RequestHash
+	}
+	return ""
+}
+
+func (x *VaultDbCredentialLease) GetCredentialCiphertext() string {
+	if x != nil {
+		return x.CredentialCiphertext
+	}
+	return ""
+}
+
+func (x *VaultDbCredentialLease) GetTargetInstance() string {
+	if x != nil {
+		return x.TargetInstance
+	}
+	return ""
+}
+
+func (x *VaultDbCredentialLease) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+func (x *VaultDbCredentialLease) GetRevokeReason() string {
+	if x != nil {
+		return x.RevokeReason
+	}
+	return ""
+}
+
+func (x *VaultDbCredentialLease) GetRevocationOperationId() string {
+	if x != nil {
+		return x.RevocationOperationId
+	}
+	return ""
+}
+
+func (x *VaultDbCredentialLease) GetRevocationRequestedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RevocationRequestedAt
+	}
+	return nil
+}
+
 var File_udb_core_vault_entity_v1_vault_db_credential_lease_proto protoreflect.FileDescriptor
 
 const file_udb_core_vault_entity_v1_vault_db_credential_lease_proto_rawDesc = "" +
 	"\n" +
-	"8udb/core/vault/entity/v1/vault_db_credential_lease.proto\x12\x18udb.core.vault.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xac\f\n" +
+	"8udb/core/vault/entity/v1/vault_db_credential_lease.proto\x12\x18udb.core.vault.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xc0\x15\n" +
 	"\x16VaultDbCredentialLease\x12F\n" +
 	"\blease_id\x18\x01 \x01(\tB+\x82\xb7\x18'\n" +
 	"\blease_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\aleaseId\x12n\n" +
@@ -191,20 +274,47 @@ const file_udb_core_vault_entity_v1_vault_db_credential_lease_proto_rawDesc = ""
 	"\n" +
 	"revoked_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x1d\x82\xb7\x18\x19\n" +
 	"\n" +
-	"revoked_at\x12\vTIMESTAMPTZR\trevokedAt\x12:\n" +
+	"revoked_at\x12\vTIMESTAMPTZR\trevokedAt\x12<\n" +
 	"\x05state\x18\n" +
-	" \x01(\tB$\x82\xb7\x18 \n" +
-	"\x05state\x12\vVARCHAR(20)\x18\x01:\b'ACTIVE'R\x05state\x12\x84\x01\n" +
+	" \x01(\tB&\x82\xb7\x18\"\n" +
+	"\x05state\x12\vVARCHAR(20)\x18\x01:\n" +
+	"'STARTING'R\x05state\x12\x84\x01\n" +
 	"\rmetadata_json\x18\v \x01(\tB_\x82\xb7\x18[\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ2Non-secret issuance metadata for audit and routingx\x01R\fmetadataJson:\xf4\x04\xfa\xb6\x18\xdb\x03\n" +
-	"\x1avault_db_credential_leases\x12\tudb_vault\x18\x03 \x01*BShort-lived database credentials minted by Vault (master-plan 9.1)8\x01@\x01b^\n" +
-	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01C\n" +
-	".idx_vault_db_credential_leases_username_unique\x12\x05BTREE\x18\x01Z\busername\x8a\x01I\n" +
-	"*idx_vault_db_credential_leases_tenant_role\x12\x05BTREEZ\ttenant_idZ\trole_name\x8a\x01A\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ2Non-secret issuance metadata for audit and routingx\x01R\fmetadataJson\x12M\n" +
+	"\n" +
+	"project_id\x18\f \x01(\tB.\x82\xb7\x18*\n" +
+	"\n" +
+	"project_id\x12\fVARCHAR(255)\x18\x01:\t'default'\xa0\x02\x01R\tprojectId\x12R\n" +
+	"\x0fidempotency_key\x18\r \x01(\tB)\x82\xb7\x18%\n" +
+	"\x0fidempotency_key\x12\fVARCHAR(128)\x18\x01:\x02''R\x0eidempotencyKey\x12I\n" +
+	"\frequest_hash\x18\x0e \x01(\tB&\x82\xb7\x18\"\n" +
+	"\frequest_hash\x12\fVARCHAR(128)\x18\x01:\x02''R\vrequestHash\x12\xc4\x01\n" +
+	"\x15credential_ciphertext\x18\x0f \x01(\tB\x8e\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18h\n" +
+	"\x15credential_ciphertext\x12\x04TEXT\x18\x01:\x02''ZCMaster-KEK-wrapped recovery envelope for idempotent response replay\x8a\xb7\x18\x16\b\x03\x10\x01\x18\x03:\bvault-dbJ\x04noneR\x14credentialCiphertext\x12R\n" +
+	"\x0ftarget_instance\x18\x10 \x01(\tB)\x82\xb7\x18%\n" +
+	"\x0ftarget_instance\x12\fVARCHAR(255)\x18\x01:\x02''R\x0etargetInstance\x12;\n" +
+	"\n" +
+	"last_error\x18\x11 \x01(\tB\x1c\x82\xb7\x18\x18\n" +
+	"\n" +
+	"last_error\x12\x04TEXT\x18\x01:\x02''R\tlastError\x12D\n" +
+	"\rrevoke_reason\x18\x12 \x01(\tB\x1f\x82\xb7\x18\x1b\n" +
+	"\rrevoke_reason\x12\x04TEXT\x18\x01:\x02''R\frevokeReason\x12[\n" +
+	"\x17revocation_operation_id\x18\x13 \x01(\tB#\x82\xb7\x18\x1f\n" +
+	"\x17revocation_operation_id\x12\x04UUIDR\x15revocationOperationId\x12~\n" +
+	"\x17revocation_requested_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampB*\x82\xb7\x18&\n" +
+	"\x17revocation_requested_at\x12\vTIMESTAMPTZR\x15revocationRequestedAt:\x9d\a\xfa\xb6\x18\xb4\x05\n" +
+	"\x1avault_db_credential_leases\x12\tudb_vault\x18\x03 \x01*BShort-lived database credentials minted by Vault (master-plan 9.1)8\x01@\x01b\xac\x01\n" +
+	"\x10tenant_isolation\x1a\x95\x01(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)(\x01\x8a\x01C\n" +
+	".idx_vault_db_credential_leases_username_unique\x12\x05BTREE\x18\x01Z\busername\x8a\x01U\n" +
+	"*idx_vault_db_credential_leases_tenant_role\x12\x05BTREEZ\ttenant_idZ\n" +
+	"project_idZ\trole_name\x8a\x01{\n" +
+	"1idx_vault_db_credential_leases_idempotency_unique\x12\x05BTREE\x18\x01:\x15idempotency_key <> ''Z\ttenant_idZ\n" +
+	"project_idZ\x0fidempotency_key\x8a\x01A\n" +
 	"%idx_vault_db_credential_leases_expiry\x12\x05BTREEZ\x05stateZ\n" +
 	"expires_at\xf2\x01\"udb.vault.db_credential_leases.cdc\xfa\x01\n" +
-	"vault:read\x8a\xb2\x19\x8f\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11vault.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x86\x02\n" +
+	"vault:read\x8a\xb2\x19\xdf\x01\n" +
+	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
+	"project_id*otenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')2\x04none:\x11vault.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x86\x02\n" +
 	"\x1ccom.udb.core.vault.entity.v1B\x1bVaultDbCredentialLeaseProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/vault/entity/v1;entityv1\xa2\x02\x04UCVE\xaa\x02\x18udb.core.Vault.Entity.V1\xca\x02\x18Udb\\Core\\Vault\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Vault\\Entity\\V1\xea\x02\x1cUdb::Core::Vault::Entity::V1b\x06proto3"
 
 var (
@@ -228,11 +338,12 @@ var file_udb_core_vault_entity_v1_vault_db_credential_lease_proto_depIdxs = []in
 	1, // 0: udb.core.vault.entity.v1.VaultDbCredentialLease.issued_at:type_name -> google.protobuf.Timestamp
 	1, // 1: udb.core.vault.entity.v1.VaultDbCredentialLease.expires_at:type_name -> google.protobuf.Timestamp
 	1, // 2: udb.core.vault.entity.v1.VaultDbCredentialLease.revoked_at:type_name -> google.protobuf.Timestamp
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	1, // 3: udb.core.vault.entity.v1.VaultDbCredentialLease.revocation_requested_at:type_name -> google.protobuf.Timestamp
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_vault_entity_v1_vault_db_credential_lease_proto_init() }
