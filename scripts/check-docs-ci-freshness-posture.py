@@ -112,7 +112,7 @@ def run_selftest() -> int:
 
         native_docs = root / "docs" / "generated" / "native-services.md"
         native_docs.write_text(
-            read_text(native_docs).replace("Contract version `4.1.0`", "Contract version `3.0.0`"),
+            read_text(native_docs).replace("Contract version `5.0.0`", "Contract version `4.1.0`"),
             encoding="utf-8",
         )
         failures = check(root)

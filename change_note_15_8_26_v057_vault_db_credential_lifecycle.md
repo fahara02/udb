@@ -142,3 +142,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   versions, SDK coverage, and every posture gate before docs freshness exposed
   its pinned 4.1.0 header. That fixture now requires the intentional 5.0.0 native
   contract major, keeping the generated documentation and its drift guard exact.
+- Follow-up CI run `31844431491` showed that the freshness guard's self-test
+  still mutated the former 4.1.0 good fixture, so it performed no mutation after
+  the version bump. The self-test now degrades 5.0.0 back to 4.1.0 and therefore
+  continues proving that stale generated native documentation is rejected.
