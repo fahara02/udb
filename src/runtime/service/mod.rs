@@ -2695,6 +2695,7 @@ pub async fn serve(
             let lease_pool = leader_pool.clone();
             let worker_runtime = vault_runtime.clone();
             let worker_catalog = vault_catalog.clone();
+            let worker_outbox_relation = vault_runtime.config().cdc.outbox_relation();
             crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
                 crate::runtime::singleton::WORKER_VAULT_LEASE_REAPER,
                 "vault DB credential leases revoked expired login roles",
@@ -2704,6 +2705,7 @@ pub async fn serve(
                 move || {
                     let runtime = worker_runtime.clone();
                     let catalog = worker_catalog.clone();
+                    let outbox_relation = worker_outbox_relation.clone();
                     async move {
                         let mut revoked = 0i64;
                         let mut failures = Vec::new();
@@ -2717,7 +2719,10 @@ pub async fn serve(
                             ) {
                                 Ok((pool, _instance)) => {
                                     match crate::runtime::service::vault_service::run_vault_db_lease_reaper_once(
+                                        &runtime,
                                         &pool,
+                                        &project_id,
+                                        Some(&outbox_relation),
                                         crate::runtime::service::vault_service::vault_db_lease_reaper_batch(),
                                     )
                                     .await

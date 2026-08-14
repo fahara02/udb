@@ -1,0 +1,47 @@
+# UDB v0.5.7 Vault database-credential lifecycle correction
+
+Date: 2026-08-15
+Status: implemented; GitHub CI and generated protocol artifacts pending
+
+## Changed
+
+- Added replay-safe issuance keyed by verified tenant/project plus a required
+  caller idempotency key.
+- Stored only master-KEK-wrapped recovery material, marked STORAGE_ONLY and
+  redacted by the descriptor contract.
+- Made STARTING claim, tenant/project-bound physical authority, ACTIVE state,
+  provenance, and issued event one PostgreSQL transaction.
+- Added public single-lease revoke and project-scoped emergency revoke-all RPCs.
+- Added durable STARTING/ACTIVE/REVOKING/REVOKED/FAILED reconciliation,
+  immutable target routing, session termination, generated policy/grant cleanup,
+  role-absence proof, and strict transactional revocation evidence.
+- Terminal REVOKED commits now shred the KEK-wrapped password recovery envelope
+  in the same transaction as the durable state and outbox evidence.
+- Emergency revoke-all durably marks every matching non-terminal lease before
+  processing a bounded synchronous batch; the leader worker drains all remaining
+  REVOKING/FAILED intents over subsequent bounded passes.
+- Expanded the live Vault test with response-loss replay, active-session revoke,
+  role/session absence, recovery-envelope shredding, durable outbox verification,
+  and outbox-failure atomic rollback assertions.
+
+## Compatibility
+
+- The service additions and new request/response fields are wire-additive.
+- `GenerateDatabaseCredentials.idempotency_key` is operationally required; old
+  callers receive a typed validation error until upgraded.
+- Historical rows retain migration defaults, but cannot recover passwords that
+  were never persisted as protected envelopes.
+- The idempotency uniqueness constraint excludes legacy empty-key rows, allowing
+  in-place migration while enforcing uniqueness for every new required key.
+
+## Verification
+
+- No local Cargo, build, or test command was run because the operator required
+  CI-only verification.
+- Required live filter:
+  `vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_change`
+  with `UDB_LIVE_AUTH_TESTS=1`, the CI Vault authority JSON, Postgres, and a real
+  master KEK.
+- Required standard gates: workspace library tests, native integration,
+  descriptor compatibility, codebase-map freshness, Buf/OpenAPI/SDK drift, and
+  formatting/clippy in `.github/workflows/ci.yml`.

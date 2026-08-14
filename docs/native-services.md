@@ -147,7 +147,7 @@ control plane.
 
 | Service | What it does | Representative RPCs |
 |---|---|---|
-| `VaultService` | Encrypted secrets, transit crypto, and short-lived database credentials | `PutSecret`, `GetSecret`, `Encrypt`/`Decrypt`, `Sign`/`Verify`, `Hmac`, `GenerateDatabaseCredentials`, `SealStatus` |
+| `VaultService` | Encrypted secrets, transit crypto, and short-lived database credentials | `PutSecret`, `GetSecret`, `Encrypt`/`Decrypt`, `Sign`/`Verify`, `Hmac`, `GenerateDatabaseCredentials`, `RevokeDatabaseCredentials`, `EmergencyRevokeDatabaseCredentials`, `SealStatus` |
 | `MeteringService` | Records usage events and enforces per-tenant quotas | `RecordUsage`, `QueryUsage`, `PutQuota`, `GetQuota`, `CheckQuota` |
 | `SchedulerService` | Durable cron / one-shot job scheduling | `CreateJob`, `GetJob`, `ListJobs`, `PauseJob`, `ResumeJob`, `DeleteJob` |
 | `SearchService` | Managed search indexes over app data | `CreateIndex`, `Reindex`, `Search`, `ListIndexes`, `DeleteIndex` |

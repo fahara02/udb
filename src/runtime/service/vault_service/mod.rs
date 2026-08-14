@@ -68,6 +68,7 @@ mod dynamic;
 mod errors;
 mod events;
 mod handlers;
+mod lifecycle;
 mod model;
 mod quota;
 mod store;
@@ -459,7 +460,21 @@ impl VaultService for VaultServiceImpl {
         &self,
         request: Request<vault_pb::GenerateDatabaseCredentialsRequest>,
     ) -> Result<Response<vault_pb::GenerateDatabaseCredentialsResponse>, Status> {
-        handlers::generate_database_credentials(self, request).await
+        lifecycle::generate_database_credentials(self, request).await
+    }
+
+    async fn revoke_database_credentials(
+        &self,
+        request: Request<vault_pb::RevokeDatabaseCredentialsRequest>,
+    ) -> Result<Response<vault_pb::RevokeDatabaseCredentialsResponse>, Status> {
+        lifecycle::revoke_database_credentials(self, request).await
+    }
+
+    async fn emergency_revoke_database_credentials(
+        &self,
+        request: Request<vault_pb::EmergencyRevokeDatabaseCredentialsRequest>,
+    ) -> Result<Response<vault_pb::EmergencyRevokeDatabaseCredentialsResponse>, Status> {
+        lifecycle::emergency_revoke_database_credentials(self, request).await
     }
 }
 

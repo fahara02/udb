@@ -1,7 +1,7 @@
 # UDB v0.5.7 dynamic database credential issuance is not replay-safe or revocable
 
 Date: 2026-08-14
-Status: new issuance disabled and expiry cleanup hardened; public recovery/revoke contract remains open
+Status: full lifecycle correction implemented; GitHub CI and generated-contract refresh pending
 Affected path: Vault dynamic database credentials and lease reaper
 
 ## Summary
@@ -66,6 +66,40 @@ the lifecycle contract. There is still no tenant/project-scoped public revoke or
 emergency revoke-all RPC, no STARTING/REVOKING/FAILED state machine, no durable
 revocation outbox event, and no recovery protocol for historical one-time
 responses. Those items and the listed live failure-injection tests remain open.
+
+## 2026-08-15 full lifecycle correction
+
+- `GenerateDatabaseCredentialsRequest` now requires a tenant/project-scoped
+  caller idempotency key. The unique durable claim binds every authority input;
+  a different-input reuse is an ABORTED conflict. Its partial unique index
+  excludes pre-correction empty-key rows so existing lease history can migrate.
+- Password recovery material is stored only as a master-KEK `udb-aead:`
+  envelope in a descriptor-marked STORAGE_ONLY credential column. An identical
+  authenticated replay returns the original credential and lease; no second
+  login is minted.
+- STARTING claim, restrictive-role/policy creation, ACTIVE transition,
+  provenance, and issued outbox evidence share one PostgreSQL transaction. An
+  outbox/lease failure rolls back both physical role and durable row.
+- Public single-lease revoke and project-scoped emergency revoke-all RPCs record
+  durable intent before physical work. They terminate sessions, remove generated
+  policies/grants and the login, prove role absence, then atomically record
+  REVOKED, shred the KEK-wrapped password recovery envelope, and write strict
+  revocation outbox evidence.
+- Emergency revoke-all marks every matching non-terminal lease before attempting
+  a bounded synchronous batch. The leader reconciler drains the remaining
+  REVOKING/FAILED intents in later bounded passes, so a large kill-switch request
+  is durable beyond the initial response batch.
+- The leader-elected worker reconciles STARTING, expired ACTIVE, REVOKING, and
+  revocation-pending FAILED rows against the immutable target instance. Target
+  drift fails closed and physical failures retain durable intent for retry.
+- The live served-path test now covers response-loss replay, active-session
+  termination, role-absence/outbox proof, terminal recovery-envelope shredding,
+  and strict-outbox atomic rollback.
+
+No local Cargo, build, or test command was run for this full wave, per operator
+instruction. GitHub CI must compile and execute the live filter before the fix is
+called verified. Additive proto changes also require CI-generated native
+contract, OpenAPI, and SDK artifact refresh before merge.
 
 ## Verification log
 

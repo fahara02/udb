@@ -22,6 +22,7 @@ pub(crate) const TOPIC_KEY_CREATED: &str = "udb.vault.transit_key.created.v1";
 pub(crate) const TOPIC_KEY_ROTATED: &str = "udb.vault.transit_key.rotated.v1";
 pub(crate) const TOPIC_TRANSIT_DECRYPTED: &str = "udb.vault.transit.decrypted.v1";
 pub(crate) const TOPIC_DB_CREDENTIAL_ISSUED: &str = "udb.vault.db_credential.issued.v1";
+pub(crate) const TOPIC_DB_CREDENTIAL_REVOKED: &str = "udb.vault.db_credential.revoked.v1";
 // Audit-coverage topics. `secret.listed` fulfils the ListSecrets event contract
 // declared in the proto (`method_event_contract`); the transit.* audit topics
 // give the previously-unaudited crypto RPCs (Encrypt/Sign/Hmac/Verify) the same
@@ -45,6 +46,15 @@ pub(crate) const TOPIC_TRANSIT_REWRAPPED: &str = "udb.vault.transit.rewrapped.v1
 pub(crate) const STATE_ACTIVE: &str = "ACTIVE";
 pub(crate) const STATE_DELETED: &str = "DELETED";
 pub(crate) const STATE_DESTROYED: &str = "DESTROYED";
+
+// Dynamic database-credential lease states. These are kept separate from the
+// KV secret states even where the ACTIVE token is identical: the lease FSM is
+// a reconciliation contract, not a soft-delete lifecycle.
+pub(crate) const DB_LEASE_STARTING: &str = "STARTING";
+pub(crate) const DB_LEASE_ACTIVE: &str = "ACTIVE";
+pub(crate) const DB_LEASE_REVOKING: &str = "REVOKING";
+pub(crate) const DB_LEASE_REVOKED: &str = "REVOKED";
+pub(crate) const DB_LEASE_FAILED: &str = "FAILED";
 
 // Transit key states — mirror the auth-service signing-key registry rotation:
 // ACTIVE encrypts/signs (and decrypts/verifies); VERIFYING decrypts/verifies

@@ -31,8 +31,8 @@ use super::crypto::{
     require_signing_algorithm, validate_transit_algorithm,
 };
 use super::dynamic::{
-    drop_postgres_login_role, parse_vault_db_role_configs, requested_db_credential_ttl,
-    terminate_postgres_login_sessions, validate_db_credential_binding, validate_db_role_alias,
+    parse_vault_db_role_configs, requested_db_credential_ttl, validate_db_credential_binding,
+    validate_db_role_alias,
 };
 use super::errors::{
     is_duplicate_conflict, vault_db_credentials_config_status,
@@ -694,11 +694,13 @@ async fn vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_ch
     .await
     .expect("seed cross-scope records");
 
-    let svc = vault_service().await;
+    let mut svc = vault_service().await;
     let mut request = Request::new(vault_pb::GenerateDatabaseCredentialsRequest {
         tenant_id: "tenant-a".to_string(),
+        project_id: "default".to_string(),
         role_name: "authority-test-read".to_string(),
         ttl_seconds: 300,
+        idempotency_key: "authority-live-response-loss".to_string(),
         ..Default::default()
     });
     request
@@ -750,13 +752,134 @@ async fn vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_ch
     .expect("read after hostile GUC change");
     assert_eq!(visible_after_change, ["own"]);
 
-    drop(credential_conn);
-    terminate_postgres_login_sessions(&pool, &issued.username)
+    // Simulate response loss: the caller repeats the exact request with the same
+    // key. The served path must recover the original KEK-wrapped password and
+    // lease rather than minting a second login.
+    let mut replay_request = Request::new(vault_pb::GenerateDatabaseCredentialsRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "default".to_string(),
+        role_name: "authority-test-read".to_string(),
+        ttl_seconds: 300,
+        idempotency_key: "authority-live-response-loss".to_string(),
+        ..Default::default()
+    });
+    replay_request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    replay_request.metadata_mut().insert(
+        "x-udb-project-id",
+        MetadataValue::from_static("default"),
+    );
+    let replayed = svc
+        .generate_database_credentials(replay_request)
         .await
-        .expect("terminate generated credential sessions");
-    drop_postgres_login_role(&pool, &issued.username)
+        .expect("response-loss replay must recover the original credential")
+        .into_inner();
+    assert!(replayed.replayed);
+    assert_eq!(replayed.lease_id, issued.lease_id);
+    assert_eq!(replayed.username, issued.username);
+    assert_eq!(replayed.password, issued.password);
+
+    // Revoke through the actual VaultService handler while a session is live.
+    // The response is allowed only after the session is terminated and the role
+    // is proven absent; the same transaction writes durable outbox evidence.
+    let mut revoke_request = Request::new(vault_pb::RevokeDatabaseCredentialsRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "default".to_string(),
+        lease_id: issued.lease_id.clone(),
+        reason: "live response-loss credential cleanup".to_string(),
+        ..Default::default()
+    });
+    revoke_request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    revoke_request.metadata_mut().insert(
+        "x-udb-project-id",
+        MetadataValue::from_static("default"),
+    );
+    let revoked = svc
+        .revoke_database_credentials(revoke_request)
         .await
-        .expect("drop generated credential and restrictive policies");
+        .expect("served revoke must terminate sessions and remove the role")
+        .into_inner();
+    assert_eq!(revoked.state, "REVOKED");
+    assert!(!postgres_role_exists(&pool, &issued.username)
+        .await
+        .expect("role absence proof"));
+    assert!(
+        sqlx::query("SELECT 1")
+            .execute(&mut credential_conn)
+            .await
+            .is_err(),
+        "the pre-revocation database session must be terminated"
+    );
+    let revoked_events: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM udb_system.outbox_events \
+         WHERE topic = 'udb.vault.db_credential.revoked.v1' AND partition_key = $1",
+    )
+    .bind(&issued.lease_id)
+    .fetch_one(&pool)
+    .await
+    .expect("count durable revocation evidence");
+    assert_eq!(revoked_events, 1);
+    let recovery_envelope: String = sqlx::query_scalar(
+        "SELECT credential_ciphertext FROM udb_vault.vault_db_credential_leases \
+         WHERE lease_id = $1::uuid",
+    )
+    .bind(&issued.lease_id)
+    .fetch_one(&pool)
+    .await
+    .expect("load revoked credential recovery envelope");
+    assert!(
+        recovery_envelope.is_empty(),
+        "terminal revocation must crypto-shred replayable password recovery material"
+    );
+
+    // Fault injection at the last transactional boundary: a missing outbox
+    // relation makes the strict issued-event insert fail after role/policy SQL.
+    // Because STARTING + physical authority + ACTIVE + outbox share one PG tx,
+    // neither a role nor a lease may survive the failure.
+    let roles_before: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM pg_roles WHERE rolname LIKE 'udb_vault_%'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("count generated roles before fault injection");
+    svc.outbox_relation = Some("\"udb_system\".\"missing_vault_outbox\"".to_string());
+    let mut failed_request = Request::new(vault_pb::GenerateDatabaseCredentialsRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "default".to_string(),
+        role_name: "authority-test-read".to_string(),
+        ttl_seconds: 300,
+        idempotency_key: "authority-live-outbox-failure".to_string(),
+        ..Default::default()
+    });
+    failed_request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    failed_request.metadata_mut().insert(
+        "x-udb-project-id",
+        MetadataValue::from_static("default"),
+    );
+    svc.generate_database_credentials(failed_request)
+        .await
+        .expect_err("strict outbox failure must roll back role and lease");
+    let roles_after: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM pg_roles WHERE rolname LIKE 'udb_vault_%'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("count generated roles after fault injection");
+    assert_eq!(roles_after, roles_before);
+    let stranded_leases: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM udb_vault.vault_db_credential_leases \
+         WHERE tenant_id = 'tenant-a' AND project_id = 'default' AND idempotency_key = $1",
+    )
+    .bind("authority-live-outbox-failure")
+    .fetch_one(&pool)
+    .await
+    .expect("count failed issuance leases");
+    assert_eq!(stranded_leases, 0);
 }
 
 /// DestroySecret is an irreversible crypto-shred, so a merely non-empty
