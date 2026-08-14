@@ -99,3 +99,8 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   error-detail posture, then found only the generated HTTP-style report's former
   291-operation count. The report is refreshed to 293 operations with zero
   route-style exceptions and zero operation-ID collisions.
+- Quick-gate and broker build are green in CI run `31839938418`. Because the
+  201.6 MB broker artifact is impractically slow to transfer to the constrained
+  workstation, a branch-scoped temporary workflow regenerates Buf, native,
+  OpenAPI, benchmark, and all-language SDK artifacts inside GitHub and uploads
+  only their patch. The workflow is removed when that patch is committed.
