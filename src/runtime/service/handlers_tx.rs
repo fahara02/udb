@@ -9,6 +9,11 @@ type CdcEngineResponseStream = Pin<
     >,
 >;
 
+/// Maximum interval during which an already-open CDC stream may continue using
+/// a credential/policy decision before the canonical authorities are consulted
+/// again. The existing channel timeout remains a bounded reconnect backstop.
+const CDC_AUTHORIZATION_RECHECK_INTERVAL: Duration = Duration::from_secs(5);
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CdcStreamDeadlineReason {
     CredentialExpired,
@@ -105,12 +110,21 @@ fn guard_cdc_response_stream(
     guard: CdcStreamLifetimeGuard,
     deadline: tokio::time::Instant,
     deadline_reason: CdcStreamDeadlineReason,
+    credential_revalidator: Option<crate::runtime::credential_layer::CredentialRevalidator>,
+    mut security: SecurityContext,
+    authz_snapshot: Arc<arc_swap::ArcSwap<AuthzSnapshot>>,
+    topic_pattern: String,
 ) -> CdcEngineResponseStream {
     let timeout_metrics = guard.metrics.clone();
     Box::pin(async_stream::stream! {
         let _guard = guard;
         let timeout = tokio::time::sleep_until(deadline);
         tokio::pin!(timeout);
+        let mut authorization_recheck = tokio::time::interval_at(
+            tokio::time::Instant::now() + CDC_AUTHORIZATION_RECHECK_INTERVAL,
+            CDC_AUTHORIZATION_RECHECK_INTERVAL,
+        );
+        authorization_recheck.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         let mut stream = stream;
         loop {
             tokio::select! {
@@ -119,6 +133,41 @@ fn guard_cdc_response_stream(
                     timeout_metrics.inc_channel_timeout("cdc");
                     yield Err(cdc_stream_deadline_status(deadline_reason));
                     break;
+                }
+                _ = authorization_recheck.tick() => {
+                    if let Some(revalidator) = credential_revalidator.as_ref() {
+                        match revalidator.revalidate_security_context(&security).await {
+                            Ok(refreshed) => security = refreshed,
+                            Err(status) => {
+                                yield Err(status);
+                                break;
+                            }
+                        }
+                    }
+                    if let Err(status) =
+                        crate::runtime::cdc::CdcEngine::ensure_stream_read_scope(&security.scopes)
+                    {
+                        yield Err(status);
+                        break;
+                    }
+                    if let Err(status) =
+                        super::tenant_service::tenant_status_gate(&security.tenant_id)
+                    {
+                        yield Err(status);
+                        break;
+                    }
+                    let snapshot = authz_snapshot.load_full();
+                    if let Err(status) = DataBrokerService::authorize_message_item(
+                        snapshot.as_ref(),
+                        &security,
+                        &topic_pattern,
+                        "PublishCDC",
+                    )
+                    .await
+                    {
+                        yield Err(status);
+                        break;
+                    }
                 }
                 item = stream.next() => match item {
                     Some(item) => yield item,
@@ -171,10 +220,27 @@ impl DataBrokerService {
         request: Request<CdcSubscriptionRequest>,
     ) -> Result<Response<ResponseStream<CdcEnvelope>>, Status> {
         let started = Instant::now();
+        let credential_revalidator = request
+            .extensions()
+            .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+            .and_then(|credentials| credentials.revalidator.clone());
         let security = match security_from_request(&request) {
             Ok(s) => s,
             Err(e) => return self.record_grpc("PublishCDC", started, Err(e)),
         };
+        if let Err(status) = super::tenant_service::tenant_status_gate(&security.tenant_id) {
+            return self.record_grpc("PublishCDC", started, Err(status));
+        }
+        if security.credential_type != 0 && credential_revalidator.is_none() {
+            return self.record_grpc(
+                "PublishCDC",
+                started,
+                Err(crate::runtime::executor_utils::unauthenticated_status(
+                    "cdc_credential_revalidator_missing",
+                    "PublishCDC requires the served credential-resolution layer so authorization can be revalidated during the stream",
+                )),
+            );
+        }
         let request = request.into_inner();
         if let Err(err) = self
             .authorize(&security, &request.topic_pattern, "PublishCDC")
@@ -235,6 +301,8 @@ impl DataBrokerService {
         };
         let guard = CdcStreamLifetimeGuard::new(permit, self.metrics.clone());
         let deadline = tokio::time::Instant::now() + stream_budget;
+        let authz_snapshot = self.authz_snapshot();
+        let recheck_topic_pattern = topic_pattern.clone();
         let result = tokio::time::timeout_at(
             deadline,
             cdc_engine.stream_cdc(
@@ -249,8 +317,16 @@ impl DataBrokerService {
 
         match result {
             Ok(Ok(stream)) => {
-                let guarded_stream =
-                    guard_cdc_response_stream(stream, guard, deadline, deadline_reason);
+                let guarded_stream = guard_cdc_response_stream(
+                    stream,
+                    guard,
+                    deadline,
+                    deadline_reason,
+                    credential_revalidator,
+                    security,
+                    authz_snapshot,
+                    recheck_topic_pattern,
+                );
                 let mapped_stream = guarded_stream.map(|item| item.map(proto_cdc_envelope));
                 self.record_grpc(
                     "PublishCDC",

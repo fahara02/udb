@@ -545,6 +545,15 @@ async fn live_postgres_served_grant_management_binds_every_rpc_to_claim_tenant()
     .expect("tenant-B signing key configured")
     .0;
     crate::runtime::security::SecurityConfig::install_global(security);
+    super::super::install_data_plane_credential_resolvers(
+        pool.clone(),
+        &crate::runtime::authn::AuthnConfig {
+            session_enabled: true,
+            session_hash_secret: "live-auth-test-secret".to_string(),
+            ..crate::runtime::authn::AuthnConfig::default()
+        },
+        Arc::new(authn.clone()),
+    );
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
@@ -768,7 +777,11 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         session_hash_secret: "live-auth-test-secret".to_string(),
         ..crate::runtime::authn::AuthnConfig::default()
     };
-    super::super::install_data_plane_credential_resolvers(pool.clone(), &authn_config);
+    super::super::install_data_plane_credential_resolvers(
+        pool.clone(),
+        &authn_config,
+        Arc::new(authn.clone()),
+    );
     let security = crate::runtime::security::SecurityConfig {
         allow_header_scopes: false,
         service_identity_required: true,
@@ -891,10 +904,9 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         .select(subject_mismatch)
         .await
         .expect_err("served JWT subject/header mismatch must fail closed");
-    // The data-only listener mounts no auth-plane services, so its credential
-    // layer cannot validate a service bearer against the durable typed-grant
-    // store — it fails closed as Unauthenticated before any header-vs-claim
-    // mismatch is evaluated.
+    // The listener mounts no auth-plane RPCs, but its credential layer still
+    // uses the fully wired durable Authn validator installed above. The caller's
+    // conflicting subject is therefore rejected after real bearer/grant checks.
     assert_eq!(denied.code(), tonic::Code::Unauthenticated);
 
     let mut tenant_mismatch = bearer_data_request(select_request(), &full_bearer);
@@ -1097,6 +1109,7 @@ async fn live_postgres_mtls_native_listener_is_binding_backed_and_revocable() {
             session_hash_secret: "live-auth-test-secret".to_string(),
             ..crate::runtime::authn::AuthnConfig::default()
         },
+        Arc::new(authn.clone()),
     );
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
 

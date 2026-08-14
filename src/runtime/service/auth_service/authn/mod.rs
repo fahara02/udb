@@ -343,6 +343,7 @@ mod tokens;
 mod webauthn_softauth;
 
 /// `AuthnService` handler over the UDB-owned authn primitives.
+#[derive(Clone)]
 pub struct AuthnServiceImpl {
     sessions: Arc<dyn SessionStore>,
     api_keys: Arc<dyn ApiKeyStore>,
@@ -2340,7 +2341,7 @@ impl AuthnServiceImpl {
         }
     }
 
-    pub(super) async fn jwt_persisted_state_valid(
+    pub(crate) async fn jwt_persisted_state_valid(
         &self,
         claims: &crate::runtime::security::SecurityClaims,
         now: u64,

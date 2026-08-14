@@ -2449,17 +2449,12 @@ pub async fn serve(
         // resolver install used to live only in `build_auth_services`, which
         // this early return skips, leaving the data plane fail-closed for want
         // of wiring rather than by policy.
-        if let Some(pool) = service
-            .runtime
-            .load_full()
-            .native_store_pool_for_service("authn", true, "")
-            .ok()
-        {
-            crate::runtime::service::auth_service::install_data_plane_credential_resolvers(
-                pool,
-                &crate::runtime::authn::AuthnConfig::from_env(),
-            );
-        }
+        // Build and immediately drop the native service adapters. The builder
+        // installs a clone of the fully wired AuthnService into the shared
+        // credential layer, including its configured session backend and
+        // durable revocation authority. The public listener still mounts only
+        // DataBroker; this call supplies authentication dependencies, not RPCs.
+        drop(service.build_auth_services());
         // Optional co-located UDS data-plane (PERF_TODO §3) — clone before the
         // service is moved into the TCP builder below. No-op unless configured.
         #[cfg(unix)]

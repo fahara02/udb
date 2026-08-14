@@ -1,7 +1,7 @@
 # UDB v0.5.7 CDC subscriber stream safety correction
 
-Date: 2026-08-14
-Status: implementation in progress
+Date: 2026-08-14 (authorization follow-up 2026-08-15)
+Status: implementation complete; GitHub CI pending
 
 ## Scope
 
@@ -17,11 +17,17 @@ This change wave corrects the served `DataBroker.PublishCDC` path for:
 
 ## Chosen contract
 
-- A CDC subscription has a bounded server-enforced lifetime. The bound is the
-  configured CDC channel timeout and is clamped to the verified credential's
-  expiry. At the bound, the stream ends with an authentication error and the
-  client must reconnect, which re-runs credential, revocation, tenant, project,
-  and current authorization gates.
+- A CDC subscription has both periodic and maximum-lifetime enforcement. Every
+  five seconds it re-runs canonical bearer/API-key/mTLS resolution, the tenant
+  suspension gate, the canonical CDC read-scope predicate, and the current
+  shared Casbin decision. The configured CDC channel timeout remains clamped to
+  credential expiry as a reconnect backstop.
+- Bearer revalidation uses the native Authn authority for current user,
+  session/JTI, and typed-grant state. API keys and certificate bindings are
+  re-resolved from their durable authorities. Original credential lineage is
+  immutable. Any scope-set change terminates the stream so a reconnect rebuilds
+  the CDC engine's scope-derived privilege/topic filter; expiry and key rate
+  limits refresh while lineage and scopes remain stable.
 - The scoped channel permit and inflight accounting live inside the returned
   stream and are released on normal completion, error, timeout, or client
   cancellation.
@@ -49,6 +55,23 @@ This change wave corrects the served `DataBroker.PublishCDC` path for:
 
 ## Verification
 
+### 2026-08-15 authorization-lifetime follow-up
+
+- Added an ignored live Postgres/Kafka served-path test covering bearer-session
+  revocation, API-key revocation, and shared Casbin policy withdrawal on already
+  open gRPC `PublishCDC` streams.
+- Added a secret-redaction unit assertion for retained revalidation evidence.
+- Added a shared-gate unit assertion proving both admission and periodic
+  revalidation reject credentials without a CDC read/subscribe scope.
+- Added an order-insensitive scope-set assertion covering the reconnect-on-scope
+  change contract.
+- `git diff --check`: passed.
+- No local Cargo command was run for this follow-up, per user direction. GitHub
+  quick/full CI and the live integration run are pending; append their links and
+  results here before calling the follow-up fully tested.
+
+### Historical 2026-08-14 checks
+
 - `cargo check --lib --no-default-features --features postgres -j 2`: passed
   (warnings remain in the pre-existing dirty worktree).
 - `cargo test --lib --no-default-features --features postgres -j 2
@@ -66,5 +89,6 @@ This change wave corrects the served `DataBroker.PublishCDC` path for:
   reached 77 MiB free. `cargo clean -p udb` removed 10.0 GiB of regenerable
   build artifacts; the retried resource-heavy test was stopped at the user's
   direction and delegated to GitHub CI.
-- Full-feature CI and live Postgres/Kafka verification remain pending. This note
-  must not be read as fully tested until those results are appended.
+- The historical checks above predate the periodic credential/Casbin follow-up.
+  They do not verify the new code. This note must not be read as fully tested
+  until the pending GitHub runs are appended.

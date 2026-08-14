@@ -1,7 +1,7 @@
 # UDB v0.5.7 PublishCDC keeps obsolete authorization for the stream lifetime
 
-Date: 2026-08-14
-Status: correction implemented; CI/live revocation verification pending
+Date: 2026-08-14 (implementation follow-up 2026-08-15)
+Status: full credential/policy lifetime correction implemented; GitHub CI pending
 Affected path: `DataBroker.PublishCDC`
 
 ## Summary
@@ -13,7 +13,7 @@ time. It never revalidates token expiry or revocation, user/tenant suspension,
 project removal, or a new deny policy. An already-open customer stream therefore
 continues receiving newly published events after its access has been withdrawn.
 
-## Confirmed served path
+## Original confirmed served path
 
 - `publish_cdc_inner` calls `security_from_request` and `authorize` once before
   it constructs the response stream.
@@ -38,30 +38,52 @@ continues receiving newly published events after its access has been withdrawn.
 - Policy rollout behavior differs by connection age and broker replica, making
   incident containment and access audits unreliable.
 
-## Required correction
+## Correction implemented
 
-- Bind each stream to a revocable credential/principal identity and token expiry.
-- Re-check the current credential/tenant/project gate and current authorization
-  decision periodically and on policy/revocation generation changes; terminate
-  with `UNAUTHENTICATED` or `PERMISSION_DENIED` when access is no longer valid.
-- Refresh topic-policy ownership from a versioned shared snapshot rather than
-  capturing a startup vector for the stream lifetime.
-- Define a bounded maximum connection age as a backstop, shorter than the
-  revocation-detection objective.
-- Add served tests that open a stream, revoke the token/API key, suspend the
-  tenant or remove the allow policy, publish another matching event, and assert
-  that no post-revocation event is delivered.
+- The real Tower credential layer now attaches a redacted
+  `CredentialRevalidator` containing the original bearer/API-key/certificate
+  evidence. Secret values are never exposed by `Debug` or audit lineage.
+- Bearers are rechecked through the same fully wired `AuthnServiceImpl` used by
+  native auth: signature/expiry plus current user status, issuing session, JTI
+  denylist, and typed service-account grant. API keys and certificate bindings
+  are re-resolved through their canonical durable stores and current grants.
+- A revalidated credential must retain its original credential type/id,
+  subject, tenant, project, auth method, effective service identity, and scope
+  set. Identity or scope drift closes the stream and requires fresh admission;
+  this keeps the CDC engine's scope-derived privilege/topic filter aligned with
+  the outer authorization context. Expiry and API-key rate-limit state are
+  refreshed while the lineage remains stable.
+- `PublishCDC` now rechecks credential state, the tenant suspension gate, and
+  the latest shared Casbin `AuthzSnapshot` every five seconds. The same canonical
+  baseline CDC read-scope gate used at stream admission is rerun after credential
+  refresh, so scope attenuation cannot be hidden by an allow rule without a
+  `required_scopes` clause. A revoked credential ends with `UNAUTHENTICATED`, a
+  narrowed scope or withdrawn policy ends with `PERMISSION_DENIED`, and a
+  temporarily unavailable credential store returns a retryable dependency
+  status. The existing credential-expiry/channel deadline remains the
+  maximum-lifetime backstop.
+- The CDC engine already reads its atomically reloaded topic-policy generation
+  during replay and live polling; disabling or moving topic ownership therefore
+  terminates existing streams as well as rejecting new ones.
+- DataBroker-only startup installs the same fully configured Authn validator as
+  the full native listener without mounting native RPCs. Long-lived validation
+  no longer depends on which listener topology was selected.
 
 ## Verification log
 
-- Traced `publish_cdc_inner` through `CdcEngine::stream_cdc`, its initial replay,
-  broadcast fast path, and durable journal polling loop.
-- Verified credentials now retain their expiry, every stream has a bounded
-  server lifetime, and reconnect re-runs credential/revocation/tenant/project
-  and method-authorization gates.
-- The stream also reads the current atomically reloaded topic-policy generation
-  on every replay/live cycle and terminates after a disable, ownership change,
-  or policy-store failure.
-- PostgreSQL and Kafka-enabled library checks passed; focused credential and
-  policy revocation tests passed. Served token/API-key revocation and live
-  Postgres/Kafka tests are delegated to CI and remain pending.
+- Added a live served-path Postgres/Kafka test that opens real gRPC CDC streams
+  through `CredentialResolveLayer`, then independently revokes the bearer's
+  issuing session, revokes the API key, and withdraws the shared Casbin policy.
+  Each stream must terminate within the recheck bound without delivering an
+  event after the authority change.
+- Added a unit assertion that retained revalidation evidence is redacted from
+  debug output.
+- Added a unit assertion that initial admission and periodic revalidation share
+  the same mandatory CDC read-scope predicate.
+- Added a unit assertion that scope comparison is order-insensitive but detects
+  real narrowing/widening, which terminates the old authorization context.
+- `git diff --check` passes for the implementation snapshot.
+- Per user direction, no local Cargo build or test was run on the constrained
+  workstation. Quick/full-feature and live Postgres/Kafka verification are
+  delegated to GitHub CI; this report must not be read as CI-verified until the
+  run links and conclusions are appended.

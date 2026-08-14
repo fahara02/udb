@@ -695,6 +695,21 @@ mod tests {
     }
 
     #[test]
+    fn cdc_stream_read_scope_gate_is_shared_by_open_and_revalidation() {
+        for scope in ["udb:cdc:subscribe", "udb:cdc:read", "udb:*", "*"] {
+            CdcEngine::ensure_stream_read_scope(&[scope.to_string()])
+                .expect("canonical CDC scope admits subscription");
+        }
+        let denied = CdcEngine::ensure_stream_read_scope(&["udb:read".to_string()])
+            .expect_err("unrelated scope must not retain a CDC subscription");
+        assert_cdc_stream_policy_detail(
+            &denied,
+            "cdc_read_scope_required",
+            "Missing udb:cdc:read scope",
+        );
+    }
+
+    #[test]
     fn tenant_scoped_stream_filter_rejects_missing_tenant() {
         assert!(!payload_value_matches_stream_scope(
             "udb.storage.file.created.v1",
@@ -1514,6 +1529,27 @@ impl CdcEngine {
         }
     }
 
+    /// Canonical baseline scope gate shared by initial CDC admission and the
+    /// periodic served-stream revalidator. Keeping this beside `stream_cdc`
+    /// prevents a narrowed credential from retaining a subscription merely
+    /// because the current Casbin allow rule has no `required_scopes` clause.
+    pub(crate) fn ensure_stream_read_scope(scopes: &[String]) -> Result<(), tonic::Status> {
+        let allowed = scopes.iter().any(|scope| {
+            scope == "udb:cdc:subscribe"
+                || scope == "udb:cdc:read"
+                || scope == "udb:*"
+                || scope == "*"
+        });
+        if allowed {
+            Ok(())
+        } else {
+            Err(cdc_stream_policy_status(
+                "cdc_read_scope_required",
+                "Missing udb:cdc:read scope",
+            ))
+        }
+    }
+
     pub async fn stream_cdc(
         &self,
         scopes: Vec<String>,
@@ -1531,18 +1567,7 @@ impl CdcEngine {
         >,
         tonic::Status,
     > {
-        let allowed = scopes.iter().any(|scope| {
-            scope == "udb:cdc:subscribe"
-                || scope == "udb:cdc:read"
-                || scope == "udb:*"
-                || scope == "*"
-        });
-        if !allowed {
-            return Err(cdc_stream_policy_status(
-                "cdc_read_scope_required",
-                "Missing udb:cdc:read scope",
-            ));
-        }
+        Self::ensure_stream_read_scope(&scopes)?;
         let tenant_scope = scope_text(tenant_id);
         let project_scope = scope_text(project_id);
         let privileged = cdc_stream_privileged(&scopes);
