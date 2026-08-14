@@ -31,3 +31,6 @@ Status: source complete; GitHub CI pending
 - Local Cargo build/test: deliberately not run because the operator required
   CI-only compilation and testing due local hardware limits.
 - GitHub CI: pending after the isolated commit is pushed.
+- Initial CI run `31824506981`: compile/test lanes started, while `quick-gate`
+  found one import-wrap-only `cargo fmt --check` difference. The exact emitted
+  diff was applied without running local Cargo; replacement CI is pending.

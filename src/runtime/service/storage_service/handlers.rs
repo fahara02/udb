@@ -17,8 +17,8 @@ use crate::proto::udb::core::storage::entity::v1 as storage_entity_pb;
 use crate::proto::udb::core::storage::services::v1 as storage_pb;
 
 use super::super::native_helpers::{
-    emit_payload_event, native_next_page_token_for_total, native_offset_page_window, parse_uuid,
-    metadata_project_id, tenant_only_native_service_context, update_mask_allows,
+    emit_payload_event, metadata_project_id, native_next_page_token_for_total,
+    native_offset_page_window, parse_uuid, tenant_only_native_service_context, update_mask_allows,
     update_mask_path_set, validate_request_scope, validate_request_tenant,
 };
 use super::StorageServiceImpl;

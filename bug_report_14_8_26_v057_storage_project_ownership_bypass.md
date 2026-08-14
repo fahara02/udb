@@ -79,3 +79,6 @@ boundary.
 - Per operator direction, no local Cargo build or test was run. Compilation,
   unit tests, and the ignored live Postgres regression remain pending in GitHub
   CI; this report must not be read as a green-CI claim until that run completes.
+- Initial CI run `31824506981` reported one quick-gate-only `rustfmt` import
+  wrap. The exact CI diff was applied in a follow-up; authoritative replacement
+  CI remains pending.
