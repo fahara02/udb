@@ -178,8 +178,7 @@ pub struct AuthPlaneDeps {
     /// The same fully wired authn adapter used by native token validation. CDC
     /// revalidation therefore observes durable user/session/JTI/grant state and
     /// the configured Postgres/Redis session backend without parallel logic.
-    pub bearer_state_validator:
-        Arc<crate::runtime::service::auth_service::AuthnServiceImpl>,
+    pub bearer_state_validator: Arc<crate::runtime::service::auth_service::AuthnServiceImpl>,
 }
 
 static AUTH_PLANE_DEPS: OnceLock<RwLock<Option<Arc<AuthPlaneDeps>>>> = OnceLock::new();
@@ -336,9 +335,10 @@ async fn resolve_credentials(
                             ))
                         }
                     },
-                    None => Err(
-                        "bearer validation requires the durable auth-state resolver".to_string(),
-                    ),
+                    None => {
+                        Err("bearer validation requires the durable auth-state resolver"
+                            .to_string())
+                    }
                 }
             }
             Err(error) => Err(error),
@@ -745,12 +745,8 @@ mod tests {
         let reordered = vec!["udb:read".to_string(), "udb:cdc:read".to_string()];
         let narrowed = vec!["udb:cdc:read".to_string()];
 
-        assert!(CredentialRevalidator::same_scope_set(
-            &original, &reordered
-        ));
-        assert!(!CredentialRevalidator::same_scope_set(
-            &original, &narrowed
-        ));
+        assert!(CredentialRevalidator::same_scope_set(&original, &reordered));
+        assert!(!CredentialRevalidator::same_scope_set(&original, &narrowed));
     }
 
     #[test]

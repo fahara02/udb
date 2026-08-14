@@ -69,6 +69,11 @@ This change wave corrects the served `DataBroker.PublishCDC` path for:
 - No local Cargo command was run for this follow-up, per user direction. GitHub
   quick/full CI and the live integration run are pending; append their links and
   results here before calling the follow-up fully tested.
+- GitHub CI `31832101820` reported only seven `cargo fmt --check` diffs in the
+  CDC patch before its quick gate stopped. The follow-up applies that exact CI
+  formatting output and deliberately does not run Cargo locally. Its
+  postgres-only slim build and Clippy job passed before the replacement push;
+  replacement CI remains the full compile/test authority.
 
 ### Historical 2026-08-14 checks
 

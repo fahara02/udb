@@ -12,9 +12,7 @@ use crate::proto::udb::core::common::v1 as common_pb;
 use crate::runtime::authz::AuthzSnapshot;
 use crate::runtime::cdc::{CdcConfig, CdcEngine, CdcEnvelope};
 use crate::runtime::metrics::NoopMetrics;
-use crate::runtime::service::method_security::{
-    scope_claim_context_for_test, test_claim_context,
-};
+use crate::runtime::service::method_security::{scope_claim_context_for_test, test_claim_context};
 use futures::StreamExt;
 use std::pin::Pin;
 use std::sync::{Arc, RwLock};
@@ -139,10 +137,9 @@ fn served_api_key_cdc_request(
         topic_pattern: "udb.authn.*".to_string(),
         ..Default::default()
     });
-    request.metadata_mut().insert(
-        "x-api-key",
-        plain_key.parse().expect("API-key metadata"),
-    );
+    request
+        .metadata_mut()
+        .insert("x-api-key", plain_key.parse().expect("API-key metadata"));
     add_served_cdc_scope_metadata(&mut request, correlation_id);
     request
 }
@@ -558,16 +555,15 @@ async fn live_served_cdc_stream_revalidates_bearer_api_key_and_policy() {
         .await
         .expect("load served CDC topic-policy snapshot");
 
-    let runtime = crate::runtime::DataBrokerRuntime::from_config(
-        crate::runtime::config::UdbConfig {
+    let runtime =
+        crate::runtime::DataBrokerRuntime::from_config(crate::runtime::config::UdbConfig {
             primary: crate::runtime::config::DbConfig {
                 direct_dsn: live_pg_dsn(),
                 ..crate::runtime::config::DbConfig::default()
             },
             ..crate::runtime::config::UdbConfig::default()
-        },
-    )
-    .await;
+        })
+        .await;
     let broker = crate::runtime::service::DataBrokerService::with_runtime_and_state(
         crate::runtime::native_catalog::native_manifest().clone(),
         runtime,
@@ -617,8 +613,7 @@ async fn live_served_cdc_stream_revalidates_bearer_api_key_and_policy() {
         }))
         .await
         .expect("revoke CDC bearer issuing session");
-    let bearer_status =
-        expect_served_cdc_stream_error(&mut bearer_stream, "revoked bearer").await;
+    let bearer_status = expect_served_cdc_stream_error(&mut bearer_stream, "revoked bearer").await;
     assert_eq!(bearer_status.code(), tonic::Code::Unauthenticated);
 
     let mut api_key_stream = client

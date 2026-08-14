@@ -87,3 +87,9 @@ continues receiving newly published events after its access has been withdrawn.
   workstation. Quick/full-feature and live Postgres/Kafka verification are
   delegated to GitHub CI; this report must not be read as CI-verified until the
   run links and conclusions are appended.
+- GitHub CI run `31832101820` reached the Rust build matrix but its `quick-gate`
+  stopped at `cargo fmt --check` with seven formatting-only diffs. Those exact
+  CI-produced changes were applied in the follow-up commit; no local Cargo
+  command was used. The same run's postgres-only slim build and Clippy job passed
+  before the replacement push; replacement-run full compilation and tests remain
+  pending.
