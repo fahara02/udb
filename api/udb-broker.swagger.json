@@ -39040,7 +39040,7 @@
     "/v1/vault/database/credentials/{leaseId}:revoke": {
       "post": {
         "summary": "Revoke one lease in the authenticated tenant/project. The durable state is\nmoved to REVOKING before physical session fencing and becomes REVOKED only\nafter the generated role is proven absent. Replays are naturally idempotent.",
-        "operationId": "VaultService_RevokeDatabaseCredentials",
+        "operationId": "revokeDatabaseCredentials",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -39170,13 +39170,26 @@
         ],
         "tags": [
           "VaultService"
-        ]
+        ],
+        "x-udb-sdk-alias": "revoke_database_credentials",
+        "x-udb-scope": [
+          "udb:vault:revoke-db-credentials"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "lease_id",
+          "server_generated_key": false,
+          "duplicate_response_field": "replayed",
+          "replay_safe": true
+        },
+        "x-udb-resource": "vault",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/vault/database/credentials:emergencyRevoke": {
       "post": {
         "summary": "Emergency kill-switch for every non-terminal lease in exactly one verified\ntenant/project. A confirmation token bound to both scope dimensions prevents\nan accidental tenant-wide or cross-project credential wipe.",
-        "operationId": "VaultService_EmergencyRevokeDatabaseCredentials",
+        "operationId": "emergencyRevokeDatabaseCredentials",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -39300,7 +39313,20 @@
         ],
         "tags": [
           "VaultService"
-        ]
+        ],
+        "x-udb-sdk-alias": "emergency_revoke_database_credentials",
+        "x-udb-scope": [
+          "udb:vault:emergency-revoke-db-credentials"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "vault",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/vault/seal-status": {

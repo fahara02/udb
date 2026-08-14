@@ -69,3 +69,9 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   then found the benchmark posture guard still pinned to the former
   tenant/role/TTL request. Its expected machine JSON now includes the required
   project and idempotency binding used by the implemented issuance contract.
+- Combined CI run `31838390984` reached the generated API-inventory guard and
+  exposed the expected bootstrap cycle: the two new HTTP RPCs must exist in the
+  native contract before the quick gate will build the broker that emits that
+  contract. Descriptor-derived records are seeded from the proto annotations
+  solely to unlock that CI build; they must be replaced by the artifact broker's
+  authoritative manifest before final validation and merge.
