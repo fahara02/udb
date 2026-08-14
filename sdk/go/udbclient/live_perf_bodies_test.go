@@ -99,7 +99,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"saml_provider_id": "saml-provider-1", "scim_group_id": "sdk-perf-group", "scim_user_id": "scim-user-1", "delete_scim_user_id": "delete-scim-user-1",
 		"signal_peer_id": "signal-peer-1", "step_id": "step-1", "topic_pattern": "topic.*", "ts_table": "sdk_timeseries",
 		"unpublish_track_id": "unpublish-track-1", "update_draft_id": "update-draft-1", "update_key_id": "update-key-1", "username": "perf-u",
-		"vault_ciphertext": "vault-ciphertext-1", "vault_db_role": "readonly", "vault_delete_secret_path": "secret/delete",
+		"vault_ciphertext": "vault-ciphertext-1", "vault_db_role": "readonly", "vault_db_idempotency_key": "vault-db-idempotency-1", "vault_db_lease_id": "vault-db-lease-1", "vault_delete_secret_path": "secret/delete",
 		"vault_create_key_name": "transit-create-key", "vault_destroy_secret_path": "secret/destroy", "vault_key_name": "transit-key", "vault_put_secret_path": "secret/put", "vault_secret_path": "secret/path",
 		"vault_signature": "vault-signature-1", "vault_signing_key_name": "transit-signing-key", "vault_hmac_key_name": "transit-hmac-key", "reissue_file_id": "reissue-file-1", "workflow_id": "workflow-1",
 	} {
@@ -1759,6 +1759,8 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	fix.set("vault_delete_secret_path", "app/delete")
 	fix.set("vault_destroy_secret_path", "app/destroy")
 	fix.set("vault_db_role", "sdk-readonly")
+	fix.set("vault_db_idempotency_key", "sdk-vault-db-idempotency")
+	fix.set("vault_db_lease_id", "sdk-vault-db-lease")
 	vaultIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/Verify", fix)
 	if !ok {
 		t.Fatalf("VaultService manifest JSON body was not hydrated")
@@ -1773,6 +1775,24 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	if got := vaultMsg.Get(vaultFields.ByName("signature")).String(); got != "udb-vault-sig:v1:seed" {
 		t.Fatalf("vault signature = %q, want seeded signature", got)
+	}
+	dbCredentialsIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials", fix)
+	if !ok {
+		t.Fatalf("VaultService GenerateDatabaseCredentials manifest JSON body was not hydrated")
+	}
+	dbCredentialsMsg := dbCredentialsIn.ProtoReflect()
+	dbCredentialsFields := dbCredentialsMsg.Descriptor().Fields()
+	if got := dbCredentialsMsg.Get(dbCredentialsFields.ByName("idempotency_key")).String(); got != "sdk-vault-db-idempotency" {
+		t.Fatalf("vault GenerateDatabaseCredentials idempotency_key = %q, want sdk-vault-db-idempotency", got)
+	}
+	revokeCredentialsIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials", fix)
+	if !ok {
+		t.Fatalf("VaultService RevokeDatabaseCredentials manifest JSON body was not hydrated")
+	}
+	revokeCredentialsMsg := revokeCredentialsIn.ProtoReflect()
+	revokeCredentialsFields := revokeCredentialsMsg.Descriptor().Fields()
+	if got := revokeCredentialsMsg.Get(revokeCredentialsFields.ByName("lease_id")).String(); got != "sdk-vault-db-lease" {
+		t.Fatalf("vault RevokeDatabaseCredentials lease_id = %q, want sdk-vault-db-lease", got)
 	}
 	createKeyIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/CreateTransitKey", fix)
 	if !ok {

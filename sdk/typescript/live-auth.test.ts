@@ -583,7 +583,7 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     saml_provider_id: "saml-provider-1", scim_group_id: "sdk-perf-group", scim_user_id: "scim-user-1",
     signal_peer_id: "signal-peer-1", step_id: "step-1", topic_pattern: "topic.*", ts_table: "sdk_timeseries",
     unpublish_track_id: "unpublish-track-1", update_key_id: "update-key-1", username: "perf-u",
-    vault_ciphertext: "vault-ciphertext-1", vault_db_role: "readonly", vault_delete_secret_path: "secret/delete",
+    vault_ciphertext: "vault-ciphertext-1", vault_db_role: "readonly", vault_db_idempotency_key: "vault-db-idempotency-1", vault_db_lease_id: "vault-db-lease-1", vault_delete_secret_path: "secret/delete",
     vault_destroy_secret_path: "secret/destroy", vault_key_name: "transit-key", vault_secret_path: "secret/path",
     vault_signature: "vault-signature-1", vault_signing_key_name: "transit-signing-key", vault_hmac_key_name: "transit-hmac-key", reissue_file_id: "reissue-file-1", workflow_id: "workflow-1",
     approve_draft_id: "approve-draft-1", canary_version_id: "canary-version-1",
@@ -1621,6 +1621,8 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   fixtures.set("vault_delete_secret_path", "app/delete");
   fixtures.set("vault_destroy_secret_path", "app/destroy");
   fixtures.set("vault_db_role", "sdk-readonly");
+  fixtures.set("vault_db_idempotency_key", "sdk-vault-db-idempotency");
+  fixtures.set("vault_db_lease_id", "sdk-vault-db-lease");
   fixtures.set("vault_create_key_name", "sdk-perf-create-key");
   fixtures.set("vault_put_secret_path", "app/put");
   const created = manifestJSONBody("VaultService", "create_transit_key", fixtures);
@@ -1629,6 +1631,7 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   const destroyed = manifestJSONBody("VaultService", "destroy_secret", fixtures);
   const encrypted = manifestJSONBody("VaultService", "encrypt", fixtures);
   const dbCreds = manifestJSONBody("VaultService", "generate_database_credentials", fixtures);
+  const revokedDbCreds = manifestJSONBody("VaultService", "revoke_database_credentials", fixtures);
   const secret = manifestJSONBody("VaultService", "get_secret", fixtures);
   const hmac = manifestJSONBody("VaultService", "hmac", fixtures);
   const secrets = manifestJSONBody("VaultService", "list_secrets", fixtures);
@@ -1646,6 +1649,8 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   assert.equal(encrypted?.plaintext, "perf");
   assert.equal(dbCreds?.role_name, "sdk-readonly");
   assert.equal(dbCreds?.ttl_seconds, 900);
+  assert.equal(dbCreds?.idempotency_key, "sdk-vault-db-idempotency");
+  assert.equal(revokedDbCreds?.lease_id, "sdk-vault-db-lease");
   assert.equal(secret?.secret_path, "app/config");
   assert.equal(hmac?.input, "perf");
   assert.equal(hmac?.key_name, "sdk-perf-hmac-key");

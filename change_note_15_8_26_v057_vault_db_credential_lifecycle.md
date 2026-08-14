@@ -122,3 +122,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   derived security inventory at 300 rather than 302 RPCs. Regeneration from the
   CI-authored native manifest adds emergency and single-lease revoke with their
   exact bearer scopes; all 302 inventoried RPCs retain endpoint security.
+- SDK conformance in run `31842157652` confirmed 381 generated identities align,
+  then found Go/TypeScript manifest fixtures lacked the two new seed references.
+  Their full-surface and hydration tests now provide and assert the issuance
+  idempotency key and revoke lease ID, eliminating both no-body gaps.
