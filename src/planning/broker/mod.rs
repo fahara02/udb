@@ -3330,6 +3330,7 @@ mod tests {
         );
         // Third entry is the appended verified-tenant backstop bind.
         assert_eq!(plan.parameter_columns, ["id", "tenant_id", "tenant_id"]);
+        assert_eq!(plan.context_parameter_values, ["tenant-a"]);
         assert_eq!(plan.operation, "delete");
         assert_eq!(plan.audit_event_type, "udb.sql.delete");
     }
@@ -4280,12 +4281,11 @@ mod tests {
         let (compiled_sql, compiled_params) =
             compile_pg_sql(&manifest, &context, CompileOperation::Delete(&delete));
 
-        // Same safe-subset relationship as the select bridge test: the neutral-IR
-        // DELETE (served default) carries RLS1's defense-in-depth tenant backstop
-        // (`AND "tenant_id" = $N`) the legacy planner omits — intentionally MORE
-        // tenant-scoped, not byte-identical. (`build_delete_logical_delete` also
-        // declines for soft-delete tables, but `widgets` here is non-soft, so it
-        // is a real physical DELETE, exercising the backstop on the delete path.)
+        // Both emitters carry RLS1's defense-in-depth tenant backstop. The legacy
+        // plan returns its trusted bind separately in `context_parameter_values`,
+        // while neutral IR returns it in the compiled parameter list.
+        // (`build_delete_logical_delete` declines for soft-delete tables, but
+        // `widgets` here is non-soft, so this exercises a physical DELETE.)
         // The order between the two caller predicates is a `serde_json`
         // object-iteration artifact (see the select bridge test) — assert
         // presence / occurrence-count / last-positional-param, never a hardcoded
@@ -4320,6 +4320,7 @@ mod tests {
              backstop — the same shape the IR compiler produces, which is exactly what makes \
              this an A-B parity assertion (inter-column order is a map-iteration artifact)"
         );
+        assert_eq!(legacy_plan.context_parameter_values, ["tenant-a"]);
         assert_eq!(
             compiled_params.len(),
             3,
