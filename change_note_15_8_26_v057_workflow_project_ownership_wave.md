@@ -1,7 +1,7 @@
 # UDB v0.5.7 change note: Workflow project ownership wave
 
 Date: 2026-08-15
-Status: source complete; GitHub CI pending
+Status: source and CI formatting correction complete; replacement GitHub CI pending
 
 ## Changed
 
@@ -28,4 +28,7 @@ Status: source complete; GitHub CI pending
 - Manual call-site/outbox review and pre-stage `git diff --check`: passed.
 - Local Cargo build/test: deliberately not run because the operator requires
   CI-only compilation and testing due local hardware limits.
-- GitHub CI: pending after an isolated Workflow commit is pushed.
+- Initial GitHub CI run `31828450334`: quick gate found five mechanical
+  `rustfmt` hunks; no compile or behavioral result is claimed from that run.
+- The exact CI-emitted formatting is included in the follow-up. Replacement
+  GitHub CI is pending and remains authoritative.

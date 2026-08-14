@@ -58,11 +58,7 @@ async fn start_workflow(
     .workflow_id
 }
 
-async fn workflow_event(
-    pool: &sqlx::PgPool,
-    topic: &str,
-    workflow_id: &str,
-) -> serde_json::Value {
+async fn workflow_event(pool: &sqlx::PgPool, topic: &str, workflow_id: &str) -> serde_json::Value {
     sqlx::query_scalar(
         "SELECT payload FROM udb_system.outbox_events \
          WHERE topic = $1 AND payload->'payload'->>'workflow_id' = $2 \
@@ -90,14 +86,8 @@ async fn live_postgres_workflow_project_ownership_isolation() {
     let project_b = Uuid::new_v4().to_string();
 
     let workflow_a = start_workflow(&svc, &tenant_id, &project_a, "", "project-a-flow").await;
-    let workflow_b = start_workflow(
-        &svc,
-        &tenant_id,
-        &project_b,
-        &project_b,
-        "project-b-flow",
-    )
-    .await;
+    let workflow_b =
+        start_workflow(&svc, &tenant_id, &project_b, &project_b, "project-b-flow").await;
 
     let got_a = svc
         .get_workflow(workflow_project_request(

@@ -410,10 +410,7 @@ pub(crate) async fn cancel_workflow(
         workflow_internal_status("cancel_workflow_decode", format!("decode saga_id: {e}"))
     })?;
     let event_project_id: String = row.try_get("project_id").map_err(|e| {
-        workflow_internal_status(
-            "cancel_workflow_decode",
-            format!("decode project_id: {e}"),
-        )
+        workflow_internal_status("cancel_workflow_decode", format!("decode project_id: {e}"))
     })?;
 
     // Already compensating: the tick's compensation driver already owns the
@@ -618,10 +615,7 @@ pub(crate) async fn signal_workflow(
         )
     })?;
     let event_project_id: String = row.try_get("project_id").map_err(|e| {
-        workflow_internal_status(
-            "signal_workflow_decode",
-            format!("decode project_id: {e}"),
-        )
+        workflow_internal_status("signal_workflow_decode", format!("decode project_id: {e}"))
     })?;
     // H7 — a COMPENSATING instance is non-signalable: a signal must never revert
     // it to RUNNING and abandon the in-flight compensation.

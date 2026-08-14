@@ -58,3 +58,8 @@ normalization.
   of creating another service-local fixture.
 - Per operator direction, no local Cargo build or test was run. GitHub CI and
   the ignored live Postgres regression remain pending.
+- GitHub CI run `31828450334` stopped at the quick gate on five mechanical
+  `rustfmt` hunks in the new Workflow source and tests; no compile or behavioral
+  failure was reported by that run.
+- The exact CI-emitted formatting was applied without running local Cargo. A
+  replacement GitHub CI run is the compilation and test authority.

@@ -181,7 +181,10 @@ async fn every_workflow_rpc_rejects_code_project_without_tenantwide_downgrade() 
 
 #[test]
 fn workflow_project_bind_never_converts_nonempty_authority_to_tenantwide() {
-    assert_eq!(workflow_project_bind("").expect("empty tenant-wide scope"), "");
+    assert_eq!(
+        workflow_project_bind("").expect("empty tenant-wide scope"),
+        ""
+    );
     let project_id = "33333333-3333-4333-8333-333333333333";
     assert_eq!(
         workflow_project_bind(project_id).expect("UUID project scope"),
