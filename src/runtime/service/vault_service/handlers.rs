@@ -86,6 +86,7 @@ pub(crate) async fn put_secret(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "put_secret")?;
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -144,10 +145,9 @@ pub(crate) async fn put_secret(
     }
 
     svc.emit(
+        &context,
         TOPIC_SECRET_PUT,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "put",
         &secret_path,
         serde_json::json!({
@@ -190,6 +190,7 @@ pub(crate) async fn get_secret(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "get_secret")?;
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -212,10 +213,9 @@ pub(crate) async fn get_secret(
 
     // Sensitive READ — audit it (no plaintext in the payload).
     svc.emit(
+        &context,
         TOPIC_SECRET_ACCESSED,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "read",
         &secret_path,
         serde_json::json!({
@@ -255,7 +255,7 @@ pub(crate) async fn list_secrets(
     )
     .await?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
-    let (context, pool) = svc.resolve_project_store(context, false, "list_secrets")?;
+    let (context, pool) = svc.resolve_project_store(context, true, "list_secrets")?;
 
     let prefix = req.path_prefix.trim();
     let has_prefix = !prefix.is_empty();
@@ -328,10 +328,9 @@ pub(crate) async fn list_secrets(
     // declared in the proto but never emitted). Metadata only — counts and the
     // requested prefix; NEVER any secret path value or secret material.
     svc.emit(
+        &context,
         TOPIC_SECRET_LISTED,
         &tenant_id,
-        &tenant_id,
-        &context.project_id,
         "list",
         prefix,
         serde_json::json!({
@@ -375,6 +374,7 @@ pub(crate) async fn delete_secret(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "delete_secret")?;
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -411,10 +411,9 @@ pub(crate) async fn delete_secret(
         .await?;
 
     svc.emit(
+        &context,
         TOPIC_SECRET_DELETED,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "delete",
         &secret_path,
         serde_json::json!({
@@ -455,6 +454,7 @@ pub(crate) async fn undelete_secret(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "undelete_secret")?;
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -495,10 +495,9 @@ pub(crate) async fn undelete_secret(
         .await?;
 
     svc.emit(
+        &context,
         TOPIC_SECRET_RESTORED,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "undelete",
         &secret_path,
         serde_json::json!({
@@ -576,10 +575,9 @@ pub(crate) async fn destroy_secret(
     let destroyed = shred.rows_affected() as u32;
 
     svc.emit(
+        &context,
         TOPIC_SECRET_DESTROYED,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "destroy",
         &secret_path,
         serde_json::json!({
@@ -627,6 +625,7 @@ pub(crate) async fn create_transit_key(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "create_transit_key")?;
 
     let existing = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -660,10 +659,9 @@ pub(crate) async fn create_transit_key(
         .await?;
 
     svc.emit(
+        &context,
         TOPIC_KEY_CREATED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "create_key",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "version": 1}),
@@ -754,10 +752,9 @@ pub(crate) async fn rotate_transit_key(
         .map_err(|err| vault_internal_status("rotate_commit_tx", err.to_string()))?;
 
     svc.emit(
+        &context,
         TOPIC_KEY_ROTATED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "rotate_key",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "version": new_version}),
@@ -799,6 +796,7 @@ pub(crate) async fn encrypt(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "encrypt")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -818,10 +816,9 @@ pub(crate) async fn encrypt(
     // Audit the crypto operation (no plaintext/ciphertext/key material — only
     // the tenant/key/version metadata).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_ENCRYPTED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "encrypt",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
@@ -870,6 +867,7 @@ pub(crate) async fn decrypt(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "decrypt")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -895,10 +893,9 @@ pub(crate) async fn decrypt(
 
     // Sensitive READ — audit it (no plaintext in the payload).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_DECRYPTED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "decrypt",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": version}),
@@ -955,6 +952,7 @@ pub(crate) async fn batch_encrypt(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "batch_encrypt")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -977,10 +975,9 @@ pub(crate) async fn batch_encrypt(
     }
 
     svc.emit(
+        &context,
         TOPIC_TRANSIT_ENCRYPTED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "batch_encrypt",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version, "count": req.plaintexts.len()}),
@@ -1038,6 +1035,7 @@ pub(crate) async fn batch_decrypt(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "batch_decrypt")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1079,10 +1077,9 @@ pub(crate) async fn batch_decrypt(
     }
 
     svc.emit(
+        &context,
         TOPIC_TRANSIT_DECRYPTED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "batch_decrypt",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "count": req.ciphertexts.len()}),
@@ -1123,6 +1120,7 @@ pub(crate) async fn generate_data_key(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "generate_data_key")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1146,10 +1144,9 @@ pub(crate) async fn generate_data_key(
     // Audit the key generation on its OWN topic (no key material — only
     // tenant/key/version); previously conflated under `transit.encrypted`.
     svc.emit(
+        &context,
         TOPIC_DATA_KEY_GENERATED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "generate_data_key",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
@@ -1200,6 +1197,7 @@ pub(crate) async fn rewrap(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "rewrap")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1233,10 +1231,9 @@ pub(crate) async fn rewrap(
     // Audit the rewrap on its OWN topic (no key material — only tenant/key/old+new
     // version); previously conflated under `transit.encrypted`.
     svc.emit(
+        &context,
         TOPIC_TRANSIT_REWRAPPED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "rewrap",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "from_version": version, "key_version": active.version}),
@@ -1275,6 +1272,8 @@ pub(crate) async fn get_transit_public_key(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) =
+        svc.resolve_project_store(context, true, "get_transit_public_key")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1344,6 +1343,7 @@ pub(crate) async fn sign(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "sign")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1371,10 +1371,9 @@ pub(crate) async fn sign(
     // Audit the crypto operation (no input/signature/key material — only the
     // tenant/key/version metadata).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_SIGNED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "sign",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
@@ -1429,6 +1428,7 @@ pub(crate) async fn verify(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "verify")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1463,10 +1463,9 @@ pub(crate) async fn verify(
     // Audit the verification (no input/signature/key material — only the
     // tenant/key/version metadata and the boolean outcome).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_VERIFIED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "verify",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": version, "valid": valid}),
@@ -1506,6 +1505,7 @@ pub(crate) async fn hmac(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "hmac")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1532,10 +1532,9 @@ pub(crate) async fn hmac(
     // Audit the crypto operation (no input/MAC/key material — only the
     // tenant/key/version metadata).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_HMAC,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "hmac",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),

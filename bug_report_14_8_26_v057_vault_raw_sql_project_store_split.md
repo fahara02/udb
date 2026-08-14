@@ -1,7 +1,7 @@
 # UDB v0.5.7 Vault raw SQL and entity dispatch can target different stores
 
 Date: 2026-08-14
-Status: request/worker routing corrected; live topology proof and legacy lease provenance remain
+Status: full served project-store correction implemented; GitHub CI pending
 Affected paths: secret list/destroy, transit rotation, dynamic DB credentials
 
 ## Summary
@@ -65,10 +65,32 @@ default store. The lease reaper also watches only that default pool.
   pool. New direct database-role issuance is disabled by the separate authority
   correction, so it can no longer split a role and lease across stores.
 
-The served request split is corrected. A live two-project/two-instance
-conformance test is still required, and pre-existing lease rows do not contain a
-trustworthy physical-instance identity for forensic/reconciliation use. Those
-items remain open rather than being represented as complete.
+## 2026-08-15 full project-store correction
+
+- Every Vault RPC that reads or mutates durable secret/transit state now resolves
+  the active project once, selects the project's write-authority Postgres
+  instance once, and pins that instance in the shared `RequestContext` before
+  the first typed native-entity operation. This closes the remaining typed-only
+  read/write drift in Put/Delete/Undelete/CreateTransitKey and all transit crypto
+  handlers; project absence fails closed before storage is touched.
+- List is intentionally pinned to the write authority as well. Vault key/secret
+  reads therefore cannot select a read replica while a later mutation or audit
+  step selects a different physical database.
+- Vault outbox emission now receives the already pinned request context and
+  resolves the exact named instance from that context. It no longer constructs
+  a fresh tenant/project-only context that re-enters weighted selection.
+- Added an ignored live served-path regression that provisions two real
+  PostgreSQL databases, binds one named instance to each of two active projects,
+  starts the generated Vault tonic service, and drives the generated client
+  through Put/Get/List/Destroy/CreateTransitKey/Rotate/Encrypt. It proves same
+  tenant/path/key values remain physically independent and verifies the unique
+  rotate/destroy outbox topics exist only in project A's database.
+
+The raw/project-store split itself is now closed in production code and has a
+real two-project/two-instance regression. Dynamic database-credential lease
+provenance/reconciliation is being corrected in the dedicated Vault credential
+lifecycle wave because it changes that entity's durable contract and reaper;
+it is not silently treated as proof of this request-routing change.
 
 ## Verification log
 
@@ -77,5 +99,11 @@ items remain open rather than being represented as complete.
 - `cargo check --lib --no-default-features --features postgres -j 2` passed
   locally after the correction (warnings only).
 - Focused Vault unit execution was terminated after the local linker remained
-  CPU-bound for more than ten minutes; no test result is claimed. GitHub CI is
-  pending for this wave; no production data was mutated.
+  CPU-bound for more than ten minutes during the prior wave.
+- Per operator direction, no local Cargo/build/test command was run for the
+  2026-08-15 correction. GitHub CI must run the quick gate, library tests, and
+  native-service live tests; no pass is claimed before those jobs are green.
+
+— DONE (2026-08-15): all served Vault secret/transit and audit paths reuse one
+active-project physical authority; the two-project/two-instance tonic regression
+is in `src/runtime/service/vault_service/project_store_live.rs` (CI pending).

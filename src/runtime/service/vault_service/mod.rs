@@ -72,6 +72,8 @@ mod model;
 mod quota;
 mod store;
 #[cfg(test)]
+mod project_store_live;
+#[cfg(test)]
 mod tests;
 mod workers;
 
@@ -462,8 +464,10 @@ impl VaultService for VaultServiceImpl {
 }
 
 impl DataBrokerService {
-    /// Build the native `VaultService`, wired to the broker's Postgres pool, the
-    /// master-key envelope runtime, and the shared outbox.
+    /// Build the native `VaultService`, wired to the runtime's project-aware
+    /// Postgres authority resolver, live catalog, master-key envelope, and shared
+    /// outbox. No default/startup pool is captured: every durable RPC resolves
+    /// and pins its active project's write authority at request time.
     pub(crate) fn build_vault_service(&self) -> VaultServiceImpl {
         let runtime = self.runtime.load_full();
         let outbox = runtime.config().cdc.outbox_relation();

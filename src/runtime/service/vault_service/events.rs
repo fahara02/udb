@@ -15,20 +15,20 @@ impl VaultServiceImpl {
     #[allow(clippy::too_many_arguments)]
     pub(crate) async fn emit(
         &self,
+        context: &crate::RequestContext,
         topic: &str,
         partition_key: &str,
-        tenant_id: &str,
-        project_id: &str,
         operation: &str,
         target_resource: &str,
         payload: serde_json::Value,
     ) {
-        let context = crate::RequestContext {
-            tenant_id: tenant_id.to_string(),
-            project_id: project_id.to_string(),
-            ..crate::RequestContext::default()
-        };
-        let Ok((_context, pool)) = self.resolve_project_store(context, true, "vault_event") else {
+        // The caller resolves and pins one physical Vault authority before any
+        // durable read/write. Preserve that exact instance for the audit outbox;
+        // re-running weighted selection here could put the mutation and its
+        // event in different project stores.
+        let Ok((context, pool)) =
+            self.resolve_project_store(context.clone(), true, "vault_event")
+        else {
             return;
         };
         enqueue_outbox_event_with_context(
@@ -36,8 +36,8 @@ impl VaultServiceImpl {
             self.outbox_relation.as_deref(),
             topic,
             partition_key,
-            tenant_id,
-            project_id,
+            &context.tenant_id,
+            &context.project_id,
             payload,
             NativeEventContext {
                 operation: operation.to_string(),
