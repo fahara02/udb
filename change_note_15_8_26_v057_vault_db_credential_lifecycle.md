@@ -104,3 +104,8 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   workstation, a branch-scoped temporary workflow regenerates Buf, native,
   OpenAPI, benchmark, and all-language SDK artifacts inside GitHub and uploads
   only their patch. The workflow is removed when that patch is committed.
+- Temporary generation run `31841686791` proved the CI artifact handoff but its
+  raw default Buf invocation produced unrelated plugin-format churn, so that
+  patch was rejected before commit. The replacement invocation mirrors the hard
+  Proto gate exactly: Buf 1.65.0, `--include-imports`, and the repository SDK
+  postprocessor before native/high-level generation.
