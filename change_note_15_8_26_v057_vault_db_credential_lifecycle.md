@@ -136,3 +136,5 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   downloads the broker artifact produced by run `31842747425`, emits the exact
   embedded `FileDescriptorSet`, and returns only a binary Git patch. The
   temporary workflow is removed together with the committed baseline output.
+  Regeneration run `31844121489` completed successfully; its patch changed only
+  `docs/generated/contract-baseline.bin`.
