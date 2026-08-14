@@ -84,9 +84,8 @@ continues receiving newly published events after its access has been withdrawn.
   real narrowing/widening, which terminates the old authorization context.
 - `git diff --check` passes for the implementation snapshot.
 - Per user direction, no local Cargo build or test was run on the constrained
-  workstation. Quick/full-feature and live Postgres/Kafka verification are
-  delegated to GitHub CI; this report must not be read as CI-verified until the
-  run links and conclusions are appended.
+  workstation. Quick/full-feature and live Postgres/Kafka verification were
+  delegated to GitHub CI.
 - GitHub CI run `31832101820` reached the Rust build matrix but its `quick-gate`
   stopped at `cargo fmt --check` with seven formatting-only diffs. Those exact
   CI-produced changes were applied in the follow-up commit; no local Cargo
@@ -100,6 +99,8 @@ continues receiving newly published events after its access has been withdrawn.
   the real dependency stack, then failed before CDC admission because
   `DataBrokerRuntime::from_config` republished the test's default security block
   and erased the JWT verifier installed before token minting. The test now carries
-  the same explicit signer/verifier config into runtime construction. A
-  replacement isolated live run is pending; no stream-revocation pass is claimed
-  from the failed run.
+  the same explicit signer/verifier config into runtime construction.
+- Replacement isolated live run `31834837502` passed on
+  `075f9ebdd65f8136ed805d70031927e2c39558f2`. The served Postgres/Kafka test
+  verified bearer-session revocation, API-key revocation, and shared Casbin
+  policy withdrawal on already-open CDC streams, with no post-change event.

@@ -67,8 +67,7 @@ This change wave corrects the served `DataBroker.PublishCDC` path for:
   change contract.
 - `git diff --check`: passed.
 - No local Cargo command was run for this follow-up, per user direction. GitHub
-  quick/full CI and the live integration run are pending; append their links and
-  results here before calling the follow-up fully tested.
+  CI is the compilation and integration-test authority.
 - GitHub CI `31832101820` reported only seven `cargo fmt --check` diffs in the
   CDC patch before its quick gate stopped. The follow-up applies that exact CI
   formatting output and deliberately does not run Cargo locally. Its
@@ -80,7 +79,11 @@ This change wave corrects the served `DataBroker.PublishCDC` path for:
   test failed before opening CDC because runtime construction overwrote the
   explicitly installed JWT test verifier with `UdbConfig::default().security`.
   The live test now passes its signer/verifier into that runtime config as the
-  same canonical authority; replacement live execution remains pending.
+  same canonical authority.
+- Replacement isolated Postgres/Kafka run `31834837502`: passed on
+  `075f9ebdd65f8136ed805d70031927e2c39558f2`, including bearer-session
+  revocation, API-key revocation, and Casbin-policy withdrawal for already-open
+  served gRPC streams without post-change delivery.
 
 ### Historical 2026-08-14 checks
 
@@ -101,6 +104,5 @@ This change wave corrects the served `DataBroker.PublishCDC` path for:
   reached 77 MiB free. `cargo clean -p udb` removed 10.0 GiB of regenerable
   build artifacts; the retried resource-heavy test was stopped at the user's
   direction and delegated to GitHub CI.
-- The historical checks above predate the periodic credential/Casbin follow-up.
-  They do not verify the new code. This note must not be read as fully tested
-  until the pending GitHub runs are appended.
+- The historical checks above predate the periodic credential/Casbin follow-up;
+  the replacement GitHub runs listed above are the evidence for the new code.
