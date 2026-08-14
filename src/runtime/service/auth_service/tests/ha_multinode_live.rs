@@ -893,6 +893,10 @@ async fn live_postgres_ha_cdc_idempotent_double_process() {
         config,
     )
     .expect("build CDC engine");
+    engine
+        .load_topic_policies()
+        .await
+        .expect("load live CDC topic policies");
 
     let redis_client = redis::Client::open(redis_url.as_str()).expect("redis client");
     let mut redis_conn = redis_client

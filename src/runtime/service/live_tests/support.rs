@@ -109,6 +109,13 @@ pub(crate) async fn migrate_native_service_db(pool: &sqlx::PgPool) {
             .await
             .unwrap_or_else(|err| panic!("native service DDL failed: {err}\nSQL:\n{stmt}"));
     }
+    // Native-service workers use singleton leases and other shared system
+    // relations. Cleanup drops every `udb_*` schema, so mirror served startup
+    // and the auth live fixture by restoring the system catalog before a test
+    // constructs or starts any worker host.
+    crate::runtime::system::ensure_system_catalog(pool)
+        .await
+        .expect("bootstrap udb_system catalog for native service tests");
 }
 
 pub(super) async fn reset_native_outbox(pool: &sqlx::PgPool) {

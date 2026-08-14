@@ -304,6 +304,10 @@ async fn live_cdc_mismatched_envelope_event_id_routes_to_dlq() {
     )
     .expect("build CDC engine");
     engine
+        .load_topic_policies()
+        .await
+        .expect("load live CDC topic policies");
+    engine
         .process_outbox_event(
             event_id,
             topic.to_string(),
@@ -352,6 +356,10 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
         cdc_config_for_live_outbox("udb.cdc.dlq.replay.v1"),
     )
     .expect("build CDC engine");
+    engine
+        .load_topic_policies()
+        .await
+        .expect("load live CDC topic policies");
 
     let denied = match engine
         .stream_cdc(Vec::new(), "udb.authn.*".to_string(), None, None, None)
