@@ -1,6 +1,6 @@
 # Change note: IR live delete context binding
 
-Date: 2026-08-15  
+Date: 2026-08-15
 Release: 0.5.7 follow-up
 
 ## Observed failure
