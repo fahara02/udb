@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.5.7
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 379
+ *   RPCs ............. 381
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -317,6 +317,7 @@ final class GeneratedClient
         "Decrypt" => "read_only",
         "DeleteSecret" => "mutation",
         "DestroySecret" => "destructive",
+        "EmergencyRevokeDatabaseCredentials" => "destructive",
         "Encrypt" => "mutation",
         "GenerateDataKey" => "mutation",
         "GenerateDatabaseCredentials" => "mutation",
@@ -325,6 +326,7 @@ final class GeneratedClient
         "Hmac" => "mutation",
         "ListSecrets" => "read_only",
         "PutSecret" => "mutation",
+        "RevokeDatabaseCredentials" => "destructive",
         "Rewrap" => "mutation",
         "RotateTransitKey" => "mutation",
         "SealStatus" => "read_only",
@@ -705,6 +707,7 @@ final class GeneratedClient
         "VaultService/Decrypt" => "read_only",
         "VaultService/DeleteSecret" => "mutation",
         "VaultService/DestroySecret" => "destructive",
+        "VaultService/EmergencyRevokeDatabaseCredentials" => "destructive",
         "VaultService/Encrypt" => "mutation",
         "VaultService/GenerateDataKey" => "mutation",
         "VaultService/GenerateDatabaseCredentials" => "mutation",
@@ -713,6 +716,7 @@ final class GeneratedClient
         "VaultService/Hmac" => "mutation",
         "VaultService/ListSecrets" => "read_only",
         "VaultService/PutSecret" => "mutation",
+        "VaultService/RevokeDatabaseCredentials" => "destructive",
         "VaultService/Rewrap" => "mutation",
         "VaultService/RotateTransitKey" => "mutation",
         "VaultService/SealStatus" => "read_only",
@@ -1093,6 +1097,7 @@ final class GeneratedClient
         "VaultService/Decrypt" => "decrypt",
         "VaultService/DeleteSecret" => "delete_secret",
         "VaultService/DestroySecret" => "destroy_secret",
+        "VaultService/EmergencyRevokeDatabaseCredentials" => "emergency_revoke_database_credentials",
         "VaultService/Encrypt" => "encrypt",
         "VaultService/GenerateDataKey" => "generate_data_key",
         "VaultService/GenerateDatabaseCredentials" => "generate_database_credentials",
@@ -1101,6 +1106,7 @@ final class GeneratedClient
         "VaultService/Hmac" => "hmac",
         "VaultService/ListSecrets" => "list_secrets",
         "VaultService/PutSecret" => "put_secret",
+        "VaultService/RevokeDatabaseCredentials" => "revoke_database_credentials",
         "VaultService/Rewrap" => "rewrap",
         "VaultService/RotateTransitKey" => "rotate_transit_key",
         "VaultService/SealStatus" => "seal_status",
@@ -1480,6 +1486,7 @@ final class GeneratedClient
         "VaultService/Decrypt" => "vaultDecrypt",
         "VaultService/DeleteSecret" => "deleteSecret",
         "VaultService/DestroySecret" => "destroySecret",
+        "VaultService/EmergencyRevokeDatabaseCredentials" => "emergencyRevokeDatabaseCredentials",
         "VaultService/Encrypt" => "vaultEncrypt",
         "VaultService/GenerateDataKey" => "vaultGenerateDataKey",
         "VaultService/GenerateDatabaseCredentials" => "generateDatabaseCredentials",
@@ -1488,6 +1495,7 @@ final class GeneratedClient
         "VaultService/Hmac" => "vaultHmac",
         "VaultService/ListSecrets" => "listSecrets",
         "VaultService/PutSecret" => "putSecret",
+        "VaultService/RevokeDatabaseCredentials" => "revokeDatabaseCredentials",
         "VaultService/Rewrap" => "vaultRewrap",
         "VaultService/RotateTransitKey" => "rotateTransitKey",
         "VaultService/SealStatus" => "vaultSealStatus",
@@ -1867,6 +1875,7 @@ final class GeneratedClient
         "VaultService/Decrypt" => "post",
         "VaultService/DeleteSecret" => "post",
         "VaultService/DestroySecret" => "post",
+        "VaultService/EmergencyRevokeDatabaseCredentials" => "post",
         "VaultService/Encrypt" => "post",
         "VaultService/GenerateDataKey" => "post",
         "VaultService/GenerateDatabaseCredentials" => "post",
@@ -1875,6 +1884,7 @@ final class GeneratedClient
         "VaultService/Hmac" => "post",
         "VaultService/ListSecrets" => "get",
         "VaultService/PutSecret" => "post",
+        "VaultService/RevokeDatabaseCredentials" => "post",
         "VaultService/Rewrap" => "post",
         "VaultService/RotateTransitKey" => "post",
         "VaultService/SealStatus" => "get",
@@ -2254,6 +2264,7 @@ final class GeneratedClient
         "VaultService/Decrypt" => "/v1/vault/transit:decrypt",
         "VaultService/DeleteSecret" => "/v1/vault/secrets:delete",
         "VaultService/DestroySecret" => "/v1/vault/secrets:destroy",
+        "VaultService/EmergencyRevokeDatabaseCredentials" => "/v1/vault/database/credentials:emergencyRevoke",
         "VaultService/Encrypt" => "/v1/vault/transit:encrypt",
         "VaultService/GenerateDataKey" => "/v1/vault/transit:generateDataKey",
         "VaultService/GenerateDatabaseCredentials" => "/v1/vault/database/credentials",
@@ -2262,6 +2273,7 @@ final class GeneratedClient
         "VaultService/Hmac" => "/v1/vault/transit:hmac",
         "VaultService/ListSecrets" => "/v1/vault/secrets",
         "VaultService/PutSecret" => "/v1/vault/secrets:put",
+        "VaultService/RevokeDatabaseCredentials" => "/v1/vault/database/credentials/{lease_id}:revoke",
         "VaultService/Rewrap" => "/v1/vault/transit:rewrap",
         "VaultService/RotateTransitKey" => "/v1/vault/transit/keys:rotate",
         "VaultService/SealStatus" => "/v1/vault/seal-status",
@@ -2460,7 +2472,7 @@ final class GeneratedClient
         "udb.core.storage.entity.v1.File" => ['table' => "files", 'primary_keys' => ["file_id"], 'fields' => ["file_id", "tenant_id", "project_id", "filename", "content_type", "size_bytes", "backend", "bucket", "object_key", "url", "cdn_url", "file_type", "reference_id", "reference_type", "is_public", "status", "checksum", "expires_at", "uploaded_by", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Storage\Entity\V1\File"],
         "udb.core.tenant.entity.v1.Tenant" => ['table' => "tenants", 'primary_keys' => ["tenant_id"], 'fields' => ["tenant_id", "code", "name", "type", "status", "parent_tenant_id", "config", "branding", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"parent_tenant\",\"kind\":\"belongs_to\",\"local_fields\":[\"parent_tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"tenant_configs\",\"kind\":\"has_many\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.TenantConfig\",\"target_table\":\"udb_tenant.tenant_configs\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"tenants\",\"kind\":\"has_many\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"parent_tenant_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Tenant\Entity\V1\Tenant"],
         "udb.core.tenant.entity.v1.TenantConfig" => ['table' => "tenant_configs", 'primary_keys' => ["config_id"], 'fields' => ["id", "tenant_id", "config_key", "config_value", "type", "description", "audit_info", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"tenant\",\"kind\":\"belongs_to\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Tenant\Entity\V1\TenantConfig"],
-        "udb.core.vault.entity.v1.VaultDbCredentialLease" => ['table' => "vault_db_credential_leases", 'primary_keys' => ["lease_id"], 'fields' => ["lease_id", "tenant_id", "role_name", "username", "parent_role", "backend", "issued_at", "expires_at", "revoked_at", "state", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Vault\Entity\V1\VaultDbCredentialLease"],
+        "udb.core.vault.entity.v1.VaultDbCredentialLease" => ['table' => "vault_db_credential_leases", 'primary_keys' => ["lease_id"], 'fields' => ["lease_id", "tenant_id", "role_name", "username", "parent_role", "backend", "issued_at", "expires_at", "revoked_at", "state", "metadata_json", "project_id", "idempotency_key", "request_hash", "credential_ciphertext", "target_instance", "last_error", "revoke_reason", "revocation_operation_id", "revocation_requested_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Vault\Entity\V1\VaultDbCredentialLease"],
         "udb.core.vault.entity.v1.VaultSecret" => ['table' => "vault_secrets", 'primary_keys' => ["secret_id"], 'fields' => ["secret_id", "tenant_id", "secret_path", "version", "ciphertext", "data_key_wrapped", "state", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Vault\Entity\V1\VaultSecret"],
         "udb.core.vault.entity.v1.VaultTransitKey" => ['table' => "vault_transit_keys", 'primary_keys' => ["key_id"], 'fields' => ["key_id", "tenant_id", "key_name", "version", "algorithm", "wrapped_key_material", "state", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Vault\Entity\V1\VaultTransitKey"],
         "udb.core.webhook.entity.v1.WebhookDelivery" => ['table' => "webhook_deliveries", 'primary_keys' => ["delivery_id"], 'fields' => ["delivery_id", "tenant_id", "endpoint_id", "event_id", "topic", "status", "attempt_count", "response_status", "signature", "last_error", "payload_json", "delivered_at", "audit_info", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Webhook\Entity\V1\WebhookDelivery"],
@@ -2745,6 +2757,7 @@ final class GeneratedClient
         "decrypt" => "decrypt",
         "delete_secret" => "deleteSecret",
         "destroy_secret" => "destroySecret",
+        "emergency_revoke_database_credentials" => "emergencyRevokeDatabaseCredentials",
         "encrypt" => "encrypt",
         "generate_data_key" => "generateDataKey",
         "generate_database_credentials" => "generateDatabaseCredentials",
@@ -2753,6 +2766,7 @@ final class GeneratedClient
         "hmac" => "hmac",
         "list_secrets" => "listSecrets",
         "put_secret" => "putSecret",
+        "revoke_database_credentials" => "revokeDatabaseCredentials",
         "rewrap" => "rewrap",
         "rotate_transit_key" => "rotateTransitKey",
         "seal_status" => "sealStatus",
@@ -8225,6 +8239,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.vault.services.v1.VaultService / EmergencyRevokeDatabaseCredentials (unary), public alias emergency_revoke_database_credentials.
+     *
+     * Forwards to {@see stubFor()}->EmergencyRevokeDatabaseCredentials(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded EmergencyRevokeDatabaseCredentialsResponse
+     */
+    public function emergencyRevokeDatabaseCredentials($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'EmergencyRevokeDatabaseCredentials',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->EmergencyRevokeDatabaseCredentials($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.vault.services.v1.VaultService / Encrypt (unary), public alias encrypt.
      *
      * Forwards to {@see stubFor()}->Encrypt(); retries transient codes.
@@ -8389,6 +8424,27 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutSecret($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / RevokeDatabaseCredentials (unary), public alias revoke_database_credentials.
+     *
+     * Forwards to {@see stubFor()}->RevokeDatabaseCredentials(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RevokeDatabaseCredentialsResponse
+     */
+    public function revokeDatabaseCredentials($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RevokeDatabaseCredentials',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeDatabaseCredentials($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
             $request,
         );
     }
@@ -11014,7 +11070,7 @@ final class GeneratedClient
         return $this->stubFor('TenantService', 'udb.core.tenant.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.vault.services.v1.VaultService (20 RPC(s)).
+     * Underlying buf-generated stub for udb.core.vault.services.v1.VaultService (22 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a VaultServiceClient
@@ -11297,9 +11353,9 @@ final class GeneratedClient
 
     public const DEFAULT_IR_BACKEND = 'postgres';
 
-    private const ORM_TIERS_JSON = "{\"azureblob\":\"blob\",\"cassandra\":\"relational\",\"clickhouse\":\"relational\",\"elasticsearch\":\"vector\",\"gcs\":\"blob\",\"memcached\":\"kv\",\"minio\":\"blob\",\"mongodb\":\"document\",\"mysql\":\"relational\",\"neo4j\":\"graph\",\"pinecone\":\"vector\",\"postgres\":\"relational\",\"qdrant\":\"vector\",\"redis\":\"kv\",\"s3\":\"blob\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"weaviate\":\"vector\"}";
+    private const ORM_TIERS_JSON = "{\"postgres\":\"relational\",\"mysql\":\"relational\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"clickhouse\":\"relational\",\"redis\":\"kv\",\"memcached\":\"kv\",\"qdrant\":\"vector\",\"weaviate\":\"vector\",\"pinecone\":\"vector\",\"minio\":\"blob\",\"s3\":\"blob\",\"azureblob\":\"blob\",\"gcs\":\"blob\",\"mongodb\":\"document\",\"elasticsearch\":\"vector\",\"neo4j\":\"graph\",\"cassandra\":\"relational\"}";
 
-    private const BACKEND_ROLES_JSON = "{\"azureblob\":\"projection\",\"cassandra\":\"projection\",\"clickhouse\":\"projection\",\"elasticsearch\":\"projection\",\"gcs\":\"projection\",\"memcached\":\"projection\",\"minio\":\"projection\",\"mongodb\":\"projection\",\"mysql\":\"canonical\",\"neo4j\":\"projection\",\"pinecone\":\"projection\",\"postgres\":\"canonical\",\"qdrant\":\"projection\",\"redis\":\"projection\",\"s3\":\"projection\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"weaviate\":\"projection\"}";
+    private const BACKEND_ROLES_JSON = "{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"projection\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"projection\",\"cassandra\":\"projection\"}";
 
     public static function query(string $messageType): IrQuery
     {

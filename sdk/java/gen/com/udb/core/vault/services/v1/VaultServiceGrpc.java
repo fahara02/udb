@@ -948,6 +948,8 @@ public final class VaultServiceGrpc {
      * Mint short-lived, per-request Postgres credentials with a durable lease.
      * The requested role_name is an operator-configured alias resolved from
      * UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+     * The authenticated tenant/project/caller and idempotency_key are durably
+     * deduplicated in the same transaction that activates the issued lease.
      * WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
      * </pre>
      */
@@ -960,7 +962,8 @@ public final class VaultServiceGrpc {
      * <pre>
      * Revoke one lease in the authenticated tenant/project. The durable state is
      * moved to REVOKING before physical session fencing and becomes REVOKED only
-     * after the generated role is proven absent. Replays are naturally idempotent.
+     * after the generated role is proven absent. The tenant/project/caller and
+     * lease_id dedup record transition in one transaction, so replay is safe.
      * </pre>
      */
     default void revokeDatabaseCredentials(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest request,
@@ -1276,6 +1279,8 @@ public final class VaultServiceGrpc {
      * Mint short-lived, per-request Postgres credentials with a durable lease.
      * The requested role_name is an operator-configured alias resolved from
      * UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+     * The authenticated tenant/project/caller and idempotency_key are durably
+     * deduplicated in the same transaction that activates the issued lease.
      * WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
      * </pre>
      */
@@ -1289,7 +1294,8 @@ public final class VaultServiceGrpc {
      * <pre>
      * Revoke one lease in the authenticated tenant/project. The durable state is
      * moved to REVOKING before physical session fencing and becomes REVOKED only
-     * after the generated role is proven absent. Replays are naturally idempotent.
+     * after the generated role is proven absent. The tenant/project/caller and
+     * lease_id dedup record transition in one transaction, so replay is safe.
      * </pre>
      */
     public void revokeDatabaseCredentials(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest request,
@@ -1574,6 +1580,8 @@ public final class VaultServiceGrpc {
      * Mint short-lived, per-request Postgres credentials with a durable lease.
      * The requested role_name is an operator-configured alias resolved from
      * UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+     * The authenticated tenant/project/caller and idempotency_key are durably
+     * deduplicated in the same transaction that activates the issued lease.
      * WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
      * </pre>
      */
@@ -1586,7 +1594,8 @@ public final class VaultServiceGrpc {
      * <pre>
      * Revoke one lease in the authenticated tenant/project. The durable state is
      * moved to REVOKING before physical session fencing and becomes REVOKED only
-     * after the generated role is proven absent. Replays are naturally idempotent.
+     * after the generated role is proven absent. The tenant/project/caller and
+     * lease_id dedup record transition in one transaction, so replay is safe.
      * </pre>
      */
     public com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse revokeDatabaseCredentials(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest request) throws io.grpc.StatusException {
@@ -1864,6 +1873,8 @@ public final class VaultServiceGrpc {
      * Mint short-lived, per-request Postgres credentials with a durable lease.
      * The requested role_name is an operator-configured alias resolved from
      * UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+     * The authenticated tenant/project/caller and idempotency_key are durably
+     * deduplicated in the same transaction that activates the issued lease.
      * WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
      * </pre>
      */
@@ -1876,7 +1887,8 @@ public final class VaultServiceGrpc {
      * <pre>
      * Revoke one lease in the authenticated tenant/project. The durable state is
      * moved to REVOKING before physical session fencing and becomes REVOKED only
-     * after the generated role is proven absent. Replays are naturally idempotent.
+     * after the generated role is proven absent. The tenant/project/caller and
+     * lease_id dedup record transition in one transaction, so replay is safe.
      * </pre>
      */
     public com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse revokeDatabaseCredentials(com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest request) {
@@ -2168,6 +2180,8 @@ public final class VaultServiceGrpc {
      * Mint short-lived, per-request Postgres credentials with a durable lease.
      * The requested role_name is an operator-configured alias resolved from
      * UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+     * The authenticated tenant/project/caller and idempotency_key are durably
+     * deduplicated in the same transaction that activates the issued lease.
      * WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
      * </pre>
      */
@@ -2181,7 +2195,8 @@ public final class VaultServiceGrpc {
      * <pre>
      * Revoke one lease in the authenticated tenant/project. The durable state is
      * moved to REVOKING before physical session fencing and becomes REVOKED only
-     * after the generated role is proven absent. Replays are naturally idempotent.
+     * after the generated role is proven absent. The tenant/project/caller and
+     * lease_id dedup record transition in one transaction, so replay is safe.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse> revokeDatabaseCredentials(

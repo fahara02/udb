@@ -525,6 +525,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
@@ -539,7 +541,8 @@ namespace udb.core.Vault.Services.V1 {
       /// <summary>
       /// Revoke one lease in the authenticated tenant/project. The durable state is
       /// moved to REVOKING before physical session fencing and becomes REVOKED only
-      /// after the generated role is proven absent. Replays are naturally idempotent.
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
@@ -1422,6 +1425,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -1438,6 +1443,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -1452,6 +1459,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -1468,6 +1477,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -1481,7 +1492,8 @@ namespace udb.core.Vault.Services.V1 {
       /// <summary>
       /// Revoke one lease in the authenticated tenant/project. The durable state is
       /// moved to REVOKING before physical session fencing and becomes REVOKED only
-      /// after the generated role is proven absent. Replays are naturally idempotent.
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -1496,7 +1508,8 @@ namespace udb.core.Vault.Services.V1 {
       /// <summary>
       /// Revoke one lease in the authenticated tenant/project. The durable state is
       /// moved to REVOKING before physical session fencing and becomes REVOKED only
-      /// after the generated role is proven absent. Replays are naturally idempotent.
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -1509,7 +1522,8 @@ namespace udb.core.Vault.Services.V1 {
       /// <summary>
       /// Revoke one lease in the authenticated tenant/project. The durable state is
       /// moved to REVOKING before physical session fencing and becomes REVOKED only
-      /// after the generated role is proven absent. Replays are naturally idempotent.
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -1524,7 +1538,8 @@ namespace udb.core.Vault.Services.V1 {
       /// <summary>
       /// Revoke one lease in the authenticated tenant/project. The durable state is
       /// moved to REVOKING before physical session fencing and becomes REVOKED only
-      /// after the generated role is proven absent. Replays are naturally idempotent.
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>

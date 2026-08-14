@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "b7d5b7f97dbd77ced0aeda868a000125f6ff498126cb35e9a77961bf381a1e29",
+  "descriptor_sha256": "31045c3465107a61b65700b8df0016a7e7d3a2572f66058d00e7df6989d18190",
   "contract_version": "4.1.0",
   "udb_version": "0.5.7",
   "protocol_version": "1.0.0",
@@ -23813,7 +23813,7 @@
         ],
         "degraded_when_missing": []
       },
-      "rpc_count": 20,
+      "rpc_count": 22,
       "rpcs": [
         {
           "method": "BatchDecrypt",
@@ -24378,6 +24378,102 @@
           }
         },
         {
+          "method": "EmergencyRevokeDatabaseCredentials",
+          "method_alias": "emergency_revoke_database_credentials",
+          "rest_operation_id": "emergencyRevokeDatabaseCredentials",
+          "path": "/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials",
+          "kind": "unary",
+          "operation_kind": "destructive",
+          "read_only": false,
+          "input": ".udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest",
+          "output": ".udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:vault:emergency-revoke-db-credentials"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "project_id",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:vault:emergency-revoke-db-credentials"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "vault.EmergencyRevokeDatabaseCredentials",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "project_id",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": {
+            "event_type": "vault.EmergencyRevokeDatabaseCredentials",
+            "outbox_topic": "udb.vault.db_credential.revoked.v1",
+            "partition_key_field": "lease_id",
+            "payload_redaction_profile": "strict",
+            "delivery_guarantee": "at_least_once",
+            "replay_compatibility": "stable"
+          },
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "emergency_revoke_database_credentials",
+            "rest_operation_id": "emergencyRevokeDatabaseCredentials",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 1,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "vault"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "vault"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/vault/database/credentials:emergencyRevoke",
+            "body": "*",
+            "response_body": ""
+          }
+        },
+        {
           "method": "Encrypt",
           "method_alias": "encrypt",
           "rest_operation_id": "vaultEncrypt",
@@ -24573,7 +24669,7 @@
           "policy_ref": "",
           "tenant_required": true,
           "tenant_field": "",
-          "project_field": "",
+          "project_field": "project_id",
           "endpoint_security": {
             "auth_mode": "bearer",
             "roles": [],
@@ -24595,11 +24691,18 @@
             "decision_resource": "vault.GenerateDatabaseCredentials",
             "owner_field": "",
             "tenant_field": "",
-            "project_field": "",
-            "idempotency_required": false,
+            "project_field": "project_id",
+            "idempotency_required": true,
             "request_context_required": true
           },
-          "event_contract": null,
+          "event_contract": {
+            "event_type": "vault.GenerateDatabaseCredentials",
+            "outbox_topic": "udb.vault.db_credential.issued.v1",
+            "partition_key_field": "lease_id",
+            "payload_redaction_profile": "strict",
+            "delivery_guarantee": "at_least_once",
+            "replay_compatibility": "stable"
+          },
           "emits": [],
           "sdk_surface": {
             "include_in_facade": true,
@@ -24634,111 +24737,19 @@
           },
           "precondition_contract": null,
           "readback_contract": null,
-          "lifecycle_contract": null,
-          "idempotency_contract": null,
-          "error_contract": null,
-          "http": {
-            "verb": "post",
-            "path": "/v1/vault/database/credentials",
-            "body": "*",
-            "response_body": ""
-          }
-        },
-        {
-          "method": "RevokeDatabaseCredentials",
-          "method_alias": "revoke_database_credentials",
-          "rest_operation_id": "revokeDatabaseCredentials",
-          "path": "/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials",
-          "kind": "unary",
-          "operation_kind": "destructive",
-          "read_only": false,
-          "input": ".udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest",
-          "output": ".udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse",
-          "auth_mode": "bearer",
-          "scopes": [
-            "udb:vault:revoke-db-credentials"
-          ],
-          "roles": [],
-          "policy_ref": "",
-          "tenant_required": true,
-          "tenant_field": "",
-          "project_field": "project_id",
-          "endpoint_security": {
-            "auth_mode": "bearer",
-            "roles": [],
-            "scopes": [
-              "udb:vault:revoke-db-credentials"
-            ],
-            "policy_ref": "",
-            "tenant_required": true,
-            "csrf_required": false,
-            "internal_grpc_only": false,
-            "required_assurance_level": 0,
-            "allowed_credential_types": [
-              1,
-              2
-            ],
-            "rate_limit_policy_ref": "",
-            "abuse_policy_ref": "",
-            "audit_event_type": "",
-            "decision_resource": "vault.RevokeDatabaseCredentials",
-            "owner_field": "",
-            "tenant_field": "",
-            "project_field": "project_id",
-            "idempotency_required": true,
-            "request_context_required": true
-          },
-          "event_contract": null,
-          "emits": [],
-          "sdk_surface": {
-            "include_in_facade": true,
-            "method_alias": "revoke_database_credentials",
-            "rest_operation_id": "revokeDatabaseCredentials",
-            "required_credential_provider": "udb",
-            "streaming_helper_type": "",
-            "default_deadline_ms": 30000,
-            "default_max_attempts": 3,
-            "browser_safe": false,
-            "server_only": true,
-            "boilerplate_recipe_tags": [
-              "vault"
-            ],
-            "generate_minimal_example": true
-          },
-          "dependency_contract": {
-            "required_native_services": [
-              "vault"
-            ],
-            "optional_native_services": [],
-            "required_backends": [
-              "postgres"
-            ],
-            "optional_backends": [],
-            "required_features": [],
-            "required_env": [
-              "UDB_NATIVE_SERVICES_ENABLED",
-              "UDB_GRPC_TARGET"
-            ],
-            "degraded_when_missing": []
-          },
-          "precondition_contract": null,
-          "readback_contract": null,
           "lifecycle_contract": {
             "entity": "VaultDbCredentialLease",
-            "legal_source_states": [
-              "STARTING",
-              "ACTIVE",
-              "REVOKING",
+            "legal_source_states": [],
+            "target_state": "ACTIVE",
+            "terminal_states": [
+              "REVOKED",
               "FAILED"
             ],
-            "target_state": "REVOKED",
-            "terminal_states": [
-              "REVOKED"
-            ],
-            "destructive": true
+            "input_consumed": false,
+            "destructive": false
           },
           "idempotency_contract": {
-            "request_key_field": "lease_id",
+            "request_key_field": "idempotency_key",
             "server_generated_key": false,
             "duplicate_response_field": "replayed",
             "replay_safe": true
@@ -24746,96 +24757,7 @@
           "error_contract": null,
           "http": {
             "verb": "post",
-            "path": "/v1/vault/database/credentials/{lease_id}:revoke",
-            "body": "*",
-            "response_body": ""
-          }
-        },
-        {
-          "method": "EmergencyRevokeDatabaseCredentials",
-          "method_alias": "emergency_revoke_database_credentials",
-          "rest_operation_id": "emergencyRevokeDatabaseCredentials",
-          "path": "/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials",
-          "kind": "unary",
-          "operation_kind": "destructive",
-          "read_only": false,
-          "input": ".udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest",
-          "output": ".udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse",
-          "auth_mode": "bearer",
-          "scopes": [
-            "udb:vault:emergency-revoke-db-credentials"
-          ],
-          "roles": [],
-          "policy_ref": "",
-          "tenant_required": true,
-          "tenant_field": "",
-          "project_field": "project_id",
-          "endpoint_security": {
-            "auth_mode": "bearer",
-            "roles": [],
-            "scopes": [
-              "udb:vault:emergency-revoke-db-credentials"
-            ],
-            "policy_ref": "",
-            "tenant_required": true,
-            "csrf_required": false,
-            "internal_grpc_only": false,
-            "required_assurance_level": 0,
-            "allowed_credential_types": [
-              1,
-              2
-            ],
-            "rate_limit_policy_ref": "",
-            "abuse_policy_ref": "",
-            "audit_event_type": "",
-            "decision_resource": "vault.EmergencyRevokeDatabaseCredentials",
-            "owner_field": "",
-            "tenant_field": "",
-            "project_field": "project_id",
-            "idempotency_required": false,
-            "request_context_required": true
-          },
-          "event_contract": null,
-          "emits": [],
-          "sdk_surface": {
-            "include_in_facade": true,
-            "method_alias": "emergency_revoke_database_credentials",
-            "rest_operation_id": "emergencyRevokeDatabaseCredentials",
-            "required_credential_provider": "udb",
-            "streaming_helper_type": "",
-            "default_deadline_ms": 30000,
-            "default_max_attempts": 1,
-            "browser_safe": false,
-            "server_only": true,
-            "boilerplate_recipe_tags": [
-              "vault"
-            ],
-            "generate_minimal_example": true
-          },
-          "dependency_contract": {
-            "required_native_services": [
-              "vault"
-            ],
-            "optional_native_services": [],
-            "required_backends": [
-              "postgres"
-            ],
-            "optional_backends": [],
-            "required_features": [],
-            "required_env": [
-              "UDB_NATIVE_SERVICES_ENABLED",
-              "UDB_GRPC_TARGET"
-            ],
-            "degraded_when_missing": []
-          },
-          "precondition_contract": null,
-          "readback_contract": null,
-          "lifecycle_contract": null,
-          "idempotency_contract": null,
-          "error_contract": null,
-          "http": {
-            "verb": "post",
-            "path": "/v1/vault/database/credentials:emergencyRevoke",
+            "path": "/v1/vault/database/credentials",
             "body": "*",
             "response_body": ""
           }
@@ -25302,6 +25224,121 @@
           "http": {
             "verb": "post",
             "path": "/v1/vault/secrets:put",
+            "body": "*",
+            "response_body": ""
+          }
+        },
+        {
+          "method": "RevokeDatabaseCredentials",
+          "method_alias": "revoke_database_credentials",
+          "rest_operation_id": "revokeDatabaseCredentials",
+          "path": "/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials",
+          "kind": "unary",
+          "operation_kind": "destructive",
+          "read_only": false,
+          "input": ".udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest",
+          "output": ".udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:vault:revoke-db-credentials"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "project_id",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:vault:revoke-db-credentials"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "vault.RevokeDatabaseCredentials",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "project_id",
+            "idempotency_required": true,
+            "request_context_required": true
+          },
+          "event_contract": {
+            "event_type": "vault.RevokeDatabaseCredentials",
+            "outbox_topic": "udb.vault.db_credential.revoked.v1",
+            "partition_key_field": "lease_id",
+            "payload_redaction_profile": "strict",
+            "delivery_guarantee": "at_least_once",
+            "replay_compatibility": "stable"
+          },
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "revoke_database_credentials",
+            "rest_operation_id": "revokeDatabaseCredentials",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "vault"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "vault"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": {
+            "entity": "VaultDbCredentialLease",
+            "legal_source_states": [
+              "STARTING",
+              "ACTIVE",
+              "REVOKING",
+              "FAILED"
+            ],
+            "target_state": "REVOKED",
+            "terminal_states": [
+              "REVOKED"
+            ],
+            "input_consumed": false,
+            "destructive": true
+          },
+          "idempotency_contract": {
+            "request_key_field": "lease_id",
+            "server_generated_key": false,
+            "duplicate_response_field": "replayed",
+            "replay_safe": true
+          },
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/vault/database/credentials/{lease_id}:revoke",
             "body": "*",
             "response_body": ""
           }
@@ -32759,7 +32796,7 @@
       ]
     }
   ],
-  "message_count": 1036,
+  "message_count": 1040,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -127007,10 +127044,10 @@
       "dependency_contract": null,
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "vault.operational",
         "retention_days": 90,
@@ -127021,7 +127058,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 11,
+      "field_count": 20,
       "fields": [
         {
           "name": "lease_id",
@@ -127217,6 +127254,190 @@
           "name": "metadata_json",
           "number": 11,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 12,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 13,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "request_hash",
+          "number": 14,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "credential_ciphertext",
+          "number": 15,
+          "type": "9",
+          "column_security": {
+            "secret_classification": 3,
+            "output_view": 1,
+            "redaction_strategy": 3,
+            "tokenization_strategy": "",
+            "hashing_strategy": "",
+            "hashing_algorithm": "",
+            "encryption_key_class": "vault-db",
+            "searchable_encrypted": false,
+            "uniqueness_scope": "none",
+            "owner_field": false,
+            "tenant_field": false,
+            "project_field": false
+          },
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": true,
+            "sensitive": true,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "target_instance",
+          "number": 16,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "last_error",
+          "number": 17,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "revoke_reason",
+          "number": 18,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "revocation_operation_id",
+          "number": 19,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "revocation_requested_at",
+          "number": 20,
+          "type": ".google.protobuf.Timestamp",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -128672,6 +128893,227 @@
       ]
     },
     {
+      "message": "udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 1,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "reason",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "confirmation_token",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 1,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "operation_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "matched_count",
+          "number": 2,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "revoked_count",
+          "number": 3,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 6,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.vault.services.v1.EncryptRequest",
       "file": "udb/core/vault/services/v1/vault_service.proto",
       "sdk_surface": {
@@ -129084,7 +129526,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 3,
+      "field_count": 5,
       "fields": [
         {
           "name": "tenant_id",
@@ -129142,6 +129584,44 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -129166,7 +129646,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 6,
+      "field_count": 8,
       "fields": [
         {
           "name": "username",
@@ -129280,6 +129760,44 @@
           "name": "error",
           "number": 6,
           "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "replayed",
+          "number": 7,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "state",
+          "number": 8,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -130334,6 +130852,246 @@
         {
           "name": "error",
           "number": 4,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "lease_id",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "reason",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 6,
+      "fields": [
+        {
+          "name": "lease_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "state",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "replayed",
+          "number": 3,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "operation_id",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 6,
           "type": ".udb.core.common.v1.ApiError",
           "column_security": null,
           "scalar_security": {
@@ -176537,10 +177295,10 @@
       "file": "udb/core/vault/entity/v1/vault_db_credential_lease.proto",
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "vault.operational",
         "retention_days": 90,
@@ -176551,7 +177309,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 11,
+      "field_count": 20,
       "fields": [
         {
           "name": "lease_id",
@@ -176747,6 +177505,190 @@
           "name": "metadata_json",
           "number": 11,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 12,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 13,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "request_hash",
+          "number": 14,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "credential_ciphertext",
+          "number": 15,
+          "type": "9",
+          "column_security": {
+            "secret_classification": 3,
+            "output_view": 1,
+            "redaction_strategy": 3,
+            "tokenization_strategy": "",
+            "hashing_strategy": "",
+            "hashing_algorithm": "",
+            "encryption_key_class": "vault-db",
+            "searchable_encrypted": false,
+            "uniqueness_scope": "none",
+            "owner_field": false,
+            "tenant_field": false,
+            "project_field": false
+          },
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": true,
+            "sensitive": true,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "target_instance",
+          "number": 16,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "last_error",
+          "number": 17,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "revoke_reason",
+          "number": 18,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "revocation_operation_id",
+          "number": 19,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "revocation_requested_at",
+          "number": 20,
+          "type": ".google.protobuf.Timestamp",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -178905,7 +179847,7 @@
       ]
     }
   ],
-  "event_count": 251,
+  "event_count": 254,
   "events": [
     {
       "event_type": "analytics.GetExecutorPerformance",
@@ -180312,6 +181254,24 @@
       "source": "/udb.core.vault.services.v1.VaultService/DestroySecret"
     },
     {
+      "event_type": "vault.EmergencyRevokeDatabaseCredentials",
+      "outbox_topic": "udb.vault.db_credential.revoked.v1",
+      "partition_key_field": "lease_id",
+      "payload_redaction_profile": "strict",
+      "delivery_guarantee": "at_least_once",
+      "replay_compatibility": "stable",
+      "source": "/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials"
+    },
+    {
+      "event_type": "vault.GenerateDatabaseCredentials",
+      "outbox_topic": "udb.vault.db_credential.issued.v1",
+      "partition_key_field": "lease_id",
+      "payload_redaction_profile": "strict",
+      "delivery_guarantee": "at_least_once",
+      "replay_compatibility": "stable",
+      "source": "/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials"
+    },
+    {
       "event_type": "vault.GetSecret",
       "outbox_topic": "udb.vault.secret.accessed.v1",
       "partition_key_field": "secret_path",
@@ -180337,6 +181297,15 @@
       "delivery_guarantee": "at_least_once",
       "replay_compatibility": "stable",
       "source": "/udb.core.vault.services.v1.VaultService/PutSecret"
+    },
+    {
+      "event_type": "vault.RevokeDatabaseCredentials",
+      "outbox_topic": "udb.vault.db_credential.revoked.v1",
+      "partition_key_field": "lease_id",
+      "payload_redaction_profile": "strict",
+      "delivery_guarantee": "at_least_once",
+      "replay_compatibility": "stable",
+      "source": "/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials"
     },
     {
       "event_type": "vault.RotateTransitKey",

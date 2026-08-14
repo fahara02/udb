@@ -109,3 +109,8 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   patch was rejected before commit. The replacement invocation mirrors the hard
   Proto gate exactly: Buf 1.65.0, `--include-imports`, and the repository SDK
   postprocessor before native/high-level generation.
+- Canonical generation run `31841970749` succeeded with that exact gate sequence
+  and produced a narrow 16-file patch: Vault stubs and high-level clients for all
+  six languages, the native manifest/docs, OpenAPI, and benchmark rows. The
+  temporary workflow is removed in the same commit as those authoritative
+  outputs and is not part of the permanent CI surface.

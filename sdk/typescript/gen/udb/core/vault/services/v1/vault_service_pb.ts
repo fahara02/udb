@@ -1635,6 +1635,8 @@ export const VaultService: GenService<{
    * Mint short-lived, per-request Postgres credentials with a durable lease.
    * The requested role_name is an operator-configured alias resolved from
    * UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+   * The authenticated tenant/project/caller and idempotency_key are durably
+   * deduplicated in the same transaction that activates the issued lease.
    * WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
    *
    * @generated from rpc udb.core.vault.services.v1.VaultService.GenerateDatabaseCredentials
@@ -1647,7 +1649,8 @@ export const VaultService: GenService<{
   /**
    * Revoke one lease in the authenticated tenant/project. The durable state is
    * moved to REVOKING before physical session fencing and becomes REVOKED only
-   * after the generated role is proven absent. Replays are naturally idempotent.
+   * after the generated role is proven absent. The tenant/project/caller and
+   * lease_id dedup record transition in one transaction, so replay is safe.
    *
    * @generated from rpc udb.core.vault.services.v1.VaultService.RevokeDatabaseCredentials
    */

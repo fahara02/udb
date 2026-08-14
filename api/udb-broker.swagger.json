@@ -38896,7 +38896,7 @@
     },
     "/v1/vault/database/credentials": {
       "post": {
-        "summary": "Mint short-lived, per-request Postgres credentials with a durable lease.\nThe requested role_name is an operator-configured alias resolved from\nUDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.\nWORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.",
+        "summary": "Mint short-lived, per-request Postgres credentials with a durable lease.\nThe requested role_name is an operator-configured alias resolved from\nUDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.\nThe authenticated tenant/project/caller and idempotency_key are durably\ndeduplicated in the same transaction that activates the issued lease.\nWORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.",
         "operationId": "generateDatabaseCredentials",
         "responses": {
           "200": {
@@ -39026,12 +39026,12 @@
         "x-udb-scope": [
           "udb:vault:generate-db-credentials"
         ],
-        "x-udb-retry-safe": false,
+        "x-udb-retry-safe": true,
         "x-udb-idempotency": {
-          "request_key_field": "",
+          "request_key_field": "idempotency_key",
           "server_generated_key": false,
-          "duplicate_response_field": "",
-          "replay_safe": false
+          "duplicate_response_field": "replayed",
+          "replay_safe": true
         },
         "x-udb-resource": "vault",
         "x-udb-operation-kind": "mutation"
@@ -39039,7 +39039,7 @@
     },
     "/v1/vault/database/credentials/{leaseId}:revoke": {
       "post": {
-        "summary": "Revoke one lease in the authenticated tenant/project. The durable state is\nmoved to REVOKING before physical session fencing and becomes REVOKED only\nafter the generated role is proven absent. Replays are naturally idempotent.",
+        "summary": "Revoke one lease in the authenticated tenant/project. The durable state is\nmoved to REVOKING before physical session fencing and becomes REVOKED only\nafter the generated role is proven absent. The tenant/project/caller and\nlease_id dedup record transition in one transaction, so replay is safe.",
         "operationId": "revokeDatabaseCredentials",
         "responses": {
           "200": {
