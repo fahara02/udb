@@ -5,6 +5,7 @@
 //! guard, per-tenant admission, quota lease, presign/HEAD verification, typed
 //! upsert, and outbox emission as the former god file.
 
+use tonic::metadata::MetadataMap;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
@@ -17,8 +18,8 @@ use crate::proto::udb::core::storage::services::v1 as storage_pb;
 
 use super::super::native_helpers::{
     emit_payload_event, native_next_page_token_for_total, native_offset_page_window, parse_uuid,
-    tenant_only_native_service_context, update_mask_allows, update_mask_path_set,
-    validate_request_scope, validate_request_tenant,
+    metadata_project_id, tenant_only_native_service_context, update_mask_allows,
+    update_mask_path_set, validate_request_scope, validate_request_tenant,
 };
 use super::StorageServiceImpl;
 use super::config::{
@@ -56,6 +57,24 @@ pub(crate) type DownloadFileStream = std::pin::Pin<
     >,
 >;
 
+/// Resolve Storage's authorization project claim-first while preserving the
+/// existing tenant-wide placement model. A tenant-scoped credential with no
+/// project claim/header gets an empty project and keeps tenant-wide behavior;
+/// every non-empty value is validated for the UUID column before it reaches IR.
+fn resolved_storage_project_scope(
+    metadata: &MetadataMap,
+    request_project_id: &str,
+) -> Result<String, Status> {
+    let project_id = metadata_project_id(metadata)
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| request_project_id.trim().to_string());
+    if project_id.is_empty() {
+        Ok(String::new())
+    } else {
+        Ok(parse_uuid("project_id", &project_id)?.to_string())
+    }
+}
+
 /// Register a new upload's metadata row in `PENDING` state and mint the
 /// canonical `object_key`.
 ///
@@ -67,8 +86,9 @@ pub(crate) async fn register_upload(
     request: Request<storage_pb::RegisterUploadRequest>,
 ) -> Result<Response<storage_pb::RegisterUploadResponse>, Status> {
     let metadata = request.metadata().clone();
-    let req = request.into_inner();
+    let mut req = request.into_inner();
     validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
+    req.project_id = resolved_storage_project_scope(&metadata, &req.project_id)?;
     validate_register_upload_required_fields(&req.tenant_id, &req.filename)?;
     // Fail closed on a filename that would escape the tenant/file object-key
     // prefix (path traversal / absolute path) before minting the key below.
@@ -251,8 +271,9 @@ pub(crate) async fn finalize_upload(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_tenant(&metadata, &req.tenant_id)?;
+    let project_id = resolved_storage_project_scope(&metadata, "")?;
     // Per-tenant fair admission (held for the whole RPC).
-    let _admit = svc.admit(&req.tenant_id, "").await?;
+    let _admit = svc.admit(&req.tenant_id, &project_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
     let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
     let file_type = file_type_to_db(&req.file_type, "")?;
@@ -262,7 +283,11 @@ pub(crate) async fn finalize_upload(
     // Load the current row: confirms existence, gives the object_key/project to
     // verify the bytes landed, and the prior size for the quota delta.
     let prior_rows = runtime
-        .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
+        .native_entity_read_for_service(
+            "storage",
+            &context,
+            file_read_by_id(&tenant_id, &project_id, &file_id),
+        )
         .await?;
     let prior = match prior_rows.first() {
         Some(row) => file_from_json(row),
@@ -497,7 +522,11 @@ pub(crate) async fn finalize_upload(
     // idempotent outcome, not a double-run. If the row vanished (concurrently
     // soft-deleted between the CAS and this read) fail closed as not-found.
     let rows = runtime
-        .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
+        .native_entity_read_for_service(
+            "storage",
+            &context,
+            file_read_by_id(&tenant_id, &project_id, &file_id),
+        )
         .await?;
     let file = match rows.first().map(file_from_json) {
         Some(f) => f,
@@ -543,21 +572,26 @@ pub(crate) async fn get_download_url(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_tenant(&metadata, &req.tenant_id)?;
+    let project_id = resolved_storage_project_scope(&metadata, "")?;
     // Per-tenant fair admission: GetDownloadUrl mints a presigned URL via the
     // object backend, so it's an Object-class op gated per tenant.
-    let _admit = svc.admit(&req.tenant_id, "").await?;
+    let _admit = svc.admit(&req.tenant_id, &project_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
     let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
     let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let runtime = svc.require_runtime()?;
     let rows = runtime
-        .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
+        .native_entity_read_for_service(
+            "storage",
+            &context,
+            file_read_by_id(&tenant_id, &project_id, &file_id),
+        )
         .await?;
     let Some(file) = rows.first().map(file_from_json) else {
         return Err(storage_file_not_found_status("get_download_url"));
     };
     let object_key = file.object_key;
-    let project_id = file.project_id;
+    let object_project_id = file.project_id;
     let minutes = if req.expires_in_minutes > 0 {
         req.expires_in_minutes.min(1440)
     } else {
@@ -566,7 +600,7 @@ pub(crate) async fn get_download_url(
     // Mint a presigned GET URL (empty in metadata-only mode / on error — the
     // client then uses the public GeneratePresignedUrl RPC with object_key).
     let (download_url, expires_unix) = match svc
-        .presign(&project_id, &object_key, "GET", "", minutes)
+        .presign(&object_project_id, &object_key, "GET", "", minutes)
         .await
     {
         PresignOutcome::Url { url, expires_at } => (url, expires_at),
@@ -608,13 +642,18 @@ pub(crate) async fn reissue_upload_url(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_tenant(&metadata, &req.tenant_id)?;
-    let _admit = svc.admit(&req.tenant_id, "").await?;
+    let project_id = resolved_storage_project_scope(&metadata, "")?;
+    let _admit = svc.admit(&req.tenant_id, &project_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
     let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
     let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let runtime = svc.require_runtime()?;
     let rows = runtime
-        .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
+        .native_entity_read_for_service(
+            "storage",
+            &context,
+            file_read_by_id(&tenant_id, &project_id, &file_id),
+        )
         .await?;
     let Some(file) = rows.first().map(file_from_json) else {
         return Err(storage_file_not_found_status("reissue_upload_url"));
@@ -674,13 +713,14 @@ pub(crate) async fn reissue_upload_url(
 ///
 /// Identity comes from the verified claim (`validate_request_tenant`): the
 /// body `file_id` is the only client-chosen target; the tenant is taken from
-/// the claim and the row is resolved tenant-scoped + live-only, so a
-/// cross-tenant `file_id` simply yields not-found (fail-closed). Presence is
-/// confirmed via the SAME `object_exists` HEAD the finalize path uses (also
-/// supplies the first-chunk content_type/total_size/etag), then the bytes are
-/// streamed in BOUNDED chunks through `get_object_stream_backend_target` (the
-/// data-plane `GetObject` streaming primitive) — the whole object is never
-/// buffered in the broker.
+/// the claim and the row is resolved tenant-scoped + live-only, with an
+/// additional project-ownership predicate whenever the verified credential
+/// carries one. A cross-tenant or cross-project `file_id` therefore yields
+/// not-found (fail-closed). Presence is confirmed via the SAME `object_exists`
+/// HEAD the finalize path uses (also supplies the first-chunk
+/// content_type/total_size/etag), then the bytes are streamed in BOUNDED chunks
+/// through `get_object_stream_backend_target` (the data-plane `GetObject`
+/// streaming primitive) — the whole object is never buffered in the broker.
 pub(crate) async fn download_file(
     svc: &StorageServiceImpl,
     request: Request<storage_pb::DownloadFileRequest>,
@@ -688,8 +728,9 @@ pub(crate) async fn download_file(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_tenant(&metadata, &req.tenant_id)?;
+    let project_id = resolved_storage_project_scope(&metadata, "")?;
     // Per-tenant fair admission: streaming object bytes is an Object-class op.
-    let _admit = svc.admit(&req.tenant_id, "").await?;
+    let _admit = svc.admit(&req.tenant_id, &project_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
     let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
     let context = tenant_only_native_service_context(&metadata, &tenant_id);
@@ -697,7 +738,11 @@ pub(crate) async fn download_file(
     // Resolve the live file row scoped to the verified tenant (cross-tenant
     // file_id → not-found, fail-closed).
     let rows = runtime
-        .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
+        .native_entity_read_for_service(
+            "storage",
+            &context,
+            file_read_by_id(&tenant_id, &project_id, &file_id),
+        )
         .await?;
     let Some(file) = rows.first().map(file_from_json) else {
         return Err(storage_file_not_found_status("download_file"));
@@ -809,6 +854,7 @@ pub(crate) async fn get_file(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_tenant(&metadata, &req.tenant_id)?;
+    let project_id = resolved_storage_project_scope(&metadata, "")?;
     // Per-tenant fair admission (lighter Read budget) so one tenant can't
     // exhaust the shared pool with reads.
     let _admit = svc.admit_read(&req.tenant_id).await?;
@@ -817,7 +863,11 @@ pub(crate) async fn get_file(
     let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let runtime = svc.require_runtime()?;
     let rows = runtime
-        .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
+        .native_entity_read_for_service(
+            "storage",
+            &context,
+            file_read_by_id(&tenant_id, &project_id, &file_id),
+        )
         .await?;
     let file = rows.first().map(file_from_json);
     if file.is_none() {
@@ -837,8 +887,9 @@ pub(crate) async fn update_file(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_tenant(&metadata, &req.tenant_id)?;
+    let project_id = resolved_storage_project_scope(&metadata, "")?;
     // Per-tenant fair admission (held for the whole RPC).
-    let _admit = svc.admit(&req.tenant_id, "").await?;
+    let _admit = svc.admit(&req.tenant_id, &project_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
     let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
     let file_type = file_type_to_db(&req.file_type, "")?;
@@ -869,7 +920,11 @@ pub(crate) async fn update_file(
     let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let runtime = svc.require_runtime()?;
     let rows = runtime
-        .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
+        .native_entity_read_for_service(
+            "storage",
+            &context,
+            file_read_by_id(&tenant_id, &project_id, &file_id),
+        )
         .await?;
     let prior = match rows.first() {
         Some(row) => file_from_json(row),
@@ -970,9 +1025,10 @@ pub(crate) async fn delete_file(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_tenant(&metadata, &req.tenant_id)?;
+    let project_id = resolved_storage_project_scope(&metadata, "")?;
     // Per-tenant fair admission (held for the whole RPC) — DeleteFile also
     // removes object bytes via the object executor, so it's an Object-class op.
-    let _admit = svc.admit(&req.tenant_id, "").await?;
+    let _admit = svc.admit(&req.tenant_id, &project_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
     let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
     let context = tenant_only_native_service_context(&metadata, &tenant_id);
@@ -984,9 +1040,27 @@ pub(crate) async fn delete_file(
         storage_pb::DeleteMode::Hard
     );
     if hard {
-        delete_file_hard(svc, runtime, &context, &tenant_id, &file_id, &req).await
+        delete_file_hard(
+            svc,
+            runtime,
+            &context,
+            &tenant_id,
+            &project_id,
+            &file_id,
+            &req,
+        )
+        .await
     } else {
-        delete_file_soft(svc, runtime, &context, &tenant_id, &file_id, &req).await
+        delete_file_soft(
+            svc,
+            runtime,
+            &context,
+            &tenant_id,
+            &project_id,
+            &file_id,
+            &req,
+        )
+        .await
     }
 }
 
@@ -1041,13 +1115,18 @@ async fn delete_file_soft(
     runtime: &crate::runtime::DataBrokerRuntime,
     context: &crate::RequestContext,
     tenant_id: &str,
+    project_id: &str,
     file_id: &str,
     req: &storage_pb::DeleteFileRequest,
 ) -> Result<Response<storage_pb::DeleteFileResponse>, Status> {
     // Load the live row first: confirms existence (and not already deleted) and
     // recovers the object_key/project so the bytes can be removed too.
     let rows = runtime
-        .native_entity_read_for_service("storage", context, file_read_by_id(tenant_id, file_id))
+        .native_entity_read_for_service(
+            "storage",
+            context,
+            file_read_by_id(tenant_id, project_id, file_id),
+        )
         .await?;
     let prior = match rows.first() {
         Some(row) => file_from_json(row),
@@ -1091,6 +1170,7 @@ async fn delete_file_hard(
     runtime: &crate::runtime::DataBrokerRuntime,
     context: &crate::RequestContext,
     tenant_id: &str,
+    project_id: &str,
     file_id: &str,
     req: &storage_pb::DeleteFileRequest,
 ) -> Result<Response<storage_pb::DeleteFileResponse>, Status> {
@@ -1100,9 +1180,14 @@ async fn delete_file_hard(
     let idempotency_key = req.idempotency_key.trim();
 
     // Idempotent replay: a prior intent under this key returns its recorded outcome
-    // (fingerprint-guarded so a mismatched target conflicts).
+    // only when it belongs to the caller's verified project. The project check
+    // precedes the fingerprint/outcome response so a known key cannot expose a
+    // different project's delete result.
     if !idempotency_key.is_empty() {
         if let Some(prior) = svc.gc_intent_by_key(tenant_id, idempotency_key).await? {
+            if !project_id.is_empty() && prior.project_id != project_id {
+                return Err(storage_file_not_found_status("delete_file"));
+            }
             return resolve_replayed_gc_intent(svc, prior, &fingerprint, max_attempts).await;
         }
     }
@@ -1110,7 +1195,11 @@ async fn delete_file_hard(
     // Fresh delete: resolve the live row (existence + object coordinates), enforce
     // the optimistic guard, then commit the tombstone + PENDING intent atomically.
     let rows = runtime
-        .native_entity_read_for_service("storage", context, file_read_by_id(tenant_id, file_id))
+        .native_entity_read_for_service(
+            "storage",
+            context,
+            file_read_by_id(tenant_id, project_id, file_id),
+        )
         .await?;
     let prior = match rows.first() {
         Some(row) => file_from_json(row),
@@ -1158,6 +1247,9 @@ async fn delete_file_hard(
                         "idempotency race left no intent row to replay",
                     )
                 })?;
+            if !project_id.is_empty() && winner.project_id != project_id {
+                return Err(storage_file_not_found_status("delete_file"));
+            }
             return resolve_replayed_gc_intent(svc, winner, &fingerprint, max_attempts).await;
         }
     };
@@ -1265,6 +1357,7 @@ pub(crate) async fn list_files(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_tenant(&metadata, &req.tenant_id)?;
+    let project_id = resolved_storage_project_scope(&metadata, "")?;
     // Per-tenant fair admission (lighter Read budget) so one tenant can't
     // exhaust the shared pool with list scans.
     let _admit = svc.admit_read(&req.tenant_id).await?;
@@ -1275,6 +1368,7 @@ pub(crate) async fn list_files(
     let runtime = svc.require_runtime()?;
     let filter = file_list_filter(
         &tenant_id,
+        &project_id,
         &type_filter,
         &req.reference_id,
         &req.reference_type,

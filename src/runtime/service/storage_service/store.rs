@@ -78,19 +78,25 @@ fn file_uuid_eq(field: &str, value: &str) -> LogicalFilter {
     }
 }
 
-/// The base clauses every tenant-scoped live-file read shares: tenant match +
-/// not soft-deleted. Single source for `file_active_by_id_filter` and
-/// `file_list_filter` so the "live file" definition can never diverge.
-fn file_tenant_active_clauses(tenant_id: &str) -> Vec<LogicalFilter> {
-    vec![
+/// The base clauses every live-file read shares: tenant match, optional
+/// project ownership, and not soft-deleted. Storage metadata remains physically
+/// tenant-placed; `project_id` is an authorization predicate, not a routing key.
+/// An empty project intentionally preserves tenant-wide credentials.
+fn file_tenant_active_clauses(tenant_id: &str, project_id: &str) -> Vec<LogicalFilter> {
+    let mut clauses = vec![
         file_uuid_eq("tenant_id", tenant_id),
         LogicalFilter::IsNull("deleted_at".to_string()),
-    ]
+    ];
+    if !project_id.trim().is_empty() {
+        clauses.push(file_uuid_eq("project_id", project_id.trim()));
+    }
+    clauses
 }
 
-/// A single live (non-soft-deleted) file scoped to its tenant.
-fn file_active_by_id_filter(tenant_id: &str, file_id: &str) -> LogicalFilter {
-    let mut clauses = file_tenant_active_clauses(tenant_id);
+/// A single live (non-soft-deleted) file scoped to its tenant and, when the
+/// verified caller carries one, its owning project.
+fn file_active_by_id_filter(tenant_id: &str, project_id: &str, file_id: &str) -> LogicalFilter {
+    let mut clauses = file_tenant_active_clauses(tenant_id, project_id);
     clauses.push(file_uuid_eq("file_id", file_id));
     LogicalFilter::And(clauses)
 }
@@ -99,12 +105,13 @@ fn file_active_by_id_filter(tenant_id: &str, file_id: &str) -> LogicalFilter {
 /// applied only when supplied (mirrors the old `$n = '' OR col = $n` guards).
 pub(crate) fn file_list_filter(
     tenant_id: &str,
+    project_id: &str,
     file_type: &str,
     reference_id: &str,
     reference_type: &str,
     uploaded_by: &str,
 ) -> LogicalFilter {
-    let mut filters = file_tenant_active_clauses(tenant_id);
+    let mut filters = file_tenant_active_clauses(tenant_id, project_id);
     if !file_type.is_empty() {
         filters.push(file_eq("file_type", file_type));
     }
@@ -148,10 +155,10 @@ pub(crate) fn file_projection() -> LogicalProjection {
     )
 }
 
-pub(crate) fn file_read_by_id(tenant_id: &str, file_id: &str) -> LogicalRead {
+pub(crate) fn file_read_by_id(tenant_id: &str, project_id: &str, file_id: &str) -> LogicalRead {
     LogicalRead {
         message_type: FILE_MSG.to_string(),
-        filter: Some(file_active_by_id_filter(tenant_id, file_id)),
+        filter: Some(file_active_by_id_filter(tenant_id, project_id, file_id)),
         projection: Some(file_projection()),
         sort: Vec::new(),
         include: Vec::new(),
