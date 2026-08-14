@@ -24,10 +24,10 @@ use super::super::native_helpers::{
 };
 use super::BackupServiceImpl;
 use super::config::{KIND_BACKUP, MANIFEST_SUFFIX, TOPIC_BACKUP_COMPLETED};
-use super::errors::backup_internal_status;
+use super::errors::{backup_internal_status, backup_not_found_status};
 use super::events::emit_event;
-use super::model::{qualified_relation, sha256_hex};
-use super::store::journal_run;
+use super::model::{policy_view_from_json, qualified_relation, sha256_hex};
+use super::store::{journal_run, journal_run_started, policy_read_by_name};
 
 /// Resolve the object-store target for a run: an explicit request override
 /// wins, else the service default (which `build_backup_service` seeds from
@@ -67,17 +67,41 @@ pub(crate) async fn start_tenant_backup(
         ));
     }
     // The verified-tenant context carries project/correlation from request
-    // metadata; the actual export mechanics live in the shared internal routine
-    // so a background driver can fire the SAME backup without an inbound request.
+    // metadata. A named policy supplies the fallback object destination promised
+    // by the public request contract; explicit request fields still win.
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
-    let response = run_tenant_backup(
-        svc,
-        &tenant_id,
-        &req.object_backend,
-        &req.object_bucket,
-        context,
-    )
-    .await?;
+    let mut object_backend = req.object_backend.trim().to_string();
+    let mut object_bucket = req.object_bucket.trim().to_string();
+    if !req.policy_name.trim().is_empty() {
+        let runtime = svc.require_runtime()?;
+        let policy_name = req.policy_name.trim();
+        let policy = runtime
+            .native_entity_read_for_service(
+                "backup",
+                &context,
+                policy_read_by_name(&tenant_id, policy_name),
+            )
+            .await?
+            .first()
+            .map(policy_view_from_json)
+            .ok_or_else(|| {
+                backup_not_found_status(
+                    "start_tenant_backup",
+                    "backup_policy_not_found",
+                    "named backup policy not found",
+                )
+            })?;
+        if object_backend.is_empty() {
+            object_backend = policy.object_backend;
+        }
+        if object_bucket.is_empty() {
+            object_bucket = policy.object_bucket;
+        }
+    }
+    // The actual export mechanics live in the shared internal routine so a
+    // background driver can fire the SAME backup without an inbound request.
+    let response =
+        run_tenant_backup(svc, &tenant_id, &object_backend, &object_bucket, context).await?;
     Ok(Response::new(response))
 }
 
@@ -133,8 +157,9 @@ pub(crate) async fn run_tenant_backup(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let pool = svc.require_pool()?;
-    let manifest = svc.require_manifest()?;
+    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    let mut context = context;
+    context.project_id = binding.project_id.clone();
     // Canonical tenant id (and a value that matches the `::text` filter).
     let _ = parse_uuid("tenant_id", &tenant_id)?;
     let (object_backend, object_bucket) =
@@ -142,7 +167,7 @@ pub(crate) async fn run_tenant_backup(
 
     // SHARED enumeration: the same planner PurgeTenant uses. Tenant-owned
     // tables are `targets`; tenant-less tables are REPORTED in `excluded`.
-    let plan = plan_tenant_purge(manifest);
+    let plan = plan_tenant_purge(&binding.manifest);
     let excluded_count = plan.excluded.len() as i64;
 
     let backup_id = Uuid::new_v4().to_string();
@@ -153,6 +178,65 @@ pub(crate) async fn run_tenant_backup(
         started.format("%Y%m%dT%H%M%SZ"),
         &backup_id[..8.min(backup_id.len())]
     );
+    let manifest_key = format!("{object_prefix}{MANIFEST_SUFFIX}");
+
+    // Establish one explicit, read-only repeatable-read transaction before the
+    // first table query. PostgreSQL fixes this transaction's snapshot on the
+    // provenance query below; every table read therefore observes the same MVCC
+    // world even though object uploads happen between reads.
+    let mut snapshot_tx = binding.pool.begin().await.map_err(|err| {
+        backup_internal_status(
+            "start_backup_snapshot_begin",
+            format!("failed to begin backup snapshot transaction: {err}"),
+        )
+    })?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *snapshot_tx)
+        .await
+        .map_err(|err| {
+            backup_internal_status(
+                "start_backup_snapshot_configure",
+                format!("failed to configure repeatable-read backup snapshot: {err}"),
+            )
+        })?;
+    let (postgres_snapshot, snapshot_wal_lsn): (String, String) =
+        sqlx::query_as("SELECT txid_current_snapshot()::text, pg_current_wal_lsn()::text")
+            .fetch_one(&mut *snapshot_tx)
+            .await
+            .map_err(|err| {
+                backup_internal_status(
+                    "start_backup_snapshot_provenance",
+                    format!("failed to capture backup snapshot provenance: {err}"),
+                )
+            })?;
+
+    // The journal identity and immutable object location are durable before the
+    // first artifact write. A later crash leaves a RUNNING recovery inventory,
+    // never an unindexed prefix whose backend/bucket must be guessed.
+    let started_metadata = serde_json::json!({
+        "object_backend": object_backend,
+        "object_bucket": object_bucket,
+        "manifest_key": manifest_key,
+        "project_id": binding.project_id,
+        "catalog_version": binding.catalog_version,
+        "catalog_checksum": binding.catalog_checksum,
+        "manifest_catalog_checksum": binding.manifest_checksum,
+        "postgres_instance": binding.postgres_instance,
+        "snapshot_consistency": "single_postgres_repeatable_read",
+        "postgres_snapshot": postgres_snapshot,
+        "snapshot_wal_lsn": snapshot_wal_lsn,
+        "snapshot_started_at": started.to_rfc3339(),
+    });
+    journal_run_started(
+        runtime,
+        &context,
+        &backup_id,
+        &tenant_id,
+        KIND_BACKUP,
+        &object_prefix,
+        &started_metadata,
+    )
+    .await?;
 
     let mut table_entries: Vec<backup_pb::BackupTableEntry> = Vec::new();
     let mut total_rows: i64 = 0;
@@ -166,7 +250,7 @@ pub(crate) async fn run_tenant_backup(
         );
         let rows: Vec<String> = sqlx::query_scalar(&select_sql)
             .bind(&tenant_id)
-            .fetch_all(pool)
+            .fetch_all(&mut *snapshot_tx)
             .await
             .map_err(|err| {
                 backup_internal_status(
@@ -222,6 +306,13 @@ pub(crate) async fn run_tenant_backup(
             checksum_sha256: checksum,
         });
     }
+    snapshot_tx.commit().await.map_err(|err| {
+        backup_internal_status(
+            "start_backup_snapshot_commit",
+            format!("failed to close backup snapshot transaction: {err}"),
+        )
+    })?;
+    let snapshot_read_completed = Utc::now();
 
     let excluded: Vec<backup_pb::BackupExcludedTable> = plan
         .excluded
@@ -244,6 +335,17 @@ pub(crate) async fn run_tenant_backup(
         "object_prefix": object_prefix,
         "object_backend": object_backend,
         "object_bucket": object_bucket,
+        "manifest_key": manifest_key,
+        "project_id": binding.project_id,
+        "catalog_version": binding.catalog_version,
+        "catalog_checksum": binding.catalog_checksum,
+        "manifest_catalog_checksum": binding.manifest_checksum,
+        "postgres_instance": binding.postgres_instance,
+        "snapshot_consistency": "single_postgres_repeatable_read",
+        "postgres_snapshot": postgres_snapshot,
+        "snapshot_wal_lsn": snapshot_wal_lsn,
+        "snapshot_started_at": started.to_rfc3339(),
+        "snapshot_read_completed_at": snapshot_read_completed.to_rfc3339(),
         "encrypted": true,
         "fk_ordered": plan.fk_ordered,
         "tables": table_entries.iter().map(|t| serde_json::json!({
@@ -267,7 +369,6 @@ pub(crate) async fn run_tenant_backup(
         )
     })?;
     let manifest_checksum = sha256_hex(&manifest_bytes);
-    let manifest_key = format!("{object_prefix}{MANIFEST_SUFFIX}");
     let manifest_put = crate::runtime::core::setup_data::object_request_json(
         "put",
         &object_bucket,
@@ -285,6 +386,21 @@ pub(crate) async fn run_tenant_backup(
         .await?;
 
     let table_count = table_entries.len() as i64;
+    let completed_metadata = serde_json::json!({
+        "object_backend": object_backend,
+        "object_bucket": object_bucket,
+        "manifest_key": manifest_key,
+        "project_id": binding.project_id,
+        "catalog_version": binding.catalog_version,
+        "catalog_checksum": binding.catalog_checksum,
+        "manifest_catalog_checksum": binding.manifest_checksum,
+        "postgres_instance": binding.postgres_instance,
+        "snapshot_consistency": "single_postgres_repeatable_read",
+        "postgres_snapshot": postgres_snapshot,
+        "snapshot_wal_lsn": snapshot_wal_lsn,
+        "snapshot_started_at": started.to_rfc3339(),
+        "snapshot_read_completed_at": snapshot_read_completed.to_rfc3339(),
+    });
     journal_run(
         runtime,
         &context,
@@ -298,6 +414,7 @@ pub(crate) async fn run_tenant_backup(
         excluded_count,
         "",
         "",
+        &completed_metadata,
     )
     .await?;
 

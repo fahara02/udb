@@ -100,6 +100,49 @@ pub(crate) fn run_summary_from_json(row: &serde_json::Value) -> backup_pb::Backu
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct BackupRunLocation {
+    pub(crate) object_backend: String,
+    pub(crate) object_bucket: String,
+    pub(crate) manifest_key: String,
+    pub(crate) project_id: String,
+    pub(crate) catalog_checksum: String,
+    pub(crate) postgres_instance: String,
+}
+
+/// Decode immutable run-location/topology data from BackupRun.metadata_json.
+/// Native-store adapters may return JSONB either as an object or as JSON text,
+/// so both canonical representations are accepted. Legacy rows without this
+/// metadata return `None`; callers must surface an explicit migration condition
+/// rather than guessing from mutable process defaults.
+pub(crate) fn run_location_from_json(row: &serde_json::Value) -> Option<BackupRunLocation> {
+    let value = match row_object(row).get("metadata_json")? {
+        serde_json::Value::Object(value) => serde_json::Value::Object(value.clone()),
+        serde_json::Value::String(value) => serde_json::from_str(value).ok()?,
+        _ => return None,
+    };
+    let object = value.as_object()?;
+    let location = BackupRunLocation {
+        object_backend: json_str(object, "object_backend"),
+        object_bucket: json_str(object, "object_bucket"),
+        manifest_key: json_str(object, "manifest_key"),
+        project_id: json_str(object, "project_id"),
+        catalog_checksum: json_str(object, "catalog_checksum"),
+        postgres_instance: json_str(object, "postgres_instance"),
+    };
+    if location.object_backend.trim().is_empty()
+        || location.object_bucket.trim().is_empty()
+        || location.manifest_key.trim().is_empty()
+        || location.project_id.trim().is_empty()
+        || location.catalog_checksum.trim().is_empty()
+        || location.postgres_instance.trim().is_empty()
+    {
+        None
+    } else {
+        Some(location)
+    }
+}
+
 pub(crate) fn policy_view_from_json(row: &serde_json::Value) -> backup_pb::BackupPolicyView {
     let m = row_object(row);
     backup_pb::BackupPolicyView {

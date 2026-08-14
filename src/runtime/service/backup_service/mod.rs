@@ -58,11 +58,11 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use tonic::{Request, Response, Status};
 
-use crate::generation::CatalogManifest;
 use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::udb::core::backup::services::v1 as backup_pb;
 use crate::proto::udb::core::backup::services::v1::backup_service_server::BackupService;
 use crate::runtime::DataBrokerRuntime;
+use crate::runtime::catalog::{CatalogManager, DEFAULT_PROJECT_ID};
 use crate::runtime::channels::ChannelManager;
 
 pub use crate::proto::udb::core::backup::services::v1::backup_service_server::BackupServiceServer;
@@ -90,9 +90,9 @@ mod tests;
 
 /// Postgres-backed `BackupService` handler.
 pub struct BackupServiceImpl {
-    /// Pool for the raw tenant-row movement SQL and the outbox. Resolved from this
-    /// service's `native_service` binding (the data-plane Postgres in a shared
-    /// deployment), mirroring `tenant_service::PurgeTenant`.
+    /// Backup native-store pool used only for leader-lane cross-tenant policy
+    /// enumeration (and bare tests). Production tenant row movement resolves its
+    /// project-bound canonical Postgres instance at operation start.
     pub(crate) pg_pool: Option<PgPool>,
     /// Runtime handle: typed native-entity dispatch (journal + policy), the
     /// encrypt/decrypt-at-rest envelope, and the object-store helpers.
@@ -102,10 +102,9 @@ pub struct BackupServiceImpl {
     /// Shared per-tenant fair-admission manager (same one the data plane uses).
     pub(crate) channels: Option<ChannelManager>,
     pub(crate) metrics: Arc<dyn MetricsRecorder>,
-    /// Active catalog manifest — the table set the backup/restore ripples over,
-    /// enumerated via the SHARED purge planner. `None` only in bare unit-test
-    /// construction (the data-movement RPCs fail closed then).
-    pub(crate) manifest: Option<CatalogManifest>,
+    /// Live multi-project catalog. Backup/restore resolves the request project's
+    /// current state at operation start; it must never retain a startup manifest.
+    pub(crate) catalog: Option<Arc<CatalogManager>>,
     /// Default object-store target when neither the request nor a policy overrides.
     pub(crate) object_backend: String,
     pub(crate) object_bucket: String,
@@ -119,7 +118,7 @@ impl BackupServiceImpl {
             outbox_relation: None,
             channels: None,
             metrics: Arc::new(NoopMetrics),
-            manifest: None,
+            catalog: None,
             object_backend: DEFAULT_OBJECT_BACKEND.to_string(),
             object_bucket: DEFAULT_OBJECT_BUCKET.to_string(),
         }
@@ -150,8 +149,8 @@ impl BackupServiceImpl {
         self
     }
 
-    pub(crate) fn with_manifest(mut self, manifest: Option<CatalogManifest>) -> Self {
-        self.manifest = manifest;
+    pub(crate) fn with_catalog(mut self, catalog: Option<Arc<CatalogManager>>) -> Self {
+        self.catalog = catalog;
         self
     }
 
@@ -188,17 +187,141 @@ impl BackupServiceImpl {
         })
     }
 
-    /// The backup/restore ripple enumerates the same manifest table set the purge
-    /// planner walks; fail closed when the manifest is absent.
-    pub(crate) fn require_manifest(&self) -> Result<&CatalogManifest, Status> {
-        self.manifest.as_ref().ok_or_else(|| {
+    /// Resolve one explicitly active project, its current catalog, and the single
+    /// canonical Postgres write instance that owns every relational backup table.
+    /// Multi-instance catalogs are refused until a coordinated distributed
+    /// snapshot protocol exists; silently producing a fuzzy partial backup is not
+    /// an acceptable fallback.
+    pub(crate) fn resolve_project_snapshot(
+        &self,
+        requested_project_id: &str,
+    ) -> Result<BackupProjectSnapshot, Status> {
+        let runtime = self.require_runtime()?;
+        let catalog = self.catalog.as_deref().ok_or_else(|| {
             errors::backup_capability_status(
                 "tenant_table_enumeration",
                 "catalog_manifest",
-                "backup service requires the catalog manifest to enumerate tenant tables",
+                "backup service requires the live project catalog to enumerate tenant tables",
             )
+        })?;
+        let project_id = match requested_project_id.trim() {
+            "" => DEFAULT_PROJECT_ID.to_string(),
+            value => value.to_string(),
+        };
+        if !catalog
+            .active_project_ids()
+            .iter()
+            .any(|active| active == &project_id)
+        {
+            return Err(errors::backup_policy_status(
+                "resolve_project_topology",
+                "backup_project_catalog_not_active",
+                format!(
+                    "project '{project_id}' has no explicitly active catalog; default-project fallback is refused"
+                ),
+            ));
+        }
+
+        let state = catalog.active_for(&project_id);
+        let plan = crate::runtime::core::tenant_purge::plan_tenant_purge(&state.manifest);
+        let default_instance = runtime
+            .choose_instance_name_for_project("postgres", true, &project_id)
+            .map(str::to_string);
+        let mut instances = std::collections::BTreeSet::new();
+
+        for target in &plan.targets {
+            let table = state
+                .manifest
+                .tables
+                .iter()
+                .find(|table| table.schema == target.schema && table.table == target.table)
+                .ok_or_else(|| {
+                    errors::backup_internal_status(
+                        "resolve_project_topology",
+                        format!(
+                            "catalog table disappeared while resolving backup topology: {}.{}",
+                            target.schema, target.table
+                        ),
+                    )
+                })?;
+            let owners: Vec<_> = table
+                .projections
+                .iter()
+                .filter(|projection| projection.write_owner)
+                .collect();
+            if owners.len() != 1 {
+                return Err(errors::backup_policy_status(
+                    "resolve_project_topology",
+                    "backup_write_owner_not_unique",
+                    format!(
+                        "backup table {}.{} must have exactly one canonical write owner (found {})",
+                        target.schema,
+                        target.table,
+                        owners.len()
+                    ),
+                ));
+            }
+            let owner = owners[0];
+            if !owner.backend.eq_ignore_ascii_case("postgres")
+                || !owner.projection_kind.eq_ignore_ascii_case("relational")
+            {
+                return Err(errors::backup_capability_status(
+                    "resolve_project_topology",
+                    "postgres_relational_write_owner",
+                    "logical tenant backup currently requires every canonical write owner to be relational Postgres",
+                ));
+            }
+            let instance = if owner.instance.trim().is_empty() {
+                default_instance
+                    .clone()
+                    .unwrap_or_else(|| "primary".to_string())
+            } else {
+                owner.instance.trim().to_string()
+            };
+            instances.insert(instance);
+        }
+
+        if instances.len() > 1 {
+            return Err(errors::backup_capability_status(
+                "resolve_project_topology",
+                "coordinated_multi_instance_snapshot",
+                "project backup spans multiple canonical Postgres instances; a coordinated snapshot is required and fuzzy completion is refused",
+            ));
+        }
+        let postgres_instance = instances
+            .into_iter()
+            .next()
+            .or(default_instance)
+            .unwrap_or_else(|| "primary".to_string());
+        let pool = match runtime.pg_pool_for_instance(Some(&postgres_instance)) {
+            Ok(pool) => pool.clone(),
+            Err(_) if postgres_instance == "primary" => runtime.pg_pool_for_instance(None)?.clone(),
+            Err(err) => return Err(err),
+        };
+
+        Ok(BackupProjectSnapshot {
+            project_id,
+            catalog_version: state.metadata.version.clone(),
+            catalog_checksum: state.metadata.checksum.clone(),
+            manifest_checksum: state.manifest.checksum_sha256.clone(),
+            manifest: state.manifest.clone(),
+            postgres_instance,
+            pool,
         })
     }
+}
+
+/// Immutable operation-start view used by export and restore. It deliberately
+/// contains a concrete pool/instance rather than a routing hint that could be
+/// re-evaluated differently halfway through a run.
+pub(crate) struct BackupProjectSnapshot {
+    pub(crate) project_id: String,
+    pub(crate) catalog_version: String,
+    pub(crate) catalog_checksum: String,
+    pub(crate) manifest_checksum: String,
+    pub(crate) manifest: Arc<crate::generation::CatalogManifest>,
+    pub(crate) postgres_instance: String,
+    pub(crate) pool: PgPool,
 }
 
 impl Default for BackupServiceImpl {
@@ -273,11 +396,11 @@ impl DataBrokerService {
     /// tenant-table enumeration source), and the default object-store target.
     pub(crate) fn build_backup_service(&self) -> BackupServiceImpl {
         let runtime = self.runtime.load_full();
-        // Native-service persistence resolves through the discovery seam: the
-        // backend is read from this service's proto `native_service` binding, then
-        // a health/weight-routed instance is chosen — not the process-global pool.
-        let pg_pool = runtime
-            .native_store_pool_for_service("backup", true, "")
+        // Cross-tenant maintenance policy enumeration still needs the backup
+        // native store. Raw tenant movement never uses this startup pool; export
+        // and restore resolve a concrete project topology per operation.
+        let maintenance_pool = runtime
+            .native_store_pool_for_service("backup", true, DEFAULT_PROJECT_ID)
             .ok();
         let outbox = runtime.config().cdc.outbox_relation();
         let channels = Some(runtime.channels().clone());
@@ -286,12 +409,12 @@ impl DataBrokerService {
             std::env::var("UDB_STORAGE_BUCKET").ok(),
         );
         BackupServiceImpl::new()
-            .with_postgres(pg_pool)
+            .with_postgres(maintenance_pool)
             .with_runtime(Some(runtime))
             .with_outbox(Some(outbox))
             .with_channels(channels)
             .with_metrics(self.metrics.clone())
-            .with_manifest(Some(self.manifest.clone()))
+            .with_catalog(Some(self.catalog.clone()))
             .with_object(object_backend, object_bucket)
     }
 }

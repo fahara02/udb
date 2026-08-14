@@ -13,7 +13,9 @@ use crate::ir::{
 };
 use crate::runtime::DataBrokerRuntime;
 
-use super::config::{BACKUP_POLICY_MSG, BACKUP_RUN_MSG, MAX_LIST_ROWS, STATUS_COMPLETED};
+use super::config::{
+    BACKUP_POLICY_MSG, BACKUP_RUN_MSG, MAX_LIST_ROWS, STATUS_COMPLETED, STATUS_RUNNING,
+};
 
 /// The full BackupRun column set read back into a [`backup_pb::BackupRunSummary`].
 pub(crate) fn run_summary_fields() -> Vec<String> {
@@ -31,6 +33,7 @@ pub(crate) fn run_summary_fields() -> Vec<String> {
         "target_tenant_id",
         "created_at",
         "completed_at",
+        "metadata_json",
     ]
     .into_iter()
     .map(str::to_string)
@@ -182,7 +185,52 @@ pub(crate) fn policy_conflict() -> ConflictStrategy {
     )
 }
 
-/// Append a journal row (best-effort durability via native-entity dispatch).
+/// Persist the durable RUNNING identity before any backup artifact is written.
+/// A collision is an error: operation ids are immutable journal identities, not
+/// replaceable aliases.
+pub(crate) async fn journal_run_started(
+    runtime: &DataBrokerRuntime,
+    context: &crate::RequestContext,
+    backup_id: &str,
+    tenant_id: &str,
+    kind: &str,
+    object_prefix: &str,
+    metadata: &serde_json::Value,
+) -> Result<(), Status> {
+    let now = Utc::now();
+    let mut record = LogicalRecord::new();
+    record.insert("backup_id".to_string(), logical_string(backup_id));
+    record.insert("tenant_id".to_string(), logical_string(tenant_id));
+    record.insert("kind".to_string(), logical_string(kind));
+    record.insert("status".to_string(), logical_string(STATUS_RUNNING));
+    record.insert("object_prefix".to_string(), logical_string(object_prefix));
+    record.insert("manifest_checksum".to_string(), logical_string(""));
+    record.insert("table_count".to_string(), LogicalValue::Int(0));
+    record.insert("total_rows".to_string(), LogicalValue::Int(0));
+    record.insert("excluded_count".to_string(), LogicalValue::Int(0));
+    record.insert("source_tenant_id".to_string(), logical_string(""));
+    record.insert("target_tenant_id".to_string(), logical_string(""));
+    record.insert("error_message".to_string(), logical_string(""));
+    record.insert("created_at".to_string(), LogicalValue::Timestamp(now));
+    record.insert("completed_at".to_string(), LogicalValue::Null);
+    record.insert(
+        "metadata_json".to_string(),
+        logical_string(metadata.to_string()),
+    );
+    runtime
+        .native_entity_write_for_service(
+            "backup",
+            context,
+            BACKUP_RUN_MSG,
+            record,
+            ConflictStrategy::Error,
+        )
+        .await
+        .map(|_| ())
+}
+
+/// Transition an existing run to COMPLETED after its side effects and immutable
+/// integrity metadata are durable.
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn journal_run(
     runtime: &DataBrokerRuntime,
@@ -197,6 +245,7 @@ pub(crate) async fn journal_run(
     excluded_count: i64,
     source_tenant_id: &str,
     target_tenant_id: &str,
+    metadata: &serde_json::Value,
 ) -> Result<(), Status> {
     let now = Utc::now();
     let mut record = LogicalRecord::new();
@@ -226,7 +275,10 @@ pub(crate) async fn journal_run(
     record.insert("error_message".to_string(), logical_string(""));
     record.insert("created_at".to_string(), LogicalValue::Timestamp(now));
     record.insert("completed_at".to_string(), LogicalValue::Timestamp(now));
-    record.insert("metadata_json".to_string(), logical_string("{}"));
+    record.insert(
+        "metadata_json".to_string(),
+        logical_string(metadata.to_string()),
+    );
     runtime
         .native_entity_write_for_service(
             "backup",
@@ -241,6 +293,7 @@ pub(crate) async fn journal_run(
                 "total_rows".to_string(),
                 "excluded_count".to_string(),
                 "completed_at".to_string(),
+                "metadata_json".to_string(),
             ]),
         )
         .await

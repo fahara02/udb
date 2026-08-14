@@ -64,12 +64,12 @@ use crate::runtime::DataBrokerRuntime;
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
 use super::BackupServiceImpl;
-use super::config::{
-    BACKUP_POLICY_MSG, BACKUP_RUN_MSG, KIND_BACKUP, MANIFEST_SUFFIX, MAX_LIST_ROWS,
+use super::config::{BACKUP_POLICY_MSG, BACKUP_RUN_MSG, KIND_BACKUP, MAX_LIST_ROWS};
+use super::errors::{
+    backup_internal_status, backup_run_location_missing_status, restore_manifest_integrity_status,
 };
-use super::errors::backup_internal_status;
 use super::export::run_tenant_backup;
-use super::model::run_summary_from_json;
+use super::model::{BackupRunLocation, run_location_from_json, run_summary_from_json, sha256_hex};
 use super::store::{logical_string, runs_list_read};
 
 /// Hard upper bound on runs scanned in one prune pass so a single invocation can
@@ -100,6 +100,8 @@ pub(crate) struct EnabledBackupPolicy {
     pub retention_days: i32,
     pub max_retained_backups: i32,
     pub schedule_cron: String,
+    pub object_backend: String,
+    pub object_bucket: String,
 }
 
 /// Manifest-derived model for the durable backup-policy table, so the
@@ -114,14 +116,17 @@ fn backup_policy_model() -> NativeModel {
             "retention_days",
             "max_retained_backups",
             "schedule_cron",
+            "object_backend",
+            "object_bucket",
             "enabled",
         ],
     )
 }
 
 /// The bounded cross-tenant enumeration SQL: every ENABLED policy's
-/// `(tenant_id, retention_days, max_retained_backups, schedule_cron)` across ALL
-/// tenants, capped by `LIMIT $1`. Exposed (and unit-tested) so the read-only,
+/// `(tenant_id, retention_days, max_retained_backups, schedule_cron, object
+/// destination)` across ALL tenants, capped by `LIMIT $1`. Exposed (and
+/// unit-tested) so the read-only,
 /// bounded, enabled-only shape is asserted on the rendered SQL, mirroring
 /// `lock_service::expired_locks_claim_sql`. Columns are cast to stable scalar
 /// types so a UUID tenant column and a nullable cron both decode uniformly.
@@ -130,7 +135,9 @@ pub(crate) fn enabled_policies_sql(m: &NativeModel) -> String {
         "SELECT {tenant}::text AS tenant_id, \
                 {retention}::bigint AS retention_days, \
                 {max_ret}::bigint AS max_retained_backups, \
-                COALESCE({cron}::text, '') AS schedule_cron \
+                COALESCE({cron}::text, '') AS schedule_cron, \
+                COALESCE({object_backend}::text, '') AS object_backend, \
+                COALESCE({object_bucket}::text, '') AS object_bucket \
          FROM {rel} \
          WHERE {enabled} = TRUE \
          ORDER BY {tenant} \
@@ -140,6 +147,8 @@ pub(crate) fn enabled_policies_sql(m: &NativeModel) -> String {
         retention = m.q("retention_days"),
         max_ret = m.q("max_retained_backups"),
         cron = m.q("schedule_cron"),
+        object_backend = m.q("object_backend"),
+        object_bucket = m.q("object_bucket"),
         enabled = m.q("enabled"),
     )
 }
@@ -176,11 +185,15 @@ pub(crate) async fn enabled_backup_policies(
         let retention_days: i64 = row.try_get("retention_days").unwrap_or(0);
         let max_retained_backups: i64 = row.try_get("max_retained_backups").unwrap_or(0);
         let schedule_cron: String = row.try_get("schedule_cron").unwrap_or_default();
+        let object_backend: String = row.try_get("object_backend").unwrap_or_default();
+        let object_bucket: String = row.try_get("object_bucket").unwrap_or_default();
         policies.push(EnabledBackupPolicy {
             tenant_id,
             retention_days: clamp_i32(retention_days),
             max_retained_backups: clamp_i32(max_retained_backups),
             schedule_cron,
+            object_backend,
+            object_bucket,
         });
     }
     Ok(policies)
@@ -346,15 +359,22 @@ where
         }
         // Fire through the SAME internal routine the RPC uses. The policy's own
         // tenant is the verified tenant here (read cross-tenant in the leader
-        // lane), so no request-scoped identity is smuggled. Object target falls
-        // back to the service default (the enumerator projects only the retention
-        // + schedule columns); the run is journaled and emits its outbox event
-        // exactly as an operator-triggered backup.
+        // lane), so no request-scoped identity is smuggled. The durable policy's
+        // object destination is passed through the same target resolver used by
+        // an operator-triggered backup.
         let context = crate::RequestContext {
             tenant_id: policy.tenant_id.clone(),
             ..crate::RequestContext::default()
         };
-        match run_tenant_backup(svc, &policy.tenant_id, "", "", context).await {
+        match run_tenant_backup(
+            svc,
+            &policy.tenant_id,
+            &policy.object_backend,
+            &policy.object_bucket,
+            context,
+        )
+        .await
+        {
             Ok(_) => {
                 fired = fired.saturating_add(1);
             }
@@ -450,7 +470,7 @@ pub(crate) async fn prune_tenant_backups(
     };
 
     // Bounded enumeration of this tenant's completed BACKUP runs, newest-first.
-    let mut runs: Vec<(String, i64, String)> = Vec::new(); // (backup_id, created_at, object_prefix)
+    let mut runs: Vec<(String, i64, String, String, Option<BackupRunLocation>)> = Vec::new();
     let page: u32 = MAX_LIST_ROWS;
     let mut offset: u64 = 0;
     loop {
@@ -464,7 +484,13 @@ pub(crate) async fn prune_tenant_backups(
         let fetched = rows.len();
         for row in &rows {
             let run = run_summary_from_json(row);
-            runs.push((run.backup_id, run.created_at_unix, run.object_prefix));
+            runs.push((
+                run.backup_id,
+                run.created_at_unix,
+                run.object_prefix,
+                run.manifest_checksum,
+                run_location_from_json(row),
+            ));
         }
         if fetched < page as usize || runs.len() >= PRUNE_SCAN_CAP {
             break;
@@ -472,7 +498,10 @@ pub(crate) async fn prune_tenant_backups(
         offset = offset.saturating_add(fetched as u64);
     }
 
-    let ids: Vec<(String, i64)> = runs.iter().map(|(id, ts, _)| (id.clone(), *ts)).collect();
+    let ids: Vec<(String, i64)> = runs
+        .iter()
+        .map(|(id, ts, _, _, _)| (id.clone(), *ts))
+        .collect();
     let now_unix = chrono::Utc::now().timestamp();
     let prune_ids = runs_to_prune(&ids, retention_days, max_retained_backups, now_unix);
     if prune_ids.is_empty() {
@@ -481,120 +510,126 @@ pub(crate) async fn prune_tenant_backups(
     let prune_set: std::collections::HashSet<&str> = prune_ids.iter().map(String::as_str).collect();
 
     let mut outcome = PruneOutcome::default();
-    for (backup_id, _ts, object_prefix) in &runs {
+    for (backup_id, _ts, object_prefix, manifest_checksum, location) in &runs {
         if !prune_set.contains(backup_id.as_str()) {
             continue;
         }
-        outcome.objects_deleted += delete_run_objects(svc, runtime, &context, object_prefix).await;
-        delete_run_journal_row(runtime, &context, tenant_id, backup_id).await;
-        outcome.runs_pruned += 1;
+        let location = location
+            .as_ref()
+            .ok_or_else(|| backup_run_location_missing_status("retention_prune"))?;
+        outcome.objects_deleted +=
+            delete_run_objects(runtime, location, object_prefix, manifest_checksum).await?;
+        if delete_run_journal_row(runtime, &context, tenant_id, backup_id).await? {
+            outcome.runs_pruned += 1;
+        }
     }
     Ok(outcome)
 }
 
-/// Best-effort deletion of a run's object artifacts. The manifest lists the
-/// per-table encrypted objects and records the backend/bucket they live under
-/// (mirroring restore); we delete those, then the manifest itself. Best-effort:
-/// a missing/unreadable manifest or a transient object-store error is logged and
-/// never fails retention (the journal row is still pruned by the caller).
+/// Delete a run's table objects and only then its manifest. Any provider or
+/// integrity failure is retryable by the next retention pass because both the
+/// manifest and journal reference remain intact.
 async fn delete_run_objects(
-    svc: &BackupServiceImpl,
     runtime: &DataBrokerRuntime,
-    context: &crate::RequestContext,
+    location: &BackupRunLocation,
     object_prefix: &str,
-) -> u64 {
+    manifest_checksum: &str,
+) -> Result<u64, Status> {
     let object_prefix = object_prefix.trim();
     if object_prefix.is_empty() {
-        return 0;
+        return Err(backup_internal_status(
+            "retention_prune",
+            "backup run has no object prefix",
+        ));
     }
-    let manifest_key = format!("{object_prefix}{MANIFEST_SUFFIX}");
-    let run_backend = svc.object_backend.clone();
-    let run_bucket = svc.object_bucket.clone();
     let manifest_get = crate::runtime::core::setup_data::object_request_json(
         "get",
-        &run_bucket,
-        &manifest_key,
+        &location.object_bucket,
+        &location.manifest_key,
         "",
     );
     let mut deleted: u64 = 0;
-    if let Ok(bytes) = runtime
+    let bytes = runtime
         .get_object_backend_target_for_project(
-            &run_backend,
+            &location.object_backend,
             None,
-            &context.project_id,
+            &location.project_id,
             &manifest_get,
         )
-        .await
-        && let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes)
-    {
-        let object_backend = value
-            .get("object_backend")
-            .and_then(|v| v.as_str())
-            .filter(|v| !v.trim().is_empty())
-            .unwrap_or(run_backend.as_str())
-            .to_string();
-        let object_bucket = value
-            .get("object_bucket")
-            .and_then(|v| v.as_str())
-            .filter(|v| !v.trim().is_empty())
-            .unwrap_or(run_bucket.as_str())
-            .to_string();
-        if let Some(tables) = value.get("tables").and_then(|v| v.as_array()) {
-            for entry in tables {
-                let Some(object_key) = entry
-                    .get("object_key")
-                    .and_then(|v| v.as_str())
-                    .filter(|k| !k.trim().is_empty())
-                else {
-                    continue;
-                };
-                let del = crate::runtime::core::setup_data::object_request_json(
-                    "delete",
-                    &object_bucket,
-                    object_key,
-                    "",
-                );
-                if runtime
-                    .delete_object_backend_target(&object_backend, None, &context.project_id, &del)
-                    .await
-                    .is_ok()
-                {
-                    deleted += 1;
-                } else {
-                    tracing::warn!(
-                        target: "udb.backup.retention",
-                        object_key,
-                        "retention: best-effort table-object delete failed"
-                    );
-                }
-            }
-        }
+        .await?;
+    if manifest_checksum.trim().is_empty() || sha256_hex(&bytes) != manifest_checksum.trim() {
+        return Err(restore_manifest_integrity_status());
     }
-    // Delete the manifest object last (after the artifacts it points at).
-    let manifest_del = crate::runtime::core::setup_data::object_request_json(
-        "delete",
-        &run_bucket,
-        &manifest_key,
-        "",
-    );
-    if runtime
-        .delete_object_backend_target(&run_backend, None, &context.project_id, &manifest_del)
-        .await
-        .is_ok()
-    {
+    let value = serde_json::from_slice::<serde_json::Value>(&bytes).map_err(|err| {
+        backup_internal_status(
+            "retention_manifest_parse",
+            format!("backup manifest parse failed: {err}"),
+        )
+    })?;
+    let tables = value
+        .get("tables")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            backup_internal_status(
+                "retention_manifest_tables",
+                "backup manifest has no tables array",
+            )
+        })?;
+    for entry in tables {
+        let object_key = entry
+            .get("object_key")
+            .and_then(serde_json::Value::as_str)
+            .filter(|key| !key.trim().is_empty())
+            .ok_or_else(|| {
+                backup_internal_status(
+                    "retention_manifest_object_key",
+                    "backup manifest table entry has no object key",
+                )
+            })?;
+        let del = crate::runtime::core::setup_data::object_request_json(
+            "delete",
+            &location.object_bucket,
+            object_key,
+            "",
+        );
+        runtime
+            .delete_object_backend_target(
+                &location.object_backend,
+                None,
+                &location.project_id,
+                &del,
+            )
+            .await?;
         deleted += 1;
     }
-    deleted
+
+    // The manifest is the recovery inventory and is deleted only after every
+    // artifact delete completed successfully.
+    let manifest_del = crate::runtime::core::setup_data::object_request_json(
+        "delete",
+        &location.object_bucket,
+        &location.manifest_key,
+        "",
+    );
+    runtime
+        .delete_object_backend_target(
+            &location.object_backend,
+            None,
+            &location.project_id,
+            &manifest_del,
+        )
+        .await?;
+    deleted += 1;
+    Ok(deleted)
 }
 
-/// Best-effort deletion of a run's durable journal row, tenant-scoped. Logged and
-/// swallowed on failure so one bad row never aborts the remaining prunes.
+/// Delete a run's durable journal row and return the actual affected outcome.
 async fn delete_run_journal_row(
     runtime: &DataBrokerRuntime,
     context: &crate::RequestContext,
     tenant_id: &str,
     backup_id: &str,
-) {
+) -> Result<bool, Status> {
     let op = LogicalDelete {
         message_type: BACKUP_RUN_MSG.to_string(),
         filter: LogicalFilter::And(vec![
@@ -609,19 +644,12 @@ async fn delete_run_journal_row(
                 value: logical_string(backup_id),
             },
         ]),
-        return_fields: Vec::new(),
+        return_fields: vec!["backup_id".to_string()],
     };
-    if let Err(err) = runtime
-        .native_entity_delete_for_service("backup", context, op)
+    runtime
+        .native_entity_delete_rows_for_service("backup", context, op)
         .await
-    {
-        tracing::warn!(
-            target: "udb.backup.retention",
-            backup_id,
-            error = %err,
-            "retention: best-effort journal-row delete failed"
-        );
-    }
+        .map(|rows| !rows.is_empty())
 }
 
 #[cfg(test)]
@@ -712,7 +740,7 @@ mod tests {
 
     /// The enabled-policy enumeration SQL must be a READ-ONLY, ENABLED-only,
     /// BOUNDED scan over the manifest-derived backup-policy relation, projecting
-    /// exactly the four columns the leader-lane drivers consume. Asserted on the
+    /// exactly the six columns the leader-lane drivers consume. Asserted on the
     /// rendered SQL (no Postgres), mirroring `lock_service::expired_locks_claim_sql`.
     #[test]
     fn enabled_policies_sql_shape() {
@@ -723,6 +751,8 @@ mod tests {
             "AS retention_days",
             "AS max_retained_backups",
             "AS schedule_cron",
+            "AS object_backend",
+            "AS object_bucket",
         ] {
             assert!(sql.contains(alias), "must project {alias}: {sql}");
         }

@@ -14,6 +14,7 @@ pub(crate) const TOPIC_POLICY_DELETED: &str = "udb.backup.policy.deleted.v1";
 pub(crate) const KIND_BACKUP: &str = "BACKUP";
 pub(crate) const KIND_RESTORE: &str = "RESTORE";
 
+pub(crate) const STATUS_RUNNING: &str = "RUNNING";
 pub(crate) const STATUS_COMPLETED: &str = "COMPLETED";
 
 /// Upper bound on rows returned by a list RPC so one call can't unbound the store.
