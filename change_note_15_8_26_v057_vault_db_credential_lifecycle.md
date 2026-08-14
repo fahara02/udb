@@ -87,3 +87,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   benchmark manifest still at 379 RPCs. The manifest now carries both revoke
   operations plus the current project/idempotency-bound issuance request, so
   benchmark coverage documentation can be regenerated at 381 RPCs.
+- Bootstrap CI run `31839337878` confirmed the regenerated 381-RPC documents
+  are internally fresh and found only the posture guard's former 379-RPC
+  literal. Both coverage-document assertions now follow the descriptor-backed
+  381-RPC surface while the service count remains 28.
