@@ -138,3 +138,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   temporary workflow is removed together with the committed baseline output.
   Regeneration run `31844121489` completed successfully; its patch changed only
   `docs/generated/contract-baseline.bin`.
+- Final-candidate CI run `31844207550` accepted formatting, Buf compatibility,
+  versions, SDK coverage, and every posture gate before docs freshness exposed
+  its pinned 4.1.0 header. That fixture now requires the intentional 5.0.0 native
+  contract major, keeping the generated documentation and its drift guard exact.
