@@ -91,3 +91,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   are internally fresh and found only the posture guard's former 379-RPC
   literal. Both coverage-document assertions now follow the descriptor-backed
   381-RPC surface while the service count remains 28.
+- Bootstrap CI run `31839524955` reached semantic retry documentation and found
+  that the public proto comments did not explicitly state the implemented proof
+  boundary. Issuance and revoke now document tenant/project/caller binding,
+  their request dedup key, and same-transaction durable replay behavior.
