@@ -239,6 +239,10 @@ impl VaultServiceImpl {
             "" => DEFAULT_PROJECT_ID.to_string(),
             project_id => project_id.to_string(),
         };
+        // Preserve the service's primary capability ordering: a missing runtime
+        // is the first actionable setup failure. The catalog validation below
+        // still fails closed before any project store is selected or touched.
+        let runtime = self.require_runtime()?;
         let catalog = self.catalog.as_deref().ok_or_else(|| {
             vault_capability_status(
                 operation,
@@ -260,7 +264,6 @@ impl VaultServiceImpl {
                 ),
             ));
         }
-        let runtime = self.require_runtime()?;
         let (pool, instance) =
             runtime.native_store_postgres_binding_for_service("vault", write, &context)?;
         context.target_backend = "postgres".to_string();

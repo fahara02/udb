@@ -58,3 +58,13 @@ Date: 2026-08-14
   owned `Option<String>`.
 - No local build or test was run for this follow-up. The replacement GitHub CI
   run remains the compilation and test authority.
+- Replacement CI run `31818197455` compiled the PostgreSQL-slim target, the
+  live-tier broker, and the full Ubuntu/all-features library test binaries. Both
+  library jobs then reported the same single failed assertion after thousands
+  of passing tests: the no-runtime `DestroySecret` guard received the new
+  missing-catalog capability before the established missing-runtime capability.
+- `resolve_project_store` now checks its primary runtime capability before the
+  active-project catalog. Both remain fail-closed before store selection; this
+  restores the documented error precedence without weakening project routing.
+  No local test was run for this correction; the next GitHub CI run is the
+  authority.
