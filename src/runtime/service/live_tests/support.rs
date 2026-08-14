@@ -11,19 +11,19 @@ use crate::runtime::{DataBrokerRuntime, native_catalog};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-pub(super) fn live_pg_dsn() -> String {
+pub(crate) fn live_pg_dsn() -> String {
     std::env::var("UDB_LIVE_NATIVE_PG_DSN")
         .or_else(|_| std::env::var("UDB_LIVE_AUTH_PG_DSN"))
         .or_else(|_| std::env::var("UDB_INTEGRATION_PG_DSN"))
         .unwrap_or_else(|_| "postgres://udb:udb@127.0.0.1:55432/udb".to_string())
 }
 
-pub(super) fn live_native_service_db_lock() -> &'static tokio::sync::Mutex<()> {
+pub(crate) fn live_native_service_db_lock() -> &'static tokio::sync::Mutex<()> {
     static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
 }
 
-pub(super) async fn live_pg_pool() -> sqlx::PgPool {
+pub(crate) async fn live_pg_pool() -> sqlx::PgPool {
     let dsn = live_pg_dsn();
     sqlx::postgres::PgPoolOptions::new()
         .max_connections(4)
@@ -96,7 +96,7 @@ fn quote_ident(value: &str) -> String {
     format!("\"{}\"", value.replace('"', "\"\""))
 }
 
-pub(super) async fn migrate_native_service_db(pool: &sqlx::PgPool) {
+pub(crate) async fn migrate_native_service_db(pool: &sqlx::PgPool) {
     cleanup_native_service_db(pool).await;
     let ddl = crate::runtime::native_catalog::native_service_catalog_ddl();
     assert!(
@@ -141,6 +141,10 @@ async fn native_broker_service() -> DataBrokerService {
         native_catalog::native_manifest().clone(),
         DataBrokerRuntime::from_config(config).await,
     )
+}
+
+pub(crate) async fn vault_service() -> crate::runtime::service::vault_service::VaultServiceImpl {
+    native_broker_service().await.build_vault_service()
 }
 
 fn live_native_config() -> UdbConfig {

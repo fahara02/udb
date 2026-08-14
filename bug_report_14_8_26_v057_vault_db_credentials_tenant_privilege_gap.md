@@ -1,7 +1,7 @@
 # UDB v0.5.7 Vault database credentials are not tenant-bound at PostgreSQL
 
 Date: 2026-08-14
-Status: unsafe issuance disabled fail closed; tenant-bound credential feature remains unimplemented
+Status: tenant/project-bound read-only PostgreSQL credential authority implemented; GitHub CI pending
 Affected path: `VaultService.GenerateDatabaseCredentials`
 
 ## Summary
@@ -60,19 +60,54 @@ caller-changeable and cannot be the immutable authorization boundary promised by
 the lease label. The removed served path therefore cannot grant a global parent
 role to a tenant caller.
 
-The functional replacement remains open: a trusted credential broker/proxy or
-database-native tenant-specific least-privilege role model, policy revision and
-physical target persistence, continuous parent/grant audit, and cross-tenant
-negative live tests. Until those exist, the endpoint is intentionally
-non-serving rather than unsafe.
+## 2026-08-15 functional correction
+
+`GenerateDatabaseCredentials` now uses a database-native, direct-grant authority
+instead of a global parent role:
+
+- `UDB_VAULT_DB_ROLES_JSON` aliases must bind one exact tenant, project,
+  canonical runtime instance, physical database, declared policy revision, and
+  a bounded relation list with explicit tenant/project columns. Legacy
+  `parent_role` entries and unknown fields are rejected.
+- The served handler first resolves and pins the active project through
+  `resolve_project_store`; the alias selectors must match that verified context
+  before role DDL begins, and `current_database()` must match the configured
+  physical database.
+- The first production-safe capability is intentionally read-only. Only
+  `SELECT` is accepted. The generated role is `NOINHERIT`, `NOBYPASSRLS`, has no
+  administrative attributes and no memberships, receives direct relation
+  grants, and is audited after creation.
+- Each allowed relation is required to expose the configured tenant/project
+  columns and a permissive read policy. Issuance enables and forces RLS, then
+  adds a per-login `AS RESTRICTIVE` policy with fixed tenant/project literals.
+  Role-level `app.current_*` settings remain compatibility defaults, but a
+  caller changing them cannot relax the restrictive predicate.
+- Issuance refuses databases with PUBLIC data privileges or non-extension
+  PUBLIC `SECURITY DEFINER` functions, which could otherwise provide an
+  authority path outside the explicit relation list.
+- Lease metadata records the canonical instance, database, server address and
+  port, declared policy revision, SHA-256 of the effective alias configuration,
+  exact relations, and generated policy names. The legacy `parent_role` lease
+  field is stored empty because no parent membership exists.
+- Cleanup now removes every policy that references the generated role, drops
+  direct grants, and only then drops the login, so expiry/revocation does not
+  strand a role behind RLS dependencies.
+
+An ignored live PostgreSQL test invokes the actual `VaultService` trait method,
+connects using the returned username/password, proves only the bound row is
+visible, changes both caller-controlled GUC hints to foreign scope, and proves
+foreign-tenant and foreign-project rows remain invisible. The main native-live
+job supplies the exact authority config; `live-quick` includes the focused
+`vault_db_credentials_live` filter.
 
 ## Verification log
 
 - Traced global role config, request selection, generated CREATE ROLE SQL, and
   lease schema.
-- Added a unit guard asserting the typed fail-closed capability response.
-- `cargo check --lib --no-default-features --features postgres -j 2` passed
-  locally after the correction (warnings only).
-- Focused Vault unit execution was terminated after the local linker remained
-  CPU-bound for more than ten minutes; no test result is claimed. GitHub CI is
-  pending for this wave; no production data was mutated.
+- Added parser/binding guards for legacy parent roles, unsafe privileges, and
+  tenant/project/instance drift.
+- Added the served-path live negative test and wired it into the GitHub
+  native-integration and `live-quick` environments.
+- Per operator instruction, no local Cargo build or test was run for the
+  2026-08-15 functional wave. GitHub CI is pending; no production database was
+  mutated.

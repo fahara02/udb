@@ -18,7 +18,7 @@ on:
       filter:
         description: "cargo test name filter(s), space-separated. Empty = all ignored lib tests."
         required: false
-        default: "apikey_live authn_authenticate_live authn_security_live authn_session_live grants_live grants_transfer_live notification_events_live notification_live data_plane_tenant_rls_live native_events_live search_tenant_iso_live storage_live ha_multinode_live"
+        default: "apikey_live authn_authenticate_live authn_security_live authn_session_live grants_live grants_transfer_live notification_events_live notification_live data_plane_tenant_rls_live native_events_live search_tenant_iso_live storage_live vault_db_credentials_live ha_multinode_live"
   push:
     branches:
       - "livefix/**"
@@ -79,6 +79,7 @@ jobs:
           UDB_MINIO_SECRET_KEY: minio123
           UDB_QDRANT_URL: http://localhost:56333
           UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
+          UDB_VAULT_DB_ROLES_JSON: '[{"role_name":"authority-test-read","tenant_id":"tenant-a","project_id":"default","target_instance":"primary","database_name":"udb","policy_revision":"ci-v1","relations":[{"schema":"udb_vault_authority_test","table":"records","tenant_column":"tenant_id","project_column":"project_id","privileges":["SELECT"]}],"ttl_seconds_max":600}]'
           TEST_FILTER: ${{ github.event.inputs.filter }}
         run: |
           set -euo pipefail

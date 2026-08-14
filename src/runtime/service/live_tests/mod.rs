@@ -19,6 +19,6 @@ mod storage_live;
 mod storage_object_live;
 #[cfg(feature = "http-client")]
 mod storage_object_tenant_iso_live;
-mod support;
+pub(crate) mod support;
 mod webrtc_live;
 mod workflow_live;
