@@ -118,3 +118,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   map but found its exact-set regression fixture still listed only the former
   four RPCs. The fixture now includes and directly asserts both project-bound
   Vault issuance and single-lease revoke; emergency revoke remains non-retryable.
+- The same run's Proto job confirmed canonical stubs/OpenAPI, then found the
+  derived security inventory at 300 rather than 302 RPCs. Regeneration from the
+  CI-authored native manifest adds emergency and single-lease revoke with their
+  exact bearer scopes; all 302 inventoried RPCs retain endpoint security.
