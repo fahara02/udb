@@ -2681,9 +2681,25 @@ pub async fn serve(
     // generated Postgres login roles and marks their durable lease rows REVOKED.
     {
         let vault_runtime = service.runtime.load_full();
-        if let Ok(vault_pool) = vault_runtime.native_store_pool_for_service("vault", true, "") {
+        let vault_catalog = service.catalog.clone();
+        let leader_pool = vault_catalog
+            .active_project_ids()
+            .into_iter()
+            .find_map(|project_id| {
+                let context = crate::RequestContext {
+                    project_id,
+                    ..crate::RequestContext::default()
+                };
+                vault_runtime
+                    .native_store_postgres_binding_for_service("vault", true, &context)
+                    .ok()
+                    .map(|(pool, _instance)| pool)
+            });
+        if let Some(leader_pool) = leader_pool {
             let singleton_relation = vault_runtime.config().cdc.lock_log_relation();
-            let lease_pool = vault_pool.clone();
+            let lease_pool = leader_pool.clone();
+            let worker_runtime = vault_runtime.clone();
+            let worker_catalog = vault_catalog.clone();
             crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
                 crate::runtime::singleton::WORKER_VAULT_LEASE_REAPER,
                 "vault DB credential leases revoked expired login roles",
@@ -2691,13 +2707,41 @@ pub async fn serve(
                 singleton_relation,
                 crate::runtime::service::vault_service::vault_db_lease_reaper_interval(),
                 move || {
-                    let pool = vault_pool.clone();
+                    let runtime = worker_runtime.clone();
+                    let catalog = worker_catalog.clone();
                     async move {
-                        crate::runtime::service::vault_service::run_vault_db_lease_reaper_once(
-                            &pool,
-                            crate::runtime::service::vault_service::vault_db_lease_reaper_batch(),
-                        )
-                        .await
+                        let mut revoked = 0i64;
+                        let mut failures = Vec::new();
+                        for project_id in catalog.active_project_ids() {
+                            let context = crate::RequestContext {
+                                project_id: project_id.clone(),
+                                ..crate::RequestContext::default()
+                            };
+                            match runtime.native_store_postgres_binding_for_service(
+                                "vault", true, &context,
+                            ) {
+                                Ok((pool, _instance)) => {
+                                    match crate::runtime::service::vault_service::run_vault_db_lease_reaper_once(
+                                        &pool,
+                                        crate::runtime::service::vault_service::vault_db_lease_reaper_batch(),
+                                    )
+                                    .await
+                                    {
+                                        Ok(count) => revoked += count,
+                                        Err(err) => failures.push(format!("{project_id}: {err}")),
+                                    }
+                                }
+                                Err(err) => failures.push(format!("{project_id}: {err}")),
+                            }
+                        }
+                        if failures.is_empty() {
+                            Ok(revoked)
+                        } else {
+                            Err(format!(
+                                "vault DB lease reaper project failures: {}",
+                                failures.join("; ")
+                            ))
+                        }
                     }
                 },
             );

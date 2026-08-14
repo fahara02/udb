@@ -14,7 +14,6 @@
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
-use chrono::Utc;
 use sqlx::Row;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -29,14 +28,13 @@ use super::super::native_helpers::{
 };
 use super::VaultServiceImpl;
 use super::config::{
-    DEFAULT_DB_CREDENTIAL_MAX_TTL_SECONDS, DEFAULT_TRANSIT_ALGORITHM, KEY_STATE_ACTIVE,
-    KEY_STATE_VERIFYING, MAX_LIST_SECRETS, STATE_ACTIVE, STATE_DELETED, TOPIC_DATA_KEY_GENERATED,
-    TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED, TOPIC_SECRET_ACCESSED,
-    TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED, TOPIC_SECRET_PUT,
-    TOPIC_SECRET_RESTORED, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED, TOPIC_TRANSIT_HMAC,
-    TOPIC_TRANSIT_REWRAPPED, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
-    VAULT_DB_CREDENTIAL_LEASE_MSG, VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG,
-    VAULT_TRANSIT_KEY_MSG, max_batch_decrypt_items, max_batch_encrypt_items,
+    DEFAULT_TRANSIT_ALGORITHM, KEY_STATE_ACTIVE, KEY_STATE_VERIFYING, MAX_LIST_SECRETS,
+    STATE_ACTIVE, STATE_DELETED, TOPIC_DATA_KEY_GENERATED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED,
+    TOPIC_SECRET_ACCESSED, TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED,
+    TOPIC_SECRET_PUT, TOPIC_SECRET_RESTORED, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED,
+    TOPIC_TRANSIT_HMAC, TOPIC_TRANSIT_REWRAPPED, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
+    VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG, VAULT_TRANSIT_KEY_MSG,
+    max_batch_decrypt_items, max_batch_encrypt_items,
 };
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
@@ -44,26 +42,20 @@ use super::crypto::{
     parse_transit_envelope, require_encryption_algorithm, require_hmac_algorithm,
     require_signing_algorithm, transit_payload, unwrap_dek, validate_transit_algorithm, wrap_dek,
 };
-use super::dynamic::{
-    create_postgres_login_role, drop_postgres_login_role, generate_db_password,
-    generate_db_username, requested_db_credential_ttl, validate_db_role_alias,
-    vault_db_role_configs,
-};
+use super::dynamic::validate_db_role_alias;
 use super::errors::{
     is_duplicate_conflict, vault_confirmation_token_mismatch_status,
-    vault_confirmation_token_required_status, vault_db_credentials_config_status,
-    vault_db_native_store_required_status, vault_field_violation, vault_internal_status,
-    vault_native_store_required_status, vault_required_key_name, vault_required_secret_path,
-    vault_schema_already_exists_status, vault_schema_not_found_status,
+    vault_confirmation_token_required_status, vault_db_credentials_authority_status,
+    vault_field_violation, vault_internal_status, vault_required_key_name,
+    vault_required_secret_path, vault_schema_already_exists_status, vault_schema_not_found_status,
     vault_secret_cas_conflict_status,
 };
 use super::model::{active_transit, select_readable_secret, transit_version};
 use super::quota::admit_transit_op;
 use super::store::{
-    db_credential_lease_record, like_prefix_pattern, secret_conflict,
-    secret_count_distinct_paths_sql, secret_list_page_sql, secret_record, secret_shred_all_sql,
-    transit_demote_active_sql, transit_insert_rotated_sql, transit_key_conflict,
-    transit_key_record,
+    like_prefix_pattern, secret_conflict, secret_count_distinct_paths_sql, secret_list_page_sql,
+    secret_record, secret_shred_all_sql, transit_demote_active_sql, transit_insert_rotated_sql,
+    transit_key_conflict, transit_key_record,
 };
 
 // ── KV engine ─────────────────────────────────────────────────────────────
@@ -263,10 +255,7 @@ pub(crate) async fn list_secrets(
     )
     .await?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
-    let pool = svc
-        .pg_pool
-        .as_ref()
-        .ok_or_else(|| vault_native_store_required_status("list_secrets"))?;
+    let (context, pool) = svc.resolve_project_store(context, false, "list_secrets")?;
 
     let prefix = req.path_prefix.trim();
     let has_prefix = !prefix.is_empty();
@@ -287,7 +276,7 @@ pub(crate) async fn list_secrets(
         count_query = count_query.bind(like_prefix_pattern(prefix));
     }
     let total_count = count_query
-        .fetch_one(pool)
+        .fetch_one(&pool)
         .await
         .map_err(|err| vault_internal_status("list_secrets_count", err.to_string()))?
         as i32;
@@ -304,7 +293,7 @@ pub(crate) async fn list_secrets(
     }
     page_query = page_query.bind(page_size as i64);
     let rows = page_query
-        .fetch_all(pool)
+        .fetch_all(&pool)
         .await
         .map_err(|err| vault_internal_status("list_secrets_page", err.to_string()))?;
 
@@ -563,12 +552,8 @@ pub(crate) async fn destroy_secret(
     // The whole service requires the native runtime/store; gate on it here so a
     // misconfigured deployment fails closed with the runtime capability detail
     // (rather than a bare "no pool") before touching the store.
-    svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
-    let pool = svc
-        .pg_pool
-        .as_ref()
-        .ok_or_else(|| vault_native_store_required_status("destroy_secret"))?;
+    let (context, pool) = svc.resolve_project_store(context, true, "destroy_secret")?;
 
     // ATOMIC multi-version crypto-shred: clear the ciphertext + wrapped DEK and
     // flip every non-DESTROYED version to DESTROYED in ONE statement, inside a
@@ -717,6 +702,7 @@ pub(crate) async fn rotate_transit_key(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, pool) = svc.resolve_project_store(context, true, "rotate_transit_key")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -738,10 +724,6 @@ pub(crate) async fn rotate_transit_key(
     let dek = DataKey::generate();
     let wrapped = wrap_dek(runtime, &dek)?;
     let new_key_id = Uuid::new_v4().to_string();
-    let pool = svc
-        .pg_pool
-        .as_ref()
-        .ok_or_else(|| vault_native_store_required_status("rotate_transit_key"))?;
 
     // ATOMIC rotation: demote every ACTIVE version to VERIFYING AND insert the new
     // ACTIVE version in ONE transaction, so a concurrent Encrypt/Sign can never
@@ -1618,97 +1600,10 @@ pub(crate) async fn generate_database_credentials(
         None,
     )
     .await?;
-    let runtime = svc.require_runtime()?;
-    let pool = svc
-        .pg_pool
-        .as_ref()
-        .ok_or_else(vault_db_native_store_required_status)?;
-    let role_config = vault_db_role_configs()?.get(&role_name).ok_or_else(|| {
-        vault_db_credentials_config_status(format!(
-            "vault dynamic database role '{role_name}' is not configured"
-        ))
-    })?;
-    let max_ttl = role_config
-        .ttl_seconds_max
-        .unwrap_or(DEFAULT_DB_CREDENTIAL_MAX_TTL_SECONDS);
-    let ttl_seconds = requested_db_credential_ttl(req.ttl_seconds, max_ttl)?;
-    let issued_at = Utc::now();
-    let expires_at = issued_at + chrono::Duration::seconds(i64::from(ttl_seconds));
-    let lease_id = Uuid::new_v4().to_string();
-    let username = generate_db_username();
-    let password = generate_db_password();
-
-    create_postgres_login_role(
-        pool,
-        &username,
-        &password,
-        expires_at,
-        &role_config.parent_role,
-    )
-    .await?;
-
-    let context = project_scoped_native_service_context(&metadata, &tenant_id);
-    let metadata_json = serde_json::json!({
-        "role_name": &role_name,
-        "parent_role": &role_config.parent_role,
-        "ttl_seconds": ttl_seconds,
-        "lease_id": &lease_id,
-    })
-    .to_string();
-    let write = runtime
-        .native_entity_write_for_service(
-            "vault",
-            &context,
-            VAULT_DB_CREDENTIAL_LEASE_MSG,
-            db_credential_lease_record(
-                &lease_id,
-                &tenant_id,
-                &role_name,
-                &username,
-                &role_config.parent_role,
-                issued_at,
-                expires_at,
-                &metadata_json,
-            ),
-            ConflictStrategy::Error,
-        )
-        .await;
-    if let Err(err) = write {
-        if let Err(drop_err) = drop_postgres_login_role(pool, &username).await {
-            tracing::warn!(
-                lease_id = %lease_id,
-                username = %username,
-                error = %drop_err,
-                "vault DB credential cleanup failed after lease write failure"
-            );
-        }
-        return Err(err);
-    }
-
-    svc.emit(
-        TOPIC_DB_CREDENTIAL_ISSUED,
-        &lease_id,
-        &tenant_id,
-        "",
-        "vault.GenerateDatabaseCredentials",
-        &format!("vault/database/credentials/{role_name}"),
-        serde_json::json!({
-            "lease_id": &lease_id,
-            "role_name": &role_name,
-            "username": &username,
-            "expires_at": expires_at.to_rfc3339(),
-        }),
-    )
-    .await;
-
-    Ok(Response::new(
-        vault_pb::GenerateDatabaseCredentialsResponse {
-            username,
-            password,
-            lease_id,
-            lease_ttl_seconds: ttl_seconds,
-            message: "dynamic database credentials issued".to_string(),
-            error: None,
-        },
-    ))
+    // A direct PostgreSQL login can change ordinary custom GUCs, so setting
+    // app.current_tenant_id/project_id on the role would not create an immutable
+    // authorization boundary. Until issuance is delegated to a trusted proxy or
+    // a database-native tenant-bound authority, refuse the capability instead of
+    // minting a credential whose lease label overstates its physical privileges.
+    Err(vault_db_credentials_authority_status())
 }

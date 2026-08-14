@@ -9,7 +9,9 @@
 use sqlx::{PgPool, Row};
 
 use super::config::{VAULT_DB_CREDENTIAL_LEASE_MSG, vault_db_lease_reaper_batch};
-use super::dynamic::drop_postgres_login_role;
+use super::dynamic::{
+    drop_postgres_login_role, postgres_role_exists, terminate_postgres_login_sessions,
+};
 
 pub async fn run_vault_db_lease_reaper_once(pool: &PgPool, batch: i64) -> Result<i64, String> {
     let model = crate::runtime::native_catalog::native_model(
@@ -51,6 +53,19 @@ pub async fn run_vault_db_lease_reaper_once(pool: &PgPool, batch: i64) -> Result
         let username: String = row
             .try_get("username")
             .map_err(|err| format!("expired lease row missing username: {err}"))?;
+        // Fence sessions before role deletion. VALID UNTIL only blocks fresh
+        // logins; without this step a pre-expiry connection can outlive the
+        // advertised lease indefinitely.
+        if let Err(err) = terminate_postgres_login_sessions(pool, &username).await {
+            tracing::warn!(
+                lease_id = %lease_id,
+                username = %username,
+                error = %err,
+                "vault DB lease reaper: terminating expired login sessions failed; \
+                 lease remains ACTIVE for retry"
+            );
+            continue;
+        }
         // Log-and-continue: one un-droppable role (e.g. a role the broker can no
         // longer manage, or a transient backend error) must not stall revocation
         // of the rest of the batch. Skip marking THIS lease REVOKED — it stays
@@ -64,6 +79,28 @@ pub async fn run_vault_db_lease_reaper_once(pool: &PgPool, batch: i64) -> Result
                  continuing with the rest of the batch"
             );
             continue;
+        }
+        match postgres_role_exists(pool, &username).await {
+            Ok(false) => {}
+            Ok(true) => {
+                tracing::warn!(
+                    lease_id = %lease_id,
+                    username = %username,
+                    "vault DB lease reaper: generated role still exists after DROP; \
+                     lease remains ACTIVE for retry"
+                );
+                continue;
+            }
+            Err(err) => {
+                tracing::warn!(
+                    lease_id = %lease_id,
+                    username = %username,
+                    error = %err,
+                    "vault DB lease reaper: role-absence verification failed; \
+                     lease remains ACTIVE for retry"
+                );
+                continue;
+            }
         }
         let updated = sqlx::query(&update_sql)
             .bind(&lease_id)

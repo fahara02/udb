@@ -6,6 +6,8 @@
 //! dynamic DB-role allow-listing. Copied verbatim from the former god file;
 //! imports are explicit (no `use super::*`).
 
+use std::sync::Arc;
+
 use tonic::metadata::MetadataValue;
 use tonic::{Request, Status};
 
@@ -24,9 +26,9 @@ use super::config::{
 use super::config::{STATE_ACTIVE, STATE_DELETED};
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
-    ed25519_sign_b64, ed25519_verify_b64, hmac_sha256, parse_transit_envelope,
-    require_encryption_algorithm, require_hmac_algorithm, require_signing_algorithm,
-    validate_transit_algorithm,
+    ed25519_sign_b64, ed25519_verify_b64, hmac_sha256, is_wrapped_dek_envelope,
+    parse_transit_envelope, require_encryption_algorithm, require_hmac_algorithm,
+    require_signing_algorithm, validate_transit_algorithm,
 };
 use super::dynamic::{
     parse_vault_db_role_configs, requested_db_credential_ttl, validate_db_role_alias,
@@ -438,6 +440,29 @@ async fn sealed_vault_fails_closed() {
     );
 }
 
+#[test]
+fn default_runtime_without_master_kek_is_sealed() {
+    let svc = VaultServiceImpl::new()
+        .with_runtime(Some(Arc::new(crate::runtime::DataBrokerRuntime::default())));
+    let err = svc
+        .check_seal()
+        .expect_err("Vault must not inherit the runtime's plaintext development fallback");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    let detail = decode_detail(&err);
+    assert_eq!(detail.operation, "seal_gate");
+    assert_eq!(detail.capability_required, "vault_master_key");
+}
+
+#[test]
+fn only_authenticated_master_kek_envelopes_are_accepted_as_wrapped_deks() {
+    assert!(is_wrapped_dek_envelope("udb-aead:v1:nonce:ciphertext"));
+    assert!(!is_wrapped_dek_envelope("udb-aead:"));
+    assert!(!is_wrapped_dek_envelope(
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    ));
+    assert!(!is_wrapped_dek_envelope("plaintext"));
+}
+
 #[tokio::test]
 async fn vault_missing_runtime_carries_capability_detail() {
     let svc = VaultServiceImpl::new().with_seal_override(false);
@@ -586,6 +611,33 @@ fn db_role_config_is_allow_listed_and_identifier_safe() {
         parse_vault_db_role_configs(r#"[{"role_name":"app read","parent_role":"udb_app_read"}]"#)
             .expect_err("space in role alias must be rejected");
     assert!(bad_alias.contains("role_name"));
+}
+
+#[tokio::test]
+async fn dynamic_database_credentials_fail_closed_without_tenant_bound_authority() {
+    let svc = VaultServiceImpl::new().with_seal_override(false);
+    let mut request = Request::new(vault_pb::GenerateDatabaseCredentialsRequest {
+        tenant_id: "tenant-a".to_string(),
+        role_name: "app-read".to_string(),
+        ttl_seconds: 300,
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+
+    let err = svc
+        .generate_database_credentials(request)
+        .await
+        .expect_err("unsafe direct PostgreSQL role issuance must be disabled");
+    assert_capability_detail(
+        &err,
+        "generate_database_credentials",
+        "tenant_bound_database_credential_authority",
+        "dynamic database credential issuance is disabled: direct Postgres roles cannot enforce \
+         immutable tenant/project scope; configure a trusted tenant-bound credential broker \
+         before enabling this capability",
+    );
 }
 
 /// DestroySecret is an irreversible crypto-shred, so a merely non-empty

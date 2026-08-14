@@ -172,7 +172,7 @@ impl DataBrokerRuntime {
     fn native_entity_dispatch_target(
         &self,
         service_id: &str,
-        project_id: &str,
+        context: &crate::RequestContext,
         write: bool,
     ) -> Result<
         (
@@ -181,9 +181,17 @@ impl DataBrokerRuntime {
         ),
         tonic::Status,
     > {
-        let backend = native_store_backend_for_service(service_id, project_id);
-        let selected_instance = self.choose_instance_name_for_project(backend, write, project_id);
-        let target = self.backend_executor_for_project(backend, selected_instance, project_id)?;
+        let backend = native_store_backend_for_service(service_id, &context.project_id);
+        let selected_instance = if context.target_instance.trim().is_empty() {
+            self.choose_instance_name_for_project(backend, write, &context.project_id)
+        } else {
+            Some(context.target_instance.trim().to_string())
+        };
+        let target = self.backend_executor_for_project(
+            backend,
+            selected_instance,
+            &context.project_id,
+        )?;
         let kind = crate::backend::BackendKind::from_token(&target.backend).ok_or_else(|| {
             native_store_capability_status(
                 target.backend.clone(),
@@ -399,8 +407,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalRead,
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, false)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, false)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_read_dispatch(
             &kind,
@@ -432,8 +439,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalRead,
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, false)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, false)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref())
             .allowing_global_tenant(true);
         let compiled = crate::runtime::service::handlers_data::compile_logical_read_dispatch(
@@ -463,8 +469,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalAggregate,
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, false)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, false)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_aggregate_dispatch(
             &kind,
@@ -515,8 +520,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalWrite,
     ) -> Result<String, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, true)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_write_dispatch(
             &kind,
@@ -569,8 +573,7 @@ impl DataBrokerRuntime {
         op: LogicalUpdate,
     ) -> Result<(u64, Vec<serde_json::Value>), tonic::Status> {
         let require_affected = op.require_affected;
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, true)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_update_dispatch(
             &kind,
@@ -608,8 +611,7 @@ impl DataBrokerRuntime {
             return Err(empty_native_entity_transaction_status());
         }
 
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, true)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
         if kind != crate::backend::BackendKind::Postgres || target.backend != "postgres" {
             return Err(native_store_capability_status(
                 target.backend.clone(),
@@ -861,8 +863,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalDelete,
     ) -> Result<String, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, true)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_delete_dispatch(
             &kind,
@@ -905,6 +906,33 @@ impl DataBrokerRuntime {
     /// P0: Postgres-only — fails closed for any other backend rather than silently
     /// persisting to the wrong/absent one. Falls back to the default pool when no
     /// multi-instance routing applies, so single-primary deployments see no change.
+    pub(crate) fn native_store_postgres_binding_for_service(
+        &self,
+        service_id: &str,
+        write: bool,
+        context: &crate::RequestContext,
+    ) -> Result<(PgPool, Option<String>), tonic::Status> {
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, write)?;
+        if kind != crate::backend::BackendKind::Postgres || target.backend != "postgres" {
+            return Err(native_store_capability_status(
+                target.backend.clone(),
+                "pool_lookup",
+                "postgres_native_store",
+                format!(
+                    "native store backend '{}' does not support direct Postgres operations",
+                    target.backend
+                ),
+            ));
+        }
+        let pool = self
+            .pg_pool_for_instance(target.instance.as_deref())?
+            .clone();
+        Ok((pool, target.instance))
+    }
+
+    /// Compatibility helper for single-step Postgres-native operations. Compound
+    /// operations should call [`Self::native_store_postgres_binding_for_service`]
+    /// and pin the returned instance in their request context.
     pub(crate) fn native_store_pool_for_service(
         &self,
         service_id: &str,

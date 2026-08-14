@@ -84,22 +84,43 @@ impl fmt::Debug for PlaintextSecret {
 
 // ── crypto helpers — ONE stack: master-KEK wrap + the shared aes_gcm_siv ──────
 
-/// Wrap a DEK with the master KEK (`encrypt_secret_at_rest`). The result is the
-/// `udb-aead:` envelope (or, in dev with no KEK, the base64 passthrough — still
-/// only the DEK, never a cleartext secret value).
+const MASTER_KEK_ENVELOPE_PREFIX: &str = "udb-aead:";
+
+pub(crate) fn is_wrapped_dek_envelope(value: &str) -> bool {
+    value.starts_with(MASTER_KEK_ENVELOPE_PREFIX) && value.len() > MASTER_KEK_ENVELOPE_PREFIX.len()
+}
+
+/// Wrap a DEK with the master KEK (`encrypt_secret_at_rest`). A cleartext/dev
+/// passthrough is rejected even if the broader runtime permits it: Vault must
+/// never persist a base64 DEK as though it were a wrapped key.
 pub(crate) fn wrap_dek(runtime: &DataBrokerRuntime, dek: &DataKey) -> Result<String, Status> {
-    runtime
+    let wrapped = runtime
         .encrypt_secret_at_rest(&dek.to_b64())
         .map_err(|err| {
             vault_master_key_operation_status(
                 "wrap_data_key",
                 format!("vault is sealed: cannot wrap data key ({err})"),
             )
-        })
+        })?;
+    if !is_wrapped_dek_envelope(&wrapped) {
+        return Err(vault_master_key_operation_status(
+            "wrap_data_key",
+            "vault is sealed: master KEK returned no authenticated key envelope",
+        ));
+    }
+    Ok(wrapped)
 }
 
-/// Reverse of [`wrap_dek`].
+/// Reverse of [`wrap_dek`]. Legacy base64/plaintext DEK rows fail closed. They
+/// require an explicit offline migration while the original material is still
+/// available; accepting them here would silently restore the keyless posture.
 pub(crate) fn unwrap_dek(runtime: &DataBrokerRuntime, wrapped: &str) -> Result<DataKey, Status> {
+    if !is_wrapped_dek_envelope(wrapped) {
+        return Err(vault_master_key_operation_status(
+            "unwrap_data_key",
+            "vault data key is not protected by an authenticated master-KEK envelope",
+        ));
+    }
     let b64 = runtime.decrypt_secret_at_rest(wrapped).map_err(|err| {
         vault_master_key_operation_status(
             "unwrap_data_key",

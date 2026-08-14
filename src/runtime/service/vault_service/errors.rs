@@ -46,6 +46,16 @@ pub(crate) fn vault_db_credentials_config_status(message: impl Into<String>) -> 
     )
 }
 
+pub(crate) fn vault_db_credentials_authority_status() -> Status {
+    vault_capability_status(
+        "generate_database_credentials",
+        "tenant_bound_database_credential_authority",
+        "dynamic database credential issuance is disabled: direct Postgres roles cannot enforce \
+         immutable tenant/project scope; configure a trusted tenant-bound credential broker \
+         before enabling this capability",
+    )
+}
+
 pub(crate) fn vault_db_native_store_required_status() -> Status {
     vault_capability_status(
         "generate_database_credentials",

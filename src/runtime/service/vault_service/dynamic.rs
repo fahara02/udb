@@ -195,3 +195,39 @@ pub(crate) async fn drop_postgres_login_role(pool: &PgPool, username: &str) -> R
         .map(|_| ())
         .map_err(|err| format!("drop generated database role {username} failed: {err}"))
 }
+
+/// Fence an expiring/revoked login before dropping it. Password `VALID UNTIL`
+/// prevents new authentication but does not end sessions that connected before
+/// expiry, so the lifecycle worker must terminate those backends explicitly.
+pub(crate) async fn terminate_postgres_login_sessions(
+    pool: &PgPool,
+    username: &str,
+) -> Result<u64, String> {
+    validate_pg_identifier_value(username, "generated username")?;
+    let terminated = sqlx::query_scalar::<_, bool>(
+        "SELECT pg_terminate_backend(pid) \
+         FROM pg_stat_activity \
+         WHERE usename = $1 AND pid <> pg_backend_pid()",
+    )
+    .bind(username)
+    .fetch_all(pool)
+    .await
+    .map_err(|err| {
+        format!("terminate sessions for generated database role {username} failed: {err}")
+    })?;
+    if terminated.iter().any(|did_terminate| !did_terminate) {
+        return Err(format!(
+            "one or more sessions for generated database role {username} could not be terminated"
+        ));
+    }
+    Ok(terminated.len() as u64)
+}
+
+pub(crate) async fn postgres_role_exists(pool: &PgPool, username: &str) -> Result<bool, String> {
+    validate_pg_identifier_value(username, "generated username")?;
+    sqlx::query_scalar::<_, bool>("SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = $1)")
+        .bind(username)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| format!("verify generated database role {username} absence failed: {err}"))
+}

@@ -23,11 +23,16 @@ impl VaultServiceImpl {
         target_resource: &str,
         payload: serde_json::Value,
     ) {
-        let Some(pool) = self.pg_pool.as_ref() else {
+        let context = crate::RequestContext {
+            tenant_id: tenant_id.to_string(),
+            project_id: project_id.to_string(),
+            ..crate::RequestContext::default()
+        };
+        let Ok((_context, pool)) = self.resolve_project_store(context, true, "vault_event") else {
             return;
         };
         enqueue_outbox_event_with_context(
-            pool,
+            &pool,
             self.outbox_relation.as_deref(),
             topic,
             partition_key,
