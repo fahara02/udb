@@ -462,7 +462,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             '| [ ] | DeleteSecret | MUTATION | DeleteSecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_delete_secret_path>" }` |',
             '| [ ] | DestroySecret | DESTRUCTIVE | DestroySecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_destroy_secret_path>", "confirmation_token": "<seed:vault_destroy_secret_path>" }` |',
             '| [ ] | Encrypt | MUTATION | EncryptRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "plaintext": "perf" }` |',
-            '| [ ] | GenerateDatabaseCredentials | MUTATION | GenerateDatabaseCredentialsRequest | `{ "tenant_id": "<seed:tenant_id>", "role_name": "<seed:vault_db_role>", "ttl_seconds": 900 }` |',
+            '| [ ] | GenerateDatabaseCredentials | MUTATION | GenerateDatabaseCredentialsRequest | `{ "tenant_id": "<seed:tenant_id>", "project_id": "default", "role_name": "<seed:vault_db_role>", "ttl_seconds": 900, "idempotency_key": "<seed:vault_db_idempotency_key>" }` |',
             '| [ ] | GetSecret | READ_ONLY | GetSecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_secret_path>", "version": 0 }` |',
             '| [ ] | Hmac | MUTATION | HmacRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_hmac_key_name>", "input": "perf" }` |',
             '| [ ] | ListSecrets | READ_ONLY | ListSecretsRequest | `{ "tenant_id": "<seed:tenant_id>", "path_prefix": "app/", "page": 1, "page_size": 50 }` |',

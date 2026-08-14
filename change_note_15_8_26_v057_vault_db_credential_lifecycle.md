@@ -65,3 +65,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   skeleton drift after the new Vault lifecycle surfaces were added. The
   repository generator is rerun in this change so the quick gate can build the
   broker artifact used for descriptor, native-contract, and SDK regeneration.
+- Combined CI run `31838223377` confirmed that skeleton generation is fresh,
+  then found the benchmark posture guard still pinned to the former
+  tenant/role/TTL request. Its expected machine JSON now includes the required
+  project and idempotency binding used by the implemented issuance contract.
