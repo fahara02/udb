@@ -711,9 +711,9 @@ impl DataBrokerRuntime {
     ) -> Result<Option<bool>, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let pool = self.pg_pool()?;
-        let config = SystemCatalogConfig::default();
+        let config = SystemCatalogConfig::current();
         let policy_rel = config.topic_policy_relation();
-        let rows = sqlx::query(&format!(
+        let rows: Vec<(String, String, String, bool)> = sqlx::query_as(&format!(
             "SELECT topic, tenant_id, owning_project, enabled FROM {policy_rel} ORDER BY created_at ASC"
         ))
         .fetch_all(pool)
@@ -727,22 +727,14 @@ impl DataBrokerRuntime {
         if rows.is_empty() {
             return Ok(None);
         }
-        let allowed = rows.iter().any(|row| {
-            let pattern = row.try_get::<String, _>("topic").unwrap_or_default();
-            let policy_tenant = row
-                .try_get::<String, _>("tenant_id")
-                .unwrap_or_else(|_| "*".to_string());
-            let owning_project = row
-                .try_get::<String, _>("owning_project")
-                .unwrap_or_default();
-            let enabled = row.try_get::<bool, _>("enabled").unwrap_or(false);
-            enabled
-                && wildmatch::WildMatch::new(&pattern).matches(topic)
-                && (policy_tenant == "*" || policy_tenant == tenant_id)
-                && (owning_project.is_empty()
-                    || owning_project == "*"
-                    || owning_project == project_id)
-        });
+        let allowed = rows
+            .iter()
+            .any(|(pattern, policy_tenant, owning_project, enabled)| {
+                *enabled
+                    && crate::runtime::cdc::topic_policy_pattern_matches(pattern, topic)
+                    && crate::runtime::cdc::topic_policy_scope_allows(policy_tenant, tenant_id)
+                    && crate::runtime::cdc::topic_policy_scope_allows(owning_project, project_id)
+            });
         Ok(Some(allowed))
     }
 

@@ -51,6 +51,10 @@ pub struct VerifiedPrincipal {
     /// Never the secret itself.
     pub credential_id: String,
     pub auth_method: String,
+    /// Absolute credential expiry in Unix seconds. `0` means the credential
+    /// has no intrinsic expiry and must still be periodically re-resolved by
+    /// long-lived served paths so revocation/grant changes take effect.
+    pub expires_at_unix: i64,
     /// The certificate-derived identity when a verified peer certificate was
     /// present (also set alongside a bearer/key for composition checks).
     pub certificate_identity: Option<String>,
@@ -94,6 +98,7 @@ impl VerifiedPrincipal {
             roles: claims.roles.clone().unwrap_or_default(),
             credential_id: claims.jti.clone().unwrap_or_default(),
             auth_method,
+            expires_at_unix: claims.exp.unwrap_or_default(),
             certificate_identity: None,
             // Bearer/JWT principals carry no api-key budget — tenant default.
             rate_limit_per_minute: 0,
@@ -327,6 +332,8 @@ async fn resolve_credentials(
                         roles: Vec::new(),
                         credential_id: record.key_prefix,
                         auth_method: "api_key".to_string(),
+                        expires_at_unix: i64::try_from(record.expires_at_unix)
+                            .unwrap_or(i64::MAX),
                         certificate_identity: None,
                         // The key's own per-minute budget (0 when the column is
                         // unset) — the opt-in limiter uses it to raise this key.
@@ -369,6 +376,10 @@ async fn resolve_credentials(
                             roles: Vec::new(),
                             credential_id: grant.credential_id,
                             auth_method: "mtls".to_string(),
+                            // Certificate validity and grant state are checked
+                            // when the principal is resolved. Long-lived calls
+                            // force bounded re-resolution independently.
+                            expires_at_unix: 0,
                             certificate_identity: resolved.certificate_identity.clone(),
                             // mTLS grants carry no api-key budget — tenant default.
                             rate_limit_per_minute: 0,

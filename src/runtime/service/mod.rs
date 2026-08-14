@@ -3550,14 +3550,20 @@ async fn start_cdc_engine(
         runtime.config().cdc.clone(),
     );
     match engine {
-        Ok(mut engine) => {
-            // Phase 7: load the topic-policy allowlist into the engine before it
-            // starts tailing. Without this the allowlist stays empty and topic
-            // policy enforcement in process_outbox_event is dormant in prod.
+        Ok(engine) => {
+            // A policy dependency failure is not an empty allowlist. Refuse to
+            // expose/start this CDC engine until one complete generation loads.
             if let Err(err) = engine.load_topic_policies().await {
-                tracing::warn!("CDC topic policy load failed: {err}");
+                tracing::error!("CDC engine start refused: topic policy load failed: {err}");
+                return None;
             }
             let engine = Arc::new(engine);
+            tokio::spawn({
+                let engine = engine.clone();
+                async move {
+                    engine.run_topic_policy_reload_loop().await;
+                }
+            });
             // U21: reset in-doubt `publishing` rows left by a prior process epoch
             // before tailing (no-op outside KafkaTransactional mode).
             if let Err(err) = engine.run_indoubt_recovery_on_startup().await {

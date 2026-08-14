@@ -291,6 +291,36 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
     };
     assert_eq!(denied.code(), tonic::Code::PermissionDenied);
 
+    let malformed = match engine
+        .stream_cdc(
+            vec!["udb:cdc:read".to_string()],
+            "udb.authn.*".to_string(),
+            Some("not-a-uuid".to_string()),
+            Some("tenant-a".to_string()),
+            None,
+        )
+        .await
+    {
+        Ok(_) => panic!("malformed CDC cursor should be rejected"),
+        Err(status) => status,
+    };
+    assert_eq!(malformed.code(), tonic::Code::InvalidArgument);
+
+    let unknown = match engine
+        .stream_cdc(
+            vec!["udb:cdc:read".to_string()],
+            "udb.authn.*".to_string(),
+            Some(Uuid::new_v4().to_string()),
+            Some("tenant-a".to_string()),
+            None,
+        )
+        .await
+    {
+        Ok(_) => panic!("unknown CDC cursor should fail closed"),
+        Err(status) => status,
+    };
+    assert_eq!(unknown.code(), tonic::Code::NotFound);
+
     let anchor_id = Uuid::new_v4();
     let replay_id = Uuid::new_v4();
     let skipped_id = Uuid::new_v4();
