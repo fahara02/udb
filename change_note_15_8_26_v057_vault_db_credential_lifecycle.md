@@ -50,3 +50,9 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
 - Required standard gates: workspace library tests, native integration,
   descriptor compatibility, codebase-map freshness, Buf/OpenAPI/SDK drift, and
   formatting/clippy in `.github/workflows/ci.yml`.
+- Combined-head CI `31837471675` correctly blocked the first integration push:
+  Rust formatting drift, stale descriptor-derived native/SDK metadata for the
+  two additive RPCs, and a non-canonical kebab-case emergency REST action. The
+  REST action is now lower-camel-case; formatting is normalized without local
+  compilation, and descriptor-derived artifacts remain delegated to the
+  replacement CI-built broker before merge.

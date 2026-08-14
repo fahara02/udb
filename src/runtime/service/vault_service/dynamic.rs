@@ -79,8 +79,7 @@ pub(crate) struct DbCredentialAuthorityProvenance {
 }
 
 pub(crate) fn vault_db_role_configs() -> Result<&'static DbCredentialRoleConfigs, Status> {
-    static CONFIGS: OnceLock<Result<DbCredentialRoleConfigs, String>> =
-        OnceLock::new();
+    static CONFIGS: OnceLock<Result<DbCredentialRoleConfigs, String>> = OnceLock::new();
     match CONFIGS.get_or_init(|| {
         let raw = std::env::var("UDB_VAULT_DB_ROLES_JSON")
             .map_err(|_| "UDB_VAULT_DB_ROLES_JSON is not configured".to_string())?;
@@ -131,7 +130,10 @@ pub(crate) fn parse_vault_db_role_configs(
             validate_pg_identifier_value(&relation.table, "relation table")?;
             validate_pg_identifier_value(&relation.tenant_column, "tenant_column")?;
             validate_pg_identifier_value(&relation.project_column, "project_column")?;
-            if matches!(relation.schema.as_str(), "pg_catalog" | "information_schema") {
+            if matches!(
+                relation.schema.as_str(),
+                "pg_catalog" | "information_schema"
+            ) {
                 return Err(format!(
                     "role '{}' cannot delegate a system relation",
                     entry.role_name
@@ -373,14 +375,11 @@ pub(crate) async fn create_postgres_login_role(
             setting,
             pg_literal(value)
         );
-        sqlx::query(&sql)
-            .execute(&mut *conn)
-            .await
-            .map_err(|err| {
-                vault_db_role_creation_status(format!(
-                    "vault database credential scope-default installation failed: {err}"
-                ))
-            })?;
+        sqlx::query(&sql).execute(&mut *conn).await.map_err(|err| {
+            vault_db_role_creation_status(format!(
+                "vault database credential scope-default installation failed: {err}"
+            ))
+        })?;
     }
     let read_only_sql = format!(
         "ALTER ROLE {} SET default_transaction_read_only = on",
@@ -406,18 +405,17 @@ pub(crate) async fn create_postgres_login_role(
             pg_ident(&relation.table)
         );
         for sql in [
-            format!(
-                "ALTER TABLE {relation_sql} ENABLE ROW LEVEL SECURITY"
-            ),
-            format!(
-                "ALTER TABLE {relation_sql} FORCE ROW LEVEL SECURITY"
-            ),
+            format!("ALTER TABLE {relation_sql} ENABLE ROW LEVEL SECURITY"),
+            format!("ALTER TABLE {relation_sql} FORCE ROW LEVEL SECURITY"),
             format!(
                 "GRANT USAGE ON SCHEMA {} TO {}",
                 pg_ident(&relation.schema),
                 pg_ident(username)
             ),
-            format!("GRANT SELECT ON TABLE {relation_sql} TO {}", pg_ident(username)),
+            format!(
+                "GRANT SELECT ON TABLE {relation_sql} TO {}",
+                pg_ident(username)
+            ),
         ] {
             sqlx::query(&sql)
                 .execute(&mut *conn)

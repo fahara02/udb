@@ -11,9 +11,9 @@ use std::time::Duration;
 use sqlx::postgres::PgPoolOptions;
 use tokio::sync::oneshot;
 use tokio_stream::wrappers::TcpListenerStream;
+use tonic::Request;
 use tonic::metadata::MetadataValue;
 use tonic::transport::Server;
-use tonic::Request;
 use uuid::Uuid;
 
 use crate::proto::udb::core::vault::services::v1 as vault_pb;
@@ -24,8 +24,8 @@ use crate::runtime::config::{
 use crate::runtime::service::DataBrokerService;
 use crate::runtime::{DataBrokerRuntime, native_catalog};
 
-use super::config::{TOPIC_KEY_ROTATED, TOPIC_SECRET_DESTROYED};
 use super::VaultServiceServer;
+use super::config::{TOPIC_KEY_ROTATED, TOPIC_SECRET_DESTROYED};
 
 const PROJECT_A: &str = "vault-project-a";
 const PROJECT_B: &str = "vault-project-b";
@@ -82,14 +82,12 @@ fn project_instance(name: &str, project_id: &str, dsn: String) -> BackendInstanc
 
 fn scoped_request<T>(message: T, project_id: &'static str) -> Request<T> {
     let mut request = Request::new(message);
-    request.metadata_mut().insert(
-        "x-tenant-id",
-        MetadataValue::from_static(TENANT),
-    );
-    request.metadata_mut().insert(
-        "x-udb-project-id",
-        MetadataValue::from_static(project_id),
-    );
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static(TENANT));
+    request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static(project_id));
     request
 }
 

@@ -21,14 +21,14 @@ use super::super::native_helpers::{
 };
 use super::VaultServiceImpl;
 use super::config::{
-    DB_LEASE_ACTIVE, DB_LEASE_FAILED, DB_LEASE_REVOKED, DB_LEASE_REVOKING,
-    DB_LEASE_STARTING, TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_DB_CREDENTIAL_REVOKED,
-    VAULT_DB_CREDENTIAL_LEASE_MSG, vault_db_lease_reaper_batch,
+    DB_LEASE_ACTIVE, DB_LEASE_FAILED, DB_LEASE_REVOKED, DB_LEASE_REVOKING, DB_LEASE_STARTING,
+    TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_DB_CREDENTIAL_REVOKED, VAULT_DB_CREDENTIAL_LEASE_MSG,
+    vault_db_lease_reaper_batch,
 };
 use super::dynamic::{
-    create_postgres_login_role, generate_db_password, generate_db_username,
-    postgres_role_exists, requested_db_credential_ttl, terminate_postgres_login_sessions,
-    drop_postgres_login_role, validate_db_role_alias, vault_db_role_configs,
+    create_postgres_login_role, drop_postgres_login_role, generate_db_password,
+    generate_db_username, postgres_role_exists, requested_db_credential_ttl,
+    terminate_postgres_login_sessions, validate_db_role_alias, vault_db_role_configs,
 };
 use super::errors::{
     vault_db_idempotency_conflict_status, vault_db_lease_not_found_status,
@@ -130,12 +130,24 @@ fn lease_from_row(row: &sqlx::postgres::PgRow) -> Result<DbCredentialLease, Stat
         )
     };
     Ok(DbCredentialLease {
-        lease_id: row.try_get("lease_id").map_err(|err| field("lease_id", err))?,
-        tenant_id: row.try_get("tenant_id").map_err(|err| field("tenant_id", err))?,
-        project_id: row.try_get("project_id").map_err(|err| field("project_id", err))?,
-        role_name: row.try_get("role_name").map_err(|err| field("role_name", err))?,
-        username: row.try_get("username").map_err(|err| field("username", err))?,
-        expires_at: row.try_get("expires_at").map_err(|err| field("expires_at", err))?,
+        lease_id: row
+            .try_get("lease_id")
+            .map_err(|err| field("lease_id", err))?,
+        tenant_id: row
+            .try_get("tenant_id")
+            .map_err(|err| field("tenant_id", err))?,
+        project_id: row
+            .try_get("project_id")
+            .map_err(|err| field("project_id", err))?,
+        role_name: row
+            .try_get("role_name")
+            .map_err(|err| field("role_name", err))?,
+        username: row
+            .try_get("username")
+            .map_err(|err| field("username", err))?,
+        expires_at: row
+            .try_get("expires_at")
+            .map_err(|err| field("expires_at", err))?,
         state: row.try_get("state").map_err(|err| field("state", err))?,
         request_hash: row
             .try_get("request_hash")
@@ -323,8 +335,7 @@ fn response_from_lease(
         lease_id: lease.lease_id.clone(),
         lease_ttl_seconds: remaining,
         message: if replayed {
-            "original database credential response recovered from the idempotent lease"
-                .to_string()
+            "original database credential response recovered from the idempotent lease".to_string()
         } else {
             "database credentials issued".to_string()
         },
@@ -493,7 +504,8 @@ pub(crate) async fn generate_database_credentials(
     if context.project_id.trim().is_empty() && !req.project_id.trim().is_empty() {
         context.project_id = req.project_id.trim().to_string();
     }
-    let (context, pool) = svc.resolve_project_store(context, true, "generate_database_credentials")?;
+    let (context, pool) =
+        svc.resolve_project_store(context, true, "generate_database_credentials")?;
     let request_hash = issuance_request_hash(
         &tenant_id,
         &context.project_id,
@@ -502,13 +514,8 @@ pub(crate) async fn generate_database_credentials(
         ttl,
         &context.target_instance,
     );
-    if let Some(existing) = load_lease_by_idempotency(
-        &pool,
-        &tenant_id,
-        &context.project_id,
-        &idempotency_key,
-    )
-    .await?
+    if let Some(existing) =
+        load_lease_by_idempotency(&pool, &tenant_id, &context.project_id, &idempotency_key).await?
     {
         if existing.request_hash != request_hash {
             return Err(vault_db_idempotency_conflict_status());
@@ -883,14 +890,9 @@ pub(crate) async fn revoke_database_credentials(
     }
     let (mut context, lease_pool) =
         svc.resolve_project_store(context, true, "revoke_database_credentials")?;
-    let mut lease = load_lease_by_id(
-        &lease_pool,
-        &tenant_id,
-        &context.project_id,
-        &lease_id,
-    )
-    .await?
-    .ok_or_else(vault_db_lease_not_found_status)?;
+    let mut lease = load_lease_by_id(&lease_pool, &tenant_id, &context.project_id, &lease_id)
+        .await?
+        .ok_or_else(vault_db_lease_not_found_status)?;
     if lease.state == DB_LEASE_REVOKED
         && !postgres_role_exists(&lease_pool, &lease.username)
             .await
@@ -959,11 +961,8 @@ pub(crate) async fn emergency_revoke_database_credentials(
     if context.project_id.trim().is_empty() && !req.project_id.trim().is_empty() {
         context.project_id = req.project_id.trim().to_string();
     }
-    let (context, pool) = svc.resolve_project_store(
-        context,
-        true,
-        "emergency_revoke_database_credentials",
-    )?;
+    let (context, pool) =
+        svc.resolve_project_store(context, true, "emergency_revoke_database_credentials")?;
     let expected_confirmation = format!("{}:{}", tenant_id, context.project_id);
     if req.confirmation_token.trim() != expected_confirmation {
         return Err(vault_field_violation(

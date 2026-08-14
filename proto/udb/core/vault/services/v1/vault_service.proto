@@ -840,7 +840,7 @@ service VaultService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {post: "/v1/vault/database/credentials:emergency-revoke" body: "*"};
+    option (google.api.http) = {post: "/v1/vault/database/credentials:emergencyRevoke" body: "*"};
   }
 
   // Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to

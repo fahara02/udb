@@ -11,9 +11,7 @@ use uuid::Uuid;
 
 use crate::runtime::DataBrokerRuntime;
 
-use super::config::{
-    DB_LEASE_ACTIVE, DB_LEASE_FAILED, DB_LEASE_REVOKING, DB_LEASE_STARTING,
-};
+use super::config::{DB_LEASE_ACTIVE, DB_LEASE_FAILED, DB_LEASE_REVOKING, DB_LEASE_STARTING};
 use super::dynamic::postgres_role_exists;
 use super::lifecycle::{
     activate_lease, finalize_revocation, load_reconciliation_candidates, mark_lease_failed,
@@ -49,21 +47,20 @@ pub async fn run_vault_db_lease_reaper_once(
             target_instance: lease.target_instance.clone(),
             ..crate::RequestContext::default()
         };
-        let (physical_pool, resolved_instance) = match runtime
-            .native_store_postgres_binding_for_service("vault", true, &context)
-        {
-            Ok(binding) => binding,
-            Err(status) => {
-                let err = format!(
-                    "immutable database credential target is not routable: {}",
-                    status.message()
-                );
-                let _ = mark_lease_failed(discovery_pool, &lease.lease_id, &err).await;
-                tracing::error!(lease_id = %lease.lease_id, error = %err,
+        let (physical_pool, resolved_instance) =
+            match runtime.native_store_postgres_binding_for_service("vault", true, &context) {
+                Ok(binding) => binding,
+                Err(status) => {
+                    let err = format!(
+                        "immutable database credential target is not routable: {}",
+                        status.message()
+                    );
+                    let _ = mark_lease_failed(discovery_pool, &lease.lease_id, &err).await;
+                    tracing::error!(lease_id = %lease.lease_id, error = %err,
                     "vault DB credential reconciliation target resolution failed");
-                continue;
-            }
-        };
+                    continue;
+                }
+            };
         if resolved_instance.unwrap_or_default() != lease.target_instance {
             let err = "resolved database credential target does not match immutable lease target";
             let _ = mark_lease_failed(discovery_pool, &lease.lease_id, err).await;
@@ -106,7 +103,8 @@ pub async fn run_vault_db_lease_reaper_once(
             continue;
         }
 
-        let needs_revocation = (lease.state == DB_LEASE_ACTIVE && lease.expires_at <= chrono::Utc::now())
+        let needs_revocation = (lease.state == DB_LEASE_ACTIVE
+            && lease.expires_at <= chrono::Utc::now())
             || lease.state == DB_LEASE_REVOKING
             || (lease.state == DB_LEASE_FAILED && lease.revocation_requested);
         if !needs_revocation {

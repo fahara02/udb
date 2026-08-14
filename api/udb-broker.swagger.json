@@ -39173,7 +39173,7 @@
         ]
       }
     },
-    "/v1/vault/database/credentials:emergency-revoke": {
+    "/v1/vault/database/credentials:emergencyRevoke": {
       "post": {
         "summary": "Emergency kill-switch for every non-terminal lease in exactly one verified\ntenant/project. A confirmation token bound to both scope dimensions prevents\nan accidental tenant-wide or cross-project credential wipe.",
         "operationId": "VaultService_EmergencyRevokeDatabaseCredentials",

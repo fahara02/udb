@@ -3307,7 +3307,7 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"\rmatched_count\x18\x02 \x01(\x03R\fmatchedCount\x12#\n" +
 	"\rrevoked_count\x18\x03 \x01(\x03R\frevokedCount\x12\x18\n" +
 	"\amessage\x18\x05 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05vaultP\x01J\x04\b\x04\x10\x052\xd7L\n" +
+	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05vaultP\x01J\x04\b\x04\x10\x052\xd6L\n" +
 	"\fVaultService\x12\x9f\x03\n" +
 	"\tPutSecret\x12,.udb.core.vault.services.v1.PutSecretRequest\x1a-.udb.core.vault.services.v1.PutSecretResponse\"\xb4\x02\xca\xf3\x182\b\x02\x1a\x14udb:vault:put-secret \x01J\x02\x01\x02j\x0fvault.PutSecret\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18/\b\x01\x12\n" +
 	"put_secret\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\tputSecret\xea\xf3\x18V\n" +
@@ -3362,11 +3362,11 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"\x1fvault.RevokeDatabaseCredentials\x12\"udb.vault.db_credential.revoked.v1\x1a\blease_id\"\x06strict*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
 	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x92\xf4\x18P\n" +
 	"\x16VaultDbCredentialLease\x12\bSTARTING\x12\x06ACTIVE\x12\bREVOKING\x12\x06FAILED\x1a\aREVOKED\"\aREVOKED0\x01\x9a\xf4\x18\x16\n" +
-	"\blease_id\x1a\breplayed \x01\x82\xd3\xe4\x93\x025:\x01*\"0/v1/vault/database/credentials/{lease_id}:revoke\x12\x94\x05\n" +
-	"\"EmergencyRevokeDatabaseCredentials\x12E.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest\x1aF.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse\"\xde\x03\xca\xf3\x18m\b\x02\x1a)udb:vault:emergency-revoke-db-credentials \x01J\x02\x01\x02j(vault.EmergencyRevokeDatabaseCredentials\x82\x01\n" +
+	"\blease_id\x1a\breplayed \x01\x82\xd3\xe4\x93\x025:\x01*\"0/v1/vault/database/credentials/{lease_id}:revoke\x12\x93\x05\n" +
+	"\"EmergencyRevokeDatabaseCredentials\x12E.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest\x1aF.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse\"\xdd\x03\xca\xf3\x18m\b\x02\x1a)udb:vault:emergency-revoke-db-credentials \x01J\x02\x01\x02j(vault.EmergencyRevokeDatabaseCredentials\x82\x01\n" +
 	"project_id\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18c\b\x01\x12%emergency_revoke_database_credentials\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05vaultP\x01Z\"emergencyRevokeDatabaseCredentials\xea\xf3\x18w\n" +
 	"(vault.EmergencyRevokeDatabaseCredentials\x12\"udb.vault.db_credential.revoked.v1\x1a\blease_id\"\x06strict*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
-	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x024:\x01*\"//v1/vault/database/credentials:emergency-revoke\x12\x82\x03\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x023:\x01*\"./v1/vault/database/credentials:emergencyRevoke\x12\x82\x03\n" +
 	"\x0fGenerateDataKey\x122.udb.core.vault.services.v1.GenerateDataKeyRequest\x1a3.udb.core.vault.services.v1.GenerateDataKeyResponse\"\x85\x02\xca\xf3\x18?\b\x02\x1a\x1budb:vault:generate-data-key \x01J\x02\x01\x02j\x15vault.GenerateDataKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18A\b\x01\x12\x11generate_data_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x14vaultGenerateDataKey\xf2\xf3\x18?\n" +
 	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02&:\x01*\"!/v1/vault/transit:generateDataKey\x12\xb6\x02\n" +
 	"\x06Rewrap\x12).udb.core.vault.services.v1.RewrapRequest\x1a*.udb.core.vault.services.v1.RewrapResponse\"\xd4\x01\xca\xf3\x18+\b\x02\x1a\x10udb:vault:rewrap \x01J\x02\x01\x02j\fvault.Rewrap\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18-\b\x01\x12\x06rewrap\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\vvaultRewrap\xf2\xf3\x18?\n" +

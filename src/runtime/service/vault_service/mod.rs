@@ -70,10 +70,10 @@ mod events;
 mod handlers;
 mod lifecycle;
 mod model;
-mod quota;
-mod store;
 #[cfg(test)]
 mod project_store_live;
+mod quota;
+mod store;
 #[cfg(test)]
 mod tests;
 mod workers;

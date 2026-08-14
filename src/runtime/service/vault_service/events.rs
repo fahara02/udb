@@ -26,8 +26,7 @@ impl VaultServiceImpl {
         // durable read/write. Preserve that exact instance for the audit outbox;
         // re-running weighted selection here could put the mutation and its
         // event in different project stores.
-        let Ok((context, pool)) =
-            self.resolve_project_store(context.clone(), true, "vault_event")
+        let Ok((context, pool)) = self.resolve_project_store(context.clone(), true, "vault_event")
         else {
             return;
         };

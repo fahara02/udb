@@ -652,11 +652,11 @@ async fn vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_ch
     if std::env::var("UDB_LIVE_AUTH_TESTS").ok().as_deref() != Some("1") {
         return;
     }
-    use sqlx::Connection as _;
     use crate::runtime::service::live_tests::support::{
         live_native_service_db_lock, live_pg_dsn, live_pg_pool, migrate_native_service_db,
         vault_service,
     };
+    use sqlx::Connection as _;
 
     let _guard = live_native_service_db_lock().lock().await;
     let pool = live_pg_pool().await;
@@ -706,10 +706,9 @@ async fn vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_ch
     request
         .metadata_mut()
         .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
-    request.metadata_mut().insert(
-        "x-udb-project-id",
-        MetadataValue::from_static("default"),
-    );
+    request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("default"));
     let issued = svc
         .generate_database_credentials(request)
         .await
@@ -766,10 +765,9 @@ async fn vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_ch
     replay_request
         .metadata_mut()
         .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
-    replay_request.metadata_mut().insert(
-        "x-udb-project-id",
-        MetadataValue::from_static("default"),
-    );
+    replay_request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("default"));
     let replayed = svc
         .generate_database_credentials(replay_request)
         .await
@@ -793,19 +791,20 @@ async fn vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_ch
     revoke_request
         .metadata_mut()
         .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
-    revoke_request.metadata_mut().insert(
-        "x-udb-project-id",
-        MetadataValue::from_static("default"),
-    );
+    revoke_request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("default"));
     let revoked = svc
         .revoke_database_credentials(revoke_request)
         .await
         .expect("served revoke must terminate sessions and remove the role")
         .into_inner();
     assert_eq!(revoked.state, "REVOKED");
-    assert!(!postgres_role_exists(&pool, &issued.username)
-        .await
-        .expect("role absence proof"));
+    assert!(
+        !postgres_role_exists(&pool, &issued.username)
+            .await
+            .expect("role absence proof")
+    );
     assert!(
         sqlx::query("SELECT 1")
             .execute(&mut credential_conn)
@@ -839,12 +838,11 @@ async fn vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_ch
     // relation makes the strict issued-event insert fail after role/policy SQL.
     // Because STARTING + physical authority + ACTIVE + outbox share one PG tx,
     // neither a role nor a lease may survive the failure.
-    let roles_before: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM pg_roles WHERE rolname LIKE 'udb_vault_%'",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("count generated roles before fault injection");
+    let roles_before: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM pg_roles WHERE rolname LIKE 'udb_vault_%'")
+            .fetch_one(&pool)
+            .await
+            .expect("count generated roles before fault injection");
     svc.outbox_relation = Some("\"udb_system\".\"missing_vault_outbox\"".to_string());
     let mut failed_request = Request::new(vault_pb::GenerateDatabaseCredentialsRequest {
         tenant_id: "tenant-a".to_string(),
@@ -857,19 +855,17 @@ async fn vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_ch
     failed_request
         .metadata_mut()
         .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
-    failed_request.metadata_mut().insert(
-        "x-udb-project-id",
-        MetadataValue::from_static("default"),
-    );
+    failed_request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("default"));
     svc.generate_database_credentials(failed_request)
         .await
         .expect_err("strict outbox failure must roll back role and lease");
-    let roles_after: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM pg_roles WHERE rolname LIKE 'udb_vault_%'",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("count generated roles after fault injection");
+    let roles_after: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM pg_roles WHERE rolname LIKE 'udb_vault_%'")
+            .fetch_one(&pool)
+            .await
+            .expect("count generated roles after fault injection");
     assert_eq!(roles_after, roles_before);
     let stranded_leases: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM udb_vault.vault_db_credential_leases \

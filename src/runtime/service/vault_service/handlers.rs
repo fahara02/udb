@@ -51,9 +51,9 @@ use super::errors::{
 use super::model::{active_transit, select_readable_secret, transit_version};
 use super::quota::admit_transit_op;
 use super::store::{
-    like_prefix_pattern, secret_conflict, secret_count_distinct_paths_sql,
-    secret_list_page_sql, secret_record, secret_shred_all_sql, transit_demote_active_sql,
-    transit_insert_rotated_sql, transit_key_conflict, transit_key_record,
+    like_prefix_pattern, secret_conflict, secret_count_distinct_paths_sql, secret_list_page_sql,
+    secret_record, secret_shred_all_sql, transit_demote_active_sql, transit_insert_rotated_sql,
+    transit_key_conflict, transit_key_record,
 };
 
 // ── KV engine ─────────────────────────────────────────────────────────────
@@ -1270,8 +1270,7 @@ pub(crate) async fn get_transit_public_key(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
-    let (context, _pool) =
-        svc.resolve_project_store(context, true, "get_transit_public_key")?;
+    let (context, _pool) = svc.resolve_project_store(context, true, "get_transit_public_key")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
