@@ -75,3 +75,7 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   contract. Descriptor-derived records are seeded from the proto annotations
   solely to unlock that CI build; they must be replaced by the artifact broker's
   authoritative manifest before final validation and merge.
+- Bootstrap CI run `31838739099` then confirmed all 293 HTTP operations are
+  recognized and requested the corresponding generated Vault benchmark rows.
+  The destructive rows use explicit project-bound seeded leases and the
+  tenant/project confirmation token; they remain opt-in benchmark fixtures.
