@@ -31,8 +31,8 @@ use super::crypto::{
     require_signing_algorithm, validate_transit_algorithm,
 };
 use super::dynamic::{
-    parse_vault_db_role_configs, requested_db_credential_ttl, validate_db_credential_binding,
-    validate_db_role_alias,
+    parse_vault_db_role_configs, postgres_role_exists, requested_db_credential_ttl,
+    validate_db_credential_binding, validate_db_role_alias,
 };
 use super::errors::{
     is_duplicate_conflict, vault_db_credentials_config_status,

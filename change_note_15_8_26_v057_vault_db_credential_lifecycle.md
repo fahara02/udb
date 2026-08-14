@@ -56,3 +56,12 @@ Status: implemented; generated protocol artifacts refreshed; GitHub CI pending
   REST action is now lower-camel-case; formatting is normalized without local
   compilation, and descriptor-derived artifacts remain delegated to the
   replacement CI-built broker before merge.
+- The first three combined live lanes (`31837515968`, `31837519876`, and
+  `31837522725`) all stopped at the shared lib-test compile preflight because
+  the expanded lifecycle assertion lacked its explicit
+  `postgres_role_exists` import. The import is restored; none of those failed
+  runs reached a live assertion, so all three filters must be rerun.
+- Combined CI run `31837950928` also identified generated benchmark-body
+  skeleton drift after the new Vault lifecycle surfaces were added. The
+  repository generator is rerun in this change so the quick gate can build the
+  broker artifact used for descriptor, native-contract, and SDK regeneration.
