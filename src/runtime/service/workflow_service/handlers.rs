@@ -6,6 +6,7 @@
 
 use chrono::Utc;
 use sqlx::Row;
+use tonic::metadata::MetadataMap;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
@@ -36,13 +37,27 @@ use super::model::{
 use super::store::{workflow_project_bind, workflow_scope_predicate, workflow_select_projection};
 use super::tick::signal_resumes;
 
+/// Resolve Workflow project authority claim/header first, falling back to the
+/// StartWorkflow body only when metadata carries no project. The shared binder
+/// validates the UUID representation before any SQL is constructed.
+fn resolved_workflow_project_scope(
+    metadata: &MetadataMap,
+    request_project_id: &str,
+) -> Result<String, Status> {
+    let project_id = metadata_project_id(metadata)
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| request_project_id.trim().to_string());
+    workflow_project_bind(&project_id)
+}
+
 pub(crate) async fn start_workflow(
     svc: &WorkflowServiceImpl,
     request: Request<workflow_pb::StartWorkflowRequest>,
 ) -> Result<Response<workflow_pb::StartWorkflowResponse>, Status> {
     let metadata = request.metadata().clone();
-    let req = request.into_inner();
+    let mut req = request.into_inner();
     validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
+    req.project_id = resolved_workflow_project_scope(&metadata, &req.project_id)?;
     if req.workflow_type.trim().is_empty() {
         return Err(workflow_required_field(
             "workflow_type",
@@ -217,18 +232,15 @@ pub(crate) async fn get_workflow(
     // 16.3.1 — GetWorkflowRequest carries no project field (proto verified), so
     // the project scope is resolved from request metadata / the verified claim
     // and bound into both the scope validation and the row predicate.
-    // Normalize the metadata/claim-resolved scope: the workflow schema stores
-    // project_id as a UUID, so a non-UUID project CODE (e.g. "default") degrades to
-    // tenant-wide instead of erroring "invalid input syntax for type uuid".
-    let project_id = workflow_project_bind(&metadata_project_id(&metadata).unwrap_or_default());
-    validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
+    validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_workflow_project_scope(&metadata, "")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "workflow",
         OperationChannel::Read,
         &req.tenant_id,
-        Some(project_id.as_str()),
+        (!project_id.is_empty()).then_some(project_id.as_str()),
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -271,18 +283,15 @@ pub(crate) async fn list_workflows(
     let req = request.into_inner();
     // 16.3.1 — ListWorkflowsRequest carries no project field (proto verified);
     // resolve the project scope from metadata / the verified claim.
-    // Normalize the metadata/claim-resolved scope: the workflow schema stores
-    // project_id as a UUID, so a non-UUID project CODE (e.g. "default") degrades to
-    // tenant-wide instead of erroring "invalid input syntax for type uuid".
-    let project_id = workflow_project_bind(&metadata_project_id(&metadata).unwrap_or_default());
-    validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
+    validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_workflow_project_scope(&metadata, "")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "workflow",
         OperationChannel::Read,
         &req.tenant_id,
-        Some(project_id.as_str()),
+        (!project_id.is_empty()).then_some(project_id.as_str()),
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -351,18 +360,15 @@ pub(crate) async fn cancel_workflow(
     // 16.3.1 — CancelWorkflowRequest carries no project field (proto verified);
     // resolve the project scope from metadata / the verified claim and bind it
     // into both queries so a project-scoped caller cannot cancel across projects.
-    // Normalize the metadata/claim-resolved scope: the workflow schema stores
-    // project_id as a UUID, so a non-UUID project CODE (e.g. "default") degrades to
-    // tenant-wide instead of erroring "invalid input syntax for type uuid".
-    let project_id = workflow_project_bind(&metadata_project_id(&metadata).unwrap_or_default());
-    validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
+    validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_workflow_project_scope(&metadata, "")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "workflow",
         OperationChannel::Admin,
         &req.tenant_id,
-        Some(project_id.as_str()),
+        (!project_id.is_empty()).then_some(project_id.as_str()),
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -371,13 +377,16 @@ pub(crate) async fn cancel_workflow(
     let m = workflow_model();
     let rel = m.relation.clone();
 
-    // Load current status + linked saga.
+    // Load current status, linked saga, and the durable event project. The
+    // latter preserves project lineage for intentional tenant-wide operators.
     let row = sqlx::query(&format!(
-        "SELECT {status} AS status, COALESCE({saga_id}::TEXT, '') AS saga_id \
+        "SELECT {status} AS status, COALESCE({saga_id}::TEXT, '') AS saga_id, \
+            COALESCE({project_id_column}::TEXT, '') AS project_id \
          FROM {rel} \
          WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
         status = m.q("status"),
         saga_id = m.q("saga_id"),
+        project_id_column = m.q("project_id"),
         workflow_id = m.q("workflow_id"),
         scope = workflow_scope_predicate(&m, "$2", "$3"),
         deleted = m.q("deleted_at"),
@@ -399,6 +408,9 @@ pub(crate) async fn cancel_workflow(
     })?;
     let saga_id: String = row.try_get("saga_id").map_err(|e| {
         workflow_internal_status("cancel_workflow_decode", format!("decode saga_id: {e}"))
+    })?;
+    let event_project_id: String = row.try_get("project_id").map_err(|e| {
+        workflow_internal_status("cancel_workflow_decode", format!("decode project_id: {e}"))
     })?;
 
     // Already compensating: the tick's compensation driver already owns the
@@ -490,7 +502,7 @@ pub(crate) async fn cancel_workflow(
         TOPIC_CANCELLED,
         &workflow_id, // partition key = workflow_id (proto method_event_contract)
         &tenant_id,
-        &project_id,
+        &event_project_id,
         &workflow_id,
         "cancelled",
         &workflow_id,
@@ -498,7 +510,7 @@ pub(crate) async fn cancel_workflow(
         serde_json::json!({
             "workflow_id": workflow_id.clone(),
             "tenant_id": tenant_id.clone(),
-            "project_id": project_id.clone(),
+            "project_id": event_project_id.clone(),
             "status": new_status,
             "saga_id": saga_id.clone(),
             "reason": req.reason.clone(),
@@ -527,11 +539,8 @@ pub(crate) async fn signal_workflow(
     // 16.3.1 — SignalWorkflowRequest carries no project field (proto verified);
     // resolve the project scope from metadata / the verified claim and bind it
     // into both queries so a project-scoped caller cannot signal across projects.
-    // Normalize the metadata/claim-resolved scope: the workflow schema stores
-    // project_id as a UUID, so a non-UUID project CODE (e.g. "default") degrades to
-    // tenant-wide instead of erroring "invalid input syntax for type uuid".
-    let project_id = workflow_project_bind(&metadata_project_id(&metadata).unwrap_or_default());
-    validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
+    validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_workflow_project_scope(&metadata, "")?;
     if req.signal_name.trim().is_empty() {
         return Err(workflow_required_field(
             "signal_name",
@@ -545,7 +554,7 @@ pub(crate) async fn signal_workflow(
         "workflow",
         OperationChannel::Admin,
         &req.tenant_id,
-        Some(project_id.as_str()),
+        (!project_id.is_empty()).then_some(project_id.as_str()),
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -568,13 +577,15 @@ pub(crate) async fn signal_workflow(
     })?;
     let row = sqlx::query(&format!(
         "SELECT {status} AS status, COALESCE({payload}::TEXT, '') AS payload, \
-            COALESCE({pending_signal}, '') AS pending_signal \
+            COALESCE({pending_signal}, '') AS pending_signal, \
+            COALESCE({project_id_column}::TEXT, '') AS project_id \
          FROM {rel} \
          WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL \
          FOR UPDATE",
         status = m.q("status"),
         payload = m.q("payload"),
         pending_signal = m.q("pending_signal"),
+        project_id_column = m.q("project_id"),
         workflow_id = m.q("workflow_id"),
         scope = workflow_scope_predicate(&m, "$2", "$3"),
         deleted = m.q("deleted_at"),
@@ -602,6 +613,9 @@ pub(crate) async fn signal_workflow(
             "signal_workflow_decode",
             format!("decode pending_signal: {e}"),
         )
+    })?;
+    let event_project_id: String = row.try_get("project_id").map_err(|e| {
+        workflow_internal_status("signal_workflow_decode", format!("decode project_id: {e}"))
     })?;
     // H7 — a COMPENSATING instance is non-signalable: a signal must never revert
     // it to RUNNING and abandon the in-flight compensation.
@@ -684,7 +698,7 @@ pub(crate) async fn signal_workflow(
         TOPIC_SIGNALED,
         &workflow_id, // partition key = workflow_id (proto method_event_contract)
         &tenant_id,
-        &project_id,
+        &event_project_id,
         &workflow_id,
         "signaled",
         &workflow_id,
@@ -692,7 +706,7 @@ pub(crate) async fn signal_workflow(
         serde_json::json!({
             "workflow_id": workflow_id.clone(),
             "tenant_id": tenant_id.clone(),
-            "project_id": project_id.clone(),
+            "project_id": event_project_id.clone(),
             "signal_name": req.signal_name.clone(),
         }),
     )

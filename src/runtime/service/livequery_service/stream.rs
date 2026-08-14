@@ -51,6 +51,9 @@ pub(crate) async fn run_delta_forward(
     tenant_id: String,
     project_id: String,
     cdc_topic: String,
+    // Columns to mask in every forwarded row image (empty when the subscriber
+    // holds udb:pii:read). Resolved once at subscribe time from the manifest.
+    masked_columns: Vec<String>,
     user_filter: Option<LogicalFilter>,
     // Durable-resume backlog: change events the client missed while disconnected,
     // read from the CDC journal and already tenant re-checked at read time. Drained
@@ -95,7 +98,10 @@ pub(crate) async fn run_delta_forward(
                 continue;
             }
         }
-        match tx.send(Ok(change_frame(&envelope, &payload))).await {
+        match tx
+            .send(Ok(change_frame(&envelope, &payload, &masked_columns)))
+            .await
+        {
             Ok(()) => metrics.record_livequery_delta_forwarded(&tenant_id),
             Err(_) => {
                 ended = true;
@@ -111,6 +117,7 @@ pub(crate) async fn run_delta_forward(
             &tenant_id,
             &project_id,
             &cdc_topic,
+            &masked_columns,
             user_filter.as_ref(),
             metrics.as_ref(),
         )
@@ -131,6 +138,7 @@ async fn run_live_loop(
     tenant_id: &str,
     project_id: &str,
     cdc_topic: &str,
+    masked_columns: &[String],
     user_filter: Option<&LogicalFilter>,
     metrics: &dyn MetricsRecorder,
 ) {
@@ -196,7 +204,7 @@ async fn run_live_loop(
                         continue;
                     }
                 }
-                match tx.try_send(Ok(change_frame(&envelope, &payload))) {
+                match tx.try_send(Ok(change_frame(&envelope, &payload, masked_columns))) {
                     Ok(()) => metrics.record_livequery_delta_forwarded(tenant_id),
                     Err(mpsc::error::TrySendError::Full(_)) => {
                         metrics.record_livequery_delta_dropped(tenant_id, "backpressure");

@@ -38,6 +38,14 @@ class GenerateDatabaseCredentialsResponse extends \Google\Protobuf\Internal\Mess
      * Generated from protobuf field <code>.udb.core.common.v1.ApiError error = 6 [json_name = "error"];</code>
      */
     protected $error = null;
+    /**
+     * Generated from protobuf field <code>bool replayed = 7 [json_name = "replayed"];</code>
+     */
+    protected $replayed = false;
+    /**
+     * Generated from protobuf field <code>string state = 8 [json_name = "state"];</code>
+     */
+    protected $state = '';
 
     /**
      * Constructor.
@@ -51,6 +59,8 @@ class GenerateDatabaseCredentialsResponse extends \Google\Protobuf\Internal\Mess
      *     @type int $lease_ttl_seconds
      *     @type string $message
      *     @type \Udb\Core\Common\V1\ApiError $error
+     *     @type bool $replayed
+     *     @type string $state
      * }
      */
     public function __construct($data = NULL) {
@@ -196,6 +206,50 @@ class GenerateDatabaseCredentialsResponse extends \Google\Protobuf\Internal\Mess
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool replayed = 7 [json_name = "replayed"];</code>
+     * @return bool
+     */
+    public function getReplayed()
+    {
+        return $this->replayed;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool replayed = 7 [json_name = "replayed"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setReplayed($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->replayed = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string state = 8 [json_name = "state"];</code>
+     * @return string
+     */
+    public function getState()
+    {
+        return $this->state;
+    }
+
+    /**
+     * Generated from protobuf field <code>string state = 8 [json_name = "state"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setState($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->state = $var;
 
         return $this;
     }

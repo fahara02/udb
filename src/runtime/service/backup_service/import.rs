@@ -23,18 +23,20 @@ use crate::runtime::tenant_movement::{
 };
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, parse_uuid, validate_request_tenant,
+    admit_on as native_admit_on, parse_uuid, project_scoped_native_service_context,
+    validate_request_tenant,
 };
 use super::BackupServiceImpl;
-use super::config::{KIND_RESTORE, MANIFEST_SUFFIX, TOPIC_BACKUP_RESTORED};
+use super::config::{KIND_RESTORE, TOPIC_BACKUP_RESTORED};
 use super::errors::{
-    backup_internal_status, backup_not_found_status, backup_run_missing_object_prefix_status,
+    backup_internal_status, backup_not_found_status, backup_run_location_missing_status,
+    backup_run_missing_object_prefix_status, backup_topology_mismatch_status,
     ensure_target_is_fresh_in, restore_cross_tenant_admin_required_status,
     restore_manifest_integrity_status,
 };
 use super::events::emit_event;
-use super::model::{qualified_relation, run_summary_from_json, sha256_hex};
-use super::store::{journal_run, run_read_by_id};
+use super::model::{qualified_relation, run_location_from_json, run_summary_from_json, sha256_hex};
+use super::store::{journal_run, journal_run_started, run_read_by_id};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct RestoreColumnKey {
@@ -345,15 +347,18 @@ pub(crate) async fn restore_tenant(
         .map_err(|err| tenant_movement_policy_status(movement.operation, err))?;
 
     let runtime = svc.require_runtime()?;
-    let pool = svc.require_pool()?;
-    let manifest = svc.require_manifest()?;
     let _ = parse_uuid("source_tenant_id", &source_tenant_id)?;
     let _ = parse_uuid("target_tenant_id", &target_tenant_id)?;
-    let context = native_service_context(&metadata, &target_tenant_id, "");
+    let mut context = project_scoped_native_service_context(&metadata, &target_tenant_id);
+    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    context.project_id = binding.project_id.clone();
+    let pool = &binding.pool;
+    let manifest = binding.manifest.as_ref();
 
     // Resolve the source run's object prefix from the durable journal.
-    let source_ctx = native_service_context(&metadata, &source_tenant_id, "");
-    let run = runtime
+    let mut source_ctx = project_scoped_native_service_context(&metadata, &source_tenant_id);
+    source_ctx.project_id = binding.project_id.clone();
+    let run_row = runtime
         .native_entity_read_for_service(
             "backup",
             &source_ctx,
@@ -361,7 +366,7 @@ pub(crate) async fn restore_tenant(
         )
         .await?
         .first()
-        .map(run_summary_from_json)
+        .cloned()
         .ok_or_else(|| {
             backup_not_found_status(
                 "restore_tenant",
@@ -369,6 +374,36 @@ pub(crate) async fn restore_tenant(
                 "backup run not found for source tenant",
             )
         })?;
+    let run = run_summary_from_json(&run_row);
+    let location = run_location_from_json(&run_row)
+        .ok_or_else(|| backup_run_location_missing_status("restore_tenant"))?;
+    if location.project_id != binding.project_id {
+        return Err(backup_topology_mismatch_status(
+            "restore_tenant",
+            format!(
+                "backup belongs to project '{}' but restore resolved project '{}'",
+                location.project_id, binding.project_id
+            ),
+        ));
+    }
+    if location.catalog_checksum != binding.catalog_checksum {
+        return Err(backup_topology_mismatch_status(
+            "restore_tenant",
+            format!(
+                "backup catalog checksum '{}' does not match active project catalog '{}'",
+                location.catalog_checksum, binding.catalog_checksum
+            ),
+        ));
+    }
+    if location.postgres_instance != binding.postgres_instance {
+        return Err(backup_topology_mismatch_status(
+            "restore_tenant",
+            format!(
+                "backup canonical Postgres instance '{}' does not match restore instance '{}'",
+                location.postgres_instance, binding.postgres_instance
+            ),
+        ));
+    }
     let object_prefix = run.object_prefix.trim().to_string();
     if object_prefix.is_empty() {
         return Err(backup_run_missing_object_prefix_status());
@@ -390,13 +425,12 @@ pub(crate) async fn restore_tenant(
     )
     .await?;
 
-    // Load + verify the run manifest (object backend/bucket are recorded in
-    // it). The manifest itself lives under the service default object target
-    // (where the backup wrote it); the per-table artifacts then use whatever
-    // backend/bucket the manifest records.
-    let manifest_key = format!("{object_prefix}{MANIFEST_SUFFIX}");
-    let run_backend = svc.object_backend.clone();
-    let run_bucket = svc.object_bucket.clone();
+    // Load + verify the run manifest from the immutable location persisted in
+    // BackupRun before artifact writes. Legacy rows without that location fail
+    // explicitly above; mutable process defaults are never used as a locator.
+    let manifest_key = location.manifest_key.clone();
+    let run_backend = location.object_backend.clone();
+    let run_bucket = location.object_bucket.clone();
     let manifest_get = crate::runtime::core::setup_data::object_request_json(
         "get",
         &run_bucket,
@@ -429,6 +463,24 @@ pub(crate) async fn restore_tenant(
                 format!("restore manifest parse failed: {err}"),
             )
         })?;
+    for (field, expected) in [
+        ("project_id", binding.project_id.as_str()),
+        ("catalog_checksum", binding.catalog_checksum.as_str()),
+        ("postgres_instance", binding.postgres_instance.as_str()),
+    ] {
+        let actual = manifest_value
+            .get(field)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default();
+        if actual != expected {
+            return Err(backup_topology_mismatch_status(
+                "restore_tenant",
+                format!(
+                    "backup manifest {field} '{actual}' does not match resolved value '{expected}'"
+                ),
+            ));
+        }
+    }
     let object_backend = manifest_value
         .get("object_backend")
         .and_then(|v| v.as_str())
@@ -451,6 +503,29 @@ pub(crate) async fn restore_tenant(
     // (safe for delete); inserting parents→children satisfies FK constraints.
     let mut ordered_tables = manifest_tables;
     ordered_tables.reverse();
+
+    let restore_id = Uuid::new_v4().to_string();
+    let restore_metadata = serde_json::json!({
+        "source_backup_id": backup_id,
+        "object_backend": location.object_backend,
+        "object_bucket": location.object_bucket,
+        "manifest_key": location.manifest_key,
+        "project_id": binding.project_id,
+        "catalog_version": binding.catalog_version,
+        "catalog_checksum": binding.catalog_checksum,
+        "manifest_catalog_checksum": binding.manifest_checksum,
+        "postgres_instance": binding.postgres_instance,
+    });
+    journal_run_started(
+        runtime,
+        &context,
+        &restore_id,
+        &target_tenant_id,
+        KIND_RESTORE,
+        &object_prefix,
+        &restore_metadata,
+    )
+    .await?;
 
     let mut restored_rows: i64 = 0;
     let mut restored_table_count: i32 = 0;
@@ -637,7 +712,6 @@ pub(crate) async fn restore_tenant(
         )
     })?;
 
-    let restore_id = Uuid::new_v4().to_string();
     journal_run(
         runtime,
         &context,
@@ -651,6 +725,7 @@ pub(crate) async fn restore_tenant(
         0,
         &source_tenant_id,
         &target_tenant_id,
+        &restore_metadata,
     )
     .await?;
 

@@ -88,13 +88,15 @@ pub(super) fn now_unix() -> u64 {
 
 /// UDB-AUTH-004/007: install the data-plane credential dependencies for scoped
 /// `x-api-key` principals and certificate-verified service-identity grants.
-/// Extracted so a DataBroker-only deployment
-/// (native control plane disabled — `build_auth_services` never runs) still
-/// authenticates scoped keys and registered mTLS services instead of failing
-/// closed for want of wiring. Idempotent; safe to call from both paths.
+/// Extracted so full and DataBroker-only listeners install the same fully wired
+/// authn authority before serving. DataBroker-only startup builds then drops the
+/// unmounted RPC adapters, but retains this validator for API-key, bearer, mTLS,
+/// and long-lived CDC credential revalidation. Idempotent; safe to call from
+/// both paths.
 pub(crate) fn install_data_plane_credential_resolvers(
     pool: sqlx::PgPool,
     authn_config: &AuthnConfig,
+    bearer_state_validator: Arc<AuthnServiceImpl>,
 ) {
     // fix_plan §1.2: the async credential layer is the only request-time
     // authority. No process-global synchronous database bridge is installed.
@@ -103,6 +105,7 @@ pub(crate) fn install_data_plane_credential_resolvers(
             pool: pool.clone(),
             api_key_store: Arc::new(PostgresApiKeyStore::new(pool.clone(), "")),
             api_key_hash_key: authn_config.api_key_hash_secret().as_bytes().to_vec(),
+            bearer_state_validator,
         },
     ));
 }
@@ -164,10 +167,6 @@ impl DataBrokerService {
                 )
             });
             let api_key_store = Arc::new(PostgresApiKeyStore::new(pool.clone(), ""));
-            // Install the shared async request credential dependencies over this
-            // store. DataBroker and native method security consume the same
-            // pre-resolved principal; no handler performs a second key lookup.
-            install_data_plane_credential_resolvers(pool.clone(), &authn_config);
             let user_store: Arc<dyn UserStore> = Arc::new(PostgresUserStore::new(pool.clone(), ""));
             let session_store: Arc<dyn SessionStore> =
                 if authn_config.session_backend.eq_ignore_ascii_case("redis") {
@@ -209,7 +208,7 @@ impl DataBrokerService {
             let authn = authn.with_jti_denylist(jti_denylist);
             (
                 authn,
-                ApiKeyServiceImpl::with_store(authn_config, api_key_store)
+                ApiKeyServiceImpl::with_store(authn_config.clone(), api_key_store)
                     // Owner and typed-grant lookup are mandatory for key
                     // issuance and validation.
                     .with_user_store(user_store)
@@ -222,9 +221,20 @@ impl DataBrokerService {
                     .with_event_sink(event_sink.clone())
                     .with_metrics(self.metrics.clone())
                     .with_authz_snapshot(Some(shared_snapshot.clone())),
-                ApiKeyServiceImpl::new(authn_config).with_event_sink(event_sink.clone()),
+                ApiKeyServiceImpl::new(authn_config.clone()).with_event_sink(event_sink.clone()),
             )
         };
+        if let Some(pool) = pg_pool.clone() {
+            // The request credential layer and long-lived CDC revalidation use
+            // this exact AuthnService clone, so bearer signature checks, durable
+            // user/session/JTI state, typed grants, API keys, and certificate
+            // bindings all share one authority.
+            install_data_plane_credential_resolvers(
+                pool,
+                &authn_config,
+                Arc::new(authn_service.clone()),
+            );
+        }
         (
             authn_service,
             AuthzServiceImpl::shared(shared_snapshot)

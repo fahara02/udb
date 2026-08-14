@@ -3,25 +3,27 @@ use crate::runtime::core::setup_data::object_request_json;
 use crate::runtime::service::DataBrokerService;
 use crate::runtime::service::asset_service::AssetServiceImpl;
 use crate::runtime::service::native_helpers::DEFAULT_OBJECT_BUCKET;
+use crate::runtime::service::scheduler_service::SchedulerServiceImpl;
 use crate::runtime::service::storage_service::StorageServiceImpl;
 use crate::runtime::service::webrtc_service::WebrtcServiceImpl;
+use crate::runtime::service::workflow_service::WorkflowServiceImpl;
 use crate::runtime::{DataBrokerRuntime, native_catalog};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-pub(super) fn live_pg_dsn() -> String {
+pub(crate) fn live_pg_dsn() -> String {
     std::env::var("UDB_LIVE_NATIVE_PG_DSN")
         .or_else(|_| std::env::var("UDB_LIVE_AUTH_PG_DSN"))
         .or_else(|_| std::env::var("UDB_INTEGRATION_PG_DSN"))
         .unwrap_or_else(|_| "postgres://udb:udb@127.0.0.1:55432/udb".to_string())
 }
 
-pub(super) fn live_native_service_db_lock() -> &'static tokio::sync::Mutex<()> {
+pub(crate) fn live_native_service_db_lock() -> &'static tokio::sync::Mutex<()> {
     static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
 }
 
-pub(super) async fn live_pg_pool() -> sqlx::PgPool {
+pub(crate) async fn live_pg_pool() -> sqlx::PgPool {
     let dsn = live_pg_dsn();
     sqlx::postgres::PgPoolOptions::new()
         .max_connections(4)
@@ -94,7 +96,7 @@ fn quote_ident(value: &str) -> String {
     format!("\"{}\"", value.replace('"', "\"\""))
 }
 
-pub(super) async fn migrate_native_service_db(pool: &sqlx::PgPool) {
+pub(crate) async fn migrate_native_service_db(pool: &sqlx::PgPool) {
     cleanup_native_service_db(pool).await;
     let ddl = crate::runtime::native_catalog::native_service_catalog_ddl();
     assert!(
@@ -109,6 +111,26 @@ pub(super) async fn migrate_native_service_db(pool: &sqlx::PgPool) {
     }
 }
 
+pub(super) async fn reset_native_outbox(pool: &sqlx::PgPool) {
+    sqlx::query("CREATE SCHEMA IF NOT EXISTS udb_system")
+        .execute(pool)
+        .await
+        .expect("create udb_system schema");
+    sqlx::query("DROP TABLE IF EXISTS udb_system.outbox_events CASCADE")
+        .execute(pool)
+        .await
+        .expect("drop native-service test outbox");
+    sqlx::query(
+        "CREATE TABLE udb_system.outbox_events ( \
+            event_seq BIGSERIAL PRIMARY KEY, event_id UUID NOT NULL UNIQUE, \
+            topic TEXT NOT NULL, partition_key TEXT NOT NULL DEFAULT '', \
+            payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW() )",
+    )
+    .execute(pool)
+    .await
+    .expect("create native-service test outbox");
+}
+
 pub(super) async fn live_runtime() -> Arc<DataBrokerRuntime> {
     Arc::new(DataBrokerRuntime::from_config(live_native_config()).await)
 }
@@ -119,6 +141,10 @@ async fn native_broker_service() -> DataBrokerService {
         native_catalog::native_manifest().clone(),
         DataBrokerRuntime::from_config(config).await,
     )
+}
+
+pub(crate) async fn vault_service() -> crate::runtime::service::vault_service::VaultServiceImpl {
+    native_broker_service().await.build_vault_service()
 }
 
 fn live_native_config() -> UdbConfig {
@@ -135,6 +161,14 @@ fn live_native_config() -> UdbConfig {
 
 pub(super) async fn storage_service(_pool: sqlx::PgPool) -> StorageServiceImpl {
     native_broker_service().await.build_storage_service()
+}
+
+pub(super) async fn scheduler_service(_pool: sqlx::PgPool) -> SchedulerServiceImpl {
+    native_broker_service().await.build_scheduler_service()
+}
+
+pub(super) async fn workflow_service(_pool: sqlx::PgPool) -> WorkflowServiceImpl {
+    native_broker_service().await.build_workflow_service()
 }
 
 pub(super) async fn asset_service(_pool: sqlx::PgPool) -> AssetServiceImpl {

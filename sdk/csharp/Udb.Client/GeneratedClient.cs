@@ -3,10 +3,10 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.5.6
+//   UDB version:      0.5.7
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             379
+//   RPCs:             381
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -318,6 +318,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.vault.services.v1.VaultService/Decrypt"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Decrypt", "VaultService", "Decrypt", "decrypt", "vaultDecrypt", "read_only", "post", "/v1/vault/transit:decrypt");
         map["/udb.core.vault.services.v1.VaultService/DeleteSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/DeleteSecret", "VaultService", "DeleteSecret", "delete_secret", "deleteSecret", "mutation", "post", "/v1/vault/secrets:delete");
         map["/udb.core.vault.services.v1.VaultService/DestroySecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/DestroySecret", "VaultService", "DestroySecret", "destroy_secret", "destroySecret", "destructive", "post", "/v1/vault/secrets:destroy");
+        map["/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials", "VaultService", "EmergencyRevokeDatabaseCredentials", "emergency_revoke_database_credentials", "emergencyRevokeDatabaseCredentials", "destructive", "post", "/v1/vault/database/credentials:emergencyRevoke");
         map["/udb.core.vault.services.v1.VaultService/Encrypt"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Encrypt", "VaultService", "Encrypt", "encrypt", "vaultEncrypt", "mutation", "post", "/v1/vault/transit:encrypt");
         map["/udb.core.vault.services.v1.VaultService/GenerateDataKey"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GenerateDataKey", "VaultService", "GenerateDataKey", "generate_data_key", "vaultGenerateDataKey", "mutation", "post", "/v1/vault/transit:generateDataKey");
         map["/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials", "VaultService", "GenerateDatabaseCredentials", "generate_database_credentials", "generateDatabaseCredentials", "mutation", "post", "/v1/vault/database/credentials");
@@ -326,6 +327,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.vault.services.v1.VaultService/Hmac"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Hmac", "VaultService", "Hmac", "hmac", "vaultHmac", "mutation", "post", "/v1/vault/transit:hmac");
         map["/udb.core.vault.services.v1.VaultService/ListSecrets"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/ListSecrets", "VaultService", "ListSecrets", "list_secrets", "listSecrets", "read_only", "get", "/v1/vault/secrets");
         map["/udb.core.vault.services.v1.VaultService/PutSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/PutSecret", "VaultService", "PutSecret", "put_secret", "putSecret", "mutation", "post", "/v1/vault/secrets:put");
+        map["/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials", "VaultService", "RevokeDatabaseCredentials", "revoke_database_credentials", "revokeDatabaseCredentials", "destructive", "post", "/v1/vault/database/credentials/{lease_id}:revoke");
         map["/udb.core.vault.services.v1.VaultService/Rewrap"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Rewrap", "VaultService", "Rewrap", "rewrap", "vaultRewrap", "mutation", "post", "/v1/vault/transit:rewrap");
         map["/udb.core.vault.services.v1.VaultService/RotateTransitKey"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/RotateTransitKey", "VaultService", "RotateTransitKey", "rotate_transit_key", "rotateTransitKey", "mutation", "post", "/v1/vault/transit/keys:rotate");
         map["/udb.core.vault.services.v1.VaultService/SealStatus"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/SealStatus", "VaultService", "SealStatus", "seal_status", "vaultSealStatus", "read_only", "get", "/v1/vault/seal-status");
@@ -967,7 +969,7 @@ public sealed partial class GeneratedTenantServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.vault.services.v1.VaultService</c> service
-/// (20 RPCs). Forwards to the buf-generated
+/// (22 RPCs). Forwards to the buf-generated
 /// <c>VaultServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedVaultServiceClient : GeneratedServiceBase
@@ -6986,6 +6988,29 @@ public sealed partial class GeneratedVaultServiceClient
 public sealed partial class GeneratedVaultServiceClient
 {
     /// <summary>
+    /// <c>emergency_revoke_database_credentials</c> (unary) — forwards to <c>VaultServiceClient.EmergencyRevokeDatabaseCredentialsAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> EmergencyRevokeDatabaseCredentialsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.EmergencyRevokeDatabaseCredentialsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials",
+            co => (object)_stub.EmergencyRevokeDatabaseCredentialsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
     /// <c>encrypt</c> (unary) — forwards to <c>VaultServiceClient.EncryptAsync</c>.
     /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/Encrypt</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -7048,7 +7073,7 @@ public sealed partial class GeneratedVaultServiceClient
             deadline,
             cancellationToken,
             "mutation" == "read_only",
-            "false" == "true",
+            "true" == "true",
             (object)request);
     }
 }
@@ -7164,6 +7189,29 @@ public sealed partial class GeneratedVaultServiceClient
             cancellationToken,
             "mutation" == "read_only",
             "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>revoke_database_credentials</c> (unary) — forwards to <c>VaultServiceClient.RevokeDatabaseCredentialsAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RevokeDatabaseCredentialsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RevokeDatabaseCredentialsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials",
+            co => (object)_stub.RevokeDatabaseCredentialsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "true" == "true",
             (object)request);
     }
 }
@@ -9644,11 +9692,11 @@ public static class UdbIr
     public const string DefaultBackend = "postgres";
 
     public static IReadOnlyDictionary<string, string> BackendRoles { get; } =
-        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"azureblob\":\"projection\",\"cassandra\":\"projection\",\"clickhouse\":\"projection\",\"elasticsearch\":\"projection\",\"gcs\":\"projection\",\"memcached\":\"projection\",\"minio\":\"projection\",\"mongodb\":\"projection\",\"mysql\":\"canonical\",\"neo4j\":\"projection\",\"pinecone\":\"projection\",\"postgres\":\"canonical\",\"qdrant\":\"projection\",\"redis\":\"projection\",\"s3\":\"projection\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"weaviate\":\"projection\"}")
+        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"projection\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"projection\",\"cassandra\":\"projection\"}")
         ?? new Dictionary<string, string>();
 
     public static IReadOnlyDictionary<string, string> OrmTiers { get; } =
-        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"azureblob\":\"blob\",\"cassandra\":\"relational\",\"clickhouse\":\"relational\",\"elasticsearch\":\"vector\",\"gcs\":\"blob\",\"memcached\":\"kv\",\"minio\":\"blob\",\"mongodb\":\"document\",\"mysql\":\"relational\",\"neo4j\":\"graph\",\"pinecone\":\"vector\",\"postgres\":\"relational\",\"qdrant\":\"vector\",\"redis\":\"kv\",\"s3\":\"blob\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"weaviate\":\"vector\"}")
+        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"relational\",\"mysql\":\"relational\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"clickhouse\":\"relational\",\"redis\":\"kv\",\"memcached\":\"kv\",\"qdrant\":\"vector\",\"weaviate\":\"vector\",\"pinecone\":\"vector\",\"minio\":\"blob\",\"s3\":\"blob\",\"azureblob\":\"blob\",\"gcs\":\"blob\",\"mongodb\":\"document\",\"elasticsearch\":\"vector\",\"neo4j\":\"graph\",\"cassandra\":\"relational\"}")
         ?? new Dictionary<string, string>();
 
     public static IReadOnlyDictionary<string, EntityBinding> Entities { get; } = BuildEntityRegistry();
@@ -10290,11 +10338,11 @@ public static class UdbIr
             "udb.core.vault.entity.v1.VaultDbCredentialLease",
             "vault_db_credential_leases",
             new List<string> { "lease_id" },
-            new List<string> { "lease_id", "tenant_id", "role_name", "username", "parent_role", "backend", "issued_at", "expires_at", "revoked_at", "state", "metadata_json", "created_at", "updated_at", "created_by" },
+            new List<string> { "lease_id", "tenant_id", "role_name", "username", "parent_role", "backend", "issued_at", "expires_at", "revoked_at", "state", "metadata_json", "project_id", "idempotency_key", "request_hash", "credential_ciphertext", "target_instance", "last_error", "revoke_reason", "revocation_operation_id", "revocation_requested_at", "created_at", "updated_at", "created_by" },
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "udb.core.Vault.Entity.V1.VaultDbCredentialLease");
         entities["udb.core.vault.entity.v1.VaultSecret"] = new EntityBinding(
             "udb.core.vault.entity.v1.VaultSecret",

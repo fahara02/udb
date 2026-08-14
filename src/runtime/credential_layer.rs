@@ -51,6 +51,10 @@ pub struct VerifiedPrincipal {
     /// Never the secret itself.
     pub credential_id: String,
     pub auth_method: String,
+    /// Absolute credential expiry in Unix seconds. `0` means the credential
+    /// has no intrinsic expiry and must still be periodically re-resolved by
+    /// long-lived served paths so revocation/grant changes take effect.
+    pub expires_at_unix: i64,
     /// The certificate-derived identity when a verified peer certificate was
     /// present (also set alongside a bearer/key for composition checks).
     pub certificate_identity: Option<String>,
@@ -94,10 +98,33 @@ impl VerifiedPrincipal {
             roles: claims.roles.clone().unwrap_or_default(),
             credential_id: claims.jti.clone().unwrap_or_default(),
             auth_method,
+            expires_at_unix: claims.exp.unwrap_or_default(),
             certificate_identity: None,
             // Bearer/JWT principals carry no api-key budget — tenant default.
             rate_limit_per_minute: 0,
         }
+    }
+}
+
+/// Secret-bearing evidence retained only so long-lived served calls can
+/// periodically re-run the canonical credential resolver. Debug output is
+/// deliberately redacted; audit/log paths use [`VerifiedPrincipal`] lineage,
+/// never the bearer, API-key secret, or certificate bytes.
+#[derive(Clone, Default)]
+pub struct CredentialRevalidator {
+    bearer: Option<String>,
+    api_key: Option<String>,
+    peer_cert_der: Option<Vec<u8>>,
+}
+
+impl std::fmt::Debug for CredentialRevalidator {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("CredentialRevalidator")
+            .field("bearer", &self.bearer.is_some())
+            .field("api_key", &self.api_key.is_some())
+            .field("peer_cert_der", &self.peer_cert_der.is_some())
+            .finish()
     }
 }
 
@@ -136,6 +163,10 @@ pub struct PreresolvedCredentials {
     /// DB blip during mTLS resolution is not reported as a bad certificate
     /// (UDB-DB-READINESS-001).
     pub certificate_resolution_unavailable: bool,
+    /// Canonical revalidation handle for long-lived served calls. This is
+    /// populated only by the real Tower credential layer; direct handler tests
+    /// that bypass the layer do not accidentally simulate revocation safety.
+    pub revalidator: Option<CredentialRevalidator>,
 }
 
 /// Durable-store handles for async credential resolution. Installed once at
@@ -144,6 +175,10 @@ pub struct AuthPlaneDeps {
     pub pool: sqlx::PgPool,
     pub api_key_store: Arc<PostgresApiKeyStore>,
     pub api_key_hash_key: Vec<u8>,
+    /// The same fully wired authn adapter used by native token validation. CDC
+    /// revalidation therefore observes durable user/session/JTI/grant state and
+    /// the configured Postgres/Redis session backend without parallel logic.
+    pub bearer_state_validator: Arc<crate::runtime::service::auth_service::AuthnServiceImpl>,
 }
 
 static AUTH_PLANE_DEPS: OnceLock<RwLock<Option<Arc<AuthPlaneDeps>>>> = OnceLock::new();
@@ -233,30 +268,29 @@ async fn resolve_credentials(
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.trim().strip_prefix("Bearer "))
         .map(str::to_string);
-    let api_key = {
-        let key = {
-            let primary = header_value(headers, "x-api-key");
-            if primary.is_empty() {
-                header_value(headers, "x-udb-api-key")
-            } else {
-                primary
-            }
-        };
-        if key.is_empty() {
-            None
+    let api_key_value = {
+        let primary = header_value(headers, "x-api-key");
+        if primary.is_empty() {
+            header_value(headers, "x-udb-api-key")
         } else {
-            auth_plane_deps().map(|deps| {
-                // Placeholder replaced below (async block keeps the map lazy-free).
-                (deps, key)
-            })
+            primary
         }
     };
+    let api_key_value = (!api_key_value.is_empty()).then_some(api_key_value);
+    let api_key = api_key_value
+        .clone()
+        .and_then(|key| auth_plane_deps().map(|deps| (deps, key)));
     let has_cert = peer_cert_der.is_some();
-    if bearer.is_none() && api_key.is_none() && !has_cert {
+    if bearer.is_none() && api_key_value.is_none() && !has_cert {
         return None;
     }
 
     let mut resolved = PreresolvedCredentials::default();
+    resolved.revalidator = Some(CredentialRevalidator {
+        bearer: bearer.clone(),
+        api_key: api_key_value,
+        peer_cert_der: peer_cert_der.clone(),
+    });
 
     if let Some(token) = bearer {
         let outcome = match crate::runtime::security::validate_bearer_token_cached(
@@ -265,28 +299,46 @@ async fn resolve_credentials(
         ) {
             Ok(claims) => {
                 let principal = VerifiedPrincipal::from_verified_bearer_claims(&claims);
-                if principal.service_identity.trim().is_empty() {
-                    Ok(principal)
-                } else if let Some(deps) = auth_plane_deps() {
-                    match crate::runtime::service::auth_service::grants::validate_service_principal_against_grant(
-                        &deps.pool,
-                        &principal.tenant_id,
-                        &principal.subject,
-                        &principal.project_id,
-                        &principal.service_identity,
-                        &principal.scopes,
-                    )
-                    .await
+                match auth_plane_deps() {
+                    Some(deps) => match deps
+                        .bearer_state_validator
+                        .jwt_persisted_state_valid(&claims, now_unix())
+                        .await
                     {
                         Ok(true) => Ok(principal),
-                        Ok(false) => Err("service bearer is not backed by a current typed grant".to_string()),
-                        Err(error) => Err(error),
+                        Ok(false) => Err(
+                            "bearer credential is revoked, expired, inactive, or no longer granted"
+                                .to_string(),
+                        ),
+                        Err(status) => {
+                            // Durable validation reports adapter/store failures as
+                            // Internal in a few legacy seams. They are still an
+                            // inability to decide, not proof that the credential
+                            // is bad: preserve fail-closed behavior but return a
+                            // retryable dependency status to the served client.
+                            let status = if matches!(
+                                status.code(),
+                                tonic::Code::Internal | tonic::Code::Unavailable
+                            ) {
+                                crate::runtime::executor_utils::retryable_status(
+                                    "authn",
+                                    "bearer_durable_state_validate",
+                                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                                    "bearer credential state could not be validated because the credential store is unavailable",
+                                )
+                            } else {
+                                status
+                            };
+                            Err(crate::runtime::executor_utils::store_string_from_status(
+                                "bearer durable-state validation",
+                                &status,
+                            ))
+                        }
+                    },
+                    None => {
+                        Err("bearer validation requires the durable auth-state resolver"
+                            .to_string())
                     }
-                } else {
-                    Err(
-                        "service bearer validation requires the durable typed-grant store"
-                            .to_string(),
-                    )
                 }
             }
             Err(error) => Err(error),
@@ -327,6 +379,8 @@ async fn resolve_credentials(
                         roles: Vec::new(),
                         credential_id: record.key_prefix,
                         auth_method: "api_key".to_string(),
+                        expires_at_unix: i64::try_from(record.expires_at_unix)
+                            .unwrap_or(i64::MAX),
                         certificate_identity: None,
                         // The key's own per-minute budget (0 when the column is
                         // unset) — the opt-in limiter uses it to raise this key.
@@ -369,6 +423,10 @@ async fn resolve_credentials(
                             roles: Vec::new(),
                             credential_id: grant.credential_id,
                             auth_method: "mtls".to_string(),
+                            // Certificate validity and grant state are checked
+                            // when the principal is resolved. Long-lived calls
+                            // force bounded re-resolution independently.
+                            expires_at_unix: 0,
                             certificate_identity: resolved.certificate_identity.clone(),
                             // mTLS grants carry no api-key budget — tenant default.
                             rate_limit_per_minute: 0,
@@ -404,6 +462,201 @@ async fn resolve_credentials(
     }
 
     Some(resolved)
+}
+
+impl CredentialRevalidator {
+    fn bearer_resolution_status(operation: &str, reason: String) -> tonic::Status {
+        let typed = crate::runtime::executor_utils::status_from_store_string(reason);
+        if typed.code() == tonic::Code::Unavailable {
+            typed
+        } else {
+            crate::runtime::executor_utils::unauthenticated_status(
+                operation,
+                "CDC subscription credential is no longer valid; authenticate again",
+            )
+        }
+    }
+
+    fn api_key_resolution_status() -> tonic::Status {
+        // The request-time API-key path treats resolver errors as dependency
+        // outages: unknown/revoked keys are `Ok(None)`, while `Err` means the
+        // durable authority could not make a decision. Preserve that contract
+        // during stream revalidation instead of misreporting an outage as a bad
+        // credential.
+        crate::runtime::executor_utils::retryable_status(
+            "authn",
+            "cdc_api_key_revalidate",
+            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+            "CDC API key could not be revalidated because the credential store is unavailable",
+        )
+    }
+
+    fn effective_service_identity(principal: &VerifiedPrincipal) -> String {
+        if !principal.service_identity.trim().is_empty() {
+            principal.service_identity.clone()
+        } else if principal.credential_type == 3 {
+            // API-key requests use the stored owner as the stable service
+            // identity when the key record has no explicit service identity.
+            principal.subject.clone()
+        } else {
+            "unknown".to_string()
+        }
+    }
+
+    fn same_scope_set(left: &[String], right: &[String]) -> bool {
+        let normalize = |scopes: &[String]| {
+            scopes
+                .iter()
+                .map(|scope| scope.trim().to_ascii_lowercase())
+                .collect::<std::collections::BTreeSet<_>>()
+        };
+        normalize(left) == normalize(right)
+    }
+
+    /// Re-run the same signature + durable credential resolution used by the
+    /// Tower request layer, then bind the result to the stream's original
+    /// principal lineage. Scope/rate-limit changes are refreshed; identity,
+    /// tenant, project, and credential lineage may never change underneath an
+    /// already-open stream.
+    pub(crate) async fn revalidate_security_context(
+        &self,
+        expected: &crate::runtime::security::SecurityContext,
+    ) -> Result<crate::runtime::security::SecurityContext, tonic::Status> {
+        let mut headers = http::HeaderMap::new();
+        if let Some(token) = self.bearer.as_ref() {
+            let value = http::HeaderValue::from_str(&format!("Bearer {token}")).map_err(|_| {
+                crate::runtime::executor_utils::unauthenticated_status(
+                    "cdc_bearer_evidence_invalid",
+                    "CDC bearer revalidation evidence is invalid; authenticate again",
+                )
+            })?;
+            headers.insert(http::header::AUTHORIZATION, value);
+        }
+        if let Some(key) = self.api_key.as_ref() {
+            let value = http::HeaderValue::from_str(key).map_err(|_| {
+                crate::runtime::executor_utils::unauthenticated_status(
+                    "cdc_api_key_evidence_invalid",
+                    "CDC API-key revalidation evidence is invalid; authenticate again",
+                )
+            })?;
+            headers.insert("x-api-key", value);
+        }
+
+        let mut resolved = resolve_credentials(&headers, self.peer_cert_der.clone())
+            .await
+            .ok_or_else(|| {
+                crate::runtime::executor_utils::unauthenticated_status(
+                    "cdc_credential_evidence_missing",
+                    "CDC subscription has no revalidatable credential; authenticate again",
+                )
+            })?;
+
+        if resolved.certificate_resolution_unavailable {
+            return Err(crate::runtime::executor_utils::retryable_status(
+                "authn",
+                "cdc_certificate_revalidate",
+                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                "CDC certificate binding could not be revalidated because the credential store is unavailable",
+            ));
+        }
+        if resolved.certificate_resolution_failed
+            || (resolved.certificate_present && resolved.certificate_principal.is_none())
+        {
+            return Err(crate::runtime::executor_utils::unauthenticated_status(
+                "cdc_certificate_binding_revoked",
+                "CDC certificate binding is no longer valid; authenticate again",
+            ));
+        }
+
+        let principal = if self.bearer.is_some() {
+            match resolved.bearer.take() {
+                Some(Ok(principal)) => principal,
+                Some(Err(reason)) => {
+                    return Err(Self::bearer_resolution_status(
+                        "cdc_bearer_revalidate",
+                        reason,
+                    ));
+                }
+                None => {
+                    return Err(crate::runtime::executor_utils::unauthenticated_status(
+                        "cdc_bearer_revalidation_missing",
+                        "CDC bearer could not be revalidated; authenticate again",
+                    ));
+                }
+            }
+        } else if self.api_key.is_some() {
+            match resolved.api_key.take() {
+                Some(Ok(Some(principal))) => principal,
+                Some(Ok(None)) => {
+                    return Err(crate::runtime::executor_utils::unauthenticated_status(
+                        "cdc_api_key_revoked",
+                        "CDC API key is revoked, expired, or no longer granted; authenticate again",
+                    ));
+                }
+                Some(Err(_reason)) => {
+                    return Err(Self::api_key_resolution_status());
+                }
+                None => {
+                    return Err(crate::runtime::executor_utils::unauthenticated_status(
+                        "cdc_api_key_revalidation_missing",
+                        "CDC API key could not be revalidated; authenticate again",
+                    ));
+                }
+            }
+        } else {
+            resolved.certificate_principal.clone().ok_or_else(|| {
+                crate::runtime::executor_utils::unauthenticated_status(
+                    "cdc_certificate_revalidation_missing",
+                    "CDC client certificate could not be revalidated; authenticate again",
+                )
+            })?
+        };
+
+        if let Some(binding) = resolved.certificate_principal.as_ref()
+            && (self.bearer.is_some() || self.api_key.is_some())
+        {
+            crate::runtime::security::enforce_certificate_credential_composition(
+                binding,
+                &principal.service_identity,
+                &principal.tenant_id,
+                &principal.project_id,
+            )?;
+        }
+
+        let service_identity = Self::effective_service_identity(&principal);
+        let lineage_matches = principal.credential_type == expected.credential_type
+            && principal.credential_id == expected.credential_id
+            && principal.subject == expected.user_id
+            && principal.tenant_id == expected.tenant_id
+            && principal.project_id == expected.project_id
+            && principal.auth_method == expected.auth_method
+            && service_identity == expected.service_identity;
+        if !lineage_matches {
+            return Err(crate::runtime::executor_utils::unauthenticated_status(
+                "cdc_credential_lineage_changed",
+                "CDC credential lineage changed during revalidation; authenticate again",
+            ));
+        }
+        // `CdcEngine::stream_cdc` captures the subscriber's scope-derived
+        // privilege class for its inner tenant/project topic filter. Continuing
+        // after any scope-set change would let that captured classification
+        // drift from the refreshed outer Casbin decision. Close the stream and
+        // require a fresh admission so both layers derive from one scope set.
+        if !Self::same_scope_set(&principal.scopes, &expected.scopes) {
+            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                tonic::Code::PermissionDenied,
+                "cdc_credential_revalidate",
+                "cdc_credential_scopes_changed",
+                "CDC credential scopes changed; reconnect to establish a new authorization context",
+            ));
+        }
+
+        let mut refreshed = expected.clone();
+        refreshed.scopes = principal.scopes;
+        refreshed.expires_at_unix = principal.expires_at_unix;
+        refreshed.rate_limit_per_minute = principal.rate_limit_per_minute;
+        Ok(refreshed)
+    }
 }
 
 /// Tower layer running the async credential resolution before dispatch.
@@ -479,5 +732,37 @@ where
             }
             inner.call(req).await
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CredentialRevalidator;
+
+    #[test]
+    fn scope_set_comparison_is_order_insensitive_but_detects_authority_change() {
+        let original = vec!["udb:cdc:read".to_string(), "UDB:READ".to_string()];
+        let reordered = vec!["udb:read".to_string(), "udb:cdc:read".to_string()];
+        let narrowed = vec!["udb:cdc:read".to_string()];
+
+        assert!(CredentialRevalidator::same_scope_set(&original, &reordered));
+        assert!(!CredentialRevalidator::same_scope_set(&original, &narrowed));
+    }
+
+    #[test]
+    fn credential_revalidator_debug_never_exposes_secret_evidence() {
+        let revalidator = CredentialRevalidator {
+            bearer: Some("secret-bearer-token".to_string()),
+            api_key: Some("secret-api-key".to_string()),
+            peer_cert_der: Some(vec![0xde, 0xad, 0xbe, 0xef]),
+        };
+
+        let debug = format!("{revalidator:?}");
+        assert!(debug.contains("bearer: true"));
+        assert!(debug.contains("api_key: true"));
+        assert!(debug.contains("peer_cert_der: true"));
+        assert!(!debug.contains("secret-bearer-token"));
+        assert!(!debug.contains("secret-api-key"));
+        assert!(!debug.contains("deadbeef"));
     }
 }

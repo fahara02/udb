@@ -108,6 +108,7 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     fn set_cdc_lag_seconds(&self, seconds: f64);
     fn set_cdc_outbox_depth(&self, depth: i64);
     fn set_cdc_dlq_depth(&self, depth: i64);
+    fn set_cdc_topic_policy_state(&self, _generation: u64, _age_seconds: f64, _available: bool) {}
     fn observe_cdc_publish_duration_seconds(&self, seconds: f64);
     fn inc_cdc_dlq_replayed_total(&self);
     fn inc_cdc_duplicate_skipped_total(&self);
@@ -445,6 +446,9 @@ pub struct PrometheusMetrics {
     cdc_lag: prometheus::Gauge,
     cdc_outbox_depth: prometheus::IntGauge,
     cdc_dlq_depth: prometheus::IntGauge,
+    cdc_topic_policy_generation: prometheus::IntGauge,
+    cdc_topic_policy_age: prometheus::Gauge,
+    cdc_topic_policy_available: prometheus::IntGauge,
     cdc_publish_latency: prometheus::Histogram,
     cdc_dlq_replayed: prometheus::IntCounter,
     cdc_duplicate_skipped: prometheus::IntCounter,
@@ -608,6 +612,18 @@ impl PrometheusMetrics {
             prometheus::IntGauge::new("udb_cdc_outbox_depth", "CDC outbox depth")?;
         let cdc_dlq_depth =
             prometheus::IntGauge::new("udb_cdc_dlq_depth", "Current number of open DLQ events")?;
+        let cdc_topic_policy_generation = prometheus::IntGauge::new(
+            "udb_cdc_topic_policy_generation",
+            "Current in-process CDC topic-policy generation",
+        )?;
+        let cdc_topic_policy_age = prometheus::Gauge::new(
+            "udb_cdc_topic_policy_age_seconds",
+            "Age of the last successfully loaded CDC topic-policy snapshot",
+        )?;
+        let cdc_topic_policy_available = prometheus::IntGauge::new(
+            "udb_cdc_topic_policy_available",
+            "Whether the CDC topic-policy snapshot is currently available (1) or fail-closed (0)",
+        )?;
         let cdc_publish_latency = prometheus::Histogram::with_opts(
             prometheus::HistogramOpts::new(
                 "udb_cdc_publish_latency_seconds",
@@ -976,6 +992,9 @@ impl PrometheusMetrics {
             Box::new(cdc_lag.clone()),
             Box::new(cdc_outbox_depth.clone()),
             Box::new(cdc_dlq_depth.clone()),
+            Box::new(cdc_topic_policy_generation.clone()),
+            Box::new(cdc_topic_policy_age.clone()),
+            Box::new(cdc_topic_policy_available.clone()),
             Box::new(cdc_publish_latency.clone()),
             Box::new(cdc_dlq_replayed.clone()),
             Box::new(cdc_duplicate_skipped.clone()),
@@ -1057,6 +1076,9 @@ impl PrometheusMetrics {
             cdc_lag,
             cdc_outbox_depth,
             cdc_dlq_depth,
+            cdc_topic_policy_generation,
+            cdc_topic_policy_age,
+            cdc_topic_policy_available,
             cdc_publish_latency,
             cdc_dlq_replayed,
             cdc_duplicate_skipped,
@@ -1499,6 +1521,12 @@ impl MetricsRecorder for PrometheusMetrics {
     }
     fn set_cdc_dlq_depth(&self, depth: i64) {
         self.cdc_dlq_depth.set(depth);
+    }
+    fn set_cdc_topic_policy_state(&self, generation: u64, age_seconds: f64, available: bool) {
+        self.cdc_topic_policy_generation
+            .set(generation.min(i64::MAX as u64) as i64);
+        self.cdc_topic_policy_age.set(age_seconds.max(0.0));
+        self.cdc_topic_policy_available.set(i64::from(available));
     }
     fn observe_cdc_publish_duration_seconds(&self, seconds: f64) {
         self.cdc_publish_latency.observe(seconds);

@@ -28,6 +28,19 @@ fn topic_pattern_may_match_tenant_scoped(pattern: &str) -> bool {
     pattern == "*" || pattern.starts_with("udb.") || pattern.starts_with("udb*")
 }
 
+fn topic_patterns_may_overlap(request_pattern: &str, policy: &TopicPolicy) -> bool {
+    let request_has_wildcard = request_pattern.contains('*') || request_pattern.contains('?');
+    let policy_has_wildcard = policy.topic.contains('*') || policy.topic.contains('?');
+    match (request_has_wildcard, policy_has_wildcard) {
+        (false, _) => policy.matches_topic(request_pattern),
+        (_, false) => WildMatch::new(request_pattern).matches(policy.topic.trim()),
+        // Proving two wildcard languages disjoint is not supported by WildMatch.
+        // Treat them as overlapping so admission remains conservative; per-event
+        // matching below still uses the exact canonical policy predicate.
+        (true, true) => true,
+    }
+}
+
 fn scope_text(value: Option<String>) -> String {
     value.unwrap_or_default().trim().to_string()
 }
@@ -42,6 +55,129 @@ fn cdc_stream_policy_status(
         policy_decision_id,
         message,
     )
+}
+
+fn cdc_stream_policy_unavailable_status() -> tonic::Status {
+    crate::runtime::executor_utils::retryable_status(
+        "cdc",
+        "topic_policy_snapshot",
+        crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+        "CDC topic policy snapshot is temporarily unavailable",
+    )
+}
+
+fn ensure_cdc_stream_policy_current(
+    snapshot: &TopicPolicySnapshot,
+    topic_pattern: &str,
+    tenant_scope: &str,
+    project_scope: &str,
+    privileged: bool,
+) -> Result<(), tonic::Status> {
+    if !snapshot.available {
+        return Err(cdc_stream_policy_unavailable_status());
+    }
+    if !snapshot.configured() {
+        return Ok(());
+    }
+    let matching = snapshot
+        .policies
+        .iter()
+        .filter(|policy| policy.enabled && topic_patterns_may_overlap(topic_pattern, policy))
+        .collect::<Vec<_>>();
+    if matching.is_empty() {
+        return Err(cdc_stream_policy_status(
+            "topic_policy_denied",
+            "topic pattern is not allowed by the current CDC topic policy",
+        ));
+    }
+    if !privileged && tenant_scope.is_empty() {
+        return Err(cdc_stream_policy_status(
+            "tenant_scope_required",
+            "tenant_id is required to stream policy-owned CDC topics",
+        ));
+    }
+    if !privileged
+        && !matching.iter().any(|policy| {
+            policy.allows_tenant(tenant_scope) && policy.allows_project(project_scope)
+        })
+    {
+        return Err(cdc_stream_policy_status(
+            "topic_policy_scope_denied",
+            "topic pattern is not allowed for the current tenant/project scope",
+        ));
+    }
+    Ok(())
+}
+
+fn cdc_stream_journal_unavailable(operation: &'static str, err: &sqlx::Error) -> tonic::Status {
+    warn!(error = %err, operation, "[cdc] durable subscriber journal unavailable");
+    crate::runtime::executor_utils::retryable_status(
+        "cdc",
+        operation,
+        crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+        "CDC durable journal is temporarily unavailable",
+    )
+}
+
+fn cdc_stream_journal_decode_status(field: &'static str, err: &sqlx::Error) -> tonic::Status {
+    warn!(error = %err, field, "[cdc] durable subscriber journal row is invalid");
+    crate::runtime::executor_utils::internal_status(
+        "cdc",
+        "stream_journal_decode",
+        format!("CDC durable journal row has an invalid {field} field"),
+    )
+}
+
+async fn resolve_cdc_stream_cursor(
+    pool: &PgPool,
+    journal_relation: &str,
+    since_event_id: Option<&str>,
+) -> Result<(DateTime<Utc>, String), tonic::Status> {
+    if let Some(raw_id) = since_event_id {
+        let since_uuid = Uuid::parse_str(raw_id.trim()).map_err(|_| {
+            crate::runtime::executor_utils::invalid_argument_fields(
+                "since_event_id must be a valid UUID",
+                [("since_event_id", "must be a valid UUID")],
+            )
+        })?;
+        let anchor_sql = format!("SELECT published_at FROM {journal_relation} WHERE event_id = $1");
+        let anchor = sqlx::query_as::<_, (DateTime<Utc>,)>(&anchor_sql)
+            .bind(since_uuid)
+            .fetch_optional(pool)
+            .await
+            .map_err(|err| cdc_stream_journal_unavailable("resolve_resume_cursor", &err))?;
+        return anchor
+            .map(|(published_at,)| (published_at, since_uuid.to_string()))
+            .ok_or_else(|| {
+                crate::runtime::executor_utils::schema_status(
+                    tonic::Code::NotFound,
+                    "cdc",
+                    "resolve_resume_cursor",
+                    "cdc_resume_cursor_not_found",
+                    "CDC resume cursor is unknown or no longer retained",
+                )
+            });
+    }
+
+    // Fresh subscription: anchor at the journal's current newest row using DB
+    // ordering, not the application clock. An empty journal legitimately starts
+    // at epoch; a dependency error does not masquerade as an empty journal.
+    let max_sql = format!(
+        "SELECT published_at, event_id FROM {journal_relation} \
+         ORDER BY published_at DESC, event_id DESC LIMIT 1"
+    );
+    let newest = sqlx::query_as::<_, (DateTime<Utc>, Uuid)>(&max_sql)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| cdc_stream_journal_unavailable("resolve_fresh_cursor", &err))?;
+    Ok(newest
+        .map(|(published_at, event_id)| (published_at, event_id.to_string()))
+        .unwrap_or_else(|| {
+            (
+                DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_else(Utc::now),
+                String::new(),
+            )
+        }))
 }
 
 /// Per-process CDC leader-lease identity (F-4). `HOSTNAME` alone is not a fencing
@@ -343,11 +479,11 @@ async fn cdc_journal_poll(
     tenant_scope: &str,
     project_scope: &str,
     privileged: bool,
-    policy_topics: &[String],
+    policy_snapshot: &TopicPolicySnapshot,
     seen: &mut std::collections::HashSet<String>,
     order: &mut std::collections::VecDeque<String>,
     window: usize,
-) -> Vec<CdcEnvelope> {
+) -> Result<Vec<CdcEnvelope>, tonic::Status> {
     let mut out = Vec::new();
     // Bind owned/copied cursor values so the live stream can mutate the cursor.
     let mut rows = sqlx::query(sql)
@@ -355,49 +491,50 @@ async fn cdc_journal_poll(
         .bind(cursor_id.clone())
         .fetch(pool);
     while let Some(row) = tokio_stream::StreamExt::next(&mut rows).await {
-        let record = match row {
-            Ok(record) => record,
-            Err(err) => {
-                warn!("[cdc] journal tail row decode failed: {err}");
-                continue;
-            }
-        };
-        let event_id: Uuid = match record.try_get("event_id") {
-            Ok(value) => value,
-            Err(_) => continue,
-        };
-        let published_at: DateTime<Utc> = match record.try_get("published_at") {
-            Ok(value) => value,
-            Err(_) => continue,
-        };
-        // Advance the cursor past EVERY scanned row so the next poll never rescans it.
+        let record = row.map_err(|err| cdc_stream_journal_unavailable("journal_poll", &err))?;
+        // Decode the ENTIRE durable row before advancing. A corrupt/shape-drifted
+        // row must terminate the stream so reconnect can retry after repair; it
+        // must never be skipped while the cursor permanently moves beyond it.
+        let event_id: Uuid = record
+            .try_get("event_id")
+            .map_err(|err| cdc_stream_journal_decode_status("event_id", &err))?;
+        let published_at: DateTime<Utc> = record
+            .try_get("published_at")
+            .map_err(|err| cdc_stream_journal_decode_status("published_at", &err))?;
+        let topic: String = record
+            .try_get("topic")
+            .map_err(|err| cdc_stream_journal_decode_status("topic", &err))?;
+        let payload: serde_json::Value = record
+            .try_get("payload")
+            .map_err(|err| cdc_stream_journal_decode_status("payload", &err))?;
+        let partition_key: String = record
+            .try_get("partition_key")
+            .map_err(|err| cdc_stream_journal_decode_status("partition_key", &err))?;
+
+        // Advance past every fully-decoded row, matched or not, so a scoped
+        // subscription does not rescan foreign/unmatched history forever.
         *cursor_ts = published_at;
         *cursor_id = event_id.to_string();
-        let topic: String = match record.try_get("topic") {
-            Ok(value) => value,
-            Err(_) => continue,
-        };
         if !matcher.matches(&topic) {
             continue;
         }
-        let payload: serde_json::Value = match record.try_get("payload") {
-            Ok(value) => value,
-            Err(_) => continue,
-        };
+        if policy_snapshot.configured()
+            && policy_snapshot
+                .active_policy_for(&topic, tenant_scope, project_scope, privileged)
+                .is_none()
+        {
+            continue;
+        }
         if !payload_value_matches_stream_scope(
             &topic,
             &payload,
             tenant_scope,
             project_scope,
             privileged,
-            policy_topics.iter().any(|policy| policy == &topic),
+            policy_snapshot.active_topic_is_policy_owned(&topic),
         ) {
             continue;
         }
-        let partition_key: String = match record.try_get("partition_key") {
-            Ok(value) => value,
-            Err(_) => continue,
-        };
         let id = event_id.to_string();
         if !cdc_dedup_admit(seen, order, &id, window) {
             continue;
@@ -410,7 +547,7 @@ async fn cdc_journal_poll(
             published_at,
         });
     }
-    out
+    Ok(out)
 }
 
 /// #26: retention sweep over the CDC journal. Bind `$1` = TTL in seconds
@@ -443,6 +580,72 @@ mod tests {
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
     use serde_json::json;
+
+    fn stream_policy(pattern: &str, tenant: &str, project: &str, enabled: bool) -> TopicPolicy {
+        TopicPolicy {
+            policy_id: 1,
+            topic: pattern.to_string(),
+            tenant_id: tenant.to_string(),
+            owning_project: project.to_string(),
+            owning_service: "billing".to_string(),
+            schema_uri: String::new(),
+            redaction_mode: "mask".to_string(),
+            redaction_version: 1,
+            retention_class: "standard".to_string(),
+            max_retry_attempts: 3,
+            retry_delay_secs: vec![],
+            dlq_enabled: true,
+            enabled,
+        }
+    }
+
+    #[test]
+    fn stream_policy_reload_failure_is_not_an_empty_allowlist() {
+        let status = ensure_cdc_stream_policy_current(
+            &TopicPolicySnapshot::unavailable(),
+            "billing.*",
+            "tenant-a",
+            "project-a",
+            false,
+        )
+        .expect_err("unavailable snapshot must fail closed");
+        assert_eq!(status.code(), tonic::Code::Unavailable);
+    }
+
+    #[test]
+    fn stream_policy_disable_and_scope_change_revoke_admission() {
+        let disabled = TopicPolicySnapshot {
+            policies: vec![stream_policy("billing.*", "tenant-a", "project-a", false)],
+            generation: 2,
+            loaded_at_unix: 1,
+            available: true,
+        };
+        let status = ensure_cdc_stream_policy_current(
+            &disabled,
+            "billing.invoice.v1",
+            "tenant-a",
+            "project-a",
+            false,
+        )
+        .expect_err("disabled policy must revoke an exact stream");
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+
+        let moved = TopicPolicySnapshot {
+            policies: vec![stream_policy("billing.*", "tenant-b", "project-b", true)],
+            generation: 3,
+            loaded_at_unix: 2,
+            available: true,
+        };
+        let status = ensure_cdc_stream_policy_current(
+            &moved,
+            "billing.invoice.v1",
+            "tenant-a",
+            "project-a",
+            false,
+        )
+        .expect_err("ownership change must revoke the former scope");
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+    }
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status
@@ -488,6 +691,21 @@ mod tests {
             &missing_tenant,
             "tenant_scope_required",
             "tenant_id is required to stream tenant-scoped CDC topics",
+        );
+    }
+
+    #[test]
+    fn cdc_stream_read_scope_gate_is_shared_by_open_and_revalidation() {
+        for scope in ["udb:cdc:subscribe", "udb:cdc:read", "udb:*", "*"] {
+            CdcEngine::ensure_stream_read_scope(&[scope.to_string()])
+                .expect("canonical CDC scope admits subscription");
+        }
+        let denied = CdcEngine::ensure_stream_read_scope(&["udb:read".to_string()])
+            .expect_err("unrelated scope must not retain a CDC subscription");
+        assert_cdc_stream_policy_detail(
+            &denied,
+            "cdc_read_scope_required",
+            "Missing udb:cdc:read scope",
         );
     }
 
@@ -890,7 +1108,9 @@ impl CdcEngine {
             dsn,
             metrics,
             config,
-            topic_policies: Vec::new(),
+            topic_policies: std::sync::Arc::new(arc_swap::ArcSwap::from_pointee(
+                TopicPolicySnapshot::unavailable(),
+            )),
         })
     }
 
@@ -912,7 +1132,9 @@ impl CdcEngine {
             dsn,
             metrics,
             config,
-            topic_policies: Vec::new(),
+            topic_policies: std::sync::Arc::new(arc_swap::ArcSwap::from_pointee(
+                TopicPolicySnapshot::unavailable(),
+            )),
         })
     }
 
@@ -1307,6 +1529,27 @@ impl CdcEngine {
         }
     }
 
+    /// Canonical baseline scope gate shared by initial CDC admission and the
+    /// periodic served-stream revalidator. Keeping this beside `stream_cdc`
+    /// prevents a narrowed credential from retaining a subscription merely
+    /// because the current Casbin allow rule has no `required_scopes` clause.
+    pub(crate) fn ensure_stream_read_scope(scopes: &[String]) -> Result<(), tonic::Status> {
+        let allowed = scopes.iter().any(|scope| {
+            scope == "udb:cdc:subscribe"
+                || scope == "udb:cdc:read"
+                || scope == "udb:*"
+                || scope == "*"
+        });
+        if allowed {
+            Ok(())
+        } else {
+            Err(cdc_stream_policy_status(
+                "cdc_read_scope_required",
+                "Missing udb:cdc:read scope",
+            ))
+        }
+    }
+
     pub async fn stream_cdc(
         &self,
         scopes: Vec<String>,
@@ -1324,35 +1567,22 @@ impl CdcEngine {
         >,
         tonic::Status,
     > {
-        let allowed = scopes.iter().any(|scope| {
-            scope == "udb:cdc:subscribe"
-                || scope == "udb:cdc:read"
-                || scope == "udb:*"
-                || scope == "*"
-        });
-        if !allowed {
-            return Err(cdc_stream_policy_status(
-                "cdc_read_scope_required",
-                "Missing udb:cdc:read scope",
-            ));
-        }
+        Self::ensure_stream_read_scope(&scopes)?;
         let tenant_scope = scope_text(tenant_id);
         let project_scope = scope_text(project_id);
         let privileged = cdc_stream_privileged(&scopes);
         let matcher = WildMatch::new(&topic_pattern);
-        // #8: topics owned by an active topic policy are tenant-scoped even
-        // without the `udb.` prefix — consult the policies at subscription
-        // time, both for the tenant-required guard and per-event filtering.
-        let policy_topics: Vec<String> = self
-            .topic_policies
-            .iter()
-            .filter(|policy| policy.enabled)
-            .map(|policy| policy.topic.clone())
-            .collect();
+        let initial_policy_snapshot = self.topic_policies.load_full();
+        ensure_cdc_stream_policy_current(
+            &initial_policy_snapshot,
+            &topic_pattern,
+            &tenant_scope,
+            &project_scope,
+            privileged,
+        )?;
         if !privileged
             && tenant_scope.is_empty()
-            && (topic_pattern_may_match_tenant_scoped(&topic_pattern)
-                || policy_topics.iter().any(|topic| matcher.matches(topic)))
+            && topic_pattern_may_match_tenant_scoped(&topic_pattern)
         {
             return Err(cdc_stream_policy_status(
                 "tenant_scope_required",
@@ -1364,9 +1594,15 @@ impl CdcEngine {
 
         let rx = self.broadcast_tx.subscribe();
         let pool = self.pool.clone();
+        let topic_policies = self.topic_policies.clone();
         // #19: replay reads the durable cdc_journal — outbox rows are
         // deleted on ack, so the outbox cannot serve a reconnect gap.
         let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
+        // Resolve and validate before returning the lazy stream. A malformed,
+        // unknown, pruned, or temporarily unreadable cursor must fail this RPC;
+        // none of those states may silently become a full-history epoch replay.
+        let initial_cursor =
+            resolve_cdc_stream_cursor(&pool, &journal_relation, since_event_id.as_deref()).await?;
 
         Ok(Box::pin(try_stream! {
             // Hybrid delivery (bug_report.md §R "kafka is not used"): an in-process
@@ -1383,64 +1619,24 @@ impl CdcEngine {
             let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
             let mut order: std::collections::VecDeque<String> = std::collections::VecDeque::new();
 
-            // Journal cursor (published_at, event_id). With `since_event_id` we
-            // anchor at that event (or the retained-window start if it was pruned)
-            // to replay history; a fresh subscription starts at "now" so only future
-            // events stream and the subscribe→publish window cannot drop an event.
-            let (mut cursor_ts, mut cursor_id): (DateTime<Utc>, String) = match since_event_id
-                .as_deref()
-                .and_then(|id| Uuid::parse_str(id).ok())
-            {
-                Some(since_uuid) => {
-                    let anchor_sql = format!(
-                        "SELECT published_at FROM {journal_relation} WHERE event_id = $1"
-                    );
-                    match sqlx::query_as::<_, (DateTime<Utc>,)>(&anchor_sql)
-                        .bind(since_uuid)
-                        .fetch_optional(&pool)
-                        .await
-                    {
-                        Ok(Some((ts,))) => (ts, since_uuid.to_string()),
-                        Ok(None) | Err(_) => (
-                            DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_else(Utc::now),
-                            String::new(),
-                        ),
-                    }
-                }
-                // Fresh subscription: anchor at the journal's CURRENT newest row
-                // (DB clock + DB ordering), NOT the application `Utc::now()` — an
-                // app-vs-DB clock skew could otherwise place the cursor ahead of a
-                // just-committed event's `published_at` and skip it. Every event
-                // journaled after subscribe is strictly greater and is picked up.
-                None => {
-                    let max_sql = format!(
-                        "SELECT published_at, event_id FROM {journal_relation} \
-                         ORDER BY published_at DESC, event_id DESC LIMIT 1"
-                    );
-                    match sqlx::query_as::<_, (DateTime<Utc>, Uuid)>(&max_sql)
-                        .fetch_optional(&pool)
-                        .await
-                    {
-                        Ok(Some((ts, id))) => (ts, id.to_string()),
-                        // Empty journal (or read error): start from the epoch so the
-                        // first future event is admitted; the broadcast fast-path
-                        // covers the interim with no app-clock dependency.
-                        Ok(None) | Err(_) => (
-                            DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_else(Utc::now),
-                            String::new(),
-                        ),
-                    }
-                }
-            };
+            let (mut cursor_ts, mut cursor_id) = initial_cursor;
 
             // 1. Replay: drain the journal from the cursor (bounded per batch).
             loop {
+                let policy_snapshot = topic_policies.load_full();
+                ensure_cdc_stream_policy_current(
+                    &policy_snapshot,
+                    &topic_pattern,
+                    &tenant_scope,
+                    &project_scope,
+                    privileged,
+                )?;
                 let batch = cdc_journal_poll(
                     &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
-                    &tenant_scope, &project_scope, privileged, &policy_topics,
+                    &tenant_scope, &project_scope, privileged, &policy_snapshot,
                     &mut seen, &mut order, DEDUP_WINDOW,
                 )
-                .await;
+                .await?;
                 let caught_up = batch.len() < TAIL_BATCH as usize;
                 for envelope in batch {
                     yield envelope;
@@ -1451,8 +1647,20 @@ impl CdcEngine {
             }
 
             // 2. Live: broadcast fast-path + journal backstop, de-duped by event_id.
+            enum StreamWake {
+                Fast(Result<CdcEnvelope, broadcast::error::RecvError>),
+                Journal(Result<Vec<CdcEnvelope>, tonic::Status>),
+            }
             let mut rx = Some(rx);
             loop {
+                let policy_snapshot = topic_policies.load_full();
+                ensure_cdc_stream_policy_current(
+                    &policy_snapshot,
+                    &topic_pattern,
+                    &tenant_scope,
+                    &project_scope,
+                    privileged,
+                )?;
                 let fast_path = async {
                     match rx.as_mut() {
                         Some(receiver) => receiver.recv().await,
@@ -1464,17 +1672,38 @@ impl CdcEngine {
                         .await,
                     }
                 };
-                tokio::select! {
-                    received = fast_path => match received {
+                let wake = tokio::select! {
+                    received = fast_path => StreamWake::Fast(received),
+                    _ = tokio::time::sleep(TAIL_POLL) => StreamWake::Journal(
+                        cdc_journal_poll(
+                            &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
+                            &tenant_scope, &project_scope, privileged, &policy_snapshot,
+                            &mut seen, &mut order, DEDUP_WINDOW,
+                        )
+                        .await
+                    ),
+                };
+                match wake {
+                    StreamWake::Fast(received) => match received {
                         Ok(envelope) => {
+                            let policy_allowed = !policy_snapshot.configured()
+                                || policy_snapshot
+                                    .active_policy_for(
+                                        &envelope.topic,
+                                        &tenant_scope,
+                                        &project_scope,
+                                        privileged,
+                                    )
+                                    .is_some();
                             if matcher.matches(&envelope.topic)
+                                && policy_allowed
                                 && payload_string_matches_stream_scope(
                                     &envelope.topic,
                                     &envelope.payload_json,
                                     &tenant_scope,
                                     &project_scope,
                                     privileged,
-                                    policy_topics.iter().any(|policy| policy == &envelope.topic),
+                                    policy_snapshot.active_topic_is_policy_owned(&envelope.topic),
                                 )
                                 && cdc_dedup_admit(&mut seen, &mut order, &envelope.event_id, DEDUP_WINDOW)
                             {
@@ -1491,13 +1720,8 @@ impl CdcEngine {
                             rx = None;
                         }
                     },
-                    _ = tokio::time::sleep(TAIL_POLL) => {
-                        let batch = cdc_journal_poll(
-                            &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
-                            &tenant_scope, &project_scope, privileged, &policy_topics,
-                            &mut seen, &mut order, DEDUP_WINDOW,
-                        )
-                        .await;
+                    StreamWake::Journal(batch) => {
+                        let batch = batch?;
                         for envelope in batch {
                             yield envelope;
                         }
@@ -2064,6 +2288,18 @@ impl CdcEngine {
         lsn: i64,
         mut redis_conn: Option<&mut redis::aio::MultiplexedConnection>,
     ) -> Option<PreparedOutbox> {
+        let topic_policy_snapshot = self.topic_policies.load_full();
+        if !topic_policy_snapshot.available {
+            warn!(
+                event_id = %event_id,
+                generation = topic_policy_snapshot.generation,
+                "[cdc] topic policy snapshot unavailable; retaining outbox row for retry"
+            );
+            self.metrics
+                .inc_cdc_errors_total("topic_policy_unavailable");
+            return None;
+        }
+
         // 1. Idempotency Check
         let idempotency_key = format!("{}:{}", self.config.idempotency_key_prefix, event_id);
 
@@ -2173,77 +2409,18 @@ impl CdcEngine {
                 }
 
                 // 2a. Phase 7: Topic policy enforcement — reject topics not in the allowlist.
-                if !self.topic_policies.is_empty() {
+                if topic_policy_snapshot.configured() {
                     // Resolve the policy once. Missing → reject (allowlist).
                     // Matched → apply its policy-specific behavior: the policy's
                     // declared `schema_uri` is authoritative over the event's own,
                     // so schema validation below enforces the policy contract (#131).
-                    let policy_schema = match self.topic_policy_for(&topic) {
-                        Some(policy) => {
-                            if policy.tenant_id.trim() != "*"
-                                && policy.tenant_id.trim() != env.tenant_id.trim()
-                            {
-                                let error_message = format!(
-                                    "topic '{}' policy requires tenant '{}' but event has '{}'",
-                                    topic,
-                                    policy.tenant_id.trim(),
-                                    env.tenant_id.trim()
-                                );
-                                error!(
-                                    "[cdc] topic policy rejected event {}: {}",
-                                    event_id, error_message
-                                );
-                                self.metrics.inc_cdc_errors_total("topic_policy_rejected");
-                                self.metrics.inc_cdc_errors_total("dlq_routed");
-                                if self
-                                    .route_to_dlq(
-                                        event_id,
-                                        payload_json,
-                                        "TopicPolicyTenantRejected",
-                                        &error_message,
-                                    )
-                                    .await
-                                {
-                                    self.ack_event(event_id, lsn).await;
-                                } else if let Some(conn) = redis_conn.as_deref_mut() {
-                                    let _: () =
-                                        conn.del(&idempotency_key).await.unwrap_or_default();
-                                }
-                                return None;
-                            }
-                            if !policy.owning_project.trim().is_empty()
-                                && policy.owning_project.trim() != env.project_id.trim()
-                            {
-                                let error_message = format!(
-                                    "topic '{}' policy requires project '{}' but event has '{}'",
-                                    topic,
-                                    policy.owning_project.trim(),
-                                    env.project_id.trim()
-                                );
-                                error!(
-                                    "[cdc] topic policy rejected event {}: {}",
-                                    event_id, error_message
-                                );
-                                self.metrics.inc_cdc_errors_total("topic_policy_rejected");
-                                self.metrics.inc_cdc_errors_total("dlq_routed");
-                                if self
-                                    .route_to_dlq(
-                                        event_id,
-                                        payload_json,
-                                        "TopicPolicyProjectRejected",
-                                        &error_message,
-                                    )
-                                    .await
-                                {
-                                    self.ack_event(event_id, lsn).await;
-                                } else if let Some(conn) = redis_conn.as_deref_mut() {
-                                    let _: () =
-                                        conn.del(&idempotency_key).await.unwrap_or_default();
-                                }
-                                return None;
-                            }
-                            policy.schema_uri.trim().to_string()
-                        }
+                    let policy_schema = match topic_policy_snapshot.active_policy_for(
+                        &topic,
+                        &env.tenant_id,
+                        &env.project_id,
+                        false,
+                    ) {
+                        Some(policy) => policy.schema_uri.trim().to_string(),
                         None => {
                             let error_message = format!(
                                 "topic '{}' is not in the active topic policy allowlist",

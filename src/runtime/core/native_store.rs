@@ -172,7 +172,7 @@ impl DataBrokerRuntime {
     fn native_entity_dispatch_target(
         &self,
         service_id: &str,
-        project_id: &str,
+        context: &crate::RequestContext,
         write: bool,
     ) -> Result<
         (
@@ -181,9 +181,19 @@ impl DataBrokerRuntime {
         ),
         tonic::Status,
     > {
-        let backend = native_store_backend_for_service(service_id, project_id);
-        let selected_instance = self.choose_instance_name_for_project(backend, write, project_id);
-        let target = self.backend_executor_for_project(backend, selected_instance, project_id)?;
+        let backend = native_store_backend_for_service(service_id, &context.project_id);
+        // A service may resolve one physical target before beginning a compound
+        // raw-SQL + typed-native operation. Honour that internal pin so every
+        // step lands on the same database instance. Native service contexts do
+        // not copy the caller's x-udb-target-instance header, so this cannot be
+        // used to override the service-owned store binding from the wire.
+        let selected_instance = if context.target_instance.trim().is_empty() {
+            self.choose_instance_name_for_project(backend, write, &context.project_id)
+        } else {
+            Some(context.target_instance.trim())
+        };
+        let target =
+            self.backend_executor_for_project(backend, selected_instance, &context.project_id)?;
         let kind = crate::backend::BackendKind::from_token(&target.backend).ok_or_else(|| {
             native_store_capability_status(
                 target.backend.clone(),
@@ -304,6 +314,56 @@ impl DataBrokerRuntime {
         }
     }
 
+    /// Extract ONE scalar aggregate measure by its alias.
+    ///
+    /// An ungrouped aggregate always yields exactly one row, so a missing row
+    /// or a missing alias is a shape defect — not an empty measure. Defaulting
+    /// it to 0 makes a broken aggregate indistinguishable from a genuine zero,
+    /// which hides the failure from every caller (a quota check reads it as
+    /// "nothing used yet" and admits the write) and leaves the underlying
+    /// defect un-diagnosable from its symptom. Fail closed instead.
+    ///
+    /// SQL NULL is the one legitimate empty result: `SUM` over zero rows is
+    /// NULL, which genuinely means 0.
+    fn native_entity_scalar_i64(
+        rows: &[serde_json::Value],
+        alias: &str,
+    ) -> Result<i64, tonic::Status> {
+        let Some(row) = rows.first() else {
+            return Err(native_store_internal_status(
+                "native_entity_aggregate_shape",
+                format!(
+                    "ungrouped aggregate returned no row; expected exactly one carrying '{alias}'"
+                ),
+            ));
+        };
+        let Some(value) = row.get(alias) else {
+            return Err(native_store_internal_status(
+                "native_entity_aggregate_shape",
+                format!("aggregate row carries no '{alias}' measure"),
+            ));
+        };
+        match value {
+            serde_json::Value::Null => Ok(0),
+            serde_json::Value::Number(number) => number.as_i64().ok_or_else(|| {
+                native_store_internal_status(
+                    "native_entity_aggregate_shape",
+                    format!("aggregate '{alias}' is not representable as i64: {number}"),
+                )
+            }),
+            serde_json::Value::String(text) => text.trim().parse::<i64>().map_err(|err| {
+                native_store_internal_status(
+                    "native_entity_aggregate_shape",
+                    format!("aggregate '{alias}' is not a valid integer: {err}"),
+                )
+            }),
+            other => Err(native_store_internal_status(
+                "native_entity_aggregate_shape",
+                format!("aggregate '{alias}' has unexpected JSON type: {other}"),
+            )),
+        }
+    }
+
     fn native_entity_mutation_result(
         result_json: &str,
     ) -> Result<(u64, Vec<serde_json::Value>), tonic::Status> {
@@ -349,8 +409,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalRead,
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, false)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, false)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_read_dispatch(
             &kind,
@@ -382,8 +441,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalRead,
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, false)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, false)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref())
             .allowing_global_tenant(true);
         let compiled = crate::runtime::service::handlers_data::compile_logical_read_dispatch(
@@ -413,8 +471,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalAggregate,
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, false)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, false)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_aggregate_dispatch(
             &kind,
@@ -465,8 +522,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalWrite,
     ) -> Result<String, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, true)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_write_dispatch(
             &kind,
@@ -519,8 +575,7 @@ impl DataBrokerRuntime {
         op: LogicalUpdate,
     ) -> Result<(u64, Vec<serde_json::Value>), tonic::Status> {
         let require_affected = op.require_affected;
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, true)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_update_dispatch(
             &kind,
@@ -558,8 +613,7 @@ impl DataBrokerRuntime {
             return Err(empty_native_entity_transaction_status());
         }
 
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, true)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
         if kind != crate::backend::BackendKind::Postgres || target.backend != "postgres" {
             return Err(native_store_capability_status(
                 target.backend.clone(),
@@ -727,15 +781,7 @@ impl DataBrokerRuntime {
         let rows = self
             .native_entity_aggregate_for_service(service_id, context, op)
             .await?;
-        Ok(rows
-            .first()
-            .and_then(|row| row.get("total_count"))
-            .and_then(|value| match value {
-                serde_json::Value::Number(number) => number.as_i64(),
-                serde_json::Value::String(value) => value.parse::<i64>().ok(),
-                _ => None,
-            })
-            .unwrap_or(0))
+        Self::native_entity_scalar_i64(&rows, "total_count")
     }
 
     /// Sum an integer `field` across native entities matching `filter` (per-tenant
@@ -765,15 +811,7 @@ impl DataBrokerRuntime {
         let rows = self
             .native_entity_aggregate_for_service(service_id, context, op)
             .await?;
-        Ok(rows
-            .first()
-            .and_then(|row| row.get("total_sum"))
-            .and_then(|value| match value {
-                serde_json::Value::Number(number) => number.as_i64(),
-                serde_json::Value::String(value) => value.parse::<i64>().ok(),
-                _ => None,
-            })
-            .unwrap_or(0))
+        Self::native_entity_scalar_i64(&rows, "total_sum")
     }
 
     /// Acquire a portable per-tenant advisory lease on the default canonical store —
@@ -827,8 +865,7 @@ impl DataBrokerRuntime {
         context: &crate::RequestContext,
         op: LogicalDelete,
     ) -> Result<String, tonic::Status> {
-        let (target, kind) =
-            self.native_entity_dispatch_target(service_id, &context.project_id, true)?;
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let compiled = crate::runtime::service::handlers_data::compile_logical_delete_dispatch(
             &kind,
@@ -871,6 +908,33 @@ impl DataBrokerRuntime {
     /// P0: Postgres-only — fails closed for any other backend rather than silently
     /// persisting to the wrong/absent one. Falls back to the default pool when no
     /// multi-instance routing applies, so single-primary deployments see no change.
+    pub(crate) fn native_store_postgres_binding_for_service(
+        &self,
+        service_id: &str,
+        write: bool,
+        context: &crate::RequestContext,
+    ) -> Result<(PgPool, Option<String>), tonic::Status> {
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, write)?;
+        if kind != crate::backend::BackendKind::Postgres || target.backend != "postgres" {
+            return Err(native_store_capability_status(
+                target.backend.clone(),
+                "pool_lookup",
+                "postgres_native_store",
+                format!(
+                    "native store backend '{}' does not support direct Postgres operations",
+                    target.backend
+                ),
+            ));
+        }
+        let pool = self
+            .pg_pool_for_instance(target.instance.as_deref())?
+            .clone();
+        Ok((pool, target.instance))
+    }
+
+    /// Compatibility helper for single-step Postgres-native operations. Compound
+    /// operations should call [`Self::native_store_postgres_binding_for_service`]
+    /// and pin the returned instance in their request context.
     pub(crate) fn native_store_pool_for_service(
         &self,
         service_id: &str,

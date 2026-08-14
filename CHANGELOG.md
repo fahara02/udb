@@ -5,6 +5,94 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.7] - 2026-08-14
+
+Patch release closing a production-reported migration defect and a cluster of
+defects found by the cross-subsystem audit it triggered. Two of them are
+isolation boundaries on the served write path, and one returns PII to callers
+that the `Select` verb masks it from, so `^0.5.6` consumers should upgrade. No
+wire-protocol change. Operators running non-relational stores should read the
+migration entry closely: an approved backend change that UDB cannot apply now
+refuses to start instead of recording itself as done.
+
+### Fixed
+- **An approved `RequiresReview` migration operation is executed.** The startup
+  gate accepted an approval plan, then `generate_delta_sql` filtered the very
+  set it had just authorized down to `SafeAuto`, discarding every reviewed
+  operation before rendering. A replaced foreign key therefore added its new
+  constraint, silently kept the old one, and saved the manifest as current — so
+  the next boot fast-started over the divergence and deletion stayed blocked by
+  a constraint the plan said was gone. The startup lifecycle now selects its
+  generator explicitly from the authorization decision, rendering review-required
+  work only once the exact canonical change set has passed the approval gate;
+  unattended paths still emit only `SafeAuto`, and `Blocked` work remains
+  unrenderable on every path.
+- **The migration plan shows the SQL that will run.** `udb plan` rendered its
+  artifacts with the unattended generator, so an operator approved a plan whose
+  SQL omitted the destructive DDL `serve` would then execute.
+- **New operator control: `UDB_ACK_MANUAL_BACKEND_RECONCILIATION`.** Set it to
+  `true` to assert that a backend change UDB cannot apply itself has been
+  reconciled by hand; startup then proceeds and records the new manifest, and
+  the assertion is reported as a startup warning rather than applied silently.
+  This is the recovery path for the refusal below, and it is required: the diff
+  is computed against the STORED manifest, which only advances after a
+  successful start, so reconciling the store by hand does NOT clear the refusal
+  on its own. It is deliberately independent of `allow_degraded_backend_startup`
+  — degraded backend health must never imply "the operator fixed the schema".
+- **A migration that cannot be applied refuses to start.** The approval gate
+  validates the canonical change set (relational **plus** Qdrant / MongoDB /
+  Neo4j / ClickHouse / S3), but the executor recomputed the relational half
+  alone and dropped the rest after they had been counted, approved and hashed.
+  Creates are covered by desired-state provisioning; the update and drop kinds
+  have no executor at all, and now fail startup with the operations named
+  instead of recording the manifest as applied over a store that never changed.
+- **The delta renderer no longer fails open.** `render_delta_operation` ended in
+  `_ => String::new()`, so any change kind without an arm produced empty SQL
+  with no error — the mechanism by which approved work could vanish. The match
+  is now exhaustive, making an unhandled kind a compile error.
+- **`BeginTx` deletes are tenant-scoped.** The transaction apply loop executes
+  planner SQL directly: it consults no bridged emitter and installs no request
+  GUC, and the planner only checked that the caller *mentioned* the tenant
+  column — the value came from the caller. A delete naming another tenant's id
+  deleted that tenant's rows and reported success. Delete and update plans now
+  carry a verified tenant **and** project predicate derived from the request
+  context, so a cross-tenant or cross-project filter matches zero rows.
+- **Soft-delete tables are tenant-scoped on `Delete`.** The bridged emitter
+  declines every soft-delete table by design, so those deletes always fell back
+  to the same unprotected planner SQL. Same fix, same seam.
+- **`Update` is project-scoped.** It had a verified tenant predicate but none
+  for project, so a caller in one project could update another's rows inside its
+  own tenant. `Update` has no bridged emitter, so this was its only boundary.
+- **`return_record: true` no longer returns unmasked PII.** Masking was a
+  parameter of the row serializer and four of its five callers passed an empty
+  set, so `Upsert`/`Update` returned `is_pii` columns in clear text to callers
+  whose `Select` masked them — reachable by anyone holding `udb:write` via a
+  no-op update. The mask is now derived from the table and the only remaining
+  choice is an explicit `ClientVisible` / `InternalUnmasked` intent, the latter
+  used solely by compare-and-swap preconditions.
+- **Native aggregates fail closed.** The count/sum helpers ended in
+  `.unwrap_or(0)`, making a missing row or absent alias indistinguishable from a
+  real zero — which is how a quota check reads "nothing used" and admits a write,
+  and why a typed-aggregate defect could not be diagnosed from its symptom. A
+  shape defect is now an error; SQL `NULL` remains a legitimate zero.
+  `GetThroughput` likewise surfaces a decode failure instead of reporting `0`.
+
+### Changed
+- **`native_service_context(.., "")` is banned.** The empty project argument fell
+  back to the `x-udb-project-id` request header, which the native entity layer
+  then applied as a query predicate — a pattern that had already shipped three
+  silent read defects. It was guarded by a ratchet holding 77 allowed call sites,
+  which only ever stopped the 78th. All 77 were audited against their entity's
+  proto and migrated: 58 to `tenant_only_native_service_context` (their entities
+  declare no project column), 19 to an explicit
+  `project_scoped_native_service_context` (they genuinely need it — `NOT NULL`
+  project columns, write stamping, vector-store routing). The allowance list is
+  deleted and the pattern is now a hard build failure.
+- **Request scope resolves from the validated claim first.** `metadata_tenant_id`
+  and `metadata_project_id` consulted the raw header before the bearer claim;
+  they now prefer the claim and fall back to the header only where no claim
+  context exists (the in-process loopback path).
+
 ## [0.5.6] - 2026-08-13
 
 Patch release fixing three PostgreSQL data-plane defects reported from

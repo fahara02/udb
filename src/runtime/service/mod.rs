@@ -2449,17 +2449,12 @@ pub async fn serve(
         // resolver install used to live only in `build_auth_services`, which
         // this early return skips, leaving the data plane fail-closed for want
         // of wiring rather than by policy.
-        if let Some(pool) = service
-            .runtime
-            .load_full()
-            .native_store_pool_for_service("authn", true, "")
-            .ok()
-        {
-            crate::runtime::service::auth_service::install_data_plane_credential_resolvers(
-                pool,
-                &crate::runtime::authn::AuthnConfig::from_env(),
-            );
-        }
+        // Build and immediately drop the native service adapters. The builder
+        // installs a clone of the fully wired AuthnService into the shared
+        // credential layer, including its configured session backend and
+        // durable revocation authority. The public listener still mounts only
+        // DataBroker; this call supplies authentication dependencies, not RPCs.
+        drop(service.build_auth_services());
         // Optional co-located UDS data-plane (PERF_TODO §3) — clone before the
         // service is moved into the TCP builder below. No-op unless configured.
         #[cfg(unix)]
@@ -2681,9 +2676,26 @@ pub async fn serve(
     // generated Postgres login roles and marks their durable lease rows REVOKED.
     {
         let vault_runtime = service.runtime.load_full();
-        if let Ok(vault_pool) = vault_runtime.native_store_pool_for_service("vault", true, "") {
+        let vault_catalog = service.catalog.clone();
+        let leader_pool = vault_catalog
+            .active_project_ids()
+            .into_iter()
+            .find_map(|project_id| {
+                let context = crate::RequestContext {
+                    project_id,
+                    ..crate::RequestContext::default()
+                };
+                vault_runtime
+                    .native_store_postgres_binding_for_service("vault", true, &context)
+                    .ok()
+                    .map(|(pool, _instance)| pool)
+            });
+        if let Some(leader_pool) = leader_pool {
             let singleton_relation = vault_runtime.config().cdc.lock_log_relation();
-            let lease_pool = vault_pool.clone();
+            let lease_pool = leader_pool.clone();
+            let worker_runtime = vault_runtime.clone();
+            let worker_catalog = vault_catalog.clone();
+            let worker_outbox_relation = vault_runtime.config().cdc.outbox_relation();
             crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
                 crate::runtime::singleton::WORKER_VAULT_LEASE_REAPER,
                 "vault DB credential leases revoked expired login roles",
@@ -2691,13 +2703,45 @@ pub async fn serve(
                 singleton_relation,
                 crate::runtime::service::vault_service::vault_db_lease_reaper_interval(),
                 move || {
-                    let pool = vault_pool.clone();
+                    let runtime = worker_runtime.clone();
+                    let catalog = worker_catalog.clone();
+                    let outbox_relation = worker_outbox_relation.clone();
                     async move {
-                        crate::runtime::service::vault_service::run_vault_db_lease_reaper_once(
-                            &pool,
-                            crate::runtime::service::vault_service::vault_db_lease_reaper_batch(),
-                        )
-                        .await
+                        let mut revoked = 0i64;
+                        let mut failures = Vec::new();
+                        for project_id in catalog.active_project_ids() {
+                            let context = crate::RequestContext {
+                                project_id: project_id.clone(),
+                                ..crate::RequestContext::default()
+                            };
+                            match runtime.native_store_postgres_binding_for_service(
+                                "vault", true, &context,
+                            ) {
+                                Ok((pool, _instance)) => {
+                                    match crate::runtime::service::vault_service::run_vault_db_lease_reaper_once(
+                                        &runtime,
+                                        &pool,
+                                        &project_id,
+                                        Some(&outbox_relation),
+                                        crate::runtime::service::vault_service::vault_db_lease_reaper_batch(),
+                                    )
+                                    .await
+                                    {
+                                        Ok(count) => revoked += count,
+                                        Err(err) => failures.push(format!("{project_id}: {err}")),
+                                    }
+                                }
+                                Err(err) => failures.push(format!("{project_id}: {err}")),
+                            }
+                        }
+                        if failures.is_empty() {
+                            Ok(revoked)
+                        } else {
+                            Err(format!(
+                                "vault DB lease reaper project failures: {}",
+                                failures.join("; ")
+                            ))
+                        }
                     }
                 },
             );
@@ -3550,14 +3594,20 @@ async fn start_cdc_engine(
         runtime.config().cdc.clone(),
     );
     match engine {
-        Ok(mut engine) => {
-            // Phase 7: load the topic-policy allowlist into the engine before it
-            // starts tailing. Without this the allowlist stays empty and topic
-            // policy enforcement in process_outbox_event is dormant in prod.
+        Ok(engine) => {
+            // A policy dependency failure is not an empty allowlist. Refuse to
+            // expose/start this CDC engine until one complete generation loads.
             if let Err(err) = engine.load_topic_policies().await {
-                tracing::warn!("CDC topic policy load failed: {err}");
+                tracing::error!("CDC engine start refused: topic policy load failed: {err}");
+                return None;
             }
             let engine = Arc::new(engine);
+            tokio::spawn({
+                let engine = engine.clone();
+                async move {
+                    engine.run_topic_policy_reload_loop().await;
+                }
+            });
             // U21: reset in-doubt `publishing` rows left by a prior process epoch
             // before tailing (no-op outside KafkaTransactional mode).
             if let Err(err) = engine.run_indoubt_recovery_on_startup().await {

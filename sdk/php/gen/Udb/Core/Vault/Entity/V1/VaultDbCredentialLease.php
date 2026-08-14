@@ -12,12 +12,12 @@ use Google\Protobuf\RepeatedField;
 /**
  * ---------------------------------------------------------------------------
  * VaultDbCredentialLease — one short-lived database login minted by Vault.
- * The password is returned only in GenerateDatabaseCredentialsResponse and is
- * never stored. The durable row tracks the generated username, tenant, configured
- * role alias, parent Postgres role, and expiry so WORKER_VAULT_LEASE_REAPER can
- * revoke/drop the login after its lease expires. RLS scopes rows to the current
- * tenant; operators should grant the parent role only the privileges that alias
- * is allowed to delegate.
+ * The password is returned only in GenerateDatabaseCredentialsResponse. A
+ * master-KEK-wrapped recovery envelope is stored so an authenticated replay of
+ * the same idempotent request can recover the original one-time response without
+ * creating a second login. The durable STARTING/ACTIVE/REVOKING/REVOKED/FAILED
+ * state machine lets WORKER_VAULT_LEASE_REAPER reconcile every split boundary.
+ * RLS scopes rows to the current tenant and project.
  * ---------------------------------------------------------------------------
  *
  * Generated from protobuf message <code>udb.core.vault.entity.v1.VaultDbCredentialLease</code>
@@ -67,7 +67,9 @@ class VaultDbCredentialLease extends \Google\Protobuf\Internal\Message
      */
     protected $revoked_at = null;
     /**
-     * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+     * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+     * plus FAILED rows with a pending revocation, is owned by the reconciliation
+     * worker. REVOKED is set only after session termination and role-absence proof.
      *
      * Generated from protobuf field <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
      */
@@ -76,6 +78,55 @@ class VaultDbCredentialLease extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string metadata_json = 11 [json_name = "metadataJson", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $metadata_json = '';
+    /**
+     * Generated from protobuf field <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $project_id = '';
+    /**
+     * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+     * response-loss replay can never mint a second physical login.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $idempotency_key = '';
+    /**
+     * Hash of every authority-relevant issuance input; the same idempotency key
+     * with different inputs is a conflict, never a replay.
+     *
+     * Generated from protobuf field <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $request_hash = '';
+    /**
+     * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+     * only be selected by the trusted recovery path and never appears in normal
+     * entity/SDK output, logs, CDC payloads, or audit events.
+     *
+     * Generated from protobuf field <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $credential_ciphertext = '';
+    /**
+     * Immutable physical authority selected at issuance. Reconciliation must use
+     * this exact instance and fails closed if it is no longer routable.
+     *
+     * Generated from protobuf field <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $target_instance = '';
+    /**
+     * Generated from protobuf field <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $last_error = '';
+    /**
+     * Generated from protobuf field <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $revoke_reason = '';
+    /**
+     * Generated from protobuf field <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $revocation_operation_id = '';
+    /**
+     * Generated from protobuf field <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $revocation_requested_at = null;
 
     /**
      * Constructor.
@@ -96,8 +147,28 @@ class VaultDbCredentialLease extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\Timestamp $expires_at
      *     @type \Google\Protobuf\Timestamp $revoked_at
      *     @type string $state
-     *           ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+     *           STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+     *           plus FAILED rows with a pending revocation, is owned by the reconciliation
+     *           worker. REVOKED is set only after session termination and role-absence proof.
      *     @type string $metadata_json
+     *     @type string $project_id
+     *     @type string $idempotency_key
+     *           Caller-supplied idempotency key. Its unique scope is tenant+project so a
+     *           response-loss replay can never mint a second physical login.
+     *     @type string $request_hash
+     *           Hash of every authority-relevant issuance input; the same idempotency key
+     *           with different inputs is a conflict, never a replay.
+     *     @type string $credential_ciphertext
+     *           Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+     *           only be selected by the trusted recovery path and never appears in normal
+     *           entity/SDK output, logs, CDC payloads, or audit events.
+     *     @type string $target_instance
+     *           Immutable physical authority selected at issuance. Reconciliation must use
+     *           this exact instance and fails closed if it is no longer routable.
+     *     @type string $last_error
+     *     @type string $revoke_reason
+     *     @type string $revocation_operation_id
+     *     @type \Google\Protobuf\Timestamp $revocation_requested_at
      * }
      */
     public function __construct($data = NULL) {
@@ -346,7 +417,9 @@ class VaultDbCredentialLease extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+     * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+     * plus FAILED rows with a pending revocation, is owned by the reconciliation
+     * worker. REVOKED is set only after session termination and role-absence proof.
      *
      * Generated from protobuf field <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
@@ -357,7 +430,9 @@ class VaultDbCredentialLease extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+     * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+     * plus FAILED rows with a pending revocation, is owned by the reconciliation
+     * worker. REVOKED is set only after session termination and role-absence proof.
      *
      * Generated from protobuf field <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
@@ -389,6 +464,240 @@ class VaultDbCredentialLease extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->metadata_json = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * Generated from protobuf field <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->project_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+     * response-loss replay can never mint a second physical login.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getIdempotencyKey()
+    {
+        return $this->idempotency_key;
+    }
+
+    /**
+     * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+     * response-loss replay can never mint a second physical login.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setIdempotencyKey($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->idempotency_key = $var;
+
+        return $this;
+    }
+
+    /**
+     * Hash of every authority-relevant issuance input; the same idempotency key
+     * with different inputs is a conflict, never a replay.
+     *
+     * Generated from protobuf field <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getRequestHash()
+    {
+        return $this->request_hash;
+    }
+
+    /**
+     * Hash of every authority-relevant issuance input; the same idempotency key
+     * with different inputs is a conflict, never a replay.
+     *
+     * Generated from protobuf field <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRequestHash($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->request_hash = $var;
+
+        return $this;
+    }
+
+    /**
+     * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+     * only be selected by the trusted recovery path and never appears in normal
+     * entity/SDK output, logs, CDC payloads, or audit events.
+     *
+     * Generated from protobuf field <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getCredentialCiphertext()
+    {
+        return $this->credential_ciphertext;
+    }
+
+    /**
+     * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+     * only be selected by the trusted recovery path and never appears in normal
+     * entity/SDK output, logs, CDC payloads, or audit events.
+     *
+     * Generated from protobuf field <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setCredentialCiphertext($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->credential_ciphertext = $var;
+
+        return $this;
+    }
+
+    /**
+     * Immutable physical authority selected at issuance. Reconciliation must use
+     * this exact instance and fails closed if it is no longer routable.
+     *
+     * Generated from protobuf field <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getTargetInstance()
+    {
+        return $this->target_instance;
+    }
+
+    /**
+     * Immutable physical authority selected at issuance. Reconciliation must use
+     * this exact instance and fails closed if it is no longer routable.
+     *
+     * Generated from protobuf field <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setTargetInstance($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->target_instance = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getLastError()
+    {
+        return $this->last_error;
+    }
+
+    /**
+     * Generated from protobuf field <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setLastError($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->last_error = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getRevokeReason()
+    {
+        return $this->revoke_reason;
+    }
+
+    /**
+     * Generated from protobuf field <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRevokeReason($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->revoke_reason = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getRevocationOperationId()
+    {
+        return $this->revocation_operation_id;
+    }
+
+    /**
+     * Generated from protobuf field <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRevocationOperationId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->revocation_operation_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = {</code>
+     * @return \Google\Protobuf\Timestamp|null
+     */
+    public function getRevocationRequestedAt()
+    {
+        return $this->revocation_requested_at;
+    }
+
+    public function hasRevocationRequestedAt()
+    {
+        return isset($this->revocation_requested_at);
+    }
+
+    public function clearRevocationRequestedAt()
+    {
+        unset($this->revocation_requested_at);
+    }
+
+    /**
+     * Generated from protobuf field <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = {</code>
+     * @param \Google\Protobuf\Timestamp $var
+     * @return $this
+     */
+    public function setRevocationRequestedAt($var)
+    {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
+        $this->revocation_requested_at = $var;
 
         return $this;
     }

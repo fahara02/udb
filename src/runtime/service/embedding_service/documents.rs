@@ -5,7 +5,8 @@ use crate::proto::udb::core::embedding::services::v1 as embedding_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, non_empty_json, validate_request_tenant,
+    admit_on as native_admit_on, non_empty_json, project_scoped_native_service_context,
+    validate_request_tenant,
 };
 use super::EmbeddingServiceImpl;
 use super::chunking::{chunk_content_hash, chunk_source_text_for_model};
@@ -76,7 +77,7 @@ async fn ingest_one(
     validate_ingest(&req)?;
     let tenant_id = req.tenant_id.trim().to_string();
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(metadata, &tenant_id);
     let model = runtime
         .native_entity_read_for_service(
             "embedding",
@@ -331,7 +332,7 @@ pub(crate) async fn report_parsed_document(
     }
     let tenant_id = req.tenant_id.trim().to_string();
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let row = runtime
         .native_entity_read_for_service(
             "embedding",

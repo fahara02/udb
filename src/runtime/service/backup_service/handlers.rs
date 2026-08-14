@@ -14,15 +14,20 @@ use crate::proto::udb::core::backup::services::v1 as backup_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, non_empty_json, validate_request_tenant,
+    admit_on as native_admit_on, non_empty_json, project_scoped_native_service_context,
+    validate_request_tenant,
 };
 use super::BackupServiceImpl;
-use super::config::{
-    BACKUP_POLICY_MSG, MANIFEST_SUFFIX, TOPIC_POLICY_DELETED, TOPIC_POLICY_UPSERTED,
+use super::config::{BACKUP_POLICY_MSG, TOPIC_POLICY_DELETED, TOPIC_POLICY_UPSERTED};
+use super::errors::{
+    backup_internal_status, backup_not_found_status, backup_run_location_missing_status,
+    required_backup_field, restore_manifest_integrity_status,
 };
-use super::errors::{backup_not_found_status, required_backup_field};
 use super::events::emit_event;
-use super::model::{json_str, policy_view_from_json, row_object, run_summary_from_json};
+use super::model::{
+    json_str, policy_view_from_json, row_object, run_location_from_json, run_summary_from_json,
+    sha256_hex,
+};
 use super::store::{
     clamp_limit, logical_string, next_page_token, parse_offset, policies_list_read,
     policy_conflict, policy_read_by_name, run_read_by_id, runs_list_read,
@@ -46,7 +51,9 @@ pub(crate) async fn list_backups(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    context.project_id = binding.project_id.clone();
     let limit = clamp_limit(req.page_size);
     let offset = parse_offset(&req.page_token);
     let kind = match req.kind.trim() {
@@ -90,92 +97,114 @@ pub(crate) async fn get_backup(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
-    let run = runtime
+    let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    context.project_id = binding.project_id.clone();
+    let run_row = runtime
         .native_entity_read_for_service("backup", &context, run_read_by_id(&tenant_id, &backup_id))
         .await?
         .first()
-        .map(run_summary_from_json)
+        .cloned()
         .ok_or_else(|| {
             backup_not_found_status("get_backup", "backup_run_not_found", "backup run not found")
         })?;
+    let run = run_summary_from_json(&run_row);
 
-    // Best-effort: read the run manifest for per-table detail. A missing
-    // manifest (e.g. object store offline) still returns the journal summary.
+    // A completed run's detail is integrity-bearing, not best-effort. Locate it
+    // exclusively from the immutable run metadata and propagate object-store or
+    // checksum failures instead of returning a false empty detail set.
     let (mut tables, mut excluded) = (Vec::new(), Vec::new());
     if !run.object_prefix.trim().is_empty() {
-        let manifest_key = format!("{}{MANIFEST_SUFFIX}", run.object_prefix);
+        let location = run_location_from_json(&run_row)
+            .ok_or_else(|| backup_run_location_missing_status("get_backup"))?;
+        if location.project_id != binding.project_id
+            || location.catalog_checksum != binding.catalog_checksum
+            || location.postgres_instance != binding.postgres_instance
+        {
+            return Err(super::errors::backup_topology_mismatch_status(
+                "get_backup",
+                "backup run topology does not match the active request project",
+            ));
+        }
         let get_req = crate::runtime::core::setup_data::object_request_json(
             "get",
-            &svc.object_bucket,
-            &manifest_key,
+            &location.object_bucket,
+            &location.manifest_key,
             "",
         );
-        if let Ok(bytes) = runtime
+        let bytes = runtime
             .get_object_backend_target_for_project(
-                &svc.object_backend,
+                &location.object_backend,
                 None,
-                &context.project_id,
+                &location.project_id,
                 &get_req,
             )
-            .await
-            && let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes)
+            .await?;
+        if run.manifest_checksum.trim().is_empty()
+            || sha256_hex(&bytes) != run.manifest_checksum.trim()
         {
-            if let Some(arr) = value.get("tables").and_then(|v| v.as_array()) {
-                tables = arr
-                    .iter()
-                    .map(|t| backup_pb::BackupTableEntry {
-                        schema: t
-                            .get("schema")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                        table: t
-                            .get("table")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                        tenant_column: t
-                            .get("tenant_column")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                        object_key: t
-                            .get("object_key")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                        row_count: t.get("row_count").and_then(|v| v.as_i64()).unwrap_or(0),
-                        checksum_sha256: t
-                            .get("checksum_sha256")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                    })
-                    .collect();
-            }
-            if let Some(arr) = value.get("excluded").and_then(|v| v.as_array()) {
-                excluded = arr
-                    .iter()
-                    .map(|e| backup_pb::BackupExcludedTable {
-                        schema: e
-                            .get("schema")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                        table: e
-                            .get("table")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                        reason: e
-                            .get("reason")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                    })
-                    .collect();
-            }
+            return Err(restore_manifest_integrity_status());
+        }
+        let value = serde_json::from_slice::<serde_json::Value>(&bytes).map_err(|err| {
+            backup_internal_status(
+                "get_backup_manifest_parse",
+                format!("backup manifest parse failed: {err}"),
+            )
+        })?;
+        if let Some(arr) = value.get("tables").and_then(|v| v.as_array()) {
+            tables = arr
+                .iter()
+                .map(|t| backup_pb::BackupTableEntry {
+                    schema: t
+                        .get("schema")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    table: t
+                        .get("table")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    tenant_column: t
+                        .get("tenant_column")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    object_key: t
+                        .get("object_key")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    row_count: t.get("row_count").and_then(|v| v.as_i64()).unwrap_or(0),
+                    checksum_sha256: t
+                        .get("checksum_sha256")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                })
+                .collect();
+        }
+        if let Some(arr) = value.get("excluded").and_then(|v| v.as_array()) {
+            excluded = arr
+                .iter()
+                .map(|e| backup_pb::BackupExcludedTable {
+                    schema: e
+                        .get("schema")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    table: e
+                        .get("table")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    reason: e
+                        .get("reason")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                })
+                .collect();
         }
     }
 
@@ -210,7 +239,7 @@ pub(crate) async fn put_backup_policy(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
 
     // Reuse the existing policy id on update so the upsert is in place.
     let existing = runtime
@@ -316,7 +345,7 @@ pub(crate) async fn get_backup_policy(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let policy = runtime
         .native_entity_read_for_service(
             "backup",
@@ -357,7 +386,7 @@ pub(crate) async fn list_backup_policies(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     let limit = clamp_limit(req.page_size);
     let offset = parse_offset(&req.page_token);
     let rows = runtime
@@ -400,7 +429,7 @@ pub(crate) async fn delete_backup_policy(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
     runtime
         .native_entity_delete_for_service(
             "backup",

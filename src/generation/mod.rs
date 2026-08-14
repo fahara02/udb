@@ -25,4 +25,5 @@ pub use manifest::{
     ManifestMigrationReport, ManifestSchemaChecksum, ManifestStore, ManifestStoreOption,
     ManifestTable, ManifestTableSecurity, ManifestTrigger, migrate_manifest_to_current,
 };
+pub(crate) use sql::generate_review_delta_sql;
 pub use sql::{GeneratedArtifact, SqlGenerationConfig, generate_bootstrap_sql, generate_delta_sql};

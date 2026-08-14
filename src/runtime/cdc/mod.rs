@@ -1,3 +1,4 @@
+use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "kafka")]
 use rdkafka::ClientConfig;
@@ -12,7 +13,7 @@ use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 use std::fmt;
 use std::pin::Pin;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 #[cfg(feature = "kafka")]
 use std::time::Duration;
 use tokio::sync::broadcast;
@@ -101,6 +102,9 @@ static INSTALLED_CDC_CONFIG: OnceLock<Mutex<CdcConfig>> = OnceLock::new();
 pub(crate) const DEFAULT_CDC_IDEMPOTENCY_TTL_SECS: u64 = 604_800;
 pub(crate) const DEFAULT_CDC_BROADCAST_CAPACITY: usize = 1024;
 pub(crate) const DEFAULT_CDC_POLL_INTERVAL_MS: u64 = 250;
+/// Maximum delay before topic-policy changes reach publishers and subscribers.
+/// Resolved once with the rest of [`CdcConfig`]; never read on an event hot path.
+pub(crate) const DEFAULT_CDC_TOPIC_POLICY_RELOAD_INTERVAL_MS: u64 = 1_000;
 pub(crate) const DEFAULT_CDC_POLL_BATCH: i64 = 200;
 pub(crate) const DEFAULT_CDC_PRODUCER_LINGER_MS: u64 = 20;
 pub(crate) const DEFAULT_CDC_PRODUCER_BATCH_MESSAGES: u64 = 10_000;
@@ -244,6 +248,7 @@ pub struct CdcConfig {
     pub idempotency_ttl_secs: u64,
     pub broadcast_capacity: usize,
     pub poll_interval_ms: u64,
+    pub topic_policy_reload_interval_ms: u64,
     pub poll_batch: i64,
     pub producer_linger_ms: u64,
     pub producer_batch_messages: u64,
@@ -379,6 +384,7 @@ impl Default for CdcConfig {
             idempotency_ttl_secs: DEFAULT_CDC_IDEMPOTENCY_TTL_SECS,
             broadcast_capacity: DEFAULT_CDC_BROADCAST_CAPACITY,
             poll_interval_ms: DEFAULT_CDC_POLL_INTERVAL_MS,
+            topic_policy_reload_interval_ms: DEFAULT_CDC_TOPIC_POLICY_RELOAD_INTERVAL_MS,
             poll_batch: DEFAULT_CDC_POLL_BATCH,
             producer_linger_ms: DEFAULT_CDC_PRODUCER_LINGER_MS,
             producer_batch_messages: DEFAULT_CDC_PRODUCER_BATCH_MESSAGES,
@@ -512,6 +518,12 @@ impl CdcConfig {
                 .ok()
                 .and_then(|value| value.parse::<u64>().ok())
                 .unwrap_or(defaults.poll_interval_ms),
+            topic_policy_reload_interval_ms: std::env::var(
+                "UDB_CDC_TOPIC_POLICY_RELOAD_INTERVAL_MS",
+            )
+            .ok()
+            .and_then(|value| value.parse::<u64>().ok())
+            .unwrap_or(defaults.topic_policy_reload_interval_ms),
             poll_batch: std::env::var("UDB_CDC_POLL_BATCH")
                 .ok()
                 .and_then(|value| value.parse::<i64>().ok())
@@ -642,6 +654,11 @@ impl CdcConfig {
         {
             self.poll_interval_ms = parsed;
         }
+        if let Ok(value) = std::env::var("UDB_CDC_TOPIC_POLICY_RELOAD_INTERVAL_MS")
+            && let Ok(parsed) = value.parse::<u64>()
+        {
+            self.topic_policy_reload_interval_ms = parsed;
+        }
         if let Ok(value) = std::env::var("UDB_CDC_POLL_BATCH")
             && let Ok(parsed) = value.parse::<i64>()
         {
@@ -706,6 +723,9 @@ impl CdcConfig {
         }
         if self.poll_interval_ms == 0 {
             self.poll_interval_ms = Self::default().poll_interval_ms;
+        }
+        if self.topic_policy_reload_interval_ms == 0 {
+            self.topic_policy_reload_interval_ms = Self::default().topic_policy_reload_interval_ms;
         }
         if self.poll_batch <= 0 {
             self.poll_batch = Self::default().poll_batch;
@@ -1331,7 +1351,7 @@ pub struct CdcMetrics {
 
 /// Phase 7: Topic policy loaded from `udb_system.udb_topic_policy`.
 /// Controls per-topic allowlist, owning service/project, schema URI, and retry config.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TopicPolicy {
     pub policy_id: i64,
     pub topic: String,
@@ -1346,6 +1366,76 @@ pub struct TopicPolicy {
     pub retry_delay_secs: Vec<i32>,
     pub dlq_enabled: bool,
     pub enabled: bool,
+}
+
+impl TopicPolicy {
+    pub(crate) fn matches_topic(&self, topic: &str) -> bool {
+        topic_policy_pattern_matches(&self.topic, topic)
+    }
+
+    pub(crate) fn allows_tenant(&self, tenant_id: &str) -> bool {
+        topic_policy_scope_allows(&self.tenant_id, tenant_id)
+    }
+
+    pub(crate) fn allows_project(&self, project_id: &str) -> bool {
+        topic_policy_scope_allows(&self.owning_project, project_id)
+    }
+}
+
+pub(crate) fn topic_policy_pattern_matches(pattern: &str, topic: &str) -> bool {
+    WildMatch::new(pattern.trim()).matches(topic.trim())
+}
+
+pub(crate) fn topic_policy_scope_allows(required: &str, actual: &str) -> bool {
+    let required = required.trim();
+    required.is_empty() || required == "*" || required == actual.trim()
+}
+
+/// One immutable topic-policy world shared by CDC publication, replay, live
+/// subscription, and DLQ retry. `available=false` is a fail-closed sentinel used
+/// after a reload failure; callers must not reinterpret it as an empty allowlist.
+#[derive(Debug, Clone)]
+pub(crate) struct TopicPolicySnapshot {
+    pub(crate) policies: Vec<TopicPolicy>,
+    pub(crate) generation: u64,
+    pub(crate) loaded_at_unix: i64,
+    pub(crate) available: bool,
+}
+
+impl TopicPolicySnapshot {
+    fn unavailable() -> Self {
+        Self {
+            policies: Vec::new(),
+            generation: 0,
+            loaded_at_unix: 0,
+            available: false,
+        }
+    }
+
+    pub(crate) fn configured(&self) -> bool {
+        !self.policies.is_empty()
+    }
+
+    pub(crate) fn active_policy_for(
+        &self,
+        topic: &str,
+        tenant_id: &str,
+        project_id: &str,
+        privileged: bool,
+    ) -> Option<&TopicPolicy> {
+        self.policies.iter().find(|policy| {
+            policy.enabled
+                && policy.matches_topic(topic)
+                && (privileged
+                    || (policy.allows_tenant(tenant_id) && policy.allows_project(project_id)))
+        })
+    }
+
+    pub(crate) fn active_topic_is_policy_owned(&self, topic: &str) -> bool {
+        self.policies
+            .iter()
+            .any(|policy| policy.enabled && policy.matches_topic(topic))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1368,9 +1458,9 @@ pub struct CdcEngine {
     dsn: String,
     metrics: std::sync::Arc<dyn MetricsRecorder>,
     config: CdcConfig,
-    /// Phase 7: topic policies loaded from DB at engine construction.
-    /// Empty means all topics allowed (backward-compatible default).
-    topic_policies: Vec<TopicPolicy>,
+    /// Live topic-policy world. Readers take one immutable snapshot per logical
+    /// operation, while the reloader atomically publishes complete generations.
+    topic_policies: Arc<ArcSwap<TopicPolicySnapshot>>,
 }
 
 impl fmt::Debug for CdcEngine {
@@ -1401,6 +1491,50 @@ mod live_tests;
 mod tests {
     use super::*;
     use serde_json::json;
+
+    fn topic_policy(pattern: &str, tenant: &str, project: &str, enabled: bool) -> TopicPolicy {
+        TopicPolicy {
+            policy_id: 1,
+            topic: pattern.to_string(),
+            tenant_id: tenant.to_string(),
+            owning_project: project.to_string(),
+            owning_service: "billing".to_string(),
+            schema_uri: String::new(),
+            redaction_mode: "mask".to_string(),
+            redaction_version: 1,
+            retention_class: "standard".to_string(),
+            max_retry_attempts: 3,
+            retry_delay_secs: vec![10, 60, 300],
+            dlq_enabled: true,
+            enabled,
+        }
+    }
+
+    #[test]
+    fn topic_policy_uses_one_wildcard_and_scope_contract() {
+        let policy = topic_policy("billing.*.v1", "tenant-a", "*", true);
+        assert!(policy.matches_topic("billing.invoice.v1"));
+        assert!(!policy.matches_topic("shipping.invoice.v1"));
+        assert!(policy.allows_tenant("tenant-a"));
+        assert!(!policy.allows_tenant("tenant-b"));
+        assert!(policy.allows_project("any-project"));
+    }
+
+    #[test]
+    fn disabled_final_policy_keeps_allowlist_configured_and_denies_match() {
+        let snapshot = TopicPolicySnapshot {
+            policies: vec![topic_policy("billing.*", "*", "*", false)],
+            generation: 2,
+            loaded_at_unix: 1,
+            available: true,
+        };
+        assert!(snapshot.configured());
+        assert!(
+            snapshot
+                .active_policy_for("billing.invoice", "tenant-a", "project-a", false)
+                .is_none()
+        );
+    }
 
     #[test]
     fn outbox_payload_sanitizer_strips_nul_before_jsonb_insert() {

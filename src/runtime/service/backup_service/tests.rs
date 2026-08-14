@@ -21,6 +21,7 @@ use super::errors::{
     backup_capability_status, backup_internal_status, backup_not_found_status,
     backup_run_missing_object_prefix_status, ensure_target_is_fresh,
 };
+use super::model::run_location_from_json;
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -143,6 +144,38 @@ fn backup_run_missing_object_prefix_carries_policy_detail() {
         "backup run has no object prefix to restore from"
     );
     assert_policy_detail(&err, "restore_tenant", "backup_run_missing_object_prefix");
+}
+
+#[test]
+fn run_location_requires_complete_immutable_topology() {
+    let row = serde_json::json!({
+        "metadata_json": {
+            "object_backend": "minio",
+            "object_bucket": "tenant-backups",
+            "manifest_key": "backups/t/run/manifest.json",
+            "project_id": "billing",
+            "catalog_checksum": "catalog-sha",
+            "postgres_instance": "billing-primary"
+        }
+    });
+    let location = run_location_from_json(&row).expect("complete location must decode");
+    assert_eq!(location.object_backend, "minio");
+    assert_eq!(location.project_id, "billing");
+    assert_eq!(location.postgres_instance, "billing-primary");
+
+    let missing_instance = serde_json::json!({
+        "metadata_json": {
+            "object_backend": "minio",
+            "object_bucket": "tenant-backups",
+            "manifest_key": "backups/t/run/manifest.json",
+            "project_id": "billing",
+            "catalog_checksum": "catalog-sha"
+        }
+    });
+    assert!(
+        run_location_from_json(&missing_instance).is_none(),
+        "partial location must never trigger default-instance guessing"
+    );
 }
 
 #[test]

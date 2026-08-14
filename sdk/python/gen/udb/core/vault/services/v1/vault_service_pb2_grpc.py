@@ -100,6 +100,16 @@ class VaultServiceStub(object):
                 request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsResponse.FromString,
                 _registered_method=True)
+        self.RevokeDatabaseCredentials = channel.unary_unary(
+                '/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials',
+                request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RevokeDatabaseCredentialsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RevokeDatabaseCredentialsResponse.FromString,
+                _registered_method=True)
+        self.EmergencyRevokeDatabaseCredentials = channel.unary_unary(
+                '/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials',
+                request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.EmergencyRevokeDatabaseCredentialsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.EmergencyRevokeDatabaseCredentialsResponse.FromString,
+                _registered_method=True)
         self.GenerateDataKey = channel.unary_unary(
                 '/udb.core.vault.services.v1.VaultService/GenerateDataKey',
                 request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDataKeyRequest.SerializeToString,
@@ -271,7 +281,28 @@ class VaultServiceServicer(object):
         Mint short-lived, per-request Postgres credentials with a durable lease.
         The requested role_name is an operator-configured alias resolved from
         UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+        The authenticated tenant/project/caller and idempotency_key are durably
+        deduplicated in the same transaction that activates the issued lease.
         WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RevokeDatabaseCredentials(self, request, context):
+        """Revoke one lease in the authenticated tenant/project. The durable state is
+        moved to REVOKING before physical session fencing and becomes REVOKED only
+        after the generated role is proven absent. The tenant/project/caller and
+        lease_id dedup record transition in one transaction, so replay is safe.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def EmergencyRevokeDatabaseCredentials(self, request, context):
+        """Emergency kill-switch for every non-terminal lease in exactly one verified
+        tenant/project. A confirmation token bound to both scope dimensions prevents
+        an accidental tenant-wide or cross-project credential wipe.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -402,6 +433,16 @@ def add_VaultServiceServicer_to_server(servicer, server):
                     servicer.GenerateDatabaseCredentials,
                     request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsRequest.FromString,
                     response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsResponse.SerializeToString,
+            ),
+            'RevokeDatabaseCredentials': grpc.unary_unary_rpc_method_handler(
+                    servicer.RevokeDatabaseCredentials,
+                    request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RevokeDatabaseCredentialsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RevokeDatabaseCredentialsResponse.SerializeToString,
+            ),
+            'EmergencyRevokeDatabaseCredentials': grpc.unary_unary_rpc_method_handler(
+                    servicer.EmergencyRevokeDatabaseCredentials,
+                    request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.EmergencyRevokeDatabaseCredentialsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.EmergencyRevokeDatabaseCredentialsResponse.SerializeToString,
             ),
             'GenerateDataKey': grpc.unary_unary_rpc_method_handler(
                     servicer.GenerateDataKey,
@@ -845,6 +886,60 @@ class VaultService(object):
             '/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials',
             udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsRequest.SerializeToString,
             udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RevokeDatabaseCredentials(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials',
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RevokeDatabaseCredentialsRequest.SerializeToString,
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RevokeDatabaseCredentialsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def EmergencyRevokeDatabaseCredentials(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials',
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.EmergencyRevokeDatabaseCredentialsRequest.SerializeToString,
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.EmergencyRevokeDatabaseCredentialsResponse.FromString,
             options,
             channel_credentials,
             insecure,

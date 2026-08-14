@@ -442,27 +442,89 @@ class SealStatusResponse(_message.Message):
     def __init__(self, sealed: bool = ..., kek_configured: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class GenerateDatabaseCredentialsRequest(_message.Message):
-    __slots__ = ("tenant_id", "role_name", "ttl_seconds")
+    __slots__ = ("tenant_id", "role_name", "ttl_seconds", "project_id", "idempotency_key")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     ROLE_NAME_FIELD_NUMBER: _ClassVar[int]
     TTL_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     role_name: str
     ttl_seconds: int
-    def __init__(self, tenant_id: _Optional[str] = ..., role_name: _Optional[str] = ..., ttl_seconds: _Optional[int] = ...) -> None: ...
+    project_id: str
+    idempotency_key: str
+    def __init__(self, tenant_id: _Optional[str] = ..., role_name: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., project_id: _Optional[str] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
 
 class GenerateDatabaseCredentialsResponse(_message.Message):
-    __slots__ = ("username", "password", "lease_id", "lease_ttl_seconds", "message", "error")
+    __slots__ = ("username", "password", "lease_id", "lease_ttl_seconds", "message", "error", "replayed", "state")
     USERNAME_FIELD_NUMBER: _ClassVar[int]
     PASSWORD_FIELD_NUMBER: _ClassVar[int]
     LEASE_ID_FIELD_NUMBER: _ClassVar[int]
     LEASE_TTL_SECONDS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    REPLAYED_FIELD_NUMBER: _ClassVar[int]
+    STATE_FIELD_NUMBER: _ClassVar[int]
     username: str
     password: str
     lease_id: str
     lease_ttl_seconds: int
     message: str
     error: _dto_pb2.ApiError
-    def __init__(self, username: _Optional[str] = ..., password: _Optional[str] = ..., lease_id: _Optional[str] = ..., lease_ttl_seconds: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    replayed: bool
+    state: str
+    def __init__(self, username: _Optional[str] = ..., password: _Optional[str] = ..., lease_id: _Optional[str] = ..., lease_ttl_seconds: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., replayed: bool = ..., state: _Optional[str] = ...) -> None: ...
+
+class RevokeDatabaseCredentialsRequest(_message.Message):
+    __slots__ = ("tenant_id", "project_id", "lease_id", "reason")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    LEASE_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    project_id: str
+    lease_id: str
+    reason: str
+    def __init__(self, tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., lease_id: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class RevokeDatabaseCredentialsResponse(_message.Message):
+    __slots__ = ("lease_id", "state", "replayed", "operation_id", "message", "error")
+    LEASE_ID_FIELD_NUMBER: _ClassVar[int]
+    STATE_FIELD_NUMBER: _ClassVar[int]
+    REPLAYED_FIELD_NUMBER: _ClassVar[int]
+    OPERATION_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    lease_id: str
+    state: str
+    replayed: bool
+    operation_id: str
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, lease_id: _Optional[str] = ..., state: _Optional[str] = ..., replayed: bool = ..., operation_id: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class EmergencyRevokeDatabaseCredentialsRequest(_message.Message):
+    __slots__ = ("tenant_id", "project_id", "reason", "confirmation_token")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CONFIRMATION_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    project_id: str
+    reason: str
+    confirmation_token: str
+    def __init__(self, tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., reason: _Optional[str] = ..., confirmation_token: _Optional[str] = ...) -> None: ...
+
+class EmergencyRevokeDatabaseCredentialsResponse(_message.Message):
+    __slots__ = ("operation_id", "matched_count", "revoked_count", "message", "error")
+    OPERATION_ID_FIELD_NUMBER: _ClassVar[int]
+    MATCHED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    REVOKED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    operation_id: str
+    matched_count: int
+    revoked_count: int
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, operation_id: _Optional[str] = ..., matched_count: _Optional[int] = ..., revoked_count: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...

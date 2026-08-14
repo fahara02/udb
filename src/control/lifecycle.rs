@@ -11,7 +11,8 @@ use crate::db_ops_sync::{discover_db_ops_root, resolve_seeders_dir};
 use crate::engine::{Engine, FsmState};
 use crate::generation::{
     CatalogManifest, DsnGenerationConfig, GeneratedArtifact, LintItem, LintSeverity,
-    SqlGenerationConfig, generate_bootstrap_sql, generate_delta_sql, generate_unified_dsn_catalog,
+    SqlGenerationConfig, generate_bootstrap_sql, generate_delta_sql, generate_review_delta_sql,
+    generate_unified_dsn_catalog,
 };
 use crate::migration::diff::{ChangeKind, ChangeOperation, ChangeSafety, diff_manifests};
 use crate::provisioning::try_build_provisioning_plan;
@@ -91,6 +92,48 @@ fn record_change_metric_operations(
                 .to_string(),
             });
     }
+}
+
+/// Select the PostgreSQL delta generator for the serving startup lifecycle.
+///
+/// `approved_via_plan` is set only after the canonical change set passes the
+/// configured approval policy. Keeping this decision in one function lets the
+/// lifecycle and its regression tests exercise the same authorization boundary.
+fn generate_startup_delta(
+    manifest: &CatalogManifest,
+    changes: &[ChangeOperation],
+    approved_via_plan: bool,
+    dry_run: bool,
+) -> Vec<GeneratedArtifact> {
+    let config = SqlGenerationConfig::default();
+    if approved_via_plan || dry_run {
+        // Dry-run cannot execute artifacts, so it includes review work to make
+        // the preview complete. A mutating run reaches this branch only after
+        // the exact canonical change set passed the approval gate.
+        generate_review_delta_sql(manifest, changes, &config)
+    } else {
+        generate_delta_sql(manifest, changes, &config)
+    }
+}
+
+/// Operator assertion that a backend change UDB cannot apply itself has been
+/// reconciled by hand, so startup may record the new manifest as current.
+pub(crate) const ACK_MANUAL_BACKEND_RECONCILIATION_ENV: &str =
+    "UDB_ACK_MANUAL_BACKEND_RECONCILIATION";
+
+/// Whether the operator has acknowledged manual reconciliation of backend
+/// changes with no executor. Deliberately opt-in and explicit: it lets the
+/// manifest advance past a change UDB did not perform, so it must never be
+/// implied by a broader "degraded startup" switch.
+fn manual_backend_reconciliation_acknowledged() -> bool {
+    matches!(
+        std::env::var(ACK_MANUAL_BACKEND_RECONCILIATION_ENV)
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase()
+            .as_str(),
+        "1" | "true" | "yes" | "on"
+    )
 }
 
 const REVIEW_REQUIRED_SQL_ARTIFACT_MARKER: &str = "UDB:sql_artifact_requires_review=true";
@@ -901,6 +944,9 @@ async fn run_startup_lifecycle_core(
         .map_err(|err| fail(runtime, &mut report, "dsn_catalog", err.to_string()))?;
     let provisioning_plan = try_build_provisioning_plan(manifest, &dsn_catalog.entries)
         .map_err(|err| fail(runtime, &mut report, "provisioning_plan", err))?;
+    // Resolve the explicit recovery override once per lifecycle. Its presence
+    // disables fast-start so a normal serve can reject misuse fail-closed.
+    let replay_prior_checksum = migration_replay_prior_checksum();
 
     // ── §4 fast start (opt-in: UDB_STARTUP_SKIP_IF_UNCHANGED) ──────────────────
     // When the persisted manifest checksum already equals the current one, skip
@@ -917,6 +963,7 @@ async fn run_startup_lifecycle_core(
         && !dry_run
         && !runtime.config().migration.force_reseed
         && !runtime.config().migration.emergency_auto_alter
+        && replay_prior_checksum.is_none()
     {
         match runtime.load_last_manifest_checksum_if_exists().await {
             Ok(Some(stored)) if stored == manifest.checksum_sha256 => {
@@ -1004,11 +1051,23 @@ async fn run_startup_lifecycle_core(
     // this was loaded a second time after the apply block, which meant every run
     // unconditionally re-executed hundreds of idempotent CREATE TABLE/INDEX
     // statements even when nothing had changed.
-    let prior_manifest = if dry_run {
-        load_prior_manifest_for_dry_run(runtime, manifest, &mut report).await?
+    let prior_selection = if dry_run {
+        load_prior_manifest_for_dry_run(runtime, manifest, &mut report, replay_prior_checksum)
+            .await?
     } else {
-        load_prior_manifest_for_apply(runtime, manifest, &mut report).await?
+        load_prior_manifest_for_apply(
+            runtime,
+            manifest,
+            &mut report,
+            force_sync,
+            replay_prior_checksum,
+        )
+        .await?
     };
+    let PriorManifestSelection {
+        manifest: prior_manifest,
+        latest_checksum: expected_latest_checksum,
+    } = prior_selection;
 
     // Name the LEDGER SOURCE whenever a prior manifest is in play. Operators
     // with multiple DSN env vars (UDB_PG_DSN vs DATABASE_URL) have inspected
@@ -1504,8 +1563,79 @@ async fn run_startup_lifecycle_core(
     // (and equivalent) statements and apply them before the verify step runs.
     match &prior_manifest {
         Some(prior) if prior.checksum_sha256 != manifest.checksum_sha256 => {
-            let changes = diff_manifests(Some(prior), manifest);
+            // Derive the SAME canonical set the approval gate validated
+            // (relational + per-backend), not `diff_manifests` alone. The old
+            // comment below claimed the two were identical; they are not
+            // whenever the manifest carries a Qdrant/Mongo/Neo4j/ClickHouse/S3
+            // delta, and the difference was silently dropped here after being
+            // counted, approved, and hashed upstream.
+            let changes = canonical_migration_changes(Some(prior), manifest);
             record_change_metric_operations(&mut report, &changes);
+
+            // Of those backend operations only the CREATE kinds have an apply
+            // path — the desired-state ENSURE provisioning above brings a new
+            // collection/bucket/constraint into being. The UPDATE and DROP kinds
+            // have no renderer and no executor anywhere, so continuing would
+            // record the new manifest as applied while the store still holds the
+            // old geometry, and the next boot would fast-start straight over the
+            // divergence. Fail closed instead of diverging silently.
+            let unappliable: Vec<String> = changes
+                .iter()
+                .filter(|change| {
+                    matches!(
+                        change.kind,
+                        ChangeKind::UpdateCollection
+                            | ChangeKind::DropCollection
+                            | ChangeKind::UpdateValidator
+                            | ChangeKind::UpdateConstraint
+                            | ChangeKind::DropConstraint
+                            | ChangeKind::ChangeTableEngine
+                            | ChangeKind::UpdateLifecyclePolicy
+                            | ChangeKind::DropBucket
+                            | ChangeKind::UpdateStore
+                            | ChangeKind::DropStore
+                    )
+                })
+                .map(|change| format!("{:?} {}.{}", change.kind, change.schema, change.table))
+                .collect();
+            if !unappliable.is_empty() {
+                // RECOVERY PATH. The diff is derived prior-manifest → current
+                // manifest, and the stored manifest only advances after a
+                // SUCCESSFUL startup — so reconciling the store by hand does not
+                // clear this condition on its own, and refusing unconditionally
+                // would deadlock the broker until the proto change was reverted.
+                // The operator asserts "I have reconciled the backend myself" by
+                // setting the ack variable; startup then proceeds, the manifest
+                // advances, and the condition clears permanently. The assertion
+                // is recorded as a warning so it shows up in the startup report
+                // rather than being an invisible override.
+                if manual_backend_reconciliation_acknowledged() {
+                    report.warnings.push(format!(
+                        "operator acknowledged manual backend reconciliation for changes UDB \
+                         cannot apply ({}); recording the new manifest as current. Verify the \
+                         store geometry matches the proto — nothing re-checks it after this.",
+                        unappliable.join(", ")
+                    ));
+                } else {
+                    return Err(fail(
+                        runtime,
+                        &mut report,
+                        "backend_delta_unappliable",
+                        format!(
+                            "the manifest requires backend changes UDB cannot apply automatically \
+                             ({}). Applying the rest would record this manifest as current while \
+                             the store keeps its previous geometry, and the next boot would \
+                             fast-start over the divergence. Either revert the proto change, or \
+                             reconcile the store by hand and set {}=true to acknowledge it — \
+                             hand-reconciliation alone does NOT clear this, because the diff is \
+                             computed against the stored manifest, which only advances on a \
+                             successful start.",
+                            unappliable.join(", "),
+                            ACK_MANUAL_BACKEND_RECONCILIATION_ENV
+                        ),
+                    ));
+                }
+            }
 
             // The approval decision and the Blocked-op rejection were made ONCE,
             // upfront, against the canonical change set (identical to this diff),
@@ -1516,7 +1646,12 @@ async fn run_startup_lifecycle_core(
             // the delta apply below skip the artifact-marker re-gate.
             let approved_via_plan = migration_authorized_via_plan;
 
-            let delta = generate_delta_sql(manifest, &changes, &SqlGenerationConfig::default());
+            // The ordinary generator is intentionally unattended-safe and
+            // excludes RequiresReview operations. Once the exact canonical
+            // change set has passed the approval gate above, use the explicit
+            // approved generator so the reviewed operations are not silently
+            // dropped while the new manifest is recorded as applied.
+            let delta = generate_startup_delta(manifest, &changes, approved_via_plan, dry_run);
             report.pending_migration_files = if dry_run { delta.len() as i64 } else { 0 };
             report.step(
                 FsmState::Applying,
@@ -1813,12 +1948,7 @@ async fn run_startup_lifecycle_core(
     // In dry-run mode, skip the save so the DB state is not mutated.
     if !dry_run {
         runtime
-            .save_manifest_if_latest(
-                manifest,
-                prior_manifest
-                    .as_ref()
-                    .map(|prior| prior.checksum_sha256.as_str()),
-            )
+            .save_manifest_if_latest(manifest, expected_latest_checksum.as_deref())
             .await
             .map_err(|err| fail(runtime, &mut report, "save_manifest", err.to_string()))?;
     }
@@ -1974,11 +2104,132 @@ async fn run_startup_lifecycle_core(
     Ok(report)
 }
 
+const MIGRATION_REPLAY_PRIOR_CHECKSUM_ENV: &str = "UDB_MIGRATION_REPLAY_PRIOR_CHECKSUM";
+
+#[derive(Debug)]
+struct PriorManifestSelection {
+    manifest: Option<CatalogManifest>,
+    /// The actual latest checksum observed before planning. This, rather than
+    /// an explicitly replayed historical manifest, anchors the final ledger CAS.
+    latest_checksum: Option<String>,
+}
+
+fn migration_replay_prior_checksum() -> Option<String> {
+    std::env::var(MIGRATION_REPLAY_PRIOR_CHECKSUM_ENV)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn validate_migration_replay_request(
+    force_sync: bool,
+    dry_run: bool,
+    latest_checksum: Option<&str>,
+    current_checksum: &str,
+    replay_checksum: &str,
+) -> Result<(), String> {
+    if !force_sync && !dry_run {
+        return Err(format!(
+            "{MIGRATION_REPLAY_PRIOR_CHECKSUM_ENV} is a recovery override and is accepted only by admin dry-run or admin force-sync"
+        ));
+    }
+    let Some(latest_checksum) = latest_checksum else {
+        return Err(format!(
+            "{MIGRATION_REPLAY_PRIOR_CHECKSUM_ENV} cannot be used because the manifest ledger is empty"
+        ));
+    };
+    if latest_checksum != current_checksum {
+        return Err(format!(
+            "{MIGRATION_REPLAY_PRIOR_CHECKSUM_ENV} requires the latest ledger checksum to equal the current proto checksum; latest={latest_checksum} current={current_checksum}"
+        ));
+    }
+    if replay_checksum == current_checksum {
+        return Err(format!(
+            "{MIGRATION_REPLAY_PRIOR_CHECKSUM_ENV} must name an older manifest, not the current checksum"
+        ));
+    }
+    Ok(())
+}
+
+async fn load_selected_prior_manifest(
+    runtime: &DataBrokerRuntime,
+    manifest: &CatalogManifest,
+    report: &mut StartupLifecycleReport,
+    latest_checksum: Option<String>,
+    replay_checksum: Option<String>,
+    force_sync: bool,
+    dry_run: bool,
+) -> Result<PriorManifestSelection, String> {
+    let selected_checksum = match replay_checksum {
+        Some(replay_checksum) => {
+            validate_migration_replay_request(
+                force_sync,
+                dry_run,
+                latest_checksum.as_deref(),
+                &manifest.checksum_sha256,
+                &replay_checksum,
+            )
+            .map_err(|message| fail(runtime, report, "migration_replay_prior_invalid", message))?;
+            report.step(
+                FsmState::PlanProtoDiff,
+                format!(
+                    "explicit migration recovery replay selected historical checksum {replay_checksum}; latest ledger checksum remains {}",
+                    latest_checksum.as_deref().unwrap_or_default()
+                ),
+            );
+            Some(replay_checksum)
+        }
+        None => latest_checksum.clone(),
+    };
+
+    let Some(selected_checksum) = selected_checksum else {
+        return Ok(PriorManifestSelection {
+            manifest: None,
+            latest_checksum,
+        });
+    };
+
+    let selected = if dry_run {
+        runtime
+            .load_manifest_by_checksum_with_statement_timeout(
+                &selected_checksum,
+                dry_run_manifest_fetch_timeout(),
+            )
+            .await
+    } else {
+        runtime.load_manifest_by_checksum(&selected_checksum).await
+    }
+    .map_err(|err| {
+        fail(
+            runtime,
+            report,
+            "load_manifest_by_checksum",
+            err.to_string(),
+        )
+    })?;
+    if selected.is_none() {
+        return Err(fail(
+            runtime,
+            report,
+            "migration_replay_prior_missing",
+            format!(
+                "selected prior manifest checksum {selected_checksum} is not present in the manifest ledger"
+            ),
+        ));
+    }
+
+    Ok(PriorManifestSelection {
+        manifest: selected,
+        latest_checksum,
+    })
+}
+
 async fn load_prior_manifest_for_dry_run(
     runtime: &DataBrokerRuntime,
     manifest: &CatalogManifest,
     report: &mut StartupLifecycleReport,
-) -> Result<Option<CatalogManifest>, String> {
+    replay_checksum: Option<String>,
+) -> Result<PriorManifestSelection, String> {
     let prior_checksum = match runtime.load_last_manifest_checksum_if_exists().await {
         Ok(value) => value,
         Err(err) => {
@@ -1986,16 +2237,35 @@ async fn load_prior_manifest_for_dry_run(
                 "dry-run could not read prior manifest checksum: {}; planning bootstrap SQL only",
                 err.message()
             ));
-            return Ok(None);
+            return Ok(PriorManifestSelection {
+                manifest: None,
+                latest_checksum: None,
+            });
         }
     };
 
-    let Some(prior_checksum) = prior_checksum else {
+    if replay_checksum.is_some() {
+        return load_selected_prior_manifest(
+            runtime,
+            manifest,
+            report,
+            prior_checksum,
+            replay_checksum,
+            false,
+            true,
+        )
+        .await;
+    }
+
+    let Some(prior_checksum) = prior_checksum.clone() else {
         report.step(
             FsmState::PlanProtoDiff,
             "dry-run found no prior proto manifest ledger; planning bootstrap SQL",
         );
-        return Ok(None);
+        return Ok(PriorManifestSelection {
+            manifest: None,
+            latest_checksum: None,
+        });
     };
 
     if prior_checksum == manifest.checksum_sha256 {
@@ -2010,7 +2280,10 @@ async fn load_prior_manifest_for_dry_run(
         .load_manifest_by_checksum_with_statement_timeout(&prior_checksum, timeout)
         .await
     {
-        Ok(value) => Ok(value),
+        Ok(value) => Ok(PriorManifestSelection {
+            manifest: value,
+            latest_checksum: Some(prior_checksum),
+        }),
         Err(err) => {
             report.warnings.push(format!(
                 "dry-run could not load prior manifest_json within {}s: {}; \
@@ -2018,7 +2291,10 @@ async fn load_prior_manifest_for_dry_run(
                 timeout.as_secs().max(1),
                 err.message()
             ));
-            Ok(None)
+            Ok(PriorManifestSelection {
+                manifest: None,
+                latest_checksum: Some(prior_checksum),
+            })
         }
     }
 }
@@ -2066,7 +2342,9 @@ async fn load_prior_manifest_for_apply(
     runtime: &DataBrokerRuntime,
     manifest: &CatalogManifest,
     report: &mut StartupLifecycleReport,
-) -> Result<Option<CatalogManifest>, String> {
+    force_sync: bool,
+    replay_checksum: Option<String>,
+) -> Result<PriorManifestSelection, String> {
     let prior_checksum = runtime
         .load_last_manifest_checksum_if_exists()
         .await
@@ -2079,8 +2357,24 @@ async fn load_prior_manifest_for_apply(
             )
         })?;
 
+    if replay_checksum.is_some() {
+        return load_selected_prior_manifest(
+            runtime,
+            manifest,
+            report,
+            prior_checksum,
+            replay_checksum,
+            force_sync,
+            false,
+        )
+        .await;
+    }
+
     let Some(prior_checksum) = prior_checksum else {
-        return Ok(None);
+        return Ok(PriorManifestSelection {
+            manifest: None,
+            latest_checksum: None,
+        });
     };
 
     if prior_checksum == manifest.checksum_sha256 {
@@ -2090,7 +2384,7 @@ async fn load_prior_manifest_for_apply(
         );
     }
 
-    runtime
+    let prior = runtime
         .load_manifest_by_checksum(&prior_checksum)
         .await
         .map_err(|err| {
@@ -2100,7 +2394,11 @@ async fn load_prior_manifest_for_apply(
                 "load_manifest_by_checksum",
                 err.to_string(),
             )
-        })
+        })?;
+    Ok(PriorManifestSelection {
+        manifest: prior,
+        latest_checksum: Some(prior_checksum),
+    })
 }
 
 fn allow_degraded_backend_startup(runtime: &DataBrokerRuntime) -> bool {
@@ -2283,6 +2581,86 @@ fn parse_seed_identity(file_name: &str) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn migration_replay_requires_explicit_admin_mode_and_current_latest_ledger() {
+        let current = "current";
+        let prior = "prior";
+
+        assert!(
+            validate_migration_replay_request(true, false, Some(current), current, prior).is_ok()
+        );
+        assert!(
+            validate_migration_replay_request(false, true, Some(current), current, prior).is_ok()
+        );
+
+        let normal_start =
+            validate_migration_replay_request(false, false, Some(current), current, prior)
+                .expect_err("normal serve must reject a replay override");
+        assert!(normal_start.contains("only by admin dry-run or admin force-sync"));
+
+        let empty_ledger = validate_migration_replay_request(true, false, None, current, prior)
+            .expect_err("replay requires ledger history");
+        assert!(empty_ledger.contains("manifest ledger is empty"));
+
+        let advanced = validate_migration_replay_request(
+            true,
+            false,
+            Some("different-latest"),
+            current,
+            prior,
+        )
+        .expect_err("replay must not race a newer manifest");
+        assert!(advanced.contains("requires the latest ledger checksum to equal"));
+
+        let current_as_prior =
+            validate_migration_replay_request(true, false, Some(current), current, current)
+                .expect_err("replay must select a historical manifest");
+        assert!(current_as_prior.contains("must name an older manifest"));
+    }
+
+    #[test]
+    fn startup_delta_emits_reviewed_drop_only_after_plan_authorization() {
+        let reviewed_drop = ChangeOperation {
+            kind: ChangeKind::DropForeignKey,
+            safety: ChangeSafety::RequiresReview,
+            schema: "fleet".to_string(),
+            table: "driver_sessions".to_string(),
+            object_name: "fk_driver_sessions_profile_old".to_string(),
+            ..Default::default()
+        };
+        let blocked_drop = ChangeOperation {
+            kind: ChangeKind::DropForeignKey,
+            safety: ChangeSafety::Blocked,
+            schema: "fleet".to_string(),
+            table: "driver_sessions".to_string(),
+            object_name: "fk_driver_sessions_profile_blocked".to_string(),
+            ..Default::default()
+        };
+        let changes = vec![reviewed_drop, blocked_drop];
+        let manifest = CatalogManifest::default();
+
+        assert!(
+            generate_startup_delta(&manifest, &changes, false, false).is_empty(),
+            "unattended startup must not render review-required work"
+        );
+
+        let preview = generate_startup_delta(&manifest, &changes, false, true);
+        assert_eq!(preview.len(), 1, "dry-run must preview reviewed work");
+
+        let approved = generate_startup_delta(&manifest, &changes, true, false);
+        assert_eq!(approved.len(), 1);
+        assert!(
+            approved[0]
+                .content
+                .contains("DROP CONSTRAINT IF EXISTS \"fk_driver_sessions_profile_old\"")
+        );
+        assert!(
+            !approved[0]
+                .content
+                .contains("fk_driver_sessions_profile_blocked")
+        );
+    }
 
     // Regression for the dual approval-gate deadlock: the ONE canonical change set
     // an upgrade approves must be the prior→current delta, NOT the from-empty

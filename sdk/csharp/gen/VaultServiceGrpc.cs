@@ -119,6 +119,14 @@ namespace udb.core.Vault.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest> __Marshaller_udb_core_vault_services_v1_RevokeDatabaseCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest> __Marshaller_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest> __Marshaller_udb_core_vault_services_v1_GenerateDataKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDataKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> __Marshaller_udb_core_vault_services_v1_GenerateDataKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse.Parser));
@@ -258,6 +266,22 @@ namespace udb.core.Vault.Services.V1 {
         "GenerateDatabaseCredentials",
         __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest,
         __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> __Method_RevokeDatabaseCredentials = new grpc::Method<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RevokeDatabaseCredentials",
+        __Marshaller_udb_core_vault_services_v1_RevokeDatabaseCredentialsRequest,
+        __Marshaller_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> __Method_EmergencyRevokeDatabaseCredentials = new grpc::Method<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "EmergencyRevokeDatabaseCredentials",
+        __Marshaller_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsRequest,
+        __Marshaller_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> __Method_GenerateDataKey = new grpc::Method<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse>(
@@ -501,6 +525,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
@@ -508,6 +534,35 @@ namespace udb.core.Vault.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> GenerateDatabaseCredentials(global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Revoke one lease in the authenticated tenant/project. The durable state is
+      /// moved to REVOKING before physical session fencing and becomes REVOKED only
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> RevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Emergency kill-switch for every non-terminal lease in exactly one verified
+      /// tenant/project. A confirmation token bound to both scope dimensions prevents
+      /// an accidental tenant-wide or cross-project credential wipe.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> EmergencyRevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1370,6 +1425,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -1386,6 +1443,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -1400,6 +1459,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -1416,6 +1477,8 @@ namespace udb.core.Vault.Services.V1 {
       /// Mint short-lived, per-request Postgres credentials with a durable lease.
       /// The requested role_name is an operator-configured alias resolved from
       /// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+      /// The authenticated tenant/project/caller and idempotency_key are durably
+      /// deduplicated in the same transaction that activates the issued lease.
       /// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -1425,6 +1488,122 @@ namespace udb.core.Vault.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> GenerateDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GenerateDatabaseCredentials, null, options, request);
+      }
+      /// <summary>
+      /// Revoke one lease in the authenticated tenant/project. The durable state is
+      /// moved to REVOKING before physical session fencing and becomes REVOKED only
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse RevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeDatabaseCredentials(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Revoke one lease in the authenticated tenant/project. The durable state is
+      /// moved to REVOKING before physical session fencing and becomes REVOKED only
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse RevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RevokeDatabaseCredentials, null, options, request);
+      }
+      /// <summary>
+      /// Revoke one lease in the authenticated tenant/project. The durable state is
+      /// moved to REVOKING before physical session fencing and becomes REVOKED only
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> RevokeDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeDatabaseCredentialsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Revoke one lease in the authenticated tenant/project. The durable state is
+      /// moved to REVOKING before physical session fencing and becomes REVOKED only
+      /// after the generated role is proven absent. The tenant/project/caller and
+      /// lease_id dedup record transition in one transaction, so replay is safe.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> RevokeDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RevokeDatabaseCredentials, null, options, request);
+      }
+      /// <summary>
+      /// Emergency kill-switch for every non-terminal lease in exactly one verified
+      /// tenant/project. A confirmation token bound to both scope dimensions prevents
+      /// an accidental tenant-wide or cross-project credential wipe.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse EmergencyRevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return EmergencyRevokeDatabaseCredentials(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Emergency kill-switch for every non-terminal lease in exactly one verified
+      /// tenant/project. A confirmation token bound to both scope dimensions prevents
+      /// an accidental tenant-wide or cross-project credential wipe.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse EmergencyRevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_EmergencyRevokeDatabaseCredentials, null, options, request);
+      }
+      /// <summary>
+      /// Emergency kill-switch for every non-terminal lease in exactly one verified
+      /// tenant/project. A confirmation token bound to both scope dimensions prevents
+      /// an accidental tenant-wide or cross-project credential wipe.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> EmergencyRevokeDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return EmergencyRevokeDatabaseCredentialsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Emergency kill-switch for every non-terminal lease in exactly one verified
+      /// tenant/project. A confirmation token bound to both scope dimensions prevents
+      /// an accidental tenant-wide or cross-project credential wipe.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> EmergencyRevokeDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_EmergencyRevokeDatabaseCredentials, null, options, request);
       }
       /// <summary>
       /// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
@@ -1747,6 +1926,8 @@ namespace udb.core.Vault.Services.V1 {
           .AddMethod(__Method_Hmac, serviceImpl.Hmac)
           .AddMethod(__Method_SealStatus, serviceImpl.SealStatus)
           .AddMethod(__Method_GenerateDatabaseCredentials, serviceImpl.GenerateDatabaseCredentials)
+          .AddMethod(__Method_RevokeDatabaseCredentials, serviceImpl.RevokeDatabaseCredentials)
+          .AddMethod(__Method_EmergencyRevokeDatabaseCredentials, serviceImpl.EmergencyRevokeDatabaseCredentials)
           .AddMethod(__Method_GenerateDataKey, serviceImpl.GenerateDataKey)
           .AddMethod(__Method_Rewrap, serviceImpl.Rewrap)
           .AddMethod(__Method_GetTransitPublicKey, serviceImpl.GetTransitPublicKey)
@@ -1776,6 +1957,8 @@ namespace udb.core.Vault.Services.V1 {
       serviceBinder.AddMethod(__Method_Hmac, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.HmacRequest, global::udb.core.Vault.Services.V1.HmacResponse>(serviceImpl.Hmac));
       serviceBinder.AddMethod(__Method_SealStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.SealStatusRequest, global::udb.core.Vault.Services.V1.SealStatusResponse>(serviceImpl.SealStatus));
       serviceBinder.AddMethod(__Method_GenerateDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse>(serviceImpl.GenerateDatabaseCredentials));
+      serviceBinder.AddMethod(__Method_RevokeDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse>(serviceImpl.RevokeDatabaseCredentials));
+      serviceBinder.AddMethod(__Method_EmergencyRevokeDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse>(serviceImpl.EmergencyRevokeDatabaseCredentials));
       serviceBinder.AddMethod(__Method_GenerateDataKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse>(serviceImpl.GenerateDataKey));
       serviceBinder.AddMethod(__Method_Rewrap, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.RewrapRequest, global::udb.core.Vault.Services.V1.RewrapResponse>(serviceImpl.Rewrap));
       serviceBinder.AddMethod(__Method_GetTransitPublicKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest, global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse>(serviceImpl.GetTransitPublicKey));

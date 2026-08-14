@@ -115,6 +115,21 @@ pub(crate) fn backup_run_missing_object_prefix_status() -> Status {
     )
 }
 
+pub(crate) fn backup_run_location_missing_status(operation: &'static str) -> Status {
+    backup_policy_status(
+        operation,
+        "backup_run_location_migration_required",
+        "backup run lacks immutable object/project topology metadata; legacy location guessing is refused",
+    )
+}
+
+pub(crate) fn backup_topology_mismatch_status(
+    operation: &'static str,
+    message: impl Into<String>,
+) -> Status {
+    backup_policy_status(operation, "backup_topology_mismatch", message)
+}
+
 /// A cross-tenant restore (target differs from source, or the caller asked to
 /// cross the boundary) moves one tenant's raw rows into another. Only a genuine
 /// cross-tenant / platform admin — the identity authorized over BOTH tenants —

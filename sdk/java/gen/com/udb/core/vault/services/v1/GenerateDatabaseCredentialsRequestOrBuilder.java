@@ -39,4 +39,50 @@ public interface GenerateDatabaseCredentialsRequestOrBuilder extends
    * @return The ttlSeconds.
    */
   int getTtlSeconds();
+
+  /**
+   * <pre>
+   * Must match the verified project claim/header. Empty resolves to the
+   * canonical default project, never to an arbitrary catalog fallback.
+   * </pre>
+   *
+   * <code>string project_id = 4 [json_name = "projectId"];</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <pre>
+   * Must match the verified project claim/header. Empty resolves to the
+   * canonical default project, never to an arbitrary catalog fallback.
+   * </pre>
+   *
+   * <code>string project_id = 4 [json_name = "projectId"];</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
+
+  /**
+   * <pre>
+   * Required caller-supplied replay key. Reusing it with identical authoritative
+   * inputs returns the original KEK-protected credential response; reusing it
+   * with different inputs is an ABORTED conflict.
+   * </pre>
+   *
+   * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+   * @return The idempotencyKey.
+   */
+  java.lang.String getIdempotencyKey();
+  /**
+   * <pre>
+   * Required caller-supplied replay key. Reusing it with identical authoritative
+   * inputs returns the original KEK-protected credential response; reusing it
+   * with different inputs is an ABORTED conflict.
+   * </pre>
+   *
+   * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+   * @return The bytes for idempotencyKey.
+   */
+  com.google.protobuf.ByteString
+      getIdempotencyKeyBytes();
 }

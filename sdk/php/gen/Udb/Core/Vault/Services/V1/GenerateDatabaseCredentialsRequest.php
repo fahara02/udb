@@ -26,6 +26,21 @@ class GenerateDatabaseCredentialsRequest extends \Google\Protobuf\Internal\Messa
      * Generated from protobuf field <code>int32 ttl_seconds = 3 [json_name = "ttlSeconds"];</code>
      */
     protected $ttl_seconds = 0;
+    /**
+     * Must match the verified project claim/header. Empty resolves to the
+     * canonical default project, never to an arbitrary catalog fallback.
+     *
+     * Generated from protobuf field <code>string project_id = 4 [json_name = "projectId"];</code>
+     */
+    protected $project_id = '';
+    /**
+     * Required caller-supplied replay key. Reusing it with identical authoritative
+     * inputs returns the original KEK-protected credential response; reusing it
+     * with different inputs is an ABORTED conflict.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+     */
+    protected $idempotency_key = '';
 
     /**
      * Constructor.
@@ -36,6 +51,13 @@ class GenerateDatabaseCredentialsRequest extends \Google\Protobuf\Internal\Messa
      *     @type string $tenant_id
      *     @type string $role_name
      *     @type int $ttl_seconds
+     *     @type string $project_id
+     *           Must match the verified project claim/header. Empty resolves to the
+     *           canonical default project, never to an arbitrary catalog fallback.
+     *     @type string $idempotency_key
+     *           Required caller-supplied replay key. Reusing it with identical authoritative
+     *           inputs returns the original KEK-protected credential response; reusing it
+     *           with different inputs is an ABORTED conflict.
      * }
      */
     public function __construct($data = NULL) {
@@ -105,6 +127,64 @@ class GenerateDatabaseCredentialsRequest extends \Google\Protobuf\Internal\Messa
     {
         GPBUtil::checkInt32($var);
         $this->ttl_seconds = $var;
+
+        return $this;
+    }
+
+    /**
+     * Must match the verified project claim/header. Empty resolves to the
+     * canonical default project, never to an arbitrary catalog fallback.
+     *
+     * Generated from protobuf field <code>string project_id = 4 [json_name = "projectId"];</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * Must match the verified project claim/header. Empty resolves to the
+     * canonical default project, never to an arbitrary catalog fallback.
+     *
+     * Generated from protobuf field <code>string project_id = 4 [json_name = "projectId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->project_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Required caller-supplied replay key. Reusing it with identical authoritative
+     * inputs returns the original KEK-protected credential response; reusing it
+     * with different inputs is an ABORTED conflict.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+     * @return string
+     */
+    public function getIdempotencyKey()
+    {
+        return $this->idempotency_key;
+    }
+
+    /**
+     * Required caller-supplied replay key. Reusing it with identical authoritative
+     * inputs returns the original KEK-protected credential response; reusing it
+     * with different inputs is an ABORTED conflict.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setIdempotencyKey($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->idempotency_key = $var;
 
         return $this;
     }

@@ -13,7 +13,7 @@ use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
     admit_on as native_admit_on, metadata_project_id, metadata_tenant_id, native_page_response,
-    native_page_window, native_service_context,
+    native_page_window, tenant_only_native_service_context,
 };
 use super::AnalyticsServiceImpl;
 use super::config::{
@@ -169,7 +169,7 @@ pub(crate) async fn get_pipeline_summary(
         && req.hour_to.trim().is_empty()
         && let Some(runtime) = svc.runtime()
     {
-        let context = native_service_context(&metadata, &req.tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &req.tenant_id);
         let filter = pipeline_summary_filter(&req);
         let total = runtime
             .native_entity_count_for_service("analytics", &context, PMS_MSG, filter.clone())
@@ -261,7 +261,14 @@ pub(crate) async fn get_executor_performance(
         && req.date_to.trim().is_empty()
         && let Some(runtime) = svc.runtime()
     {
-        let context = native_service_context(&metadata, "", "");
+        // Scope to the VALIDATED caller tenant, exactly as the admission check
+        // above already resolves it. Passing "" here built a tenant-less context:
+        // harmless only while these summary entities carry no tenant column, and
+        // a `tenant_scope_required` failure the moment one is added.
+        let context = tenant_only_native_service_context(
+            &metadata,
+            &metadata_tenant_id(&metadata).unwrap_or_default(),
+        );
         let rows = runtime
             .native_entity_read_for_service("analytics", &context, executor_performance_read(&req))
             .await?;
@@ -347,7 +354,14 @@ pub(crate) async fn get_reconciliation_analytics(
         && req.date_to.trim().is_empty()
         && let Some(runtime) = svc.runtime()
     {
-        let context = native_service_context(&metadata, "", "");
+        // Scope to the VALIDATED caller tenant, exactly as the admission check
+        // above already resolves it. Passing "" here built a tenant-less context:
+        // harmless only while these summary entities carry no tenant column, and
+        // a `tenant_scope_required` failure the moment one is added.
+        let context = tenant_only_native_service_context(
+            &metadata,
+            &metadata_tenant_id(&metadata).unwrap_or_default(),
+        );
         let rows = runtime
             .native_entity_read_for_service("analytics", &context, reconciliation_analytics_read())
             .await?;
@@ -499,16 +513,38 @@ pub(crate) async fn get_throughput(
     .map_err(|err| {
         analytics_internal_status("get_throughput", format!("get throughput failed: {err}"))
     })?;
-    let total_requests: i64 = row.try_get("total_requests").unwrap_or(0);
-    let total_successful: i64 = row.try_get("total_successful").unwrap_or(0);
+    // Every selected column is COALESCE-ed, so it is always present and
+    // non-NULL: a decode failure here means a genuine type/shape defect, never
+    // an absent metric. Reporting 0 for it made a broken read indistinguishable
+    // from a tenant with no traffic — the same silent-zero that left the typed
+    // aggregate this raw SQL stands in for un-diagnosable from its symptom.
+    // Surface the failure instead of swallowing it.
+    let decode = |column: &str, err: sqlx::Error| {
+        analytics_internal_status(
+            "get_throughput",
+            format!("get throughput decode of column '{column}' failed: {err}"),
+        )
+    };
+    let total_requests: i64 = row
+        .try_get("total_requests")
+        .map_err(|err| decode("total_requests", err))?;
+    let total_successful: i64 = row
+        .try_get("total_successful")
+        .map_err(|err| decode("total_successful", err))?;
+    let avg_rps: f64 = row
+        .try_get("avg_rps")
+        .map_err(|err| decode("avg_rps", err))?;
+    let peak_rps: f64 = row
+        .try_get("peak_rps")
+        .map_err(|err| decode("peak_rps", err))?;
     let overall_success_rate = if total_requests > 0 {
         total_successful as f64 / total_requests as f64
     } else {
         0.0
     };
     Ok(Response::new(ana_pb::GetThroughputResponse {
-        avg_rps: row.try_get("avg_rps").unwrap_or(0.0),
-        peak_rps: row.try_get("peak_rps").unwrap_or(0.0),
+        avg_rps,
+        peak_rps,
         total_requests,
         overall_success_rate,
     }))
@@ -539,7 +575,7 @@ pub(crate) async fn get_sla_compliance(
         && req.date_to.trim().is_empty()
         && let Some(runtime) = svc.runtime()
     {
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let rows = runtime
             .native_entity_read_for_service(
                 "analytics",

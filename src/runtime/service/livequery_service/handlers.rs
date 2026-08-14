@@ -131,9 +131,38 @@ pub(crate) async fn subscribe(
     let rows = runtime
         .native_entity_read_for_service(SERVICE_ID, &context, read)
         .await?;
+    // PII masking for BOTH the snapshot and the live deltas. The relational read
+    // path masks these columns; LiveQuery shipped the raw row image, so a
+    // subscriber with only `udb:stream` saw them in clear text.
+    let can_read_pii = context
+        .scopes
+        .iter()
+        .any(|scope| scope == "udb:pii:read" || scope == "udb:*" || scope == "*");
+    let masked_columns: Vec<String> = if can_read_pii {
+        Vec::new()
+    } else {
+        crate::runtime::native_catalog::native_manifest()
+            .tables
+            .iter()
+            .find(|table| {
+                crate::runtime::projection::message_type_matches(&table.message_name, &message_type)
+            })
+            .map(|table| {
+                table
+                    .columns
+                    .iter()
+                    .filter(|c| c.security.is_pii || c.security.mask_in_logs)
+                    .map(|c| c.column_name.clone())
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
     let rows_json: Vec<String> = rows
         .iter()
-        .map(|row| serde_json::to_string(&row_object(row)).unwrap_or_else(|_| "{}".to_string()))
+        .map(|row| {
+            let masked = super::predicate::mask_row(row_object(row), &masked_columns);
+            serde_json::to_string(&masked).unwrap_or_else(|_| "{}".to_string())
+        })
         .collect();
     let snapshot = lq_pb::SubscribeResponse {
         payload: Some(lq_pb::subscribe_response::Payload::Snapshot(
@@ -161,6 +190,7 @@ pub(crate) async fn subscribe(
             tenant_id,
             project_id,
             source.cdc_topic,
+            masked_columns,
             user_filter,
             resume_replay,
             svc.metrics.clone(),

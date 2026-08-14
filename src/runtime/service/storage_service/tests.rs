@@ -8,6 +8,7 @@
 use tonic::metadata::MetadataValue;
 use tonic::{Request, Status};
 
+use crate::ir::{ComparisonOp, LogicalFilter, LogicalValue};
 use crate::proto::udb::core::storage::services::v1 as storage_pb;
 use crate::proto::udb::core::storage::services::v1::storage_service_server::StorageService;
 use crate::proto::{ErrorDetail, ErrorKind};
@@ -27,7 +28,35 @@ use super::errors::{
     validate_object_key_filename,
 };
 use super::model::{file_status_to_db, file_type_to_db, register_is_public_bind};
-use super::store::gc_intent_fingerprint;
+use super::store::{file_list_filter, file_read_by_id, gc_intent_fingerprint};
+
+fn comparison_value<'a>(filter: &'a LogicalFilter, wanted_field: &str) -> Option<&'a LogicalValue> {
+    match filter {
+        LogicalFilter::And(clauses) | LogicalFilter::Or(clauses) => clauses
+            .iter()
+            .find_map(|clause| comparison_value(clause, wanted_field)),
+        LogicalFilter::Not(clause) => comparison_value(clause, wanted_field),
+        LogicalFilter::Comparison { field, op, value }
+            if field == wanted_field && *op == ComparisonOp::Eq =>
+        {
+            Some(value)
+        }
+        LogicalFilter::Comparison { .. }
+        | LogicalFilter::IsNull(_)
+        | LogicalFilter::InList { .. } => None,
+    }
+}
+
+fn has_null_guard(filter: &LogicalFilter, wanted_field: &str) -> bool {
+    match filter {
+        LogicalFilter::And(clauses) | LogicalFilter::Or(clauses) => clauses
+            .iter()
+            .any(|clause| has_null_guard(clause, wanted_field)),
+        LogicalFilter::Not(clause) => has_null_guard(clause, wanted_field),
+        LogicalFilter::IsNull(field) => field == wanted_field,
+        LogicalFilter::Comparison { .. } | LogicalFilter::InList { .. } => false,
+    }
+}
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -423,6 +452,46 @@ fn gc_intent_fingerprint_is_stable_and_discriminating() {
     assert_eq!(a, gc_intent_fingerprint(" file-1 ", " HARD ")); // trimmed
     assert_ne!(a, gc_intent_fingerprint("file-2", "HARD")); // different file
     assert_ne!(a, gc_intent_fingerprint("file-1", "SOFT")); // different mode
+}
+
+/// A project-scoped Storage credential must add ownership to every logical
+/// object lookup and list predicate. An intentionally tenant-wide credential
+/// keeps the historical tenant-only view instead of accidentally matching
+/// `project_id IS NULL`.
+#[test]
+fn storage_file_filters_bind_project_ownership_when_present() {
+    let tenant_id = "11111111-1111-4111-8111-111111111111";
+    let project_id = "22222222-2222-4222-8222-222222222222";
+    let file_id = "33333333-3333-4333-8333-333333333333";
+
+    let project_read = file_read_by_id(tenant_id, project_id, file_id);
+    let project_filter = project_read.filter.as_ref().expect("read filter");
+    assert_eq!(
+        comparison_value(project_filter, "tenant_id"),
+        Some(&LogicalValue::String(tenant_id.to_string()))
+    );
+    assert_eq!(
+        comparison_value(project_filter, "project_id"),
+        Some(&LogicalValue::String(project_id.to_string()))
+    );
+    assert_eq!(
+        comparison_value(project_filter, "file_id"),
+        Some(&LogicalValue::String(file_id.to_string()))
+    );
+    assert!(has_null_guard(project_filter, "deleted_at"));
+
+    let tenant_read = file_read_by_id(tenant_id, "", file_id);
+    let tenant_filter = tenant_read.filter.as_ref().expect("read filter");
+    assert_eq!(comparison_value(tenant_filter, "project_id"), None);
+    assert!(has_null_guard(tenant_filter, "deleted_at"));
+
+    let project_list = file_list_filter(tenant_id, project_id, "", "", "", "");
+    assert_eq!(
+        comparison_value(&project_list, "project_id"),
+        Some(&LogicalValue::String(project_id.to_string()))
+    );
+    let tenant_list = file_list_filter(tenant_id, "", "", "", "", "");
+    assert_eq!(comparison_value(&tenant_list, "project_id"), None);
 }
 
 /// A same-key/different-target HARD delete replay conflicts fail-closed, mirroring

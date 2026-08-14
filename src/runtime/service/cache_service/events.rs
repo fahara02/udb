@@ -3,7 +3,7 @@
 //! produced by the Redis-backed handlers.
 
 use super::super::native_helpers::{
-    NativeEventContext, enqueue_outbox_event_with_context, native_service_context,
+    NativeEventContext, enqueue_outbox_event_with_context, project_scoped_native_service_context,
 };
 use super::CacheServiceImpl;
 
@@ -19,7 +19,7 @@ pub(crate) async fn emit_event(
     let Some(pool) = svc.pg_pool.as_ref() else {
         return;
     };
-    let context = native_service_context(metadata, tenant_id, "");
+    let context = project_scoped_native_service_context(metadata, tenant_id);
     enqueue_outbox_event_with_context(
         pool,
         svc.outbox_relation.as_deref(),

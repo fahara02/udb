@@ -180,10 +180,62 @@ pub fn generate_bootstrap_sql(
     Ok(out)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DeltaGenerationScope {
+    Unattended,
+    IncludeReview,
+}
+
+impl DeltaGenerationScope {
+    fn permits(self, safety: &ChangeSafety) -> bool {
+        match (self, safety) {
+            (_, &ChangeSafety::SafeAuto) => true,
+            (Self::IncludeReview, &ChangeSafety::RequiresReview) => true,
+            _ => false,
+        }
+    }
+}
+
+/// Generate only the delta operations that are safe to execute unattended.
+/// Review-required and blocked operations are deliberately excluded.
 pub fn generate_delta_sql(
     manifest: &CatalogManifest,
     changes: &[ChangeOperation],
     config: &SqlGenerationConfig,
+) -> Vec<GeneratedArtifact> {
+    generate_delta_sql_with_authorization(
+        manifest,
+        changes,
+        config,
+        DeltaGenerationScope::Unattended,
+    )
+}
+
+/// Generate the exact reviewable relational delta for a non-executing preview,
+/// or after the caller has verified an approval plan for this change set.
+/// Blocked operations remain impossible to render even on this path.
+///
+/// This is intentionally a separate entry point rather than a boolean on the
+/// ordinary generator. The serving lifecycle must still prevent execution
+/// unless the exact change set has passed its approval gate.
+pub(crate) fn generate_review_delta_sql(
+    manifest: &CatalogManifest,
+    changes: &[ChangeOperation],
+    config: &SqlGenerationConfig,
+) -> Vec<GeneratedArtifact> {
+    generate_delta_sql_with_authorization(
+        manifest,
+        changes,
+        config,
+        DeltaGenerationScope::IncludeReview,
+    )
+}
+
+fn generate_delta_sql_with_authorization(
+    manifest: &CatalogManifest,
+    changes: &[ChangeOperation],
+    config: &SqlGenerationConfig,
+    scope: DeltaGenerationScope,
 ) -> Vec<GeneratedArtifact> {
     let mut grouped: Vec<((&str, &str), Vec<&ChangeOperation>)> = Vec::new();
     // #116/#120: ops PostgreSQL forbids inside a transaction (enum ADD VALUE,
@@ -192,7 +244,7 @@ pub fn generate_delta_sql(
     let mut standalone: Vec<&ChangeOperation> = Vec::new();
     for change in changes
         .iter()
-        .filter(|change| change.safety == ChangeSafety::SafeAuto)
+        .filter(|change| scope.permits(&change.safety))
     {
         // HintWarning (UDB-MIG-001) is an informational audit record, never DDL;
         // now that consumed/stale allow_drop hints are SafeAuto they would
@@ -579,6 +631,56 @@ pub(crate) use render_ext::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn review_delta_emits_reviewed_drop_but_never_blocked_operations() {
+        let reviewed_drop = ChangeOperation {
+            kind: ChangeKind::DropForeignKey,
+            safety: ChangeSafety::RequiresReview,
+            schema: "fleet".to_string(),
+            table: "driver_sessions".to_string(),
+            object_name: "fk_driver_sessions_profile_old".to_string(),
+            ..Default::default()
+        };
+        let blocked_drop = ChangeOperation {
+            kind: ChangeKind::DropForeignKey,
+            safety: ChangeSafety::Blocked,
+            schema: "fleet".to_string(),
+            table: "driver_sessions".to_string(),
+            object_name: "fk_driver_sessions_profile_blocked".to_string(),
+            ..Default::default()
+        };
+        let changes = vec![reviewed_drop, blocked_drop];
+        let manifest = CatalogManifest::default();
+        let config = SqlGenerationConfig::default();
+
+        let unattended = generate_delta_sql(&manifest, &changes, &config);
+        assert!(
+            unattended.is_empty(),
+            "unattended generation must not render review-required drops"
+        );
+
+        let approved = generate_review_delta_sql(&manifest, &changes, &config);
+        assert_eq!(
+            approved.len(),
+            1,
+            "approved review work should form one table delta"
+        );
+        assert!(
+            approved[0]
+                .content
+                .contains("DROP CONSTRAINT IF EXISTS \"fk_driver_sessions_profile_old\""),
+            "approved review-required drop must reach SQL: {}",
+            approved[0].content
+        );
+        assert!(
+            !approved[0]
+                .content
+                .contains("fk_driver_sessions_profile_blocked"),
+            "blocked work must never reach SQL, even on an approved path: {}",
+            approved[0].content
+        );
+    }
 
     // Regression: a DropUnique must drop the index UDB actually created
     // (`uidx_<schema>_<table>_<column>`), not the bare column. The old code emitted

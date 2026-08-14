@@ -222,9 +222,10 @@ impl CdcEngine {
         true
     }
 
-    /// Phase 7: Load topic policies from `udb_system.udb_topic_policy` and cache them
-    /// in this engine instance. Call once after construction; reload on SIGHUP if needed.
-    pub async fn load_topic_policies(&mut self) -> Result<(), String> {
+    /// Load one complete topic-policy generation and publish it atomically.
+    /// Disabled rows are retained so disabling the final policy cannot turn a
+    /// configured allowlist into the legacy unconfigured/open state.
+    pub async fn load_topic_policies(&self) -> Result<(), String> {
         use crate::runtime::system::SystemCatalogConfig;
         let sys = SystemCatalogConfig::current();
         let rel = sys.topic_policy_relation();
@@ -232,51 +233,112 @@ impl CdcEngine {
         let rows = sqlx::query(&format!(
             "SELECT policy_id, topic, tenant_id, owning_project, owning_service, schema_uri, \
              redaction_mode, redaction_version, retention_class, max_retry_attempts, retry_delay_secs, dlq_enabled, enabled \
-             FROM {rel} WHERE enabled = TRUE ORDER BY policy_id ASC"
+             FROM {rel} ORDER BY policy_id ASC"
         ))
         .fetch_all(&self.pool)
         .await
         .map_err(|e| format!("failed to load topic policies: {}", e))?;
 
-        self.topic_policies = rows
-            .iter()
-            .map(|row| TopicPolicy {
-                policy_id: row.try_get("policy_id").unwrap_or(0),
-                topic: row.try_get("topic").unwrap_or_default(),
-                tenant_id: row.try_get("tenant_id").unwrap_or_else(|_| "*".to_string()),
-                owning_project: row.try_get("owning_project").unwrap_or_default(),
-                owning_service: row.try_get("owning_service").unwrap_or_default(),
-                schema_uri: row.try_get("schema_uri").unwrap_or_default(),
-                redaction_mode: row
-                    .try_get("redaction_mode")
-                    .unwrap_or_else(|_| "mask".to_string()),
-                redaction_version: row.try_get("redaction_version").unwrap_or(1),
-                retention_class: row.try_get("retention_class").unwrap_or_default(),
-                max_retry_attempts: row.try_get("max_retry_attempts").unwrap_or(3),
-                retry_delay_secs: row.try_get("retry_delay_secs").unwrap_or_default(),
-                dlq_enabled: row.try_get("dlq_enabled").unwrap_or(true),
-                enabled: row.try_get("enabled").unwrap_or(true),
+        let policies = rows
+            .into_iter()
+            .map(|row| {
+                Ok(TopicPolicy {
+                    policy_id: row.try_get("policy_id")?,
+                    topic: row.try_get("topic")?,
+                    tenant_id: row.try_get("tenant_id")?,
+                    owning_project: row.try_get("owning_project")?,
+                    owning_service: row.try_get("owning_service")?,
+                    schema_uri: row.try_get("schema_uri")?,
+                    redaction_mode: row.try_get("redaction_mode")?,
+                    redaction_version: row.try_get("redaction_version")?,
+                    retention_class: row.try_get("retention_class")?,
+                    max_retry_attempts: row.try_get("max_retry_attempts")?,
+                    retry_delay_secs: row.try_get("retry_delay_secs")?,
+                    dlq_enabled: row.try_get("dlq_enabled")?,
+                    enabled: row.try_get("enabled")?,
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(|e| format!("failed to decode topic policy row: {e}"))?;
 
-        info!(
-            "[cdc] loaded {} topic policies from {}",
-            self.topic_policies.len(),
-            rel
-        );
+        let previous = self.topic_policies.load_full();
+        let changed = previous.policies != policies || !previous.available;
+        let generation = if changed {
+            previous.generation.saturating_add(1)
+        } else {
+            previous.generation
+        };
+        let policy_count = policies.len();
+        self.topic_policies
+            .store(std::sync::Arc::new(TopicPolicySnapshot {
+                policies,
+                generation,
+                loaded_at_unix: Utc::now().timestamp(),
+                available: true,
+            }));
+        self.metrics
+            .set_cdc_topic_policy_state(generation, 0.0, true);
+
+        if changed {
+            info!(
+                "[cdc] loaded topic policy generation {} with {} row(s) from {}",
+                generation, policy_count, rel
+            );
+        }
         Ok(())
     }
 
-    /// Phase 7: Look up the active policy for a given topic (exact match only).
-    /// Returns `None` when the topic_policies list is empty (open allowlist).
-    #[cfg(feature = "kafka")]
-    pub(crate) fn topic_policy_for(&self, topic: &str) -> Option<&TopicPolicy> {
-        if self.topic_policies.is_empty() {
-            return None;
-        }
+    fn mark_topic_policies_unavailable(&self) {
+        let previous = self.topic_policies.load_full();
+        let generation = if previous.available {
+            previous.generation.saturating_add(1)
+        } else {
+            previous.generation
+        };
+        let age_seconds = Utc::now()
+            .timestamp()
+            .saturating_sub(previous.loaded_at_unix)
+            .max(0) as f64;
         self.topic_policies
+            .store(std::sync::Arc::new(TopicPolicySnapshot {
+                policies: previous.policies.clone(),
+                generation,
+                loaded_at_unix: previous.loaded_at_unix,
+                available: false,
+            }));
+        self.metrics
+            .set_cdc_topic_policy_state(generation, age_seconds, false);
+    }
+
+    /// Continuously refresh the shared policy world. A read/decode failure swaps
+    /// an explicit unavailable sentinel so publishers retain pending rows and
+    /// subscribers terminate instead of enforcing an indefinitely stale allow.
+    pub async fn run_topic_policy_reload_loop(&self) {
+        let mut tick = tokio::time::interval(std::time::Duration::from_millis(
+            self.config.topic_policy_reload_interval_ms.max(1),
+        ));
+        // The startup path already loaded generation 1; do not immediately issue
+        // a duplicate query before the configured interval elapses.
+        tick.tick().await;
+        loop {
+            tick.tick().await;
+            if let Err(err) = self.load_topic_policies().await {
+                self.mark_topic_policies_unavailable();
+                tracing::error!("[cdc] topic policy reload failed closed: {err}");
+            }
+        }
+    }
+
+    /// Look up the current active policy with the same wildcard semantics used
+    /// by ingress. The clone prevents a returned value from outliving its ArcSwap
+    /// generation guard.
+    pub(crate) fn topic_policy_for(&self, topic: &str) -> Option<TopicPolicy> {
+        self.topic_policies
+            .load()
+            .policies
             .iter()
-            .find(|p| p.topic == topic && p.enabled)
+            .find(|policy| policy.enabled && policy.matches_topic(topic))
+            .cloned()
     }
 
     /// Phase 7: Validate an event's schema_uri against the configured schema registry.
@@ -560,11 +622,9 @@ impl CdcEngine {
             None => return Err(format!("DLQ event {dlq_id} not found")),
         };
         let next_retry_count = retry_count + 1;
-        let policy = self
-            .topic_policies
-            .iter()
-            .find(|policy| policy.topic == topic && policy.enabled);
+        let policy = self.topic_policy_for(&topic);
         let max_retry_attempts = policy
+            .as_ref()
             .map(|policy| policy.max_retry_attempts.max(1))
             .unwrap_or_else(|| self.config.max_retry_attempts.max(1) as i32)
             .min(self.config.max_retry_attempts.max(1) as i32);

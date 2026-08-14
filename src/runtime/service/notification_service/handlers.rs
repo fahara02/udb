@@ -16,8 +16,8 @@ use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
     admit_on as native_admit_on, metadata_tenant_id, native_page_response, native_page_window,
-    native_service_context, parse_uuid, tenant_only_native_service_context, validate_request_scope,
-    validate_request_tenant,
+    native_service_context, parse_uuid, project_scoped_native_service_context,
+    tenant_only_native_service_context, validate_request_scope, validate_request_tenant,
 };
 use super::NotificationServiceImpl;
 use super::config::{
@@ -683,7 +683,7 @@ pub(crate) async fn get_template(
     .await?;
     let locale = template_locale_or_default(&req.locale)?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &scoped_tenant, "");
+    let context = tenant_only_native_service_context(&metadata, &scoped_tenant);
     let filter = template_scope_filter(
         &scoped_tenant,
         &req.event_type,
@@ -741,7 +741,7 @@ pub(crate) async fn list_templates(
         req.active_only,
     );
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &scoped_tenant, "");
+    let context = tenant_only_native_service_context(&metadata, &scoped_tenant);
     let total = runtime
         .native_entity_count_for_service(
             "notification",
@@ -786,7 +786,7 @@ pub(crate) async fn get_delivery_stats(
     .await?;
     if req.date_from.trim().is_empty() && req.date_to.trim().is_empty() {
         let runtime = svc.require_runtime()?;
-        let context = native_service_context(&metadata, &req.tenant_id, "");
+        let context = project_scoped_native_service_context(&metadata, &req.tenant_id);
         let rows = runtime
             .native_entity_aggregate_for_service(
                 "notification",
@@ -1009,7 +1009,7 @@ pub(crate) async fn get_preference(
     .await?;
     let user_id = parse_uuid("user_id", &req.user_id)?.to_string();
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &req.tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &req.tenant_id);
     let rows = runtime
         .native_entity_read_for_service(
             "notification",
@@ -1053,7 +1053,7 @@ pub(crate) async fn list_preferences(
     let user_id = user_id.to_string();
     let filter = preference_list_filter(&user_id, &req.tenant_id);
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &req.tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &req.tenant_id);
     let total = runtime
         .native_entity_count_for_service(
             "notification",

@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 379 RPCs across 28 services.
+Current generated RPC surface: 381 RPCs across 28 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -73,7 +73,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | TenantService | 8 | 3 | 3 | 2 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
-| VaultService | 20 | 6 | 13 | 1 | 0 |
+| VaultService | 22 | 6 | 13 | 3 | 0 |
 | WebhookService | 6 | 3 | 2 | 1 | 0 |
 | WorkflowService | 5 | 2 | 2 | 1 | 0 |
 
@@ -439,6 +439,7 @@ identity surface available to benchmark reports.
 | `VaultService/Decrypt` | `decrypt` | `vaultDecrypt` | READ_ONLY |
 | `VaultService/DeleteSecret` | `delete_secret` | `deleteSecret` | MUTATION |
 | `VaultService/DestroySecret` | `destroy_secret` | `destroySecret` | DESTRUCTIVE |
+| `VaultService/EmergencyRevokeDatabaseCredentials` | `emergency_revoke_database_credentials` | `emergencyRevokeDatabaseCredentials` | DESTRUCTIVE |
 | `VaultService/Encrypt` | `encrypt` | `vaultEncrypt` | MUTATION |
 | `VaultService/GenerateDatabaseCredentials` | `generate_database_credentials` | `generateDatabaseCredentials` | MUTATION |
 | `VaultService/GenerateDataKey` | `generate_data_key` | `vaultGenerateDataKey` | MUTATION |
@@ -447,6 +448,7 @@ identity surface available to benchmark reports.
 | `VaultService/Hmac` | `hmac` | `vaultHmac` | MUTATION |
 | `VaultService/ListSecrets` | `list_secrets` | `listSecrets` | READ_ONLY |
 | `VaultService/PutSecret` | `put_secret` | `putSecret` | MUTATION |
+| `VaultService/RevokeDatabaseCredentials` | `revoke_database_credentials` | `revokeDatabaseCredentials` | DESTRUCTIVE |
 | `VaultService/Rewrap` | `rewrap` | `vaultRewrap` | MUTATION |
 | `VaultService/RotateTransitKey` | `rotate_transit_key` | `rotateTransitKey` | MUTATION |
 | `VaultService/SealStatus` | `seal_status` | `vaultSealStatus` | READ_ONLY |

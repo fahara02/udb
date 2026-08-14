@@ -44,7 +44,7 @@ public final class VaultDbCredentialLeaseProto {
       "ential_lease.proto\022\030udb.core.vault.entit" +
       "y.v1\032\037google/protobuf/timestamp.proto\032\033u" +
       "db/core/common/v1/db.proto\032!udb/core/com" +
-      "mon/v1/security.proto\"\254\014\n\026VaultDbCredent" +
+      "mon/v1/security.proto\"\300\025\n\026VaultDbCredent" +
       "ialLease\022F\n\010lease_id\030\001 \001(\tB+\202\267\030\'\n\010lease_" +
       "id\022\004UUID\030\001(\001:\021gen_random_uuid()R\007leaseId" +
       "\022n\n\ttenant_id\030\002 \001(\tBQ\202\267\030M\n\ttenant_id\022\013VA" +
@@ -63,34 +63,64 @@ public final class VaultDbCredentialLeaseProto {
       "tampB\037\202\267\030\033\n\nexpires_at\022\013TIMESTAMPTZ\030\001R\te" +
       "xpiresAt\022X\n\nrevoked_at\030\t \001(\0132\032.google.pr" +
       "otobuf.TimestampB\035\202\267\030\031\n\nrevoked_at\022\013TIME" +
-      "STAMPTZR\trevokedAt\022:\n\005state\030\n \001(\tB$\202\267\030 \n" +
-      "\005state\022\013VARCHAR(20)\030\001:\010\'ACTIVE\'R\005state\022\204" +
-      "\001\n\rmetadata_json\030\013 \001(\tB_\202\267\030[\n\rmetadata_j" +
-      "son\022\005JSONB\030\001:\013\'{}\'::jsonbZ2Non-secret is" +
-      "suance metadata for audit and routingx\001R" +
-      "\014metadataJson:\364\004\372\266\030\333\003\n\032vault_db_credenti" +
-      "al_leases\022\tudb_vault\030\003 \001*BShort-lived da" +
-      "tabase credentials minted by Vault (mast" +
-      "er-plan 9.1)8\001@\001b^\n\020tenant_isolation\032H(t" +
-      "enant_id::text = current_setting(\'app.cu" +
-      "rrent_tenant_id\', true)::text)(\001\212\001C\n.idx" +
-      "_vault_db_credential_leases_username_uni" +
-      "que\022\005BTREE\030\001Z\010username\212\001I\n*idx_vault_db_" +
-      "credential_leases_tenant_role\022\005BTREEZ\tte" +
-      "nant_idZ\trole_name\212\001A\n%idx_vault_db_cred" +
-      "ential_leases_expiry\022\005BTREEZ\005stateZ\nexpi" +
-      "res_at\362\001\"udb.vault.db_credential_leases." +
-      "cdc\372\001\nvault:read\212\262\031\217\001\n\006tenant\032\ttenant_id" +
-      "*4tenant_id = current_setting(\'app.curre" +
-      "nt_tenant_id\')2\004none:\021vault.operational@" +
-      "ZH\002R\006tenantZ\010standardr\025tenant.data_resid" +
-      "encyB\206\002\n\034com.udb.core.vault.entity.v1B\033V" +
-      "aultDbCredentialLeaseProtoP\001ZDgithub.com" +
-      "/fahara02/udb/sdk/go/gen/udb/core/vault/" +
-      "entity/v1;entityv1\242\002\004UCVE\252\002\030udb.core.Vau" +
-      "lt.Entity.V1\312\002\030Udb\\Core\\Vault\\Entity\\V1\342" +
-      "\002$Udb\\GPBMetadata\\Core\\Vault\\Entity\\V1\352\002" +
-      "\034Udb::Core::Vault::Entity::V1b\006proto3"
+      "STAMPTZR\trevokedAt\022<\n\005state\030\n \001(\tB&\202\267\030\"\n" +
+      "\005state\022\013VARCHAR(20)\030\001:\n\'STARTING\'R\005state" +
+      "\022\204\001\n\rmetadata_json\030\013 \001(\tB_\202\267\030[\n\rmetadata" +
+      "_json\022\005JSONB\030\001:\013\'{}\'::jsonbZ2Non-secret " +
+      "issuance metadata for audit and routingx" +
+      "\001R\014metadataJson\022M\n\nproject_id\030\014 \001(\tB.\202\267\030" +
+      "*\n\nproject_id\022\014VARCHAR(255)\030\001:\t\'default\'" +
+      "\240\002\001R\tprojectId\022R\n\017idempotency_key\030\r \001(\tB" +
+      ")\202\267\030%\n\017idempotency_key\022\014VARCHAR(128)\030\001:\002" +
+      "\'\'R\016idempotencyKey\022I\n\014request_hash\030\016 \001(\t" +
+      "B&\202\267\030\"\n\014request_hash\022\014VARCHAR(128)\030\001:\002\'\'" +
+      "R\013requestHash\022\304\001\n\025credential_ciphertext\030" +
+      "\017 \001(\tB\216\001\350\265\030\001\360\265\030\001\202\267\030h\n\025credential_ciphert" +
+      "ext\022\004TEXT\030\001:\002\'\'ZCMaster-KEK-wrapped reco" +
+      "very envelope for idempotent response re" +
+      "play\212\267\030\026\010\003\020\001\030\003:\010vault-dbJ\004noneR\024credenti" +
+      "alCiphertext\022R\n\017target_instance\030\020 \001(\tB)\202" +
+      "\267\030%\n\017target_instance\022\014VARCHAR(255)\030\001:\002\'\'" +
+      "R\016targetInstance\022;\n\nlast_error\030\021 \001(\tB\034\202\267" +
+      "\030\030\n\nlast_error\022\004TEXT\030\001:\002\'\'R\tlastError\022D\n" +
+      "\rrevoke_reason\030\022 \001(\tB\037\202\267\030\033\n\rrevoke_reaso" +
+      "n\022\004TEXT\030\001:\002\'\'R\014revokeReason\022[\n\027revocatio" +
+      "n_operation_id\030\023 \001(\tB#\202\267\030\037\n\027revocation_o" +
+      "peration_id\022\004UUIDR\025revocationOperationId" +
+      "\022~\n\027revocation_requested_at\030\024 \001(\0132\032.goog" +
+      "le.protobuf.TimestampB*\202\267\030&\n\027revocation_" +
+      "requested_at\022\013TIMESTAMPTZR\025revocationReq" +
+      "uestedAt:\235\007\372\266\030\264\005\n\032vault_db_credential_le" +
+      "ases\022\tudb_vault\030\003 \001*BShort-lived databas" +
+      "e credentials minted by Vault (master-pl" +
+      "an 9.1)8\001@\001b\254\001\n\020tenant_isolation\032\225\001(tena" +
+      "nt_id::text = current_setting(\'app.curre" +
+      "nt_tenant_id\', true)::text AND project_i" +
+      "d::text = current_setting(\'app.current_p" +
+      "roject_id\', true)::text)(\001\212\001C\n.idx_vault" +
+      "_db_credential_leases_username_unique\022\005B" +
+      "TREE\030\001Z\010username\212\001U\n*idx_vault_db_creden" +
+      "tial_leases_tenant_role\022\005BTREEZ\ttenant_i" +
+      "dZ\nproject_idZ\trole_name\212\001{\n1idx_vault_d" +
+      "b_credential_leases_idempotency_unique\022\005" +
+      "BTREE\030\001:\025idempotency_key <> \'\'Z\ttenant_i" +
+      "dZ\nproject_idZ\017idempotency_key\212\001A\n%idx_v" +
+      "ault_db_credential_leases_expiry\022\005BTREEZ" +
+      "\005stateZ\nexpires_at\362\001\"udb.vault.db_creden" +
+      "tial_leases.cdc\372\001\nvault:read\212\262\031\337\001\n\006tenan" +
+      "t\022\007project\032\ttenant_id\"\nproject_id*otenan" +
+      "t_id = current_setting(\'app.current_tena" +
+      "nt_id\') AND project_id = current_setting" +
+      "(\'app.current_project_id\')2\004none:\021vault." +
+      "operational@ZH\002R\006tenantZ\010standardr\025tenan" +
+      "t.data_residencyB\206\002\n\034com.udb.core.vault." +
+      "entity.v1B\033VaultDbCredentialLeaseProtoP\001" +
+      "ZDgithub.com/fahara02/udb/sdk/go/gen/udb" +
+      "/core/vault/entity/v1;entityv1\242\002\004UCVE\252\002\030" +
+      "udb.core.Vault.Entity.V1\312\002\030Udb\\Core\\Vaul" +
+      "t\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Vault" +
+      "\\Entity\\V1\352\002\034Udb::Core::Vault::Entity::V" +
+      "1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -104,16 +134,19 @@ public final class VaultDbCredentialLeaseProto {
     internal_static_udb_core_vault_entity_v1_VaultDbCredentialLease_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_vault_entity_v1_VaultDbCredentialLease_descriptor,
-        new java.lang.String[] { "LeaseId", "TenantId", "RoleName", "Username", "ParentRole", "Backend", "IssuedAt", "ExpiresAt", "RevokedAt", "State", "MetadataJson", });
+        new java.lang.String[] { "LeaseId", "TenantId", "RoleName", "Username", "ParentRole", "Backend", "IssuedAt", "ExpiresAt", "RevokedAt", "State", "MetadataJson", "ProjectId", "IdempotencyKey", "RequestHash", "CredentialCiphertext", "TargetInstance", "LastError", "RevokeReason", "RevocationOperationId", "RevocationRequestedAt", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
     com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbColumnSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
+    registry.add(com.udb.core.common.v1.SecurityProto.logRedacted);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
+    registry.add(com.udb.core.common.v1.SecurityProto.sensitive);
     com.google.protobuf.Descriptors.FileDescriptor
         .internalUpdateFileDescriptor(descriptor, registry);
   }

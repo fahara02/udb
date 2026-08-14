@@ -13,7 +13,7 @@ use crate::runtime::channels::OperationChannel;
 use super::super::native_helpers::{
     NativeEventContext, admit_on as native_admit_on, enqueue_outbox_event_with_context,
     native_next_page_token, native_offset_page_window, native_service_context, non_empty_json,
-    validate_request_tenant,
+    tenant_only_native_service_context, validate_request_tenant,
 };
 use super::MeteringServiceImpl;
 use super::calc::{bump_revision, now_unix, quota_decision, window_start_unix};
@@ -214,7 +214,7 @@ pub(crate) async fn query_usage(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
 
     let to_unix = now_unix();
     let from_unix = window_start_unix(to_unix, window_seconds);

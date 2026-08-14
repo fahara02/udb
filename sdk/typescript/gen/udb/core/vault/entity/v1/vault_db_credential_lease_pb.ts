@@ -14,18 +14,18 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/vault/entity/v1/vault_db_credential_lease.proto.
  */
 export const file_udb_core_vault_entity_v1_vault_db_credential_lease: GenFile = /*@__PURE__*/
-  fileDesc("Cjh1ZGIvY29yZS92YXVsdC9lbnRpdHkvdjEvdmF1bHRfZGJfY3JlZGVudGlhbF9sZWFzZS5wcm90bxIYdWRiLmNvcmUudmF1bHQuZW50aXR5LnYxIroLChZWYXVsdERiQ3JlZGVudGlhbExlYXNlEj0KCGxlYXNlX2lkGAEgASgJQiuCtxgnCghsZWFzZV9pZBIEVVVJRBgBKAE6EWdlbl9yYW5kb21fdXVpZCgpEmQKCXRlbmFudF9pZBgCIAEoCUJRgrcYTQoJdGVuYW50X2lkEgtWQVJDSEFSKDY0KRgBUi4KJWlkeF92YXVsdF9kYl9jcmVkZW50aWFsX2xlYXNlc190ZW5hbnQSBUJUUkVFmAIBEjIKCXJvbGVfbmFtZRgDIAEoCUIfgrcYGwoJcm9sZV9uYW1lEgxWQVJDSEFSKDEyOCkYARIvCgh1c2VybmFtZRgEIAEoCUIdgrcYGQoIdXNlcm5hbWUSC1ZBUkNIQVIoNjMpGAESNQoLcGFyZW50X3JvbGUYBSABKAlCIIK3GBwKC3BhcmVudF9yb2xlEgtWQVJDSEFSKDYzKRgBEjkKB2JhY2tlbmQYBiABKAlCKIK3GCQKB2JhY2tlbmQSC1ZBUkNIQVIoMzIpGAE6Cidwb3N0Z3JlcycSYAoJaXNzdWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIxgrcYLQoJaXNzdWVkX2F0EgtUSU1FU1RBTVBUWhgBOhFDVVJSRU5UX1RJTUVTVEFNUBJPCgpleHBpcmVzX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIfgrcYGwoKZXhwaXJlc19hdBILVElNRVNUQU1QVFoYARJNCgpyZXZva2VkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIdgrcYGQoKcmV2b2tlZF9hdBILVElNRVNUQU1QVFoSMwoFc3RhdGUYCiABKAlCJIK3GCAKBXN0YXRlEgtWQVJDSEFSKDIwKRgBOggnQUNUSVZFJxJ2Cg1tZXRhZGF0YV9qc29uGAsgASgJQl+CtxhbCg1tZXRhZGF0YV9qc29uEgVKU09OQhgBOgsne30nOjpqc29uYloyTm9uLXNlY3JldCBpc3N1YW5jZSBtZXRhZGF0YSBmb3IgYXVkaXQgYW5kIHJvdXRpbmd4ATr0BPq2GNsDChp2YXVsdF9kYl9jcmVkZW50aWFsX2xlYXNlcxIJdWRiX3ZhdWx0GAMgASpCU2hvcnQtbGl2ZWQgZGF0YWJhc2UgY3JlZGVudGlhbHMgbWludGVkIGJ5IFZhdWx0IChtYXN0ZXItcGxhbiA5LjEpOAFAAWJeChB0ZW5hbnRfaXNvbGF0aW9uGkgodGVuYW50X2lkOjp0ZXh0ID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnLCB0cnVlKTo6dGV4dCkoAYoBQwouaWR4X3ZhdWx0X2RiX2NyZWRlbnRpYWxfbGVhc2VzX3VzZXJuYW1lX3VuaXF1ZRIFQlRSRUUYAVoIdXNlcm5hbWWKAUkKKmlkeF92YXVsdF9kYl9jcmVkZW50aWFsX2xlYXNlc190ZW5hbnRfcm9sZRIFQlRSRUVaCXRlbmFudF9pZFoJcm9sZV9uYW1ligFBCiVpZHhfdmF1bHRfZGJfY3JlZGVudGlhbF9sZWFzZXNfZXhwaXJ5EgVCVFJFRVoFc3RhdGVaCmV4cGlyZXNfYXTyASJ1ZGIudmF1bHQuZGJfY3JlZGVudGlhbF9sZWFzZXMuY2Rj+gEKdmF1bHQ6cmVhZIqyGY8BCgZ0ZW5hbnQaCXRlbmFudF9pZCo0dGVuYW50X2lkID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnKTIEbm9uZToRdmF1bHQub3BlcmF0aW9uYWxAWkgCUgZ0ZW5hbnRaCHN0YW5kYXJkchV0ZW5hbnQuZGF0YV9yZXNpZGVuY3lChgIKHGNvbS51ZGIuY29yZS52YXVsdC5lbnRpdHkudjFCG1ZhdWx0RGJDcmVkZW50aWFsTGVhc2VQcm90b1ABWkRnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL3ZhdWx0L2VudGl0eS92MTtlbnRpdHl2MaICBFVDVkWqAhh1ZGIuY29yZS5WYXVsdC5FbnRpdHkuVjHKAhhVZGJcQ29yZVxWYXVsdFxFbnRpdHlcVjHiAiRVZGJcR1BCTWV0YWRhdGFcQ29yZVxWYXVsdFxFbnRpdHlcVjHqAhxVZGI6OkNvcmU6OlZhdWx0OjpFbnRpdHk6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_udb_core_common_v1_db, file_udb_core_common_v1_security]);
+  fileDesc("Cjh1ZGIvY29yZS92YXVsdC9lbnRpdHkvdjEvdmF1bHRfZGJfY3JlZGVudGlhbF9sZWFzZS5wcm90bxIYdWRiLmNvcmUudmF1bHQuZW50aXR5LnYxIrkTChZWYXVsdERiQ3JlZGVudGlhbExlYXNlEj0KCGxlYXNlX2lkGAEgASgJQiuCtxgnCghsZWFzZV9pZBIEVVVJRBgBKAE6EWdlbl9yYW5kb21fdXVpZCgpEmQKCXRlbmFudF9pZBgCIAEoCUJRgrcYTQoJdGVuYW50X2lkEgtWQVJDSEFSKDY0KRgBUi4KJWlkeF92YXVsdF9kYl9jcmVkZW50aWFsX2xlYXNlc190ZW5hbnQSBUJUUkVFmAIBEjIKCXJvbGVfbmFtZRgDIAEoCUIfgrcYGwoJcm9sZV9uYW1lEgxWQVJDSEFSKDEyOCkYARIvCgh1c2VybmFtZRgEIAEoCUIdgrcYGQoIdXNlcm5hbWUSC1ZBUkNIQVIoNjMpGAESNQoLcGFyZW50X3JvbGUYBSABKAlCIIK3GBwKC3BhcmVudF9yb2xlEgtWQVJDSEFSKDYzKRgBEjkKB2JhY2tlbmQYBiABKAlCKIK3GCQKB2JhY2tlbmQSC1ZBUkNIQVIoMzIpGAE6Cidwb3N0Z3JlcycSYAoJaXNzdWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIxgrcYLQoJaXNzdWVkX2F0EgtUSU1FU1RBTVBUWhgBOhFDVVJSRU5UX1RJTUVTVEFNUBJPCgpleHBpcmVzX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIfgrcYGwoKZXhwaXJlc19hdBILVElNRVNUQU1QVFoYARJNCgpyZXZva2VkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIdgrcYGQoKcmV2b2tlZF9hdBILVElNRVNUQU1QVFoSNQoFc3RhdGUYCiABKAlCJoK3GCIKBXN0YXRlEgtWQVJDSEFSKDIwKRgBOgonU1RBUlRJTkcnEnYKDW1ldGFkYXRhX2pzb24YCyABKAlCX4K3GFsKDW1ldGFkYXRhX2pzb24SBUpTT05CGAE6Cyd7fSc6Ompzb25iWjJOb24tc2VjcmV0IGlzc3VhbmNlIG1ldGFkYXRhIGZvciBhdWRpdCBhbmQgcm91dGluZ3gBEkIKCnByb2plY3RfaWQYDCABKAlCLoK3GCoKCnByb2plY3RfaWQSDFZBUkNIQVIoMjU1KRgBOgknZGVmYXVsdCegAgESQgoPaWRlbXBvdGVuY3lfa2V5GA0gASgJQimCtxglCg9pZGVtcG90ZW5jeV9rZXkSDFZBUkNIQVIoMTI4KRgBOgInJxI8CgxyZXF1ZXN0X2hhc2gYDiABKAlCJoK3GCIKDHJlcXVlc3RfaGFzaBIMVkFSQ0hBUigxMjgpGAE6AicnEq4BChVjcmVkZW50aWFsX2NpcGhlcnRleHQYDyABKAlCjgHotRgB8LUYAYK3GGgKFWNyZWRlbnRpYWxfY2lwaGVydGV4dBIEVEVYVBgBOgInJ1pDTWFzdGVyLUtFSy13cmFwcGVkIHJlY292ZXJ5IGVudmVsb3BlIGZvciBpZGVtcG90ZW50IHJlc3BvbnNlIHJlcGxheYq3GBYIAxABGAM6CHZhdWx0LWRiSgRub25lEkIKD3RhcmdldF9pbnN0YW5jZRgQIAEoCUIpgrcYJQoPdGFyZ2V0X2luc3RhbmNlEgxWQVJDSEFSKDI1NSkYAToCJycSMAoKbGFzdF9lcnJvchgRIAEoCUIcgrcYGAoKbGFzdF9lcnJvchIEVEVYVBgBOgInJxI2Cg1yZXZva2VfcmVhc29uGBIgASgJQh+CtxgbCg1yZXZva2VfcmVhc29uEgRURVhUGAE6AicnEkQKF3Jldm9jYXRpb25fb3BlcmF0aW9uX2lkGBMgASgJQiOCtxgfChdyZXZvY2F0aW9uX29wZXJhdGlvbl9pZBIEVVVJRBJnChdyZXZvY2F0aW9uX3JlcXVlc3RlZF9hdBgUIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCKoK3GCYKF3Jldm9jYXRpb25fcmVxdWVzdGVkX2F0EgtUSU1FU1RBTVBUWjqdB/q2GLQFChp2YXVsdF9kYl9jcmVkZW50aWFsX2xlYXNlcxIJdWRiX3ZhdWx0GAMgASpCU2hvcnQtbGl2ZWQgZGF0YWJhc2UgY3JlZGVudGlhbHMgbWludGVkIGJ5IFZhdWx0IChtYXN0ZXItcGxhbiA5LjEpOAFAAWKsAQoQdGVuYW50X2lzb2xhdGlvbhqVASh0ZW5hbnRfaWQ6OnRleHQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3RlbmFudF9pZCcsIHRydWUpOjp0ZXh0IEFORCBwcm9qZWN0X2lkOjp0ZXh0ID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF9wcm9qZWN0X2lkJywgdHJ1ZSk6OnRleHQpKAGKAUMKLmlkeF92YXVsdF9kYl9jcmVkZW50aWFsX2xlYXNlc191c2VybmFtZV91bmlxdWUSBUJUUkVFGAFaCHVzZXJuYW1ligFVCippZHhfdmF1bHRfZGJfY3JlZGVudGlhbF9sZWFzZXNfdGVuYW50X3JvbGUSBUJUUkVFWgl0ZW5hbnRfaWRaCnByb2plY3RfaWRaCXJvbGVfbmFtZYoBewoxaWR4X3ZhdWx0X2RiX2NyZWRlbnRpYWxfbGVhc2VzX2lkZW1wb3RlbmN5X3VuaXF1ZRIFQlRSRUUYAToVaWRlbXBvdGVuY3lfa2V5IDw+ICcnWgl0ZW5hbnRfaWRaCnByb2plY3RfaWRaD2lkZW1wb3RlbmN5X2tleYoBQQolaWR4X3ZhdWx0X2RiX2NyZWRlbnRpYWxfbGVhc2VzX2V4cGlyeRIFQlRSRUVaBXN0YXRlWgpleHBpcmVzX2F08gEidWRiLnZhdWx0LmRiX2NyZWRlbnRpYWxfbGVhc2VzLmNkY/oBCnZhdWx0OnJlYWSKshnfAQoGdGVuYW50Egdwcm9qZWN0Ggl0ZW5hbnRfaWQiCnByb2plY3RfaWQqb3RlbmFudF9pZCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJykgQU5EIHByb2plY3RfaWQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3Byb2plY3RfaWQnKTIEbm9uZToRdmF1bHQub3BlcmF0aW9uYWxAWkgCUgZ0ZW5hbnRaCHN0YW5kYXJkchV0ZW5hbnQuZGF0YV9yZXNpZGVuY3lChgIKHGNvbS51ZGIuY29yZS52YXVsdC5lbnRpdHkudjFCG1ZhdWx0RGJDcmVkZW50aWFsTGVhc2VQcm90b1ABWkRnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL3ZhdWx0L2VudGl0eS92MTtlbnRpdHl2MaICBFVDVkWqAhh1ZGIuY29yZS5WYXVsdC5FbnRpdHkuVjHKAhhVZGJcQ29yZVxWYXVsdFxFbnRpdHlcVjHiAiRVZGJcR1BCTWV0YWRhdGFcQ29yZVxWYXVsdFxFbnRpdHlcVjHqAhxVZGI6OkNvcmU6OlZhdWx0OjpFbnRpdHk6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_udb_core_common_v1_db, file_udb_core_common_v1_security]);
 
 /**
  * ---------------------------------------------------------------------------
  * VaultDbCredentialLease — one short-lived database login minted by Vault.
  *
- * The password is returned only in GenerateDatabaseCredentialsResponse and is
- * never stored. The durable row tracks the generated username, tenant, configured
- * role alias, parent Postgres role, and expiry so WORKER_VAULT_LEASE_REAPER can
- * revoke/drop the login after its lease expires. RLS scopes rows to the current
- * tenant; operators should grant the parent role only the privileges that alias
- * is allowed to delegate.
+ * The password is returned only in GenerateDatabaseCredentialsResponse. A
+ * master-KEK-wrapped recovery envelope is stored so an authenticated replay of
+ * the same idempotent request can recover the original one-time response without
+ * creating a second login. The durable STARTING/ACTIVE/REVOKING/REVOKED/FAILED
+ * state machine lets WORKER_VAULT_LEASE_REAPER reconcile every split boundary.
+ * RLS scopes rows to the current tenant and project.
  * ---------------------------------------------------------------------------
  *
  * @generated from message udb.core.vault.entity.v1.VaultDbCredentialLease
@@ -83,7 +83,9 @@ export type VaultDbCredentialLease = Message<"udb.core.vault.entity.v1.VaultDbCr
   revokedAt?: Timestamp | undefined;
 
   /**
-   * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+   * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+   * plus FAILED rows with a pending revocation, is owned by the reconciliation
+   * worker. REVOKED is set only after session termination and role-absence proof.
    *
    * @generated from field: string state = 10;
    */
@@ -93,6 +95,64 @@ export type VaultDbCredentialLease = Message<"udb.core.vault.entity.v1.VaultDbCr
    * @generated from field: string metadata_json = 11;
    */
   metadataJson: string;
+
+  /**
+   * @generated from field: string project_id = 12;
+   */
+  projectId: string;
+
+  /**
+   * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+   * response-loss replay can never mint a second physical login.
+   *
+   * @generated from field: string idempotency_key = 13;
+   */
+  idempotencyKey: string;
+
+  /**
+   * Hash of every authority-relevant issuance input; the same idempotency key
+   * with different inputs is a conflict, never a replay.
+   *
+   * @generated from field: string request_hash = 14;
+   */
+  requestHash: string;
+
+  /**
+   * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+   * only be selected by the trusted recovery path and never appears in normal
+   * entity/SDK output, logs, CDC payloads, or audit events.
+   *
+   * @generated from field: string credential_ciphertext = 15;
+   */
+  credentialCiphertext: string;
+
+  /**
+   * Immutable physical authority selected at issuance. Reconciliation must use
+   * this exact instance and fails closed if it is no longer routable.
+   *
+   * @generated from field: string target_instance = 16;
+   */
+  targetInstance: string;
+
+  /**
+   * @generated from field: string last_error = 17;
+   */
+  lastError: string;
+
+  /**
+   * @generated from field: string revoke_reason = 18;
+   */
+  revokeReason: string;
+
+  /**
+   * @generated from field: string revocation_operation_id = 19;
+   */
+  revocationOperationId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp revocation_requested_at = 20;
+   */
+  revocationRequestedAt?: Timestamp | undefined;
 };
 
 /**

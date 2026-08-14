@@ -674,9 +674,23 @@ service VaultService {
   // Mint short-lived, per-request Postgres credentials with a durable lease.
   // The requested role_name is an operator-configured alias resolved from
   // UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+  // The authenticated tenant/project/caller and idempotency_key are durably
+  // deduplicated in the same transaction that activates the issued lease.
   // WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
   rpc GenerateDatabaseCredentials(GenerateDatabaseCredentialsRequest) returns (GenerateDatabaseCredentialsResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "VaultDbCredentialLease"
+      target_state: "ACTIVE"
+      terminal_states: "REVOKED"
+      terminal_states: "FAILED"
+    };
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "idempotency_key"
+      server_generated_key: false
+      duplicate_response_field: "replayed"
+      replay_safe: true
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:vault:generate-db-credentials"
@@ -685,6 +699,8 @@ service VaultService {
       decision_resource: "vault.GenerateDatabaseCredentials"
       request_context_required: true
       tenant_required: true
+      project_field: "project_id"
+      idempotency_required: true
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
@@ -702,12 +718,132 @@ service VaultService {
       required_env: "UDB_NATIVE_SERVICES_ENABLED"
       required_env: "UDB_GRPC_TARGET"
     };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.GenerateDatabaseCredentials"
+      outbox_topic: "udb.vault.db_credential.issued.v1"
+      partition_key_field: "lease_id"
+      payload_redaction_profile: "strict"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
       api_error: true
       explicit_nulls: true
     };
     option (google.api.http) = {post: "/v1/vault/database/credentials" body: "*"};
+  }
+
+  // Revoke one lease in the authenticated tenant/project. The durable state is
+  // moved to REVOKING before physical session fencing and becomes REVOKED only
+  // after the generated role is proven absent. The tenant/project/caller and
+  // lease_id dedup record transition in one transaction, so replay is safe.
+  rpc RevokeDatabaseCredentials(RevokeDatabaseCredentialsRequest) returns (RevokeDatabaseCredentialsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "VaultDbCredentialLease"
+      legal_source_states: "STARTING"
+      legal_source_states: "ACTIVE"
+      legal_source_states: "REVOKING"
+      legal_source_states: "FAILED"
+      target_state: "REVOKED"
+      terminal_states: "REVOKED"
+      destructive: true
+    };
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "lease_id"
+      server_generated_key: false
+      duplicate_response_field: "replayed"
+      replay_safe: true
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:revoke-db-credentials"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.RevokeDatabaseCredentials"
+      request_context_required: true
+      tenant_required: true
+      project_field: "project_id"
+      idempotency_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "revoke_database_credentials" rest_operation_id: "revokeDatabaseCredentials"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.RevokeDatabaseCredentials"
+      outbox_topic: "udb.vault.db_credential.revoked.v1"
+      partition_key_field: "lease_id"
+      payload_redaction_profile: "strict"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/database/credentials/{lease_id}:revoke" body: "*"};
+  }
+
+  // Emergency kill-switch for every non-terminal lease in exactly one verified
+  // tenant/project. A confirmation token bound to both scope dimensions prevents
+  // an accidental tenant-wide or cross-project credential wipe.
+  rpc EmergencyRevokeDatabaseCredentials(EmergencyRevokeDatabaseCredentialsRequest) returns (EmergencyRevokeDatabaseCredentialsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:emergency-revoke-db-credentials"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.EmergencyRevokeDatabaseCredentials"
+      request_context_required: true
+      tenant_required: true
+      project_field: "project_id"
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "emergency_revoke_database_credentials" rest_operation_id: "emergencyRevokeDatabaseCredentials"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 1
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.EmergencyRevokeDatabaseCredentials"
+      outbox_topic: "udb.vault.db_credential.revoked.v1"
+      partition_key_field: "lease_id"
+      payload_redaction_profile: "strict"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/database/credentials:emergencyRevoke" body: "*"};
   }
 
   // Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
@@ -1391,6 +1527,13 @@ message GenerateDatabaseCredentialsRequest {
   string tenant_id = 1;
   string role_name = 2;
   int32 ttl_seconds = 3;
+  // Must match the verified project claim/header. Empty resolves to the
+  // canonical default project, never to an arbitrary catalog fallback.
+  string project_id = 4;
+  // Required caller-supplied replay key. Reusing it with identical authoritative
+  // inputs returns the original KEK-protected credential response; reusing it
+  // with different inputs is an ABORTED conflict.
+  string idempotency_key = 5;
 }
 
 message GenerateDatabaseCredentialsResponse {
@@ -1403,6 +1546,61 @@ message GenerateDatabaseCredentialsResponse {
   string password = 2 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_SELF redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-db" uniqueness_scope: "tenant" }];
   string lease_id = 3;
   int32 lease_ttl_seconds = 4;
+  string message = 5;
+  udb.core.common.v1.ApiError error = 6;
+  bool replayed = 7;
+  string state = 8;
+}
+
+message RevokeDatabaseCredentialsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string lease_id = 3;
+  string reason = 4;
+}
+
+message RevokeDatabaseCredentialsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string lease_id = 1;
+  string state = 2;
+  bool replayed = 3;
+  string operation_id = 4;
+  string message = 5;
+  udb.core.common.v1.ApiError error = 6;
+}
+
+message EmergencyRevokeDatabaseCredentialsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 1 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string reason = 3;
+  // Required exact value "<tenant_id>:<resolved-project_id>".
+  string confirmation_token = 4;
+}
+
+message EmergencyRevokeDatabaseCredentialsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 1 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string operation_id = 1;
+  int64 matched_count = 2;
+  int64 revoked_count = 3;
+  reserved 4;
   string message = 5;
   udb.core.common.v1.ApiError error = 6;
 }

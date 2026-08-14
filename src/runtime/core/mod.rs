@@ -2297,10 +2297,35 @@ mod outbox_envelope_tests {
 // ── rows_to_record_set, decrypt_record_value, row_value_to_json remain here   ──
 // ── because they depend on the private EncryptionMetrics type.                 ──
 
+/// Whether a row set is being built for a CLIENT response (PII masking applies)
+/// or for the broker's own internal comparison (it must see stored values).
+///
+/// This used to be a `masked_columns: &[String]` parameter, and four of its five
+/// call sites passed `&[]` — so `return_record` on Upsert/Update handed back PII
+/// that the very same caller's `Select` masked. A mask that every caller has to
+/// remember to supply is a mask some caller will forget, so the column set is now
+/// derived from the table here and the only choice left is an explicit, named
+/// intent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PiiMasking<'a> {
+    /// Mask `is_pii` / `mask_in_logs` columns unless the caller holds
+    /// `udb:pii:read`. Correct for anything that reaches a client.
+    ClientVisible,
+    /// Same policy, but for a row set whose columns are NOT this table's bare
+    /// column names — join fusion aliases every output as
+    /// `"{Message}__{column}"`, so a mask keyed on bare names would match
+    /// nothing. The caller supplies the already-aliased names.
+    ClientVisibleAliased(&'a [String]),
+    /// Return stored values verbatim. ONLY for internal reads the broker
+    /// compares against stored state (e.g. the CAS precondition), where a
+    /// `***MASKED***` placeholder would break the comparison.
+    InternalUnmasked,
+}
+
 fn rows_to_record_set(
     rows: Vec<PgRow>,
     table: Option<&ManifestTable>,
-    masked_columns: &[String],
+    masking: PiiMasking<'_>,
     context: &RequestContext,
     encryption: Option<&EncryptionRuntime>,
     encryption_metrics: &EncryptionMetrics,
@@ -2309,6 +2334,18 @@ fn rows_to_record_set(
         .scopes
         .iter()
         .any(|scope| scope == "udb:pii:read" || scope == "udb:*" || scope == "*");
+    // Same rule as the planner's `masked_columns(table)`: PII plus anything
+    // flagged mask-in-logs.
+    let masked_columns: Vec<String> = match (masking, table) {
+        (PiiMasking::ClientVisible, Some(table)) => table
+            .columns
+            .iter()
+            .filter(|column| column.security.is_pii || column.security.mask_in_logs)
+            .map(|column| column.column_name.clone())
+            .collect(),
+        (PiiMasking::ClientVisibleAliased(columns), _) => columns.to_vec(),
+        (PiiMasking::ClientVisible, None) | (PiiMasking::InternalUnmasked, _) => Vec::new(),
+    };
     // Preallocate the result vectors to the known row count so the per-row push
     // loop never reallocates+copies the growing Vec (matters for large result
     // sets — the row-build path is the relational read hot path).

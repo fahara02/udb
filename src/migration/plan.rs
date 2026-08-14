@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::ast::ProtoSchema;
 use crate::generation::{
     CatalogManifest, DsnGenerationConfig, GeneratedArtifact, SqlGenerationConfig, UnifiedDsn,
-    generate_bootstrap_sql, generate_delta_sql, generate_unified_dsn_catalog,
+    generate_bootstrap_sql, generate_review_delta_sql, generate_unified_dsn_catalog,
 };
 use crate::observability::{MetricLabels, TraceContext};
 use crate::provisioning::try_build_provisioning_plan;
@@ -146,7 +146,14 @@ pub fn build_migration_plan(
     let blocked_count = changes.len() - auto_count;
     let operations_hash = operations_hash(&changes);
     let sql_artifacts = if previous.is_some() {
-        generate_delta_sql(&manifest, &changes, &config.sql)
+        // Render what the APPROVED apply path will execute, not the
+        // unattended subset. This plan exists to be reviewed and signed off;
+        // emitting only SafeAuto SQL meant an operator approved a plan whose
+        // artifacts silently omitted the very DropForeignKey (and every other
+        // RequiresReview operation) that `serve` would then run. `changes` is
+        // the same canonical set, and Blocked work stays unrenderable on this
+        // path as on every other.
+        generate_review_delta_sql(&manifest, &changes, &config.sql)
     } else {
         generate_bootstrap_sql(schemas, &config.sql)?
     };

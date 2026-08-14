@@ -20,7 +20,7 @@ use super::cron::{
 use super::errors::{
     scheduler_capability_status, scheduler_internal_status, scheduler_not_found_status,
 };
-use super::handlers::guarded_insert_job_sql;
+use super::handlers::{guarded_insert_job_sql, project_scope_predicate};
 use super::model::{job_status_filter_to_db, schedule_type_to_db, scheduled_job_model};
 use super::quota::{DEFAULT_MAX_JOBS_PER_TENANT, enforce_job_quota, job_quota_exhausted_status};
 use super::tick::{due_jobs_claim_sql, fired_idempotency_key};
@@ -84,6 +84,36 @@ async fn get_job_rejects_cross_tenant_body() {
         .await
         .expect_err("cross-tenant body must be rejected");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+#[tokio::test]
+async fn get_job_rejects_non_uuid_project_authority_before_pool_access() {
+    let tenant_id = "11111111-1111-4111-8111-111111111111";
+    let svc = SchedulerServiceImpl::new();
+    let mut request = Request::new(scheduler_pb::GetJobRequest {
+        tenant_id: tenant_id.to_string(),
+        job_id: "22222222-2222-4222-8222-222222222222".to_string(),
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("not-a-uuid"));
+
+    let err = svc
+        .get_job(request)
+        .await
+        .expect_err("invalid project authority must fail before pool access");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+}
+
+#[test]
+fn scheduler_project_scope_predicate_is_optional_but_exact() {
+    let predicate = project_scope_predicate(&scheduled_job_model(), "$3");
+    assert!(predicate.contains("NULLIF($3, '')::UUID IS NULL"));
+    assert!(predicate.contains("project_id"));
+    assert!(predicate.contains("= NULLIF($3, '')::UUID"));
 }
 
 #[tokio::test]

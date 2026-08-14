@@ -85,7 +85,7 @@ pub(crate) async fn create_pipeline_definition(
     };
     let version = if req.version > 0 { req.version } else { 1 };
     let definition_id = Uuid::new_v4().to_string();
-    let context = native_service_context(&metadata, &req.tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &req.tenant_id);
     svc.require_runtime()?
         .native_entity_write_for_service(
             "asset",
@@ -122,7 +122,7 @@ pub(crate) async fn get_pipeline_definition(
     let _admit = svc.admit_read(&req.tenant_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
     let definition_id = parse_uuid("definition_id", &req.definition_id)?;
-    let context = native_service_context(&metadata, &req.tenant_id, "");
+    let context = tenant_only_native_service_context(&metadata, &req.tenant_id);
     let rows = svc
         .require_runtime()?
         .native_entity_read_for_service(

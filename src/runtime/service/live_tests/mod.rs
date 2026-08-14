@@ -11,6 +11,7 @@ mod asset_vector_live;
 mod data_plane_live;
 mod data_plane_tenant_rls_live;
 mod native_events_live;
+mod scheduler_live;
 #[cfg(feature = "http-client")]
 mod search_tenant_iso_live;
 mod storage_live;
@@ -18,5 +19,6 @@ mod storage_live;
 mod storage_object_live;
 #[cfg(feature = "http-client")]
 mod storage_object_tenant_iso_live;
-mod support;
+pub(crate) mod support;
 mod webrtc_live;
+mod workflow_live;

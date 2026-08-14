@@ -55,6 +55,7 @@ use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::udb::core::vault::services::v1 as vault_pb;
 use crate::proto::udb::core::vault::services::v1::vault_service_server::VaultService;
 use crate::runtime::DataBrokerRuntime;
+use crate::runtime::catalog::{CatalogManager, DEFAULT_PROJECT_ID};
 use crate::runtime::channels::ChannelManager;
 
 pub use crate::proto::udb::core::vault::services::v1::vault_service_server::VaultServiceServer;
@@ -67,7 +68,10 @@ mod dynamic;
 mod errors;
 mod events;
 mod handlers;
+mod lifecycle;
 mod model;
+#[cfg(test)]
+mod project_store_live;
 mod quota;
 mod store;
 #[cfg(test)]
@@ -76,21 +80,6 @@ mod workers;
 
 use config::{SEAL_PROBE, VAULT_MASTER_KEY_UNAVAILABLE_MESSAGE, VAULT_RUNTIME_REQUIRED_MESSAGE};
 use errors::{vault_capability_status, vault_master_key_unavailable_status};
-
-/// Whether the operator requires a real master KEK for the vault secrets engine
-/// (`UDB_VAULT_REQUIRE_MASTER_KEY`), sealing it in dev rather than storing DEKs as
-/// base64 plaintext. Independent of the global fail-closed default (which already
-/// makes `encrypt_secret_at_rest` error without a key).
-fn vault_require_master_key() -> bool {
-    std::env::var("UDB_VAULT_REQUIRE_MASTER_KEY")
-        .map(|value| {
-            matches!(
-                value.trim().to_ascii_lowercase().as_str(),
-                "1" | "true" | "yes" | "on"
-            )
-        })
-        .unwrap_or(false)
-}
 use model::{
     StoredSecret, StoredTransitKey, stored_secret_from_json, stored_transit_key_from_json,
 };
@@ -110,11 +99,12 @@ pub use workers::run_vault_db_lease_reaper_once;
 
 /// Postgres-backed `VaultService` handler.
 pub struct VaultServiceImpl {
-    /// Outbox-event Postgres pool (the configured native store for `vault`).
-    pub(crate) pg_pool: Option<PgPool>,
     /// Runtime handle for the master-key envelope (KEK wrap/unwrap) and typed
     /// native-entity dispatch.
     pub(crate) runtime: Option<Arc<DataBrokerRuntime>>,
+    /// Live project registry. Raw-SQL paths must resolve an explicitly active
+    /// project instead of inheriting the catalog's unknown-project fallback.
+    pub(crate) catalog: Option<Arc<CatalogManager>>,
     /// Configured outbox relation; `None` disables event emission (best-effort).
     pub(crate) outbox_relation: Option<String>,
     /// Shared per-tenant fair-admission manager (same one the data plane uses).
@@ -130,8 +120,8 @@ pub struct VaultServiceImpl {
 impl VaultServiceImpl {
     pub fn new() -> Self {
         Self {
-            pg_pool: None,
             runtime: None,
+            catalog: None,
             outbox_relation: None,
             channels: None,
             metrics: Arc::new(NoopMetrics),
@@ -139,13 +129,13 @@ impl VaultServiceImpl {
         }
     }
 
-    pub fn with_postgres(mut self, pool: Option<PgPool>) -> Self {
-        self.pg_pool = pool;
+    pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
+        self.runtime = runtime;
         self
     }
 
-    pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
-        self.runtime = runtime;
+    pub(crate) fn with_catalog(mut self, catalog: Option<Arc<CatalogManager>>) -> Self {
+        self.catalog = catalog;
         self
     }
 
@@ -205,17 +195,13 @@ impl VaultServiceImpl {
             ))
         })?;
         // A dev passthrough returns the plaintext probe unchanged (no `udb-aead:`
-        // envelope), meaning DEKs would be stored in the clear. When the operator
-        // requires a real master KEK for the secrets engine
-        // (`UDB_VAULT_REQUIRE_MASTER_KEY`), refuse to serve unsealed — a
-        // vault-specific fail-closed sealing gate independent of the global dev
-        // default. (In global fail-closed mode the probe above already errors, so
-        // this only adds the dev-time footgun guard.)
+        // envelope), meaning DEKs would be stored in the clear. Vault is a secrets
+        // engine, so a real KEK is mandatory in every served posture; there is no
+        // opt-in environment switch that can silently turn plaintext wrapping on.
         let has_real_kek = probe != SEAL_PROBE && probe.starts_with("udb-aead:");
-        if !has_real_kek && vault_require_master_key() {
+        if !has_real_kek {
             return Err(vault_master_key_unavailable_status(
-                "vault is sealed: a real master KEK is required for the vault \
-                 (UDB_VAULT_REQUIRE_MASTER_KEY) but none is configured — set \
+                "vault is sealed: a real master KEK is required but none is configured — set \
                  UDB_ENCRYPTION_KEY / a Vault KEK to unseal",
             ));
         }
@@ -241,6 +227,51 @@ impl VaultServiceImpl {
                 .unwrap_or(false),
             None => false,
         }
+    }
+
+    /// Resolve and pin one active project's Postgres Vault store. The returned
+    /// context carries the selected physical instance so subsequent typed-native
+    /// calls cannot re-run weighted selection and drift away from the raw SQL.
+    pub(crate) fn resolve_project_store(
+        &self,
+        mut context: crate::RequestContext,
+        write: bool,
+        operation: &str,
+    ) -> Result<(crate::RequestContext, PgPool), Status> {
+        context.project_id = match context.project_id.trim() {
+            "" => DEFAULT_PROJECT_ID.to_string(),
+            project_id => project_id.to_string(),
+        };
+        // Preserve the service's primary capability ordering: a missing runtime
+        // is the first actionable setup failure. The catalog validation below
+        // still fails closed before any project store is selected or touched.
+        let runtime = self.require_runtime()?;
+        let catalog = self.catalog.as_deref().ok_or_else(|| {
+            vault_capability_status(
+                operation,
+                "active_project_catalog",
+                "vault direct-store operation requires the live project catalog",
+            )
+        })?;
+        if !catalog
+            .active_project_ids()
+            .iter()
+            .any(|active| active == &context.project_id)
+        {
+            return Err(vault_capability_status(
+                operation,
+                "active_project_catalog",
+                format!(
+                    "vault project '{}' has no explicitly active catalog; default-project fallback is refused",
+                    context.project_id
+                ),
+            ));
+        }
+        let (pool, instance) =
+            runtime.native_store_postgres_binding_for_service("vault", write, &context)?;
+        context.target_backend = "postgres".to_string();
+        context.target_instance = instance.unwrap_or_default();
+        Ok((context, pool))
     }
 
     /// All durable secret versions for one path (bounded scan).
@@ -429,26 +460,36 @@ impl VaultService for VaultServiceImpl {
         &self,
         request: Request<vault_pb::GenerateDatabaseCredentialsRequest>,
     ) -> Result<Response<vault_pb::GenerateDatabaseCredentialsResponse>, Status> {
-        handlers::generate_database_credentials(self, request).await
+        lifecycle::generate_database_credentials(self, request).await
+    }
+
+    async fn revoke_database_credentials(
+        &self,
+        request: Request<vault_pb::RevokeDatabaseCredentialsRequest>,
+    ) -> Result<Response<vault_pb::RevokeDatabaseCredentialsResponse>, Status> {
+        lifecycle::revoke_database_credentials(self, request).await
+    }
+
+    async fn emergency_revoke_database_credentials(
+        &self,
+        request: Request<vault_pb::EmergencyRevokeDatabaseCredentialsRequest>,
+    ) -> Result<Response<vault_pb::EmergencyRevokeDatabaseCredentialsResponse>, Status> {
+        lifecycle::emergency_revoke_database_credentials(self, request).await
     }
 }
 
 impl DataBrokerService {
-    /// Build the native `VaultService`, wired to the broker's Postgres pool, the
-    /// master-key envelope runtime, and the shared outbox.
+    /// Build the native `VaultService`, wired to the runtime's project-aware
+    /// Postgres authority resolver, live catalog, master-key envelope, and shared
+    /// outbox. No default/startup pool is captured: every durable RPC resolves
+    /// and pins its active project's write authority at request time.
     pub(crate) fn build_vault_service(&self) -> VaultServiceImpl {
         let runtime = self.runtime.load_full();
-        // Native-service persistence resolves through the discovery seam: the
-        // backend is read from this service's proto `native_service` binding, then
-        // a health/weight-routed instance is chosen — not the process-global pool.
-        let pg_pool = runtime
-            .native_store_pool_for_service("vault", true, "")
-            .ok();
         let outbox = runtime.config().cdc.outbox_relation();
         let channels = Some(runtime.channels().clone());
         VaultServiceImpl::new()
-            .with_postgres(pg_pool)
             .with_runtime(Some(runtime))
+            .with_catalog(Some(self.catalog.clone()))
             .with_outbox(Some(outbox))
             .with_channels(channels)
             .with_metrics(self.metrics.clone())

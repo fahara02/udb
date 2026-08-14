@@ -4,6 +4,7 @@
 //! admission, and emit one outbox event each.
 
 use chrono::Utc;
+use tonic::metadata::MetadataMap;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
@@ -12,8 +13,8 @@ use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
     NativeEventContext, admit_on as native_admit_on, enqueue_outbox_event_in_tx,
-    native_next_page_token_for_total, native_offset_page_window, non_empty_json, parse_uuid,
-    validate_request_scope,
+    metadata_project_id, native_next_page_token_for_total, native_offset_page_window,
+    non_empty_json, parse_uuid, validate_request_scope,
 };
 use super::SchedulerServiceImpl;
 use super::config::{
@@ -31,6 +32,31 @@ use super::quota::{job_quota_exhausted_status, max_jobs_per_tenant};
 
 use crate::runtime::native_catalog::NativeModel;
 
+/// Resolve Scheduler's authorization project claim-first. ScheduledJob stores
+/// UUID project identifiers, so every non-empty authority is validated before
+/// reaching SQL; an empty value deliberately preserves tenant-wide operators.
+fn resolved_scheduler_project_scope(
+    metadata: &MetadataMap,
+    request_project_id: &str,
+) -> Result<String, Status> {
+    let project_id = metadata_project_id(metadata)
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| request_project_id.trim().to_string());
+    if project_id.is_empty() {
+        Ok(String::new())
+    } else {
+        Ok(parse_uuid("project_id", &project_id)?.to_string())
+    }
+}
+
+/// Optional project-ownership predicate shared by every post-create Scheduler
+/// query. `$n = ''` means an intentionally tenant-wide caller; a project-scoped
+/// caller must match the durable ScheduledJob owner exactly.
+pub(crate) fn project_scope_predicate(m: &NativeModel, bind: &str) -> String {
+    let project_id = m.q("project_id");
+    format!("(NULLIF({bind}, '')::UUID IS NULL OR {project_id} = NULLIF({bind}, '')::UUID)")
+}
+
 /// Create a scheduled job. FIRE-ONLY SEMANTICS: when the job is due, the
 /// scheduler durably emits one `udb.scheduler.job.fired.v1` event
 /// (at-least-once via the outbox→CDC pipeline) — it never executes the
@@ -45,8 +71,9 @@ pub(crate) async fn create_job(
     request: Request<scheduler_pb::CreateJobRequest>,
 ) -> Result<Response<scheduler_pb::CreateJobResponse>, Status> {
     let metadata = request.metadata().clone();
-    let req = request.into_inner();
+    let mut req = request.into_inner();
     validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
+    req.project_id = resolved_scheduler_project_scope(&metadata, &req.project_id)?;
     if req.name.trim().is_empty() {
         return Err(scheduler_required_field(
             "name",
@@ -251,13 +278,14 @@ pub(crate) async fn get_job(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_scheduler_project_scope(&metadata, "")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "scheduler",
         OperationChannel::Read,
         &req.tenant_id,
-        None,
+        (!project_id.is_empty()).then_some(project_id.as_str()),
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -266,15 +294,18 @@ pub(crate) async fn get_job(
     let m = scheduled_job_model();
     let rel = m.relation.clone();
     let projection = job_select_projection(&m);
+    let project_scope = project_scope_predicate(&m, "$3");
     let row = sqlx::query(&format!(
         "SELECT {projection} FROM {rel} \
-         WHERE {job_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
+         WHERE {job_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL \
+           AND {project_scope}",
         job_id = m.q("job_id"),
         tenant_id = m.q("tenant_id"),
         deleted = m.q("deleted_at"),
     ))
     .bind(&job_id)
     .bind(&tenant_id)
+    .bind(&project_id)
     .fetch_optional(pool)
     .await
     .map_err(|err| {
@@ -303,13 +334,14 @@ pub(crate) async fn list_jobs(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_scheduler_project_scope(&metadata, "")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "scheduler",
         OperationChannel::Read,
         &req.tenant_id,
-        None,
+        (!project_id.is_empty()).then_some(project_id.as_str()),
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -319,8 +351,10 @@ pub(crate) async fn list_jobs(
     let rel = m.relation.clone();
     let projection = job_select_projection(&m);
     let page_window = native_offset_page_window(req.page, req.page_size, &req.page_token, 50);
+    let project_scope = project_scope_predicate(&m, "$3");
     let where_clause = format!(
-        "WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL AND ($2 = '' OR {status} = $2)",
+        "WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL AND ($2 = '' OR {status} = $2) \
+           AND {project_scope}",
         tenant_id = m.q("tenant_id"),
         deleted = m.q("deleted_at"),
         status = m.q("status"),
@@ -328,6 +362,7 @@ pub(crate) async fn list_jobs(
     let total: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {rel} {where_clause}"))
         .bind(&tenant_id)
         .bind(&status_filter)
+        .bind(&project_id)
         .fetch_one(pool)
         .await
         .map_err(|err| {
@@ -338,11 +373,12 @@ pub(crate) async fn list_jobs(
         })?;
     let rows = sqlx::query(&format!(
         "SELECT {projection} FROM {rel} {where_clause} \
-         ORDER BY {name} LIMIT $3 OFFSET $4",
+         ORDER BY {name} LIMIT $4 OFFSET $5",
         name = m.q("name"),
     ))
     .bind(&tenant_id)
     .bind(&status_filter)
+    .bind(&project_id)
     .bind(page_window.limit_i64())
     .bind(page_window.offset_i64())
     .fetch_all(pool)
@@ -376,13 +412,14 @@ pub(crate) async fn delete_job(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_scheduler_project_scope(&metadata, "")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "scheduler",
         OperationChannel::Admin,
         &req.tenant_id,
-        None,
+        (!project_id.is_empty()).then_some(project_id.as_str()),
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -400,16 +437,21 @@ pub(crate) async fn delete_job(
             format!("delete scheduled job begin failed: {err}"),
         )
     })?;
-    let result = sqlx::query(&format!(
+    let project_scope = project_scope_predicate(&m, "$3");
+    let event_project_id = sqlx::query_scalar::<_, String>(&format!(
         "UPDATE {rel} SET {deleted} = NOW() \
-         WHERE {job_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
+         WHERE {job_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL \
+           AND {project_scope} \
+         RETURNING COALESCE({project_id_column}::TEXT, '')",
         deleted = m.q("deleted_at"),
         job_id = m.q("job_id"),
         tenant_id = m.q("tenant_id"),
+        project_id_column = m.q("project_id"),
     ))
     .bind(&job_id)
     .bind(&tenant_id)
-    .execute(&mut *tx)
+    .bind(&project_id)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|err| {
         scheduler_internal_status(
@@ -417,22 +459,26 @@ pub(crate) async fn delete_job(
             format!("delete scheduled job failed: {err}"),
         )
     })?;
-    if result.rows_affected() == 0 {
+    let Some(event_project_id) = event_project_id else {
         // Nothing matched: fail closed; the tx rolls back on drop (no event).
         return Err(scheduler_not_found_status(
             "delete_job",
             "scheduled_job_not_found",
             "scheduled job not found",
         ));
-    }
+    };
     enqueue_outbox_event_in_tx(
         &mut *tx,
         svc.outbox_relation.as_deref(),
         TOPIC_JOB_DELETED,
         &tenant_id,
         &tenant_id,
-        "",
-        serde_json::json!({ "job_id": job_id.clone(), "tenant_id": tenant_id.clone() }),
+        &event_project_id,
+        serde_json::json!({
+            "job_id": job_id.clone(),
+            "tenant_id": tenant_id.clone(),
+            "project_id": event_project_id.clone(),
+        }),
         NativeEventContext::default(),
     )
     .await
@@ -461,13 +507,14 @@ pub(crate) async fn pause_job(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_scheduler_project_scope(&metadata, "")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "scheduler",
         OperationChannel::Admin,
         &req.tenant_id,
-        None,
+        (!project_id.is_empty()).then_some(project_id.as_str()),
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -482,18 +529,22 @@ pub(crate) async fn pause_job(
             format!("pause scheduled job begin failed: {err}"),
         )
     })?;
-    let result = sqlx::query(&format!(
+    let project_scope = project_scope_predicate(&m, "$3");
+    let event_project_id = sqlx::query_scalar::<_, String>(&format!(
         "UPDATE {rel} SET {status} = 'PAUSED' \
          WHERE {job_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL \
-           AND {status} = 'ACTIVE'",
+           AND {status} = 'ACTIVE' AND {project_scope} \
+         RETURNING COALESCE({project_id_column}::TEXT, '')",
         status = m.q("status"),
         job_id = m.q("job_id"),
         tenant_id = m.q("tenant_id"),
         deleted = m.q("deleted_at"),
+        project_id_column = m.q("project_id"),
     ))
     .bind(&job_id)
     .bind(&tenant_id)
-    .execute(&mut *tx)
+    .bind(&project_id)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|err| {
         scheduler_internal_status(
@@ -501,21 +552,25 @@ pub(crate) async fn pause_job(
             format!("pause scheduled job failed: {err}"),
         )
     })?;
-    if result.rows_affected() == 0 {
+    let Some(event_project_id) = event_project_id else {
         return Err(scheduler_not_found_status(
             "pause_job",
             "active_scheduled_job_not_found",
             "active scheduled job not found",
         ));
-    }
+    };
     enqueue_outbox_event_in_tx(
         &mut *tx,
         svc.outbox_relation.as_deref(),
         TOPIC_JOB_PAUSED,
         &tenant_id,
         &tenant_id,
-        "",
-        serde_json::json!({ "job_id": job_id.clone(), "tenant_id": tenant_id.clone() }),
+        &event_project_id,
+        serde_json::json!({
+            "job_id": job_id.clone(),
+            "tenant_id": tenant_id.clone(),
+            "project_id": event_project_id.clone(),
+        }),
         NativeEventContext::default(),
     )
     .await
@@ -544,13 +599,14 @@ pub(crate) async fn resume_job(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_scheduler_project_scope(&metadata, "")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "scheduler",
         OperationChannel::Admin,
         &req.tenant_id,
-        None,
+        (!project_id.is_empty()).then_some(project_id.as_str()),
     )
     .await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -567,19 +623,23 @@ pub(crate) async fn resume_job(
             format!("resume scheduled job begin failed: {err}"),
         )
     })?;
-    let result = sqlx::query(&format!(
+    let project_scope = project_scope_predicate(&m, "$3");
+    let event_project_id = sqlx::query_scalar::<_, String>(&format!(
         "UPDATE {rel} SET {status} = 'ACTIVE', {attempt_count} = 0 \
          WHERE {job_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL \
-           AND {status} = 'PAUSED'",
+           AND {status} = 'PAUSED' AND {project_scope} \
+         RETURNING COALESCE({project_id_column}::TEXT, '')",
         status = m.q("status"),
         attempt_count = m.q("attempt_count"),
         job_id = m.q("job_id"),
         tenant_id = m.q("tenant_id"),
         deleted = m.q("deleted_at"),
+        project_id_column = m.q("project_id"),
     ))
     .bind(&job_id)
     .bind(&tenant_id)
-    .execute(&mut *tx)
+    .bind(&project_id)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|err| {
         scheduler_internal_status(
@@ -587,21 +647,25 @@ pub(crate) async fn resume_job(
             format!("resume scheduled job failed: {err}"),
         )
     })?;
-    if result.rows_affected() == 0 {
+    let Some(event_project_id) = event_project_id else {
         return Err(scheduler_not_found_status(
             "resume_job",
             "paused_scheduled_job_not_found",
             "paused scheduled job not found",
         ));
-    }
+    };
     enqueue_outbox_event_in_tx(
         &mut *tx,
         svc.outbox_relation.as_deref(),
         TOPIC_JOB_RESUMED,
         &tenant_id,
         &tenant_id,
-        "",
-        serde_json::json!({ "job_id": job_id.clone(), "tenant_id": tenant_id.clone() }),
+        &event_project_id,
+        serde_json::json!({
+            "job_id": job_id.clone(),
+            "tenant_id": tenant_id.clone(),
+            "project_id": event_project_id.clone(),
+        }),
         NativeEventContext::default(),
     )
     .await

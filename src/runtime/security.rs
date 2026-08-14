@@ -28,6 +28,11 @@ pub struct SecurityContext {
     /// Authentication method recorded by the verified credential issuer.
     #[serde(default)]
     pub auth_method: String,
+    /// Absolute verified credential expiry in Unix seconds. `0` means the
+    /// credential itself has no expiry; long-lived streams still impose a
+    /// bounded reconnect age so revocation and policy changes are rechecked.
+    #[serde(default)]
+    pub expires_at_unix: i64,
     pub trace_id: String,
     /// Optional project identifier extracted from `x-udb-project-id` header.
     /// Empty string means single-project mode (default).
@@ -1478,6 +1483,7 @@ pub(crate) fn claims_from_verified_principal(
         service_identity: non_empty(principal.service_identity.clone()),
         jti: Some(principal.credential_id.clone()),
         auth_method: Some(principal.auth_method.clone()),
+        exp: (principal.expires_at_unix > 0).then_some(principal.expires_at_unix),
         ..Default::default()
     }
 }
@@ -1767,6 +1773,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                             credential_type: principal.credential_type,
                             credential_id: principal.credential_id,
                             auth_method: principal.auth_method,
+                            expires_at_unix: principal.expires_at_unix,
                             trace_id: trace_id.clone(),
                             project_id: principal.project_id,
                             consistency: consistency.clone(),
@@ -1842,6 +1849,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                     credential_type: principal.credential_type,
                     credential_id: principal.credential_id,
                     auth_method: principal.auth_method,
+                    expires_at_unix: principal.expires_at_unix,
                     trace_id: trace_id.clone(),
                     project_id: principal.project_id,
                     consistency: consistency.clone(),
@@ -1978,6 +1986,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         }
         // Compute before the struct literal: the literal partially moves `claims`.
         let resolved_scopes = claims.resolved_scopes();
+        let expires_at_unix = claims.exp.unwrap_or_default();
 
         return Ok(SecurityContext {
             tenant_id: claim_tenant.to_string(),
@@ -1991,6 +2000,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             credential_type: bearer_lineage.credential_type,
             credential_id: bearer_lineage.credential_id,
             auth_method: bearer_lineage.auth_method,
+            expires_at_unix,
             trace_id,
             project_id: claim_project.to_string(),
             consistency,
@@ -2055,6 +2065,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             credential_type: 0,
             credential_id: String::new(),
             auth_method: "header".to_string(),
+            expires_at_unix: 0,
             trace_id,
             project_id: project_id_header,
             consistency,
@@ -2146,6 +2157,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         credential_type: grant.credential_type,
         credential_id: grant.credential_id,
         auth_method: grant.auth_method,
+        expires_at_unix: grant.expires_at_unix,
         trace_id,
         project_id,
         consistency,
@@ -4062,6 +4074,7 @@ mod tests {
             roles: Vec::new(),
             credential_id: "udbk_test".to_string(),
             auth_method: "api_key".to_string(),
+            expires_at_unix: 4_102_444_800,
             certificate_identity: None,
             rate_limit_per_minute: 0,
         }

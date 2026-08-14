@@ -24,7 +24,7 @@ use super::errors::{
     workflow_signal_terminal_status,
 };
 use super::model::{is_terminal_status, workflow_model, workflow_status_filter_to_db};
-use super::store::workflow_scope_predicate;
+use super::store::{workflow_project_bind, workflow_scope_predicate};
 use super::tick::{
     advance_event_topic, compensate_emitted_from_payload, compensating_workflows_claim_sql,
     compensation_steps_to_emit, due_workflows_claim_sql, pending_signal_for_step, signal_delivered,
@@ -94,6 +94,105 @@ async fn start_workflow_rejects_cross_tenant_body() {
         .await
         .expect_err("cross-tenant body must be rejected");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+fn workflow_code_project_request<T>(message: T, tenant_id: &str) -> Request<T> {
+    let mut request = Request::new(message);
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    request.metadata_mut().insert(
+        "x-udb-project-id",
+        MetadataValue::from_static("project-code"),
+    );
+    request
+}
+
+#[tokio::test]
+async fn every_workflow_rpc_rejects_code_project_without_tenantwide_downgrade() {
+    let svc = WorkflowServiceImpl::new();
+    let tenant_id = "11111111-1111-4111-8111-111111111111";
+    let workflow_id = "22222222-2222-4222-8222-222222222222";
+
+    let start = svc
+        .start_workflow(workflow_code_project_request(
+            workflow_pb::StartWorkflowRequest {
+                tenant_id: tenant_id.to_string(),
+                workflow_type: "scope-test".to_string(),
+                ..Default::default()
+            },
+            tenant_id,
+        ))
+        .await
+        .expect_err("StartWorkflow must reject an unrepresentable project code");
+    assert_eq!(start.code(), tonic::Code::InvalidArgument);
+
+    let get = svc
+        .get_workflow(workflow_code_project_request(
+            workflow_pb::GetWorkflowRequest {
+                tenant_id: tenant_id.to_string(),
+                workflow_id: workflow_id.to_string(),
+            },
+            tenant_id,
+        ))
+        .await
+        .expect_err("GetWorkflow must reject an unrepresentable project code");
+    assert_eq!(get.code(), tonic::Code::InvalidArgument);
+
+    let list = svc
+        .list_workflows(workflow_code_project_request(
+            workflow_pb::ListWorkflowsRequest {
+                tenant_id: tenant_id.to_string(),
+                ..Default::default()
+            },
+            tenant_id,
+        ))
+        .await
+        .expect_err("ListWorkflows must reject an unrepresentable project code");
+    assert_eq!(list.code(), tonic::Code::InvalidArgument);
+
+    let cancel = svc
+        .cancel_workflow(workflow_code_project_request(
+            workflow_pb::CancelWorkflowRequest {
+                tenant_id: tenant_id.to_string(),
+                workflow_id: workflow_id.to_string(),
+                reason: "scope-test".to_string(),
+            },
+            tenant_id,
+        ))
+        .await
+        .expect_err("CancelWorkflow must reject an unrepresentable project code");
+    assert_eq!(cancel.code(), tonic::Code::InvalidArgument);
+
+    let signal = svc
+        .signal_workflow(workflow_code_project_request(
+            workflow_pb::SignalWorkflowRequest {
+                tenant_id: tenant_id.to_string(),
+                workflow_id: workflow_id.to_string(),
+                signal_name: "scope-test".to_string(),
+                ..Default::default()
+            },
+            tenant_id,
+        ))
+        .await
+        .expect_err("SignalWorkflow must reject an unrepresentable project code");
+    assert_eq!(signal.code(), tonic::Code::InvalidArgument);
+}
+
+#[test]
+fn workflow_project_bind_never_converts_nonempty_authority_to_tenantwide() {
+    assert_eq!(
+        workflow_project_bind("").expect("empty tenant-wide scope"),
+        ""
+    );
+    let project_id = "33333333-3333-4333-8333-333333333333";
+    assert_eq!(
+        workflow_project_bind(project_id).expect("UUID project scope"),
+        project_id
+    );
+    let err = workflow_project_bind("project-code")
+        .expect_err("a project code must fail closed instead of becoming empty");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
 }
 
 #[tokio::test]

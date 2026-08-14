@@ -29,7 +29,7 @@ use crate::runtime::descriptor_manifest::{
 /// wire `protocol_version()` ([`crate::runtime::native_catalog::protocol_version`]):
 /// the wire version tracks on-the-wire framing, whereas this tracks the semantic
 /// contract that native-service consumers and SDKs depend on.
-pub const NATIVE_CONTRACT_VERSION: &str = "4.1.0";
+pub const NATIVE_CONTRACT_VERSION: &str = "5.0.0";
 
 /// Classification of a single contract difference.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

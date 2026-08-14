@@ -1,8 +1,8 @@
-//! The twenty `VaultService` RPC handlers (KV put/get/list/delete/undelete/
+//! The non-database-credential `VaultService` RPC handlers (KV
+//! put/get/list/delete/undelete/
 //! destroy, transit create/rotate/encrypt/decrypt/batch-encrypt/batch-decrypt/
 //! sign/verify/hmac + envelope generate-data-key/rewrap + ed25519
-//! get-transit-public-key, seal-status, and
-//! dynamic database-credential generation), extracted from the trait impl as free
+//! get-transit-public-key and seal-status), extracted from the trait impl as free
 //! `pub(crate) async fn`s taking `svc` where the trait method took `&self`.
 //! `mod.rs` delegates one line to each. Bodies are verbatim — the same seal gate,
 //! cross-tenant guard, admission, envelope crypto, versioned CAS, rotation
@@ -14,7 +14,6 @@
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
-use chrono::Utc;
 use sqlx::Row;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -24,18 +23,18 @@ use crate::proto::udb::core::vault::services::v1 as vault_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, non_empty_json, validate_request_tenant,
+    admit_on as native_admit_on, non_empty_json, project_scoped_native_service_context,
+    validate_request_tenant,
 };
 use super::VaultServiceImpl;
 use super::config::{
-    DEFAULT_DB_CREDENTIAL_MAX_TTL_SECONDS, DEFAULT_TRANSIT_ALGORITHM, KEY_STATE_ACTIVE,
-    KEY_STATE_VERIFYING, MAX_LIST_SECRETS, STATE_ACTIVE, STATE_DELETED, TOPIC_DATA_KEY_GENERATED,
-    TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED, TOPIC_SECRET_ACCESSED,
-    TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED, TOPIC_SECRET_PUT,
-    TOPIC_SECRET_RESTORED, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED, TOPIC_TRANSIT_HMAC,
-    TOPIC_TRANSIT_REWRAPPED, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
-    VAULT_DB_CREDENTIAL_LEASE_MSG, VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG,
-    VAULT_TRANSIT_KEY_MSG, max_batch_decrypt_items, max_batch_encrypt_items,
+    DEFAULT_TRANSIT_ALGORITHM, KEY_STATE_ACTIVE, KEY_STATE_VERIFYING, MAX_LIST_SECRETS,
+    STATE_ACTIVE, STATE_DELETED, TOPIC_DATA_KEY_GENERATED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED,
+    TOPIC_SECRET_ACCESSED, TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED,
+    TOPIC_SECRET_PUT, TOPIC_SECRET_RESTORED, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED,
+    TOPIC_TRANSIT_HMAC, TOPIC_TRANSIT_REWRAPPED, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
+    VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG, VAULT_TRANSIT_KEY_MSG,
+    max_batch_decrypt_items, max_batch_encrypt_items,
 };
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
@@ -43,26 +42,18 @@ use super::crypto::{
     parse_transit_envelope, require_encryption_algorithm, require_hmac_algorithm,
     require_signing_algorithm, transit_payload, unwrap_dek, validate_transit_algorithm, wrap_dek,
 };
-use super::dynamic::{
-    create_postgres_login_role, drop_postgres_login_role, generate_db_password,
-    generate_db_username, requested_db_credential_ttl, validate_db_role_alias,
-    vault_db_role_configs,
-};
 use super::errors::{
     is_duplicate_conflict, vault_confirmation_token_mismatch_status,
-    vault_confirmation_token_required_status, vault_db_credentials_config_status,
-    vault_db_native_store_required_status, vault_field_violation, vault_internal_status,
-    vault_native_store_required_status, vault_required_key_name, vault_required_secret_path,
-    vault_schema_already_exists_status, vault_schema_not_found_status,
-    vault_secret_cas_conflict_status,
+    vault_confirmation_token_required_status, vault_field_violation, vault_internal_status,
+    vault_required_key_name, vault_required_secret_path, vault_schema_already_exists_status,
+    vault_schema_not_found_status, vault_secret_cas_conflict_status,
 };
 use super::model::{active_transit, select_readable_secret, transit_version};
 use super::quota::admit_transit_op;
 use super::store::{
-    db_credential_lease_record, like_prefix_pattern, secret_conflict,
-    secret_count_distinct_paths_sql, secret_list_page_sql, secret_record, secret_shred_all_sql,
-    transit_demote_active_sql, transit_insert_rotated_sql, transit_key_conflict,
-    transit_key_record,
+    like_prefix_pattern, secret_conflict, secret_count_distinct_paths_sql, secret_list_page_sql,
+    secret_record, secret_shred_all_sql, transit_demote_active_sql, transit_insert_rotated_sql,
+    transit_key_conflict, transit_key_record,
 };
 
 // ── KV engine ─────────────────────────────────────────────────────────────
@@ -92,7 +83,8 @@ pub(crate) async fn put_secret(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "put_secret")?;
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -151,10 +143,9 @@ pub(crate) async fn put_secret(
     }
 
     svc.emit(
+        &context,
         TOPIC_SECRET_PUT,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "put",
         &secret_path,
         serde_json::json!({
@@ -196,7 +187,8 @@ pub(crate) async fn get_secret(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "get_secret")?;
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -219,10 +211,9 @@ pub(crate) async fn get_secret(
 
     // Sensitive READ — audit it (no plaintext in the payload).
     svc.emit(
+        &context,
         TOPIC_SECRET_ACCESSED,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "read",
         &secret_path,
         serde_json::json!({
@@ -261,11 +252,8 @@ pub(crate) async fn list_secrets(
         None,
     )
     .await?;
-    let context = native_service_context(&metadata, &tenant_id, "");
-    let pool = svc
-        .pg_pool
-        .as_ref()
-        .ok_or_else(|| vault_native_store_required_status("list_secrets"))?;
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, pool) = svc.resolve_project_store(context, true, "list_secrets")?;
 
     let prefix = req.path_prefix.trim();
     let has_prefix = !prefix.is_empty();
@@ -286,7 +274,7 @@ pub(crate) async fn list_secrets(
         count_query = count_query.bind(like_prefix_pattern(prefix));
     }
     let total_count = count_query
-        .fetch_one(pool)
+        .fetch_one(&pool)
         .await
         .map_err(|err| vault_internal_status("list_secrets_count", err.to_string()))?
         as i32;
@@ -303,7 +291,7 @@ pub(crate) async fn list_secrets(
     }
     page_query = page_query.bind(page_size as i64);
     let rows = page_query
-        .fetch_all(pool)
+        .fetch_all(&pool)
         .await
         .map_err(|err| vault_internal_status("list_secrets_page", err.to_string()))?;
 
@@ -338,10 +326,9 @@ pub(crate) async fn list_secrets(
     // declared in the proto but never emitted). Metadata only — counts and the
     // requested prefix; NEVER any secret path value or secret material.
     svc.emit(
+        &context,
         TOPIC_SECRET_LISTED,
         &tenant_id,
-        &tenant_id,
-        &context.project_id,
         "list",
         prefix,
         serde_json::json!({
@@ -384,7 +371,8 @@ pub(crate) async fn delete_secret(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "delete_secret")?;
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -421,10 +409,9 @@ pub(crate) async fn delete_secret(
         .await?;
 
     svc.emit(
+        &context,
         TOPIC_SECRET_DELETED,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "delete",
         &secret_path,
         serde_json::json!({
@@ -464,7 +451,8 @@ pub(crate) async fn undelete_secret(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "undelete_secret")?;
 
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
@@ -505,10 +493,9 @@ pub(crate) async fn undelete_secret(
         .await?;
 
     svc.emit(
+        &context,
         TOPIC_SECRET_RESTORED,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "undelete",
         &secret_path,
         serde_json::json!({
@@ -562,12 +549,8 @@ pub(crate) async fn destroy_secret(
     // The whole service requires the native runtime/store; gate on it here so a
     // misconfigured deployment fails closed with the runtime capability detail
     // (rather than a bare "no pool") before touching the store.
-    svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
-    let pool = svc
-        .pg_pool
-        .as_ref()
-        .ok_or_else(|| vault_native_store_required_status("destroy_secret"))?;
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, pool) = svc.resolve_project_store(context, true, "destroy_secret")?;
 
     // ATOMIC multi-version crypto-shred: clear the ciphertext + wrapped DEK and
     // flip every non-DESTROYED version to DESTROYED in ONE statement, inside a
@@ -590,10 +573,9 @@ pub(crate) async fn destroy_secret(
     let destroyed = shred.rows_affected() as u32;
 
     svc.emit(
+        &context,
         TOPIC_SECRET_DESTROYED,
         &secret_path,
-        &tenant_id,
-        &context.project_id,
         "destroy",
         &secret_path,
         serde_json::json!({
@@ -640,7 +622,8 @@ pub(crate) async fn create_transit_key(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "create_transit_key")?;
 
     let existing = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -674,10 +657,9 @@ pub(crate) async fn create_transit_key(
         .await?;
 
     svc.emit(
+        &context,
         TOPIC_KEY_CREATED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "create_key",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "version": 1}),
@@ -715,7 +697,8 @@ pub(crate) async fn rotate_transit_key(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, pool) = svc.resolve_project_store(context, true, "rotate_transit_key")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -737,10 +720,6 @@ pub(crate) async fn rotate_transit_key(
     let dek = DataKey::generate();
     let wrapped = wrap_dek(runtime, &dek)?;
     let new_key_id = Uuid::new_v4().to_string();
-    let pool = svc
-        .pg_pool
-        .as_ref()
-        .ok_or_else(|| vault_native_store_required_status("rotate_transit_key"))?;
 
     // ATOMIC rotation: demote every ACTIVE version to VERIFYING AND insert the new
     // ACTIVE version in ONE transaction, so a concurrent Encrypt/Sign can never
@@ -771,10 +750,9 @@ pub(crate) async fn rotate_transit_key(
         .map_err(|err| vault_internal_status("rotate_commit_tx", err.to_string()))?;
 
     svc.emit(
+        &context,
         TOPIC_KEY_ROTATED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "rotate_key",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "version": new_version}),
@@ -815,7 +793,8 @@ pub(crate) async fn encrypt(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "encrypt")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -835,10 +814,9 @@ pub(crate) async fn encrypt(
     // Audit the crypto operation (no plaintext/ciphertext/key material — only
     // the tenant/key/version metadata).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_ENCRYPTED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "encrypt",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
@@ -886,7 +864,8 @@ pub(crate) async fn decrypt(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "decrypt")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -912,10 +891,9 @@ pub(crate) async fn decrypt(
 
     // Sensitive READ — audit it (no plaintext in the payload).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_DECRYPTED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "decrypt",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": version}),
@@ -971,7 +949,8 @@ pub(crate) async fn batch_encrypt(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "batch_encrypt")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -994,10 +973,9 @@ pub(crate) async fn batch_encrypt(
     }
 
     svc.emit(
+        &context,
         TOPIC_TRANSIT_ENCRYPTED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "batch_encrypt",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version, "count": req.plaintexts.len()}),
@@ -1054,7 +1032,8 @@ pub(crate) async fn batch_decrypt(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "batch_decrypt")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1096,10 +1075,9 @@ pub(crate) async fn batch_decrypt(
     }
 
     svc.emit(
+        &context,
         TOPIC_TRANSIT_DECRYPTED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "batch_decrypt",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "count": req.ciphertexts.len()}),
@@ -1139,7 +1117,8 @@ pub(crate) async fn generate_data_key(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "generate_data_key")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1163,10 +1142,9 @@ pub(crate) async fn generate_data_key(
     // Audit the key generation on its OWN topic (no key material — only
     // tenant/key/version); previously conflated under `transit.encrypted`.
     svc.emit(
+        &context,
         TOPIC_DATA_KEY_GENERATED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "generate_data_key",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
@@ -1216,7 +1194,8 @@ pub(crate) async fn rewrap(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "rewrap")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1250,10 +1229,9 @@ pub(crate) async fn rewrap(
     // Audit the rewrap on its OWN topic (no key material — only tenant/key/old+new
     // version); previously conflated under `transit.encrypted`.
     svc.emit(
+        &context,
         TOPIC_TRANSIT_REWRAPPED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "rewrap",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "from_version": version, "key_version": active.version}),
@@ -1291,7 +1269,8 @@ pub(crate) async fn get_transit_public_key(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "get_transit_public_key")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1360,7 +1339,8 @@ pub(crate) async fn sign(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "sign")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1388,10 +1368,9 @@ pub(crate) async fn sign(
     // Audit the crypto operation (no input/signature/key material — only the
     // tenant/key/version metadata).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_SIGNED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "sign",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
@@ -1445,7 +1424,8 @@ pub(crate) async fn verify(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "verify")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1480,10 +1460,9 @@ pub(crate) async fn verify(
     // Audit the verification (no input/signature/key material — only the
     // tenant/key/version metadata and the boolean outcome).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_VERIFIED,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "verify",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": version, "valid": valid}),
@@ -1522,7 +1501,8 @@ pub(crate) async fn hmac(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
+    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let (context, _pool) = svc.resolve_project_store(context, true, "hmac")?;
 
     let versions = svc
         .read_transit_versions(runtime, &context, &tenant_id, &key_name)
@@ -1549,10 +1529,9 @@ pub(crate) async fn hmac(
     // Audit the crypto operation (no input/MAC/key material — only the
     // tenant/key/version metadata).
     svc.emit(
+        &context,
         TOPIC_TRANSIT_HMAC,
         &key_name,
-        &tenant_id,
-        &context.project_id,
         "hmac",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
@@ -1592,122 +1571,4 @@ pub(crate) async fn seal_status(
         },
         error: None,
     }))
-}
-
-// ── Dynamic database credentials ─────────────────────────────────────────
-
-pub(crate) async fn generate_database_credentials(
-    svc: &VaultServiceImpl,
-    request: Request<vault_pb::GenerateDatabaseCredentialsRequest>,
-) -> Result<Response<vault_pb::GenerateDatabaseCredentialsResponse>, Status> {
-    let metadata = request.metadata().clone();
-    let req = request.into_inner();
-    svc.check_seal()?;
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant_id = req.tenant_id.trim().to_string();
-    let role_name = req.role_name.trim().to_string();
-    validate_db_role_alias(&role_name)?;
-
-    let _admit = native_admit_on(
-        svc.channels.as_ref(),
-        &svc.metrics,
-        "vault",
-        OperationChannel::Admin,
-        &tenant_id,
-        None,
-    )
-    .await?;
-    let runtime = svc.require_runtime()?;
-    let pool = svc
-        .pg_pool
-        .as_ref()
-        .ok_or_else(vault_db_native_store_required_status)?;
-    let role_config = vault_db_role_configs()?.get(&role_name).ok_or_else(|| {
-        vault_db_credentials_config_status(format!(
-            "vault dynamic database role '{role_name}' is not configured"
-        ))
-    })?;
-    let max_ttl = role_config
-        .ttl_seconds_max
-        .unwrap_or(DEFAULT_DB_CREDENTIAL_MAX_TTL_SECONDS);
-    let ttl_seconds = requested_db_credential_ttl(req.ttl_seconds, max_ttl)?;
-    let issued_at = Utc::now();
-    let expires_at = issued_at + chrono::Duration::seconds(i64::from(ttl_seconds));
-    let lease_id = Uuid::new_v4().to_string();
-    let username = generate_db_username();
-    let password = generate_db_password();
-
-    create_postgres_login_role(
-        pool,
-        &username,
-        &password,
-        expires_at,
-        &role_config.parent_role,
-    )
-    .await?;
-
-    let context = native_service_context(&metadata, &tenant_id, "");
-    let metadata_json = serde_json::json!({
-        "role_name": &role_name,
-        "parent_role": &role_config.parent_role,
-        "ttl_seconds": ttl_seconds,
-        "lease_id": &lease_id,
-    })
-    .to_string();
-    let write = runtime
-        .native_entity_write_for_service(
-            "vault",
-            &context,
-            VAULT_DB_CREDENTIAL_LEASE_MSG,
-            db_credential_lease_record(
-                &lease_id,
-                &tenant_id,
-                &role_name,
-                &username,
-                &role_config.parent_role,
-                issued_at,
-                expires_at,
-                &metadata_json,
-            ),
-            ConflictStrategy::Error,
-        )
-        .await;
-    if let Err(err) = write {
-        if let Err(drop_err) = drop_postgres_login_role(pool, &username).await {
-            tracing::warn!(
-                lease_id = %lease_id,
-                username = %username,
-                error = %drop_err,
-                "vault DB credential cleanup failed after lease write failure"
-            );
-        }
-        return Err(err);
-    }
-
-    svc.emit(
-        TOPIC_DB_CREDENTIAL_ISSUED,
-        &lease_id,
-        &tenant_id,
-        "",
-        "vault.GenerateDatabaseCredentials",
-        &format!("vault/database/credentials/{role_name}"),
-        serde_json::json!({
-            "lease_id": &lease_id,
-            "role_name": &role_name,
-            "username": &username,
-            "expires_at": expires_at.to_rfc3339(),
-        }),
-    )
-    .await;
-
-    Ok(Response::new(
-        vault_pb::GenerateDatabaseCredentialsResponse {
-            username,
-            password,
-            lease_id,
-            lease_ttl_seconds: ttl_seconds,
-            message: "dynamic database credentials issued".to_string(),
-            error: None,
-        },
-    ))
 }

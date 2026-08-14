@@ -6,6 +6,8 @@
 //! dynamic DB-role allow-listing. Copied verbatim from the former god file;
 //! imports are explicit (no `use super::*`).
 
+use std::sync::Arc;
+
 use tonic::metadata::MetadataValue;
 use tonic::{Request, Status};
 
@@ -24,12 +26,13 @@ use super::config::{
 use super::config::{STATE_ACTIVE, STATE_DELETED};
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
-    ed25519_sign_b64, ed25519_verify_b64, hmac_sha256, parse_transit_envelope,
-    require_encryption_algorithm, require_hmac_algorithm, require_signing_algorithm,
-    validate_transit_algorithm,
+    ed25519_sign_b64, ed25519_verify_b64, hmac_sha256, is_wrapped_dek_envelope,
+    parse_transit_envelope, require_encryption_algorithm, require_hmac_algorithm,
+    require_signing_algorithm, validate_transit_algorithm,
 };
 use super::dynamic::{
-    parse_vault_db_role_configs, requested_db_credential_ttl, validate_db_role_alias,
+    parse_vault_db_role_configs, postgres_role_exists, requested_db_credential_ttl,
+    validate_db_credential_binding, validate_db_role_alias,
 };
 use super::errors::{
     is_duplicate_conflict, vault_db_credentials_config_status,
@@ -438,6 +441,29 @@ async fn sealed_vault_fails_closed() {
     );
 }
 
+#[test]
+fn default_runtime_without_master_kek_is_sealed() {
+    let svc = VaultServiceImpl::new()
+        .with_runtime(Some(Arc::new(crate::runtime::DataBrokerRuntime::default())));
+    let err = svc
+        .check_seal()
+        .expect_err("Vault must not inherit the runtime's plaintext development fallback");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    let detail = decode_detail(&err);
+    assert_eq!(detail.operation, "seal_gate");
+    assert_eq!(detail.capability_required, "vault_master_key");
+}
+
+#[test]
+fn only_authenticated_master_kek_envelopes_are_accepted_as_wrapped_deks() {
+    assert!(is_wrapped_dek_envelope("udb-aead:v1:nonce:ciphertext"));
+    assert!(!is_wrapped_dek_envelope("udb-aead:"));
+    assert!(!is_wrapped_dek_envelope(
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    ));
+    assert!(!is_wrapped_dek_envelope("plaintext"));
+}
+
 #[tokio::test]
 async fn vault_missing_runtime_carries_capability_detail() {
     let svc = VaultServiceImpl::new().with_seal_override(false);
@@ -569,23 +595,287 @@ fn encryption_path_rejects_a_signing_key() {
 #[test]
 fn db_role_config_is_allow_listed_and_identifier_safe() {
     let configs = parse_vault_db_role_configs(
-        r#"[{"role_name":"app-read","parent_role":"udb_app_read","ttl_seconds_max":600}]"#,
+        r#"[{"role_name":"app-read","tenant_id":"tenant-a","project_id":"default","target_instance":"primary","database_name":"udb","policy_revision":"rev-1","relations":[{"schema":"app","table":"records","tenant_column":"tenant_id","project_column":"project_id","privileges":["select"]}],"ttl_seconds_max":600}]"#,
     )
     .expect("valid config");
     let app_read = configs.get("app-read").expect("role alias present");
-    assert_eq!(app_read.parent_role, "udb_app_read");
+    assert_eq!(app_read.tenant_id, "tenant-a");
+    assert_eq!(app_read.project_id, "default");
+    assert_eq!(app_read.target_instance, "primary");
+    assert_eq!(app_read.database_name, "udb");
+    assert_eq!(app_read.policy_revision, "rev-1");
+    assert_eq!(app_read.relations[0].privileges, ["SELECT"]);
     assert_eq!(app_read.ttl_seconds_max, Some(600));
 
-    let bad_parent = parse_vault_db_role_configs(
+    let legacy_parent = parse_vault_db_role_configs(
         r#"[{"role_name":"app-read","parent_role":"udb_app_read;drop role x"}]"#,
     )
-    .expect_err("SQL-shaped parent role must be rejected");
-    assert!(bad_parent.contains("parent_role"));
+    .expect_err("legacy global parent-role delegation must be rejected");
+    assert!(legacy_parent.contains("unknown field") || legacy_parent.contains("tenant_id"));
 
-    let bad_alias =
-        parse_vault_db_role_configs(r#"[{"role_name":"app read","parent_role":"udb_app_read"}]"#)
-            .expect_err("space in role alias must be rejected");
+    let bad_alias = parse_vault_db_role_configs(
+        r#"[{"role_name":"app read","tenant_id":"tenant-a","project_id":"default","target_instance":"primary","database_name":"udb","policy_revision":"rev-1","relations":[{"schema":"app","table":"records","tenant_column":"tenant_id","project_column":"project_id","privileges":["SELECT"]}]}]"#,
+    )
+    .expect_err("space in role alias must be rejected");
     assert!(bad_alias.contains("role_name"));
+
+    let write_grant = parse_vault_db_role_configs(
+        r#"[{"role_name":"app-read","tenant_id":"tenant-a","project_id":"default","target_instance":"primary","database_name":"udb","policy_revision":"rev-1","relations":[{"schema":"app","table":"records","tenant_column":"tenant_id","project_column":"project_id","privileges":["UPDATE"]}]}]"#,
+    )
+    .expect_err("the first authority version is intentionally read-only");
+    assert!(write_grant.contains("only SELECT is supported"));
+}
+
+#[test]
+fn dynamic_database_credential_alias_is_exactly_scope_and_instance_bound() {
+    let configs = parse_vault_db_role_configs(
+        r#"[{"role_name":"app-read","tenant_id":"tenant-a","project_id":"default","target_instance":"primary","database_name":"udb","policy_revision":"rev-1","relations":[{"schema":"app","table":"records","tenant_column":"tenant_id","project_column":"project_id","privileges":["SELECT"]}]}]"#,
+    )
+    .expect("valid config");
+    let config = &configs["app-read"];
+    validate_db_credential_binding(config, "tenant-a", "default", "primary")
+        .expect("exact binding must pass");
+    for (tenant, project, instance) in [
+        ("tenant-b", "default", "primary"),
+        ("tenant-a", "project-b", "primary"),
+        ("tenant-a", "default", "replica-b"),
+    ] {
+        let err = validate_db_credential_binding(config, tenant, project, instance)
+            .expect_err("any binding drift must fail closed");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires live PostgreSQL with UDB_VAULT_DB_ROLES_JSON authority config"]
+async fn vault_db_credentials_live_enforce_fixed_tenant_and_project_after_guc_change() {
+    if std::env::var("UDB_LIVE_AUTH_TESTS").ok().as_deref() != Some("1") {
+        return;
+    }
+    use crate::runtime::service::live_tests::support::{
+        live_native_service_db_lock, live_pg_dsn, live_pg_pool, migrate_native_service_db,
+        vault_service,
+    };
+    use sqlx::Connection as _;
+
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    sqlx::query("CREATE SCHEMA udb_vault_authority_test")
+        .execute(&pool)
+        .await
+        .expect("create authority test schema");
+    sqlx::query(
+        "CREATE TABLE udb_vault_authority_test.records (\
+             record_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL\
+         )",
+    )
+    .execute(&pool)
+    .await
+    .expect("create authority test table");
+    sqlx::query("ALTER TABLE udb_vault_authority_test.records ENABLE ROW LEVEL SECURITY")
+        .execute(&pool)
+        .await
+        .expect("enable test RLS");
+    sqlx::query(
+        "CREATE POLICY caller_scope ON udb_vault_authority_test.records \
+         AS PERMISSIVE FOR SELECT TO PUBLIC USING (true)",
+    )
+    .execute(&pool)
+    .await
+    .expect("create deliberately broad baseline policy");
+    sqlx::query(
+        "INSERT INTO udb_vault_authority_test.records (record_id, tenant_id, project_id, payload) \
+         VALUES ('own', 'tenant-a', 'default', 'own'), \
+                ('foreign-tenant', 'tenant-b', 'default', 'foreign'), \
+                ('foreign-project', 'tenant-a', 'project-b', 'foreign')",
+    )
+    .execute(&pool)
+    .await
+    .expect("seed cross-scope records");
+
+    let mut svc = vault_service().await;
+    let mut request = Request::new(vault_pb::GenerateDatabaseCredentialsRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "default".to_string(),
+        role_name: "authority-test-read".to_string(),
+        ttl_seconds: 300,
+        idempotency_key: "authority-live-response-loss".to_string(),
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("default"));
+    let issued = svc
+        .generate_database_credentials(request)
+        .await
+        .expect("served Vault RPC must issue the bound credential")
+        .into_inner();
+
+    let dsn = live_pg_dsn();
+    let options = dsn
+        .parse::<sqlx::postgres::PgConnectOptions>()
+        .expect("parse live Postgres DSN")
+        .username(&issued.username)
+        .password(&issued.password);
+    let mut credential_conn = sqlx::PgConnection::connect_with(&options)
+        .await
+        .expect("connect with generated credential");
+    let visible: Vec<String> = sqlx::query_scalar(
+        "SELECT record_id FROM udb_vault_authority_test.records ORDER BY record_id",
+    )
+    .fetch_all(&mut credential_conn)
+    .await
+    .expect("read through generated credential");
+    assert_eq!(visible, ["own"]);
+
+    // Ordinary custom GUCs are caller-changeable. The negative proof changes
+    // both hints to foreign scope and then reads again: the fixed restrictive
+    // policy, not the GUC, remains the authorization boundary.
+    sqlx::query("SET app.current_tenant_id = 'tenant-b'")
+        .execute(&mut credential_conn)
+        .await
+        .expect("caller can change the tenant hint");
+    sqlx::query("SET app.current_project_id = 'project-b'")
+        .execute(&mut credential_conn)
+        .await
+        .expect("caller can change the project hint");
+    let visible_after_change: Vec<String> = sqlx::query_scalar(
+        "SELECT record_id FROM udb_vault_authority_test.records ORDER BY record_id",
+    )
+    .fetch_all(&mut credential_conn)
+    .await
+    .expect("read after hostile GUC change");
+    assert_eq!(visible_after_change, ["own"]);
+
+    // Simulate response loss: the caller repeats the exact request with the same
+    // key. The served path must recover the original KEK-wrapped password and
+    // lease rather than minting a second login.
+    let mut replay_request = Request::new(vault_pb::GenerateDatabaseCredentialsRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "default".to_string(),
+        role_name: "authority-test-read".to_string(),
+        ttl_seconds: 300,
+        idempotency_key: "authority-live-response-loss".to_string(),
+        ..Default::default()
+    });
+    replay_request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    replay_request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("default"));
+    let replayed = svc
+        .generate_database_credentials(replay_request)
+        .await
+        .expect("response-loss replay must recover the original credential")
+        .into_inner();
+    assert!(replayed.replayed);
+    assert_eq!(replayed.lease_id, issued.lease_id);
+    assert_eq!(replayed.username, issued.username);
+    assert_eq!(replayed.password, issued.password);
+
+    // Revoke through the actual VaultService handler while a session is live.
+    // The response is allowed only after the session is terminated and the role
+    // is proven absent; the same transaction writes durable outbox evidence.
+    let mut revoke_request = Request::new(vault_pb::RevokeDatabaseCredentialsRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "default".to_string(),
+        lease_id: issued.lease_id.clone(),
+        reason: "live response-loss credential cleanup".to_string(),
+        ..Default::default()
+    });
+    revoke_request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    revoke_request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("default"));
+    let revoked = svc
+        .revoke_database_credentials(revoke_request)
+        .await
+        .expect("served revoke must terminate sessions and remove the role")
+        .into_inner();
+    assert_eq!(revoked.state, "REVOKED");
+    assert!(
+        !postgres_role_exists(&pool, &issued.username)
+            .await
+            .expect("role absence proof")
+    );
+    assert!(
+        sqlx::query("SELECT 1")
+            .execute(&mut credential_conn)
+            .await
+            .is_err(),
+        "the pre-revocation database session must be terminated"
+    );
+    let revoked_events: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM udb_system.outbox_events \
+         WHERE topic = 'udb.vault.db_credential.revoked.v1' AND partition_key = $1",
+    )
+    .bind(&issued.lease_id)
+    .fetch_one(&pool)
+    .await
+    .expect("count durable revocation evidence");
+    assert_eq!(revoked_events, 1);
+    let recovery_envelope: String = sqlx::query_scalar(
+        "SELECT credential_ciphertext FROM udb_vault.vault_db_credential_leases \
+         WHERE lease_id = $1::uuid",
+    )
+    .bind(&issued.lease_id)
+    .fetch_one(&pool)
+    .await
+    .expect("load revoked credential recovery envelope");
+    assert!(
+        recovery_envelope.is_empty(),
+        "terminal revocation must crypto-shred replayable password recovery material"
+    );
+
+    // Fault injection at the last transactional boundary: a missing outbox
+    // relation makes the strict issued-event insert fail after role/policy SQL.
+    // Because STARTING + physical authority + ACTIVE + outbox share one PG tx,
+    // neither a role nor a lease may survive the failure.
+    let roles_before: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM pg_roles WHERE rolname LIKE 'udb_vault_%'")
+            .fetch_one(&pool)
+            .await
+            .expect("count generated roles before fault injection");
+    svc.outbox_relation = Some("\"udb_system\".\"missing_vault_outbox\"".to_string());
+    let mut failed_request = Request::new(vault_pb::GenerateDatabaseCredentialsRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "default".to_string(),
+        role_name: "authority-test-read".to_string(),
+        ttl_seconds: 300,
+        idempotency_key: "authority-live-outbox-failure".to_string(),
+        ..Default::default()
+    });
+    failed_request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    failed_request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("default"));
+    svc.generate_database_credentials(failed_request)
+        .await
+        .expect_err("strict outbox failure must roll back role and lease");
+    let roles_after: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM pg_roles WHERE rolname LIKE 'udb_vault_%'")
+            .fetch_one(&pool)
+            .await
+            .expect("count generated roles after fault injection");
+    assert_eq!(roles_after, roles_before);
+    let stranded_leases: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM udb_vault.vault_db_credential_leases \
+         WHERE tenant_id = 'tenant-a' AND project_id = 'default' AND idempotency_key = $1",
+    )
+    .bind("authority-live-outbox-failure")
+    .fetch_one(&pool)
+    .await
+    .expect("count failed issuance leases");
+    assert_eq!(stranded_leases, 0);
 }
 
 /// DestroySecret is an irreversible crypto-shred, so a merely non-empty

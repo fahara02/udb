@@ -46,6 +46,16 @@ pub(crate) fn vault_db_credentials_config_status(message: impl Into<String>) -> 
     )
 }
 
+pub(crate) fn vault_db_credentials_authority_status() -> Status {
+    vault_capability_status(
+        "generate_database_credentials",
+        "tenant_bound_database_credential_authority",
+        "dynamic database credential issuance is disabled: direct Postgres roles cannot enforce \
+         immutable tenant/project scope; configure a trusted tenant-bound credential broker \
+         before enabling this capability",
+    )
+}
+
 pub(crate) fn vault_db_native_store_required_status() -> Status {
     vault_capability_status(
         "generate_database_credentials",
@@ -95,6 +105,34 @@ pub(crate) fn vault_db_role_creation_status(message: impl Into<String>) -> Statu
     vault_capability_status(
         "generate_database_credentials",
         "postgres_role_management",
+        message,
+    )
+}
+
+pub(crate) fn vault_db_idempotency_conflict_status() -> Status {
+    crate::runtime::executor_utils::retryable_aborted_status(
+        "vault",
+        "generate_database_credentials",
+        0,
+        "idempotency_key was already used with different database-credential inputs",
+    )
+}
+
+pub(crate) fn vault_db_lease_not_found_status() -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "vault",
+        "revoke_database_credentials",
+        "vault_db_credential_lease_not_found",
+        "database credential lease was not found in the authenticated tenant/project",
+    )
+}
+
+pub(crate) fn vault_db_reconciliation_status(message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::retryable_aborted_status(
+        "vault",
+        "database_credential_reconciliation",
+        250,
         message,
     )
 }

@@ -178,6 +178,10 @@ pub(crate) async fn execute_tx_plan(
 pub(crate) struct JoinFusionPlan {
     pub(crate) sql: String,
     pub(crate) bindings: Vec<(ManifestColumn, JsonValue)>,
+    /// Columns to mask, in this plan's ALIASED output names
+    /// (`"{Message}__{column}"`). The single-entity path masks on bare column
+    /// names, which never match a fused row.
+    pub(crate) masked_columns: Vec<String>,
 }
 
 pub(crate) fn build_join_fusion_sql(
@@ -191,6 +195,27 @@ pub(crate) fn build_join_fusion_sql(
             "tenant_id",
             "must be non-empty for join fusion",
             "tenant_id is required for join fusion",
+        ));
+    }
+    // `select` short-circuits to join fusion BEFORE it plans anything, so every
+    // check the planner performs has to be repeated here or it simply does not
+    // happen for a fused read.
+    if context.purpose.trim().is_empty() {
+        return Err(postgres_invalid_field(
+            "purpose",
+            "must be non-empty for join fusion",
+            "purpose is required for join fusion",
+        ));
+    }
+    if !context
+        .scopes
+        .iter()
+        .any(|scope| scope == "udb:read" || scope == "udb:*" || scope == "*")
+    {
+        return Err(postgres_invalid_field(
+            "scopes",
+            "must include udb:read",
+            "scope udb:read is required for join fusion",
         ));
     }
     let message_types = split_join_message_types(&request.message_type);
@@ -254,19 +279,74 @@ pub(crate) fn build_join_fusion_sql(
     let mut bindings = Vec::new();
     let mut predicates = Vec::new();
     for (table_idx, table) in tables.iter().enumerate() {
-        let Some(column) = tenant_column_ref(table) else {
-            if table_requires_tenant_column(table) {
-                return Err(join_fusion_missing_tenant_column_status(table));
+        // C22 per-table ABAC: a table declaring `required_scope` demands it on
+        // every other read path, and demanded nothing here.
+        let required = table.required_scope.trim();
+        if !required.is_empty()
+            && !context
+                .scopes
+                .iter()
+                .any(|scope| scope == required || scope == "udb:*" || scope == "*")
+        {
+            return Err(postgres_invalid_field(
+                "scopes",
+                "must include the table's required_scope",
+                format!("scope {required} is required for this table"),
+            ));
+        }
+        match tenant_column_ref(table) {
+            Some(column) => {
+                bindings.push((column.clone(), JsonValue::String(context.tenant_id.clone())));
+                predicates.push(format!(
+                    "{}.{} = ${}",
+                    qi_runtime(&aliases[table_idx]),
+                    qi_runtime(&column.column_name),
+                    bindings.len()
+                ));
             }
-            continue;
-        };
-        bindings.push((column.clone(), JsonValue::String(context.tenant_id.clone())));
-        predicates.push(format!(
-            "{}.{} = ${}",
-            qi_runtime(&aliases[table_idx]),
-            qi_runtime(&column.column_name),
-            bindings.len()
-        ));
+            None => {
+                if table_requires_tenant_column(table) {
+                    return Err(join_fusion_missing_tenant_column_status(table));
+                }
+            }
+        }
+        // Project isolation, mirroring tenant. Absent entirely until now, so a
+        // fused read spanned every project in the caller's tenant.
+        if !context.project_id.trim().is_empty()
+            && let Some(name) = crate::generation::sql::resolve_project_column(table)
+            && let Some(column) = table.columns.iter().find(|c| c.column_name == name)
+        {
+            bindings.push((
+                column.clone(),
+                JsonValue::String(context.project_id.clone()),
+            ));
+            predicates.push(format!(
+                "{}.{} = ${}",
+                qi_runtime(&aliases[table_idx]),
+                qi_runtime(&column.column_name),
+                bindings.len()
+            ));
+        }
+        // Default-exclude tombstoned rows, as the single-entity read does.
+        // Malformed metadata fails closed rather than returning deleted rows.
+        if table.soft_delete {
+            let column = table.soft_delete_column.trim();
+            if column.is_empty() || !table.columns.iter().any(|c| c.column_name == column) {
+                return Err(postgres_invalid_field(
+                    "message_type",
+                    "soft-delete table must declare a real soft_delete_column",
+                    format!(
+                        "{}.{} soft_delete_column '{}' is not a declared column",
+                        table.schema, table.table, table.soft_delete_column
+                    ),
+                ));
+            }
+            predicates.push(format!(
+                "{}.{} IS NULL",
+                qi_runtime(&aliases[table_idx]),
+                qi_runtime(column)
+            ));
+        }
     }
     if let JsonValue::Object(map) = filter {
         for (field, value) in map {
@@ -305,7 +385,25 @@ pub(crate) fn build_join_fusion_sql(
     if request.limit > 0 {
         sql.push_str(&format!(" LIMIT {}", request.limit));
     }
-    Ok(JoinFusionPlan { sql, bindings })
+    // Mask set in this plan's ALIASED output names. Computed over every joined
+    // column, not just the projected ones — a name absent from the row simply
+    // never matches, and an explicitly requested PII field must still be masked.
+    let masked_columns = tables
+        .iter()
+        .flat_map(|table| {
+            table
+                .columns
+                .iter()
+                .filter(|column| column.security.is_pii || column.security.mask_in_logs)
+                .map(move |column| format!("{}__{}", table.message_name, column.column_name))
+        })
+        .collect::<Vec<_>>();
+
+    Ok(JoinFusionPlan {
+        sql,
+        bindings,
+        masked_columns,
+    })
 }
 
 pub(crate) fn split_join_message_types(message_type: &str) -> Vec<String> {
@@ -327,18 +425,26 @@ fn join_select_list(
     fields: &[String],
 ) -> Result<Vec<String>, tonic::Status> {
     if fields.is_empty() {
+        // Mirror the single-entity read: a default projection never ships PII or
+        // raw ciphertext. Join fusion used to select EVERY column of EVERY joined
+        // table, so a `message_type` with a comma returned columns the same
+        // caller's `Select` had dropped before they left the database.
         return Ok(tables
             .iter()
             .zip(aliases)
             .flat_map(|(table, alias)| {
-                table.columns.iter().map(move |column| {
-                    format!(
-                        "{}.{} AS {}",
-                        qi_runtime(alias),
-                        qi_runtime(&column.column_name),
-                        qi_runtime(&format!("{}__{}", table.message_name, column.column_name))
-                    )
-                })
+                table
+                    .columns
+                    .iter()
+                    .filter(|column| !column.security.is_pii && !column.security.is_encrypted)
+                    .map(move |column| {
+                        format!(
+                            "{}.{} AS {}",
+                            qi_runtime(alias),
+                            qi_runtime(&column.column_name),
+                            qi_runtime(&format!("{}__{}", table.message_name, column.column_name))
+                        )
+                    })
             })
             .collect());
     }
@@ -1154,6 +1260,11 @@ mod tests {
     fn ctx() -> RequestContext {
         RequestContext {
             tenant_id: "acme".to_string(),
+            // Join fusion now enforces the same context contract as every other
+            // read (purpose + udb:read + per-table required_scope). This fixture
+            // predates those checks, when a fused read demanded only a tenant.
+            purpose: "test".to_string(),
+            scopes: vec!["udb:read".to_string()],
             ..RequestContext::default()
         }
     }

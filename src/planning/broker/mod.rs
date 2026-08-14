@@ -265,6 +265,11 @@ pub struct SqlOperationPlan {
     pub filter_columns: Vec<String>,
     pub cache_policy: CachePolicyPlan,
     pub audit_event_type: String,
+    /// VERIFIED caller-context values for the isolation predicates this plan
+    /// appended to its own WHERE clause, in the order their columns were pushed
+    /// onto `parameter_columns`. Executors MUST bind these after the caller's
+    /// own filter values — see [`append_verified_scope_predicates`].
+    pub context_parameter_values: Vec<String>,
     pub errors: Vec<String>,
 }
 
@@ -1068,6 +1073,50 @@ pub(crate) fn build_upsert_logical_write(
 /// affected-rows contract are all preserved. Malformed soft-delete metadata
 /// fails closed (see [`resolve_soft_delete_column`]) and NEVER degrades to a
 /// physical `DELETE`.
+/// AND the VERIFIED caller tenant/project onto a planner-built WHERE clause.
+///
+/// The planner only checks that the caller MENTIONED the isolation columns
+/// (`mandatory_and_columns`); the values in that filter are caller-supplied, so
+/// presence alone lets `{tenant_id: <victim>}` address another tenant's rows.
+///
+/// On PostgreSQL the compiler predicate is the real isolation boundary: tables
+/// are `enable_rls` but NOT `force_rls` by default and the broker connects as
+/// the table owner, so DB row-level security is bypassed at runtime. Planner
+/// SQL never passes through `ir::compile`, and several served paths reach it —
+/// the BeginTx apply loop (which does not even install the request GUC), the
+/// soft-delete fallback the bridged emitter declines, and Update, which has no
+/// bridged emitter at all. Each of those must therefore carry the scope itself,
+/// so a cross-tenant or cross-project filter matches ZERO rows.
+///
+/// Returns the values to bind, in the order their columns were appended to
+/// `parameter_columns`. Appends nothing to an empty WHERE — callers reject an
+/// unbounded mutation before this point.
+fn append_verified_scope_predicates(
+    sql: &mut String,
+    parameter_columns: &mut Vec<String>,
+    tenant_column: &str,
+    project_column: &str,
+    context: &RequestContext,
+) -> Vec<String> {
+    let mut bound = Vec::new();
+    if sql.is_empty() {
+        return bound;
+    }
+    for (column, value) in [
+        (tenant_column, context.tenant_id.trim()),
+        (project_column, context.project_id.trim()),
+    ] {
+        if column.is_empty() || value.is_empty() {
+            continue;
+        }
+        let param = parameter_columns.len() + 1;
+        sql.push_str(&format!(" AND {} = ${}", qi(column), param));
+        parameter_columns.push(column.to_string());
+        bound.push(value.to_string());
+    }
+    bound
+}
+
 pub fn build_delete_plan(
     manifest: &CatalogManifest,
     request: &DeletePlanRequest,
@@ -1093,7 +1142,7 @@ pub fn build_delete_plan(
     let mut parameter_columns = Vec::new();
     let backend_kind = effective_sql_backend(&request.context);
     let encrypted = encrypted_filter_columns(table);
-    let compiled = compile_filter_predicates(
+    let mut compiled = compile_filter_predicates(
         &filter,
         &allowed,
         &encrypted,
@@ -1119,6 +1168,19 @@ pub fn build_delete_plan(
     if compiled.sql.is_empty() {
         errors.push("delete requires at least one safe filter predicate".to_string());
     }
+    // The bridged neutral-IR emitter carries the verified scope for a hard
+    // delete, but it DECLINES every soft-delete table (see
+    // `build_delete_logical_delete`), and the BeginTx apply loop never consults
+    // it at all — both land on this SQL, which until now trusted the caller's
+    // own tenant/project values. Append the verified scope here so all three
+    // consumers inherit it.
+    let context_parameter_values = append_verified_scope_predicates(
+        &mut compiled.sql,
+        &mut parameter_columns,
+        &tenant,
+        &project,
+        &request.context,
+    );
     // #3: resolve the tombstone column (fail-closed on malformed metadata) BEFORE
     // emitting anything, so a soft-delete table can never fall through to a
     // physical DELETE.
@@ -1179,6 +1241,7 @@ pub fn build_delete_plan(
             },
         ),
         audit_event_type: "udb.sql.delete".to_string(),
+        context_parameter_values,
         errors,
         ..SqlOperationPlan::default()
     }
@@ -1334,14 +1397,17 @@ pub fn build_update_plan(
     // backstop) so a cross-tenant filter matches ZERO rows. `runtime.update`
     // binds the value from the verified context, keyed by this appended param
     // (`parameter_columns.len() + 1`).
-    if !tenant.is_empty()
-        && !request.context.tenant_id.trim().is_empty()
-        && !compiled.sql.is_empty()
-    {
-        let backstop_param = parameter_columns.len() + 1;
-        compiled.sql = format!("{} AND {} = ${}", compiled.sql, qi(&tenant), backstop_param);
-        parameter_columns.push(tenant.clone());
-    }
+    // Update has no bridged neutral-IR emitter at all, so this is its ONLY
+    // isolation boundary. It previously scoped the tenant but not the project,
+    // which let a caller in one project update another project's rows inside
+    // its own tenant; the shared helper binds both.
+    let context_parameter_values = append_verified_scope_predicates(
+        &mut compiled.sql,
+        &mut parameter_columns,
+        &tenant,
+        &project,
+        &request.context,
+    );
 
     let sql = format!(
         "UPDATE {}.{} SET {} WHERE {}{}",
@@ -1375,6 +1441,7 @@ pub fn build_update_plan(
             },
         ),
         audit_event_type: "udb.sql.update".to_string(),
+        context_parameter_values,
         errors,
         ..SqlOperationPlan::default()
     }
@@ -3248,14 +3315,21 @@ mod tests {
         assert_eq!(plan.errors, Vec::<String>::new());
         assert_eq!(
             plan.sql,
-            "UPDATE \"public\".\"widgets\" SET \"deleted_at\" = NOW() WHERE (\"id\" = $1 AND \"tenant_id\" = $2)"
+            // The trailing `AND "tenant_id" = $3` is the VERIFIED caller tenant
+            // appended by `append_verified_scope_predicates`. The caller's own
+            // `tenant_id` in the filter ($2) is attacker-controlled — presence of
+            // the column was the only thing checked — so the soft-delete
+            // tombstone, which the bridged emitter always declines and therefore
+            // always lands on this SQL, carries the backstop too.
+            "UPDATE \"public\".\"widgets\" SET \"deleted_at\" = NOW() WHERE (\"id\" = $1 AND \"tenant_id\" = $2) AND \"tenant_id\" = $3"
         );
         assert!(
             !plan.sql.to_ascii_uppercase().contains("DELETE FROM"),
             "soft-delete must never physically DELETE: {}",
             plan.sql
         );
-        assert_eq!(plan.parameter_columns, ["id", "tenant_id"]);
+        // Third entry is the appended verified-tenant backstop bind.
+        assert_eq!(plan.parameter_columns, ["id", "tenant_id", "tenant_id"]);
         assert_eq!(plan.operation, "delete");
         assert_eq!(plan.audit_event_type, "udb.sql.delete");
     }
@@ -4237,8 +4311,14 @@ mod tests {
         param_cols.sort();
         assert_eq!(
             param_cols,
-            vec!["status".to_string(), "tenant_id".to_string()],
-            "legacy planner filters on exactly the caller columns (inter-column order is a map-iteration artifact)"
+            vec![
+                "status".to_string(),
+                "tenant_id".to_string(),
+                "tenant_id".to_string()
+            ],
+            "legacy planner binds the caller columns PLUS the appended verified-tenant \
+             backstop — the same shape the IR compiler produces, which is exactly what makes \
+             this an A-B parity assertion (inter-column order is a map-iteration artifact)"
         );
         assert_eq!(
             compiled_params.len(),
