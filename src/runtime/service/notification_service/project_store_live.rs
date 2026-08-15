@@ -513,11 +513,75 @@ async fn served_notification_pins_all_paths_to_each_project_instance() {
         .connect(&dsn_shared)
         .await
         .expect("inspect shared Notification project database");
+    // The integration DSN is an administrative PostgreSQL superuser so the
+    // fixture can CREATE/DROP its isolated databases. PostgreSQL superusers
+    // bypass RLS even when a table is FORCE ROW LEVEL SECURITY, so inspecting
+    // through that identity would not prove the production privilege boundary.
+    // Use a unique non-login/non-bypass role for the raw, deliberately
+    // project-unfiltered reads below.
+    let inspection_role = format!("udb_notification_inspect_{suffix}");
+    let quoted_inspection_role = quote_ident(&inspection_role);
+    sqlx::query(&format!(
+        "CREATE ROLE {quoted_inspection_role} NOLOGIN NOSUPERUSER NOBYPASSRLS"
+    ))
+    .execute(&admin_pool)
+    .await
+    .expect("create non-bypass Notification inspection role");
+    let inspection_relations = [
+        template.relation.as_str(),
+        preference.relation.as_str(),
+        log.relation.as_str(),
+        attempt.relation.as_str(),
+    ]
+    .join(", ");
+    sqlx::raw_sql(&format!(
+        "GRANT USAGE ON SCHEMA {} TO {quoted_inspection_role}; \
+         GRANT SELECT ON {inspection_relations} TO {quoted_inspection_role}",
+        quote_ident("udb_notification"),
+    ))
+    .execute(&shared_pool)
+    .await
+    .expect("grant least-privilege Notification inspection access");
+    let (role_is_superuser, role_bypasses_rls): (bool, bool) =
+        sqlx::query_as("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = $1")
+            .bind(&inspection_role)
+            .fetch_one(&shared_pool)
+            .await
+            .expect("inspect Notification test role posture");
+    assert!(!role_is_superuser, "inspection role must not be superuser");
+    assert!(
+        !role_bypasses_rls,
+        "inspection role must not carry BYPASSRLS"
+    );
+    for model in [&template, &preference, &log, &attempt] {
+        let (rls_enabled, rls_forced): (bool, bool) = sqlx::query_as(
+            "SELECT relrowsecurity, relforcerowsecurity \
+             FROM pg_class WHERE oid = to_regclass($1)",
+        )
+        .bind(&model.relation)
+        .fetch_one(&shared_pool)
+        .await
+        .unwrap_or_else(|err| panic!("inspect RLS posture for {}: {err}", model.relation));
+        assert!(
+            rls_enabled && rls_forced,
+            "{} must enable and force row-level security",
+            model.relation
+        );
+    }
     for project_id in [PROJECT_C, PROJECT_D] {
         let mut tx = shared_pool
             .begin()
             .await
             .expect("begin shared-project inspection");
+        sqlx::query(&format!("SET LOCAL ROLE {quoted_inspection_role}"))
+            .execute(&mut *tx)
+            .await
+            .expect("activate non-bypass Notification inspection role");
+        let active_role: String = sqlx::query_scalar("SELECT current_user::TEXT")
+            .fetch_one(&mut *tx)
+            .await
+            .expect("inspect active Notification database role");
+        assert_eq!(active_role, inspection_role);
         let inspect_context = crate::RequestContext {
             tenant_id: TENANT.to_string(),
             project_id: project_id.to_string(),
@@ -573,7 +637,15 @@ async fn served_notification_pins_all_paths_to_each_project_instance() {
         }
         tx.commit().await.expect("commit shared-project inspection");
     }
+    sqlx::query(&format!("DROP OWNED BY {quoted_inspection_role}"))
+        .execute(&shared_pool)
+        .await
+        .expect("remove Notification inspection role grants");
     shared_pool.close().await;
+    sqlx::query(&format!("DROP ROLE {quoted_inspection_role}"))
+        .execute(&admin_pool)
+        .await
+        .expect("drop Notification inspection role");
 
     for database in [&database_a, &database_b, &database_shared] {
         sqlx::query(&format!(

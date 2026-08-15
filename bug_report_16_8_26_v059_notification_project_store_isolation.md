@@ -76,6 +76,22 @@ bound on the operation and capability fields. Those wrapper parameters now also
 accept owned strings, matching the shared constructor and allowing the request
 operation borrowed by `resolve_project_store` to remain request-scoped.
 
+The first focused live-quick project-store run (`31908446993`, job
+`95069789297`) completed every served split-store and shared-store operation but
+failed the raw shared-database RLS inspection: project C's deliberately
+project-unfiltered query observed both project C and project D. The generated
+tables did enable and force tenant+project RLS; the inspection connection was the
+integration stack's administrative `POSTGRES_USER=udb` identity, and PostgreSQL
+superusers bypass RLS even on `FORCE ROW LEVEL SECURITY` tables.
+
+The regression now creates a unique `NOLOGIN NOSUPERUSER NOBYPASSRLS` role,
+grants it only schema usage and read access to the four Notification ownership
+tables, verifies both the role flags and each table's enabled/forced RLS posture,
+then uses `SET LOCAL ROLE` before installing tenant/project GUCs and issuing the
+raw inspection queries. Its database-local grants and cluster role are removed
+before the temporary databases are dropped. Production routing and SQL behavior
+are unchanged.
+
 ## Required CI proof
 
 ```text
@@ -84,3 +100,6 @@ cargo test --features http-client --lib runtime::service::notification_service
 UDB_LIVE_AUTH_TESTS=1 cargo test --lib served_notification_pins_all_paths_to_each_project_instance -- --ignored --nocapture
 UDB_LIVE_AUTH_TESTS=1 cargo test --lib notification_events_live -- --ignored --nocapture
 ```
+
+The focused project-store filter must be rerun in CI after the non-bypass fixture
+change; no local Cargo/build/test/rustfmt execution is permitted for this repair.

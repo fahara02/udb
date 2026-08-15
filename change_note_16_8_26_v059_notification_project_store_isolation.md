@@ -37,3 +37,15 @@ That run's slim compile and successor run `31906505380` identified and drove the
 owned capability message/operation signature corrections documented in the
 companion bug report. No local Cargo, build, test, code generation, or rustfmt
 command was used for those repairs.
+
+Focused live-quick run `31908446993` subsequently proved the served split-store
+and shared-store paths reached their assertions, then exposed a fixture-only RLS
+proof defect: its raw shared-database inspection reused the integration
+superuser, which PostgreSQL permits to bypass even forced RLS. The fixture now
+switches those deliberately project-unfiltered reads to a unique non-login,
+non-superuser, non-`BYPASSRLS` role with least-privilege Notification read
+grants, asserts the generated tables have enabled and forced RLS, and removes the
+role and grants during teardown. Production Notification behavior is unchanged.
+
+The focused `served_notification_pins_all_paths_to_each_project_instance`
+live-quick filter remains CI-only and must be rerun after this fixture correction.
