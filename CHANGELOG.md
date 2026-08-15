@@ -47,6 +47,13 @@ by the v0.5.8 post-release benchmark and restoring trustworthy release evidence.
   artifact to the successful post-Release benchmark run and trigger SHA, resolves
   the release tag to the benchmarked commit, and verifies its recorded binary
   digest against the checksum published on that exact tag.
+- **Benchmark evidence must cover the complete generated RPC surface.** The
+  collector derives the canonical wire-RPC set from the generated benchmark
+  manifest and requires Go, Python, TypeScript, and PHP to report every identity
+  exactly once with matching aliases, operation ids, dynamic counts, and
+  independently normalized zero-failure rows. C# and Java remain explicit skips.
+  Pages reruns the same gate against the manifest from the exact benchmarked
+  commit before deploying release evidence.
 - **Backup inventory remains readable during topology repair.** ListBackups
   requires an exact active project/store binding but no longer demands the full
   backup-execution topology merely to list its durable journal.

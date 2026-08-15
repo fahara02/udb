@@ -1450,7 +1450,8 @@ BENCHMARK_WORKFLOW_REQUIREMENTS = (
     ("bench-output/logs/**", "benchmark logs artifact path"),
     ("bench-output/status/**", "benchmark status artifact path"),
     ("Fail on benchmark failures", "benchmark final failure gate"),
-    ("python scripts/collect_sdk_bench_results.py --gate docs/site/bench-results.json", "central benchmark failure gate command"),
+    ("--gate docs/site/bench-results.json", "central benchmark failure gate target"),
+    ("--canonical-manifest docs/generated/bench-bodies.json", "canonical benchmark RPC manifest handoff"),
     ("Stop broker and backends", "benchmark cleanup step"),
 )
 
@@ -1488,6 +1489,7 @@ BENCHMARK_ORCHESTRATOR_TRIGGER_PATHS = (
     (("scripts/gen-bench-bodies-skeleton.mjs",), "benchmark body skeleton trigger path"),
     (("scripts/gen-bench-bodies-json.mjs",), "benchmark body parser trigger path"),
     (("docs/bench-bodies/**",), "benchmark body source trigger path"),
+    (("docs/generated/bench-bodies.json",), "generated canonical benchmark manifest trigger path"),
     (("docs/site/benchmarks.html",), "benchmark page trigger path"),
     (("docs/site/benchmarks.js",), "benchmark script trigger path"),
     (("docs/site/README.md",), "site benchmark README trigger path"),
@@ -1528,6 +1530,14 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ('gh api "repos/${GITHUB_REPOSITORY}/commits/${release_tag}" --jq .sha', "published tag commit resolution"),
     ('--pattern "${release_asset}.sha256"', "published benchmark asset checksum resolution"),
     ("benchmark binary digest does not match", "published benchmark digest validation"),
+    (
+        'repos/${GITHUB_REPOSITORY}/contents/docs/generated/bench-bodies.json?ref=${artifact_commit}',
+        "exact benchmark commit canonical RPC manifest resolution",
+    ),
+    ("> release-proof/bench-bodies.json", "exact benchmark manifest staging"),
+    ("python3 scripts/collect_sdk_bench_results.py", "central benchmark completeness validator"),
+    ("--gate docs/site/bench-results.json", "Pages benchmark completeness gate target"),
+    ("--canonical-manifest release-proof/bench-bodies.json", "Pages exact-commit benchmark manifest handoff"),
     ("keeping committed docs/site/bench-results.json", "no-stale-republish benchmark fallback"),
     ("Build UDB's parser to WebAssembly", "fresh wasm build step"),
     ("rustup target add wasm32-unknown-unknown", "wasm target install"),
@@ -1564,15 +1574,11 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ('"failed_rpc_count" in summary', "benchmark failed-RPC summary validation"),
     ('isinstance(bench.get("sdks"), list)', "benchmark SDK list validation"),
     ('isinstance(bench.get("history"), list)', "benchmark history validation"),
-    ('full_rows = []', "benchmark full-RPC row collection"),
     ('rows = sdk.get("full_rpcs") or []', "benchmark full-RPC row source"),
-    ('row.setdefault("wire_api", wire_api)', "benchmark legacy wire identity normalizer"),
-    ('row.setdefault("api_alias", "")', "benchmark legacy alias normalizer"),
-    ('row.setdefault("operation_id", "")', "benchmark legacy operationId normalizer"),
-    ('"wire_api" not in row or "api_alias" not in row or "operation_id" not in row', "benchmark public identity row validation"),
-    ('benchmark full_rpcs rows must include wire_api, api_alias, and operation_id', "benchmark public identity failure"),
-    ('row.get("operation_id") or row.get("api_alias") or row.get("wire_api")', "benchmark public identity fallback check"),
-    ('benchmark full_rpcs rows lack public API identity', "benchmark public identity non-empty check"),
+    ('assert isinstance(row, dict)', "benchmark full-RPC object validation"),
+    ('for field in ("wire_api", "api_alias", "operation_id")', "benchmark public identity field validation"),
+    ('assert isinstance(value, str) and value.strip()', "benchmark non-empty public identity validation"),
+    ('has empty {field}', "benchmark public identity failure"),
     ("from html.parser import HTMLParser", "HTML local-ref parser import"),
     ("from urllib.parse import urlparse", "HTML local-ref URL parser import"),
     ('site.glob("*.html")', "HTML artifact crawl"),
@@ -5134,9 +5140,13 @@ def check_ci_quick_gate_source_guards(root: Path = ROOT) -> list[str]:
             scoped.append(f"missing {label} selftest: {selftest}")
         if repo_scan not in lines:
             scoped.append(f"missing {label} repo scan: {repo_scan}")
-    bootstrap_compile = "python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py"
-    if bootstrap_compile not in lines:
-        scoped.append(f"missing benchmark catalog bootstrap syntax check: {bootstrap_compile}")
+    for command, label in (
+        ("python3 -m py_compile scripts/collect_sdk_bench_results.py", "benchmark collector syntax check"),
+        ("python3 scripts/collect_sdk_bench_results.py --selftest", "benchmark collector selftest"),
+        ("python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap syntax check"),
+    ):
+        if command not in lines:
+            scoped.append(f"missing {label}: {command}")
     return [f"ci.yml: {failure}" for failure in scoped]
 
 
@@ -6633,6 +6643,8 @@ jobs:
           node --check scripts/gen-bench-bodies-skeleton.mjs
           node scripts/gen-bench-bodies-skeleton.mjs --selftest
           node scripts/gen-bench-bodies-skeleton.mjs --check
+          python3 -m py_compile scripts/collect_sdk_bench_results.py
+          python3 scripts/collect_sdk_bench_results.py --selftest
           python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py
           python3 scripts/check-bench-harness-posture.py --selftest
           python3 scripts/check-bench-harness-posture.py
@@ -7032,7 +7044,8 @@ jobs:
           python scripts/collect_sdk_bench_results.py \\
             --out docs/site/bench-results.json \\
             --status-dir bench-output/status \\
-            --release-sha256 "${UDB_BENCH_BINARY_SHA256:-}"
+            --release-sha256 "${UDB_BENCH_BINARY_SHA256:-}" \\
+            --canonical-manifest docs/generated/bench-bodies.json
       - name: Upload benchmark report artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -7045,7 +7058,9 @@ jobs:
       - name: Fail on benchmark failures
         if: always()
         run: |
-          python scripts/collect_sdk_bench_results.py --gate docs/site/bench-results.json
+          python scripts/collect_sdk_bench_results.py \\
+            --gate docs/site/bench-results.json \\
+            --canonical-manifest docs/generated/bench-bodies.json
       - name: Stop broker and backends
         if: always()
         run: docker rm -f udb-bench-minio || true
@@ -7067,6 +7082,7 @@ on:
       - "scripts/gen-bench-bodies-skeleton.mjs"
       - "scripts/gen-bench-bodies-json.mjs"
       - "docs/bench-bodies/**"
+      - "docs/generated/bench-bodies.json"
       - "docs/site/benchmarks.html"
       - "docs/site/benchmarks.js"
       - "docs/site/README.md"
@@ -7299,6 +7315,12 @@ jobs:
             published_commit="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${release_tag}" --jq .sha)"
             gh release download "${release_tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${release_asset}.sha256" --dir release-proof
             echo "benchmark binary digest does not match"
+            gh api -H "Accept: application/vnd.github.raw+json" \\
+              "repos/${GITHUB_REPOSITORY}/contents/docs/generated/bench-bodies.json?ref=${artifact_commit}" \\
+              > release-proof/bench-bodies.json
+            python3 scripts/collect_sdk_bench_results.py \\
+              --gate docs/site/bench-results.json \\
+              --canonical-manifest release-proof/bench-bodies.json
           fi
           if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
       - name: Build UDB's parser to WebAssembly
@@ -7366,26 +7388,16 @@ jobs:
           assert "failed_rpc_count" in summary, "benchmark JSON has no failed_rpc_count"
           assert isinstance(bench.get("sdks"), list), "benchmark JSON sdks must be a list"
           assert isinstance(bench.get("history"), list), "benchmark JSON history must be a list"
-          full_rows = []
           for sdk in bench.get("sdks", []):
               rows = sdk.get("full_rpcs") or []
               assert isinstance(rows, list), f"benchmark full_rpcs for {sdk.get('id')} must be a list"
               for row in rows:
-                  service = str(row.get("service") or "")
-                  rpc = str(row.get("wire_rpc") or row.get("rpc") or "")
-                  wire_api = row.get("wire_api") or (f"{service}/{rpc}" if service and rpc else rpc)
-                  row.setdefault("wire_api", wire_api)
-                  row.setdefault("api_alias", "")
-                  row.setdefault("operation_id", "")
-                  row.setdefault("api", row.get("operation_id") or row.get("api_alias") or wire_api)
-              full_rows.extend(rows)
-          if full_rows:
-              missing_identity = [
-                  row for row in full_rows
-                  if "wire_api" not in row or "api_alias" not in row or "operation_id" not in row
-              ]
-              assert not missing_identity, "benchmark full_rpcs rows must include wire_api, api_alias, and operation_id"
-              assert any(row.get("operation_id") or row.get("api_alias") or row.get("wire_api") for row in full_rows), "benchmark full_rpcs rows lack public API identity"
+                  assert isinstance(row, dict), f"benchmark full_rpcs for {sdk.get('id')} contains a non-object row"
+                  for field in ("wire_api", "api_alias", "operation_id"):
+                      value = row.get(field)
+                      assert isinstance(value, str) and value.strip(), (
+                          f"benchmark full_rpcs for {sdk.get('id')} has empty {field}"
+                      )
           Path("docs/site/bench-results.json").write_text(json.dumps(bench, indent=2, sort_keys=True) + "\n")
 
           from html.parser import HTMLParser
