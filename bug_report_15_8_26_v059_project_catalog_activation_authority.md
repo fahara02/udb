@@ -104,6 +104,10 @@ catalog at all.
 - Make the error-detail posture gate follow the shared typed project resolver
   and current durable error seams instead of demanding deleted per-handler
   duplicates or obsolete in-memory activation failure messages.
+- When activation or rollback changes the ACTIVE catalog, atomically advance
+  the target row's current validation baseline and compatibility evidence with
+  the exact binding and reload record. Idempotent replay must return its stored
+  response without rewriting a later transition.
 
 ## Evidence
 
@@ -138,6 +142,13 @@ decoded `CatalogManifest` is identical. The error-detail posture guard also
 still required project-specific helpers and pre-reconciliation error strings
 that had been replaced by the shared project resolver and durable transition
 errors.
+
+After typed-manifest integrity fixed initial readback, focused run
+`31896157075` progressed through concurrent activation and rollback, then found
+one remaining split: rollback stored its new compatibility evidence in the
+project binding and reload record while the reactivated catalog row retained
+its original stage-time baseline/evidence. The next StageCatalog correctly
+detected that ACTIVE/binding mismatch.
 
 ## Regression coverage
 

@@ -1726,12 +1726,23 @@ impl DataBrokerRuntime {
             })?;
             let rows = sqlx::query(&format!(
                 "UPDATE {cat_rel}
-                 SET status = 'ACTIVE', activated_at = NOW()
+                 SET status = 'ACTIVE', activated_at = NOW(),
+                     compatibility_evidence_sha256 = $4,
+                     validated_against_catalog_id = $5,
+                     validated_against_checksum_sha256 = $6
                  WHERE catalog_id = $1 AND project_id = $2 AND status = $3"
             ))
             .bind(id)
             .bind(&project_id)
             .bind(required_status)
+            .bind(&transition_compatibility_evidence)
+            .bind(current_active.as_ref().map(|row| row.0))
+            .bind(
+                current_active
+                    .as_ref()
+                    .map(|row| row.2.as_str())
+                    .unwrap_or_default(),
+            )
             .execute(&mut *tx)
             .await
             .map_err(|err| {

@@ -216,12 +216,9 @@ mod tests {
             scopes: vec!["udb:admin".to_string()],
             ..SecurityContext::default()
         };
-        let denied = resolve_catalog_mutation_project(
-            &bound_security,
-            "project-b",
-            "LookupMessageSchema",
-        )
-        .expect_err("tenant admin cannot cross project authority");
+        let denied =
+            resolve_catalog_mutation_project(&bound_security, "project-b", "LookupMessageSchema")
+                .expect_err("tenant admin cannot cross project authority");
         assert_eq!(denied.code(), tonic::Code::PermissionDenied);
         let denied_detail = decode_detail(&denied);
         assert_eq!(denied_detail.kind, ErrorKind::Policy as i32);

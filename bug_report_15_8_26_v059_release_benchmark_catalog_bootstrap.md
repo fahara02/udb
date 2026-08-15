@@ -118,3 +118,10 @@ That run also showed the first native-repair implementation could wait on
 Cargo's target lock after an earlier test failure. Recovery now executes the
 already-built `target/debug/udb` directly; if the build did not produce that
 binary, the recovery step declines to fabricate native artifacts.
+
+The normal native manifest/docs/diff gates had the same redundant `cargo run`
+boundary after `cargo build --all-targets`, causing a later green library run to
+spend minutes re-entering Cargo before contract drift could be reported. All
+native gates now execute that already-built broker directly.
+The workflow and docs-freshness posture fixtures pin this build-once command so
+a future edit cannot silently restore the redundant Cargo boundary.

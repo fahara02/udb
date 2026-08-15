@@ -49,6 +49,9 @@ Release: 0.5.9
 - Catalog payload-integrity evidence now hashes deterministic serialization of
   the decoded typed manifest, so valid authority survives PostgreSQL JSONB
   normalization. Raw request and semantic schema checksums remain distinct.
+- Activation and rollback now advance the target catalog row's current
+  baseline/evidence in the same transaction as the exact project binding and
+  reload log, so reactivation cannot leave a split authority tuple.
 - Error-detail posture now pins the centralized catalog project policy detail
   and current typed durable/reconciliation errors, removing stale requirements
   for deleted per-handler authorization and in-memory activation branches.
@@ -140,9 +143,18 @@ Release: 0.5.9
 - GitHub run `31895052655` compiled all targets and reported 2,700 passing
   library tests before the shared default-project resolver failures; focused
   live run `31895088437` supplied the JSONB provenance-readback failure.
+- Focused run `31896157075` proved initial stage/replay, conflicting-key denial,
+  concurrent one-ACTIVE enforcement, and rollback before isolating the
+  reactivation-evidence split fixed in this revision.
+- Applied the three-line `ci-rustfmt-repair-1` artifact from run `31896140645`
+  to the shared project resolver before this commit.
 - Native repair generation consumes the exact broker already built by the
   Linux Rust job, avoiding a second Cargo invocation and its post-failure target
   lock while preserving runner/toolchain provenance.
+- Native manifest, lint, docs, and contract-diff gates likewise execute the
+  preceding all-target build directly instead of redundantly re-entering Cargo.
+- Workflow and docs-freshness posture fixtures now enforce that build-once
+  native command path.
 - The v0.5.9 tag must point to the exact fully green `main` SHA.
 - Completion requires a successful Release workflow, 1,524 measured SDK RPCs,
   four `ok` SDK statuses, zero failed RPCs, and a successful Pages deployment

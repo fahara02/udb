@@ -39,7 +39,7 @@ REQUIRED_FILES = {
         ("python3 scripts/check-docs-ci-freshness-posture.py --selftest", "docs/CI posture selftest"),
         ("python3 scripts/check-docs-ci-freshness-posture.py", "docs/CI posture repo scan"),
         ("Native docs markdown drift", "native markdown drift step"),
-        ("cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md", "native docs regenerate command"),
+        ("target/debug/udb native docs > docs/generated/native-services.md", "native docs regenerate command"),
         ("git diff --quiet -- docs/generated/native-services.md", "native docs diff gate"),
         ("No internal tables guard (masterplan §12)", "no-internal-tables CI step"),
         ("python3 scripts/check-no-internal-tables.py --selftest", "no-internal-tables selftest"),

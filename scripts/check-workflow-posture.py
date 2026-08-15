@@ -1244,16 +1244,16 @@ CI_RUST_GENERATED_CONTRACT_DOC_GATES = (
         "Native contract manifest drift + lint (F13 hard gate)",
         "native contract manifest drift/lint",
         (
-            "cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json",
+            "target/debug/udb native manifest > docs/generated/udb-native-contract.json",
             "git diff --quiet -- docs/generated/udb-native-contract.json",
-            "cargo run --locked -q --bin udb -- native lint",
+            "target/debug/udb native lint",
         ),
     ),
     (
         "Native docs markdown drift",
         "native docs markdown drift",
         (
-            "cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md",
+            "target/debug/udb native docs > docs/generated/native-services.md",
             "git diff --quiet -- docs/generated/native-services.md",
         ),
     ),
@@ -1268,7 +1268,7 @@ CI_RUST_GENERATED_CONTRACT_DOC_GATES = (
         "Native contract breaking-change gate (Phase 3)",
         "native contract breaking-change",
         (
-            "cargo run --locked -q --bin udb -- native contract-diff",
+            "target/debug/udb native contract-diff",
             "--baseline docs/generated/contract-baseline.bin",
         ),
     ),
@@ -6713,15 +6713,15 @@ jobs:
       - name: Native contract manifest drift + lint (F13 hard gate)
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json
+          target/debug/udb native manifest > docs/generated/udb-native-contract.json
           if ! git diff --quiet -- docs/generated/udb-native-contract.json; then
             exit 1
           fi
-          cargo run --locked -q --bin udb -- native lint
+          target/debug/udb native lint
       - name: Native docs markdown drift
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md
+          target/debug/udb native docs > docs/generated/native-services.md
           if ! git diff --quiet -- docs/generated/native-services.md; then
             exit 1
           fi
@@ -6741,7 +6741,7 @@ jobs:
       - name: Native contract breaking-change gate (Phase 3)
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native contract-diff \
+          target/debug/udb native contract-diff \
             --baseline docs/generated/contract-baseline.bin
   build-broker:
     needs: quick-gate
@@ -10081,8 +10081,8 @@ jobs:
 
         (wf / "ci.yml").write_text(
             ci_good.replace(
-                "          cargo run --locked -q --bin udb -- native lint\n",
-                "          cargo run --locked -q --bin udb -- native help\n",
+                "          target/debug/udb native lint\n",
+                "          target/debug/udb native help\n",
             ),
             encoding="utf-8",
         )

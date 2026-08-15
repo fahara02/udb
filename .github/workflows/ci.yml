@@ -248,13 +248,13 @@ jobs:
         # findings. Runs once on Linux to avoid CRLF/path skew.
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json
+          target/debug/udb native manifest > docs/generated/udb-native-contract.json
           if ! git diff --quiet -- docs/generated/udb-native-contract.json; then
             echo "::error::Native contract manifest is stale. Run 'udb native manifest > docs/generated/udb-native-contract.json' and commit."
             git diff -- docs/generated/udb-native-contract.json | sed -n '1,120p'
             exit 1
           fi
-          cargo run --locked -q --bin udb -- native lint
+          target/debug/udb native lint
       - name: Native docs markdown drift
         # Mirror of the JSON gate above for docs/generated/native-services.md.
         # `udb native docs` renders the markdown table from the same embedded
@@ -265,7 +265,7 @@ jobs:
         # CRLF skew.
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md
+          target/debug/udb native docs > docs/generated/native-services.md
           if ! git diff --quiet -- docs/generated/native-services.md; then
             echo "::error::Native docs markdown is stale. Run 'udb native docs > docs/generated/native-services.md' and commit."
             git diff -- docs/generated/native-services.md | sed -n '1,120p'
@@ -305,7 +305,7 @@ jobs:
         #   udb native contract-baseline --baseline docs/generated/contract-baseline.bin
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native contract-diff \
+          target/debug/udb native contract-diff \
             --baseline docs/generated/contract-baseline.bin
       - name: Prepare CI-generated native documentation repair patch
         if: failure() && runner.os == 'Linux'
