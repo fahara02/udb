@@ -2365,8 +2365,8 @@ pub async fn serve(
         }
         #[cfg(feature = "kafka")]
         {
-            service.cdc_engine =
-                start_cdc_engine(service.runtime_snapshot(), metrics.clone()).await;
+            let runtime = service.runtime_snapshot();
+            service.cdc_engine = start_cdc_engine(runtime.as_ref(), metrics.clone()).await;
         }
         let catalog_service = service.clone();
         tokio::spawn(async move {

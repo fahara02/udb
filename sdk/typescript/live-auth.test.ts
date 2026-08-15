@@ -1612,6 +1612,7 @@ test("manifest JSON body hydrates WebRTC turn and signaling rows", () => {
 test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   const fixtures = new PerfFixtures();
   fixtures.set("tenant_id", "tenant-1");
+  fixtures.set("project", "project-1");
   fixtures.set("vault_key_name", "sdk-perf-key");
   fixtures.set("vault_signing_key_name", "sdk-perf-signing-key");
   fixtures.set("vault_hmac_key_name", "sdk-perf-hmac-key");
@@ -1648,6 +1649,7 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   assert.equal(destroyed?.confirmation_token, destroyed?.secret_path);
   assert.equal(encrypted?.plaintext, "perf");
   assert.equal(dbCreds?.role_name, "sdk-readonly");
+  assert.equal(dbCreds?.project_id, "project-1");
   assert.equal(dbCreds?.ttl_seconds, 900);
   assert.equal(dbCreds?.idempotency_key, "sdk-vault-db-idempotency");
   assert.equal(revokedDbCreds?.lease_id, "sdk-vault-db-lease");

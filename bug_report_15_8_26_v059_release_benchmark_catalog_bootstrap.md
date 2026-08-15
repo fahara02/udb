@@ -34,6 +34,14 @@ the same bootstrap path:
   consumer skill also described the expanded Vault surface as 20 rather than 22
   RPCs.
 
+The first combined PR run also proved that CI reported generated Rust/SDK/native
+drift only as truncated log output. On a CI-only development machine that left
+no authoritative patch to apply, while the workflow-posture selftest's nominal
+benchmark fixture had not been updated with the new bootstrap trigger path.
+The same run showed that the TypeScript Vault body regression fixture seeded
+tenant and lease values but not the new `<seed:project>` placeholder, so SDK
+conformance failed before it could assert exact-project database credentials.
+
 ## Impact
 
 - A release whose main CI was green could not produce valid post-release
@@ -77,6 +85,13 @@ the same bootstrap path:
   Vault inventory with the generated contract, and do not relabel the committed
   v0.4.28 benchmark evidence.
 - Do not weaken Backup/Vault exact-project checks.
+- On a failed Rust formatting, SDK generation, or native contract/docs gate,
+  upload the exact binary Git patch produced by the pinned GitHub runner so the
+  repair remains CI-authored and reproducible without a local build.
+- Keep the benchmark orchestrator selftest fixture in lockstep with every
+  required trigger path, including the catalog bootstrap script.
+- Seed and assert the exact project in TypeScript's Vault manifest-body test so
+  the project-authority benchmark body is covered by offline SDK conformance.
 
 ## Evidence
 

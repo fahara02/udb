@@ -75,6 +75,17 @@ Release: 0.5.9
 - Quick CI and workflow lint now compile the benchmark catalog bootstrap, both
   workflow-lint trigger blocks track the script, and workflow posture fixtures
   fail if either PR-time guard is removed.
+- Failed formatting, SDK code-generation, and native contract/documentation
+  gates now retain short-lived CI-generated binary repair patches. This keeps
+  generated corrections tied to the pinned GitHub toolchain when local builds
+  are intentionally disabled.
+- The benchmark orchestrator's positive posture fixture now includes the
+  catalog-bootstrap trigger path required by the production workflow.
+- CDC startup now retains the runtime snapshot and passes the borrowed runtime
+  expected by the engine constructor, closing the CI compile mismatch without
+  changing worker or authority ordering.
+- TypeScript's Vault manifest-body regression now supplies and asserts the
+  exact project used by dynamic database-credential requests.
 - The reusable benchmark accepts only an anchored SemVer release tag and a Linux
   amd64 UDB asset. It downloads and verifies the binary checksum, manifest
   checksum, manifest tag/version/asset digest/size, and exact binary version
@@ -107,6 +118,9 @@ Release: 0.5.9
 - GitHub quick CI and workflow lint must observe the bootstrap `py_compile` and
   workflow-posture selftests, followed by a post-release Benchmark -> Pages proof
   of the new checksum/manifest/tag/commit chain.
+- Any uploaded CI repair patch must be applied, reviewed, documented, committed
+  as `fahara02`, and proven by a subsequent clean run; artifact creation alone
+  is not acceptance evidence.
 - The v0.5.9 tag must point to the exact fully green `main` SHA.
 - Completion requires a successful Release workflow, 1,524 measured SDK RPCs,
   four `ok` SDK statuses, zero failed RPCs, and a successful Pages deployment

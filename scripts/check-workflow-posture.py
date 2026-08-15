@@ -7061,6 +7061,7 @@ on:
       - "sdk-templates/**"
       - "scripts/openapi-postprocess.mjs"
       - "scripts/collect_sdk_bench_results.py"
+      - "scripts/bootstrap_benchmark_project_catalog.py"
       - "scripts/gen-bench-bodies-skeleton.mjs"
       - "scripts/gen-bench-bodies-json.mjs"
       - "docs/bench-bodies/**"

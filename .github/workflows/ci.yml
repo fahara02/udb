@@ -71,6 +71,19 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: cargo fmt --check
         run: cargo fmt --all -- --check
+      - name: Prepare CI-generated rustfmt repair patch
+        if: failure()
+        run: |
+          cargo fmt --all
+          git diff --binary -- '*.rs' > ci-rustfmt.patch
+      - name: Upload CI-generated rustfmt repair patch
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-rustfmt-repair-${{ github.run_attempt }}
+          path: ci-rustfmt.patch
+          if-no-files-found: error
+          retention-days: 7
       - name: buf lint
         run: buf lint
       - name: buf breaking (against origin/main)
@@ -294,6 +307,21 @@ jobs:
         run: |
           cargo run --locked -q --bin udb -- native contract-diff \
             --baseline docs/generated/contract-baseline.bin
+      - name: Prepare CI-generated native documentation repair patch
+        if: failure() && runner.os == 'Linux'
+        continue-on-error: true
+        run: |
+          cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json
+          cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md
+          git diff --binary -- docs/generated/udb-native-contract.json docs/generated/native-services.md > ci-native-docs.patch
+      - name: Upload CI-generated native documentation repair patch
+        if: failure() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-native-docs-repair-${{ github.run_attempt }}
+          path: ci-native-docs.patch
+          if-no-files-found: warn
+          retention-days: 7
 
   # ── Build the broker ONCE, share via same-run artifact ────────────
   # Builds the live feature tier consumed by smoke.
@@ -717,6 +745,18 @@ jobs:
             git diff --stat -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api
             exit 1
           fi
+      - name: Prepare CI-generated SDK repair patch
+        if: failure()
+        run: |
+          git diff --binary -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api > ci-sdk-codegen.patch
+      - name: Upload CI-generated SDK repair patch
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-sdk-codegen-repair-${{ github.run_attempt }}
+          path: ci-sdk-codegen.patch
+          if-no-files-found: error
+          retention-days: 7
       - name: Authn/Authz inventory drift (Phase 0A)
         # The committed RPC + sensitive-field inventories must match the protos.
         run: |

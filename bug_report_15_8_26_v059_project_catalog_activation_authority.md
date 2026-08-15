@@ -103,6 +103,13 @@ was absent from the in-memory active map. Source inspection identified the
 default-project activation helper in both served success paths and the global
 `load_last_manifest()` call immediately before it.
 
+The first combined v0.5.9 CI build additionally found that catalog-startup
+refactoring passed the owned `Arc<DataBrokerRuntime>` snapshot directly to the
+CDC constructor, whose contract is a borrowed runtime. This was a compile-time
+integration defect, not a reason to weaken either catalog freshness or CDC
+startup ordering; the snapshot must stay alive locally and be borrowed for the
+awaited constructor call.
+
 ## Regression coverage
 
 The ignored live Postgres regression
