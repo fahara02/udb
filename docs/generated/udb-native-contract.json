@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "5ac4f9b3db8a63bcadce075c883b8090267aa636bf4fd79a998893bf44be8288",
-  "contract_version": "6.0.0",
+  "descriptor_sha256": "a364bdce2e695064dc6ea3d430969326a3981385d03ead3dddce828472f17636",
+  "contract_version": "7.0.0",
   "udb_version": "0.5.9",
   "protocol_version": "1.0.0",
   "service_count": 28,
@@ -20308,8 +20308,7 @@
           "lifecycle_contract": {
             "entity": "NotificationLog",
             "legal_source_states": [
-              "FAILED",
-              "SUPPRESSED"
+              "FAILED"
             ],
             "target_state": "PENDING",
             "terminal_states": [],
@@ -20389,10 +20388,17 @@
           "emits": [
             {
               "topic": "udb.notification.sent.v1",
-              "partition_key_field": "recipient_id",
+              "partition_key_field": "recipient_ref",
               "delivery_guarantee": "at_least_once",
               "payload_redaction_profile": "standard",
-              "conditional": false
+              "conditional": true
+            },
+            {
+              "topic": "udb.notification.suppressed.v1",
+              "partition_key_field": "tenant_id",
+              "delivery_guarantee": "at_least_once",
+              "payload_redaction_profile": "standard",
+              "conditional": true
             }
           ],
           "sdk_surface": {
@@ -115259,7 +115265,7 @@
       "event_contract": {
         "event_type": "udb.core.notification.events.v1.NotificationSentEvent",
         "outbox_topic": "udb.notification.sent.v1",
-        "partition_key_field": "tenant_id",
+        "partition_key_field": "recipient_ref",
         "payload_redaction_profile": "standard",
         "delivery_guarantee": "at_least_once",
         "replay_compatibility": "stable"
@@ -182081,7 +182087,7 @@
     {
       "event_type": "udb.core.notification.events.v1.NotificationSentEvent",
       "outbox_topic": "udb.notification.sent.v1",
-      "partition_key_field": "tenant_id",
+      "partition_key_field": "recipient_ref",
       "payload_redaction_profile": "standard",
       "delivery_guarantee": "at_least_once",
       "replay_compatibility": "stable",
