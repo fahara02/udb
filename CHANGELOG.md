@@ -71,6 +71,9 @@ by the v0.5.8 post-release benchmark and restoring trustworthy release evidence.
   are intentional database- and event-contract breaks. The independent native
   contract major and descriptor baseline move together instead of hiding either
   change behind the package patch version.
+- **The declared Rust minimum is 1.88.** Repository source already relies on
+  Rust 1.88 let-chains across core runtime and generation paths; CI now compiles
+  all targets with that exact MSRV instead of advertising an untested 1.85.
 - **PHP benchmark seed failures remain observable.** A failed native seed keeps
   its original gRPC code and detail, marks only dependent RPCs `SEED_BLOCKED`,
   and still emits a complete 381-RPC PHP report. Catalog lifecycle ordering is

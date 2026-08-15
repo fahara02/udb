@@ -199,6 +199,30 @@ jobs:
         run: |
           python3 scripts/check-beta-versioning-posture.py --selftest
           python3 scripts/check-beta-versioning-posture.py
+
+  # The manifest promises Rust 1.88. Stable-only builds cannot detect source
+  # syntax or dependency drift above that floor, so compile every target with
+  # the exact declared toolchain before accepting a release candidate.
+  msrv:
+    name: Rust MSRV (1.88)
+    runs-on: ubuntu-latest
+    needs: quick-gate
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: rust-msrv-1.88
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev
+      - name: Check all targets on declared MSRV
+        run: cargo check --locked --all-targets
+
   # ── Clippy advisory: visible but not on the required quick-gate lane ─────
   clippy-advisory:
     name: Clippy advisory

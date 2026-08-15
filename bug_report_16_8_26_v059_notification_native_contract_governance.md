@@ -20,6 +20,9 @@ downstream event clients:
   `NotificationDeliveryAttempt` enforce first-class project ownership,
   tenant+project RLS, and project-aware uniqueness so physical-store colocation
   cannot collapse two projects into one logical authority.
+- served sent, suppressed, failed, and delivered payloads carry `project_id`,
+  but their public protobuf event messages omitted that field, so generated SDK
+  consumers could not decode or inspect the emitted project provenance.
 
 The committed native-contract source version remained `6.0.0`, which already
 identified the Backup tenant/project database-contract break. Its descriptor
@@ -46,6 +49,9 @@ source descriptor.
 - Make log/template/preference/delivery-attempt project ownership part of the
   proto schema. Blank legacy ownership is quarantined because it cannot be
   safely inferred.
+- Add wire-safe `project_id` fields to the four served Notification outcome
+  event messages so their descriptors match the exact payload already committed
+  to the project-local outbox.
 - Leave descriptor-derived files untouched locally. The Linux CI Rust job must
   regenerate and publish the native manifest, native-services Markdown, and
   binary descriptor baseline from the broker it compiled from this revision.

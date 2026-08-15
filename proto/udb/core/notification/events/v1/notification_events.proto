@@ -37,6 +37,7 @@ message NotificationSentEvent {
   string tenant_id = 7;
   string correlation_id = 8;
   google.protobuf.Timestamp occurred_at = 9;
+  string project_id = 10; // Exact project whose store committed the notification.
 }
 
 // Emitted when a notification delivery attempt fails (may be retried).
@@ -62,6 +63,7 @@ message NotificationFailedEvent {
   bool will_retry = 10;
   string correlation_id = 11;
   google.protobuf.Timestamp occurred_at = 12;
+  string project_id = 13; // Exact project whose store committed the outcome.
 }
 
 // Emitted when a notification is suppressed due to rate limiting or user opt-out.
@@ -84,6 +86,7 @@ message NotificationSuppressedEvent {
   string suppression_reason = 7; // RATE_LIMITED | USER_OPT_OUT | DUPLICATE
   string correlation_id = 8;
   google.protobuf.Timestamp occurred_at = 9;
+  string project_id = 10; // Exact project whose store committed the suppression.
 }
 
 // Emitted when delivery is confirmed (e.g. email open, webhook 2xx).
@@ -103,6 +106,7 @@ message NotificationDeliveredEvent {
   string tenant_id = 4;
   string correlation_id = 5;
   google.protobuf.Timestamp occurred_at = 6;
+  string project_id = 7; // Exact project whose store committed the outcome.
 }
 
 // Emitted when a notification template is created or updated.

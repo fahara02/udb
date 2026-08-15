@@ -163,6 +163,9 @@ Release: 0.5.9
   tenant/project guard and across API-key create preflight, get, filtered list,
   update, revoke, rotate, and emergency-revoke paths, while retaining explicit
   platform authority and deliberately unbound operator behavior.
+- The API-key record guard uses the same centralized predicate for its project
+  escape hatch, so explicit platform roles/scopes retain cross-project access
+  without reopening that access to project-bound broad admin scopes.
 - Refreshed the generated codebase map after adding that shared helper; GitHub
   run `31903131598` had already compiled all targets and passed the full library
   suite before its freshness gate reported the one-line map drift.

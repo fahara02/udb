@@ -435,19 +435,19 @@ impl ApiKeyServiceImpl {
         record_tenant: &str,
         record_project: &str,
     ) -> Result<(), Status> {
-        // `enforce_caller_tenant` already grants a cross-tenant admin its
-        // tenant reach. Returning Ok here as well made that admin scope skip the
-        // PROJECT check too, so a caller whose claim is bound to project-a could
-        // act on project-b purely by holding `udb:auth:admin` — the admin scope
-        // silently dissolved project separation. A claim that names a concrete
-        // project stays bound to it; an admin wanting cross-project reach simply
-        // does not carry a project claim (empty claim project still passes).
+        // `enforce_caller_tenant` grants only the centralized platform-authority
+        // predicate its tenant reach. Apply that same predicate to the project
+        // boundary: bound broad action scopes such as `udb:auth:admin` remain
+        // project-local, while an explicit platform role/scope may cross both.
         self.enforce_caller_tenant(context, record_tenant)?;
         let caller_project = context
             .and_then(|c| c.tenant.as_ref())
             .map(|tenant| tenant.project_id.trim())
             .unwrap_or_default();
-        if !caller_project.is_empty() && caller_project != record_project.trim() {
+        if !caller_project.is_empty()
+            && caller_project != record_project.trim()
+            && !Self::caller_is_cross_tenant_admin(context)
+        {
             return Err(Self::project_mismatch_status());
         }
         Ok(())
@@ -2919,6 +2919,48 @@ mod tests {
             svc.enforce_caller_scope(Some(&ctx("acme", &[])), "acme", "project-b")
                 .is_ok(),
             "tenant-bound callers intentionally retain cross-project administration"
+        );
+        assert!(
+            svc.enforce_caller_scope(
+                Some(&ctx_project_with_scopes(
+                    "acme",
+                    "project-a",
+                    &["udb:platform_admin"],
+                    &[],
+                )),
+                "other-tenant",
+                "project-b",
+            )
+            .is_ok(),
+            "explicit platform scope must retain cross-tenant/project authority"
+        );
+        assert!(
+            svc.enforce_caller_scope(
+                Some(&ctx_project_with_scopes(
+                    "acme",
+                    "project-a",
+                    &[],
+                    &["platform_admin"],
+                )),
+                "other-tenant",
+                "project-b",
+            )
+            .is_ok(),
+            "explicit platform role must retain cross-tenant/project authority"
+        );
+        assert!(
+            svc.enforce_caller_scope(
+                Some(&ctx_project_with_scopes(
+                    "acme",
+                    "project-a",
+                    &["udb:auth:admin"],
+                    &[],
+                )),
+                "acme",
+                "project-b",
+            )
+            .is_err(),
+            "bound broad admin scope must remain project-local"
         );
     }
 

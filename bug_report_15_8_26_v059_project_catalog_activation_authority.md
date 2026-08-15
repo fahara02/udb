@@ -211,3 +211,10 @@ unbound verified claims, retain explicit platform-role/scope behavior, and drive
 API-key create preflight, get, list filtering/paging, update, revoke, rotate, and
 emergency revoke through the corrected project boundary. Local Cargo/test
 remains disabled; CI is the required execution proof.
+
+The final main reconciliation briefly over-corrected the duplicated API-key
+project guard: it denied every nonempty foreign project after the tenant check,
+including callers that the centralized predicate had verified through an
+explicit platform role or `udb:platform_admin` scope. The project guard now
+reuses that exact predicate. Bound broad action scopes remain project-local,
+while genuine platform authority consistently crosses tenant and project.

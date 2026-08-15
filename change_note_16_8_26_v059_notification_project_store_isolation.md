@@ -33,6 +33,7 @@ CI run `31906253806` produced and supplied the applied repair artifacts:
 - `ci-sdk-codegen-repair-1`, SHA-256
   `03B6EE008A359B5D4C175E2B0E7E56BB311ACD31D18420295288F28D64E3FBF6`.
 
-The same run's slim compile identified and drove the owned capability-message
-signature correction documented in the companion bug report. No local Cargo,
-build, test, code generation, or rustfmt command was used for those repairs.
+That run's slim compile and successor run `31906505380` identified and drove the
+owned capability message/operation signature corrections documented in the
+companion bug report. No local Cargo, build, test, code generation, or rustfmt
+command was used for those repairs.

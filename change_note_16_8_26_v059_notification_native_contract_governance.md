@@ -15,6 +15,8 @@ package version:
   terminal opt-out suppression is not a retryable lifecycle state; and
 - log/template/preference/delivery-attempt rows now enforce exact project
   ownership with tenant+project RLS and project-aware unique keys.
+- sent, suppressed, failed, and delivered event messages now expose the exact
+  `project_id` already carried by the served outbox payload.
 
 The v0.5.9 changelog now describes both the customer-visible Notification
 behavior and why Backup/Notification database-contract changes plus Notification

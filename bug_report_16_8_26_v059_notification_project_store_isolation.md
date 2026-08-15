@@ -71,6 +71,11 @@ status constructor already accepts an owned string. The wrapper now accepts
 `impl Into<String>`, preserving the same typed capability envelope without
 discarding the project-specific diagnostic.
 
+The successor compile (`31906505380`) then exposed the same unnecessary static
+bound on the operation and capability fields. Those wrapper parameters now also
+accept owned strings, matching the shared constructor and allowing the request
+operation borrowed by `resolve_project_store` to remain request-scoped.
+
 ## Required CI proof
 
 ```text
