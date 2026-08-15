@@ -5,6 +5,38 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.8] - 2026-08-15
+
+Patch release restoring tenant-backup import availability and closing the
+release-evidence drift exposed by the v0.5.7 post-release benchmark. No wire
+protocol change.
+
+### Fixed
+
+- **`RestoreTenant` no longer rejects every fresh destination because of its own
+  journal row.** Restore deliberately records a target-scoped `RUNNING`
+  `BackupRun` before opening the freshness transaction, but the guard then
+  counted that exact row as pre-existing tenant state. The descriptor-resolved
+  backup journal probe now excludes only the current restore id. Older backup or
+  restore history and every tenant-authored relation still make the target
+  non-fresh.
+- **The release benchmark follows canonical project and credential contracts.**
+  All SDKs use one UUID project identity, rotate a refresh token only once, run
+  tenant-wide session revocation last, and authenticate again before the final
+  self-purge. The harness therefore measures served RPC behavior instead of
+  stale project codes or deliberately invalidated bearer tokens.
+- **Pages cannot publish stale benchmark evidence from a validation-only run.**
+  Push validation of the benchmark workflow no longer triggers a deployment.
+  A genuine manual or post-release benchmark must succeed and supply its fresh
+  `sdk-benchmark-results` artifact; a missing artifact fails the Pages build
+  instead of falling back to the committed historical dashboard JSON.
+
+### Changed
+
+- Maintained security, operations, native-service, changelog, generated-map,
+  example, and site version references now describe the completed v0.5.7 audit
+  wave and identify v0.5.8 as the current product/SDK release.
+
 ## [0.5.7] - 2026-08-14
 
 Patch release closing a production-reported migration defect and a cluster of

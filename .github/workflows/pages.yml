@@ -52,6 +52,13 @@ concurrency:
 
 jobs:
   build:
+    # Benchmark workflow_run events are deployable only when a real benchmark
+    # (manual or post-release) succeeded. The push event is definition validation
+    # and intentionally produces no sdk-benchmark-results artifact.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event != 'push')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -96,11 +103,15 @@ jobs:
               sleep 15
             done
           fi
+          if [ -n "${TRIGGER_RUN_ID:-}" ] && [ "$got_fresh" != 1 ]; then
+            echo "::error::benchmark run ${TRIGGER_RUN_ID} completed without a fresh sdk-benchmark-results artifact"
+            exit 1
+          fi
           if [ "$got_fresh" != 1 ]; then
-            # No fresh artifact (a docs-only / wasm push, or a benchmark run that
-            # produced none). Keep the COMMITTED docs/site/bench-results.json.
-            # Do NOT re-fetch the currently-published board: if it ever went
-            # stale, curling it back would republish the stale copy forever.
+            # No triggering benchmark means this is a direct docs/wasm push.
+            # Keep the COMMITTED docs/site/bench-results.json. Do NOT re-fetch
+            # the currently-published board: if it ever went stale, curling it
+            # back would republish the stale copy forever.
             echo "no fresh benchmark artifact; keeping committed docs/site/bench-results.json"
           fi
       - name: Build UDB's parser to WebAssembly (real udb-portable, not a mock)

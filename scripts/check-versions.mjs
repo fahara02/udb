@@ -219,6 +219,8 @@ processTriple("sdk-readme generated code comment", "sdk/README.md", C.udb.versio
   /(crate\/package version `)(\d+\.\d+\.\d+)(`;)/);
 processTriple("ops bench label", "docs/operations.md", C.udb.version,
   /(bench_snapshot\.py --label "release-)(\d+\.\d+\.\d+)(")/);
+processTriple("example go arbitrary release tag", "examples/go_arbitary_project/README.md", C.udb.version,
+  /(e\.g\. `v)(\d+\.\d+\.\d+)(`)/);
 processAll("versioning release refs", "VERSIONING.md", C.udb.version,
   /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
 
