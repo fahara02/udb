@@ -314,7 +314,13 @@ jobs:
           test -x target/debug/udb
           target/debug/udb native manifest > docs/generated/udb-native-contract.json
           target/debug/udb native docs > docs/generated/native-services.md
-          git diff --binary -- docs/generated/udb-native-contract.json docs/generated/native-services.md > ci-native-docs.patch
+          target/debug/udb native contract-baseline \
+            --baseline docs/generated/contract-baseline.bin
+          git diff --binary -- \
+            docs/generated/udb-native-contract.json \
+            docs/generated/native-services.md \
+            docs/generated/contract-baseline.bin \
+            > ci-native-docs.patch
       - name: Upload CI-generated native documentation repair patch
         if: failure() && runner.os == 'Linux'
         uses: actions/upload-artifact@v4

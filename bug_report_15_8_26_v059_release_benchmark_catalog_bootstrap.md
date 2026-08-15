@@ -129,3 +129,9 @@ a future edit cannot silently restore the redundant Cargo boundary.
 GitHub CI run `31897080052` then produced `ci-native-docs-repair-1`, the
 runner-generated native-contract update for first-class Backup project
 ownership. The patch was reviewed and applied without invoking a local build.
+
+The next exact-head run classified four Backup descriptor changes as contract
+breaking against the 5.0.0 baseline. That result is correct: first-class
+project ownership tightens persisted table security. The native contract must
+therefore advance independently to 6.0.0, and CI recovery must emit the binary
+descriptor baseline as well as the generated JSON and Markdown.

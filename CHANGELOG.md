@@ -55,6 +55,10 @@ by the v0.5.8 post-release benchmark and restoring trustworthy release evidence.
   first-class project ownership. Blank legacy ownership is quarantined, and a
   same-tenant project cannot list, guess, mutate, restore, or prune another
   project's backup state.
+- **The native contract advances to 6.0.0.** Backup's new persisted
+  tenant+project security boundary is an intentional native database-contract
+  break, so the independent native contract major and descriptor baseline move
+  together instead of hiding the change behind the package patch version.
 - **PHP benchmark seed failures remain observable.** A failed native seed keeps
   its original gRPC code and detail, marks only dependent RPCs `SEED_BLOCKED`,
   and still emits a complete 381-RPC PHP report. Catalog lifecycle ordering is

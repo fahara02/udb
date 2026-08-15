@@ -158,6 +158,10 @@ Release: 0.5.9
 - Applied `ci-native-docs-repair-1` from GitHub run `31897080052`; it refreshes
   the native contract for Backup tenant+project isolation using the runner-built
   broker, with no local build or test.
+- The independent native contract advances from 5.0.0 to 6.0.0 because Backup
+  tenant+project persistence is an intentional database/security contract
+  break. CI repair now includes the binary descriptor baseline so the bump and
+  exact runner-generated baseline are reviewed together.
 - Native manifest, lint, docs, and contract-diff gates likewise execute the
   preceding all-target build directly instead of redundantly re-entering Cargo.
 - Workflow and docs-freshness posture fixtures now enforce that build-once
