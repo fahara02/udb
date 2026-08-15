@@ -1904,8 +1904,11 @@ where
             // fails the chrono decode and falls through).
             //
             // NaiveDateTime is probed BEFORE DateTime<Utc>: MySQL DATETIME is
-            // zone-less, but sqlx can also decode it as DateTime<Utc>, inventing
-            // a `+00:00` offset that the stored value never carried.
+            // zone-LESS, but sqlx will happily decode it as DateTime<Utc>, which
+            // stamped a `+00:00` offset onto a value that never carried one —
+            // inventing a timezone the column does not have. Naive first keeps
+            // DATETIME exact to the microsecond; a genuinely zone-aware value
+            // still renders as an RFC3339 datetime string via the branch below.
             v.map(|dt| JsonValue::String(dt.format("%Y-%m-%dT%H:%M:%S%.6f").to_string()))
                 .unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>(i) {
