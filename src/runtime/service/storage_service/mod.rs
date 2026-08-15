@@ -56,6 +56,10 @@ mod workers;
 #[derive(Clone)]
 pub struct StorageServiceImpl {
     pub(crate) pg_pool: Option<PgPool>,
+    /// Readiness for the operational GC ledger belongs to this service/pool
+    /// instance. A process-global cell would let one database mark every other
+    /// routed database ready, and would stay stale across a schema rebuild.
+    pub(crate) gc_intents_ready: Arc<tokio::sync::OnceCell<()>>,
     /// Schema-qualified outbox table (`udb_system.outbox_events`) the CDC engine
     /// tails → Apache Kafka. `None` = no emit.
     pub(crate) outbox_relation: Option<String>,
@@ -79,6 +83,7 @@ impl StorageServiceImpl {
     pub fn new() -> Self {
         Self {
             pg_pool: None,
+            gc_intents_ready: Arc::new(tokio::sync::OnceCell::const_new()),
             outbox_relation: None,
             runtime: None,
             channels: None,
@@ -90,6 +95,7 @@ impl StorageServiceImpl {
 
     pub fn with_postgres(mut self, pool: Option<PgPool>) -> Self {
         self.pg_pool = pool;
+        self.gc_intents_ready = Arc::new(tokio::sync::OnceCell::const_new());
         self
     }
 

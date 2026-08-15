@@ -1,6 +1,7 @@
 use super::support::*;
 use crate::proto::udb::core::storage::services::v1 as storage_pb;
 use crate::proto::udb::core::storage::services::v1::storage_service_server::StorageService;
+use crate::runtime::service::storage_service::StorageServiceImpl;
 use tonic::{Code, Request, Status};
 use uuid::Uuid;
 
@@ -47,6 +48,40 @@ async fn live_postgres_storage_native_schema_from_proto() {
         ],
     )
     .await;
+
+    cleanup_native_service_db(&pool).await;
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_storage_gc_ledger_readiness_is_per_service_instance -- --ignored --nocapture"]
+async fn live_postgres_storage_gc_ledger_readiness_is_per_service_instance() {
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+
+    let first = StorageServiceImpl::new().with_postgres(Some(pool.clone()));
+    first
+        .ensure_gc_intents_table()
+        .await
+        .expect("initialize first storage GC ledger");
+
+    // Live fixtures rebuild every `udb_*` schema between tests. The first
+    // service's readiness must not make a new service/pool instance skip its
+    // own operational DDL after that rebuild.
+    cleanup_native_service_db(&pool).await;
+    migrate_native_service_db(&pool).await;
+
+    let second = StorageServiceImpl::new().with_postgres(Some(pool.clone()));
+    second
+        .ensure_gc_intents_table()
+        .await
+        .expect("initialize rebuilt storage GC ledger");
+    let relation: Option<String> =
+        sqlx::query_scalar("SELECT to_regclass('udb_storage.gc_intents')::text")
+            .fetch_one(&pool)
+            .await
+            .expect("inspect rebuilt storage GC ledger");
+    assert_eq!(relation.as_deref(), Some("udb_storage.gc_intents"));
 
     cleanup_native_service_db(&pool).await;
 }
