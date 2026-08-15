@@ -138,10 +138,8 @@ fn restore_over_existing_tenant_is_rejected() {
 
 #[test]
 fn restore_freshness_identifies_only_the_descriptor_backed_run_journal() {
-    let run = crate::runtime::native_catalog::native_model(
-        super::config::BACKUP_RUN_MSG,
-        &["backup_id"],
-    );
+    let run =
+        crate::runtime::native_catalog::native_model(super::config::BACKUP_RUN_MSG, &["backup_id"]);
     let unquoted = run.relation.replace('"', "");
     let (schema, table) = unquoted
         .split_once('.')

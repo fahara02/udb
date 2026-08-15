@@ -18,6 +18,8 @@ Affected release: 0.5.7
 ## Verification
 
 - No local Cargo/build/test command is run, per operator direction.
+- GitHub quick-gate run `31865577969` identified formatter-only drift in the
+  regression declaration; the follow-up applies the exact CI-proposed layout.
 - GitHub CI must compile and run the unit regression.
 - The post-release SDK benchmark must drive `RestoreTenant` against a fresh UUID
   destination and record `OK`; its aggregate gate must remain at zero failed RPCs.
