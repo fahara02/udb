@@ -58,7 +58,7 @@ class NotificationLog(_message.Message):
     def __init__(self, log_id: _Optional[str] = ..., template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., recipient_id: _Optional[str] = ..., recipient_address: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., resource_type: _Optional[str] = ..., resource_id: _Optional[str] = ..., resource_name: _Optional[str] = ..., correlation_id: _Optional[str] = ..., status: _Optional[_Union[_enums_pb2.NotificationStatus, str]] = ..., error_message: _Optional[str] = ..., provider_message_id: _Optional[str] = ..., retry_count: _Optional[int] = ..., sent_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., delivered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., rendered_subject: _Optional[str] = ..., rendered_body: _Optional[str] = ...) -> None: ...
 
 class NotificationDeliveryAttempt(_message.Message):
-    __slots__ = ("attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at")
+    __slots__ = ("attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at", "project_id")
     ATTEMPT_ID_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATION_ID_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
@@ -70,6 +70,7 @@ class NotificationDeliveryAttempt(_message.Message):
     PROVIDER_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     attempt_id: str
     notification_id: str
     tenant_id: str
@@ -81,4 +82,5 @@ class NotificationDeliveryAttempt(_message.Message):
     provider_message_id: str
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, attempt_id: _Optional[str] = ..., notification_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., provider: _Optional[str] = ..., status: _Optional[_Union[_enums_pb2.NotificationStatus, str]] = ..., attempt_count: _Optional[int] = ..., last_error: _Optional[str] = ..., provider_message_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    project_id: str
+    def __init__(self, attempt_id: _Optional[str] = ..., notification_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., provider: _Optional[str] = ..., status: _Optional[_Union[_enums_pb2.NotificationStatus, str]] = ..., attempt_count: _Optional[int] = ..., last_error: _Optional[str] = ..., provider_message_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., project_id: _Optional[str] = ...) -> None: ...

@@ -25,12 +25,8 @@ public interface NotificationTemplateOrBuilder extends
   /**
    * <pre>
    * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
-   * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
-   * global default (tenant_id NULL) for the same (event_type, channel) coexist;
-   * resolution prefers the per-tenant row over the global default. The unique
-   * index stays on (event_type, channel) for now (global dedupe); when a
-   * per-tenant write path lands, split into partial unique indexes keyed on
-   * tenant_id IS NULL vs IS NOT NULL.
+   * Partial unique indexes above permit one project-global default and one
+   * per-tenant override for the same event/channel in each exact project.
    * </pre>
    *
    * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -40,12 +36,8 @@ public interface NotificationTemplateOrBuilder extends
   /**
    * <pre>
    * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
-   * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
-   * global default (tenant_id NULL) for the same (event_type, channel) coexist;
-   * resolution prefers the per-tenant row over the global default. The unique
-   * index stays on (event_type, channel) for now (global dedupe); when a
-   * per-tenant write path lands, split into partial unique indexes keyed on
-   * tenant_id IS NULL vs IS NOT NULL.
+   * Partial unique indexes above permit one project-global default and one
+   * per-tenant override for the same event/channel in each exact project.
    * </pre>
    *
    * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -178,7 +170,7 @@ public interface NotificationTemplateOrBuilder extends
 
   /**
    * <pre>
-   * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+   * NULLABLE: NULL = project-global default template; non-null = per-tenant override.
    * </pre>
    *
    * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -187,7 +179,7 @@ public interface NotificationTemplateOrBuilder extends
   java.lang.String getTenantId();
   /**
    * <pre>
-   * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+   * NULLABLE: NULL = project-global default template; non-null = per-tenant override.
    * </pre>
    *
    * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -195,4 +187,26 @@ public interface NotificationTemplateOrBuilder extends
    */
   com.google.protobuf.ByteString
       getTenantIdBytes();
+
+  /**
+   * <pre>
+   * First-class project owner. Blank is reserved for quarantined legacy rows;
+   * serving paths persist only an explicitly active resolved project.
+   * </pre>
+   *
+   * <code>string project_id = 14 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <pre>
+   * First-class project owner. Blank is reserved for quarantined legacy rows;
+   * serving paths persist only an explicitly active resolved project.
+   * </pre>
+   *
+   * <code>string project_id = 14 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
 }

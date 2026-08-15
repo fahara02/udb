@@ -25,3 +25,14 @@ project. Blank ownership in pre-v0.5.9 rows is quarantined rather than served.
 Static diff checks passed. Local Cargo/build/test/rustfmt was intentionally not
 run; the unit, `http-client`, and ignored live PostgreSQL filters recorded in the
 companion bug report must run in CI.
+
+CI run `31906253806` produced and supplied the applied repair artifacts:
+
+- `ci-rustfmt-repair-1`, SHA-256
+  `273DF3D519F091D3A434962BDBF673A9A55265078E9E1518CB40FBC44DCBB351`;
+- `ci-sdk-codegen-repair-1`, SHA-256
+  `03B6EE008A359B5D4C175E2B0E7E56BB311ACD31D18420295288F28D64E3FBF6`.
+
+The same run's slim compile identified and drove the owned capability-message
+signature correction documented in the companion bug report. No local Cargo,
+build, test, code generation, or rustfmt command was used for those repairs.

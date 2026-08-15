@@ -2929,24 +2929,25 @@ mod tests {
             &["Platform_Admin"]
         ))));
         assert!(ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(
-            &ctx_project_with_scopes(
-                "acme",
-                "project-a",
-                &["udb:platform_admin"],
-                &[],
-            )
+            &ctx_project_with_scopes("acme", "project-a", &["udb:platform_admin"], &[],)
         )));
         for scope in ["*", "udb:*", "udb:admin", "udb:auth:admin"] {
             assert!(
-                !ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(
-                    &ctx_project_with_scopes("acme", "project-a", &[scope], &[])
-                )),
+                !ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(&ctx_project_with_scopes(
+                    "acme",
+                    "project-a",
+                    &[scope],
+                    &[]
+                ))),
                 "project-bound broad scope {scope} must not be platform authority"
             );
             assert!(
-                ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(
-                    &ctx_project_with_scopes("", "", &[scope], &[])
-                )),
+                ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(&ctx_project_with_scopes(
+                    "",
+                    "",
+                    &[scope],
+                    &[]
+                ))),
                 "unbound broad scope {scope} must preserve operator compatibility"
             );
         }

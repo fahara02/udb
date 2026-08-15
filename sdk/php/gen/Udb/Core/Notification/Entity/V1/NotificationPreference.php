@@ -52,6 +52,13 @@ class NotificationPreference extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string created_by = 9 [json_name = "createdBy", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $created_by = '';
+    /**
+     * First-class project owner. Blank is reserved for quarantined legacy rows;
+     * serving paths persist only an explicitly active resolved project.
+     *
+     * Generated from protobuf field <code>string project_id = 10 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $project_id = '';
 
     /**
      * Constructor.
@@ -69,6 +76,9 @@ class NotificationPreference extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\Timestamp $created_at
      *     @type \Google\Protobuf\Timestamp $updated_at
      *     @type string $created_by
+     *     @type string $project_id
+     *           First-class project owner. Blank is reserved for quarantined legacy rows;
+     *           serving paths persist only an explicitly active resolved project.
      * }
      */
     public function __construct($data = NULL) {
@@ -294,6 +304,34 @@ class NotificationPreference extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->created_by = $var;
+
+        return $this;
+    }
+
+    /**
+     * First-class project owner. Blank is reserved for quarantined legacy rows;
+     * serving paths persist only an explicitly active resolved project.
+     *
+     * Generated from protobuf field <code>string project_id = 10 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * First-class project owner. Blank is reserved for quarantined legacy rows;
+     * serving paths persist only an explicitly active resolved project.
+     *
+     * Generated from protobuf field <code>string project_id = 10 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->project_id = $var;
 
         return $this;
     }

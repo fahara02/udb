@@ -15,11 +15,11 @@ use Google\Protobuf\RepeatedField;
  * The broker records each notification SEND as a PENDING NotificationLog
  * (intent). A leader-elected delivery worker, or a provider webhook bridge that
  * calls NotificationService.ReportDelivery, then drives the terminal per-channel
- * delivery outcome here: one durable, tenant-scoped row per (notification,
- * channel, provider) carrying the queued/sent/failed/delivered status, the
+ * delivery outcome here: one durable, tenant+project-scoped row per
+ * (notification, channel, provider) carrying the queued/sent/failed/delivered status, the
  * attempt count, the provider's message id, the last error, and a timestamp.
  * This EXTENDS the existing intent/outbox path — it does not replace it. RLS
- * scopes rows to the current tenant.
+ * scopes rows to the current tenant and project.
  * ---------------------------------------------------------------------------
  *
  * Generated from protobuf message <code>udb.core.notification.entity.v1.NotificationDeliveryAttempt</code>
@@ -81,6 +81,13 @@ class NotificationDeliveryAttempt extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Timestamp updated_at = 11 [json_name = "updatedAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $updated_at = null;
+    /**
+     * First-class project owner. Blank is reserved for quarantined legacy rows;
+     * serving paths persist only an explicitly active resolved project.
+     *
+     * Generated from protobuf field <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $project_id = '';
 
     /**
      * Constructor.
@@ -105,6 +112,9 @@ class NotificationDeliveryAttempt extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\Timestamp $created_at
      *     @type \Google\Protobuf\Timestamp $updated_at
      *           The "ts" of the latest reported outcome.
+     *     @type string $project_id
+     *           First-class project owner. Blank is reserved for quarantined legacy rows;
+     *           serving paths persist only an explicitly active resolved project.
      * }
      */
     public function __construct($data = NULL) {
@@ -392,6 +402,34 @@ class NotificationDeliveryAttempt extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * First-class project owner. Blank is reserved for quarantined legacy rows;
+     * serving paths persist only an explicitly active resolved project.
+     *
+     * Generated from protobuf field <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * First-class project owner. Blank is reserved for quarantined legacy rows;
+     * serving paths persist only an explicitly active resolved project.
+     *
+     * Generated from protobuf field <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->project_id = $var;
 
         return $this;
     }

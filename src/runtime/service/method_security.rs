@@ -2757,13 +2757,7 @@ mod tests {
 
     #[test]
     fn cross_tenant_admin_role_may_target_other_tenant() {
-        let ctx = claim_ctx(
-            "ops-1",
-            "tenant-a",
-            "project-a",
-            &[],
-            &["platform_admin"],
-        );
+        let ctx = claim_ctx("ops-1", "tenant-a", "project-a", &[], &["platform_admin"]);
         with_ctx(&ctx, || {
             enforce_body_tenant_matches_claim(&ctx, "tenant-b", "project-b")
                 .expect("platform admin may act cross-tenant");
@@ -2803,14 +2797,12 @@ mod tests {
                 "bound broad scope {scope} must not become platform authority"
             );
             with_ctx(&ctx, || {
-                let tenant_err =
-                    enforce_body_tenant_matches_claim(&ctx, "tenant-b", "project-a")
-                        .expect_err("bound broad admin must not cross tenants");
+                let tenant_err = enforce_body_tenant_matches_claim(&ctx, "tenant-b", "project-a")
+                    .expect_err("bound broad admin must not cross tenants");
                 assert_eq!(tenant_err.code(), tonic::Code::PermissionDenied);
 
-                let project_err =
-                    enforce_body_tenant_matches_claim(&ctx, "tenant-a", "project-b")
-                        .expect_err("bound broad admin must not cross projects");
+                let project_err = enforce_body_tenant_matches_claim(&ctx, "tenant-a", "project-b")
+                    .expect_err("bound broad admin must not cross projects");
                 assert_eq!(project_err.code(), tonic::Code::PermissionDenied);
             });
 
@@ -2820,9 +2812,8 @@ mod tests {
                 "project-only broad scope {scope} must not become platform authority"
             );
             with_ctx(&project_only, || {
-                let err =
-                    enforce_body_tenant_matches_claim(&project_only, "tenant-a", "project-a")
-                        .expect_err("request body cannot supply a missing claim tenant");
+                let err = enforce_body_tenant_matches_claim(&project_only, "tenant-a", "project-a")
+                    .expect_err("request body cannot supply a missing claim tenant");
                 assert_eq!(err.code(), tonic::Code::PermissionDenied);
             });
         }

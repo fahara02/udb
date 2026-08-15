@@ -124,4 +124,26 @@ public interface NotificationPreferenceOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCreatedByBytes();
+
+  /**
+   * <pre>
+   * First-class project owner. Blank is reserved for quarantined legacy rows;
+   * serving paths persist only an explicitly active resolved project.
+   * </pre>
+   *
+   * <code>string project_id = 10 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <pre>
+   * First-class project owner. Blank is reserved for quarantined legacy rows;
+   * serving paths persist only an explicitly active resolved project.
+   * </pre>
+   *
+   * <code>string project_id = 10 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
 }

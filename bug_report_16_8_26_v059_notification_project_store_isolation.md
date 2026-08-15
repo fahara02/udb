@@ -64,6 +64,13 @@ regression covering:
 
 No local Cargo/build/test was run because the task requires CI-only validation.
 
+The first CI compile pass (`31906253806`, slim job `95064440283`) also exposed
+that the capability-status wrapper unnecessarily required a static message even
+though exact-project rejection includes the runtime project id and the shared
+status constructor already accepts an owned string. The wrapper now accepts
+`impl Into<String>`, preserving the same typed capability envelope without
+discarding the project-specific diagnostic.
+
 ## Required CI proof
 
 ```text

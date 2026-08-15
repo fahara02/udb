@@ -45,73 +45,86 @@ public final class NotificationTemplateProto {
       "tion.entity.v1\032\037google/protobuf/timestam" +
       "p.proto\032\033udb/core/common/v1/db.proto\032!ud" +
       "b/core/common/v1/security.proto\032+udb/cor" +
-      "e/notification/entity/v1/enums.proto\"\211\022\n" +
+      "e/notification/entity/v1/enums.proto\"\206\026\n" +
       "\024NotificationTemplate\022O\n\013template_id\030\001 \001" +
       "(\tB.\202\267\030*\n\013template_id\022\004UUID\030\001(\001:\021gen_ran" +
-      "dom_uuid()R\ntemplateId\022\201\001\n\nevent_type\030\002 " +
-      "\001(\tBb\202\267\030^\n\nevent_type\022\013VARCHAR(80)\030\001RA\n!" +
-      "idx_notif_templates_event_channel\022\005BTREE" +
-      "\030\001Z\nevent_typeZ\007channelR\teventType\022l\n\007ch" +
-      "annel\030\003 \001(\01624.udb.core.notification.enti" +
-      "ty.v1.NotificationChannelB\034\202\267\030\030\n\007channel" +
-      "\022\013VARCHAR(20)\030\001R\007channel\022\305\001\n\020subject_tem" +
-      "plate\030\004 \001(\tB\231\001\202\267\030\224\001\n\020subject_template\022\014V" +
-      "ARCHAR(500)ZBHandlebars/Go template such" +
-      " as \'{{.ResourceName}} requires review\'\220" +
-      "\001\001\232\001\007english\242\001\020subject_template\242\001\rbody_t" +
-      "emplateR\017subjectTemplate\022w\n\rbody_templat" +
-      "e\030\005 \001(\tBR\202\267\030N\n\rbody_template\022\004TEXT\030\001Z5Fu" +
-      "ll message body template with variable p" +
-      "laceholdersR\014bodyTemplate\022B\n\006locale\030\006 \001(" +
-      "\tB*\202\267\030&\n\006locale\022\013VARCHAR(10)\030\001:\004\'en\'Z\007en" +
-      " | bnR\006locale\022=\n\tis_active\030\007 \001(\010B \202\267\030\034\n\t" +
-      "is_active\022\007BOOLEAN\030\001:\004TRUER\010isActive\022q\n\n" +
-      "created_at\030\010 \001(\0132\032.google.protobuf.Times" +
-      "tampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021C" +
-      "URRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nupdat" +
-      "ed_at\030\t \001(\0132\032.google.protobuf.TimestampB" +
-      "4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CURREN" +
-      "T_TIMESTAMP`\001R\tupdatedAt\022\221\001\n\ndeleted_at\030" +
-      "\n \001(\0132\032.google.protobuf.TimestampBV\202\267\030R\n" +
-      "\ndeleted_at\022\013TIMESTAMPTZR7\n\032idx_notif_te" +
-      "mplates_active\022\005BTREE:\022deleted_at IS NUL" +
-      "LR\tdeletedAt\022a\n\ncreated_by\030\013 \001(\tBB\202\267\030>\n\n" +
-      "created_by\022\014VARCHAR(120)Z\"Identity that " +
-      "created this record.R\tcreatedBy\022H\n\ndelet" +
-      "ed_by\030\014 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Sof" +
-      "t delete actorR\tdeletedBy\022\270\001\n\ttenant_id\030" +
-      "\r \001(\tB\232\001\202\267\030\225\001\n\ttenant_id\022\014VARCHAR(120)R&" +
-      "\n\035idx_notif_templates_tenant_id\022\005BTREEZO" +
-      "Owning tenant for per-tenant overrides; " +
-      "NULL = platform-global default template\230" +
-      "\002\001R\010tenantId:\211\006\372\266\030\314\004\n\026notification_templ" +
-      "ates\022\020udb_notification\030\001 \001*8Message temp" +
-      "lates for each notification type and cha" +
-      "nnel0\0018\001@\001bx\n\020tenant_isolation\022\003ALL\032](te" +
-      "nant_id IS NULL OR tenant_id::text = cur" +
-      "rent_setting(\'app.current_tenant_id\', tr" +
-      "ue)::text)(\001\252\001g\n+trg_notification_templa" +
-      "tes_touch_updated_at\022\006BEFORE\032\006UPDATE\"#ud" +
-      "b_notification.touch_updated_at()*\003ROW\302\001" +
-      "\341\001\n\031touch_updated_at_function\022\010postgres\032" +
-      "\017before_triggers\"\250\001CREATE OR REPLACE FUN" +
-      "CTION udb_notification.touch_updated_at(" +
-      ")\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$" +
-      "\nBEGIN\n  NEW.updated_at = CURRENT_TIMEST" +
-      "AMP;\n  RETURN NEW;\nEND;\n$$;\372\001\022notificati" +
-      "on:admin\212\262\031\263\001\n\006tenant\032\ttenant_id*Itenant" +
-      "_id IS NULL OR tenant_id = current_setti" +
-      "ng(\'app.current_tenant_id\')2\013soft_delete" +
-      ":\030notification.operational@\373\023H\002R\006tenantZ" +
-      "\010standardr\025tenant.data_residencyB\256\002\n#com" +
-      ".udb.core.notification.entity.v1B\031Notifi" +
-      "cationTemplateProtoP\001ZKgithub.com/fahara" +
-      "02/udb/sdk/go/gen/udb/core/notification/" +
-      "entity/v1;entityv1\242\002\004UCNE\252\002\037udb.core.Not" +
-      "ification.Entity.V1\312\002\037Udb\\Core\\Notificat" +
-      "ion\\Entity\\V1\342\002+Udb\\GPBMetadata\\Core\\Not" +
-      "ification\\Entity\\V1\352\002#Udb::Core::Notific" +
-      "ation::Entity::V1b\006proto3"
+      "dom_uuid()R\ntemplateId\022>\n\nevent_type\030\002 \001" +
+      "(\tB\037\202\267\030\033\n\nevent_type\022\013VARCHAR(80)\030\001R\teve" +
+      "ntType\022l\n\007channel\030\003 \001(\01624.udb.core.notif" +
+      "ication.entity.v1.NotificationChannelB\034\202" +
+      "\267\030\030\n\007channel\022\013VARCHAR(20)\030\001R\007channel\022\305\001\n" +
+      "\020subject_template\030\004 \001(\tB\231\001\202\267\030\224\001\n\020subject" +
+      "_template\022\014VARCHAR(500)ZBHandlebars/Go t" +
+      "emplate such as \'{{.ResourceName}} requi" +
+      "res review\'\220\001\001\232\001\007english\242\001\020subject_templ" +
+      "ate\242\001\rbody_templateR\017subjectTemplate\022w\n\r" +
+      "body_template\030\005 \001(\tBR\202\267\030N\n\rbody_template" +
+      "\022\004TEXT\030\001Z5Full message body template wit" +
+      "h variable placeholdersR\014bodyTemplate\022B\n" +
+      "\006locale\030\006 \001(\tB*\202\267\030&\n\006locale\022\013VARCHAR(10)" +
+      "\030\001:\004\'en\'Z\007en | bnR\006locale\022=\n\tis_active\030\007" +
+      " \001(\010B \202\267\030\034\n\tis_active\022\007BOOLEAN\030\001:\004TRUER\010" +
+      "isActive\022q\n\ncreated_at\030\010 \001(\0132\032.google.pr" +
+      "otobuf.TimestampB6\202\267\0302\n\ncreated_at\022\013TIME" +
+      "STAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreate" +
+      "dAt\022o\n\nupdated_at\030\t \001(\0132\032.google.protobu" +
+      "f.TimestampB4\202\267\0300\n\nupdated_at\022\013TIMESTAMP" +
+      "TZ\030\001:\021CURRENT_TIMESTAMP`\001R\tupdatedAt\022\221\001\n" +
+      "\ndeleted_at\030\n \001(\0132\032.google.protobuf.Time" +
+      "stampBV\202\267\030R\n\ndeleted_at\022\013TIMESTAMPTZR7\n\032" +
+      "idx_notif_templates_active\022\005BTREE:\022delet" +
+      "ed_at IS NULLR\tdeletedAt\022a\n\ncreated_by\030\013" +
+      " \001(\tBB\202\267\030>\n\ncreated_by\022\014VARCHAR(120)Z\"Id" +
+      "entity that created this record.R\tcreate" +
+      "dBy\022H\n\ndeleted_by\030\014 \001(\tB)\202\267\030%\n\ndeleted_b" +
+      "y\022\004UUIDZ\021Soft delete actorR\tdeletedBy\022\267\001" +
+      "\n\ttenant_id\030\r \001(\tB\231\001\202\267\030\224\001\n\ttenant_id\022\014VA" +
+      "RCHAR(120)R&\n\035idx_notif_templates_tenant" +
+      "_id\022\005BTREEZNOwning tenant for per-tenant" +
+      " overrides; NULL = project-global defaul" +
+      "t template\230\002\001R\010tenantId\022o\n\nproject_id\030\016 " +
+      "\001(\tBP\202\267\030L\n\nproject_id\022\014VARCHAR(120)\030\001:\002\'" +
+      "\'R\'\n\036idx_notif_templates_project_id\022\005BTR" +
+      "EE\240\002\001R\tprojectId:\332\t\372\266\030\312\007\n\026notification_t" +
+      "emplates\022\020udb_notification\030\001 \001*8Message " +
+      "templates for each notification type and" +
+      " channel0\0018\001@\001b\320\001\n\030tenant_project_isolat" +
+      "ion\022\003ALL\032\254\001((tenant_id IS NULL OR tenant" +
+      "_id::text = current_setting(\'app.current" +
+      "_tenant_id\', true)::text) AND project_id" +
+      "::text = current_setting(\'app.current_pr" +
+      "oject_id\', true)::text)(\001h\001\212\001\206\001\n0idx_not" +
+      "if_templates_project_global_event_channe" +
+      "l\022\005BTREE\030\001:(tenant_id IS NULL AND delete" +
+      "d_at IS NULLZ\nproject_idZ\nevent_typeZ\007ch" +
+      "annel\212\001\225\001\n0idx_notif_templates_tenant_pr" +
+      "oject_event_channel\022\005BTREE\030\001:,tenant_id " +
+      "IS NOT NULL AND deleted_at IS NULLZ\ttena" +
+      "nt_idZ\nproject_idZ\nevent_typeZ\007channel\252\001" +
+      "g\n+trg_notification_templates_touch_upda" +
+      "ted_at\022\006BEFORE\032\006UPDATE\"#udb_notification" +
+      ".touch_updated_at()*\003ROW\302\001\341\001\n\031touch_upda" +
+      "ted_at_function\022\010postgres\032\017before_trigge" +
+      "rs\"\250\001CREATE OR REPLACE FUNCTION udb_noti" +
+      "fication.touch_updated_at()\nRETURNS trig" +
+      "ger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  NEW.u" +
+      "pdated_at = CURRENT_TIMESTAMP;\n  RETURN " +
+      "NEW;\nEND;\n$$;\372\001\022notification:admin\212\262\031\206\002\n" +
+      "\006tenant\022\007project\032\ttenant_id\"\nproject_id*" +
+      "\206\001(tenant_id IS NULL OR tenant_id = curr" +
+      "ent_setting(\'app.current_tenant_id\')) AN" +
+      "D project_id = current_setting(\'app.curr" +
+      "ent_project_id\')2\013soft_delete:\030notificat" +
+      "ion.operational@\373\023H\002R\006tenantZ\010standardr\025" +
+      "tenant.data_residencyB\256\002\n#com.udb.core.n" +
+      "otification.entity.v1B\031NotificationTempl" +
+      "ateProtoP\001ZKgithub.com/fahara02/udb/sdk/" +
+      "go/gen/udb/core/notification/entity/v1;e" +
+      "ntityv1\242\002\004UCNE\252\002\037udb.core.Notification.E" +
+      "ntity.V1\312\002\037Udb\\Core\\Notification\\Entity\\" +
+      "V1\342\002+Udb\\GPBMetadata\\Core\\Notification\\E" +
+      "ntity\\V1\352\002#Udb::Core::Notification::Enti" +
+      "ty::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -126,7 +139,7 @@ public final class NotificationTemplateProto {
     internal_static_udb_core_notification_entity_v1_NotificationTemplate_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_entity_v1_NotificationTemplate_descriptor,
-        new java.lang.String[] { "TemplateId", "EventType", "Channel", "SubjectTemplate", "BodyTemplate", "Locale", "IsActive", "CreatedAt", "UpdatedAt", "DeletedAt", "CreatedBy", "DeletedBy", "TenantId", });
+        new java.lang.String[] { "TemplateId", "EventType", "Channel", "SubjectTemplate", "BodyTemplate", "Locale", "IsActive", "CreatedAt", "UpdatedAt", "DeletedAt", "CreatedBy", "DeletedBy", "TenantId", "ProjectId", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();

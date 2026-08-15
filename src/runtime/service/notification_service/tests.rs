@@ -17,9 +17,9 @@ use crate::proto::udb::core::notification::entity::v1 as notif_entity_pb;
 use crate::proto::udb::core::notification::services::v1 as notif_pb;
 use crate::proto::udb::core::notification::services::v1::notification_service_server::NotificationService;
 use crate::proto::{ErrorDetail, ErrorKind};
-use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::catalog::CatalogManager;
+use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
 use super::NotificationServiceImpl;
 use super::config::{
@@ -732,10 +732,9 @@ async fn report_delivery_rejects_cross_project_body_context() {
     request
         .metadata_mut()
         .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
-    request.metadata_mut().insert(
-        "x-udb-project-id",
-        MetadataValue::from_static("project-a"),
-    );
+    request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("project-a"));
 
     let err = svc
         .report_delivery(request)
@@ -746,8 +745,8 @@ async fn report_delivery_rejects_cross_project_body_context() {
 
 #[test]
 fn project_store_resolution_requires_live_catalog() {
-    let svc = NotificationServiceImpl::new()
-        .with_runtime(Some(Arc::new(DataBrokerRuntime::default())));
+    let svc =
+        NotificationServiceImpl::new().with_runtime(Some(Arc::new(DataBrokerRuntime::default())));
     let err = svc
         .resolve_project_store(
             crate::RequestContext {
@@ -781,7 +780,10 @@ fn unknown_project_cannot_inherit_default_catalog_or_store() {
         )
         .expect_err("an unknown project must not fall back to default authority");
     assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-    assert!(err.message().contains("default-project fallback is refused"));
+    assert!(
+        err.message()
+            .contains("default-project fallback is refused")
+    );
 }
 
 /// TEST-9.13b: the terminal delivery event name is
@@ -1067,7 +1069,10 @@ fn recipient_opted_out_prefers_event_specific_and_is_scoped() {
         "{sql}"
     );
     assert!(sql.contains(&format!("{} = $2", m.q("tenant_id"))), "{sql}");
-    assert!(sql.contains(&format!("{} = $3", m.q("project_id"))), "{sql}");
+    assert!(
+        sql.contains(&format!("{} = $3", m.q("project_id"))),
+        "{sql}"
+    );
     assert!(sql.contains(&format!("{} = $4", m.q("channel"))), "{sql}");
 }
 
@@ -1090,5 +1095,8 @@ fn suppress_only_moves_pending_logs_tenant_scoped() {
         "{sql}"
     );
     assert!(sql.contains(&format!("{} = $2", m.q("tenant_id"))), "{sql}");
-    assert!(sql.contains(&format!("{} = $3", m.q("project_id"))), "{sql}");
+    assert!(
+        sql.contains(&format!("{} = $3", m.q("project_id"))),
+        "{sql}"
+    );
 }

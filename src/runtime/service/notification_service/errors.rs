@@ -36,7 +36,7 @@ pub(crate) fn status_with_reason(
 pub(crate) fn notification_capability_status(
     operation: &'static str,
     capability_required: &'static str,
-    message: &'static str,
+    message: impl Into<String>,
 ) -> Status {
     crate::runtime::executor_utils::capability_status(
         "notification",

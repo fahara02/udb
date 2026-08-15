@@ -10,9 +10,9 @@ use std::time::Duration;
 use sqlx::postgres::PgPoolOptions;
 use tokio::sync::oneshot;
 use tokio_stream::wrappers::TcpListenerStream;
+use tonic::Request;
 use tonic::metadata::MetadataValue;
 use tonic::transport::Server;
-use tonic::Request;
 use uuid::Uuid;
 
 use crate::proto::udb::core::common::v1 as common_pb;
@@ -23,10 +23,10 @@ use crate::runtime::config::{
     BackendInstance, BackendInstanceConfig, BackendInstanceRole, UdbConfig,
 };
 use crate::runtime::service::DataBrokerService;
-use crate::runtime::{native_catalog, DataBrokerRuntime};
+use crate::runtime::{DataBrokerRuntime, native_catalog};
 
-use super::model::{delivery_attempt_model, log_model, preference_model};
 use super::NotificationServiceServer;
+use super::model::{delivery_attempt_model, log_model, preference_model};
 
 const PROJECT_A: &str = "notification-project-a";
 const PROJECT_B: &str = "notification-project-b";
@@ -142,9 +142,7 @@ async fn activate_project_catalogs(service: &DataBrokerService) {
             .catalog
             .activate_catalog_for(project_id, "1.0.0")
             .await
-            .unwrap_or_else(|err| {
-                panic!("activate Notification catalog for {project_id}: {err}")
-            });
+            .unwrap_or_else(|err| panic!("activate Notification catalog for {project_id}: {err}"));
     }
 }
 
@@ -446,10 +444,9 @@ async fn served_notification_pins_all_paths_to_each_project_instance() {
     let attempt = delivery_attempt_model();
     let preference = preference_model();
     let template = super::model::template_model();
-    for (project_id, dsn, expected_opt_out) in [
-        (PROJECT_A, &dsn_a, true),
-        (PROJECT_B, &dsn_b, false),
-    ] {
+    for (project_id, dsn, expected_opt_out) in
+        [(PROJECT_A, &dsn_a, true), (PROJECT_B, &dsn_b, false)]
+    {
         let pool = PgPoolOptions::new()
             .max_connections(1)
             .connect(dsn)
@@ -574,9 +571,7 @@ async fn served_notification_pins_all_paths_to_each_project_instance() {
             .expect("inspect one shared-project delivery row");
             assert_eq!(projects, vec![project_id.to_string()]);
         }
-        tx.commit()
-            .await
-            .expect("commit shared-project inspection");
+        tx.commit().await.expect("commit shared-project inspection");
     }
     shared_pool.close().await;
 

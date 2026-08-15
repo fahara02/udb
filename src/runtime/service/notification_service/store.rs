@@ -280,11 +280,7 @@ pub(crate) fn preference_read(
     LogicalRead {
         message_type: PREFERENCE_MSG.to_string(),
         filter: Some(preference_filter(
-            user_id,
-            tenant_id,
-            project_id,
-            channel,
-            event_type,
+            user_id, tenant_id, project_id, channel, event_type,
         )),
         projection: Some(preference_projection()),
         sort: Vec::new(),

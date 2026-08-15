@@ -27,12 +27,8 @@ type NotificationTemplate struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	TemplateId string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
 	// Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
-	// Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
-	// global default (tenant_id NULL) for the same (event_type, channel) coexist;
-	// resolution prefers the per-tenant row over the global default. The unique
-	// index stays on (event_type, channel) for now (global dedupe); when a
-	// per-tenant write path lands, split into partial unique indexes keyed on
-	// tenant_id IS NULL vs IS NOT NULL.
+	// Partial unique indexes above permit one project-global default and one
+	// per-tenant override for the same event/channel in each exact project.
 	EventType       string                 `protobuf:"bytes,2,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
 	Channel         NotificationChannel    `protobuf:"varint,3,opt,name=channel,proto3,enum=udb.core.notification.entity.v1.NotificationChannel" json:"channel,omitempty"`
 	SubjectTemplate string                 `protobuf:"bytes,4,opt,name=subject_template,json=subjectTemplate,proto3" json:"subject_template,omitempty"`
@@ -44,8 +40,11 @@ type NotificationTemplate struct {
 	DeletedAt       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
 	CreatedBy       string                 `protobuf:"bytes,11,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
 	DeletedBy       string                 `protobuf:"bytes,12,opt,name=deleted_by,json=deletedBy,proto3" json:"deleted_by,omitempty"`
-	// NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
-	TenantId      string `protobuf:"bytes,13,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// NULLABLE: NULL = project-global default template; non-null = per-tenant override.
+	TenantId string `protobuf:"bytes,13,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// First-class project owner. Blank is reserved for quarantined legacy rows;
+	// serving paths persist only an explicitly active resolved project.
+	ProjectId     string `protobuf:"bytes,14,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -171,21 +170,26 @@ func (x *NotificationTemplate) GetTenantId() string {
 	return ""
 }
 
+func (x *NotificationTemplate) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 var File_udb_core_notification_entity_v1_notification_template_proto protoreflect.FileDescriptor
 
 const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc = "" +
 	"\n" +
-	";udb/core/notification/entity/v1/notification_template.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x89\x12\n" +
+	";udb/core/notification/entity/v1/notification_template.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x86\x16\n" +
 	"\x14NotificationTemplate\x12O\n" +
 	"\vtemplate_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vtemplate_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
-	"templateId\x12\x81\x01\n" +
+	"templateId\x12>\n" +
 	"\n" +
-	"event_type\x18\x02 \x01(\tBb\x82\xb7\x18^\n" +
+	"event_type\x18\x02 \x01(\tB\x1f\x82\xb7\x18\x1b\n" +
 	"\n" +
-	"event_type\x12\vVARCHAR(80)\x18\x01RA\n" +
-	"!idx_notif_templates_event_channel\x12\x05BTREE\x18\x01Z\n" +
-	"event_typeZ\achannelR\teventType\x12l\n" +
+	"event_type\x12\vVARCHAR(80)\x18\x01R\teventType\x12l\n" +
 	"\achannel\x18\x03 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelB\x1c\x82\xb7\x18\x18\n" +
 	"\achannel\x12\vVARCHAR(20)\x18\x01R\achannel\x12\xc5\x01\n" +
 	"\x10subject_template\x18\x04 \x01(\tB\x99\x01\x82\xb7\x18\x94\x01\n" +
@@ -217,12 +221,23 @@ const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc =
 	"\n" +
 	"deleted_by\x18\f \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy\x12\xb8\x01\n" +
-	"\ttenant_id\x18\r \x01(\tB\x9a\x01\x82\xb7\x18\x95\x01\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy\x12\xb7\x01\n" +
+	"\ttenant_id\x18\r \x01(\tB\x99\x01\x82\xb7\x18\x94\x01\n" +
 	"\ttenant_id\x12\fVARCHAR(120)R&\n" +
-	"\x1didx_notif_templates_tenant_id\x12\x05BTREEZOOwning tenant for per-tenant overrides; NULL = platform-global default template\x98\x02\x01R\btenantId:\x89\x06\xfa\xb6\x18\xcc\x04\n" +
-	"\x16notification_templates\x12\x10udb_notification\x18\x01 \x01*8Message templates for each notification type and channel0\x018\x01@\x01bx\n" +
-	"\x10tenant_isolation\x12\x03ALL\x1a](tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xaa\x01g\n" +
+	"\x1didx_notif_templates_tenant_id\x12\x05BTREEZNOwning tenant for per-tenant overrides; NULL = project-global default template\x98\x02\x01R\btenantId\x12o\n" +
+	"\n" +
+	"project_id\x18\x0e \x01(\tBP\x82\xb7\x18L\n" +
+	"\n" +
+	"project_id\x12\fVARCHAR(120)\x18\x01:\x02''R'\n" +
+	"\x1eidx_notif_templates_project_id\x12\x05BTREE\xa0\x02\x01R\tprojectId:\xda\t\xfa\xb6\x18\xca\a\n" +
+	"\x16notification_templates\x12\x10udb_notification\x18\x01 \x01*8Message templates for each notification type and channel0\x018\x01@\x01b\xd0\x01\n" +
+	"\x18tenant_project_isolation\x12\x03ALL\x1a\xac\x01((tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text) AND project_id::text = current_setting('app.current_project_id', true)::text)(\x01h\x01\x8a\x01\x86\x01\n" +
+	"0idx_notif_templates_project_global_event_channel\x12\x05BTREE\x18\x01:(tenant_id IS NULL AND deleted_at IS NULLZ\n" +
+	"project_idZ\n" +
+	"event_typeZ\achannel\x8a\x01\x95\x01\n" +
+	"0idx_notif_templates_tenant_project_event_channel\x12\x05BTREE\x18\x01:,tenant_id IS NOT NULL AND deleted_at IS NULLZ\ttenant_idZ\n" +
+	"project_idZ\n" +
+	"event_typeZ\achannel\xaa\x01g\n" +
 	"+trg_notification_templates_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"#udb_notification.touch_updated_at()*\x03ROW\xc2\x01\xe1\x01\n" +
 	"\x19touch_updated_at_function\x12\bpostgres\x1a\x0fbefore_triggers\"\xa8\x01CREATE OR REPLACE FUNCTION udb_notification.touch_updated_at()\n" +
 	"RETURNS trigger\n" +
@@ -232,8 +247,9 @@ const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc =
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;\xfa\x01\x12notification:admin\x8a\xb2\x19\xb3\x01\n" +
-	"\x06tenant\x1a\ttenant_id*Itenant_id IS NULL OR tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x18notification.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xae\x02\n" +
+	"$$;\xfa\x01\x12notification:admin\x8a\xb2\x19\x86\x02\n" +
+	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
+	"project_id*\x86\x01(tenant_id IS NULL OR tenant_id = current_setting('app.current_tenant_id')) AND project_id = current_setting('app.current_project_id')2\vsoft_delete:\x18notification.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xae\x02\n" +
 	"#com.udb.core.notification.entity.v1B\x19NotificationTemplateProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
 var (

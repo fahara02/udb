@@ -29,69 +29,80 @@ namespace udb.core.Notification.Entity.V1 {
             "eS52MRofZ29vZ2xlL3Byb3RvYnVmL3RpbWVzdGFtcC5wcm90bxobdWRiL2Nv",
             "cmUvY29tbW9uL3YxL2RiLnByb3RvGiF1ZGIvY29yZS9jb21tb24vdjEvc2Vj",
             "dXJpdHkucHJvdG8aK3VkYi9jb3JlL25vdGlmaWNhdGlvbi9lbnRpdHkvdjEv",
-            "ZW51bXMucHJvdG8iiRIKFE5vdGlmaWNhdGlvblRlbXBsYXRlEk8KC3RlbXBs",
+            "ZW51bXMucHJvdG8ihhYKFE5vdGlmaWNhdGlvblRlbXBsYXRlEk8KC3RlbXBs",
             "YXRlX2lkGAEgASgJQi6CtxgqCgt0ZW1wbGF0ZV9pZBIEVVVJRBgBKAE6EWdl",
-            "bl9yYW5kb21fdXVpZCgpUgp0ZW1wbGF0ZUlkEoEBCgpldmVudF90eXBlGAIg",
-            "ASgJQmKCtxheCgpldmVudF90eXBlEgtWQVJDSEFSKDgwKRgBUkEKIWlkeF9u",
-            "b3RpZl90ZW1wbGF0ZXNfZXZlbnRfY2hhbm5lbBIFQlRSRUUYAVoKZXZlbnRf",
-            "dHlwZVoHY2hhbm5lbFIJZXZlbnRUeXBlEmwKB2NoYW5uZWwYAyABKA4yNC51",
-            "ZGIuY29yZS5ub3RpZmljYXRpb24uZW50aXR5LnYxLk5vdGlmaWNhdGlvbkNo",
-            "YW5uZWxCHIK3GBgKB2NoYW5uZWwSC1ZBUkNIQVIoMjApGAFSB2NoYW5uZWwS",
-            "xQEKEHN1YmplY3RfdGVtcGxhdGUYBCABKAlCmQGCtxiUAQoQc3ViamVjdF90",
-            "ZW1wbGF0ZRIMVkFSQ0hBUig1MDApWkJIYW5kbGViYXJzL0dvIHRlbXBsYXRl",
-            "IHN1Y2ggYXMgJ3t7LlJlc291cmNlTmFtZX19IHJlcXVpcmVzIHJldmlldyeQ",
-            "AQGaAQdlbmdsaXNoogEQc3ViamVjdF90ZW1wbGF0ZaIBDWJvZHlfdGVtcGxh",
-            "dGVSD3N1YmplY3RUZW1wbGF0ZRJ3Cg1ib2R5X3RlbXBsYXRlGAUgASgJQlKC",
-            "txhOCg1ib2R5X3RlbXBsYXRlEgRURVhUGAFaNUZ1bGwgbWVzc2FnZSBib2R5",
-            "IHRlbXBsYXRlIHdpdGggdmFyaWFibGUgcGxhY2Vob2xkZXJzUgxib2R5VGVt",
-            "cGxhdGUSQgoGbG9jYWxlGAYgASgJQiqCtxgmCgZsb2NhbGUSC1ZBUkNIQVIo",
-            "MTApGAE6BCdlbidaB2VuIHwgYm5SBmxvY2FsZRI9Cglpc19hY3RpdmUYByAB",
-            "KAhCIIK3GBwKCWlzX2FjdGl2ZRIHQk9PTEVBThgBOgRUUlVFUghpc0FjdGl2",
-            "ZRJxCgpjcmVhdGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVz",
-            "dGFtcEI2grcYMgoKY3JlYXRlZF9hdBILVElNRVNUQU1QVFoYAToRQ1VSUkVO",
-            "VF9USU1FU1RBTVBgAWgBUgljcmVhdGVkQXQSbwoKdXBkYXRlZF9hdBgJIAEo",
-            "CzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCNIK3GDAKCnVwZGF0ZWRf",
-            "YXQSC1RJTUVTVEFNUFRaGAE6EUNVUlJFTlRfVElNRVNUQU1QYAFSCXVwZGF0",
-            "ZWRBdBKRAQoKZGVsZXRlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5U",
-            "aW1lc3RhbXBCVoK3GFIKCmRlbGV0ZWRfYXQSC1RJTUVTVEFNUFRaUjcKGmlk",
-            "eF9ub3RpZl90ZW1wbGF0ZXNfYWN0aXZlEgVCVFJFRToSZGVsZXRlZF9hdCBJ",
-            "UyBOVUxMUglkZWxldGVkQXQSYQoKY3JlYXRlZF9ieRgLIAEoCUJCgrcYPgoK",
-            "Y3JlYXRlZF9ieRIMVkFSQ0hBUigxMjApWiJJZGVudGl0eSB0aGF0IGNyZWF0",
-            "ZWQgdGhpcyByZWNvcmQuUgljcmVhdGVkQnkSSAoKZGVsZXRlZF9ieRgMIAEo",
-            "CUIpgrcYJQoKZGVsZXRlZF9ieRIEVVVJRFoRU29mdCBkZWxldGUgYWN0b3JS",
-            "CWRlbGV0ZWRCeRK4AQoJdGVuYW50X2lkGA0gASgJQpoBgrcYlQEKCXRlbmFu",
-            "dF9pZBIMVkFSQ0hBUigxMjApUiYKHWlkeF9ub3RpZl90ZW1wbGF0ZXNfdGVu",
-            "YW50X2lkEgVCVFJFRVpPT3duaW5nIHRlbmFudCBmb3IgcGVyLXRlbmFudCBv",
-            "dmVycmlkZXM7IE5VTEwgPSBwbGF0Zm9ybS1nbG9iYWwgZGVmYXVsdCB0ZW1w",
-            "bGF0ZZgCAVIIdGVuYW50SWQ6iQb6thjMBAoWbm90aWZpY2F0aW9uX3RlbXBs",
-            "YXRlcxIQdWRiX25vdGlmaWNhdGlvbhgBIAEqOE1lc3NhZ2UgdGVtcGxhdGVz",
-            "IGZvciBlYWNoIG5vdGlmaWNhdGlvbiB0eXBlIGFuZCBjaGFubmVsMAE4AUAB",
-            "YngKEHRlbmFudF9pc29sYXRpb24SA0FMTBpdKHRlbmFudF9pZCBJUyBOVUxM",
-            "IE9SIHRlbmFudF9pZDo6dGV4dCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1",
-            "cnJlbnRfdGVuYW50X2lkJywgdHJ1ZSk6OnRleHQpKAGqAWcKK3RyZ19ub3Rp",
-            "ZmljYXRpb25fdGVtcGxhdGVzX3RvdWNoX3VwZGF0ZWRfYXQSBkJFRk9SRRoG",
-            "VVBEQVRFIiN1ZGJfbm90aWZpY2F0aW9uLnRvdWNoX3VwZGF0ZWRfYXQoKSoD",
-            "Uk9XwgHhAQoZdG91Y2hfdXBkYXRlZF9hdF9mdW5jdGlvbhIIcG9zdGdyZXMa",
-            "D2JlZm9yZV90cmlnZ2VycyKoAUNSRUFURSBPUiBSRVBMQUNFIEZVTkNUSU9O",
-            "IHVkYl9ub3RpZmljYXRpb24udG91Y2hfdXBkYXRlZF9hdCgpClJFVFVSTlMg",
-            "dHJpZ2dlcgpMQU5HVUFHRSBwbHBnc3FsCkFTICQkCkJFR0lOCiAgTkVXLnVw",
-            "ZGF0ZWRfYXQgPSBDVVJSRU5UX1RJTUVTVEFNUDsKICBSRVRVUk4gTkVXOwpF",
-            "TkQ7CiQkO/oBEm5vdGlmaWNhdGlvbjphZG1pboqyGbMBCgZ0ZW5hbnQaCXRl",
-            "bmFudF9pZCpJdGVuYW50X2lkIElTIE5VTEwgT1IgdGVuYW50X2lkID0gY3Vy",
-            "cmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnKTILc29mdF9k",
-            "ZWxldGU6GG5vdGlmaWNhdGlvbi5vcGVyYXRpb25hbED7E0gCUgZ0ZW5hbnRa",
-            "CHN0YW5kYXJkchV0ZW5hbnQuZGF0YV9yZXNpZGVuY3lCrgIKI2NvbS51ZGIu",
-            "Y29yZS5ub3RpZmljYXRpb24uZW50aXR5LnYxQhlOb3RpZmljYXRpb25UZW1w",
-            "bGF0ZVByb3RvUAFaS2dpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9n",
-            "ZW4vdWRiL2NvcmUvbm90aWZpY2F0aW9uL2VudGl0eS92MTtlbnRpdHl2MaIC",
-            "BFVDTkWqAh91ZGIuY29yZS5Ob3RpZmljYXRpb24uRW50aXR5LlYxygIfVWRi",
-            "XENvcmVcTm90aWZpY2F0aW9uXEVudGl0eVxWMeICK1VkYlxHUEJNZXRhZGF0",
-            "YVxDb3JlXE5vdGlmaWNhdGlvblxFbnRpdHlcVjHqAiNVZGI6OkNvcmU6Ok5v",
-            "dGlmaWNhdGlvbjo6RW50aXR5OjpWMWIGcHJvdG8z"));
+            "bl9yYW5kb21fdXVpZCgpUgp0ZW1wbGF0ZUlkEj4KCmV2ZW50X3R5cGUYAiAB",
+            "KAlCH4K3GBsKCmV2ZW50X3R5cGUSC1ZBUkNIQVIoODApGAFSCWV2ZW50VHlw",
+            "ZRJsCgdjaGFubmVsGAMgASgOMjQudWRiLmNvcmUubm90aWZpY2F0aW9uLmVu",
+            "dGl0eS52MS5Ob3RpZmljYXRpb25DaGFubmVsQhyCtxgYCgdjaGFubmVsEgtW",
+            "QVJDSEFSKDIwKRgBUgdjaGFubmVsEsUBChBzdWJqZWN0X3RlbXBsYXRlGAQg",
+            "ASgJQpkBgrcYlAEKEHN1YmplY3RfdGVtcGxhdGUSDFZBUkNIQVIoNTAwKVpC",
+            "SGFuZGxlYmFycy9HbyB0ZW1wbGF0ZSBzdWNoIGFzICd7ey5SZXNvdXJjZU5h",
+            "bWV9fSByZXF1aXJlcyByZXZpZXcnkAEBmgEHZW5nbGlzaKIBEHN1YmplY3Rf",
+            "dGVtcGxhdGWiAQ1ib2R5X3RlbXBsYXRlUg9zdWJqZWN0VGVtcGxhdGUSdwoN",
+            "Ym9keV90ZW1wbGF0ZRgFIAEoCUJSgrcYTgoNYm9keV90ZW1wbGF0ZRIEVEVY",
+            "VBgBWjVGdWxsIG1lc3NhZ2UgYm9keSB0ZW1wbGF0ZSB3aXRoIHZhcmlhYmxl",
+            "IHBsYWNlaG9sZGVyc1IMYm9keVRlbXBsYXRlEkIKBmxvY2FsZRgGIAEoCUIq",
+            "grcYJgoGbG9jYWxlEgtWQVJDSEFSKDEwKRgBOgQnZW4nWgdlbiB8IGJuUgZs",
+            "b2NhbGUSPQoJaXNfYWN0aXZlGAcgASgIQiCCtxgcCglpc19hY3RpdmUSB0JP",
+            "T0xFQU4YAToEVFJVRVIIaXNBY3RpdmUScQoKY3JlYXRlZF9hdBgIIAEoCzIa",
+            "Lmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCNoK3GDIKCmNyZWF0ZWRfYXQS",
+            "C1RJTUVTVEFNUFRaGAE6EUNVUlJFTlRfVElNRVNUQU1QYAFoAVIJY3JlYXRl",
+            "ZEF0Em8KCnVwZGF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGlt",
+            "ZXN0YW1wQjSCtxgwCgp1cGRhdGVkX2F0EgtUSU1FU1RBTVBUWhgBOhFDVVJS",
+            "RU5UX1RJTUVTVEFNUGABUgl1cGRhdGVkQXQSkQEKCmRlbGV0ZWRfYXQYCiAB",
+            "KAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQlaCtxhSCgpkZWxldGVk",
+            "X2F0EgtUSU1FU1RBTVBUWlI3ChppZHhfbm90aWZfdGVtcGxhdGVzX2FjdGl2",
+            "ZRIFQlRSRUU6EmRlbGV0ZWRfYXQgSVMgTlVMTFIJZGVsZXRlZEF0EmEKCmNy",
+            "ZWF0ZWRfYnkYCyABKAlCQoK3GD4KCmNyZWF0ZWRfYnkSDFZBUkNIQVIoMTIw",
+            "KVoiSWRlbnRpdHkgdGhhdCBjcmVhdGVkIHRoaXMgcmVjb3JkLlIJY3JlYXRl",
+            "ZEJ5EkgKCmRlbGV0ZWRfYnkYDCABKAlCKYK3GCUKCmRlbGV0ZWRfYnkSBFVV",
+            "SURaEVNvZnQgZGVsZXRlIGFjdG9yUglkZWxldGVkQnkStwEKCXRlbmFudF9p",
+            "ZBgNIAEoCUKZAYK3GJQBCgl0ZW5hbnRfaWQSDFZBUkNIQVIoMTIwKVImCh1p",
+            "ZHhfbm90aWZfdGVtcGxhdGVzX3RlbmFudF9pZBIFQlRSRUVaTk93bmluZyB0",
+            "ZW5hbnQgZm9yIHBlci10ZW5hbnQgb3ZlcnJpZGVzOyBOVUxMID0gcHJvamVj",
+            "dC1nbG9iYWwgZGVmYXVsdCB0ZW1wbGF0ZZgCAVIIdGVuYW50SWQSbwoKcHJv",
+            "amVjdF9pZBgOIAEoCUJQgrcYTAoKcHJvamVjdF9pZBIMVkFSQ0hBUigxMjAp",
+            "GAE6AicnUicKHmlkeF9ub3RpZl90ZW1wbGF0ZXNfcHJvamVjdF9pZBIFQlRS",
+            "RUWgAgFSCXByb2plY3RJZDraCfq2GMoHChZub3RpZmljYXRpb25fdGVtcGxh",
+            "dGVzEhB1ZGJfbm90aWZpY2F0aW9uGAEgASo4TWVzc2FnZSB0ZW1wbGF0ZXMg",
+            "Zm9yIGVhY2ggbm90aWZpY2F0aW9uIHR5cGUgYW5kIGNoYW5uZWwwATgBQAFi",
+            "0AEKGHRlbmFudF9wcm9qZWN0X2lzb2xhdGlvbhIDQUxMGqwBKCh0ZW5hbnRf",
+            "aWQgSVMgTlVMTCBPUiB0ZW5hbnRfaWQ6OnRleHQgPSBjdXJyZW50X3NldHRp",
+            "bmcoJ2FwcC5jdXJyZW50X3RlbmFudF9pZCcsIHRydWUpOjp0ZXh0KSBBTkQg",
+            "cHJvamVjdF9pZDo6dGV4dCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJl",
+            "bnRfcHJvamVjdF9pZCcsIHRydWUpOjp0ZXh0KSgBaAGKAYYBCjBpZHhfbm90",
+            "aWZfdGVtcGxhdGVzX3Byb2plY3RfZ2xvYmFsX2V2ZW50X2NoYW5uZWwSBUJU",
+            "UkVFGAE6KHRlbmFudF9pZCBJUyBOVUxMIEFORCBkZWxldGVkX2F0IElTIE5V",
+            "TExaCnByb2plY3RfaWRaCmV2ZW50X3R5cGVaB2NoYW5uZWyKAZUBCjBpZHhf",
+            "bm90aWZfdGVtcGxhdGVzX3RlbmFudF9wcm9qZWN0X2V2ZW50X2NoYW5uZWwS",
+            "BUJUUkVFGAE6LHRlbmFudF9pZCBJUyBOT1QgTlVMTCBBTkQgZGVsZXRlZF9h",
+            "dCBJUyBOVUxMWgl0ZW5hbnRfaWRaCnByb2plY3RfaWRaCmV2ZW50X3R5cGVa",
+            "B2NoYW5uZWyqAWcKK3RyZ19ub3RpZmljYXRpb25fdGVtcGxhdGVzX3RvdWNo",
+            "X3VwZGF0ZWRfYXQSBkJFRk9SRRoGVVBEQVRFIiN1ZGJfbm90aWZpY2F0aW9u",
+            "LnRvdWNoX3VwZGF0ZWRfYXQoKSoDUk9XwgHhAQoZdG91Y2hfdXBkYXRlZF9h",
+            "dF9mdW5jdGlvbhIIcG9zdGdyZXMaD2JlZm9yZV90cmlnZ2VycyKoAUNSRUFU",
+            "RSBPUiBSRVBMQUNFIEZVTkNUSU9OIHVkYl9ub3RpZmljYXRpb24udG91Y2hf",
+            "dXBkYXRlZF9hdCgpClJFVFVSTlMgdHJpZ2dlcgpMQU5HVUFHRSBwbHBnc3Fs",
+            "CkFTICQkCkJFR0lOCiAgTkVXLnVwZGF0ZWRfYXQgPSBDVVJSRU5UX1RJTUVT",
+            "VEFNUDsKICBSRVRVUk4gTkVXOwpFTkQ7CiQkO/oBEm5vdGlmaWNhdGlvbjph",
+            "ZG1pboqyGYYCCgZ0ZW5hbnQSB3Byb2plY3QaCXRlbmFudF9pZCIKcHJvamVj",
+            "dF9pZCqGASh0ZW5hbnRfaWQgSVMgTlVMTCBPUiB0ZW5hbnRfaWQgPSBjdXJy",
+            "ZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3RlbmFudF9pZCcpKSBBTkQgcHJv",
+            "amVjdF9pZCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfcHJvamVj",
+            "dF9pZCcpMgtzb2Z0X2RlbGV0ZToYbm90aWZpY2F0aW9uLm9wZXJhdGlvbmFs",
+            "QPsTSAJSBnRlbmFudFoIc3RhbmRhcmRyFXRlbmFudC5kYXRhX3Jlc2lkZW5j",
+            "eUKuAgojY29tLnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHkudjFCGU5v",
+            "dGlmaWNhdGlvblRlbXBsYXRlUHJvdG9QAVpLZ2l0aHViLmNvbS9mYWhhcmEw",
+            "Mi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9ub3RpZmljYXRpb24vZW50aXR5",
+            "L3YxO2VudGl0eXYxogIEVUNORaoCH3VkYi5jb3JlLk5vdGlmaWNhdGlvbi5F",
+            "bnRpdHkuVjHKAh9VZGJcQ29yZVxOb3RpZmljYXRpb25cRW50aXR5XFYx4gIr",
+            "VWRiXEdQQk1ldGFkYXRhXENvcmVcTm90aWZpY2F0aW9uXEVudGl0eVxWMeoC",
+            "I1VkYjo6Q29yZTo6Tm90aWZpY2F0aW9uOjpFbnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Notification.Entity.V1.EnumsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Entity.V1.NotificationTemplate), global::udb.core.Notification.Entity.V1.NotificationTemplate.Parser, new[]{ "TemplateId", "EventType", "Channel", "SubjectTemplate", "BodyTemplate", "Locale", "IsActive", "CreatedAt", "UpdatedAt", "DeletedAt", "CreatedBy", "DeletedBy", "TenantId" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Entity.V1.NotificationTemplate), global::udb.core.Notification.Entity.V1.NotificationTemplate.Parser, new[]{ "TemplateId", "EventType", "Channel", "SubjectTemplate", "BodyTemplate", "Locale", "IsActive", "CreatedAt", "UpdatedAt", "DeletedAt", "CreatedBy", "DeletedBy", "TenantId", "ProjectId" }, null, null, null, null)
           }));
     }
     #endregion
@@ -146,6 +157,7 @@ namespace udb.core.Notification.Entity.V1 {
       createdBy_ = other.createdBy_;
       deletedBy_ = other.deletedBy_;
       tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -172,12 +184,8 @@ namespace udb.core.Notification.Entity.V1 {
     private string eventType_ = "";
     /// <summary>
     /// Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
-    /// Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
-    /// global default (tenant_id NULL) for the same (event_type, channel) coexist;
-    /// resolution prefers the per-tenant row over the global default. The unique
-    /// index stays on (event_type, channel) for now (global dedupe); when a
-    /// per-tenant write path lands, split into partial unique indexes keyed on
-    /// tenant_id IS NULL vs IS NOT NULL.
+    /// Partial unique indexes above permit one project-global default and one
+    /// per-tenant override for the same event/channel in each exact project.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -312,7 +320,7 @@ namespace udb.core.Notification.Entity.V1 {
     public const int TenantIdFieldNumber = 13;
     private string tenantId_ = "";
     /// <summary>
-    /// NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+    /// NULLABLE: NULL = project-global default template; non-null = per-tenant override.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -320,6 +328,22 @@ namespace udb.core.Notification.Entity.V1 {
       get { return tenantId_; }
       set {
         tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 14;
+    private string projectId_ = "";
+    /// <summary>
+    /// First-class project owner. Blank is reserved for quarantined legacy rows;
+    /// serving paths persist only an explicitly active resolved project.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
@@ -351,6 +375,7 @@ namespace udb.core.Notification.Entity.V1 {
       if (CreatedBy != other.CreatedBy) return false;
       if (DeletedBy != other.DeletedBy) return false;
       if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -371,6 +396,7 @@ namespace udb.core.Notification.Entity.V1 {
       if (CreatedBy.Length != 0) hash ^= CreatedBy.GetHashCode();
       if (DeletedBy.Length != 0) hash ^= DeletedBy.GetHashCode();
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -441,6 +467,10 @@ namespace udb.core.Notification.Entity.V1 {
         output.WriteRawTag(106);
         output.WriteString(TenantId);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -503,6 +533,10 @@ namespace udb.core.Notification.Entity.V1 {
         output.WriteRawTag(106);
         output.WriteString(TenantId);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -551,6 +585,9 @@ namespace udb.core.Notification.Entity.V1 {
       }
       if (TenantId.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -611,6 +648,9 @@ namespace udb.core.Notification.Entity.V1 {
       }
       if (other.TenantId.Length != 0) {
         TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -692,6 +732,10 @@ namespace udb.core.Notification.Entity.V1 {
             TenantId = input.ReadString();
             break;
           }
+          case 114: {
+            ProjectId = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -770,6 +814,10 @@ namespace udb.core.Notification.Entity.V1 {
           }
           case 106: {
             TenantId = input.ReadString();
+            break;
+          }
+          case 114: {
+            ProjectId = input.ReadString();
             break;
           }
         }

@@ -233,11 +233,11 @@ func (x *NotificationLog) GetRenderedBody() string {
 // The broker records each notification SEND as a PENDING NotificationLog
 // (intent). A leader-elected delivery worker, or a provider webhook bridge that
 // calls NotificationService.ReportDelivery, then drives the terminal per-channel
-// delivery outcome here: one durable, tenant-scoped row per (notification,
-// channel, provider) carrying the queued/sent/failed/delivered status, the
+// delivery outcome here: one durable, tenant+project-scoped row per
+// (notification, channel, provider) carrying the queued/sent/failed/delivered status, the
 // attempt count, the provider's message id, the last error, and a timestamp.
 // This EXTENDS the existing intent/outbox path — it does not replace it. RLS
-// scopes rows to the current tenant.
+// scopes rows to the current tenant and project.
 // ---------------------------------------------------------------------------
 type NotificationDeliveryAttempt struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
@@ -257,7 +257,10 @@ type NotificationDeliveryAttempt struct {
 	ProviderMessageId string                 `protobuf:"bytes,9,opt,name=provider_message_id,json=providerMessageId,proto3" json:"provider_message_id,omitempty"`
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// The "ts" of the latest reported outcome.
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// First-class project owner. Blank is reserved for quarantined legacy rows;
+	// serving paths persist only an explicitly active resolved project.
+	ProjectId     string `protobuf:"bytes,12,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -369,11 +372,18 @@ func (x *NotificationDeliveryAttempt) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *NotificationDeliveryAttempt) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 var File_udb_core_notification_entity_v1_notification_log_proto protoreflect.FileDescriptor
 
 const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"\n" +
-	"6udb/core/notification/entity/v1/notification_log.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x91\x16\n" +
+	"6udb/core/notification/entity/v1/notification_log.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xd9\x17\n" +
 	"\x0fNotificationLog\x12@\n" +
 	"\x06log_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06log_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05logId\x12\xc3\x01\n" +
@@ -393,14 +403,14 @@ const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"\x05users\x12\auser_id\x1a\tudb_authn \x042!fk_notification_logs_recipient_idR+\n" +
 	"\"idx_notification_logs_recipient_id\x12\x05BTREER\vrecipientId\x12q\n" +
 	"\x11recipient_address\x18\x06 \x01(\tBD\x82\xb7\x18@\n" +
-	"\x11recipient_address\x12\fVARCHAR(320)Z\x1dEmail, phone, or device tokenR\x10recipientAddress\x12=\n" +
-	"\ttenant_id\x18\a \x01(\tB \x82\xb7\x18\x1c\n" +
-	"\ttenant_id\x12\fVARCHAR(120)\x98\x02\x01R\btenantId\x12h\n" +
+	"\x11recipient_address\x12\fVARCHAR(320)Z\x1dEmail, phone, or device tokenR\x10recipientAddress\x12?\n" +
+	"\ttenant_id\x18\a \x01(\tB\"\x82\xb7\x18\x1e\n" +
+	"\ttenant_id\x12\fVARCHAR(120)\x18\x01\x98\x02\x01R\btenantId\x12q\n" +
 	"\n" +
-	"project_id\x18\b \x01(\tBI\x82\xb7\x18E\n" +
+	"project_id\x18\b \x01(\tBR\x82\xb7\x18N\n" +
 	"\n" +
-	"project_id\x12\fVARCHAR(120)R)\n" +
-	" idx_notification_logs_project_id\x12\x05BTREER\tprojectId\x12\xb4\x01\n" +
+	"project_id\x12\fVARCHAR(120)\x18\x01:\x02''R)\n" +
+	" idx_notification_logs_project_id\x12\x05BTREE\xa0\x02\x01R\tprojectId\x12\xb4\x01\n" +
 	"\rresource_type\x18\t \x01(\tB\x8e\x01\x82\xb7\x18\x89\x01\n" +
 	"\rresource_type\x12\vVARCHAR(80)R,\n" +
 	"#idx_notification_logs_resource_type\x12\x05BTREEZ=Project-defined resource type that triggered the notificationR\fresourceType\x12\xab\x01\n" +
@@ -434,13 +444,15 @@ const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"\x10rendered_subject\x18\x14 \x01(\tB\x1c\x82\xb7\x18\x18\n" +
 	"\x10rendered_subject\x12\x04TEXTR\x0frenderedSubject\x12>\n" +
 	"\rrendered_body\x18\x15 \x01(\tB\x19\x82\xb7\x18\x15\n" +
-	"\rrendered_body\x12\x04TEXTR\frenderedBody:\xfc\x03\xfa\xb6\x18\xdc\x02\n" +
+	"\rrendered_body\x12\x04TEXTR\frenderedBody:\xb9\x05\xfa\xb6\x18\xc9\x03\n" +
 	"\x11notification_logs\x12\x10udb_notification\x18\x02 \x01*<Delivery audit log for every notification sent by the system@\x01H\x03R\n" +
-	"created_atXZb^\n" +
-	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01C\n" +
-	"\x1eidx_nlog_tenant_channel_status\x12\x05BTREEZ\ttenant_idZ\achannelZ\x06status\x8a\x01!\n" +
-	"\x10idx_nlog_sent_at\x12\x04BRINZ\asent_at\xf2\x01\x16notification.failed.v1\x8a\xb2\x19\x96\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x18notification.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residency\"\xa5\r\n" +
+	"created_atXZb\xb4\x01\n" +
+	"\x18tenant_project_isolation\x1a\x95\x01(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)(\x01h\x01\x8a\x01W\n" +
+	"&idx_nlog_tenant_project_channel_status\x12\x05BTREEZ\ttenant_idZ\n" +
+	"project_idZ\achannelZ\x06status\x8a\x01!\n" +
+	"\x10idx_nlog_sent_at\x12\x04BRINZ\asent_at\xf2\x01\x16notification.failed.v1\x8a\xb2\x19\xe6\x01\n" +
+	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
+	"project_id*otenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')2\x04none:\x18notification.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residency\"\xef\x0f\n" +
 	"\x1bNotificationDeliveryAttempt\x12L\n" +
 	"\n" +
 	"attempt_id\x18\x01 \x01(\tB-\x82\xb7\x18)\n" +
@@ -474,12 +486,20 @@ const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB2\x82\xb7\x18.\n" +
 	"\n" +
-	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tupdatedAt:\xf3\x04\xfa\xb6\x18\xd3\x03\n" +
-	"\x1enotification_delivery_attempts\x12\x10udb_notification\x18\x04 \x01*BPer-channel notification delivery-status record (master-plan 9.13)8\x01@\x01b\x97\x01\n" +
-	"\x10tenant_isolation\x1a\x80\x01(tenant_id::text = current_setting('app.current_tenant_id', true)::text OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01O\n" +
-	" uq_notif_delivery_attempt_target\x12\x05BTREE\x18\x01Z\x0fnotification_idZ\achannelZ\bprovider\x8a\x01D\n" +
-	"(idx_notif_delivery_attempt_tenant_status\x12\x05BTREEZ\ttenant_idZ\x06status\xf2\x01\x1dudb.notification.delivery.cdc\x8a\xb2\x19\x96\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x18notification.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xa9\x02\n" +
+	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tupdatedAt\x12v\n" +
+	"\n" +
+	"project_id\x18\f \x01(\tBW\x82\xb7\x18S\n" +
+	"\n" +
+	"project_id\x12\fVARCHAR(120)\x18\x01:\x02''R.\n" +
+	"%idx_notif_delivery_attempt_project_id\x12\x05BTREE\xa0\x02\x01R\tprojectId:\xc5\x06\xfa\xb6\x18\xd5\x04\n" +
+	"\x1enotification_delivery_attempts\x12\x10udb_notification\x18\x04 \x01*BPer-channel notification delivery-status record (master-plan 9.13)8\x01@\x01b\xee\x01\n" +
+	"\x18tenant_project_isolation\x1a\xcf\x01((tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01f\n" +
+	" uq_notif_delivery_attempt_target\x12\x05BTREE\x18\x01Z\ttenant_idZ\n" +
+	"project_idZ\x0fnotification_idZ\achannelZ\bprovider\x8a\x01X\n" +
+	"0idx_notif_delivery_attempt_tenant_project_status\x12\x05BTREEZ\ttenant_idZ\n" +
+	"project_idZ\x06status\xf2\x01\x1dudb.notification.delivery.cdc\x8a\xb2\x19\xe6\x01\n" +
+	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
+	"project_id*otenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')2\x04none:\x18notification.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xa9\x02\n" +
 	"#com.udb.core.notification.entity.v1B\x14NotificationLogProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
 var (

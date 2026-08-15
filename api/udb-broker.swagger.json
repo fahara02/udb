@@ -54525,9 +54525,13 @@
           "type": "string",
           "format": "date-time",
           "description": "The \"ts\" of the latest reported outcome."
+        },
+        "projectId": {
+          "type": "string",
+          "description": "First-class project owner. Blank is reserved for quarantined legacy rows;\nserving paths persist only an explicitly active resolved project."
         }
       },
-      "description": "---------------------------------------------------------------------------\nNotificationDeliveryAttempt — master-plan 9.13 delivery-status record.\n\nThe broker records each notification SEND as a PENDING NotificationLog\n(intent). A leader-elected delivery worker, or a provider webhook bridge that\ncalls NotificationService.ReportDelivery, then drives the terminal per-channel\ndelivery outcome here: one durable, tenant-scoped row per (notification,\nchannel, provider) carrying the queued/sent/failed/delivered status, the\nattempt count, the provider's message id, the last error, and a timestamp.\nThis EXTENDS the existing intent/outbox path — it does not replace it. RLS\nscopes rows to the current tenant.\n---------------------------------------------------------------------------"
+      "description": "---------------------------------------------------------------------------\nNotificationDeliveryAttempt — master-plan 9.13 delivery-status record.\n\nThe broker records each notification SEND as a PENDING NotificationLog\n(intent). A leader-elected delivery worker, or a provider webhook bridge that\ncalls NotificationService.ReportDelivery, then drives the terminal per-channel\ndelivery outcome here: one durable, tenant+project-scoped row per\n(notification, channel, provider) carrying the queued/sent/failed/delivered status, the\nattempt count, the provider's message id, the last error, and a timestamp.\nThis EXTENDS the existing intent/outbox path — it does not replace it. RLS\nscopes rows to the current tenant and project.\n---------------------------------------------------------------------------"
     },
     "v1NotificationLog": {
       "type": "object",
@@ -54633,6 +54637,10 @@
         },
         "createdBy": {
           "type": "string"
+        },
+        "projectId": {
+          "type": "string",
+          "description": "First-class project owner. Blank is reserved for quarantined legacy rows;\nserving paths persist only an explicitly active resolved project."
         }
       }
     },
@@ -54657,7 +54665,7 @@
         },
         "eventType": {
           "type": "string",
-          "description": "Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.\nHybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the\nglobal default (tenant_id NULL) for the same (event_type, channel) coexist;\nresolution prefers the per-tenant row over the global default. The unique\nindex stays on (event_type, channel) for now (global dedupe); when a\nper-tenant write path lands, split into partial unique indexes keyed on\ntenant_id IS NULL vs IS NOT NULL."
+          "description": "Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.\nPartial unique indexes above permit one project-global default and one\nper-tenant override for the same event/channel in each exact project."
         },
         "channel": {
           "$ref": "#/definitions/v1NotificationChannel"
@@ -54694,7 +54702,11 @@
         },
         "tenantId": {
           "type": "string",
-          "description": "NULLABLE: NULL = platform-global default template; non-null = per-tenant override."
+          "description": "NULLABLE: NULL = project-global default template; non-null = per-tenant override."
+        },
+        "projectId": {
+          "type": "string",
+          "description": "First-class project owner. Blank is reserved for quarantined legacy rows;\nserving paths persist only an explicitly active resolved project."
         }
       }
     },

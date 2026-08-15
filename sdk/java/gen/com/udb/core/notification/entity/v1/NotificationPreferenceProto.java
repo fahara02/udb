@@ -45,57 +45,66 @@ public final class NotificationPreferenceProto {
       "cation.entity.v1\032\037google/protobuf/timest" +
       "amp.proto\032\033udb/core/common/v1/db.proto\032!" +
       "udb/core/common/v1/security.proto\032+udb/c" +
-      "ore/notification/entity/v1/enums.proto\"\224" +
-      "\r\n\026NotificationPreference\022U\n\rpreference_" +
+      "ore/notification/entity/v1/enums.proto\"\333" +
+      "\017\n\026NotificationPreference\022U\n\rpreference_" +
       "id\030\001 \001(\tB0\202\267\030,\n\rpreference_id\022\004UUID\030\001(\001:" +
-      "\021gen_random_uuid()R\014preferenceId\022q\n\007user" +
-      "_id\030\002 \001(\tBX\202\267\030T\n\007user_id\022\004UUID\030\001RA\n\"idx_" +
-      "notif_prefs_user_channel_event\022\005BTREE\030\001Z" +
-      "\022channel,event_typeR\006userId\022c\n\ttenant_id" +
-      "\030\003 \001(\tBF\202\267\030B\n\ttenant_id\022\014VARCHAR(120)\030\001R" +
-      "\"\n\031idx_notif_prefs_tenant_id\022\005BTREE\230\002\001R\010" +
-      "tenantId\022l\n\007channel\030\004 \001(\01624.udb.core.not" +
-      "ification.entity.v1.NotificationChannelB" +
-      "\034\202\267\030\030\n\007channel\022\013VARCHAR(20)\030\001R\007channel\022\201" +
-      "\001\n\nevent_type\030\005 \001(\tBb\202\267\030^\n\nevent_type\022\013V" +
-      "ARCHAR(80)\030\001:\002\'\'Z=\'\' = channel-wide; e.g" +
-      ". \'REVIEW_ASSIGNED\' = per-event opt-outR" +
-      "\teventType\022F\n\014is_opted_out\030\006 \001(\010B$\202\267\030 \n\014" +
-      "is_opted_out\022\007BOOLEAN\030\001:\005FALSER\nisOptedO" +
-      "ut\022q\n\ncreated_at\030\007 \001(\0132\032.google.protobuf" +
-      ".TimestampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPT" +
-      "Z\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n" +
-      "\nupdated_at\030\010 \001(\0132\032.google.protobuf.Time" +
-      "stampB4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021" +
-      "CURRENT_TIMESTAMP`\001R\tupdatedAt\022a\n\ncreate" +
-      "d_by\030\t \001(\tBB\202\267\030>\n\ncreated_by\022\014VARCHAR(12" +
-      "0)Z\"Identity that created this record.R\t" +
-      "createdBy:\311\005\372\266\030\250\004\n\030notification_preferen" +
-      "ces\022\020udb_notification\030\003 \001*APer-user per-" +
-      "channel per-event-type notification opt-" +
-      "out settings8\001@\001b^\n\020tenant_isolation\032H(t" +
-      "enant_id::text = current_setting(\'app.cu" +
-      "rrent_tenant_id\', true)::text)(\001\252\001i\n-trg" +
-      "_notification_preferences_touch_updated_" +
-      "at\022\006BEFORE\032\006UPDATE\"#udb_notification.tou" +
-      "ch_updated_at()*\003ROW\302\001\341\001\n\031touch_updated_" +
-      "at_function\022\010postgres\032\017before_triggers\"\250" +
-      "\001CREATE OR REPLACE FUNCTION udb_notifica" +
-      "tion.touch_updated_at()\nRETURNS trigger\n" +
-      "LANGUAGE plpgsql\nAS $$\nBEGIN\n  NEW.updat" +
-      "ed_at = CURRENT_TIMESTAMP;\n  RETURN NEW;" +
-      "\nEND;\n$$;\212\262\031\227\001\n\006tenant\032\ttenant_id*4tenan" +
-      "t_id = current_setting(\'app.current_tena" +
-      "nt_id\')2\004none:\030notification.operational@" +
-      "\373\023H\002R\006tenantZ\010standardr\025tenant.data_resi" +
-      "dencyB\260\002\n#com.udb.core.notification.enti" +
-      "ty.v1B\033NotificationPreferenceProtoP\001ZKgi" +
-      "thub.com/fahara02/udb/sdk/go/gen/udb/cor" +
-      "e/notification/entity/v1;entityv1\242\002\004UCNE" +
-      "\252\002\037udb.core.Notification.Entity.V1\312\002\037Udb" +
-      "\\Core\\Notification\\Entity\\V1\342\002+Udb\\GPBMe" +
-      "tadata\\Core\\Notification\\Entity\\V1\352\002#Udb" +
-      "::Core::Notification::Entity::V1b\006proto3"
+      "\021gen_random_uuid()R\014preferenceId\022.\n\007user" +
+      "_id\030\002 \001(\tB\025\202\267\030\021\n\007user_id\022\004UUID\030\001R\006userId" +
+      "\022c\n\ttenant_id\030\003 \001(\tBF\202\267\030B\n\ttenant_id\022\014VA" +
+      "RCHAR(120)\030\001R\"\n\031idx_notif_prefs_tenant_i" +
+      "d\022\005BTREE\230\002\001R\010tenantId\022l\n\007channel\030\004 \001(\01624" +
+      ".udb.core.notification.entity.v1.Notific" +
+      "ationChannelB\034\202\267\030\030\n\007channel\022\013VARCHAR(20)" +
+      "\030\001R\007channel\022\201\001\n\nevent_type\030\005 \001(\tBb\202\267\030^\n\n" +
+      "event_type\022\013VARCHAR(80)\030\001:\002\'\'Z=\'\' = chan" +
+      "nel-wide; e.g. \'REVIEW_ASSIGNED\' = per-e" +
+      "vent opt-outR\teventType\022F\n\014is_opted_out\030" +
+      "\006 \001(\010B$\202\267\030 \n\014is_opted_out\022\007BOOLEAN\030\001:\005FA" +
+      "LSER\nisOptedOut\022q\n\ncreated_at\030\007 \001(\0132\032.go" +
+      "ogle.protobuf.TimestampB6\202\267\0302\n\ncreated_a" +
+      "t\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R" +
+      "\tcreatedAt\022o\n\nupdated_at\030\010 \001(\0132\032.google." +
+      "protobuf.TimestampB4\202\267\0300\n\nupdated_at\022\013TI" +
+      "MESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001R\tupdate" +
+      "dAt\022a\n\ncreated_by\030\t \001(\tBB\202\267\030>\n\ncreated_b" +
+      "y\022\014VARCHAR(120)Z\"Identity that created t" +
+      "his record.R\tcreatedBy\022k\n\nproject_id\030\n \001" +
+      "(\tBL\202\267\030H\n\nproject_id\022\014VARCHAR(120)\030\001:\002\'\'" +
+      "R#\n\032idx_notif_prefs_project_id\022\005BTREE\240\002\001" +
+      "R\tprojectId:\346\007\372\266\030\365\005\n\030notification_prefer" +
+      "ences\022\020udb_notification\030\003 \001*APer-project" +
+      " user/channel/event-type notification op" +
+      "t-out settings8\001@\001b\264\001\n\030tenant_project_is" +
+      "olation\032\225\001(tenant_id::text = current_set" +
+      "ting(\'app.current_tenant_id\', true)::tex" +
+      "t AND project_id::text = current_setting" +
+      "(\'app.current_project_id\', true)::text)(" +
+      "\001h\001\212\001q\n1idx_notif_prefs_tenant_project_u" +
+      "ser_channel_event\022\005BTREE\030\001Z\ttenant_idZ\np" +
+      "roject_idZ\007user_idZ\007channelZ\nevent_type\252" +
+      "\001i\n-trg_notification_preferences_touch_u" +
+      "pdated_at\022\006BEFORE\032\006UPDATE\"#udb_notificat" +
+      "ion.touch_updated_at()*\003ROW\302\001\341\001\n\031touch_u" +
+      "pdated_at_function\022\010postgres\032\017before_tri" +
+      "ggers\"\250\001CREATE OR REPLACE FUNCTION udb_n" +
+      "otification.touch_updated_at()\nRETURNS t" +
+      "rigger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  NE" +
+      "W.updated_at = CURRENT_TIMESTAMP;\n  RETU" +
+      "RN NEW;\nEND;\n$$;\212\262\031\347\001\n\006tenant\022\007project\032\t" +
+      "tenant_id\"\nproject_id*otenant_id = curre" +
+      "nt_setting(\'app.current_tenant_id\') AND " +
+      "project_id = current_setting(\'app.curren" +
+      "t_project_id\')2\004none:\030notification.opera" +
+      "tional@\373\023H\002R\006tenantZ\010standardr\025tenant.da" +
+      "ta_residencyB\260\002\n#com.udb.core.notificati" +
+      "on.entity.v1B\033NotificationPreferenceProt" +
+      "oP\001ZKgithub.com/fahara02/udb/sdk/go/gen/" +
+      "udb/core/notification/entity/v1;entityv1" +
+      "\242\002\004UCNE\252\002\037udb.core.Notification.Entity.V" +
+      "1\312\002\037Udb\\Core\\Notification\\Entity\\V1\342\002+Ud" +
+      "b\\GPBMetadata\\Core\\Notification\\Entity\\V" +
+      "1\352\002#Udb::Core::Notification::Entity::V1b" +
+      "\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -110,7 +119,7 @@ public final class NotificationPreferenceProto {
     internal_static_udb_core_notification_entity_v1_NotificationPreference_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_entity_v1_NotificationPreference_descriptor,
-        new java.lang.String[] { "PreferenceId", "UserId", "TenantId", "Channel", "EventType", "IsOptedOut", "CreatedAt", "UpdatedAt", "CreatedBy", });
+        new java.lang.String[] { "PreferenceId", "UserId", "TenantId", "Channel", "EventType", "IsOptedOut", "CreatedAt", "UpdatedAt", "CreatedBy", "ProjectId", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();

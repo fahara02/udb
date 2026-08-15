@@ -30,11 +30,14 @@ type NotificationPreference struct {
 	TenantId     string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	Channel      NotificationChannel    `protobuf:"varint,4,opt,name=channel,proto3,enum=udb.core.notification.entity.v1.NotificationChannel" json:"channel,omitempty"`
 	// Empty string = channel-wide opt-out; non-empty = opt-out of specific event type.
-	EventType     string                 `protobuf:"bytes,5,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
-	IsOptedOut    bool                   `protobuf:"varint,6,opt,name=is_opted_out,json=isOptedOut,proto3" json:"is_opted_out,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	CreatedBy     string                 `protobuf:"bytes,9,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	EventType  string                 `protobuf:"bytes,5,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	IsOptedOut bool                   `protobuf:"varint,6,opt,name=is_opted_out,json=isOptedOut,proto3" json:"is_opted_out,omitempty"`
+	CreatedAt  *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt  *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CreatedBy  string                 `protobuf:"bytes,9,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	// First-class project owner. Blank is reserved for quarantined legacy rows;
+	// serving paths persist only an explicitly active resolved project.
+	ProjectId     string `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -132,17 +135,23 @@ func (x *NotificationPreference) GetCreatedBy() string {
 	return ""
 }
 
+func (x *NotificationPreference) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 var File_udb_core_notification_entity_v1_notification_preference_proto protoreflect.FileDescriptor
 
 const file_udb_core_notification_entity_v1_notification_preference_proto_rawDesc = "" +
 	"\n" +
-	"=udb/core/notification/entity/v1/notification_preference.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x94\r\n" +
+	"=udb/core/notification/entity/v1/notification_preference.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xdb\x0f\n" +
 	"\x16NotificationPreference\x12U\n" +
 	"\rpreference_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
-	"\rpreference_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\fpreferenceId\x12q\n" +
-	"\auser_id\x18\x02 \x01(\tBX\x82\xb7\x18T\n" +
-	"\auser_id\x12\x04UUID\x18\x01RA\n" +
-	"\"idx_notif_prefs_user_channel_event\x12\x05BTREE\x18\x01Z\x12channel,event_typeR\x06userId\x12c\n" +
+	"\rpreference_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\fpreferenceId\x12.\n" +
+	"\auser_id\x18\x02 \x01(\tB\x15\x82\xb7\x18\x11\n" +
+	"\auser_id\x12\x04UUID\x18\x01R\x06userId\x12c\n" +
 	"\ttenant_id\x18\x03 \x01(\tBF\x82\xb7\x18B\n" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R\"\n" +
 	"\x19idx_notif_prefs_tenant_id\x12\x05BTREE\x98\x02\x01R\btenantId\x12l\n" +
@@ -166,9 +175,18 @@ const file_udb_core_notification_entity_v1_notification_preference_proto_rawDesc
 	"\n" +
 	"created_by\x18\t \x01(\tBB\x82\xb7\x18>\n" +
 	"\n" +
-	"created_by\x12\fVARCHAR(120)Z\"Identity that created this record.R\tcreatedBy:\xc9\x05\xfa\xb6\x18\xa8\x04\n" +
-	"\x18notification_preferences\x12\x10udb_notification\x18\x03 \x01*APer-user per-channel per-event-type notification opt-out settings8\x01@\x01b^\n" +
-	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xaa\x01i\n" +
+	"created_by\x12\fVARCHAR(120)Z\"Identity that created this record.R\tcreatedBy\x12k\n" +
+	"\n" +
+	"project_id\x18\n" +
+	" \x01(\tBL\x82\xb7\x18H\n" +
+	"\n" +
+	"project_id\x12\fVARCHAR(120)\x18\x01:\x02''R#\n" +
+	"\x1aidx_notif_prefs_project_id\x12\x05BTREE\xa0\x02\x01R\tprojectId:\xe6\a\xfa\xb6\x18\xf5\x05\n" +
+	"\x18notification_preferences\x12\x10udb_notification\x18\x03 \x01*APer-project user/channel/event-type notification opt-out settings8\x01@\x01b\xb4\x01\n" +
+	"\x18tenant_project_isolation\x1a\x95\x01(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)(\x01h\x01\x8a\x01q\n" +
+	"1idx_notif_prefs_tenant_project_user_channel_event\x12\x05BTREE\x18\x01Z\ttenant_idZ\n" +
+	"project_idZ\auser_idZ\achannelZ\n" +
+	"event_type\xaa\x01i\n" +
 	"-trg_notification_preferences_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"#udb_notification.touch_updated_at()*\x03ROW\xc2\x01\xe1\x01\n" +
 	"\x19touch_updated_at_function\x12\bpostgres\x1a\x0fbefore_triggers\"\xa8\x01CREATE OR REPLACE FUNCTION udb_notification.touch_updated_at()\n" +
 	"RETURNS trigger\n" +
@@ -178,8 +196,9 @@ const file_udb_core_notification_entity_v1_notification_preference_proto_rawDesc
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;\x8a\xb2\x19\x97\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x18notification.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xb0\x02\n" +
+	"$$;\x8a\xb2\x19\xe7\x01\n" +
+	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
+	"project_id*otenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')2\x04none:\x18notification.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xb0\x02\n" +
 	"#com.udb.core.notification.entity.v1B\x1bNotificationPreferenceProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
 var (

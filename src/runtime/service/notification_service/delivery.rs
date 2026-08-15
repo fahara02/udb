@@ -663,8 +663,8 @@ async fn record_suppression_outcome(
         &intent.tenant_id,
         &intent.project_id,
     )
-        .await
-        .map_err(|err| format!("notification suppression transition failed: {err}"))?;
+    .await
+    .map_err(|err| format!("notification suppression transition failed: {err}"))?;
     if !moved {
         return Ok(());
     }

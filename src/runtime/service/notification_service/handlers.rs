@@ -17,8 +17,8 @@ use crate::runtime::core::native_store::NativeEntityTransactionOp;
 
 use super::super::native_helpers::{
     admit_on as native_admit_on, metadata_project_id, metadata_tenant_id, native_page_response,
-    native_page_window, parse_uuid, project_scoped_native_service_context,
-    validated_native_service_context, validate_request_tenant,
+    native_page_window, parse_uuid, project_scoped_native_service_context, validate_request_tenant,
+    validated_native_service_context,
 };
 use super::NotificationServiceImpl;
 use super::config::{
@@ -458,13 +458,13 @@ pub(crate) async fn retry_notification(
         // event — nothing is handed to a provider for an opted-out recipient.
         let suppressed =
             suppress_log_if_pending(&mut *tx, log_id, &scoped_tenant, &context.project_id)
-            .await
-            .map_err(|err| {
-                notification_internal_status(
-                    "retry_notification_suppress",
-                    format!("retry notification failed: {err}"),
-                )
-            })?;
+                .await
+                .map_err(|err| {
+                    notification_internal_status(
+                        "retry_notification_suppress",
+                        format!("retry notification failed: {err}"),
+                    )
+                })?;
         if !suppressed {
             return Err(notification_internal_status(
                 "retry_notification_suppress",
@@ -714,7 +714,10 @@ pub(crate) async fn upsert_template(
         ));
     }
     let scoped_tenant = metadata_tenant_id(&metadata).unwrap_or_default();
-    let body_scope = req.context.as_ref().and_then(|context| context.tenant.as_ref());
+    let body_scope = req
+        .context
+        .as_ref()
+        .and_then(|context| context.tenant.as_ref());
     let body_tenant = body_scope
         .map(|tenant| tenant.tenant_id.as_str())
         .filter(|tenant| !tenant.trim().is_empty())

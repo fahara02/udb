@@ -176,11 +176,8 @@ impl NotificationServiceImpl {
                 ),
             ));
         }
-        let (pool, instance) = runtime.native_store_postgres_binding_for_service(
-            "notification",
-            write,
-            &context,
-        )?;
+        let (pool, instance) =
+            runtime.native_store_postgres_binding_for_service("notification", write, &context)?;
         context.target_backend = "postgres".to_string();
         context.target_instance = instance.unwrap_or_default();
         Ok((context, pool))
