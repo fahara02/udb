@@ -50,3 +50,6 @@ Release: 0.5.8
   the repository scan still required the removed live-dashboard fallback
   wording. The guard and its README fixture now require the fail-closed fresh
   artifact, validation-run exclusion, and committed-JSON-only direct-push rules.
+- Workflow-lint run `31876553846` passed all self-tests and found only that the
+  new committed-JSON assertion spanned a Markdown line break. The assertion is
+  split into stable scope and behavior phrases without weakening either rule.
