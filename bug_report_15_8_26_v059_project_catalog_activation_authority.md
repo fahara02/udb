@@ -159,6 +159,14 @@ Focused GitHub run `31897092671` passed after that correction, proving the full
 serialized authority regression against PostgreSQL and Kafka on the pushed
 revision.
 
+After merge, push-only main run `31901655082` exercised the broader ignored
+native suite and found two stale served-auth fixtures. The CDC authorization
+lifetime and data-only API-key CRUD tests authenticated project `billing` but
+constructed only the default catalog, so the production fail-closed check
+correctly returned `catalog_project_not_active`. The fixtures must explicitly
+stage and activate their served manifest for `billing`; default fallback must
+not be restored.
+
 ## Regression coverage
 
 The ignored live Postgres regression

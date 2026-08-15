@@ -585,6 +585,7 @@ async fn live_served_cdc_stream_revalidates_bearer_api_key_and_policy() {
         Some(Arc::new(engine)),
         true,
     );
+    activate_live_project_catalog(&broker, "billing", "served-cdc-revalidation").await;
     let authz_snapshot = broker.authz_snapshot();
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")

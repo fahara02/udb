@@ -150,6 +150,9 @@ Release: 0.5.9
   reactivation-evidence split fixed in this revision.
 - Focused GitHub run `31897092671` then passed the complete catalog-authority
   regression after the catalog/binding/reload evidence tuple was unified.
+- The shared auth live fixture can now stage and activate a served manifest for
+  an exact project. CDC bearer/API-key lifetime and data-only API-key CRUD use
+  it for `billing`, preserving the production no-default-fallback boundary.
 - Applied the three-line `ci-rustfmt-repair-1` artifact from run `31896140645`
   to the shared project resolver before this commit.
 - Native repair generation consumes the exact broker already built by the

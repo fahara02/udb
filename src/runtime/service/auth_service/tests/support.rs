@@ -115,6 +115,28 @@ pub(super) async fn migrate_native_auth_db(pool: &sqlx::PgPool) {
         .expect("bootstrap udb_system catalog for native auth tests");
 }
 
+pub(super) async fn activate_live_project_catalog(
+    broker: &DataBrokerService,
+    project_id: &str,
+    reason: &str,
+) {
+    let checksum = broker
+        .catalog
+        .stage_catalog(
+            broker.manifest.clone(),
+            project_id.to_string(),
+            reason.to_string(),
+            "exact".to_string(),
+        )
+        .await
+        .unwrap_or_else(|err| panic!("stage live auth catalog for {project_id}: {err}"));
+    broker
+        .catalog
+        .activate_catalog_for(project_id, &checksum)
+        .await
+        .unwrap_or_else(|err| panic!("activate live auth catalog for {project_id}: {err}"));
+}
+
 pub(super) fn authn_service(pool: sqlx::PgPool) -> AuthnServiceImpl {
     // OTP cooldown disabled here so existing tests can send/resend OTPs back to
     // back; the cooldown itself is covered by a dedicated test that opts in.

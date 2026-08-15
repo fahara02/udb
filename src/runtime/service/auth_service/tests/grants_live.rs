@@ -854,6 +854,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         None,
         true,
     );
+    activate_live_project_catalog(&broker, "billing", "data-only-api-key-crud").await;
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
