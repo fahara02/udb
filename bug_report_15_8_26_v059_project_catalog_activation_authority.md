@@ -167,6 +167,9 @@ correctly returned `catalog_project_not_active`. The fixtures must explicitly
 stage and activate their served manifest for `billing`; default fallback must
 not be restored.
 
+Focused GitHub runs `31903188510` and `31903230512` passed the corrected CDC
+authorization-lifetime and data-only API-key CRUD fixtures independently.
+
 ## Regression coverage
 
 The ignored live Postgres regression

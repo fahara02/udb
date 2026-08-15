@@ -153,6 +153,11 @@ Release: 0.5.9
 - The shared auth live fixture can now stage and activate a served manifest for
   an exact project. CDC bearer/API-key lifetime and data-only API-key CRUD use
   it for `billing`, preserving the production no-default-fallback boundary.
+- Refreshed the generated codebase map after adding that shared helper; GitHub
+  run `31903131598` had already compiled all targets and passed the full library
+  suite before its freshness gate reported the one-line map drift.
+- Focused GitHub runs `31903188510` and `31903230512` passed the two corrected
+  served-auth live tests independently.
 - Applied the three-line `ci-rustfmt-repair-1` artifact from run `31896140645`
   to the shared project resolver before this commit.
 - Native repair generation consumes the exact broker already built by the
