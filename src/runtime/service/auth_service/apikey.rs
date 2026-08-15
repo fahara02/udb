@@ -2819,14 +2819,13 @@ mod tests {
         assert_platform_denied(&err);
 
         let svc = svc_with_records(vec![record]);
-        let platform_claim =
-            crate::runtime::service::method_security::test_claim_context(
-                "platform-1",
-                "acme",
-                "project-a",
-                &["udb:platform_admin"],
-                &[],
-            );
+        let platform_claim = crate::runtime::service::method_security::test_claim_context(
+            "platform-1",
+            "acme",
+            "project-a",
+            &["udb:platform_admin"],
+            &[],
+        );
         crate::runtime::service::method_security::scope_claim_context_for_test(
             platform_claim,
             async {

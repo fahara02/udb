@@ -173,6 +173,9 @@ Release: 0.5.9
 - Tenant listing and tenant-parenting regressions now distinguish bound broad
   admin authority from the explicit platform scope; run `31906893924` reached
   2,738 library passes before identifying those two stale expectations.
+- Applied `ci-rustfmt-repair-1` from run `31907509298`, SHA-256
+  `83F0E8FAEF149533D921B256D617199D3CE84FC5C5FF48F0B30D41295918550A`,
+  to the API-key and tenant authority regressions without running rustfmt locally.
 - Refreshed the generated codebase map after adding that shared helper; GitHub
   run `31903131598` had already compiled all targets and passed the full library
   suite before its freshness gate reported the one-line map drift.

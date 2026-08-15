@@ -538,13 +538,7 @@ async fn create_tenant_rejects_malformed_parent() {
 #[tokio::test]
 async fn create_tenant_allows_cross_tenant_admin_to_parent_anywhere() {
     let svc = TenantServiceImpl::new(); // no pool: the post-authz require_pool fires
-    let ctx = test_claim_context(
-        "op-1",
-        CLAIM_TENANT_A,
-        "",
-        &["udb:platform_admin"],
-        &[],
-    );
+    let ctx = test_claim_context("op-1", CLAIM_TENANT_A, "", &["udb:platform_admin"], &[]);
     let err =
         scope_claim_context_for_test(ctx, svc.create_tenant(create_under_parent(PARENT_TENANT_B)))
             .await
