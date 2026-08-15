@@ -159,6 +159,20 @@ control plane.
 | `BackupService` | Tenant-scoped backup and restore | `StartTenantBackup`, `RestoreTenant`, `ListBackups`, `PutBackupPolicy` |
 | `EmbeddingService` | Embedding sources and vector retrieval, with a leader-driven backfill enumerator | `RegisterSource`, `ReportEmbedding`, `Backfill`, `Retrieve`, `ListSources` |
 
+UDB 0.5.7 tightens the operational boundary behind several of these surfaces:
+
+- Vault secrets/transit operations and their outbox evidence pin one
+  active-project write authority; unsealing requires authenticated master-KEK
+  envelopes. Dynamic database credentials are read-only, fixed-policy,
+  tenant/project/instance/database/relation-bound leases with replay-safe issue
+  and durable single/project-wide revoke.
+- Backup export uses one project-pinned PostgreSQL repeatable-read snapshot and
+  records immutable topology and destination provenance. Unsupported
+  multi-instance project snapshots fail closed.
+- Storage, Scheduler, and Workflow apply claim-first project ownership to
+  creation, lookup, mutation, replay, and event lineage. Tenant-wide behavior is
+  retained only for credentials that intentionally carry no project authority.
+
 These services don't have `UdbProject` workflow facades yet. Until they do, call them
 through the **thin generated client** — the generated robustness layer
 (`generatedClient.ts`, `generated_client.go`, `generated_client.py`,

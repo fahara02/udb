@@ -76,6 +76,49 @@ refuses to start instead of recording itself as done.
   and why a typed-aggregate defect could not be diagnosed from its symptom. A
   shape defect is now an error; SQL `NULL` remains a legitimate zero.
   `GetThroughput` likewise surfaces a decode failure instead of reporting `0`.
+- **Open CDC subscriptions no longer outlive their authority.** Long-running
+  `PublishCDC` streams periodically re-resolve bearer sessions, API keys, mTLS
+  bindings, tenant status, scopes, and the current policy decision. Revocation,
+  suspension, policy withdrawal, credential expiry, or a changed scope set now
+  terminates the existing stream instead of permitting delivery until disconnect.
+  Admission permits, inflight accounting, and the effective deadline also live
+  for the lifetime of the lazy response stream rather than ending at RPC return.
+- **CDC replay and topic-policy failures now fail closed.** Malformed or pruned
+  resume cursors are rejected instead of rewinding to the Unix epoch; journal
+  SQL/decode failures terminate replay instead of looking like an idle stream.
+  Topic policies load and reload as complete immutable generations, include
+  disabled rows, share one ingress/publish/subscriber matcher, and make CDC
+  unavailable when the current generation cannot be loaded.
+- **Backups are coherent and project-authoritative.** `BackupService` resolves
+  one active project catalog and canonical PostgreSQL write instance, then reads
+  all tenant tables in one `REPEATABLE READ READ ONLY` transaction. The durable
+  run and immutable manifest record the exact project, catalog checksum,
+  instance, snapshot/WAL provenance, destination, and object keys. Restore and
+  retention use that recorded identity instead of mutable process defaults;
+  unsupported multi-instance project topologies refuse completion rather than
+  advertising a fuzzy backup as atomic.
+- **Vault cannot unseal from plaintext DEK material.** Secret/transit DEKs must
+  be protected by an authenticated master-KEK envelope. Every served secret and
+  transit operation pins one active-project PostgreSQL write authority before
+  its first typed or raw access, and its outbox evidence reuses that same pin so
+  weighted routing cannot split key material from its audit event.
+- **Dynamic database credentials are tenant- and project-bound.** Issued
+  PostgreSQL logins are read-only, have no memberships or RLS-bypass authority,
+  receive only explicit relation grants, and enforce restrictive fixed-literal
+  tenant/project policies independent of caller-mutable GUCs. Lease issuance is
+  idempotent and replay-safe; revoke and emergency project revoke terminate
+  sessions, remove policy/grant/role state, prove absence, emit durable evidence,
+  and shred the KEK-wrapped recovery envelope at terminal revocation.
+- **Native project ownership is enforced consistently.** Storage file
+  operations, Scheduler jobs, and Workflow instances bind claim-first project
+  authority on creation and apply the same ownership predicate to reads,
+  mutations, idempotency replay, and outbox lineage. Non-representable project
+  authority fails before database access instead of widening to tenant scope.
+- **Storage GC-ledger readiness is scoped to its physical store.** A service or
+  database that created `udb_storage.gc_intents` can no longer mark a different
+  pool or a later schema lifetime ready through process-global state. Service
+  clones share readiness for one binding; a newly bound service rechecks and
+  recreates its ledger as required.
 
 ### Changed
 - **`native_service_context(.., "")` is banned.** The empty project argument fell

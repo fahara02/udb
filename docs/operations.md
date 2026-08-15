@@ -226,8 +226,17 @@ In practice, track:
 - publish latency and publish failure count;
 - DLQ enqueue and replay count;
 - topic-policy rejection count;
+- topic-policy generation, age, and availability;
 - consumer lag;
 - schema/catalog version attached to emitted events.
+
+Treat an authorization or topic-policy change as a stream-lifetime event, not
+only a connect-time check. Open CDC streams periodically revalidate their
+credential lineage, tenant status, scopes, and policy decision; revocation or a
+changed scope set closes the stream and requires reconnect. Disabling the final
+topic policy or failing to load a complete replacement generation makes CDC
+unavailable. Do not "recover" a missing/pruned cursor by starting at epoch: ask
+the caller to choose an explicit retained position or a new subscription.
 
 ## Common Runbooks
 
@@ -267,6 +276,20 @@ sure that backup includes:
 The actual file bytes live in object storage, not in that store. Back up object
 metadata and object storage under the same retention policy, so that when you
 restore, metadata and bytes come back together and stay consistent.
+
+`BackupService` resolves the active project catalog and exactly one canonical
+PostgreSQL write instance at operation start. It exports tenant tables inside
+one `REPEATABLE READ READ ONLY` transaction and records the project, catalog
+checksum, instance, snapshot/WAL provenance, destination, manifest key, and
+checksums in durable run metadata. A project that spans multiple canonical
+PostgreSQL instances is refused until a coordinated snapshot protocol exists;
+do not describe that topology as an atomic backup.
+
+Restore and retention must follow the immutable run metadata, never current
+process defaults. Restore preflights project, catalog, and instance compatibility
+before writing. Retention stops at the first provider error, preserves the
+manifest and run journal for retry, and deletes the manifest only after every
+referenced table artifact has been removed and verified.
 
 ## Load And Soak
 
