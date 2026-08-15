@@ -435,10 +435,14 @@ impl ApiKeyServiceImpl {
         record_tenant: &str,
         record_project: &str,
     ) -> Result<(), Status> {
+        // `enforce_caller_tenant` already grants a cross-tenant admin its
+        // tenant reach. Returning Ok here as well made that admin scope skip the
+        // PROJECT check too, so a caller whose claim is bound to project-a could
+        // act on project-b purely by holding `udb:auth:admin` — the admin scope
+        // silently dissolved project separation. A claim that names a concrete
+        // project stays bound to it; an admin wanting cross-project reach simply
+        // does not carry a project claim (empty claim project still passes).
         self.enforce_caller_tenant(context, record_tenant)?;
-        if Self::caller_is_cross_tenant_admin(context) {
-            return Ok(());
-        }
         let caller_project = context
             .and_then(|c| c.tenant.as_ref())
             .map(|tenant| tenant.project_id.trim())
