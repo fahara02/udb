@@ -125,3 +125,7 @@ spend minutes re-entering Cargo before contract drift could be reported. All
 native gates now execute that already-built broker directly.
 The workflow and docs-freshness posture fixtures pin this build-once command so
 a future edit cannot silently restore the redundant Cargo boundary.
+
+GitHub CI run `31897080052` then produced `ci-native-docs-repair-1`, the
+runner-generated native-contract update for first-class Backup project
+ownership. The patch was reviewed and applied without invoking a local build.

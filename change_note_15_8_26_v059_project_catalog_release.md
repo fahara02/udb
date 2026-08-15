@@ -55,6 +55,8 @@ Release: 0.5.9
 - Error-detail posture now pins the centralized catalog project policy detail
   and current typed durable/reconciliation errors, removing stale requirements
   for deleted per-handler authorization and in-memory activation branches.
+- Its migration-planning checks now pin the current transaction/authority-lock
+  and exact catalog-id error seams rather than removed raw manifest parsing.
 - Message-schema discovery, admin summary, and projection-drift control paths
   use the same claim binding and exact active target. Capabilities expose the
   verified semantic manifest checksum, while health rejects raw ACTIVE rows
@@ -146,11 +148,16 @@ Release: 0.5.9
 - Focused run `31896157075` proved initial stage/replay, conflicting-key denial,
   concurrent one-ACTIVE enforcement, and rollback before isolating the
   reactivation-evidence split fixed in this revision.
+- Focused GitHub run `31897092671` then passed the complete catalog-authority
+  regression after the catalog/binding/reload evidence tuple was unified.
 - Applied the three-line `ci-rustfmt-repair-1` artifact from run `31896140645`
   to the shared project resolver before this commit.
 - Native repair generation consumes the exact broker already built by the
   Linux Rust job, avoiding a second Cargo invocation and its post-failure target
   lock while preserving runner/toolchain provenance.
+- Applied `ci-native-docs-repair-1` from GitHub run `31897080052`; it refreshes
+  the native contract for Backup tenant+project isolation using the runner-built
+  broker, with no local build or test.
 - Native manifest, lint, docs, and contract-diff gates likewise execute the
   preceding all-target build directly instead of redundantly re-entering Cargo.
 - Workflow and docs-freshness posture fixtures now enforce that build-once

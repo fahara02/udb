@@ -143,12 +143,21 @@ still required project-specific helpers and pre-reconciliation error strings
 that had been replaced by the shared project resolver and durable transition
 errors.
 
+The next quick gate found two final stale migration tokens in the same posture
+list: raw manifest load/parse operations no longer exist because migration
+planning consumes the exact proven catalog record. The guard must instead pin
+transaction begin, project authority lock, and exact catalog-id validation.
+
 After typed-manifest integrity fixed initial readback, focused run
 `31896157075` progressed through concurrent activation and rollback, then found
 one remaining split: rollback stored its new compatibility evidence in the
 project binding and reload record while the reactivated catalog row retained
 its original stage-time baseline/evidence. The next StageCatalog correctly
 detected that ACTIVE/binding mismatch.
+
+Focused GitHub run `31897092671` passed after that correction, proving the full
+serialized authority regression against PostgreSQL and Kafka on the pushed
+revision.
 
 ## Regression coverage
 
