@@ -34,7 +34,7 @@ class BackupRun extends \Google\Protobuf\Internal\Message
     protected $tenant_id = '';
     /**
      * First-class project owner. The empty default is a migration quarantine for
-     * pre-v0.5.8 rows: serving paths always write a resolved active project and
+     * pre-v0.5.9 rows: serving paths always write a resolved active project and
      * no request/worker is allowed to claim a blank legacy row as `default`.
      *
      * Generated from protobuf field <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
@@ -119,7 +119,7 @@ class BackupRun extends \Google\Protobuf\Internal\Message
      *     @type string $tenant_id
      *     @type string $project_id
      *           First-class project owner. The empty default is a migration quarantine for
-     *           pre-v0.5.8 rows: serving paths always write a resolved active project and
+     *           pre-v0.5.9 rows: serving paths always write a resolved active project and
      *           no request/worker is allowed to claim a blank legacy row as `default`.
      *     @type string $kind
      *           BACKUP | RESTORE — which movement produced this journal row.
@@ -196,7 +196,7 @@ class BackupRun extends \Google\Protobuf\Internal\Message
 
     /**
      * First-class project owner. The empty default is a migration quarantine for
-     * pre-v0.5.8 rows: serving paths always write a resolved active project and
+     * pre-v0.5.9 rows: serving paths always write a resolved active project and
      * no request/worker is allowed to claim a blank legacy row as `default`.
      *
      * Generated from protobuf field <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
@@ -209,7 +209,7 @@ class BackupRun extends \Google\Protobuf\Internal\Message
 
     /**
      * First-class project owner. The empty default is a migration quarantine for
-     * pre-v0.5.8 rows: serving paths always write a resolved active project and
+     * pre-v0.5.9 rows: serving paths always write a resolved active project and
      * no request/worker is allowed to claim a blank legacy row as `default`.
      *
      * Generated from protobuf field <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>

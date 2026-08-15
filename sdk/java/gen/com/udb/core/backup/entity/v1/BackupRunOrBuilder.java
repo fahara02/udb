@@ -37,7 +37,7 @@ public interface BackupRunOrBuilder extends
   /**
    * <pre>
    * First-class project owner. The empty default is a migration quarantine for
-   * pre-v0.5.8 rows: serving paths always write a resolved active project and
+   * pre-v0.5.9 rows: serving paths always write a resolved active project and
    * no request/worker is allowed to claim a blank legacy row as `default`.
    * </pre>
    *
@@ -48,7 +48,7 @@ public interface BackupRunOrBuilder extends
   /**
    * <pre>
    * First-class project owner. The empty default is a migration quarantine for
-   * pre-v0.5.8 rows: serving paths always write a resolved active project and
+   * pre-v0.5.9 rows: serving paths always write a resolved active project and
    * no request/worker is allowed to claim a blank legacy row as `default`.
    * </pre>
    *

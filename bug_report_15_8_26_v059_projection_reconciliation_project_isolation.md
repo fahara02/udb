@@ -1,7 +1,7 @@
 # Release 0.5.9 bug report: projection workers crossed project-store boundaries
 
-Date: 2026-08-15  
-Severity: Critical  
+Date: 2026-08-15
+Severity: Critical
 Status: Fixed in source; CI validation pending
 
 ## Summary

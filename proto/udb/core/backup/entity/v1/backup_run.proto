@@ -81,9 +81,9 @@ message BackupRun {
 
   string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_backup_runs_tenant" index_type: "BTREE" } }];
 
-  // First-class project owner. Blank legacy ownership is quarantined: serving
-  // paths always write a resolved active project, and no request/worker may
-  // claim a blank row as `default`.
+  // First-class project owner. The empty default is a migration quarantine for
+  // pre-v0.5.9 rows: serving paths always write a resolved active project and
+  // no request/worker is allowed to claim a blank legacy row as `default`.
   string project_id = 16 [(udb.core.common.v1.pg_column) = { column_name: "project_id" project_column: true sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
 
   // BACKUP | RESTORE — which movement produced this journal row.

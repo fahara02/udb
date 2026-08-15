@@ -50,6 +50,15 @@ by the v0.5.8 post-release benchmark and restoring trustworthy release evidence.
 - **Backup inventory remains readable during topology repair.** ListBackups
   requires an exact active project/store binding but no longer demands the full
   backup-execution topology merely to list its durable journal.
+- **Backup state is isolated by tenant and project.** Run and policy schemas,
+  RLS, indexes, conflicts, CRUD, export/import, scheduling, and retention carry
+  first-class project ownership. Blank legacy ownership is quarantined, and a
+  same-tenant project cannot list, guess, mutate, restore, or prune another
+  project's backup state.
+- **PHP benchmark seed failures remain observable.** A failed native seed keeps
+  its original gRPC code and detail, marks only dependent RPCs `SEED_BLOCKED`,
+  and still emits a complete 381-RPC PHP report. Catalog lifecycle ordering is
+  pinned as Stage, Activate, then Rollback.
 - **Materialized views use the customer project's database.** Creation and TTL
   refresh route through the exact project PostgreSQL write authority, and the
   scheduler observes catalog activation/reload instead of capturing the default

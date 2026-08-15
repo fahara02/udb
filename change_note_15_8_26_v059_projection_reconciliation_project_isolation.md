@@ -1,6 +1,6 @@
 # Release 0.5.9 change note: project-scoped projection execution and repair
 
-Date: 2026-08-15  
+Date: 2026-08-15
 Validation: Source-complete; CI pending
 
 Projection reconciliation, materialization, drift detection, and drift repair

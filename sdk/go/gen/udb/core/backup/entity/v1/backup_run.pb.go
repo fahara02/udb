@@ -37,7 +37,7 @@ type BackupRun struct {
 	BackupId string                 `protobuf:"bytes,1,opt,name=backup_id,json=backupId,proto3" json:"backup_id,omitempty"`
 	TenantId string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	// First-class project owner. The empty default is a migration quarantine for
-	// pre-v0.5.8 rows: serving paths always write a resolved active project and
+	// pre-v0.5.9 rows: serving paths always write a resolved active project and
 	// no request/worker is allowed to claim a blank legacy row as `default`.
 	ProjectId string `protobuf:"bytes,16,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	// BACKUP | RESTORE — which movement produced this journal row.
