@@ -817,6 +817,12 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ('$nasmSha256 = "161D0BFAFF53C2F9E9F3E69FD0672323EBABAFD1268976A5CEC11BE92A19AEE7"', "Windows NASM checksum pin"),
         ("Get-FileHash -Algorithm SHA256", "Windows NASM checksum verification"),
         ("NASM archive SHA-256 mismatch", "Windows NASM checksum fail-closed gate"),
+        ('$nasmPackageVersion = "3.2.0"', "Windows NASM fallback package version pin"),
+        ("https://community.chocolatey.org/api/v2/package/nasm/", "Windows NASM direct package fallback"),
+        ('$nasmPackageSha256 = "9A72BA9D6F6F0DC2A5598EC160366B2BDD925A23E229DFB5D854F63C0F2A2160"', "Windows NASM fallback package checksum"),
+        ('$nasmInstallerSha256 = "0DDB40310861EB29F4D649FEB9466779982A2D251C0DB2B9CF0D21CF591171F3"', "Windows NASM embedded installer checksum"),
+        ("NASM package SHA-256 mismatch", "Windows NASM fallback package fail-closed gate"),
+        ("NASM installer SHA-256 mismatch", "Windows NASM embedded installer fail-closed gate"),
         ("ilammy/msvc-dev-cmd@v1", "MSVC dev command setup"),
     ),
     ".github/actions/setup-sdk-toolchains/action.yml": (

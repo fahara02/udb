@@ -20,8 +20,11 @@ Release: 0.5.8
   rules so a later CI refactor cannot silently restore the fallback.
 - Windows native and release builds now reuse the hosted runner's installed
   Strawberry Perl and install NASM 3.02 from the official project archive. The
-  archive has a pinned SHA-256, bounded retries, and a hard checksum failure;
-  the Chocolatey community feed is no longer a release-build dependency.
+  archive has a pinned SHA-256 and bounded retries. If the official host is
+  unavailable, CI downloads the direct versioned Chocolatey package, verifies
+  both its package SHA-256 and embedded official-installer SHA-256, and installs
+  it silently. No mutable latest-package lookup remains, and both paths fail
+  closed on unexpected bytes.
 - The workflow-posture positive and ordering-negative self-test fixtures now
   include the successful-real-run and fresh-artifact requirements enforced for
   Pages, so the ordering mutation continues to exercise the intended failure.
@@ -66,3 +69,6 @@ Release: 0.5.8
 - PR #30 quick-gate run `31877680857` proved the new guard and exposed the
   remaining `udb-coding`, codebase-map, and RPC-inventory drift that the
   fail-fast publisher had not reached. All three generators are now applied.
+- PR #30 CI run `31877820722` passed the new skill drift gate but found the
+  official NASM host unreachable for all three bounded attempts. A second
+  checksum-pinned distribution path is added and must pass Windows CI.

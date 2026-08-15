@@ -30,10 +30,11 @@ protocol change.
   A genuine manual or post-release benchmark must succeed and supply its fresh
   `sdk-benchmark-results` artifact; a missing artifact fails the Pages build
   instead of falling back to the committed historical dashboard JSON.
-- **Windows release builds no longer depend on the Chocolatey community feed
-  for NASM.** CI uses the runner-provided Perl and a checksum-pinned NASM 3.02
-  archive from the official project distribution, with bounded download retries
-  and fail-closed archive verification.
+- **Windows release builds no longer depend on a single mutable NASM feed.** CI
+  uses the runner-provided Perl and first downloads a checksum-pinned NASM 3.02
+  archive from the official distribution. If that host is unavailable, it uses
+  the direct versioned Chocolatey package endpoint and verifies both the package
+  and embedded official-installer hashes before use.
 - **Generated UDB skill wrappers and references now match the 0.5.8 canonical
   guidance.** The OpenAI, Ollama, and plugin-reference copies no longer
   advertise 0.5.6 package commands; copied codebase/API inventories include the

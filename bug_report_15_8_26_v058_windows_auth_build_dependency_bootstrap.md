@@ -26,8 +26,11 @@ the native tool consumed by release builds.
   real Perl executable is available.
 - Download a fixed NASM version from the official NASM release archive with
   bounded retries.
-- Pin and verify the archive SHA-256 before extraction, then verify `nasm.exe`
-  exists and runs.
+- If the official host is unavailable, use a direct versioned package endpoint
+  rather than a mutable feed lookup, and verify both the package and embedded
+  official-installer SHA-256 values.
+- Verify the official archive before extraction or the fallback installer
+  before execution, then verify `nasm.exe` exists and runs.
 - Fail closed on a missing Perl, download exhaustion, checksum mismatch, or
   malformed archive.
 - Pin this bootstrap contract in the workflow-posture guard.
@@ -41,3 +44,8 @@ the native tool consumed by release builds.
 - The official `nasm-3.02-win64.zip` archive hashes to
   `161D0BFAFF53C2F9E9F3E69FD0672323EBABAFD1268976A5CEC11BE92A19AEE7` and
   contains `nasm-3.02/nasm.exe`.
+- PR #30 CI run `31877820722` showed that nasm.us can also be unreachable for
+  all three attempts. The direct `nasm/3.2.0` package hashes to
+  `9A72BA9D6F6F0DC2A5598EC160366B2BDD925A23E229DFB5D854F63C0F2A2160`;
+  its embedded x64 installer hashes to
+  `0DDB40310861EB29F4D649FEB9466779982A2D251C0DB2B9CF0D21CF591171F3`.
