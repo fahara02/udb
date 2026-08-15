@@ -25,8 +25,10 @@ Release: 0.5.8
 - The workflow-posture positive and ordering-negative self-test fixtures now
   include the successful-real-run and fresh-artifact requirements enforced for
   Pages, so the ordering mutation continues to exercise the intended failure.
-- The generated `using-udb` plugin reference, OpenAI instructions, and Ollama
-  Modelfile are synchronized from the 0.5.8 canonical skill source.
+- The generated `using-udb` and `udb-coding` plugin references, OpenAI
+  instructions, and Ollama Modelfiles are synchronized from their 0.5.8
+  canonical sources. Skill-local codebase-map and auth-inventory references are
+  synchronized as well; the latter includes both Vault credential-revoke RPCs.
 - CI quick-gate now runs all three skill synchronization checks on pull requests
   and main pushes; workflow posture pins those commands so wrapper drift cannot
   reach the main-only publisher again.
@@ -61,3 +63,6 @@ Release: 0.5.8
 - Main publisher run `31877566060` rejected three generated `using-udb`
   wrappers that still contained 0.5.6 guidance. The repository generator
   refreshes all three, and the new PR quick-gate must pass before release.
+- PR #30 quick-gate run `31877680857` proved the new guard and exposed the
+  remaining `udb-coding`, codebase-map, and RPC-inventory drift that the
+  fail-fast publisher had not reached. All three generators are now applied.

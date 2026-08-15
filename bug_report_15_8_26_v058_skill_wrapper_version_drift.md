@@ -1,4 +1,4 @@
-# Bug report: generated UDB skill wrappers retained 0.5.6 guidance
+# Bug report: generated UDB skill wrappers and references drifted
 
 Date: 2026-08-15
 Affected release process: 0.5.8 preparation
@@ -13,9 +13,12 @@ The 0.5.8 version propagation updated the canonical
 - the OpenAI instructions;
 - the Ollama Modelfile.
 
-All three still described UDB 0.5.6 and supplied 0.5.6 install commands. PR CI
-did not run the skill synchronization checks; they ran only in the main-push
-publisher, which rejected main run `31877566060` after merge.
+All three still described UDB 0.5.6 and supplied 0.5.6 install commands. The
+`udb-coding` derived wrappers also retained the 0.5.6 baseline, while its copied
+codebase map and the `using-udb` RPC inventory predated the completed Vault
+lifecycle surface. PR CI did not run the skill synchronization checks; they ran
+only in the main-push publisher, which rejected main run `31877566060` after
+merge and stopped at the first drift group.
 
 ## Impact
 
@@ -25,7 +28,8 @@ governed, public-facing artifact was out of sync.
 
 ## Required correction
 
-- Regenerate all `using-udb` wrappers from the canonical 0.5.8 source.
+- Regenerate all `using-udb` and `udb-coding` wrappers from their canonical
+  0.5.8 sources and synchronize generated map/inventory references.
 - Run `sync_skills.py --check`, `sync_udb_coding.py --check`, and
   `sync_references.py --check` in the required PR/main quick gate.
 - Pin those commands in workflow posture so the pre-merge check cannot silently
@@ -38,3 +42,8 @@ Main publisher run `31877566060` reported these exact out-of-sync files:
 - `plugins/udb/skills/using-udb/references/using-udb.md`;
 - `openai/instructions.md`;
 - `ollama/Modelfile`.
+
+PR #30 quick-gate run `31877680857` then rejected the remaining generated skill
+drift. Regenerating the other two sources updated the `udb-coding` plugin,
+OpenAI, and Ollama copies, synchronized the current codebase map, and added the
+two Vault revoke RPCs to the skill-local auth inventory (302/302 secured RPCs).
