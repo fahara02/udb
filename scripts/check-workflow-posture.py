@@ -10485,11 +10485,14 @@ jobs:
         assert any("Swagger SDK alias extension validation" in failure for failure in failures), failures
 
         (wf / "pages.yml").write_text(
-            pages_good.replace(' or "api_alias" not in row', ""),
+            pages_good.replace(
+                '                  for field in ("wire_api", "api_alias", "operation_id"):\n',
+                '                  for field in ("wire_api", "operation_id"):\n',
+            ),
             encoding="utf-8",
         )
         failures = check_pages_playground_wasm_gate(root)
-        assert any("benchmark public identity row validation" in failure for failure in failures), failures
+        assert any("benchmark public identity field validation" in failure for failure in failures), failures
 
         (wf / "pages.yml").write_text(
             pages_good.replace(

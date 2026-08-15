@@ -2642,32 +2642,29 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
 
         let decoded = match element {
             "INT2" | "SMALLINT" => row.try_get::<Option<Vec<Option<i16>>>, _>(idx).map(wrap),
-            "INT4" | "INTEGER" | "INT" => {
-                row.try_get::<Option<Vec<Option<i32>>>, _>(idx).map(wrap)
-            }
+            "INT4" | "INTEGER" | "INT" => row.try_get::<Option<Vec<Option<i32>>>, _>(idx).map(wrap),
             "INT8" | "BIGINT" => row.try_get::<Option<Vec<Option<i64>>>, _>(idx).map(wrap),
             "FLOAT8" | "DOUBLE PRECISION" => {
                 row.try_get::<Option<Vec<Option<f64>>>, _>(idx).map(wrap)
             }
             "FLOAT4" | "REAL" => row.try_get::<Option<Vec<Option<f32>>>, _>(idx).map(wrap),
             "BOOL" | "BOOLEAN" => row.try_get::<Option<Vec<Option<bool>>>, _>(idx).map(wrap),
-            "UUID" => row
-                .try_get::<Option<Vec<Option<uuid::Uuid>>>, _>(idx)
-                .map(|items| match items {
-                    Some(items) => JsonValue::Array(
-                        items
-                            .into_iter()
-                            .map(|item| {
-                                item.map(|value| JsonValue::from(value.to_string()))
-                                    .unwrap_or(JsonValue::Null)
-                            })
-                            .collect(),
-                    ),
-                    None => JsonValue::Null,
-                }),
-            _ => row
-                .try_get::<Option<Vec<Option<String>>>, _>(idx)
-                .map(wrap),
+            "UUID" => {
+                row.try_get::<Option<Vec<Option<uuid::Uuid>>>, _>(idx)
+                    .map(|items| match items {
+                        Some(items) => JsonValue::Array(
+                            items
+                                .into_iter()
+                                .map(|item| {
+                                    item.map(|value| JsonValue::from(value.to_string()))
+                                        .unwrap_or(JsonValue::Null)
+                                })
+                                .collect(),
+                        ),
+                        None => JsonValue::Null,
+                    })
+            }
+            _ => row.try_get::<Option<Vec<Option<String>>>, _>(idx).map(wrap),
         }
         .map_err(|err| {
             core_internal_status(

@@ -76,6 +76,11 @@ Release: 0.5.9
   negative selftest mutation for the old single-line collector command. The
   fixture now removes the new gate target token and expects the current
   diagnostic; verification remains CI-only.
+- Combined-head CI run `31914138188` produced rustfmt repair artifact
+  `9254465048`; its exact `src/runtime/core/mod.rs` formatting diff is applied
+  without running a local formatter. Workflow-lint run `31914138204` again
+  passed `actionlint` and identified a stale public-identity negative mutation;
+  the fixture now removes `api_alias` from the current field-validation loop.
 - GitHub CI must run `python scripts/collect_sdk_bench_results.py --selftest`,
   `python scripts/check-bench-harness-posture.py --selftest`,
   `python scripts/check-bench-harness-posture.py`,

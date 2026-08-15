@@ -133,6 +133,15 @@ this bug report, the
 paired change note, and `CHANGELOG.md`. Verification remains CI-only; no local
 Python, TypeScript, Cargo, build, test, or formatting command is run.
 
+PR CI run `31914138188` at combined head `70251567` reached the quick gate and
+failed only the Rust formatting check for the consolidated PostgreSQL array
+match. CI repair artifact `ci-rustfmt-repair-1` (artifact `9254465048`) supplied
+the exact formatting diff, which is applied without running a local formatter.
+Workflow-lint run `31914138204` passed `actionlint` and then exposed another
+stale negative fixture: it tried to remove an obsolete `api_alias` expression
+instead of mutating the current public-identity field loop. The fixture now
+removes `api_alias` from that exact loop and asserts the current diagnostic.
+
 Final authority review found that the workflow-posture `pages_good` fixture
 listed the schema-v2 rejection and digest pin after the fresh branch's closing
 `fi`, even though production correctly placed them in `else`. Token-only posture
