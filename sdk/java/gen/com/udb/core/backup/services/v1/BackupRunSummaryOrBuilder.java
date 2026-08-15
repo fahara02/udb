@@ -135,4 +135,24 @@ public interface BackupRunSummaryOrBuilder extends
    * @return The completedAtUnix.
    */
   long getCompletedAtUnix();
+
+  /**
+   * <pre>
+   * First-class project owner of this journal row.
+   * </pre>
+   *
+   * <code>string project_id = 14 [json_name = "projectId"];</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <pre>
+   * First-class project owner of this journal row.
+   * </pre>
+   *
+   * <code>string project_id = 14 [json_name = "projectId"];</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
 }

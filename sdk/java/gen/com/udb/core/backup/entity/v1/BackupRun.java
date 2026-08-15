@@ -12,8 +12,9 @@ package com.udb.core.backup.entity.v1;
  * 9.10). Each StartTenantBackup / RestoreTenant appends a row here recording
  * the object prefix, the manifest checksum, the per-run row/table counts, and
  * the count of tables EXCLUDED for lack of a tenant column (reported, never
- * silently skipped). RLS scopes rows to the tenant. ListBackups/GetBackup read
- * this journal; the encrypted artifacts themselves live in object storage.
+ * silently skipped). RLS scopes rows to the tenant AND project. ListBackups/
+ * GetBackup read this journal; the encrypted artifacts themselves live in
+ * object storage.
  * ---------------------------------------------------------------------------
  * </pre>
  *
@@ -41,6 +42,7 @@ private static final long serialVersionUID = 0L;
   private BackupRun() {
     backupId_ = "";
     tenantId_ = "";
+    projectId_ = "";
     kind_ = "";
     status_ = "";
     objectPrefix_ = "";
@@ -137,6 +139,57 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int PROJECT_ID_FIELD_NUMBER = 16;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object projectId_ = "";
+  /**
+   * <pre>
+   * First-class project owner. The empty default is a migration quarantine for
+   * pre-v0.5.8 rows: serving paths always write a resolved active project and
+   * no request/worker is allowed to claim a blank legacy row as `default`.
+   * </pre>
+   *
+   * <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The projectId.
+   */
+  @java.lang.Override
+  public java.lang.String getProjectId() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      projectId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * First-class project owner. The empty default is a migration quarantine for
+   * pre-v0.5.8 rows: serving paths always write a resolved active project and
+   * no request/worker is allowed to claim a blank legacy row as `default`.
+   * </pre>
+   *
+   * <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for projectId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getProjectIdBytes() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      projectId_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -654,6 +707,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 15, metadataJson_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 16, projectId_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -713,6 +769,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(15, metadataJson_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(16, projectId_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -732,6 +791,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getBackupId())) return false;
     if (!getTenantId()
         .equals(other.getTenantId())) return false;
+    if (!getProjectId()
+        .equals(other.getProjectId())) return false;
     if (!getKind()
         .equals(other.getKind())) return false;
     if (!getStatus()
@@ -779,6 +840,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getBackupId().hashCode();
     hash = (37 * hash) + TENANT_ID_FIELD_NUMBER;
     hash = (53 * hash) + getTenantId().hashCode();
+    hash = (37 * hash) + PROJECT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getProjectId().hashCode();
     hash = (37 * hash) + KIND_FIELD_NUMBER;
     hash = (53 * hash) + getKind().hashCode();
     hash = (37 * hash) + STATUS_FIELD_NUMBER;
@@ -914,8 +977,9 @@ private static final long serialVersionUID = 0L;
    * 9.10). Each StartTenantBackup / RestoreTenant appends a row here recording
    * the object prefix, the manifest checksum, the per-run row/table counts, and
    * the count of tables EXCLUDED for lack of a tenant column (reported, never
-   * silently skipped). RLS scopes rows to the tenant. ListBackups/GetBackup read
-   * this journal; the encrypted artifacts themselves live in object storage.
+   * silently skipped). RLS scopes rows to the tenant AND project. ListBackups/
+   * GetBackup read this journal; the encrypted artifacts themselves live in
+   * object storage.
    * ---------------------------------------------------------------------------
    * </pre>
    *
@@ -961,6 +1025,7 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       backupId_ = "";
       tenantId_ = "";
+      projectId_ = "";
       kind_ = "";
       status_ = "";
       objectPrefix_ = "";
@@ -1022,49 +1087,52 @@ private static final long serialVersionUID = 0L;
         result.tenantId_ = tenantId_;
       }
       if (((from_bitField0_ & 0x00000004) != 0)) {
-        result.kind_ = kind_;
+        result.projectId_ = projectId_;
       }
       if (((from_bitField0_ & 0x00000008) != 0)) {
-        result.status_ = status_;
+        result.kind_ = kind_;
       }
       if (((from_bitField0_ & 0x00000010) != 0)) {
-        result.objectPrefix_ = objectPrefix_;
+        result.status_ = status_;
       }
       if (((from_bitField0_ & 0x00000020) != 0)) {
-        result.manifestChecksum_ = manifestChecksum_;
+        result.objectPrefix_ = objectPrefix_;
       }
       if (((from_bitField0_ & 0x00000040) != 0)) {
-        result.tableCount_ = tableCount_;
+        result.manifestChecksum_ = manifestChecksum_;
       }
       if (((from_bitField0_ & 0x00000080) != 0)) {
-        result.totalRows_ = totalRows_;
+        result.tableCount_ = tableCount_;
       }
       if (((from_bitField0_ & 0x00000100) != 0)) {
-        result.excludedCount_ = excludedCount_;
+        result.totalRows_ = totalRows_;
       }
       if (((from_bitField0_ & 0x00000200) != 0)) {
-        result.sourceTenantId_ = sourceTenantId_;
+        result.excludedCount_ = excludedCount_;
       }
       if (((from_bitField0_ & 0x00000400) != 0)) {
-        result.targetTenantId_ = targetTenantId_;
+        result.sourceTenantId_ = sourceTenantId_;
       }
       if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.targetTenantId_ = targetTenantId_;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
         result.errorMessage_ = errorMessage_;
       }
       int to_bitField0_ = 0;
-      if (((from_bitField0_ & 0x00001000) != 0)) {
+      if (((from_bitField0_ & 0x00002000) != 0)) {
         result.createdAt_ = createdAtBuilder_ == null
             ? createdAt_
             : createdAtBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
-      if (((from_bitField0_ & 0x00002000) != 0)) {
+      if (((from_bitField0_ & 0x00004000) != 0)) {
         result.completedAt_ = completedAtBuilder_ == null
             ? completedAt_
             : completedAtBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
-      if (((from_bitField0_ & 0x00004000) != 0)) {
+      if (((from_bitField0_ & 0x00008000) != 0)) {
         result.metadataJson_ = metadataJson_;
       }
       result.bitField0_ |= to_bitField0_;
@@ -1092,24 +1160,29 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000002;
         onChanged();
       }
+      if (!other.getProjectId().isEmpty()) {
+        projectId_ = other.projectId_;
+        bitField0_ |= 0x00000004;
+        onChanged();
+      }
       if (!other.getKind().isEmpty()) {
         kind_ = other.kind_;
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         onChanged();
       }
       if (!other.getStatus().isEmpty()) {
         status_ = other.status_;
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         onChanged();
       }
       if (!other.getObjectPrefix().isEmpty()) {
         objectPrefix_ = other.objectPrefix_;
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         onChanged();
       }
       if (!other.getManifestChecksum().isEmpty()) {
         manifestChecksum_ = other.manifestChecksum_;
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000040;
         onChanged();
       }
       if (other.getTableCount() != 0) {
@@ -1123,17 +1196,17 @@ private static final long serialVersionUID = 0L;
       }
       if (!other.getSourceTenantId().isEmpty()) {
         sourceTenantId_ = other.sourceTenantId_;
-        bitField0_ |= 0x00000200;
+        bitField0_ |= 0x00000400;
         onChanged();
       }
       if (!other.getTargetTenantId().isEmpty()) {
         targetTenantId_ = other.targetTenantId_;
-        bitField0_ |= 0x00000400;
+        bitField0_ |= 0x00000800;
         onChanged();
       }
       if (!other.getErrorMessage().isEmpty()) {
         errorMessage_ = other.errorMessage_;
-        bitField0_ |= 0x00000800;
+        bitField0_ |= 0x00001000;
         onChanged();
       }
       if (other.hasCreatedAt()) {
@@ -1144,7 +1217,7 @@ private static final long serialVersionUID = 0L;
       }
       if (!other.getMetadataJson().isEmpty()) {
         metadataJson_ = other.metadataJson_;
-        bitField0_ |= 0x00004000;
+        bitField0_ |= 0x00008000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1185,73 +1258,78 @@ private static final long serialVersionUID = 0L;
             } // case 18
             case 26: {
               kind_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000004;
+              bitField0_ |= 0x00000008;
               break;
             } // case 26
             case 34: {
               status_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000008;
+              bitField0_ |= 0x00000010;
               break;
             } // case 34
             case 42: {
               objectPrefix_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000010;
+              bitField0_ |= 0x00000020;
               break;
             } // case 42
             case 50: {
               manifestChecksum_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000020;
+              bitField0_ |= 0x00000040;
               break;
             } // case 50
             case 56: {
               tableCount_ = input.readInt32();
-              bitField0_ |= 0x00000040;
+              bitField0_ |= 0x00000080;
               break;
             } // case 56
             case 64: {
               totalRows_ = input.readInt64();
-              bitField0_ |= 0x00000080;
+              bitField0_ |= 0x00000100;
               break;
             } // case 64
             case 72: {
               excludedCount_ = input.readInt32();
-              bitField0_ |= 0x00000100;
+              bitField0_ |= 0x00000200;
               break;
             } // case 72
             case 82: {
               sourceTenantId_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000200;
+              bitField0_ |= 0x00000400;
               break;
             } // case 82
             case 90: {
               targetTenantId_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000400;
+              bitField0_ |= 0x00000800;
               break;
             } // case 90
             case 98: {
               errorMessage_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000800;
+              bitField0_ |= 0x00001000;
               break;
             } // case 98
             case 106: {
               input.readMessage(
                   internalGetCreatedAtFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00001000;
+              bitField0_ |= 0x00002000;
               break;
             } // case 106
             case 114: {
               input.readMessage(
                   internalGetCompletedAtFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00002000;
+              bitField0_ |= 0x00004000;
               break;
             } // case 114
             case 122: {
               metadataJson_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00004000;
+              bitField0_ |= 0x00008000;
               break;
             } // case 122
+            case 130: {
+              projectId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 130
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1413,6 +1491,108 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private java.lang.Object projectId_ = "";
+    /**
+     * <pre>
+     * First-class project owner. The empty default is a migration quarantine for
+     * pre-v0.5.8 rows: serving paths always write a resolved active project and
+     * no request/worker is allowed to claim a blank legacy row as `default`.
+     * </pre>
+     *
+     * <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The projectId.
+     */
+    public java.lang.String getProjectId() {
+      java.lang.Object ref = projectId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        projectId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * First-class project owner. The empty default is a migration quarantine for
+     * pre-v0.5.8 rows: serving paths always write a resolved active project and
+     * no request/worker is allowed to claim a blank legacy row as `default`.
+     * </pre>
+     *
+     * <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for projectId.
+     */
+    public com.google.protobuf.ByteString
+        getProjectIdBytes() {
+      java.lang.Object ref = projectId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        projectId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * First-class project owner. The empty default is a migration quarantine for
+     * pre-v0.5.8 rows: serving paths always write a resolved active project and
+     * no request/worker is allowed to claim a blank legacy row as `default`.
+     * </pre>
+     *
+     * <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      projectId_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * First-class project owner. The empty default is a migration quarantine for
+     * pre-v0.5.8 rows: serving paths always write a resolved active project and
+     * no request/worker is allowed to claim a blank legacy row as `default`.
+     * </pre>
+     *
+     * <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProjectId() {
+      projectId_ = getDefaultInstance().getProjectId();
+      bitField0_ = (bitField0_ & ~0x00000004);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * First-class project owner. The empty default is a migration quarantine for
+     * pre-v0.5.8 rows: serving paths always write a resolved active project and
+     * no request/worker is allowed to claim a blank legacy row as `default`.
+     * </pre>
+     *
+     * <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      projectId_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
     private java.lang.Object kind_ = "";
     /**
      * <pre>
@@ -1468,7 +1648,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       kind_ = value;
-      bitField0_ |= 0x00000004;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -1482,7 +1662,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearKind() {
       kind_ = getDefaultInstance().getKind();
-      bitField0_ = (bitField0_ & ~0x00000004);
+      bitField0_ = (bitField0_ & ~0x00000008);
       onChanged();
       return this;
     }
@@ -1500,7 +1680,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       kind_ = value;
-      bitField0_ |= 0x00000004;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -1560,7 +1740,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       status_ = value;
-      bitField0_ |= 0x00000008;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }
@@ -1574,7 +1754,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearStatus() {
       status_ = getDefaultInstance().getStatus();
-      bitField0_ = (bitField0_ & ~0x00000008);
+      bitField0_ = (bitField0_ & ~0x00000010);
       onChanged();
       return this;
     }
@@ -1592,7 +1772,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       status_ = value;
-      bitField0_ |= 0x00000008;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }
@@ -1655,7 +1835,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       objectPrefix_ = value;
-      bitField0_ |= 0x00000010;
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }
@@ -1670,7 +1850,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearObjectPrefix() {
       objectPrefix_ = getDefaultInstance().getObjectPrefix();
-      bitField0_ = (bitField0_ & ~0x00000010);
+      bitField0_ = (bitField0_ & ~0x00000020);
       onChanged();
       return this;
     }
@@ -1689,7 +1869,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       objectPrefix_ = value;
-      bitField0_ |= 0x00000010;
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }
@@ -1749,7 +1929,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       manifestChecksum_ = value;
-      bitField0_ |= 0x00000020;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
@@ -1763,7 +1943,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearManifestChecksum() {
       manifestChecksum_ = getDefaultInstance().getManifestChecksum();
-      bitField0_ = (bitField0_ & ~0x00000020);
+      bitField0_ = (bitField0_ & ~0x00000040);
       onChanged();
       return this;
     }
@@ -1781,7 +1961,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       manifestChecksum_ = value;
-      bitField0_ |= 0x00000020;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
@@ -1803,7 +1983,7 @@ private static final long serialVersionUID = 0L;
     public Builder setTableCount(int value) {
 
       tableCount_ = value;
-      bitField0_ |= 0x00000040;
+      bitField0_ |= 0x00000080;
       onChanged();
       return this;
     }
@@ -1812,7 +1992,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearTableCount() {
-      bitField0_ = (bitField0_ & ~0x00000040);
+      bitField0_ = (bitField0_ & ~0x00000080);
       tableCount_ = 0;
       onChanged();
       return this;
@@ -1835,7 +2015,7 @@ private static final long serialVersionUID = 0L;
     public Builder setTotalRows(long value) {
 
       totalRows_ = value;
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000100;
       onChanged();
       return this;
     }
@@ -1844,7 +2024,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearTotalRows() {
-      bitField0_ = (bitField0_ & ~0x00000080);
+      bitField0_ = (bitField0_ & ~0x00000100);
       totalRows_ = 0L;
       onChanged();
       return this;
@@ -1877,7 +2057,7 @@ private static final long serialVersionUID = 0L;
     public Builder setExcludedCount(int value) {
 
       excludedCount_ = value;
-      bitField0_ |= 0x00000100;
+      bitField0_ |= 0x00000200;
       onChanged();
       return this;
     }
@@ -1891,7 +2071,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearExcludedCount() {
-      bitField0_ = (bitField0_ & ~0x00000100);
+      bitField0_ = (bitField0_ & ~0x00000200);
       excludedCount_ = 0;
       onChanged();
       return this;
@@ -1952,7 +2132,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       sourceTenantId_ = value;
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000400;
       onChanged();
       return this;
     }
@@ -1966,7 +2146,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearSourceTenantId() {
       sourceTenantId_ = getDefaultInstance().getSourceTenantId();
-      bitField0_ = (bitField0_ & ~0x00000200);
+      bitField0_ = (bitField0_ & ~0x00000400);
       onChanged();
       return this;
     }
@@ -1984,7 +2164,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       sourceTenantId_ = value;
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000400;
       onChanged();
       return this;
     }
@@ -2044,7 +2224,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       targetTenantId_ = value;
-      bitField0_ |= 0x00000400;
+      bitField0_ |= 0x00000800;
       onChanged();
       return this;
     }
@@ -2058,7 +2238,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearTargetTenantId() {
       targetTenantId_ = getDefaultInstance().getTargetTenantId();
-      bitField0_ = (bitField0_ & ~0x00000400);
+      bitField0_ = (bitField0_ & ~0x00000800);
       onChanged();
       return this;
     }
@@ -2076,7 +2256,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       targetTenantId_ = value;
-      bitField0_ |= 0x00000400;
+      bitField0_ |= 0x00000800;
       onChanged();
       return this;
     }
@@ -2124,7 +2304,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       errorMessage_ = value;
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }
@@ -2134,7 +2314,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearErrorMessage() {
       errorMessage_ = getDefaultInstance().getErrorMessage();
-      bitField0_ = (bitField0_ & ~0x00000800);
+      bitField0_ = (bitField0_ & ~0x00001000);
       onChanged();
       return this;
     }
@@ -2148,7 +2328,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       errorMessage_ = value;
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }
@@ -2161,7 +2341,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the createdAt field is set.
      */
     public boolean hasCreatedAt() {
-      return ((bitField0_ & 0x00001000) != 0);
+      return ((bitField0_ & 0x00002000) != 0);
     }
     /**
      * <code>.google.protobuf.Timestamp created_at = 13 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2186,7 +2366,7 @@ private static final long serialVersionUID = 0L;
       } else {
         createdAtBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00001000;
+      bitField0_ |= 0x00002000;
       onChanged();
       return this;
     }
@@ -2200,7 +2380,7 @@ private static final long serialVersionUID = 0L;
       } else {
         createdAtBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00001000;
+      bitField0_ |= 0x00002000;
       onChanged();
       return this;
     }
@@ -2209,7 +2389,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeCreatedAt(com.google.protobuf.Timestamp value) {
       if (createdAtBuilder_ == null) {
-        if (((bitField0_ & 0x00001000) != 0) &&
+        if (((bitField0_ & 0x00002000) != 0) &&
           createdAt_ != null &&
           createdAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
           getCreatedAtBuilder().mergeFrom(value);
@@ -2220,7 +2400,7 @@ private static final long serialVersionUID = 0L;
         createdAtBuilder_.mergeFrom(value);
       }
       if (createdAt_ != null) {
-        bitField0_ |= 0x00001000;
+        bitField0_ |= 0x00002000;
         onChanged();
       }
       return this;
@@ -2229,7 +2409,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp created_at = 13 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearCreatedAt() {
-      bitField0_ = (bitField0_ & ~0x00001000);
+      bitField0_ = (bitField0_ & ~0x00002000);
       createdAt_ = null;
       if (createdAtBuilder_ != null) {
         createdAtBuilder_.dispose();
@@ -2242,7 +2422,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp created_at = 13 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.Timestamp.Builder getCreatedAtBuilder() {
-      bitField0_ |= 0x00001000;
+      bitField0_ |= 0x00002000;
       onChanged();
       return internalGetCreatedAtFieldBuilder().getBuilder();
     }
@@ -2282,7 +2462,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the completedAt field is set.
      */
     public boolean hasCompletedAt() {
-      return ((bitField0_ & 0x00002000) != 0);
+      return ((bitField0_ & 0x00004000) != 0);
     }
     /**
      * <code>.google.protobuf.Timestamp completed_at = 14 [json_name = "completedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2307,7 +2487,7 @@ private static final long serialVersionUID = 0L;
       } else {
         completedAtBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00002000;
+      bitField0_ |= 0x00004000;
       onChanged();
       return this;
     }
@@ -2321,7 +2501,7 @@ private static final long serialVersionUID = 0L;
       } else {
         completedAtBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00002000;
+      bitField0_ |= 0x00004000;
       onChanged();
       return this;
     }
@@ -2330,7 +2510,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeCompletedAt(com.google.protobuf.Timestamp value) {
       if (completedAtBuilder_ == null) {
-        if (((bitField0_ & 0x00002000) != 0) &&
+        if (((bitField0_ & 0x00004000) != 0) &&
           completedAt_ != null &&
           completedAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
           getCompletedAtBuilder().mergeFrom(value);
@@ -2341,7 +2521,7 @@ private static final long serialVersionUID = 0L;
         completedAtBuilder_.mergeFrom(value);
       }
       if (completedAt_ != null) {
-        bitField0_ |= 0x00002000;
+        bitField0_ |= 0x00004000;
         onChanged();
       }
       return this;
@@ -2350,7 +2530,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp completed_at = 14 [json_name = "completedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearCompletedAt() {
-      bitField0_ = (bitField0_ & ~0x00002000);
+      bitField0_ = (bitField0_ & ~0x00004000);
       completedAt_ = null;
       if (completedAtBuilder_ != null) {
         completedAtBuilder_.dispose();
@@ -2363,7 +2543,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp completed_at = 14 [json_name = "completedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.Timestamp.Builder getCompletedAtBuilder() {
-      bitField0_ |= 0x00002000;
+      bitField0_ |= 0x00004000;
       onChanged();
       return internalGetCompletedAtFieldBuilder().getBuilder();
     }
@@ -2438,7 +2618,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       metadataJson_ = value;
-      bitField0_ |= 0x00004000;
+      bitField0_ |= 0x00008000;
       onChanged();
       return this;
     }
@@ -2448,7 +2628,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearMetadataJson() {
       metadataJson_ = getDefaultInstance().getMetadataJson();
-      bitField0_ = (bitField0_ & ~0x00004000);
+      bitField0_ = (bitField0_ & ~0x00008000);
       onChanged();
       return this;
     }
@@ -2462,7 +2642,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       metadataJson_ = value;
-      bitField0_ |= 0x00004000;
+      bitField0_ |= 0x00008000;
       onChanged();
       return this;
     }

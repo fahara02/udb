@@ -36,7 +36,29 @@ public interface BackupPolicyOrBuilder extends
 
   /**
    * <pre>
-   * Caller-chosen logical policy name, unique per tenant.
+   * First-class project owner. Blank is reserved for quarantined legacy rows;
+   * new serving-path writes always persist an explicitly active project.
+   * </pre>
+   *
+   * <code>string project_id = 13 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <pre>
+   * First-class project owner. Blank is reserved for quarantined legacy rows;
+   * new serving-path writes always persist an explicitly active project.
+   * </pre>
+   *
+   * <code>string project_id = 13 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
+
+  /**
+   * <pre>
+   * Caller-chosen logical policy name, unique per tenant+project.
    * </pre>
    *
    * <code>string policy_name = 3 [json_name = "policyName", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -45,7 +67,7 @@ public interface BackupPolicyOrBuilder extends
   java.lang.String getPolicyName();
   /**
    * <pre>
-   * Caller-chosen logical policy name, unique per tenant.
+   * Caller-chosen logical policy name, unique per tenant+project.
    * </pre>
    *
    * <code>string policy_name = 3 [json_name = "policyName", (.udb.core.common.v1.pg_column) = { ... }</code>

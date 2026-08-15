@@ -68,6 +68,12 @@ class BackupRunSummary extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int64 completed_at_unix = 13 [json_name = "completedAtUnix"];</code>
      */
     protected $completed_at_unix = 0;
+    /**
+     * First-class project owner of this journal row.
+     *
+     * Generated from protobuf field <code>string project_id = 14 [json_name = "projectId"];</code>
+     */
+    protected $project_id = '';
 
     /**
      * Constructor.
@@ -88,6 +94,8 @@ class BackupRunSummary extends \Google\Protobuf\Internal\Message
      *     @type string $target_tenant_id
      *     @type int|string $created_at_unix
      *     @type int|string $completed_at_unix
+     *     @type string $project_id
+     *           First-class project owner of this journal row.
      * }
      */
     public function __construct($data = NULL) {
@@ -377,6 +385,32 @@ class BackupRunSummary extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt64($var);
         $this->completed_at_unix = $var;
+
+        return $this;
+    }
+
+    /**
+     * First-class project owner of this journal row.
+     *
+     * Generated from protobuf field <code>string project_id = 14 [json_name = "projectId"];</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * First-class project owner of this journal row.
+     *
+     * Generated from protobuf field <code>string project_id = 14 [json_name = "projectId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->project_id = $var;
 
         return $this;
     }

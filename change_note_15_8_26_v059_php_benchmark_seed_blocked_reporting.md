@@ -1,7 +1,7 @@
 # Change note: PHP benchmark seed-blocked reporting
 
 Date: 2026-08-15
-Release: 0.5.8
+Release: 0.5.9
 
 ## Changed
 

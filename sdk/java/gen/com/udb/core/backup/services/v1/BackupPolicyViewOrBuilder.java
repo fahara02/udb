@@ -111,4 +111,24 @@ public interface BackupPolicyViewOrBuilder extends
    * @return The updatedAtUnix.
    */
   long getUpdatedAtUnix();
+
+  /**
+   * <pre>
+   * First-class project owner of this policy.
+   * </pre>
+   *
+   * <code>string project_id = 12 [json_name = "projectId"];</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <pre>
+   * First-class project owner of this policy.
+   * </pre>
+   *
+   * <code>string project_id = 12 [json_name = "projectId"];</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
 }

@@ -3,6 +3,7 @@
 Date: 2026-08-15
 Affected release: 0.5.8 benchmark verification
 Severity: release-evidence integrity
+Target correction: 0.5.9
 
 ## Observed
 

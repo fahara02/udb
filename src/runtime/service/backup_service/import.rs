@@ -71,6 +71,35 @@ fn manifest_column<'a>(table: &'a ManifestTable, column: &str) -> Option<&'a Man
         .find(|candidate| candidate.column_name == column)
 }
 
+pub(crate) fn scope_restore_row_project(
+    row: &mut serde_json::Map<String, serde_json::Value>,
+    project_column: &str,
+    project_id: &str,
+    schema: &str,
+    table: &str,
+) -> Result<(), Status> {
+    if project_column.is_empty() {
+        return Ok(());
+    }
+    let source_project = row
+        .get(project_column)
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    if source_project != project_id {
+        return Err(backup_topology_mismatch_status(
+            "restore_tenant",
+            format!(
+                "backup row project '{source_project}' for {schema}.{table} does not match restore project '{project_id}'"
+            ),
+        ));
+    }
+    row.insert(
+        project_column.to_string(),
+        serde_json::Value::String(project_id.to_string()),
+    );
+    Ok(())
+}
+
 fn unique_restore_columns(table: &ManifestTable, tenant_column: &str) -> Vec<String> {
     let mut columns = Vec::new();
     let mut seen = HashSet::new();
@@ -368,7 +397,7 @@ pub(crate) async fn restore_tenant(
         .native_entity_read_for_service(
             "backup",
             &source_ctx,
-            run_read_by_id(&source_tenant_id, &backup_id),
+            run_read_by_id(&source_tenant_id, &binding.project_id, &backup_id),
         )
         .await?
         .first()
@@ -381,6 +410,12 @@ pub(crate) async fn restore_tenant(
             )
         })?;
     let run = run_summary_from_json(&run_row);
+    if run.project_id != binding.project_id {
+        return Err(backup_topology_mismatch_status(
+            "restore_tenant",
+            "backup run project does not match the active restore project",
+        ));
+    }
     let location = run_location_from_json(&run_row)
         .ok_or_else(|| backup_run_location_missing_status("restore_tenant"))?;
     if location.project_id != binding.project_id {
@@ -527,6 +562,7 @@ pub(crate) async fn restore_tenant(
         &context,
         &restore_id,
         &target_tenant_id,
+        &binding.project_id,
         KIND_RESTORE,
         &object_prefix,
         &restore_metadata,
@@ -563,36 +599,74 @@ pub(crate) async fn restore_tenant(
             continue;
         }
         let rel = qualified_relation(&target.schema, &target.table);
+        let table_meta = manifest_table_by_relation(manifest, &target.schema, &target.table)
+            .ok_or_else(|| {
+                backup_internal_status(
+                    "restore_freshness_project_scope",
+                    format!(
+                        "purge planner target {}.{} is absent from the active project manifest",
+                        target.schema, target.table
+                    ),
+                )
+            })?;
+        let project_column = crate::generation::sql::resolve_project_column(table_meta);
         // `journal_run_started` deliberately precedes the transaction so a failed
         // restore remains observable. Its target-scoped BackupRun is therefore the
         // one legitimate row an otherwise fresh target owns at this point. Exclude
         // only THIS restore id; an older backup/restore journal still proves the
         // target is not pristine and remains a refusal.
         let current_restore_journal = is_restore_journal_relation(&target.schema, &target.table);
-        let probe_sql = if current_restore_journal {
-            let run_model = native_model(BACKUP_RUN_MSG, &["backup_id"]);
-            format!(
-                "SELECT 1 FROM {rel} WHERE {col}::text = $1 AND {backup_id}::text <> $2 LIMIT 1",
-                col = qi_runtime(&target.tenant_column),
-                backup_id = run_model.q("backup_id"),
-            )
-        } else {
-            format!(
-                "SELECT 1 FROM {rel} WHERE {col}::text = $1 LIMIT 1",
-                col = qi_runtime(&target.tenant_column),
-            )
-        };
-        let present: Option<i32> = if current_restore_journal {
-            sqlx::query_scalar(&probe_sql)
-                .bind(&target_tenant_id)
-                .bind(&restore_id)
-                .fetch_optional(&mut *tx)
-                .await
-        } else {
-            sqlx::query_scalar(&probe_sql)
-                .bind(&target_tenant_id)
-                .fetch_optional(&mut *tx)
-                .await
+        let present: Option<i32> = match (current_restore_journal, project_column) {
+            (true, Some(project_column)) => {
+                let run_model = native_model(BACKUP_RUN_MSG, &["backup_id"]);
+                let sql = format!(
+                    "SELECT 1 FROM {rel} WHERE {tenant_col}::text = $1 AND {project_col}::text = $2 AND {backup_id}::text <> $3 LIMIT 1",
+                    tenant_col = qi_runtime(&target.tenant_column),
+                    project_col = qi_runtime(project_column),
+                    backup_id = run_model.q("backup_id"),
+                );
+                sqlx::query_scalar(&sql)
+                    .bind(&target_tenant_id)
+                    .bind(&binding.project_id)
+                    .bind(&restore_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+            }
+            (false, Some(project_column)) => {
+                let sql = format!(
+                    "SELECT 1 FROM {rel} WHERE {tenant_col}::text = $1 AND {project_col}::text = $2 LIMIT 1",
+                    tenant_col = qi_runtime(&target.tenant_column),
+                    project_col = qi_runtime(project_column),
+                );
+                sqlx::query_scalar(&sql)
+                    .bind(&target_tenant_id)
+                    .bind(&binding.project_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+            }
+            (true, None) => {
+                let run_model = native_model(BACKUP_RUN_MSG, &["backup_id"]);
+                let sql = format!(
+                    "SELECT 1 FROM {rel} WHERE {tenant_col}::text = $1 AND {backup_id}::text <> $2 LIMIT 1",
+                    tenant_col = qi_runtime(&target.tenant_column),
+                    backup_id = run_model.q("backup_id"),
+                );
+                sqlx::query_scalar(&sql)
+                    .bind(&target_tenant_id)
+                    .bind(&restore_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+            }
+            (false, None) => {
+                let sql = format!(
+                    "SELECT 1 FROM {rel} WHERE {tenant_col}::text = $1 LIMIT 1",
+                    tenant_col = qi_runtime(&target.tenant_column),
+                );
+                sqlx::query_scalar(&sql)
+                    .bind(&target_tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+            }
         }
         .map_err(|err| {
             backup_internal_status(
@@ -617,6 +691,10 @@ pub(crate) async fn restore_tenant(
             .get("tenant_column")
             .and_then(|v| v.as_str())
             .unwrap_or("");
+        let declared_project_column = entry
+            .get("project_column")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
         let object_key = entry
             .get("object_key")
             .and_then(|v| v.as_str())
@@ -629,6 +707,18 @@ pub(crate) async fn restore_tenant(
             continue;
         }
         let manifest_table = manifest_table_by_relation(manifest, schema, table);
+        let project_column = manifest_table
+            .and_then(crate::generation::sql::resolve_project_column)
+            .unwrap_or_default();
+        if declared_project_column != project_column {
+            return Err(backup_topology_mismatch_status(
+                "restore_tenant",
+                format!(
+                    "backup manifest project column '{}' for {schema}.{table} does not match active catalog column '{}'",
+                    declared_project_column, project_column
+                ),
+            ));
+        }
         let db_unique_restore_columns = if cross_tenant_restore {
             match manifest_table {
                 Some(table_meta) => {
@@ -694,6 +784,7 @@ pub(crate) async fn restore_tenant(
             if let Some(obj) = value.as_object_mut()
                 && !tenant_column.is_empty()
             {
+                scope_restore_row_project(obj, project_column, &binding.project_id, schema, table)?;
                 if cross_tenant_restore && let Some(table_meta) = manifest_table {
                     apply_parent_restore_remaps(obj, table_meta, &restore_remaps);
                 }
@@ -746,6 +837,7 @@ pub(crate) async fn restore_tenant(
         &context,
         &restore_id,
         &target_tenant_id,
+        &binding.project_id,
         KIND_RESTORE,
         &object_prefix,
         &run.manifest_checksum,
@@ -770,6 +862,7 @@ pub(crate) async fn restore_tenant(
             "source_backup_id": backup_id,
             "source_tenant_id": source_tenant_id,
             "target_tenant_id": target_tenant_id,
+            "project_id": binding.project_id,
             "object_prefix": object_prefix,
             "restored_table_count": restored_table_count,
             "restored_rows": restored_rows,

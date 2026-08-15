@@ -49064,6 +49064,10 @@
         "updatedAtUnix": {
           "type": "string",
           "format": "int64"
+        },
+        "projectId": {
+          "type": "string",
+          "description": "First-class project owner of this policy."
         }
       },
       "description": "A backup retention/schedule policy."
@@ -49114,6 +49118,10 @@
         "completedAtUnix": {
           "type": "string",
           "format": "int64"
+        },
+        "projectId": {
+          "type": "string",
+          "description": "First-class project owner of this journal row."
         }
       },
       "description": "A backup/restore journal row."

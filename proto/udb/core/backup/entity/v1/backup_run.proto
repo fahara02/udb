@@ -17,8 +17,9 @@ option php_namespace = "Udb\\Core\\Backup\\Entity\\V1";
 // 9.10). Each StartTenantBackup / RestoreTenant appends a row here recording
 // the object prefix, the manifest checksum, the per-run row/table counts, and
 // the count of tables EXCLUDED for lack of a tenant column (reported, never
-// silently skipped). RLS scopes rows to the tenant. ListBackups/GetBackup read
-// this journal; the encrypted artifacts themselves live in object storage.
+// silently skipped). RLS scopes rows to the tenant AND project. ListBackups/
+// GetBackup read this journal; the encrypted artifacts themselves live in
+// object storage.
 // ---------------------------------------------------------------------------
 message BackupRun {
   option (udb.core.common.v1.pg_table) = {
@@ -31,29 +32,41 @@ message BackupRun {
     audit_fields: true
     enable_rls: true
     rls_policies: {
-      policy_name: "tenant_isolation"
-      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      policy_name: "tenant_project_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)"
       permissive: true
     }
     indexes: {
-      index_name: "idx_backup_runs_tenant_created"
+      index_name: "idx_backup_runs_tenant_project_created"
       index_type: "BTREE"
       columns: "tenant_id"
+      columns: "project_id"
       columns: "created_at"
     }
     indexes: {
-      index_name: "idx_backup_runs_tenant_status"
+      index_name: "idx_backup_runs_tenant_project_status"
       index_type: "BTREE"
       columns: "tenant_id"
+      columns: "project_id"
       columns: "status"
+    }
+    indexes: {
+      index_name: "idx_backup_runs_tenant_project_id_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "project_id"
+      columns: "backup_id"
     }
     cdc_topic: "udb.backup.backup_runs.cdc"
     required_scope: "backup:read"
   };
   option (udb.core.common.v1.db_table_security) = {
     tenant_isolation_mode: "tenant"
+    project_isolation_mode: "project"
     tenant_column: "tenant_id"
-    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    project_column: "project_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')"
     soft_delete_mode: "none"
     retention_class: "backup.run"
     retention_days: 3650
@@ -67,6 +80,11 @@ message BackupRun {
   string backup_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "backup_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 
   string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_backup_runs_tenant" index_type: "BTREE" } }];
+
+  // First-class project owner. Blank legacy ownership is quarantined: serving
+  // paths always write a resolved active project, and no request/worker may
+  // claim a blank row as `default`.
+  string project_id = 16 [(udb.core.common.v1.pg_column) = { column_name: "project_id" project_column: true sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
 
   // BACKUP | RESTORE — which movement produced this journal row.
   string kind = 3 [(udb.core.common.v1.pg_column) = { column_name: "kind" sql_type: "VARCHAR(20)" not_null: true default_value: "'BACKUP'" }];

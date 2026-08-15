@@ -36,6 +36,30 @@ public interface BackupRunOrBuilder extends
 
   /**
    * <pre>
+   * First-class project owner. The empty default is a migration quarantine for
+   * pre-v0.5.8 rows: serving paths always write a resolved active project and
+   * no request/worker is allowed to claim a blank legacy row as `default`.
+   * </pre>
+   *
+   * <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <pre>
+   * First-class project owner. The empty default is a migration quarantine for
+   * pre-v0.5.8 rows: serving paths always write a resolved active project and
+   * no request/worker is allowed to claim a blank legacy row as `default`.
+   * </pre>
+   *
+   * <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
+
+  /**
+   * <pre>
    * BACKUP | RESTORE — which movement produced this journal row.
    * </pre>
    *

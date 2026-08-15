@@ -1,8 +1,7 @@
 //! Neutral-IR query/record builders, projection field lists, the durable journal
 //! write, and the list-pagination helpers for the native `BackupService`.
 //! Extracted verbatim from the former god file — the `LogicalRead`/`LogicalRecord`
-//! shapes, the tenant-scoped filters, and the conflict strategies are
-//! byte-for-byte identical.
+//! shapes, tenant+project-scoped filters, and conflict strategies.
 
 use chrono::Utc;
 use tonic::Status;
@@ -22,6 +21,7 @@ pub(crate) fn run_summary_fields() -> Vec<String> {
     [
         "backup_id",
         "tenant_id",
+        "project_id",
         "kind",
         "status",
         "object_prefix",
@@ -46,7 +46,7 @@ pub(crate) fn logical_string(value: impl Into<String>) -> LogicalValue {
 
 // ── native-entity reads (journal + policy) ───────────────────────────────────
 
-pub(crate) fn run_read_by_id(tenant_id: &str, backup_id: &str) -> LogicalRead {
+pub(crate) fn run_read_by_id(tenant_id: &str, project_id: &str, backup_id: &str) -> LogicalRead {
     LogicalRead {
         message_type: BACKUP_RUN_MSG.to_string(),
         filter: Some(LogicalFilter::And(vec![
@@ -54,6 +54,11 @@ pub(crate) fn run_read_by_id(tenant_id: &str, backup_id: &str) -> LogicalRead {
                 field: "tenant_id".to_string(),
                 op: ComparisonOp::Eq,
                 value: logical_string(tenant_id),
+            },
+            LogicalFilter::Comparison {
+                field: "project_id".to_string(),
+                op: ComparisonOp::Eq,
+                value: logical_string(project_id),
             },
             LogicalFilter::Comparison {
                 field: "backup_id".to_string(),
@@ -70,15 +75,23 @@ pub(crate) fn run_read_by_id(tenant_id: &str, backup_id: &str) -> LogicalRead {
 
 pub(crate) fn runs_list_read(
     tenant_id: &str,
+    project_id: &str,
     kind: Option<&str>,
     limit: u32,
     offset: u64,
 ) -> LogicalRead {
-    let mut filters = vec![LogicalFilter::Comparison {
-        field: "tenant_id".to_string(),
-        op: ComparisonOp::Eq,
-        value: logical_string(tenant_id),
-    }];
+    let mut filters = vec![
+        LogicalFilter::Comparison {
+            field: "tenant_id".to_string(),
+            op: ComparisonOp::Eq,
+            value: logical_string(tenant_id),
+        },
+        LogicalFilter::Comparison {
+            field: "project_id".to_string(),
+            op: ComparisonOp::Eq,
+            value: logical_string(project_id),
+        },
+    ];
     if let Some(kind) = kind {
         filters.push(LogicalFilter::Comparison {
             field: "kind".to_string(),
@@ -109,6 +122,7 @@ pub(crate) fn policy_view_fields() -> Vec<String> {
     [
         "policy_id",
         "tenant_id",
+        "project_id",
         "policy_name",
         "schedule_cron",
         "retention_days",
@@ -124,7 +138,11 @@ pub(crate) fn policy_view_fields() -> Vec<String> {
     .collect()
 }
 
-pub(crate) fn policy_read_by_name(tenant_id: &str, policy_name: &str) -> LogicalRead {
+pub(crate) fn policy_read_by_name(
+    tenant_id: &str,
+    project_id: &str,
+    policy_name: &str,
+) -> LogicalRead {
     LogicalRead {
         message_type: BACKUP_POLICY_MSG.to_string(),
         filter: Some(LogicalFilter::And(vec![
@@ -132,6 +150,11 @@ pub(crate) fn policy_read_by_name(tenant_id: &str, policy_name: &str) -> Logical
                 field: "tenant_id".to_string(),
                 op: ComparisonOp::Eq,
                 value: logical_string(tenant_id),
+            },
+            LogicalFilter::Comparison {
+                field: "project_id".to_string(),
+                op: ComparisonOp::Eq,
+                value: logical_string(project_id),
             },
             LogicalFilter::Comparison {
                 field: "policy_name".to_string(),
@@ -146,14 +169,26 @@ pub(crate) fn policy_read_by_name(tenant_id: &str, policy_name: &str) -> Logical
     }
 }
 
-pub(crate) fn policies_list_read(tenant_id: &str, limit: u32, offset: u64) -> LogicalRead {
+pub(crate) fn policies_list_read(
+    tenant_id: &str,
+    project_id: &str,
+    limit: u32,
+    offset: u64,
+) -> LogicalRead {
     LogicalRead {
         message_type: BACKUP_POLICY_MSG.to_string(),
-        filter: Some(LogicalFilter::Comparison {
-            field: "tenant_id".to_string(),
-            op: ComparisonOp::Eq,
-            value: logical_string(tenant_id),
-        }),
+        filter: Some(LogicalFilter::And(vec![
+            LogicalFilter::Comparison {
+                field: "tenant_id".to_string(),
+                op: ComparisonOp::Eq,
+                value: logical_string(tenant_id),
+            },
+            LogicalFilter::Comparison {
+                field: "project_id".to_string(),
+                op: ComparisonOp::Eq,
+                value: logical_string(project_id),
+            },
+        ])),
         projection: Some(LogicalProjection::fields(policy_view_fields())),
         sort: vec![LogicalSort {
             field: "policy_name".to_string(),
@@ -181,7 +216,11 @@ pub(crate) fn policy_conflict() -> ConflictStrategy {
             "updated_at".to_string(),
             "metadata_json".to_string(),
         ],
-        vec!["tenant_id".to_string(), "policy_name".to_string()],
+        vec![
+            "tenant_id".to_string(),
+            "project_id".to_string(),
+            "policy_name".to_string(),
+        ],
     )
 }
 
@@ -193,6 +232,7 @@ pub(crate) async fn journal_run_started(
     context: &crate::RequestContext,
     backup_id: &str,
     tenant_id: &str,
+    project_id: &str,
     kind: &str,
     object_prefix: &str,
     metadata: &serde_json::Value,
@@ -201,6 +241,7 @@ pub(crate) async fn journal_run_started(
     let mut record = LogicalRecord::new();
     record.insert("backup_id".to_string(), logical_string(backup_id));
     record.insert("tenant_id".to_string(), logical_string(tenant_id));
+    record.insert("project_id".to_string(), logical_string(project_id));
     record.insert("kind".to_string(), logical_string(kind));
     record.insert("status".to_string(), logical_string(STATUS_RUNNING));
     record.insert("object_prefix".to_string(), logical_string(object_prefix));
@@ -237,6 +278,7 @@ pub(crate) async fn journal_run(
     context: &crate::RequestContext,
     backup_id: &str,
     tenant_id: &str,
+    project_id: &str,
     kind: &str,
     object_prefix: &str,
     manifest_checksum: &str,
@@ -251,6 +293,7 @@ pub(crate) async fn journal_run(
     let mut record = LogicalRecord::new();
     record.insert("backup_id".to_string(), logical_string(backup_id));
     record.insert("tenant_id".to_string(), logical_string(tenant_id));
+    record.insert("project_id".to_string(), logical_string(project_id));
     record.insert("kind".to_string(), logical_string(kind));
     record.insert("status".to_string(), logical_string(STATUS_COMPLETED));
     record.insert("object_prefix".to_string(), logical_string(object_prefix));
@@ -285,16 +328,23 @@ pub(crate) async fn journal_run(
             context,
             BACKUP_RUN_MSG,
             record,
-            ConflictStrategy::update(vec![
-                "status".to_string(),
-                "object_prefix".to_string(),
-                "manifest_checksum".to_string(),
-                "table_count".to_string(),
-                "total_rows".to_string(),
-                "excluded_count".to_string(),
-                "completed_at".to_string(),
-                "metadata_json".to_string(),
-            ]),
+            ConflictStrategy::update_on(
+                vec![
+                    "status".to_string(),
+                    "object_prefix".to_string(),
+                    "manifest_checksum".to_string(),
+                    "table_count".to_string(),
+                    "total_rows".to_string(),
+                    "excluded_count".to_string(),
+                    "completed_at".to_string(),
+                    "metadata_json".to_string(),
+                ],
+                vec![
+                    "tenant_id".to_string(),
+                    "project_id".to_string(),
+                    "backup_id".to_string(),
+                ],
+            ),
         )
         .await
         .map(|_| ())

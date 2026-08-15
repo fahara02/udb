@@ -1624,7 +1624,10 @@ fn priority(kind: &ChangeKind) -> i32 {
         ChangeKind::AddForeignKey => 65,
         ChangeKind::CreateIndex | ChangeKind::DropIndex => 70,
         ChangeKind::EnableRls | ChangeKind::DisableRls => 80,
-        ChangeKind::CreatePolicy | ChangeKind::DropPolicy => 85,
+        // A changed policy is represented as Drop+Create with the same name.
+        // Drop must sort first or CREATE collides with the still-live old policy.
+        ChangeKind::DropPolicy => 84,
+        ChangeKind::CreatePolicy => 85,
         ChangeKind::CreateMaterializedView | ChangeKind::DropMaterializedView => 88,
         ChangeKind::CreateTrigger | ChangeKind::DropTrigger => 89,
         ChangeKind::CreateCollection | ChangeKind::CreateBucket => 90,
@@ -1982,6 +1985,37 @@ mod tests {
         a.checksum_sha256 = b.checksum_sha256.clone();
         b.requires_review = true;
         assert_ne!(sql_artifact_content_key(&a), sql_artifact_content_key(&b));
+    }
+
+    #[test]
+    fn changed_rls_policy_drops_before_recreate() {
+        let mut old_table = table(vec![column("tenant_id", "TEXT")]);
+        old_table.rls_policies = vec![ManifestPolicy {
+            name: "table_security_isolation".to_string(),
+            command: "ALL".to_string(),
+            using_expression: "tenant_id = current_setting('app.current_tenant_id')".to_string(),
+            with_check: "tenant_id = current_setting('app.current_tenant_id')".to_string(),
+            permissive: true,
+        }];
+        let mut new_table = old_table.clone();
+        new_table.rls_policies[0].using_expression =
+            "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')".to_string();
+        new_table.rls_policies[0].with_check = new_table.rls_policies[0].using_expression.clone();
+
+        let old_manifest = manifest(old_table, "old", "old-table");
+        let new_manifest = manifest(new_table, "new", "new-table");
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+        let policy_changes = changes
+            .iter()
+            .filter(|change| change.object_name == "table_security_isolation")
+            .map(|change| change.kind.clone())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            policy_changes,
+            vec![ChangeKind::DropPolicy, ChangeKind::CreatePolicy],
+            "changed same-name RLS policy must be dropped before it is recreated"
+        );
     }
 
     #[test]

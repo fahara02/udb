@@ -44,59 +44,68 @@ public final class BackupRunProto {
       "roto\022\031udb.core.backup.entity.v1\032\037google/" +
       "protobuf/timestamp.proto\032\033udb/core/commo" +
       "n/v1/db.proto\032!udb/core/common/v1/securi" +
-      "ty.proto\"\217\016\n\tBackupRun\022I\n\tbackup_id\030\001 \001(" +
+      "ty.proto\"\376\020\n\tBackupRun\022I\n\tbackup_id\030\001 \001(" +
       "\tB,\202\267\030(\n\tbackup_id\022\004UUID\030\001(\001:\021gen_random" +
       "_uuid()R\010backupId\022_\n\ttenant_id\030\002 \001(\tBB\202\267" +
       "\030>\n\ttenant_id\022\013VARCHAR(64)\030\001R\037\n\026idx_back" +
-      "up_runs_tenant\022\005BTREE\230\002\001R\010tenantId\0227\n\004ki" +
-      "nd\030\003 \001(\tB#\202\267\030\037\n\004kind\022\013VARCHAR(20)\030\001:\010\'BA" +
-      "CKUP\'R\004kind\022_\n\006status\030\004 \001(\tBG\202\267\030C\n\006statu" +
-      "s\022\013VARCHAR(20)\030\001:\t\'RUNNING\'R\037\n\026idx_backu" +
-      "p_runs_status\022\005BTREER\006status\022L\n\robject_p" +
-      "refix\030\005 \001(\tB\'\202\267\030#\n\robject_prefix\022\014VARCHA" +
-      "R(512)\030\001:\002\'\'R\014objectPrefix\022X\n\021manifest_c" +
-      "hecksum\030\006 \001(\tB+\202\267\030\'\n\021manifest_checksum\022\014" +
-      "VARCHAR(128)\030\001:\002\'\'R\020manifestChecksum\022@\n\013" +
-      "table_count\030\007 \001(\005B\037\202\267\030\033\n\013table_count\022\007IN" +
-      "TEGER\030\001:\0010R\ntableCount\022<\n\ntotal_rows\030\010 \001" +
-      "(\003B\035\202\267\030\031\n\ntotal_rows\022\006BIGINT\030\001:\0010R\ttotal" +
-      "Rows\022I\n\016excluded_count\030\t \001(\005B\"\202\267\030\036\n\016excl" +
-      "uded_count\022\007INTEGER\030\001:\0010R\rexcludedCount\022" +
-      "S\n\020source_tenant_id\030\n \001(\tB)\202\267\030%\n\020source_" +
-      "tenant_id\022\013VARCHAR(64)\030\001:\002\'\'R\016sourceTena" +
-      "ntId\022S\n\020target_tenant_id\030\013 \001(\tB)\202\267\030%\n\020ta" +
-      "rget_tenant_id\022\013VARCHAR(64)\030\001:\002\'\'R\016targe" +
-      "tTenantId\022D\n\rerror_message\030\014 \001(\tB\037\202\267\030\033\n\r" +
-      "error_message\022\004TEXT\030\001:\002\'\'R\014errorMessage\022" +
-      "n\n\ncreated_at\030\r \001(\0132\032.google.protobuf.Ti" +
-      "mestampB3\202\267\030/\n\ncreated_at\022\013TIMESTAMPTZZ\024" +
-      "When the run startedR\tcreatedAt\022u\n\014compl" +
-      "eted_at\030\016 \001(\0132\032.google.protobuf.Timestam" +
-      "pB6\202\267\0302\n\014completed_at\022\013TIMESTAMPTZZ\025When" +
-      " the run finishedR\013completedAt\022i\n\rmetada" +
-      "ta_json\030\017 \001(\tBD\202\267\030@\n\rmetadata_json\022\005JSON" +
-      "B\030\001:\013\'{}\'::jsonbZ\027Non-secret run metadat" +
-      "ax\001R\014metadataJson:\206\004\372\266\030\363\002\n\013backup_runs\022\n" +
-      "udb_backup\030\002 \001*HDurable journal of tenan" +
-      "t logical backup/restore runs (master-pl" +
-      "an 9.10)8\001@\001b^\n\020tenant_isolation\032H(tenan" +
-      "t_id::text = current_setting(\'app.curren" +
-      "t_tenant_id\', true)::text)(\001\212\001>\n\036idx_bac" +
-      "kup_runs_tenant_created\022\005BTREEZ\ttenant_i" +
-      "dZ\ncreated_at\212\0019\n\035idx_backup_runs_tenant" +
-      "_status\022\005BTREEZ\ttenant_idZ\006status\362\001\032udb." +
-      "backup.backup_runs.cdc\372\001\013backup:read\212\262\031\211" +
-      "\001\n\006tenant\032\ttenant_id*4tenant_id = curren" +
-      "t_setting(\'app.current_tenant_id\')2\004none" +
-      ":\nbackup.run@\302\034H\002R\006tenantZ\010standardr\025ten" +
-      "ant.data_residencyB\377\001\n\035com.udb.core.back" +
-      "up.entity.v1B\016BackupRunProtoP\001ZEgithub.c" +
-      "om/fahara02/udb/sdk/go/gen/udb/core/back" +
-      "up/entity/v1;entityv1\242\002\004UCBE\252\002\031udb.core." +
-      "Backup.Entity.V1\312\002\031Udb\\Core\\Backup\\Entit" +
-      "y\\V1\342\002%Udb\\GPBMetadata\\Core\\Backup\\Entit" +
-      "y\\V1\352\002\035Udb::Core::Backup::Entity::V1b\006pr" +
-      "oto3"
+      "up_runs_tenant\022\005BTREE\230\002\001R\010tenantId\022F\n\npr" +
+      "oject_id\030\020 \001(\tB\'\202\267\030#\n\nproject_id\022\014VARCHA" +
+      "R(255)\030\001:\002\'\'\240\002\001R\tprojectId\0227\n\004kind\030\003 \001(\t" +
+      "B#\202\267\030\037\n\004kind\022\013VARCHAR(20)\030\001:\010\'BACKUP\'R\004k" +
+      "ind\022_\n\006status\030\004 \001(\tBG\202\267\030C\n\006status\022\013VARCH" +
+      "AR(20)\030\001:\t\'RUNNING\'R\037\n\026idx_backup_runs_s" +
+      "tatus\022\005BTREER\006status\022L\n\robject_prefix\030\005 " +
+      "\001(\tB\'\202\267\030#\n\robject_prefix\022\014VARCHAR(512)\030\001" +
+      ":\002\'\'R\014objectPrefix\022X\n\021manifest_checksum\030" +
+      "\006 \001(\tB+\202\267\030\'\n\021manifest_checksum\022\014VARCHAR(" +
+      "128)\030\001:\002\'\'R\020manifestChecksum\022@\n\013table_co" +
+      "unt\030\007 \001(\005B\037\202\267\030\033\n\013table_count\022\007INTEGER\030\001:" +
+      "\0010R\ntableCount\022<\n\ntotal_rows\030\010 \001(\003B\035\202\267\030\031" +
+      "\n\ntotal_rows\022\006BIGINT\030\001:\0010R\ttotalRows\022I\n\016" +
+      "excluded_count\030\t \001(\005B\"\202\267\030\036\n\016excluded_cou" +
+      "nt\022\007INTEGER\030\001:\0010R\rexcludedCount\022S\n\020sourc" +
+      "e_tenant_id\030\n \001(\tB)\202\267\030%\n\020source_tenant_i" +
+      "d\022\013VARCHAR(64)\030\001:\002\'\'R\016sourceTenantId\022S\n\020" +
+      "target_tenant_id\030\013 \001(\tB)\202\267\030%\n\020target_ten" +
+      "ant_id\022\013VARCHAR(64)\030\001:\002\'\'R\016targetTenantI" +
+      "d\022D\n\rerror_message\030\014 \001(\tB\037\202\267\030\033\n\rerror_me" +
+      "ssage\022\004TEXT\030\001:\002\'\'R\014errorMessage\022n\n\ncreat" +
+      "ed_at\030\r \001(\0132\032.google.protobuf.TimestampB" +
+      "3\202\267\030/\n\ncreated_at\022\013TIMESTAMPTZZ\024When the" +
+      " run startedR\tcreatedAt\022u\n\014completed_at\030" +
+      "\016 \001(\0132\032.google.protobuf.TimestampB6\202\267\0302\n" +
+      "\014completed_at\022\013TIMESTAMPTZZ\025When the run" +
+      " finishedR\013completedAt\022i\n\rmetadata_json\030" +
+      "\017 \001(\tBD\202\267\030@\n\rmetadata_json\022\005JSONB\030\001:\013\'{}" +
+      "\'::jsonbZ\027Non-secret run metadatax\001R\014met" +
+      "adataJson:\255\006\372\266\030\312\004\n\013backup_runs\022\nudb_back" +
+      "up\030\002 \001*HDurable journal of tenant logica" +
+      "l backup/restore runs (master-plan 9.10)" +
+      "8\001@\001b\264\001\n\030tenant_project_isolation\032\225\001(ten" +
+      "ant_id::text = current_setting(\'app.curr" +
+      "ent_tenant_id\', true)::text AND project_" +
+      "id::text = current_setting(\'app.current_" +
+      "project_id\', true)::text)(\001\212\001R\n&idx_back" +
+      "up_runs_tenant_project_created\022\005BTREEZ\tt" +
+      "enant_idZ\nproject_idZ\ncreated_at\212\001M\n%idx" +
+      "_backup_runs_tenant_project_status\022\005BTRE" +
+      "EZ\ttenant_idZ\nproject_idZ\006status\212\001U\n(idx" +
+      "_backup_runs_tenant_project_id_unique\022\005B" +
+      "TREE\030\001Z\ttenant_idZ\nproject_idZ\tbackup_id" +
+      "\362\001\032udb.backup.backup_runs.cdc\372\001\013backup:r" +
+      "ead\212\262\031\331\001\n\006tenant\022\007project\032\ttenant_id\"\npr" +
+      "oject_id*otenant_id = current_setting(\'a" +
+      "pp.current_tenant_id\') AND project_id = " +
+      "current_setting(\'app.current_project_id\'" +
+      ")2\004none:\nbackup.run@\302\034H\002R\006tenantZ\010standa" +
+      "rdr\025tenant.data_residencyB\377\001\n\035com.udb.co" +
+      "re.backup.entity.v1B\016BackupRunProtoP\001ZEg" +
+      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
+      "re/backup/entity/v1;entityv1\242\002\004UCBE\252\002\031ud" +
+      "b.core.Backup.Entity.V1\312\002\031Udb\\Core\\Backu" +
+      "p\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Backu" +
+      "p\\Entity\\V1\352\002\035Udb::Core::Backup::Entity:" +
+      ":V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -110,7 +119,7 @@ public final class BackupRunProto {
     internal_static_udb_core_backup_entity_v1_BackupRun_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_backup_entity_v1_BackupRun_descriptor,
-        new java.lang.String[] { "BackupId", "TenantId", "Kind", "Status", "ObjectPrefix", "ManifestChecksum", "TableCount", "TotalRows", "ExcludedCount", "SourceTenantId", "TargetTenantId", "ErrorMessage", "CreatedAt", "CompletedAt", "MetadataJson", });
+        new java.lang.String[] { "BackupId", "TenantId", "ProjectId", "Kind", "Status", "ObjectPrefix", "ManifestChecksum", "TableCount", "TotalRows", "ExcludedCount", "SourceTenantId", "TargetTenantId", "ErrorMessage", "CreatedAt", "CompletedAt", "MetadataJson", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();

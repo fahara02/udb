@@ -2,8 +2,8 @@
 //! (list/get backups, put/get/list/delete backup policies), extracted from the
 //! trait impl as free `pub(crate) async fn`s taking `svc` where the trait method
 //! took `&self`. `mod.rs` delegates one line to each. Bodies are verbatim — the
-//! same cross-tenant guard, admission, native-entity reads/writes, and outbox
-//! emission as the former god file.
+//! same cross-tenant guard, admission, project-pinned native-entity
+//! reads/writes, and outbox emission as the former god file.
 
 use chrono::Utc;
 use tonic::{Request, Response, Status};
@@ -63,7 +63,7 @@ pub(crate) async fn list_backups(
         .native_entity_read_for_service(
             "backup",
             &context,
-            runs_list_read(&tenant_id, kind, limit, offset),
+            runs_list_read(&tenant_id, &context.project_id, kind, limit, offset),
         )
         .await?;
     let backups: Vec<backup_pb::BackupRunSummary> =
@@ -100,7 +100,11 @@ pub(crate) async fn get_backup(
     let binding = svc.resolve_project_snapshot(&context.project_id)?;
     context.project_id = binding.project_id.clone();
     let run_row = runtime
-        .native_entity_read_for_service("backup", &context, run_read_by_id(&tenant_id, &backup_id))
+        .native_entity_read_for_service(
+            "backup",
+            &context,
+            run_read_by_id(&tenant_id, &binding.project_id, &backup_id),
+        )
         .await?
         .first()
         .cloned()
@@ -108,6 +112,12 @@ pub(crate) async fn get_backup(
             backup_not_found_status("get_backup", "backup_run_not_found", "backup run not found")
         })?;
     let run = run_summary_from_json(&run_row);
+    if run.project_id != binding.project_id {
+        return Err(super::errors::backup_topology_mismatch_status(
+            "get_backup",
+            "backup run project does not match the active request project",
+        ));
+    }
 
     // A completed run's detail is integrity-bearing, not best-effort. Locate it
     // exclusively from the immutable run metadata and propagate object-store or
@@ -238,14 +248,16 @@ pub(crate) async fn put_backup_policy(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    context.project_id = binding.project_id.clone();
 
     // Reuse the existing policy id on update so the upsert is in place.
     let existing = runtime
         .native_entity_read_for_service(
             "backup",
             &context,
-            policy_read_by_name(&tenant_id, &policy_name),
+            policy_read_by_name(&tenant_id, &binding.project_id, &policy_name),
         )
         .await?;
     let policy_id = existing
@@ -258,6 +270,10 @@ pub(crate) async fn put_backup_policy(
     let mut record = LogicalRecord::new();
     record.insert("policy_id".to_string(), logical_string(&policy_id));
     record.insert("tenant_id".to_string(), logical_string(&tenant_id));
+    record.insert(
+        "project_id".to_string(),
+        logical_string(&binding.project_id),
+    );
     record.insert("policy_name".to_string(), logical_string(&policy_name));
     record.insert(
         "schedule_cron".to_string(),
@@ -306,6 +322,7 @@ pub(crate) async fn put_backup_policy(
         &policy_name,
         serde_json::json!({
             "tenant_id": tenant_id,
+            "project_id": binding.project_id,
             "policy_id": policy_id,
             "policy_name": policy_name,
             "enabled": req.enabled,
@@ -344,12 +361,14 @@ pub(crate) async fn get_backup_policy(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    context.project_id = binding.project_id.clone();
     let policy = runtime
         .native_entity_read_for_service(
             "backup",
             &context,
-            policy_read_by_name(&tenant_id, &policy_name),
+            policy_read_by_name(&tenant_id, &binding.project_id, &policy_name),
         )
         .await?
         .first()
@@ -385,14 +404,16 @@ pub(crate) async fn list_backup_policies(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    context.project_id = binding.project_id.clone();
     let limit = clamp_limit(req.page_size);
     let offset = parse_offset(&req.page_token);
     let rows = runtime
         .native_entity_read_for_service(
             "backup",
             &context,
-            policies_list_read(&tenant_id, limit, offset),
+            policies_list_read(&tenant_id, &binding.project_id, limit, offset),
         )
         .await?;
     let policies: Vec<backup_pb::BackupPolicyView> =
@@ -428,7 +449,9 @@ pub(crate) async fn delete_backup_policy(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    context.project_id = binding.project_id.clone();
     runtime
         .native_entity_delete_for_service(
             "backup",
@@ -440,6 +463,11 @@ pub(crate) async fn delete_backup_policy(
                         field: "tenant_id".to_string(),
                         op: ComparisonOp::Eq,
                         value: logical_string(&tenant_id),
+                    },
+                    LogicalFilter::Comparison {
+                        field: "project_id".to_string(),
+                        op: ComparisonOp::Eq,
+                        value: logical_string(&binding.project_id),
                     },
                     LogicalFilter::Comparison {
                         field: "policy_name".to_string(),
@@ -459,7 +487,11 @@ pub(crate) async fn delete_backup_policy(
         &tenant_id,
         &context.project_id,
         &policy_name,
-        serde_json::json!({ "tenant_id": tenant_id, "policy_name": policy_name }),
+        serde_json::json!({
+            "tenant_id": tenant_id,
+            "project_id": binding.project_id,
+            "policy_name": policy_name
+        }),
     )
     .await;
 
