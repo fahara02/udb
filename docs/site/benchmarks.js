@@ -117,6 +117,7 @@
           wire_api: r.wire_api || ((r.service || "") + "/" + (r.rpc || "")),
           kind: r.kind || "",
           err_code: r.err_code || "",
+          result_status: r.result_status || "",
           p50_ms: r.p50_ms,
           p99_ms: r.p99_ms,
           mean_ms: r.mean_ms,
@@ -154,7 +155,7 @@
           p50_ms: r.p50_ms,
           p99_ms: r.p99_ms,
           mean_ms: r.mean_ms
-        }, failed: !!r.err_code });
+        }, failed: !!r.err_code && r.err_code !== "CAPABILITY_SKIPPED" });
       });
     });
     // Failures float to the top; then sort the rest by p99 descending.
@@ -218,9 +219,15 @@
         return;
       }
       body.innerHTML = filtered.map(function (r) {
-        var failed = !!r.err_code;
+        var capabilitySkipped = r.err_code === "CAPABILITY_SKIPPED" || r.result_status === "capability_skipped";
+        var failed = !!r.err_code && !capabilitySkipped;
+        var resultBadge = failed
+          ? '<span class="bench-status fail">' + esc(r.err_code) + '</span>'
+          : capabilitySkipped
+          ? '<span class="bench-status skip">CAPABILITY SKIPPED</span>'
+          : '<span class="bench-status ok">OK</span>';
         return '<tr><td>' + esc(r.sdk) + '</td><td><code>' + esc(r.api) + '</code></td><td><code>' + esc(r.wire_api) + '</code></td><td>' + esc(r.kind) + '</td>' +
-          '<td>' + (failed ? '<span class="bench-status fail">' + esc(r.err_code) + '</span>' : '<span class="bench-status ok">OK</span>') + '</td>' +
+          '<td>' + resultBadge + '</td>' +
           '<td class="n">' + ms(r.p50_ms) + '</td><td class="n">' + ms(r.p99_ms) + '</td><td class="n">' + ms(r.mean_ms) + '</td>' +
           '<td class="n">' + ms(r.min_ms) + '</td><td class="n">' + ms(r.max_ms) + '</td><td class="n">' + count(r.iters) + '</td>' +
           '<td>' + esc(r.note) + '</td></tr>';
@@ -236,13 +243,27 @@
   function render(data) {
     var hasSdkRows = Array.isArray(data.sdks) && data.sdks.length > 0;
     var hasMeasurements = !!(data.summary && data.summary.measured_rpc_count);
+    var summary = data.summary || {};
+    var canonicalEvidence = data.schema_version === 2 &&
+      data.evidence_status === "canonical_complete" &&
+      data.benchmark_contract &&
+      typeof data.benchmark_contract.canonical_manifest_sha256 === "string" &&
+      data.benchmark_contract.canonical_manifest_sha256.length === 64 &&
+      Number.isInteger(summary.attempted_rpc_count) &&
+      summary.attempted_rpc_count === data.benchmark_contract.expected_attempted_rpc_count &&
+      Number.isInteger(summary.measured_rpc_count) &&
+      Number.isInteger(summary.capability_skipped_rpc_count) &&
+      Number.isInteger(summary.failed_rpc_count) &&
+      summary.measured_rpc_count + summary.capability_skipped_rpc_count + summary.failed_rpc_count === summary.attempted_rpc_count;
     if (hasSdkRows || hasMeasurements) {
       var failedRpcCount = data.summary && typeof data.summary.failed_rpc_count === "number" ? data.summary.failed_rpc_count : 0;
       $("bench-status").style.display = "block";
-      $("bench-status").className = failedRpcCount ? "callout" : "callout cool";
-      $("bench-status").textContent = failedRpcCount
+      $("bench-status").className = failedRpcCount || !canonicalEvidence ? "callout" : "callout cool";
+      $("bench-status").textContent = !canonicalEvidence
+        ? "Legacy/incomplete benchmark evidence. This historical artifact predates the canonical full-surface proof gate and must not be treated as a green release result."
+        : failedRpcCount
         ? "Benchmark JSON loaded, but " + failedRpcCount + " RPC measurement" + (failedRpcCount === 1 ? "" : "s") + " returned non-OK status. See 'Failures and slowest RPCs' below."
-        : "Benchmark JSON loaded. All measured RPC rows completed without non-OK statuses.";
+        : "Canonical benchmark proof loaded. Every attempted RPC is accounted for as successful, capability-skipped, or failed.";
     } else {
       $("bench-status").className = "callout cool";
       $("bench-status").style.display = "block";
@@ -257,12 +278,14 @@
     ].filter(Boolean).join(" · ");
     $("bench-meta").innerHTML = metaText || "No release run has been published into bench-results.json yet.";
 
-    var summary = data.summary || {};
     $("bench-kpis").innerHTML = [
+      ["Evidence", canonicalEvidence ? "complete" : "legacy / incomplete"],
       ["SDKs OK", count(summary.ok)],
       ["Failed", count(summary.failed)],
       ["Skipped", count(summary.skipped)],
-      ["Measured RPCs", count(summary.measured_rpc_count)],
+      ["Attempted RPCs", count(summary.attempted_rpc_count)],
+      ["Successful RPCs", count(summary.measured_rpc_count)],
+      ["Capability skipped", count(summary.capability_skipped_rpc_count)],
       ["Failed RPCs", count(summary.failed_rpc_count)]
     ].map(function (x) {
       return '<div class="bench-kpi"><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>';
@@ -270,17 +293,19 @@
 
     $("bench-sdk-grid").innerHTML = (data.sdks || []).length ? (data.sdks || []).map(function (s) {
       var mean = s.summary && s.summary.mean_service_latency_ms;
-      return '<article class="bench-sdk-card ' + statusClass(s.status) + '">' +
-        '<div class="bench-sdk-top"><b>' + esc(s.name) + '</b><span class="' + statusClass(s.status) + '">' + esc(s.status) + '</span></div>' +
+      var displayStatus = canonicalEvidence ? s.status : "legacy / incomplete";
+      return '<article class="bench-sdk-card ' + statusClass(displayStatus) + '">' +
+        '<div class="bench-sdk-top"><b>' + esc(s.name) + '</b><span class="' + statusClass(displayStatus) + '">' + esc(displayStatus) + '</span></div>' +
         '<div class="bench-sdk-main">' + esc(ms(mean)) + '</div>' +
-        '<p>' + esc(s.note || ((s.summary && s.summary.rpc_count) ? s.summary.rpc_count + " RPCs measured" : "No live benchmark data")) + '</p>' +
+        '<p>' + esc(s.note || ((s.summary && s.summary.attempted_rpc_count) ? s.summary.attempted_rpc_count + " RPC attempts" : "No live benchmark data")) + '</p>' +
         '</article>';
     }).join("") : '<div class="bench-sdk-empty">No SDK benchmark runs are published yet.</div>';
 
     $("bench-summary-rows").innerHTML = (data.sdks || []).length ? (data.sdks || []).map(function (s) {
       var sm = s.summary || {};
-      return '<tr><td><b>' + esc(s.name) + '</b></td><td><span class="bench-status ' + statusClass(s.status) + '">' + esc(s.status) + '</span></td>' +
-        '<td class="n">' + count(sm.rpc_count) + '</td><td class="n">' + count(sm.service_count) + '</td>' +
+      var displayStatus = canonicalEvidence ? s.status : "legacy / incomplete";
+      return '<tr><td><b>' + esc(s.name) + '</b></td><td><span class="bench-status ' + statusClass(displayStatus) + '">' + esc(displayStatus) + '</span></td>' +
+        '<td class="n">' + count(sm.attempted_rpc_count) + '</td><td class="n">' + count(sm.service_count) + '</td>' +
         '<td class="n">' + ms(sm.mean_service_latency_ms) + '</td><td class="n">' + ms(sm.slowest_service_mean_ms) + '</td></tr>';
     }).join("") : '<tr><td colspan="6" class="empty-cell">No SDK summary has been published yet.</td></tr>';
 

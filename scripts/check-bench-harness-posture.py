@@ -935,7 +935,8 @@ CHECKS: tuple[SourceCheck, ...] = (
             "gap/bypass not allowed",
             "Every RPC gets its shared manifest body from perfRealBody — NO generic",
             "silently-populated placeholder",
-            "| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | note |",
+            "| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | iters | note |",
+            "iters: durs.length",
             "NO generic",
         ),
         forbidden=(
@@ -1415,7 +1416,21 @@ CHECKS: tuple[SourceCheck, ...] = (
             'rpc.rsplit(".", 1)',
             '"service/rpc/wire_rpc/api_alias/operation_id"',
             '"canonical_manifest_sha256": manifest_sha256',
-            '"expected_measured_rpc_count": len(canonical_rpcs) * len(MEASURED_SDK_IDS)',
+            '"expected_attempted_rpc_count": len(canonical_rpcs) * len(MEASURED_SDK_IDS)',
+            "canonical_counts = Counter(canonical_rpcs.keys())",
+            "def _is_finite_nonnegative_number(value: Any) -> bool:",
+            "expected a positive integer",
+            "expected a finite nonnegative number",
+            "service/rpc={service!r}/{rpc!r} inconsistent with wire_api",
+            '"result_status": result_status',
+            '"capability_skipped_rpc_count": capability_skipped_rpc_count',
+            "failed_rpcs does not equal the recomputed fatal full_rpcs set",
+            "current benchmark history SDK membership does not match payload",
+            "missing_measurement",
+            "invalid_measurement",
+            "service_rpc_mismatch",
+            "capability_aggregate_tamper",
+            "history_tamper",
             "measured SDK {sdk_id} missing RPCs",
             "measured SDK {sdk_id} unexpected RPCs",
             "measured SDK {sdk_id} duplicate RPCs",
@@ -1434,7 +1449,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             "duplicate canonical RPC identity regression was not caught",
             "bad_sdks",
             "failed_rpc_count",
-            "def _gate_results(path: Path) -> int:",
+            "def _gate_results(",
             "Benchmark gate failed",
             "--gate",
         ),
@@ -1480,6 +1495,13 @@ CHECKS: tuple[SourceCheck, ...] = (
             "apiFilter.innerHTML = uniqueSorted(rows.map(function (r) { return r.api; }))",
             "[r.sdk, r.api, r.api_alias, r.operation_id, r.wire_api, r.kind, r.err_code, r.note]",
             "<td><code>' + esc(r.api) + '</code></td><td><code>' + esc(r.wire_api) + '</code></td>",
+            'data.evidence_status === "canonical_complete"',
+            "summary.attempted_rpc_count === data.benchmark_contract.expected_attempted_rpc_count",
+            "summary.measured_rpc_count + summary.capability_skipped_rpc_count + summary.failed_rpc_count === summary.attempted_rpc_count",
+            "Legacy/incomplete benchmark evidence",
+            '["Attempted RPCs", count(summary.attempted_rpc_count)]',
+            '["Successful RPCs", count(summary.measured_rpc_count)]',
+            '["Capability skipped", count(summary.capability_skipped_rpc_count)]',
         ),
     ),
     SourceCheck(
@@ -1490,6 +1512,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             "Filter alias, operation ID, wire RPC, kind, note",
             "<th>Canonical API</th>",
             "<th>Wire RPC</th>",
+            "<th>RPC attempts</th>",
         ),
     ),
 )
@@ -1557,6 +1580,40 @@ def run_selftest() -> int:
         failures = check_source(root)
         if not any("gap/bypass not allowed" in failure for failure in failures):
             raise AssertionError(f"expected TS no-generic perf body failure, got {failures}")
+
+        ts.write_text(
+            ts.read_text(encoding="utf-8")
+            .replace("fallback allowed", "gap/bypass not allowed")
+            .replace("| mean ms | iters | note |", "| mean ms | note |"),
+            encoding="utf-8",
+        )
+        failures = check_source(root)
+        if not any("TypeScript bench manifest consumer and drift gate" in failure for failure in failures):
+            raise AssertionError(f"expected TS iteration evidence posture failure, got {failures}")
+
+        collector = root / "scripts/collect_sdk_bench_results.py"
+        collector.write_text(
+            collector.read_text(encoding="utf-8").replace(
+                "canonical_counts = Counter(canonical_rpcs.keys())",
+                "canonical_counts = Counter(canonical_rpcs)",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_source(root)
+        if not any("benchmark collector public API identity parser" in failure for failure in failures):
+            raise AssertionError(f"expected benchmark Counter posture failure, got {failures}")
+
+        dashboard = root / "docs/site/benchmarks.js"
+        dashboard.write_text(
+            dashboard.read_text(encoding="utf-8").replace(
+                "Legacy/incomplete benchmark evidence",
+                "Benchmark evidence loaded",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_source(root)
+        if not any("benchmark dashboard public API filters" in failure for failure in failures):
+            raise AssertionError(f"expected legacy benchmark banner posture failure, got {failures}")
 
         go_bodies = root / "sdk/go/udbclient/live_perf_bodies_test.go"
         go_bodies.write_text(

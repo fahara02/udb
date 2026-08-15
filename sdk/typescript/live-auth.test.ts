@@ -3927,7 +3927,7 @@ test("live per-RPC perf", {
     // path with seeded inputs, so even destructive RPCs run for real (against a
     // disposable seeded target) — measured ONCE because the action is not idempotent.
     const itersFor = (kind: string) => (kind === "destructive" ? 1 : kind === "mutation" ? 5 : 25);
-    type Sample = { service: string; rpc: string; apiAlias: string; operationId: string; kind: string; err: string; p50: number; p99: number; mean: number; note: string };
+    type Sample = { service: string; rpc: string; apiAlias: string; operationId: string; kind: string; err: string; p50: number; p99: number; mean: number; iters: number; note: string };
     const samples: Sample[] = [];
 
     // gRPC status code NAME for an error (e.g. "UNAVAILABLE", "FAILED_PRECONDITION"),
@@ -4099,7 +4099,7 @@ test("live per-RPC perf", {
           }
           durs.sort((a, b) => a - b);
           const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
-          samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
+          samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, iters: durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
           return;
         }
         // Server-streaming reads with a real first response (select_v_2, get_object).
@@ -4115,7 +4115,7 @@ test("live per-RPC perf", {
           }
           durs.sort((a, b) => a - b);
           const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
-          samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "streaming: time-to-first-response (seeded)" });
+          samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, iters: durs.length, note: "streaming: time-to-first-response (seeded)" });
           return;
         }
         // Client-streaming / bidi: a single seeded message cannot drive a real
@@ -4124,7 +4124,7 @@ test("live per-RPC perf", {
         const streamReq = perfRealBody(serviceName, methodName, tenantId, projectId, fixtures);
         if (!streamReq) throw new Error(`perfRealBody has no doc-grounded body for streaming ${serviceName}/${methodName} — gap/bypass not allowed`);
         const d = timeStreamOpen(fn, streamReq);
-        samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream_open", err: "OK", p50: d, p99: d, mean: d, note: "streaming: stream-open latency" });
+        samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream_open", err: "OK", p50: d, p99: d, mean: d, iters: 1, note: "streaming: stream-open latency" });
         return;
       }
       const kind = operationKindOf(api.serviceFull, methodName) || "read_only";
@@ -4176,6 +4176,7 @@ test("live per-RPC perf", {
         operationId: operationIdOf(api.serviceFull, methodName),
         kind, err: errCode,
         p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length,
+        iters: durs.length,
         note: capabilitySkipped ? `capability skipped: ${errDetail ?? "server reported unavailable capability"}` : kind === "destructive" ? "destructive: 1 real call against a seeded disposable target" : `${kind} (seeded success path)`,
       });
     };
@@ -4326,13 +4327,13 @@ test("live per-RPC perf", {
         lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.note} |`);
       }
     }
-    lines.push("", "## Slowest 20 by p99", "", "| RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|---|---|--:|--:|--:|---|");
+    lines.push("", "## Slowest 20 by p99", "", "| RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | iters | note |", "|---|---|---|---|---|--:|--:|--:|--:|---|");
     for (const s of [...samples].sort((a, b) => b.p99 - a.p99).slice(0, 20)) {
-      lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
+      lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.iters} | ${s.note} |`);
     }
-    lines.push("", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|---|---|---|--:|--:|--:|---|");
+    lines.push("", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | iters | note |", "|---|---|---|---|---|---|--:|--:|--:|--:|---|");
     for (const s of [...samples].sort((a, b) => (a.service === b.service ? a.rpc.localeCompare(b.rpc) : a.service.localeCompare(b.service)))) {
-      lines.push(`| ${s.service} | ${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
+      lines.push(`| ${s.service} | ${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.iters} | ${s.note} |`);
     }
     writeFileSync("perf_report_ts.md", lines.join("\n") + "\n");
     const expectedPerfCount = Object.keys(RPC_OPERATION_KIND).length;

@@ -87,6 +87,9 @@ jobs:
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
           TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
+          # Exact SHA-256 of the committed v0.4.28 historical artifact. Any new
+          # benchmark evidence must arrive through Release -> Benchmark.
+          PINNED_LEGACY_BENCH_SHA256: 52461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6
         run: |
           set -euo pipefail
           mkdir -p docs/site
@@ -200,10 +203,22 @@ jobs:
               --gate docs/site/bench-results.json \
               --canonical-manifest release-proof/bench-bodies.json
           else
-            # No triggering benchmark means this is a direct docs/wasm push.
-            # Keep the COMMITTED docs/site/bench-results.json. Do NOT re-fetch
-            # the currently-published board: if it ever went stale, curling it
-            # back would republish the stale copy forever.
+            # Push and workflow_dispatch have no fresh immutable artifact. They
+            # may publish only the exact committed v0.4.28 historical bytes.
+            # Comparing only with the preceding commit is insufficient: a
+            # predecessor could change the file in a failed deploy and a later
+            # unchanged successor could otherwise publish it.
+            if grep -Eq '"schema_version"[[:space:]]*:[[:space:]]*2|"evidence_status"[[:space:]]*:[[:space:]]*"canonical_complete"' docs/site/bench-results.json; then
+              echo "::error::committed schema-v2/canonical_complete benchmark payloads are forbidden; publish green proof through Release -> Benchmark"
+              exit 1
+            fi
+            legacy_digest="$(sha256sum docs/site/bench-results.json | awk '{print $1}')"
+            if [ "${legacy_digest}" != "${PINNED_LEGACY_BENCH_SHA256}" ]; then
+              echo "::error::no-fresh-artifact Pages run accepts only pinned v0.4.28 benchmark SHA-256 ${PINNED_LEGACY_BENCH_SHA256}; got ${legacy_digest}"
+              exit 1
+            fi
+            # Never re-fetch the currently-published board: if it ever went
+            # stale, curling it back would republish the stale copy forever.
             echo "no fresh benchmark artifact; keeping committed docs/site/bench-results.json"
           fi
       - name: Build UDB's parser to WebAssembly (real udb-portable, not a mock)
@@ -282,8 +297,6 @@ jobs:
                       assert isinstance(value, str) and value.strip(), (
                           f"benchmark full_rpcs for {sdk.get('id')} has empty {field}"
                       )
-          Path("docs/site/bench-results.json").write_text(json.dumps(bench, indent=2, sort_keys=True) + "\n")
-
           from html.parser import HTMLParser
           from urllib.parse import urlparse
 

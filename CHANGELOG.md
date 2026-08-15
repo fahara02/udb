@@ -53,7 +53,19 @@ by the v0.5.8 post-release benchmark and restoring trustworthy release evidence.
   exactly once with matching aliases, operation ids, dynamic counts, and
   independently normalized zero-failure rows. C# and Java remain explicit skips.
   Pages reruns the same gate against the manifest from the exact benchmarked
-  commit before deploying release evidence.
+  commit before deploying release evidence. Schema v2 separately recomputes
+  attempted, successful, capability-skipped, and failed counts, requires real
+  finite latency/iteration evidence and exact fatal/history sets, and preserves
+  capability skips as nonfatal evidence. Push/manual Pages runs without a fresh
+  artifact accept only the pinned v0.4.28 JSON digest and reject committed
+  schema-v2 green claims, closing predecessor-diff bypasses. The historical
+  surface remains visibly non-green; new evidence must come through Release ->
+  Benchmark.
+- **Relational wire reads remain type-exact.** PostgreSQL arrays are decoded
+  before broad scalar-name matches, preserving supported non-text arrays, NULL
+  elements, and SQL NULL while decoder mismatches fail closed. MySQL
+  `DATETIME(6)` remains zone-less and microsecond-exact instead of gaining an
+  invented UTC offset.
 - **Backup inventory remains readable during topology repair.** ListBackups
   requires an exact active project/store binding but no longer demands the full
   backup-execution topology merely to list its durable journal.

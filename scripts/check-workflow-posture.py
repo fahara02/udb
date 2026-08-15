@@ -1515,6 +1515,8 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ("TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}", "benchmark workflow_run id handoff"),
     ("TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}", "benchmark workflow_run commit handoff"),
     ("TRIGGER_EVENT: ${{ github.event.workflow_run.event }}", "benchmark trigger provenance handoff"),
+    ("Exact SHA-256 of the committed v0.4.28 historical artifact", "pinned historical benchmark provenance comment"),
+    ("PINNED_LEGACY_BENCH_SHA256: 52461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6", "exact v0.4.28 benchmark digest pin"),
     ('gh run download "${TRIGGER_RUN_ID}"', "benchmark artifact download command"),
     ('--repo "${GITHUB_REPOSITORY}"', "benchmark artifact repository scope"),
     ("--name sdk-benchmark-results", "benchmark artifact name"),
@@ -1538,6 +1540,12 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ("python3 scripts/collect_sdk_bench_results.py", "central benchmark completeness validator"),
     ("--gate docs/site/bench-results.json", "Pages benchmark completeness gate target"),
     ("--canonical-manifest release-proof/bench-bodies.json", "Pages exact-commit benchmark manifest handoff"),
+    ('"schema_version"[[:space:]]*:[[:space:]]*2', "committed schema-v2 benchmark rejection"),
+    ('"evidence_status"[[:space:]]*:[[:space:]]*"canonical_complete"', "committed canonical benchmark rejection"),
+    ("committed schema-v2/canonical_complete benchmark payloads are forbidden", "manual/commit green-proof hard failure"),
+    ("legacy_digest=\"$(sha256sum docs/site/bench-results.json | awk '{print $1}')\"", "pinned historical benchmark digest calculation"),
+    ('[ "${legacy_digest}" != "${PINNED_LEGACY_BENCH_SHA256}" ]', "pinned historical benchmark digest comparison"),
+    ("accepts only pinned v0.4.28 benchmark SHA-256", "no-fresh-artifact digest hard failure"),
     ("keeping committed docs/site/bench-results.json", "no-stale-republish benchmark fallback"),
     ("Build UDB's parser to WebAssembly", "fresh wasm build step"),
     ("rustup target add wasm32-unknown-unknown", "wasm target install"),
@@ -1623,8 +1631,11 @@ PAGES_SITE_README_REQUIREMENTS = (
     ("`sdk-benchmark-results` artifact", "README benchmark artifact name"),
     ("fails closed if a real benchmark has no fresh artifact", "README fresh benchmark hard-failure contract"),
     ("Validation-only benchmark runs do not deploy Pages", "README benchmark validation exclusion"),
-    ("direct non-benchmark Pages", "README direct-push benchmark fallback scope"),
-    ("publishes retain the committed last-known dashboard JSON", "README committed benchmark fallback contract"),
+    ("Direct pushes and manual", "README no-fresh-artifact event scope"),
+    ("exact pinned SHA-256", "README historical benchmark digest authority"),
+    ("committed schema-v2/canonical evidence is rejected", "README committed green-proof rejection"),
+    ("Release -> Benchmark artifact chain", "README fresh benchmark publication authority"),
+    ("visibly marked legacy/incomplete", "README legacy benchmark rendering contract"),
     ("current-editor WASM smoke", "README playground smoke contract"),
     ("verifies every first-class page/script/data artifact", "README full artifact contract"),
     ("HTML `href`/`src`", "README local-ref crawl contract"),
@@ -5643,6 +5654,12 @@ def check_pages_playground_wasm_gate(root: Path = ROOT) -> list[str]:
         _require(playground_js, needle, label, scoped)
     for needle, label in PAGES_SITE_README_REQUIREMENTS:
         _require(readme, needle, label, scoped)
+    if "DIRECT_PUSH_BEFORE" in workflow or 'git diff --quiet "${DIRECT_PUSH_BEFORE}"' in workflow:
+        scoped.append("Pages no-fresh authority must not rely on predecessor-relative benchmark diffs")
+    if "--canonical-manifest docs/generated/bench-bodies.json" in workflow:
+        scoped.append("manual Pages must not accept committed canonical benchmark payloads")
+    if 'Path("docs/site/bench-results.json").write_text' in workflow:
+        scoped.append("Pages must validate benchmark evidence without rewriting its historical bytes")
 
     asset_at = workflow.find("Sync brand assets into the site")
     api_at = workflow.find("Publish Swagger API document")
@@ -5660,6 +5677,64 @@ def check_pages_playground_wasm_gate(root: Path = ROOT) -> list[str]:
             "Pages must sync assets/API, pull benchmark JSON, build fresh WASM, "
             "run the current-input smoke, verify artifact contract, upload, then deploy"
         )
+    if bench_at >= 0 and build_at > bench_at:
+        benchmark_lines = workflow[bench_at:build_at].splitlines()
+        fresh_line = 'if [ "$got_fresh" = 1 ]; then'
+        try:
+            fresh_index = next(
+                index for index, line in enumerate(benchmark_lines)
+                if line.strip() == fresh_line
+            )
+        except StopIteration:
+            fresh_index = -1
+        no_fresh_else_indices: list[int] = []
+        fresh_close_index = -1
+        if fresh_index >= 0:
+            depth = 0
+            for index in range(fresh_index, len(benchmark_lines)):
+                stripped = benchmark_lines[index].strip()
+                if stripped.startswith(("if [", "if [[", "if grep ")):
+                    depth += 1
+                elif stripped == "else" and depth == 1:
+                    no_fresh_else_indices.append(index)
+                elif stripped == "fi":
+                    depth -= 1
+                    if depth == 0:
+                        fresh_close_index = index
+                        break
+        schema_reject_index = next(
+            (
+                index for index, line in enumerate(benchmark_lines)
+                if "committed schema-v2/canonical_complete benchmark payloads are forbidden" in line
+            ),
+            -1,
+        )
+        digest_calculation_index = next(
+            (
+                index for index, line in enumerate(benchmark_lines)
+                if "legacy_digest=\"$(sha256sum docs/site/bench-results.json" in line
+            ),
+            -1,
+        )
+        digest_comparison_index = next(
+            (
+                index for index, line in enumerate(benchmark_lines)
+                if '[ "${legacy_digest}" != "${PINNED_LEGACY_BENCH_SHA256}" ]' in line
+            ),
+            -1,
+        )
+        scoped_no_fresh = (
+            len(no_fresh_else_indices) == 1
+            and fresh_index < no_fresh_else_indices[0]
+            < schema_reject_index
+            < digest_calculation_index
+            < digest_comparison_index
+            < fresh_close_index
+        )
+        if not scoped_no_fresh:
+            scoped.append(
+                "Pages pinned legacy checks must be scoped and ordered only inside the no-fresh else branch"
+            )
     return [f"pages.yml/playground_wasm_smoke: {failure}" for failure in scoped]
 
 
@@ -7299,6 +7374,8 @@ jobs:
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
           TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
+          # Exact SHA-256 of the committed v0.4.28 historical artifact.
+          PINNED_LEGACY_BENCH_SHA256: 52461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6
         run: |
           got_fresh=0
           gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
@@ -7321,8 +7398,18 @@ jobs:
             python3 scripts/collect_sdk_bench_results.py \\
               --gate docs/site/bench-results.json \\
               --canonical-manifest release-proof/bench-bodies.json
+          else
+            if grep -Eq '"schema_version"[[:space:]]*:[[:space:]]*2|"evidence_status"[[:space:]]*:[[:space:]]*"canonical_complete"' docs/site/bench-results.json; then
+              echo "committed schema-v2/canonical_complete benchmark payloads are forbidden"
+              exit 1
+            fi
+            legacy_digest="$(sha256sum docs/site/bench-results.json | awk '{print $1}')"
+            if [ "${legacy_digest}" != "${PINNED_LEGACY_BENCH_SHA256}" ]; then
+              echo "accepts only pinned v0.4.28 benchmark SHA-256"
+              exit 1
+            fi
+            echo "keeping committed docs/site/bench-results.json"
           fi
-          if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
       - name: Build UDB's parser to WebAssembly
         run: |
           rustup target add wasm32-unknown-unknown
@@ -7398,8 +7485,6 @@ jobs:
                       assert isinstance(value, str) and value.strip(), (
                           f"benchmark full_rpcs for {sdk.get('id')} has empty {field}"
                       )
-          Path("docs/site/bench-results.json").write_text(json.dumps(bench, indent=2, sort_keys=True) + "\n")
-
           from html.parser import HTMLParser
           from urllib.parse import urlparse
 
@@ -7447,7 +7532,7 @@ The authoring surface is static HTML/CSS plus vanilla JS. The GitHub Pages workf
 
 Shared: `styles.css`, `app.js`, `playground.js`, `benchmarks.js`, `udb.wasm`.
 
-`bench-results.json` is uploaded as the `sdk-benchmark-results` artifact. pages.yml fails closed if a real benchmark has no fresh artifact. Validation-only benchmark runs do not deploy Pages; direct non-benchmark Pages publishes retain the committed last-known dashboard JSON.
+`bench-results.json` is uploaded as the `sdk-benchmark-results` artifact. pages.yml fails closed if a real benchmark has no fresh artifact. Validation-only benchmark runs do not deploy Pages. Direct pushes and manual deploys accept only the exact pinned SHA-256 of v0.4.28; committed schema-v2/canonical evidence is rejected, and new evidence uses the Release -> Benchmark artifact chain. Historical evidence is visibly marked legacy/incomplete.
 
 The workflow runs the current-editor WASM smoke, verifies every first-class page/script/data artifact, and crawls local HTML `href`/`src` references before upload.
 """
@@ -10233,13 +10318,13 @@ jobs:
         (wf / "_live-sdk-suite.yml").write_text(live_sdk_suite_good, encoding="utf-8")
         (wf / "_live-sdk-suite.yml").write_text(
             live_sdk_suite_good.replace(
-                "python scripts/collect_sdk_bench_results.py --gate docs/site/bench-results.json",
-                "python scripts/collect_sdk_bench_results.py docs/site/bench-results.json",
+                "--gate docs/site/bench-results.json",
+                "docs/site/bench-results.json",
             ),
             encoding="utf-8",
         )
         failures = check_benchmark_workflow_gate(root)
-        assert any("central benchmark failure gate command" in failure for failure in failures), failures
+        assert any("central benchmark failure gate target" in failure for failure in failures), failures
 
         (wf / "_live-sdk-suite.yml").write_text(
             live_sdk_suite_good.replace(
@@ -10302,6 +10387,17 @@ jobs:
         assert any("README fresh WASM build contract" in failure for failure in failures), failures
         (root / "docs" / "site" / "README.md").write_text(pages_readme_good, encoding="utf-8")
 
+        (root / "docs" / "site" / "README.md").write_text(
+            pages_readme_good.replace(
+                "visibly marked legacy/incomplete",
+                "treated as current proof",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_pages_playground_wasm_gate(root)
+        assert any("README legacy benchmark rendering contract" in failure for failure in failures), failures
+        (root / "docs" / "site" / "README.md").write_text(pages_readme_good, encoding="utf-8")
+
         (wf / "pages.yml").write_text(
             pages_good.replace(
                 "--name sdk-benchmark-results",
@@ -10311,6 +10407,61 @@ jobs:
         )
         failures = check_pages_playground_wasm_gate(root)
         assert any("benchmark artifact name" in failure for failure in failures), failures
+
+        (wf / "pages.yml").write_text(
+            pages_good.replace(
+                "52461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6",
+                "62461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_pages_playground_wasm_gate(root)
+        assert any("exact v0.4.28 benchmark digest pin" in failure for failure in failures), failures
+
+        (wf / "pages.yml").write_text(
+            pages_good.replace(
+                "committed schema-v2/canonical_complete benchmark payloads are forbidden",
+                "committed canonical payload accepted",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_pages_playground_wasm_gate(root)
+        assert any("manual/commit green-proof hard failure" in failure for failure in failures), failures
+
+        (wf / "pages.yml").write_text(
+            pages_good.replace(
+                "legacy_digest=\"$(sha256sum docs/site/bench-results.json | awk '{print $1}')\"",
+                "legacy_digest=\"predecessor-relative-placeholder\"",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_pages_playground_wasm_gate(root)
+        assert any("pinned historical benchmark digest calculation" in failure for failure in failures), failures
+
+        (wf / "pages.yml").write_text(
+            pages_good.replace(
+                '          legacy_digest="$(sha256sum docs/site/bench-results.json',
+                '          DIRECT_PUSH_BEFORE: ${{ github.event.before }}\n'
+                '          git diff --quiet "${DIRECT_PUSH_BEFORE}" "${GITHUB_SHA}" -- docs/site/bench-results.json\n'
+                '          legacy_digest="$(sha256sum docs/site/bench-results.json',
+            ),
+            encoding="utf-8",
+        )
+        failures = check_pages_playground_wasm_gate(root)
+        assert any("must not rely on predecessor-relative benchmark diffs" in failure for failure in failures), failures
+
+        (wf / "pages.yml").write_text(
+            pages_good.replace(
+                "          else\n            if grep -Eq",
+                "          else\n"
+                "            echo \"no fresh artifact\"\n"
+                "          fi\n"
+                "          if grep -Eq",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_pages_playground_wasm_gate(root)
+        assert any("only inside the no-fresh else branch" in failure for failure in failures), failures
 
         benchmark_at = pages_good.index("      - name: Pull latest benchmark results into the site")
         build_at = pages_good.index("      - name: Build UDB's parser to WebAssembly", benchmark_at)
@@ -10339,6 +10490,17 @@ jobs:
         )
         failures = check_pages_playground_wasm_gate(root)
         assert any("benchmark public identity row validation" in failure for failure in failures), failures
+
+        (wf / "pages.yml").write_text(
+            pages_good.replace(
+                "          from html.parser import HTMLParser",
+                "          Path(\"docs/site/bench-results.json\").write_text(json.dumps(bench) + \"\\n\")\n\n"
+                "          from html.parser import HTMLParser",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_pages_playground_wasm_gate(root)
+        assert any("without rewriting its historical bytes" in failure for failure in failures), failures
 
         (wf / "pages.yml").write_text(pages_good, encoding="utf-8")
         (scripts_dir / "playground_wasm_smoke.mjs").write_text(

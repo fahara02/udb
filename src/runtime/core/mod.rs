@@ -2611,6 +2611,72 @@ mod inet_decode_tests {
 
 fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonValue, tonic::Status> {
     let type_name = type_name.to_ascii_uppercase();
+    // W2: arrays MUST be matched BEFORE the scalar branches. sqlx reports a
+    // bigint array as `INT8[]`, so `contains("INT8")` below would route it into
+    // the scalar i64 decoder, which fails and used to collapse a populated array
+    // to JSON null. Decode the SQLx-enabled element matrix exactly and preserve
+    // nullable elements. NUMERIC[] / DECIMAL[] remain intentionally unsupported:
+    // this build does not enable a sqlx decimal codec, so do not claim them in the
+    // supported matrix or silently route them through a scalar decoder.
+    if let Some(element) = type_name.strip_suffix("[]") {
+        if matches!(element, "NUMERIC" | "DECIMAL") {
+            return Err(core_internal_status(
+                "read_column",
+                format!(
+                    "PostgreSQL {element}[] decoding requires a decimal codec that is not enabled"
+                ),
+            ));
+        }
+
+        fn wrap<T: Into<JsonValue>>(items: Option<Vec<Option<T>>>) -> JsonValue {
+            match items {
+                Some(items) => JsonValue::Array(
+                    items
+                        .into_iter()
+                        .map(|item| item.map(Into::into).unwrap_or(JsonValue::Null))
+                        .collect(),
+                ),
+                None => JsonValue::Null,
+            }
+        }
+
+        let decoded = match element {
+            "INT2" | "SMALLINT" => row.try_get::<Option<Vec<Option<i16>>>, _>(idx).map(wrap),
+            "INT4" | "INTEGER" | "INT" => {
+                row.try_get::<Option<Vec<Option<i32>>>, _>(idx).map(wrap)
+            }
+            "INT8" | "BIGINT" => row.try_get::<Option<Vec<Option<i64>>>, _>(idx).map(wrap),
+            "FLOAT8" | "DOUBLE PRECISION" => {
+                row.try_get::<Option<Vec<Option<f64>>>, _>(idx).map(wrap)
+            }
+            "FLOAT4" | "REAL" => row.try_get::<Option<Vec<Option<f32>>>, _>(idx).map(wrap),
+            "BOOL" | "BOOLEAN" => row.try_get::<Option<Vec<Option<bool>>>, _>(idx).map(wrap),
+            "UUID" => row
+                .try_get::<Option<Vec<Option<uuid::Uuid>>>, _>(idx)
+                .map(|items| match items {
+                    Some(items) => JsonValue::Array(
+                        items
+                            .into_iter()
+                            .map(|item| {
+                                item.map(|value| JsonValue::from(value.to_string()))
+                                    .unwrap_or(JsonValue::Null)
+                            })
+                            .collect(),
+                    ),
+                    None => JsonValue::Null,
+                }),
+            _ => row
+                .try_get::<Option<Vec<Option<String>>>, _>(idx)
+                .map(wrap),
+        }
+        .map_err(|err| {
+            core_internal_status(
+                "read_column",
+                format!("PostgreSQL {type_name} array decode failed: {err}"),
+            )
+        })?;
+        return Ok(decoded);
+    }
     // INT2/SMALLINT MUST decode via i16 — sqlx's i32 decoder rejects the INT2 OID
     // with a type-mismatch, which the NULL fallback would otherwise swallow into a
     // silent NULL for a non-null column (bug_report 2026-07-16 #3).
@@ -2728,78 +2794,6 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
                     .unwrap_or(JsonValue::Null)
             })
             .unwrap_or(JsonValue::Null));
-    }
-    // PostgreSQL array types — deserialise to a JSON array.
-    // W2: the old code decoded ONLY `Vec<String>`, so every NON-text array
-    // (bigint[]/int[]/bool[]/float[]/uuid[]/numeric[]) failed the decode and was
-    // silently returned as an empty `[]` (data loss for a populated array).
-    // Dispatch on the element type so each array decodes with the correct Vec<T>;
-    // the text fallback uses `Vec<Option<String>>` so a NULL element is preserved
-    // as JSON null rather than dropped.
-    if type_name.ends_with("[]") {
-        let base = type_name.trim_end_matches("[]");
-        let arr: JsonValue = if base.contains("INT8") || base == "BIGINT" {
-            row.try_get::<Option<Vec<i64>>, _>(idx)
-                .ok()
-                .flatten()
-                .map(|v| JsonValue::Array(v.into_iter().map(JsonValue::from).collect()))
-                .unwrap_or(JsonValue::Null)
-        } else if base.contains("INT4") || base == "INTEGER" || base == "INT" {
-            row.try_get::<Option<Vec<i32>>, _>(idx)
-                .ok()
-                .flatten()
-                .map(|v| JsonValue::Array(v.into_iter().map(JsonValue::from).collect()))
-                .unwrap_or(JsonValue::Null)
-        } else if base.contains("FLOAT8") || base.contains("DOUBLE") {
-            row.try_get::<Option<Vec<f64>>, _>(idx)
-                .ok()
-                .flatten()
-                .map(|v| JsonValue::Array(v.into_iter().map(JsonValue::from).collect()))
-                .unwrap_or(JsonValue::Null)
-        } else if base.contains("FLOAT4") || base.contains("REAL") {
-            row.try_get::<Option<Vec<f32>>, _>(idx)
-                .ok()
-                .flatten()
-                .map(|v| {
-                    JsonValue::Array(
-                        v.into_iter()
-                            .map(|f| JsonValue::from(f64::from(f)))
-                            .collect(),
-                    )
-                })
-                .unwrap_or(JsonValue::Null)
-        } else if base.contains("BOOL") {
-            row.try_get::<Option<Vec<bool>>, _>(idx)
-                .ok()
-                .flatten()
-                .map(|v| JsonValue::Array(v.into_iter().map(JsonValue::from).collect()))
-                .unwrap_or(JsonValue::Null)
-        } else if base.contains("UUID") {
-            row.try_get::<Option<Vec<Uuid>>, _>(idx)
-                .ok()
-                .flatten()
-                .map(|v| {
-                    JsonValue::Array(
-                        v.into_iter()
-                            .map(|u| JsonValue::String(u.to_string()))
-                            .collect(),
-                    )
-                })
-                .unwrap_or(JsonValue::Null)
-        } else {
-            row.try_get::<Option<Vec<Option<String>>>, _>(idx)
-                .ok()
-                .flatten()
-                .map(|v| {
-                    JsonValue::Array(
-                        v.into_iter()
-                            .map(|s| s.map(JsonValue::String).unwrap_or(JsonValue::Null))
-                            .collect(),
-                    )
-                })
-                .unwrap_or(JsonValue::Null)
-        };
-        return Ok(arr);
     }
     // INET / CIDR / MACADDR: sqlx's String decoder is TEXT-family-only and REJECTS
     // these OIDs, and the generic hex-of-binary fallback below would return the raw

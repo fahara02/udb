@@ -86,7 +86,8 @@ async fn postgres_real_and_non_text_arrays_round_trip_served_live() {
         "CREATE TABLE \"{schema}\".matrix (\
             id text PRIMARY KEY, \
             real_col real, double_col double precision, \
-            arr_i64 bigint[], arr_i32 integer[], arr_bool boolean[], \
+            arr_i64 bigint[], arr_i16 smallint[], arr_i64_nullable bigint[], \
+            arr_i64_sql_null bigint[], arr_i32 integer[], arr_bool boolean[], \
             arr_f64 double precision[], arr_f32 real[], arr_uuid uuid[], arr_text text[])"
     ))
     .execute(&pool)
@@ -97,8 +98,9 @@ async fn postgres_real_and_non_text_arrays_round_trip_served_live() {
     let u2 = Uuid::new_v4();
     let insert_sql = format!(
         "INSERT INTO \"{schema}\".matrix \
-        (id, real_col, double_col, arr_i64, arr_i32, arr_bool, arr_f64, arr_f32, arr_uuid, arr_text) \
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
+        (id, real_col, double_col, arr_i64, arr_i16, arr_i64_nullable, \
+         arr_i32, arr_bool, arr_f64, arr_f32, arr_uuid, arr_text) \
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
     );
     // Positional binds in column order. Scalars + the type-matching arrays go
     // through the served `bind_one` data-plane bind; the narrow (`int4[]`/`real[]`)
@@ -116,6 +118,8 @@ async fn postgres_real_and_non_text_arrays_round_trip_served_live() {
     )
     .expect("bind double_col");
     q = bind_one(q, Some(&col("arr_i64", "BIGINT[]")), &json!([1, 2, 3])).expect("bind arr_i64");
+    q = q.bind(vec![Some(7_i16), None, Some(-8_i16)]); // arr_i16 (smallint[])
+    q = q.bind(vec![Some(40_i64), None, Some(60_i64)]); // arr_i64_nullable
     q = q.bind(vec![10_i32, 20, 30]); // arr_i32 (integer[])
     q = bind_one(
         q,
@@ -139,7 +143,8 @@ async fn postgres_real_and_non_text_arrays_round_trip_served_live() {
     let row = served_one(
         &pool,
         &format!(
-            "SELECT real_col, double_col, arr_i64, arr_i32, arr_bool, arr_f64, arr_f32, arr_uuid, arr_text \
+            "SELECT real_col, double_col, arr_i64, arr_i16, arr_i64_nullable, arr_i64_sql_null, \
+                    arr_i32, arr_bool, arr_f64, arr_f32, arr_uuid, arr_text \
              FROM \"{schema}\".matrix WHERE id = 'm1'"
         ),
     )
@@ -150,10 +155,25 @@ async fn postgres_real_and_non_text_arrays_round_trip_served_live() {
     // non-text array must retain its EXACT elements — revert collapses each of the
     // non-text arrays to `[]`. `double precision` and `text[]` are the controls the
     // pre-fix code already handled.
-    let expected: [(&str, JsonValue, &str); 9] = [
+    let expected: [(&str, JsonValue, &str); 12] = [
         ("real_col", json!(3.5), "W1: REAL scalar (revert → null)"),
         ("double_col", json!(2.25), "float8 control"),
         ("arr_i64", json!([1, 2, 3]), "W2: bigint[] (revert → [])"),
+        (
+            "arr_i16",
+            json!([7, null, -8]),
+            "W2: smallint[] preserves NULL elements",
+        ),
+        (
+            "arr_i64_nullable",
+            json!([40, null, 60]),
+            "W2: bigint[] preserves NULL elements",
+        ),
+        (
+            "arr_i64_sql_null",
+            JsonValue::Null,
+            "W2: SQL NULL bigint[] remains JSON null",
+        ),
         (
             "arr_i32",
             json!([10, 20, 30]),
