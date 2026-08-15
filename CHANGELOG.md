@@ -34,6 +34,9 @@ protocol change.
   for NASM.** CI uses the runner-provided Perl and a checksum-pinned NASM 3.02
   archive from the official project distribution, with bounded download retries
   and fail-closed archive verification.
+- **Generated UDB skill wrappers now match the 0.5.8 canonical guidance.** The
+  OpenAI, Ollama, and plugin-reference copies no longer advertise 0.5.6 package
+  commands, and PR quick-gate CI now rejects future wrapper drift before merge.
 
 ### Changed
 

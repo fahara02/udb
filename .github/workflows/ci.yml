@@ -78,6 +78,11 @@ jobs:
         run: buf breaking --against ".git#branch=origin/main"
       - name: Version consistency
         run: node scripts/check-versions.mjs
+      - name: UDB skill wrapper drift guard
+        run: |
+          python3 udb-skill/sync_skills.py --check
+          python3 udb-skill/sync_udb_coding.py --check
+          python3 udb-skill/sync_references.py --check
       - name: SDK service-coverage guard
         run: |
           python3 scripts/check-sdk-service-coverage.py --selftest

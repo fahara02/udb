@@ -1119,6 +1119,10 @@ CI_TOPOLOGY_REQUIREMENTS = (
     ("concurrency:\n  group: ci-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true", "CI concurrency cancellation"),
     ("permissions:\n  contents: read", "read-only CI permissions"),
     ("LIVE_BROKER_FEATURES:", "single live broker feature tier"),
+    ("UDB skill wrapper drift guard", "skill wrapper drift CI step"),
+    ("python3 udb-skill/sync_skills.py --check", "using-udb wrapper drift command"),
+    ("python3 udb-skill/sync_udb_coding.py --check", "udb-coding wrapper drift command"),
+    ("python3 udb-skill/sync_references.py --check", "skill reference drift command"),
 )
 
 CI_TOPOLOGY_DEPENDENCY_FREE_JOBS = (
@@ -6544,6 +6548,11 @@ jobs:
   quick-gate:
     runs-on: ubuntu-latest
     steps:
+      - name: UDB skill wrapper drift guard
+        run: |
+          python3 udb-skill/sync_skills.py --check
+          python3 udb-skill/sync_udb_coding.py --check
+          python3 udb-skill/sync_references.py --check
       - name: SDK service-coverage guard
         run: |
           python3 scripts/check-sdk-service-coverage.py --selftest

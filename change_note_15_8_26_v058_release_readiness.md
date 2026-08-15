@@ -25,6 +25,11 @@ Release: 0.5.8
 - The workflow-posture positive and ordering-negative self-test fixtures now
   include the successful-real-run and fresh-artifact requirements enforced for
   Pages, so the ordering mutation continues to exercise the intended failure.
+- The generated `using-udb` plugin reference, OpenAI instructions, and Ollama
+  Modelfile are synchronized from the 0.5.8 canonical skill source.
+- CI quick-gate now runs all three skill synchronization checks on pull requests
+  and main pushes; workflow posture pins those commands so wrapper drift cannot
+  reach the main-only publisher again.
 - The changelog records the restore self-journal fix and benchmark/auth harness
   corrections included in this patch release.
 
@@ -53,3 +58,6 @@ Release: 0.5.8
 - Workflow-lint run `31876553846` passed all self-tests and found only that the
   new committed-JSON assertion spanned a Markdown line break. The assertion is
   split into stable scope and behavior phrases without weakening either rule.
+- Main publisher run `31877566060` rejected three generated `using-udb`
+  wrappers that still contained 0.5.6 guidance. The repository generator
+  refreshes all three, and the new PR quick-gate must pass before release.
