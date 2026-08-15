@@ -2611,6 +2611,52 @@ mod inet_decode_tests {
 
 fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonValue, tonic::Status> {
     let type_name = type_name.to_ascii_uppercase();
+    // W2: arrays MUST be matched BEFORE the scalar branches. sqlx reports a
+    // bigint array as `INT8[]`, so `contains("INT8")` below would route it into
+    // the scalar i64 decoder, which fails — and every branch ends in
+    // `unwrap_or(Null)`, so a populated array column read back as SILENT NULL.
+    // Same substring-classification trap as GEOGRAPHY(POINT) matching "INT".
+    // NULL elements inside the array are preserved as JSON null.
+    if let Some(element) = type_name.strip_suffix("[]") {
+        fn wrap<T: Into<JsonValue>>(items: Option<Vec<Option<T>>>) -> JsonValue {
+            match items {
+                Some(items) => JsonValue::Array(
+                    items
+                        .into_iter()
+                        .map(|item| item.map(Into::into).unwrap_or(JsonValue::Null))
+                        .collect(),
+                ),
+                None => JsonValue::Null,
+            }
+        }
+        return Ok(match element {
+            "INT2" | "SMALLINT" => row.try_get::<Option<Vec<Option<i16>>>, _>(idx).map(wrap),
+            "INT4" | "INTEGER" | "INT" => row.try_get::<Option<Vec<Option<i32>>>, _>(idx).map(wrap),
+            "INT8" | "BIGINT" => row.try_get::<Option<Vec<Option<i64>>>, _>(idx).map(wrap),
+            "FLOAT8" | "DOUBLE PRECISION" => {
+                row.try_get::<Option<Vec<Option<f64>>>, _>(idx).map(wrap)
+            }
+            "FLOAT4" | "REAL" => row.try_get::<Option<Vec<Option<f32>>>, _>(idx).map(wrap),
+            "BOOL" | "BOOLEAN" => row.try_get::<Option<Vec<Option<bool>>>, _>(idx).map(wrap),
+            "UUID" => {
+                row.try_get::<Option<Vec<Option<uuid::Uuid>>>, _>(idx)
+                    .map(|items| match items {
+                        Some(items) => JsonValue::Array(
+                            items
+                                .into_iter()
+                                .map(|item| {
+                                    item.map(|value| JsonValue::from(value.to_string()))
+                                        .unwrap_or(JsonValue::Null)
+                                })
+                                .collect(),
+                        ),
+                        None => JsonValue::Null,
+                    })
+            }
+            _ => row.try_get::<Option<Vec<Option<String>>>, _>(idx).map(wrap),
+        }
+        .unwrap_or(JsonValue::Null));
+    }
     // INT2/SMALLINT MUST decode via i16 — sqlx's i32 decoder rejects the INT2 OID
     // with a type-mismatch, which the NULL fallback would otherwise swallow into a
     // silent NULL for a non-null column (bug_report 2026-07-16 #3).

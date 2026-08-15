@@ -1897,15 +1897,22 @@ where
             v.map(JsonValue::from).unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<Option<bool>, _>(i) {
             v.map(JsonValue::from).unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>(i) {
+        } else if let Ok(v) = row.try_get::<Option<chrono::NaiveDateTime>, _>(i) {
             // W3: MySQL native TIMESTAMP/DATETIME/DATE decode as chrono types, NOT
             // String — without these branches every temporal column read back NULL
             // (silent data loss). Probe temporals before String (a real VARCHAR
             // fails the chrono decode and falls through).
-            v.map(|dt| JsonValue::String(dt.to_rfc3339()))
-                .unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<chrono::NaiveDateTime>, _>(i) {
+            //
+            // NaiveDateTime is probed BEFORE DateTime<Utc>: MySQL DATETIME is
+            // zone-LESS, but sqlx will happily decode it as DateTime<Utc>, which
+            // stamped a `+00:00` offset onto a value that never carried one —
+            // inventing a timezone the column does not have. Naive first keeps
+            // DATETIME exact to the microsecond; a genuinely zone-aware value
+            // still renders as an RFC3339 datetime string via the branch below.
             v.map(|dt| JsonValue::String(dt.format("%Y-%m-%dT%H:%M:%S%.6f").to_string()))
+                .unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>(i) {
+            v.map(|dt| JsonValue::String(dt.to_rfc3339()))
                 .unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<Option<chrono::NaiveDate>, _>(i) {
             v.map(|d| JsonValue::String(d.format("%Y-%m-%d").to_string()))
