@@ -93,6 +93,17 @@ catalog at all.
   only from an exact active target. Report the manifest's verified semantic
   schema checksum, and make health fail when raw ACTIVE history disagrees with
   the proven binding/reload authority.
+- Canonicalize an empty body/security project to the documented `default`
+  authority, always compare an explicit body project with the resolved security
+  project, and permit cross-project use only with the exact
+  `udb:platform_admin` authority outside a verified transport claim.
+- Compute manifest-integrity evidence from deterministic serialization of the
+  decoded `CatalogManifest` at stage, readback, and legacy upgrade. Keep the raw
+  request checksum as a separate public selector and the semantic DDL checksum
+  as separate schema evidence.
+- Make the error-detail posture gate follow the shared typed project resolver
+  and current durable error seams instead of demanding deleted per-handler
+  duplicates or obsolete in-memory activation failure messages.
 
 ## Evidence
 
@@ -109,6 +120,24 @@ CDC constructor, whose contract is a borrowed runtime. This was a compile-time
 integration defect, not a reason to weaken either catalog freshness or CDC
 startup ordering; the snapshot must stay alive locally and be borrowed for the
 awaited constructor call.
+
+The next CI library run compiled and passed 2,700 tests before exposing 12
+related metadata/embedded failures. `CapabilitiesRequest`,
+`HealthReportRequest`, and message-schema requests document an empty project as
+context/default, but the shared resolver rejected empty security/body projects.
+It also checked cross-project mismatch only while a verified-claim task-local
+was installed, so trusted in-process coverage observed `FailedPrecondition`
+instead of the required `PermissionDenied` for a mismatched bound project.
+
+Focused live run `31895088437` then failed its first StageCatalog readback with
+`catalog_provenance_invalid`. The stored integrity digest was calculated from an
+untyped JSON `Value` before PostgreSQL JSONB persistence, then recalculated from
+JSONB text after readback. That representation is not the durable canonical
+contract; JSONB may normalize object/numeric representation even when the
+decoded `CatalogManifest` is identical. The error-detail posture guard also
+still required project-specific helpers and pre-reconciliation error strings
+that had been replaced by the shared project resolver and durable transition
+errors.
 
 ## Regression coverage
 

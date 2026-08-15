@@ -105,6 +105,20 @@ fn explicit_catalog_platform_authority() -> bool {
         .any(|scope| scope.trim() == "udb:platform_admin")
 }
 
+fn request_has_explicit_catalog_platform_authority(security: &SecurityContext) -> bool {
+    if crate::runtime::service::method_security::claim_context_present() {
+        explicit_catalog_platform_authority()
+    } else {
+        // Trusted in-process callers do not have a verified-claim task-local.
+        // Preserve their explicit platform seam without treating broad tenant
+        // admin scopes (`udb:*` / `udb:admin`) as cross-project authority.
+        security
+            .scopes
+            .iter()
+            .any(|scope| scope.trim() == "udb:platform_admin")
+    }
+}
+
 pub(crate) fn require_catalog_platform_authority(operation: &'static str) -> Result<(), Status> {
     if crate::runtime::service::method_security::claim_context_present()
         && !explicit_catalog_platform_authority()
@@ -123,30 +137,38 @@ pub(crate) fn resolve_catalog_mutation_project(
     requested_project_id: &str,
     operation: &'static str,
 ) -> Result<String, Status> {
-    let project_id = if requested_project_id.trim().is_empty() {
+    let security_project = if security.project_id.trim().is_empty() {
+        crate::runtime::catalog::DEFAULT_PROJECT_ID
+    } else {
         security.project_id.trim()
+    };
+    let project_id = if requested_project_id.trim().is_empty() {
+        security_project
     } else {
         requested_project_id.trim()
     };
-    if project_id.is_empty() {
-        return Err(crate::runtime::executor_utils::invalid_argument_fields(
-            "catalog project_id is required",
-            [("project_id", "must identify an explicit project")],
-        ));
-    }
+    let has_platform_authority = request_has_explicit_catalog_platform_authority(security);
 
     if crate::runtime::service::method_security::claim_context_present() {
         let claim = crate::runtime::service::method_security::current_claim_context();
-        let claim_project = claim.project_id.trim();
-        if (claim_project.is_empty() || claim_project != project_id)
-            && !explicit_catalog_platform_authority()
-        {
+        let claim_project = if claim.project_id.trim().is_empty() {
+            crate::runtime::catalog::DEFAULT_PROJECT_ID
+        } else {
+            claim.project_id.trim()
+        };
+        if claim_project != project_id && !has_platform_authority {
             return Err(service_policy_denied(
                 operation,
                 "catalog_project_scope_mismatch",
                 "catalog project_id must match the authenticated project unless explicit platform authority is present",
             ));
         }
+    } else if security_project != project_id && !has_platform_authority {
+        return Err(service_policy_denied(
+            operation,
+            "catalog_project_scope_mismatch",
+            "catalog project_id must match the authenticated project unless explicit platform authority is present",
+        ));
     }
     Ok(project_id.to_string())
 }
@@ -175,6 +197,52 @@ mod tests {
             .get_bin(ERROR_DETAIL_METADATA_KEY)
             .expect("typed detail trailer is present");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn catalog_project_resolution_defaults_and_denies_cross_project_without_platform_scope() {
+        let default_security = SecurityContext {
+            scopes: vec!["udb:admin".to_string()],
+            ..SecurityContext::default()
+        };
+        assert_eq!(
+            resolve_catalog_mutation_project(&default_security, "", "GetCapabilities")
+                .expect("blank project uses the documented default"),
+            crate::runtime::catalog::DEFAULT_PROJECT_ID
+        );
+
+        let bound_security = SecurityContext {
+            project_id: "project-a".to_string(),
+            scopes: vec!["udb:admin".to_string()],
+            ..SecurityContext::default()
+        };
+        let denied = resolve_catalog_mutation_project(
+            &bound_security,
+            "project-b",
+            "LookupMessageSchema",
+        )
+        .expect_err("tenant admin cannot cross project authority");
+        assert_eq!(denied.code(), tonic::Code::PermissionDenied);
+        let denied_detail = decode_detail(&denied);
+        assert_eq!(denied_detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(
+            denied_detail.policy_decision_id,
+            "catalog_project_scope_mismatch"
+        );
+
+        let platform_security = SecurityContext {
+            scopes: vec!["udb:platform_admin".to_string()],
+            ..bound_security
+        };
+        assert_eq!(
+            resolve_catalog_mutation_project(
+                &platform_security,
+                "project-b",
+                "LookupMessageSchema",
+            )
+            .expect("explicit platform scope permits the requested project"),
+            "project-b"
+        );
     }
 
     #[test]

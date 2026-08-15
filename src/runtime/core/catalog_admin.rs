@@ -169,6 +169,24 @@ fn canonical_catalog_project_id(project_id: &str) -> Result<String, tonic::Statu
     Ok(project_id.to_string())
 }
 
+fn catalog_manifest_integrity_sha256(
+    operation: &'static str,
+    project_id: &str,
+    manifest: &CatalogManifest,
+) -> Result<String, tonic::Status> {
+    use sha2::{Digest, Sha256};
+
+    let canonical = serde_json::to_vec(manifest).map_err(|err| {
+        catalog_admin_internal_status(
+            operation,
+            format!(
+                "catalog manifest canonical serialization failed for project '{project_id}': {err}"
+            ),
+        )
+    })?;
+    Ok(format!("{:x}", Sha256::digest(canonical)))
+}
+
 fn validated_catalog_manifest(
     operation: &'static str,
     project_id: &str,
@@ -179,8 +197,6 @@ fn validated_catalog_manifest(
     validation_checksum_sha256: &str,
     compatibility_evidence_sha256: &str,
 ) -> Result<CatalogManifest, tonic::Status> {
-    use sha2::{Digest, Sha256};
-
     let value: serde_json::Value = serde_json::from_str(manifest_json).map_err(|err| {
         catalog_admin_internal_status(
             operation,
@@ -193,7 +209,7 @@ fn validated_catalog_manifest(
             format!("catalog manifest decode failed for project '{project_id}': {err}"),
         )
     })?;
-    let integrity = format!("{:x}", Sha256::digest(value.to_string().as_bytes()));
+    let integrity = catalog_manifest_integrity_sha256(operation, project_id, &manifest)?;
     let computed_schema_checksum = crate::generation::manifest::catalog_checksum_sha256(&manifest)
         .map_err(|err| {
             catalog_admin_internal_status(
@@ -1075,10 +1091,8 @@ impl DataBrokerRuntime {
         // storing a separate canonical decoded-payload integrity digest and the
         // manifest's semantic schema checksum as explicit provenance.
         let checksum = format!("{:x}", Sha256::digest(manifest_json));
-        let manifest_integrity_sha256 = format!(
-            "{:x}",
-            Sha256::digest(manifest_value.to_string().as_bytes())
-        );
+        let manifest_integrity_sha256 =
+            catalog_manifest_integrity_sha256("stage_catalog", &project_id, &manifest)?;
         let schema_checksum_sha256 = manifest.checksum_sha256.trim().to_string();
         let computed_schema_checksum =
             crate::generation::manifest::catalog_checksum_sha256(&manifest).map_err(|err| {
@@ -2212,14 +2226,12 @@ impl DataBrokerRuntime {
 
     /// Backfill v0.5.8 rows with explicit checksum/validation provenance and
     /// validate every durable catalog before any node hydrates it. The raw-byte
-    /// public checksum is preserved; canonical JSON integrity and semantic
-    /// schema checksums remain distinct.
+    /// public checksum is preserved; canonical decoded-manifest integrity and
+    /// semantic schema checksums remain distinct.
     pub(crate) async fn upgrade_and_validate_catalog_provenance(
         &self,
     ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
-        use sha2::{Digest, Sha256};
-
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let cat_rel = config.catalog_versions_relation();
@@ -2307,7 +2319,11 @@ impl DataBrokerRuntime {
                         ),
                     )
                 })?;
-            let integrity = format!("{:x}", Sha256::digest(value.to_string().as_bytes()));
+            let integrity = catalog_manifest_integrity_sha256(
+                "catalog_provenance_upgrade",
+                &project_id,
+                &manifest,
+            )?;
             let schema_checksum = manifest.checksum_sha256.trim();
             let computed_schema_checksum =
                 crate::generation::manifest::catalog_checksum_sha256(&manifest).map_err(|err| {
@@ -2424,10 +2440,11 @@ impl DataBrokerRuntime {
                                 format!("catalog compatibility baseline cannot decode: {err}"),
                             )
                         })?;
-                    let baseline_integrity = format!(
-                        "{:x}",
-                        Sha256::digest(baseline_value.to_string().as_bytes())
-                    );
+                    let baseline_integrity = catalog_manifest_integrity_sha256(
+                        "catalog_provenance_upgrade",
+                        &project_id,
+                        &baseline_manifest,
+                    )?;
                     let baseline_schema_checksum =
                         crate::generation::manifest::catalog_checksum_sha256(&baseline_manifest)
                             .map_err(|err| {

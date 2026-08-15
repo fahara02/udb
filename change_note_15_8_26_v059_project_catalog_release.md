@@ -41,6 +41,17 @@ Release: 0.5.9
 - EnsureProject, project enumeration, catalog reads/mutations, migration RPCs,
   capabilities, and health diagnostics bind body project identity to the
   authenticated claim; cross-project use requires explicit platform authority.
+- Empty project selectors on capabilities, health, and schema discovery now
+  follow their published context/default contract. The shared resolver also
+  enforces body-vs-security project equality for trusted in-process calls and
+  recognizes only the exact `udb:platform_admin` scope as their cross-project
+  escape hatch.
+- Catalog payload-integrity evidence now hashes deterministic serialization of
+  the decoded typed manifest, so valid authority survives PostgreSQL JSONB
+  normalization. Raw request and semantic schema checksums remain distinct.
+- Error-detail posture now pins the centralized catalog project policy detail
+  and current typed durable/reconciliation errors, removing stale requirements
+  for deleted per-handler authorization and in-memory activation branches.
 - Message-schema discovery, admin summary, and projection-drift control paths
   use the same claim binding and exact active target. Capabilities expose the
   verified semantic manifest checksum, while health rejects raw ACTIVE rows
@@ -126,6 +137,9 @@ Release: 0.5.9
   is not acceptance evidence.
 - Applied the `ci-rustfmt-repair-1` and `ci-sdk-codegen-repair-1` artifacts from
   GitHub CI run `31895052655`; the next CI run is the drift-free proof.
+- GitHub run `31895052655` compiled all targets and reported 2,700 passing
+  library tests before the shared default-project resolver failures; focused
+  live run `31895088437` supplied the JSONB provenance-readback failure.
 - Native repair generation consumes the exact broker already built by the
   Linux Rust job, avoiding a second Cargo invocation and its post-failure target
   lock while preserving runner/toolchain provenance.
