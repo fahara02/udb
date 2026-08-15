@@ -57,6 +57,7 @@ GRPC_STATUS_CODES = {
 
 HARNESS_STATUS_CODES = {
     "CAPABILITY_SKIPPED",
+    "SEED_BLOCKED",
     "SKIP_NO_BODY",
 }
 
@@ -166,7 +167,8 @@ def _parse_report(path: Path) -> dict[str, Any]:
     headers: list[str] = []
 
     # An err cell of "OK"/""/"-" means the RPC succeeded; anything else is a non-OK
-    # gRPC status code (UNAVAILABLE, FAILED_PRECONDITION, …) and counts as a failure.
+    # gRPC or harness status (UNAVAILABLE, SEED_BLOCKED, …) and counts as a failure
+    # unless it is an explicitly non-fatal capability skip.
     def _norm_err(value: str | None) -> str | None:
         raw = (value or "").strip()
         if raw in {"", "-", "OK", "ok"}:
@@ -441,26 +443,32 @@ RPCs measured: 2
             encoding="utf-8",
         )
         parsed = _parse_report(path)
+        assert parsed["summary"]["rpc_count"] == 2, parsed
         assert parsed["summary"]["failed_rpc_count"] == 2, parsed
         assert {row["err_code"] for row in parsed["failed_rpcs"]} == {"RESOURCE_EXHAUSTED"}, parsed
 
         path.write_text(
             """# UDB SDK Live Perf
 
-RPCs measured: 2
+RPCs measured: 3
 
 ## Full per-RPC table (sorted by service, then RPC)
 
 | Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |
 |---|---|---|---|--:|--:|--:|--:|
 | RoomService | StartRoomComposite | mutation | CAPABILITY_SKIPPED | 0.20 | 0.30 | 0.22 | 1 |
+| BackupService | GetBackup | read_only | SEED_BLOCKED | 0.00 | 0.00 | 0.00 | 0 |
 | VaultService | Encrypt | mutation | SKIP_NO_BODY | 0.20 | 0.30 | 0.22 | 1 |
 """,
             encoding="utf-8",
         )
         parsed = _parse_report(path)
-        assert parsed["summary"]["failed_rpc_count"] == 1, parsed
-        assert {row["err_code"] for row in parsed["failed_rpcs"]} == {"SKIP_NO_BODY"}, parsed
+        assert parsed["summary"]["rpc_count"] == 3, parsed
+        assert parsed["summary"]["failed_rpc_count"] == 2, parsed
+        assert {row["err_code"] for row in parsed["failed_rpcs"]} == {
+            "SEED_BLOCKED",
+            "SKIP_NO_BODY",
+        }, parsed
 
         # The Go harness spells the missing-body status `NO-BODY`; it must alias
         # onto the canonical `SKIP_NO_BODY` (a countable failure) rather than

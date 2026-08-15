@@ -1443,6 +1443,23 @@ function phpBenchBodyEntriesByAlias(): array
     return $byAlias;
 }
 
+/**
+ * @return null|array{rpc:string,service:string,request_msg:string,body:string,api_alias:string}
+ */
+function phpBenchBodyEntryForRpc(string $name, ?string $serviceName = null): ?array
+{
+    $n = strtolower(rpcSnake($name));
+    $rows = phpBenchBodyEntriesByAlias();
+    if ($serviceName !== null && $serviceName !== '') {
+        $entry = $rows[strtolower($serviceName).'.'.$n] ?? null;
+        if ($entry !== null) {
+            return $entry;
+        }
+    }
+
+    return $rows[$n] ?? null;
+}
+
 function phpStrictManifestJsonCell(string $body): ?string
 {
     $body = trim($body);
@@ -1548,13 +1565,7 @@ function phpRequestClassForManifestEntry(array $entry): ?string
 
 function phpManifestJsonBody(string $name, PerfFixturesPhp $fix, string $tenant, string $project, ?string $serviceName = null): ?object
 {
-    $n = strtolower(rpcSnake($name));
-    $rows = phpBenchBodyEntriesByAlias();
-    $entry = null;
-    if ($serviceName !== null && $serviceName !== '') {
-        $entry = $rows[strtolower($serviceName).'.'.$n] ?? null;
-    }
-    $entry ??= $rows[$n] ?? null;
+    $entry = phpBenchBodyEntryForRpc($name, $serviceName);
     if ($entry === null) {
         return null;
     }
@@ -2737,6 +2748,61 @@ it('manifest JSON body hydrates BackupService requests', function () {
         ->and($deleted->getPolicyName())->toBe('sdk-perf-default');
 });
 
+it('retains a failed PHP backup seed status and blocks only dependent RPC bodies', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('restore_tenant_id', 'restore-tenant-php');
+    $fix->blockSeed(
+        'backup_id',
+        'BackupService/StartTenantBackup',
+        9,
+        "project project-php has no explicitly active catalog",
+    );
+
+    $get = phpBlockedManifestSeed('get_backup', $fix, 'BackupService');
+    $restore = phpBlockedManifestSeed('restore_tenant', $fix, 'BackupService');
+    $list = phpBlockedManifestSeed('list_backups', $fix, 'BackupService');
+    $start = phpBlockedManifestSeed('start_tenant_backup', $fix, 'BackupService');
+    $seedFailure = new PerfSeedRpcExceptionPhp(
+        'BackupService/StartTenantBackup',
+        9,
+        'project project-php has no explicitly active catalog',
+    );
+
+    expect($get)->not->toBeNull()
+        ->and($get['key'])->toBe('backup_id')
+        ->and($get['source'])->toBe('BackupService/StartTenantBackup')
+        ->and($get['grpc_code'])->toBe(9)
+        ->and($get['grpc_status'])->toBe('FAILED_PRECONDITION')
+        ->and($get['details'])->toContain('no explicitly active catalog')
+        ->and($restore)->toBe($get)
+        ->and($list)->toBeNull()
+        ->and($start)->toBeNull()
+        ->and($fix->lookup('backup_id'))->toBeNull()
+        ->and($seedFailure->grpcCode)->toBe(9)
+        ->and($seedFailure->grpcStatus)->toBe('FAILED_PRECONDITION')
+        ->and($seedFailure->getMessage())->toContain('FAILED_PRECONDITION (9)')
+        ->and($seedFailure->getMessage())->toContain('no explicitly active catalog');
+});
+
+it('clears a PHP seed block when a later seed attempt succeeds', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->blockSeed('backup_id', 'BackupService/StartTenantBackup', 14, 'broker unavailable');
+    $fix->set('backup_id', 'backup-php');
+
+    expect($fix->blockedSeed('backup_id'))->toBeNull()
+        ->and($fix->lookup('backup_id'))->toBe('backup-php')
+        ->and(phpBlockedManifestSeed('get_backup', $fix, 'BackupService'))->toBeNull();
+});
+
+it('keeps an unknown missing PHP manifest seed fail closed', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+
+    expect(fn () => phpManifestJsonBody('get_backup', $fix, 'tenant-php', 'project-php', 'BackupService'))
+        ->toThrow(RuntimeException::class, "missing PHP bench manifest seed 'backup_id'");
+});
+
 it('manifest JSON body hydrates ConfigService read-only requests', function () {
     $fix = new PerfFixturesPhp();
     $fix->set('tenant_id', 'tenant-php');
@@ -3158,12 +3224,32 @@ function sdkBenchMethodPhp(string $service, string $name, string $apiAlias): str
 class PerfFixturesPhp
 {
     private array $m = [];
+    /** @var array<string,array{key:string,source:string,grpc_code:int,grpc_status:string,details:string}> */
+    private array $blocked = [];
 
     public function set(string $key, $val): void
     {
         if ($val !== null && $val !== '') {
-            $this->m[strtolower($key)] = (string) $val;
+            $key = strtolower($key);
+            $this->m[$key] = (string) $val;
+            unset($this->blocked[$key]);
         }
+    }
+
+    public function blockSeed(string $key, string $source, int $grpcCode, string $details): void
+    {
+        $key = strtolower(trim($key));
+        if ($key === '') {
+            throw new InvalidArgumentException('blocked PHP bench seed key cannot be empty');
+        }
+        unset($this->m[$key]);
+        $this->blocked[$key] = [
+            'key' => $key,
+            'source' => $source,
+            'grpc_code' => $grpcCode,
+            'grpc_status' => grpcStatusNamePhp($grpcCode),
+            'details' => $details,
+        ];
     }
 
     public function lookup(string $field): ?string
@@ -3180,12 +3266,77 @@ class PerfFixturesPhp
         return null;
     }
 
+    /**
+     * @return null|array{key:string,source:string,grpc_code:int,grpc_status:string,details:string}
+     */
+    public function blockedSeed(string $field): ?array
+    {
+        $field = strtolower($field);
+        if (isset($this->blocked[$field])) {
+            return $this->blocked[$field];
+        }
+        foreach ($this->blocked as $key => $failure) {
+            if ($field === $key || str_ends_with($field, '_'.$key)) {
+                return $failure;
+            }
+        }
+
+        return null;
+    }
+
     public function keys(): array
     {
         $keys = array_keys($this->m);
         sort($keys);
 
         return $keys;
+    }
+}
+
+/**
+ * Return the first known failed seed needed by an RPC's documented request body.
+ * Unknown/missing manifest refs intentionally remain fatal in phpResolveManifestSeeds().
+ *
+ * @return null|array{key:string,source:string,grpc_code:int,grpc_status:string,details:string}
+ */
+function phpBlockedManifestSeed(string $name, PerfFixturesPhp $fix, ?string $serviceName = null): ?array
+{
+    $entry = phpBenchBodyEntryForRpc($name, $serviceName);
+    if ($entry === null) {
+        return null;
+    }
+    $json = phpStrictManifestJsonCell($entry['body']);
+    if ($json === null) {
+        return null;
+    }
+    preg_match_all('/<seed:([^>]+)>/', $json, $matches);
+    $keys = array_values(array_unique(array_map(
+        fn ($key) => strtolower((string) $key),
+        $matches[1] ?? [],
+    )));
+    sort($keys);
+    foreach ($keys as $key) {
+        $failure = $fix->blockedSeed($key);
+        if ($failure !== null) {
+            return $failure;
+        }
+    }
+
+    return null;
+}
+
+class PerfSeedRpcExceptionPhp extends RuntimeException
+{
+    public int $grpcCode;
+    public string $grpcStatus;
+    public string $grpcDetails;
+
+    public function __construct(string $label, int $grpcCode, string $grpcDetails)
+    {
+        $this->grpcCode = $grpcCode;
+        $this->grpcStatus = grpcStatusNamePhp($grpcCode);
+        $this->grpcDetails = $grpcDetails;
+        parent::__construct("{$label} returned gRPC {$this->grpcStatus} ({$grpcCode}): {$grpcDetails}");
     }
 }
 
@@ -3291,10 +3442,13 @@ function perfSeedPhp(array $s): array
         $fix->set($k, $v);
     }
 
-    $try = function (string $label, callable $fn) {
+    $try = function (string $label, callable $fn, ?callable $onFailure = null) {
         try {
             return $fn();
         } catch (\Throwable $e) {
+            if ($onFailure !== null) {
+                $onFailure($e);
+            }
             fwrite(STDERR, "perf seed: $label failed: {$e->getMessage()}\n");
 
             return null;
@@ -4136,8 +4290,15 @@ function perfSeedPhp(array $s): array
     // any earlier seed produced. Populate the exact ref names the Go seeds use
     // (sdk/go/udbclient/live_perf_seed_test.go) and create the backing rows.
     $lockOwner = $uid !== '' ? $uid : liveUuidV4();
-    $seedStub = function (string $label, object $stub, string $rpc, string $reqClass, array $body) use ($meta, $try): ?object {
-        return $try($label, function () use ($stub, $rpc, $reqClass, $body, $meta) {
+    $seedStub = function (
+        string $label,
+        object $stub,
+        string $rpc,
+        string $reqClass,
+        array $body,
+        array $blockedSeeds = [],
+    ) use ($meta, $try, $fix): ?object {
+        return $try($label, function () use ($stub, $rpc, $reqClass, $body, $meta, $label) {
             /** @var \Google\Protobuf\Internal\Message $req */
             $req = new $reqClass();
             $req->mergeFromJsonString((string) json_encode($body));
@@ -4145,8 +4306,23 @@ function perfSeedPhp(array $s): array
             $call = $stub->{$rpc}($req, $meta->toGrpcMetadata(), ['timeout' => 20_000_000]);
             [$resp, $status] = $call->wait();
             $code = is_object($status) ? (int) ($status->code ?? 0) : (is_array($status) ? (int) ($status['code'] ?? 0) : 0);
+            if ($code !== 0) {
+                $details = is_object($status)
+                    ? (string) ($status->details ?? '')
+                    : (is_array($status) ? (string) ($status['details'] ?? '') : 'missing gRPC status details');
+                throw new PerfSeedRpcExceptionPhp($label, $code, $details);
+            }
+            if (! is_object($resp)) {
+                throw new PerfSeedRpcExceptionPhp($label, 2, 'successful gRPC status omitted the response message');
+            }
 
-            return $code === 0 ? $resp : null;
+            return $resp;
+        }, function (\Throwable $e) use ($fix, $blockedSeeds, $label): void {
+            $grpcCode = $e instanceof PerfSeedRpcExceptionPhp ? $e->grpcCode : 2;
+            $details = $e instanceof PerfSeedRpcExceptionPhp ? $e->grpcDetails : $e->getMessage();
+            foreach ($blockedSeeds as $seed) {
+                $fix->blockSeed((string) $seed, $label, $grpcCode, $details);
+            }
         });
     };
 
@@ -4249,10 +4425,17 @@ function perfSeedPhp(array $s): array
     $fix->set('restore_tenant_id', liveUuidV4());
     $seedStub('PutBackupPolicy', $backup, 'PutBackupPolicy', \Udb\Core\Backup\Services\V1\PutBackupPolicyRequest::class,
         ['tenant_id' => $tenant, 'policy_name' => 'sdk-perf-default', 'schedule_cron' => '0 3 * * *', 'retention_days' => 7, 'max_retained_backups' => 3, 'enabled' => true, 'metadata_json' => '{}']);
-    $bk = $seedStub('StartTenantBackup', $backup, 'StartTenantBackup', \Udb\Core\Backup\Services\V1\StartTenantBackupRequest::class,
-        ['tenant_id' => $tenant]);
+    $bk = $seedStub('BackupService/StartTenantBackup', $backup, 'StartTenantBackup', \Udb\Core\Backup\Services\V1\StartTenantBackupRequest::class,
+        ['tenant_id' => $tenant], ['backup_id']);
     if ($bk) {
-        $fix->set('backup_id', $bk->getBackupId());
+        $backupId = $bk->getBackupId();
+        if ($backupId !== '') {
+            $fix->set('backup_id', $backupId);
+        } else {
+            $details = 'successful seed response omitted backup_id';
+            $fix->blockSeed('backup_id', 'BackupService/StartTenantBackup', 2, $details);
+            fwrite(STDERR, "perf seed: BackupService/StartTenantBackup failed: {$details}\n");
+        }
     }
 
     // EmbeddingService: model registry, durable jobs, and one searchable vector.
@@ -4395,6 +4578,7 @@ it('measures per-RPC latency', function () {
     // the session/credentials down LAST.
     $PHASE1_AUTHN = ['login', 'refresh_session', 'authenticate', 'validate_token', 'introspect_token', 'refresh_token', 'get_jwks'];
     $PHASE3_AUTHN = ['logout', 'revoke_session', 'admin_revoke_session', 'admin_revoke_all_user_sessions', 'admin_revoke_all_tenant_sessions', 'emergency_revoke', 'change_password', 'reset_password', 'admin_reset_password', 'change_user_status', 'admin_reset_mfa', 'revoke_recovery_codes', 'revoke_device', 'delete_web_authn_credential', 'disable_mfa_factor'];
+    $CATALOG_LIFECYCLE = ['StageCatalog' => 0, 'ActivateCatalog' => 1, 'RollbackCatalog' => 2];
     $okRank = ['read_only' => 0, 'mutation' => 1, 'destructive' => 2];
     $apiKeyOf = fn (string $svc, string $name) => "$svc/$name";
     $kindOf = fn (array $u) => operationKindPhp($u['name'], $u['svc']);
@@ -4406,7 +4590,14 @@ it('measures per-RPC latency', function () {
         $svc = preg_replace('/Stub$/', '', $stubName);
         $sdkClient = $stubName === 'DataBrokerStub' ? $s['data'] : $s['authGenerated'];
         foreach (generatedStubMethods($stub) as $method) {
-            $units[] = ['stub' => $stub, 'client' => $sdkClient, 'svc' => $svc, 'method' => $method, 'name' => $method->getName()];
+            $units[] = [
+                'stub' => $stub,
+                'client' => $sdkClient,
+                'svc' => $svc,
+                'method' => $method,
+                'name' => $method->getName(),
+                'ordinal' => count($units),
+            ];
         }
     }
     // NOTE: $u['name'] is the raw grpc stub method (PascalCase, e.g. RefreshSession); the phase
@@ -4419,13 +4610,27 @@ it('measures per-RPC latency', function () {
         if ($u['svc'] === 'TenantService' && $nm === 'purge_tenant') { return 4; }
         return 2;
     };
-    usort($units, function (array $a, array $b) use ($phaseOf, $PHASE1_AUTHN, $okRank, $kindOf): int {
+    usort($units, function (array $a, array $b) use ($phaseOf, $PHASE1_AUTHN, $CATALOG_LIFECYCLE, $okRank, $kindOf): int {
         $pa = $phaseOf($a); $pb = $phaseOf($b);
         if ($pa !== $pb) { return $pa <=> $pb; }
-        if ($pa === 1) { return array_search(rpcSnake($a['name']), $PHASE1_AUTHN, true) <=> array_search(rpcSnake($b['name']), $PHASE1_AUTHN, true); }
-        if ($pa === 2) { return ($okRank[$kindOf($a)] ?? 0) <=> ($okRank[$kindOf($b)] ?? 0); }
-        if ($pa === 3) { return (int) (rpcSnake($a['name']) === 'admin_revoke_all_tenant_sessions') <=> (int) (rpcSnake($b['name']) === 'admin_revoke_all_tenant_sessions'); }
-        return 0;
+        if ($pa === 2) {
+            $kindOrder = ($okRank[$kindOf($a)] ?? 0) <=> ($okRank[$kindOf($b)] ?? 0);
+            if ($kindOrder !== 0) { return $kindOrder; }
+            $catalogA = $a['svc'] === 'DataBroker' && isset($CATALOG_LIFECYCLE[$a['name']]);
+            $catalogB = $b['svc'] === 'DataBroker' && isset($CATALOG_LIFECYCLE[$b['name']]);
+            if ($catalogA !== $catalogB) {
+                return $catalogA ? -1 : 1;
+            }
+            if ($catalogA) {
+                return $CATALOG_LIFECYCLE[$a['name']] <=> $CATALOG_LIFECYCLE[$b['name']];
+            }
+        }
+        $withinPhase = match ($pa) {
+            1 => array_search(rpcSnake($a['name']), $PHASE1_AUTHN, true) <=> array_search(rpcSnake($b['name']), $PHASE1_AUTHN, true),
+            3 => (int) (rpcSnake($a['name']) === 'admin_revoke_all_tenant_sessions') <=> (int) (rpcSnake($b['name']) === 'admin_revoke_all_tenant_sessions'),
+            default => 0,
+        };
+        return $withinPhase !== 0 ? $withinPhase : $a['ordinal'] <=> $b['ordinal'];
     });
     $reauthenticatedForPurge = false;
     foreach ($units as $u) {
@@ -4520,9 +4725,31 @@ it('measures per-RPC latency', function () {
                 && $params[0]->getType() instanceof ReflectionNamedType
                 && ! $params[0]->getType()->isBuiltin();
             $probeRequest = null;
-            $kind = 'read_only';
+            $kind = operationKindPhp($name, $svc);
             $mkBody = null;
             if ($hasRequest) {
+                $blockedSeed = phpBlockedManifestSeed($name, $fix, $svc);
+                if ($blockedSeed !== null) {
+                    $detail = sprintf(
+                        "seed '%s' blocked by %s: original gRPC %s (%d): %s",
+                        $blockedSeed['key'],
+                        $blockedSeed['source'],
+                        $blockedSeed['grpc_status'],
+                        $blockedSeed['grpc_code'],
+                        $blockedSeed['details'],
+                    );
+                    fwrite(STDERR, "FAILDETAIL $svc/$name [SEED_BLOCKED] ".substr($detail, 0, 200)."\n");
+                    $samples[] = [
+                        'service' => $svc, 'rpc' => $name, 'api_alias' => $aliasOf($svc, $name),
+                        'operation_id' => $operationIdOf($svc, $name), 'kind' => $kind, 'err' => 'SEED_BLOCKED',
+                        'p50' => 0.0, 'p99' => 0.0, 'mean' => 0.0, 'iters' => 0,
+                        'seed_key' => $blockedSeed['key'], 'seed_source' => $blockedSeed['source'],
+                        'seed_grpc_code' => $blockedSeed['grpc_code'], 'seed_grpc_status' => $blockedSeed['grpc_status'],
+                        'seed_details' => $blockedSeed['details'],
+                    ];
+
+                    continue;
+                }
                 // DOCUMENTED body per docs/bench-bodies/<svc>.md, seed refs resolved from
                 // $fix. NO generic population: an RPC not yet covered by perfBodyPhp gets a
                 // typed-empty request (never a generically-populated placeholder). Built via
@@ -4531,7 +4758,6 @@ it('measures per-RPC latency', function () {
                 // hit the unique constraint and the broker leaks it as INTERNAL).
                 $mkBody = fn () => perfBodyPhp($name, $fix, $authedMeta->tenantId, $authedMeta->projectId, $svc);
                 $probeRequest = $mkBody();
-                $kind = operationKindPhp($name, $svc);
             }
             // Refresh-token rotation is single-use. A second call with the same
             // fixture token is a replay signal in v0.5.7 and correctly revokes the
@@ -4628,6 +4854,8 @@ it('measures per-RPC latency', function () {
     // Failures section (BENCH_RPC_BODIES.md #1/#3): every RPC whose measured
     // status is non-OK is a FAILURE, not just a latency sample.
     $capabilitySkipped = array_values(array_filter($samples, fn ($r) => ($r['err'] ?? 'OK') === 'CAPABILITY_SKIPPED'));
+    $seedBlocked = array_values(array_filter($samples, fn ($r) => ($r['err'] ?? 'OK') === 'SEED_BLOCKED'));
+    usort($seedBlocked, fn ($a, $b) => ($a['service'].'/'.$a['rpc']) <=> ($b['service'].'/'.$b['rpc']));
     $failed = array_values(array_filter($samples, fn ($r) => ($r['err'] ?? 'OK') !== 'OK' && ($r['err'] ?? 'OK') !== 'CAPABILITY_SKIPPED'));
     usort($failed, fn ($a, $b) => ($a['service'].'/'.$a['rpc']) <=> ($b['service'].'/'.$b['rpc']));
     $fixtureKeys = $fix->keys();
@@ -4641,6 +4869,8 @@ it('measures per-RPC latency', function () {
             .'to finish.', '',
         'Unary = full request/response round-trip. Streaming rows (kind=stream_open) report '
             .'stream-open latency (initiate + cancel, no response drain), NOT first-message latency.', '',
+        'A failed prerequisite seed does not abort the sweep. Every dependent RPC is emitted with err=SEED_BLOCKED, '
+            .'zero iterations, and the original seed RPC status below; unrelated RPCs continue to run.', '',
         '## Seeded fixtures', '',
         'Captured semantic field -> seeded value keys used to resolve request fields: '
             .(count($fixtureKeys) > 0 ? implode(', ', $fixtureKeys) : '(none)'), '',
@@ -4658,11 +4888,33 @@ it('measures per-RPC latency', function () {
             $lines[] = sprintf('| %s/%s | %s | %s | %s | %.2f |', $row['service'], $row['rpc'], $row['api_alias'], $row['operation_id'], $row['kind'], $row['p99']);
         }
     }
+    $lines = array_merge($lines, ['', '## Seed-blocked RPCs ('.count($seedBlocked).')', '']);
+    if (count($seedBlocked) === 0) {
+        $lines[] = 'No RPC was blocked by a failed prerequisite seed.';
+    } else {
+        $lines[] = 'These RPCs were not invoked because their documented request bodies depend on a seed RPC that failed.';
+        $lines[] = '';
+        $lines[] = '| RPC | seed | seed source | original status | details |';
+        $lines[] = '|---|---|---|---|---|';
+        foreach ($seedBlocked as $row) {
+            $details = str_replace(["|", "\r", "\n"], ['\\|', ' ', ' '], (string) ($row['seed_details'] ?? ''));
+            $lines[] = sprintf(
+                '| %s/%s | %s | %s | %s (%d) | %s |',
+                $row['service'],
+                $row['rpc'],
+                $row['seed_key'],
+                $row['seed_source'],
+                $row['seed_grpc_status'],
+                $row['seed_grpc_code'],
+                $details,
+            );
+        }
+    }
     $lines = array_merge($lines, ['', '## Failures ('.count($failed).')', '']);
     if (count($failed) === 0) {
-        $lines[] = 'No RPC returned a non-OK gRPC status.';
+        $lines[] = 'No RPC returned a non-OK gRPC status or fatal harness status.';
     } else {
-        $lines[] = 'These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.';
+        $lines[] = 'These RPCs returned a non-OK gRPC status or fatal harness status and are FAILURES, not latency samples.';
         $lines[] = '';
         $lines[] = '| RPC | api_alias | operation_id | kind | err | p99 ms |';
         $lines[] = '|---|---|---|---|---|--:|';
@@ -4682,5 +4934,5 @@ it('measures per-RPC latency', function () {
     }
     file_put_contents('perf_report_php.md', implode("\n", $lines)."\n");
     $seedCleanup();
-    expect(count($samples))->toBeGreaterThanOrEqual(200);
+    expect(count($samples))->toBe(count($units));
 })->skip(getenv('UDB_LIVE_PERF') !== '1', 'perf run requires UDB_LIVE_PERF=1');
