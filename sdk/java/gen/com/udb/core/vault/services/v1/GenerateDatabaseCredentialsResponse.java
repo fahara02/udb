@@ -32,6 +32,7 @@ private static final long serialVersionUID = 0L;
     password_ = "";
     leaseId_ = "";
     message_ = "";
+    state_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -241,6 +242,56 @@ private static final long serialVersionUID = 0L;
     return error_ == null ? com.udb.core.common.v1.ApiError.getDefaultInstance() : error_;
   }
 
+  public static final int REPLAYED_FIELD_NUMBER = 7;
+  private boolean replayed_ = false;
+  /**
+   * <code>bool replayed = 7 [json_name = "replayed"];</code>
+   * @return The replayed.
+   */
+  @java.lang.Override
+  public boolean getReplayed() {
+    return replayed_;
+  }
+
+  public static final int STATE_FIELD_NUMBER = 8;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object state_ = "";
+  /**
+   * <code>string state = 8 [json_name = "state"];</code>
+   * @return The state.
+   */
+  @java.lang.Override
+  public java.lang.String getState() {
+    java.lang.Object ref = state_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      state_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string state = 8 [json_name = "state"];</code>
+   * @return The bytes for state.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getStateBytes() {
+    java.lang.Object ref = state_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      state_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -273,6 +324,12 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(6, getError());
     }
+    if (replayed_ != false) {
+      output.writeBool(7, replayed_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(state_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 8, state_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -301,6 +358,13 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(6, getError());
+    }
+    if (replayed_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(7, replayed_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(state_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(8, state_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -332,6 +396,10 @@ private static final long serialVersionUID = 0L;
       if (!getError()
           .equals(other.getError())) return false;
     }
+    if (getReplayed()
+        != other.getReplayed()) return false;
+    if (!getState()
+        .equals(other.getState())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -357,6 +425,11 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + ERROR_FIELD_NUMBER;
       hash = (53 * hash) + getError().hashCode();
     }
+    hash = (37 * hash) + REPLAYED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getReplayed());
+    hash = (37 * hash) + STATE_FIELD_NUMBER;
+    hash = (53 * hash) + getState().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -504,6 +577,8 @@ private static final long serialVersionUID = 0L;
         errorBuilder_.dispose();
         errorBuilder_ = null;
       }
+      replayed_ = false;
+      state_ = "";
       return this;
     }
 
@@ -559,6 +634,12 @@ private static final long serialVersionUID = 0L;
             : errorBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.replayed_ = replayed_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.state_ = state_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -599,6 +680,14 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasError()) {
         mergeError(other.getError());
+      }
+      if (other.getReplayed() != false) {
+        setReplayed(other.getReplayed());
+      }
+      if (!other.getState().isEmpty()) {
+        state_ = other.state_;
+        bitField0_ |= 0x00000080;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -658,6 +747,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 50
+            case 56: {
+              replayed_ = input.readBool();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
+            case 66: {
+              state_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 66
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1114,6 +1213,110 @@ private static final long serialVersionUID = 0L;
         error_ = null;
       }
       return errorBuilder_;
+    }
+
+    private boolean replayed_ ;
+    /**
+     * <code>bool replayed = 7 [json_name = "replayed"];</code>
+     * @return The replayed.
+     */
+    @java.lang.Override
+    public boolean getReplayed() {
+      return replayed_;
+    }
+    /**
+     * <code>bool replayed = 7 [json_name = "replayed"];</code>
+     * @param value The replayed to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReplayed(boolean value) {
+
+      replayed_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool replayed = 7 [json_name = "replayed"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReplayed() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      replayed_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object state_ = "";
+    /**
+     * <code>string state = 8 [json_name = "state"];</code>
+     * @return The state.
+     */
+    public java.lang.String getState() {
+      java.lang.Object ref = state_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        state_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string state = 8 [json_name = "state"];</code>
+     * @return The bytes for state.
+     */
+    public com.google.protobuf.ByteString
+        getStateBytes() {
+      java.lang.Object ref = state_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        state_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string state = 8 [json_name = "state"];</code>
+     * @param value The state to set.
+     * @return This builder for chaining.
+     */
+    public Builder setState(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      state_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string state = 8 [json_name = "state"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearState() {
+      state_ = getDefaultInstance().getState();
+      bitField0_ = (bitField0_ & ~0x00000080);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string state = 8 [json_name = "state"];</code>
+     * @param value The bytes for state to set.
+     * @return This builder for chaining.
+     */
+    public Builder setStateBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      state_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse)

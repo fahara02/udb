@@ -933,6 +933,19 @@ fn catalog_ddl(tables: &[ManifestTable], stores: &[ManifestStore]) -> CatalogDdl
     }
 }
 
+/// Recompute the semantic catalog checksum from decoded manifest authority.
+///
+/// The generator version is read from the manifest so a durable catalog keeps
+/// the checksum semantics of the generator that produced it. Callers must not
+/// trust the embedded `checksum_sha256` field as proof of payload integrity.
+pub(crate) fn catalog_checksum_sha256(
+    manifest: &CatalogManifest,
+) -> Result<String, serde_json::Error> {
+    let mut ddl = catalog_ddl(&manifest.tables, &manifest.stores);
+    ddl.generator_version = manifest.generator_version.clone();
+    checksum_hex(&ddl)
+}
+
 fn table_ddl(table: &ManifestTable) -> TableDdl {
     TableDdl {
         message_name: table.message_name.clone(),

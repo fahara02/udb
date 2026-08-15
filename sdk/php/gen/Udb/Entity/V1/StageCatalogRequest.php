@@ -33,6 +33,8 @@ class StageCatalogRequest extends \Google\Protobuf\Internal\Message
      */
     protected $reason = '';
     /**
+     * Required for durable StageCatalog retries.
+     *
      * Generated from protobuf field <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      */
     protected $idempotency_key = '';
@@ -49,6 +51,7 @@ class StageCatalogRequest extends \Google\Protobuf\Internal\Message
      *     @type string $project_id
      *     @type string $reason
      *     @type string $idempotency_key
+     *           Required for durable StageCatalog retries.
      * }
      */
     public function __construct($data = NULL) {
@@ -159,6 +162,8 @@ class StageCatalogRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Required for durable StageCatalog retries.
+     *
      * Generated from protobuf field <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      * @return string
      */
@@ -168,6 +173,8 @@ class StageCatalogRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Required for durable StageCatalog retries.
+     *
      * Generated from protobuf field <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      * @param string $var
      * @return $this

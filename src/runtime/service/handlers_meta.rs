@@ -32,12 +32,13 @@ fn message_schema_not_found_status(message_type: &str, project_id: &str) -> Stat
     )
 }
 
-fn project_scope_mismatch_status(operation: &'static str) -> Status {
-    crate::runtime::executor_utils::policy_status_with_code(
-        tonic::Code::PermissionDenied,
+fn exact_catalog_required_status(operation: &'static str) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::FailedPrecondition,
+        "catalog",
         operation,
-        "project_scope_mismatch",
-        "requested project_id does not match authenticated project",
+        "catalog_project_not_active",
+        "message schema discovery requires an exact ACTIVE project catalog",
     )
 }
 
@@ -62,7 +63,53 @@ impl DataBrokerService {
         if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("GetCapabilities", started, Err(err));
         }
-        let mut enabled_backends = self.runtime_snapshot().enabled_backend_names();
+        let req = request.into_inner();
+        let project_scope = match super::handlers_catalog::resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "GetCapabilities",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("GetCapabilities", started, Err(err)),
+        };
+        let active_catalog = match self.catalog.active_exact_for(&project_scope) {
+            Some(active) => active,
+            None => {
+                return self.record_grpc(
+                    "GetCapabilities",
+                    started,
+                    Err(crate::runtime::executor_utils::schema_status(
+                        tonic::Code::FailedPrecondition,
+                        "catalog",
+                        "GetCapabilities",
+                        "catalog_project_not_active",
+                        "capabilities require an exact ACTIVE catalog for the requested project",
+                    )),
+                );
+            }
+        };
+        let runtime = self.runtime_snapshot();
+        let project_backend_instances = runtime.backend_instances_for_project(&project_scope);
+        let configured_backends: std::collections::HashSet<String> = project_backend_instances
+            .iter()
+            .filter(|instance| instance.enabled && instance.configured)
+            .map(|instance| instance.backend.clone())
+            .collect();
+        let mut enabled_backends: Vec<String> = project_backend_instances
+            .iter()
+            .filter(|instance| {
+                instance.enabled
+                    && instance.configured
+                    && instance.connected
+                    && instance.healthy
+                    && !instance.circuit_open
+            })
+            .map(|instance| instance.backend.clone())
+            .collect();
+        let project_backend_statuses: Vec<_> = project_backend_instances
+            .into_iter()
+            .map(backend_instance_status)
+            .collect();
         let enabled_set: std::collections::HashSet<String> =
             enabled_backends.iter().cloned().collect();
         let mut degraded_backends: Vec<String> = crate::backend::all_plugins()
@@ -74,19 +121,18 @@ impl DataBrokerService {
         enabled_backends.dedup();
         degraded_backends.sort();
         degraded_backends.dedup();
-        let manifest_checksum = if !self.catalog.active().manifest.checksum_sha256.is_empty() {
-            self.catalog.active().manifest.checksum_sha256.clone()
+        let manifest_checksum = if !active_catalog.manifest.checksum_sha256.is_empty() {
+            active_catalog.manifest.checksum_sha256.clone()
         } else {
             // Fallback for older manifests built without a stored checksum: hash the
             // full manifest instead of only message names so schema changes are visible.
             use sha2::Digest;
             let mut hasher = sha2::Sha256::new();
-            if let Ok(bytes) = serde_json::to_vec(&self.catalog.active().manifest) {
+            if let Ok(bytes) = serde_json::to_vec(&active_catalog.manifest) {
                 hasher.update(bytes);
             }
             format!("{:x}", hasher.finalize())
         };
-        let req = request.into_inner();
         let sys_cfg = crate::runtime::system::SystemCatalogConfig::default();
         let sys_schema = &sys_cfg.cdc.system_schema;
         let qi = |s: &str| format!("\"{s}\"");
@@ -99,12 +145,10 @@ impl DataBrokerService {
             qrel(&sys_cfg.abac_schema, &sys_cfg.abac_table),
         ];
         // When a project_id is provided, include project-specific catalog information.
-        let project_scope = req.project_id.trim().to_string();
-        if !project_scope.is_empty()
-            && let Ok(versions) = self
-                .runtime_snapshot()
-                .get_catalog_versions(&project_scope)
-                .await
+        if let Ok(versions) = self
+            .runtime_snapshot()
+            .get_catalog_versions(&project_scope)
+            .await
         {
             for v in &versions {
                 let ver = v["version"].as_str().unwrap_or("unknown");
@@ -133,13 +177,6 @@ impl DataBrokerService {
         // backends are actually CONFIGURED on this node (have a live instance/DSN),
         // so `GetCapabilities` advertises real deployment capability, not merely
         // "the binary was compiled with this backend".
-        let configured_backends: std::collections::HashSet<String> = {
-            let snap = self.runtime_snapshot();
-            snap.backend_instances()
-                .iter()
-                .map(|inst| inst.backend.clone())
-                .collect()
-        };
         let backend_caps = crate::backend::capability_matrix_configured(&configured_backends);
         let backend_protocol_support: Vec<crate::proto::BackendProtocolSupport> = backend_caps
             .iter()
@@ -188,8 +225,8 @@ impl DataBrokerService {
 
         let startup_summary = format!(
             "[UDB] capabilities: {} table(s), {} store(s), {} backend(s) enabled, {} degraded",
-            self.catalog.active().manifest.tables.len(),
-            self.catalog.active().manifest.stores.len(),
+            active_catalog.manifest.tables.len(),
+            active_catalog.manifest.stores.len(),
             enabled_backends.len(),
             degraded_backends.len()
         );
@@ -205,12 +242,7 @@ impl DataBrokerService {
                 degraded_backends,
                 system_catalog_relations,
                 supported_rpcs,
-                backend_instances: self
-                    .runtime_snapshot()
-                    .backend_instances()
-                    .iter()
-                    .map(backend_instance_status)
-                    .collect(),
+                backend_instances: project_backend_statuses,
                 backend_capabilities: backend_caps
                     .into_iter()
                     .map(|entry| BackendCapabilityDescriptor {
@@ -248,7 +280,14 @@ impl DataBrokerService {
             return self.record_grpc("GetHealthReport", started, Err(err));
         }
         let request = request.into_inner();
-        let project_scope = request.project_id.trim().to_string();
+        let project_scope = match super::handlers_catalog::resolve_catalog_mutation_project(
+            &security,
+            &request.project_id,
+            "GetHealthReport",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("GetHealthReport", started, Err(err)),
+        };
 
         // Fast path: serve a recently-assembled report within the short TTL. Keyed by
         // (project_scope, with_probes) so scoped/probe variants don't collide.
@@ -312,6 +351,31 @@ impl DataBrokerService {
         // Live probes
         let mut probes = Vec::new();
         if request.with_probes {
+            let snapshot = self.runtime_snapshot();
+            let postgres_probe_started = std::time::Instant::now();
+            match snapshot
+                .project_postgres_write_target(&project_scope, None)
+                .await
+            {
+                Ok(target) => probes.push(crate::runtime::core::BackendProbeResult {
+                    backend: format!("postgres:{}", target.instance),
+                    ok: true,
+                    latency_ms: postgres_probe_started.elapsed().as_millis() as u64,
+                    error: None,
+                }),
+                Err(err) => {
+                    errors.push(format!(
+                        "project '{project_scope}': PostgreSQL write authority probe failed: {}",
+                        err.message()
+                    ));
+                    probes.push(crate::runtime::core::BackendProbeResult {
+                        backend: "postgres:project-write-authority".to_string(),
+                        ok: false,
+                        latency_ms: postgres_probe_started.elapsed().as_millis() as u64,
+                        error: Some(err.message().to_string()),
+                    });
+                }
+            }
             // Perf: each `probe_backend` / `native_store_self_check` is an independent
             // network round-trip. Awaiting them in series made this RPC's dominant cost.
             // Collect the futures and drive them concurrently with
@@ -319,11 +383,43 @@ impl DataBrokerService {
             // src/runtime, e.g. core/catalog_sql.rs). `configured_probe_backends` returns
             // a deterministic order; `join_all` preserves input order in its output, so
             // the probe order in the report stays deterministic.
-            let snapshot = self.runtime_snapshot();
-            let backend_probe_futs: Vec<_> = snapshot
-                .configured_probe_backends(false)
+            let backend_probe_targets: Vec<(String, String)> = snapshot
+                .backend_instances_for_project(&project_scope)
                 .into_iter()
-                .map(|backend| snapshot.probe_backend(backend))
+                .filter(|instance| {
+                    instance.backend != "postgres"
+                        && instance.enabled
+                        && instance.configured
+                        && crate::backend::BackendKind::from_token(&instance.backend)
+                            .is_some_and(|kind| kind.has_runtime_probe())
+                })
+                .map(|instance| (instance.backend.clone(), instance.name.clone()))
+                .collect();
+            let backend_probe_futs: Vec<_> = backend_probe_targets
+                .into_iter()
+                .map(|(backend, instance)| {
+                    let snapshot = snapshot.clone();
+                    async move {
+                        let started = std::time::Instant::now();
+                        match snapshot
+                            .ping_backend_target(&backend, Some(&instance))
+                            .await
+                        {
+                            Ok(()) => crate::runtime::core::BackendProbeResult {
+                                backend: format!("{backend}:{instance}"),
+                                ok: true,
+                                latency_ms: started.elapsed().as_millis() as u64,
+                                error: None,
+                            },
+                            Err(err) => crate::runtime::core::BackendProbeResult {
+                                backend: format!("{backend}:{instance}"),
+                                ok: false,
+                                latency_ms: started.elapsed().as_millis() as u64,
+                                error: Some(err.message().to_string()),
+                            },
+                        }
+                    }
+                })
                 .collect();
             probes.extend(futures::future::join_all(backend_probe_futs).await);
             #[cfg(feature = "kafka")]
@@ -381,32 +477,62 @@ impl DataBrokerService {
             ));
         }
 
-        // When a project scope is requested, surface catalog version info.
+        // Surface both raw catalog history and the exact proven authority. A
+        // raw ACTIVE row without its matching binding/reload evidence is a
+        // health error, never a healthy active catalog.
         if !project_scope.is_empty() {
+            let proven_active = self.catalog.active_exact_for(&project_scope);
             match self
                 .runtime_snapshot()
                 .get_catalog_versions(&project_scope)
                 .await
             {
-                Ok(versions) if versions.is_empty() => {
-                    warnings.push(format!(
-                        "project '{project_scope}': no catalog versions found"
-                    ));
-                }
+                Ok(versions) if versions.is_empty() => match proven_active {
+                    Some(active) => warnings.push(format!(
+                        "project '{project_scope}': bootstrap catalog '{}' is active without durable catalog history",
+                        active.metadata.version
+                    )),
+                    None => errors.push(format!(
+                        "project '{project_scope}': no catalog versions or exact active authority found"
+                    )),
+                },
                 Ok(versions) => {
-                    let active: Vec<_> = versions
+                    let raw_active: Vec<_> = versions
                         .iter()
-                        .filter(|v| v["status"].as_str().unwrap_or("") == "ACTIVE")
-                        .filter_map(|v| v["version"].as_str())
+                        .filter(|version| version["status"].as_str() == Some("ACTIVE"))
                         .collect();
-                    warnings.push(format!(
-                        "project '{project_scope}': {} catalog version(s), active=[{}]",
-                        versions.len(),
-                        active.join(", ")
-                    ));
+                    match proven_active {
+                        Some(active) => {
+                            let exact_match = raw_active.iter().any(|version| {
+                                version["version"].as_str()
+                                    == Some(active.metadata.version.as_str())
+                                    && version["checksum_sha256"].as_str()
+                                        == Some(active.metadata.checksum.as_str())
+                            });
+                            if exact_match && raw_active.len() == 1 {
+                                warnings.push(format!(
+                                    "project '{project_scope}': {} catalog version(s), exact active='{}'",
+                                    versions.len(),
+                                    active.metadata.version
+                                ));
+                            } else {
+                                errors.push(format!(
+                                    "project '{project_scope}': raw ACTIVE catalog history does not match the single proven binding/reload authority"
+                                ));
+                            }
+                        }
+                        None if raw_active.is_empty() => errors.push(format!(
+                            "project '{project_scope}': {} catalog version(s), no exact active authority",
+                            versions.len()
+                        )),
+                        None => errors.push(format!(
+                            "project '{project_scope}': {} unproven raw ACTIVE catalog row(s) refused by exact authority",
+                            raw_active.len()
+                        )),
+                    }
                 }
                 Err(_) => {
-                    warnings.push(format!(
+                    errors.push(format!(
                         "project '{project_scope}': catalog version query failed"
                     ));
                 }
@@ -455,6 +581,12 @@ impl DataBrokerService {
             .map(crate::runtime::service::native_registry::status_to_proto)
             .collect();
 
+        let project_backend_statuses: Vec<_> = self
+            .runtime_snapshot()
+            .backend_instances_for_project(&project_scope)
+            .into_iter()
+            .map(backend_instance_status)
+            .collect();
         let response = HealthReportResponse {
             passed: errors.is_empty(),
             postgres_configured: init.postgres_configured,
@@ -465,12 +597,7 @@ impl DataBrokerService {
             warnings,
             privileges_json,
             probes_json,
-            backend_instances: self
-                .runtime_snapshot()
-                .backend_instances()
-                .iter()
-                .map(backend_instance_status)
-                .collect(),
+            backend_instances: project_backend_statuses,
             native_services,
         };
 
@@ -493,21 +620,21 @@ impl DataBrokerService {
     ) -> Result<Response<MessageSchemaLookupResponse>, Status> {
         let (started, security) = authorized_call!(self, request, "LookupMessageSchema");
         let req = request.into_inner();
-        if let (Some(requested), Some(bound)) =
-            (non_empty(&req.project_id), non_empty(&security.project_id))
-        {
-            if requested != bound && !security.has_scope("udb:admin") {
-                return self.record_grpc(
-                    "LookupMessageSchema",
-                    started,
-                    Err(project_scope_mismatch_status("LookupMessageSchema")),
-                );
-            }
+        let project_id = match super::handlers_catalog::resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "LookupMessageSchema",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("LookupMessageSchema", started, Err(err)),
+        };
+        if self.catalog.active_exact_for(&project_id).is_none() {
+            return self.record_grpc(
+                "LookupMessageSchema",
+                started,
+                Err(exact_catalog_required_status("LookupMessageSchema")),
+            );
         }
-        let project_id = non_empty(&req.project_id)
-            .or_else(|| non_empty(&security.project_id))
-            .unwrap_or("default")
-            .to_string();
         let client_version = non_empty(&req.client_catalog_version)
             .unwrap_or(&security.client_catalog_version)
             .to_string();
@@ -569,21 +696,24 @@ impl DataBrokerService {
     ) -> Result<Response<MessageSchemaListResponse>, Status> {
         let (started, security) = authorized_call!(self, request, "ListMessageSchemas");
         let req = request.into_inner();
-        if let (Some(requested), Some(bound)) =
-            (non_empty(&req.project_id), non_empty(&security.project_id))
-        {
-            if requested != bound && !security.has_scope("udb:admin") {
+        let project_id = match super::handlers_catalog::resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "ListMessageSchemas",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("ListMessageSchemas", started, Err(err)),
+        };
+        let active = match self.catalog.active_exact_for(&project_id) {
+            Some(active) => active,
+            None => {
                 return self.record_grpc(
                     "ListMessageSchemas",
                     started,
-                    Err(project_scope_mismatch_status("ListMessageSchemas")),
+                    Err(exact_catalog_required_status("ListMessageSchemas")),
                 );
             }
-        }
-        let project_id = non_empty(&req.project_id)
-            .or_else(|| non_empty(&security.project_id))
-            .unwrap_or("default")
-            .to_string();
+        };
         let client_version = non_empty(&req.client_catalog_version)
             .unwrap_or(&security.client_catalog_version)
             .to_string();
@@ -599,7 +729,6 @@ impl DataBrokerService {
                 )),
             );
         }
-        let active = self.catalog.active_for(&project_id);
         self.record_grpc(
             "ListMessageSchemas",
             started,
@@ -678,25 +807,6 @@ mod tests {
         assert_eq!(detail.capability_required, "message_schema_not_found");
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
-    }
-
-    #[test]
-    fn project_scope_mismatch_carries_policy_detail() {
-        for operation in ["LookupMessageSchema", "ListMessageSchemas"] {
-            let err = project_scope_mismatch_status(operation);
-            assert_eq!(err.code(), tonic::Code::PermissionDenied);
-            assert_eq!(
-                err.message(),
-                "requested project_id does not match authenticated project"
-            );
-            let detail = decode_detail(&err);
-            assert_eq!(detail.kind, ErrorKind::Policy as i32);
-            assert_eq!(detail.backend, "");
-            assert_eq!(detail.operation, operation);
-            assert_eq!(detail.policy_decision_id, "project_scope_mismatch");
-            assert!(!detail.retryable);
-            assert_eq!(detail.retry_after_ms, 0);
-        }
     }
 }
 

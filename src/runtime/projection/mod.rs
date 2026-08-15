@@ -29,6 +29,7 @@ use uuid::Uuid;
 
 use crate::generation::{CatalogManifest, ManifestStoreOption};
 use crate::metrics::MetricsRecorder;
+use crate::runtime::catalog::CatalogManager;
 use crate::runtime::system::SystemCatalogConfig;
 
 // ── Task status constants ─────────────────────────────────────────────────────
@@ -186,13 +187,13 @@ fn should_materialize_projection(p: &crate::generation::manifest::ManifestProjec
 /// Hold an `Arc<ProjectionEngine>` in the service; pass pool + runtime to
 /// [`ProjectionWorker`] for the background processing loop.
 ///
-/// The engine holds a `pool: PgPool` used by [`Self::replay_by_primary_key`] /
-/// [`Self::replay_range`] which scan the canonical Postgres source tables to
-/// re-emit projection tasks for historical rows. Those reads are inherently
-/// PG-coupled because they read tenant tables (e.g. `udb.public.users`), not
-/// UDB system tables. Task INSERTs go through [`Self::enqueue_write_tasks_tx`],
-/// which writes inside the caller's canonical Postgres transaction so a task
-/// can never be lost relative to the row it projects.
+/// The engine's `pool: PgPool` is the canonical projection-task ledger used by
+/// replay enqueue transactions. Replay and drift source reads separately
+/// resolve an exact project-bound PostgreSQL pool from the live runtime; they
+/// never scan tenant rows through this ledger/default pool. Inline task INSERTs
+/// go through [`Self::enqueue_write_tasks_tx`], which writes inside the caller's
+/// canonical Postgres transaction so a task cannot be lost relative to the row
+/// it projects.
 #[derive(Clone)]
 pub struct ProjectionEngine {
     pool: PgPool,
@@ -329,17 +330,29 @@ impl ProjectionEngine {
         Ok(task_keys)
     }
 
-    /// Replay projection tasks from the canonical PostgreSQL row identified by
-    /// its primary-key JSON object, for example `{ "id": "p1" }`.
+    /// Replay projection tasks from the exact project's canonical PostgreSQL
+    /// row identified by its primary-key JSON object, for example
+    /// `{ "id": "p1" }`.
     pub async fn replay_by_primary_key(
         &self,
+        runtime: &crate::runtime::DataBrokerRuntime,
         manifest: &CatalogManifest,
         project_id: &str,
         message_type: &str,
         row_key: &serde_json::Value,
     ) -> Result<u64, String> {
+        let source_pool = project_source_pool(runtime, project_id)
+            .map_err(|status| status.message().to_string())?;
         let rows = self
-            .load_source_rows(manifest, message_type, Some(row_key), None, None, 1)
+            .load_source_rows_on(
+                source_pool,
+                manifest,
+                message_type,
+                Some(row_key),
+                None,
+                None,
+                1,
+            )
             .await?;
         self.enqueue_replay_rows(manifest, project_id, message_type, rows)
             .await
@@ -350,6 +363,7 @@ impl ProjectionEngine {
     /// row key from a previous run; processing resumes after that key.
     pub async fn replay_batch_rows(
         &self,
+        runtime: &crate::runtime::DataBrokerRuntime,
         manifest: &CatalogManifest,
         project_id: &str,
         message_type: &str,
@@ -357,6 +371,8 @@ impl ProjectionEngine {
         batch_size: usize,
         resume_after: Option<&serde_json::Value>,
     ) -> Result<(u64, Option<serde_json::Value>), String> {
+        let source_pool = project_source_pool(runtime, project_id)
+            .map_err(|status| status.message().to_string())?;
         let batch_size = batch_size.max(1);
         let mut enqueued = 0u64;
         let mut checkpoint = resume_after.cloned();
@@ -372,7 +388,15 @@ impl ProjectionEngine {
                 continue;
             }
             let mut loaded = self
-                .load_source_rows(manifest, message_type, Some(row_key), None, None, 1)
+                .load_source_rows_on(
+                    source_pool,
+                    manifest,
+                    message_type,
+                    Some(row_key),
+                    None,
+                    None,
+                    1,
+                )
                 .await?;
             rows.append(&mut loaded);
             batch_last_key = Some(row_key.clone());
@@ -404,6 +428,7 @@ impl ProjectionEngine {
     /// casts so the method can operate generically across scalar key types.
     pub async fn replay_range(
         &self,
+        runtime: &crate::runtime::DataBrokerRuntime,
         manifest: &CatalogManifest,
         project_id: &str,
         message_type: &str,
@@ -411,8 +436,18 @@ impl ProjectionEngine {
         end: Option<&str>,
         limit: i64,
     ) -> Result<u64, String> {
+        let source_pool = project_source_pool(runtime, project_id)
+            .map_err(|status| status.message().to_string())?;
         let rows = self
-            .load_source_rows(manifest, message_type, None, start, end, limit.max(1))
+            .load_source_rows_on(
+                source_pool,
+                manifest,
+                message_type,
+                None,
+                start,
+                end,
+                limit.max(1),
+            )
             .await?;
         self.enqueue_replay_rows(manifest, project_id, message_type, rows)
             .await
@@ -424,17 +459,41 @@ impl ProjectionEngine {
     /// same `ProjectionPlan` extraction used by replay.
     pub async fn load_source_samples(
         &self,
+        runtime: &crate::runtime::DataBrokerRuntime,
+        project_id: &str,
         manifest: &CatalogManifest,
         message_type: &str,
         limit: i64,
-    ) -> Result<Vec<crate::runtime::drift_reconciliation::SourceSample>, String> {
+    ) -> Result<Vec<crate::runtime::drift_reconciliation::SourceSample>, tonic::Status> {
+        let source_pool = project_source_pool(runtime, project_id)?;
         let plan = ProjectionPlan::from_manifest(manifest)
             .into_iter()
             .find(|plan| message_type_matches(&plan.message_type, message_type))
-            .ok_or_else(|| format!("unknown projection message_type {message_type}"))?;
+            .ok_or_else(|| {
+                crate::runtime::executor_utils::internal_status(
+                    "projection",
+                    "load_source_samples",
+                    format!("unknown projection message_type {message_type}"),
+                )
+            })?;
         let rows = self
-            .load_source_rows(manifest, message_type, None, None, None, limit.max(1))
-            .await?;
+            .load_source_rows_on(
+                source_pool,
+                manifest,
+                message_type,
+                None,
+                None,
+                None,
+                limit.max(1),
+            )
+            .await
+            .map_err(|error| {
+                crate::runtime::executor_utils::internal_status(
+                    "projection",
+                    "load_source_samples",
+                    error,
+                )
+            })?;
         Ok(rows
             .into_iter()
             .map(|row| {
@@ -446,7 +505,7 @@ impl ProjectionEngine {
             .collect())
     }
 
-    async fn enqueue_replay_rows(
+    pub(crate) async fn enqueue_replay_rows(
         &self,
         manifest: &CatalogManifest,
         project_id: &str,
@@ -479,8 +538,9 @@ impl ProjectionEngine {
         Ok(inserted)
     }
 
-    async fn load_source_rows(
+    async fn load_source_rows_on(
         &self,
+        pool: &PgPool,
         manifest: &CatalogManifest,
         message_type: &str,
         row_key: Option<&serde_json::Value>,
@@ -534,7 +594,7 @@ impl ProjectionEngine {
             query = query.bind(bind);
         }
         let rows = query
-            .fetch_all(&self.pool)
+            .fetch_all(pool)
             .await
             .map_err(|err| format!("projection replay source scan failed: {err}"))?;
         rows.into_iter()
@@ -545,6 +605,15 @@ impl ProjectionEngine {
             })
             .collect()
     }
+}
+
+fn project_source_pool<'a>(
+    runtime: &'a crate::runtime::DataBrokerRuntime,
+    project_id: &str,
+) -> Result<&'a PgPool, tonic::Status> {
+    let source_target =
+        runtime.resolve_projection_read_target_for_project("postgres", None, project_id)?;
+    runtime.pg_pool_for_instance(source_target.instance.as_deref())
 }
 
 /// PostgreSQL JSONB rejects `\u0000` escapes with "unsupported Unicode escape
@@ -709,6 +778,7 @@ pub struct ProjectionWorker {
     config: SystemCatalogConfig,
     settings: ProjectionWorkerSettings,
     metrics: Arc<dyn MetricsRecorder>,
+    catalog: Arc<CatalogManager>,
 }
 
 impl ProjectionWorker {
@@ -716,6 +786,7 @@ impl ProjectionWorker {
         store: Arc<dyn crate::runtime::canonical_store::SystemStores>,
         runtime: Arc<crate::runtime::DataBrokerRuntime>,
         metrics: Arc<dyn MetricsRecorder>,
+        catalog: Arc<CatalogManager>,
     ) -> Self {
         Self {
             store,
@@ -723,6 +794,7 @@ impl ProjectionWorker {
             config: SystemCatalogConfig::current(),
             settings: ProjectionWorkerSettings::from_env(),
             metrics,
+            catalog,
         }
     }
 
@@ -787,6 +859,10 @@ impl ProjectionWorker {
         use crate::runtime::canonical_store::system_store::{
             ProjectionClaimFilter, ProjectionTaskStatus, ProjectionTaskStore,
         };
+        if !self.catalog.authority_is_fresh() {
+            tracing::warn!("projection worker pass skipped: catalog authority is stale");
+            return (0, 0);
+        }
         self.refresh_pending_metrics().await;
         let filter = ProjectionClaimFilter {
             batch_size: self.settings.batch_size,
@@ -811,6 +887,8 @@ impl ProjectionWorker {
         // is not used after this loop, so the per-field clones are unnecessary (#107).
         for row in claimed {
             let task_id = row.task_id;
+            let project_id = row.project_id;
+            let manifest_checksum = row.manifest_checksum;
             let target_backend = row.target_backend;
             let target_instance = row.target_instance;
             let projection_kind = row.projection_kind;
@@ -828,18 +906,30 @@ impl ProjectionWorker {
                 Some(target_instance.as_str())
             };
 
-            let result = self
-                .execute_task(
-                    &target_backend,
-                    instance_opt,
-                    &projection_kind,
-                    &resource_name,
-                    &operation,
-                    &source_row_key,
-                    &target_options,
-                    &source_payload,
-                )
-                .await;
+            let result = match validate_projection_task_catalog(
+                &self.catalog,
+                &project_id,
+                &manifest_checksum,
+            ) {
+                Ok(()) => {
+                    self.execute_task(
+                        &project_id,
+                        &target_backend,
+                        instance_opt,
+                        &projection_kind,
+                        &resource_name,
+                        &operation,
+                        &source_row_key,
+                        &target_options,
+                        &source_payload,
+                    )
+                    .await
+                }
+                Err(error) => Err(format!(
+                    "{} {error}",
+                    crate::runtime::canonical_store::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX
+                )),
+            };
 
             match result {
                 Ok(_) => {
@@ -877,6 +967,7 @@ impl ProjectionWorker {
                     );
                     tracing::warn!(
                         task_id = %task_id,
+                        project_id = %project_id,
                         backend = %target_backend,
                         retry = new_retry,
                         error = %err,
@@ -928,6 +1019,7 @@ impl ProjectionWorker {
 
     async fn execute_task(
         &self,
+        project_id: &str,
         backend: &str,
         instance: Option<&str>,
         projection_kind: &str,
@@ -941,6 +1033,8 @@ impl ProjectionWorker {
         if normalized_backend == "redis" || projection_kind.eq_ignore_ascii_case("cache") {
             return self
                 .execute_redis_projection(
+                    project_id,
+                    instance,
                     resource_name,
                     operation,
                     source_row_key,
@@ -955,6 +1049,7 @@ impl ProjectionWorker {
         {
             return self
                 .execute_object_projection(
+                    project_id,
                     &normalized_backend,
                     instance,
                     resource_name,
@@ -976,7 +1071,12 @@ impl ProjectionWorker {
             source_payload,
         )?;
         self.runtime
-            .mutate_backend_target(&normalized_backend, instance, &request.to_string())
+            .mutate_backend_target_for_project(
+                &normalized_backend,
+                instance,
+                project_id,
+                &request.to_string(),
+            )
             .await
             .map(|_| ())
             .map_err(|s| s.message().to_string())
@@ -984,6 +1084,8 @@ impl ProjectionWorker {
 
     async fn execute_redis_projection(
         &self,
+        project_id: &str,
+        instance: Option<&str>,
         resource_name: &str,
         operation: &str,
         source_row_key: &serde_json::Value,
@@ -998,15 +1100,20 @@ impl ProjectionWorker {
             .unwrap_or_else(|| resource_name.to_string());
         let key = render_key_pattern(&pattern, source_row_key, source_payload);
         if operation.eq_ignore_ascii_case("delete") {
-            self.runtime.cache_delete_pattern(&key).await?;
+            self.runtime
+                .projection_cache_delete_for_project(instance, project_id, &key)
+                .await?;
             return Ok(());
         }
         let bytes = serde_json::to_vec(source_payload).map_err(|err| err.to_string())?;
-        self.runtime.cache_set(&key, &[bytes], ttl).await
+        self.runtime
+            .projection_cache_set_for_project(instance, project_id, &key, &[bytes], ttl)
+            .await
     }
 
     async fn execute_object_projection(
         &self,
+        project_id: &str,
         backend: &str,
         instance: Option<&str>,
         resource_name: &str,
@@ -1022,14 +1129,10 @@ impl ProjectionWorker {
         } else {
             format!("{}/{}.json", key_prefix.trim_matches('/'), id)
         };
-        let project_id = option_value(target_options, "project_id")
-            .or_else(|| {
-                source_payload
-                    .get("project_id")
-                    .and_then(|value| value.as_str())
-                    .map(str::to_string)
-            })
-            .unwrap_or_default();
+        let target = self
+            .runtime
+            .resolve_projection_write_target_for_project(backend, instance, project_id)
+            .map_err(|status| status.message().to_string())?;
         if operation.eq_ignore_ascii_case("delete") {
             // A projected delete must remove the object, not write a tombstone
             // body that leaves the stale object readable.
@@ -1039,7 +1142,12 @@ impl ProjectionWorker {
             });
             return self
                 .runtime
-                .delete_object_backend_target(backend, instance, &project_id, &request.to_string())
+                .delete_object_backend_target(
+                    &target.backend,
+                    target.instance.as_deref(),
+                    project_id,
+                    &request.to_string(),
+                )
                 .await
                 .map_err(|s| s.message().to_string());
         }
@@ -1055,7 +1163,13 @@ impl ProjectionWorker {
             "content_type": "application/json",
         });
         self.runtime
-            .put_object_backend_target(backend, instance, &request.to_string(), body)
+            .put_object_backend_target_for_project(
+                &target.backend,
+                target.instance.as_deref(),
+                project_id,
+                &request.to_string(),
+                body,
+            )
             .await
             .map(|_| ())
             .map_err(|s| s.message().to_string())
@@ -1086,6 +1200,36 @@ impl ProjectionWorker {
         .await
         .map_err(|e| e.to_string())
     }
+}
+
+fn validate_projection_task_catalog(
+    catalog: &CatalogManager,
+    project_id: &str,
+    task_manifest_checksum: &str,
+) -> Result<(), String> {
+    if !catalog.authority_is_fresh() {
+        return Err("catalog authority became stale before projection dispatch".to_string());
+    }
+    let project_id = project_id.trim();
+    if project_id.is_empty() {
+        return Err("projection task has no project_id".to_string());
+    }
+    let active = catalog
+        .active_exact_for(project_id)
+        .ok_or_else(|| format!("project '{project_id}' has no exact active catalog"))?;
+    let active_checksum = active.manifest.checksum_sha256.trim();
+    let task_checksum = task_manifest_checksum.trim();
+    if task_checksum.is_empty() || active_checksum.is_empty() {
+        return Err(format!(
+            "project '{project_id}' projection task/catalog checksum is empty"
+        ));
+    }
+    if task_checksum != active_checksum {
+        return Err(format!(
+            "project '{project_id}' projection task catalog '{task_checksum}' does not match active catalog '{active_checksum}'"
+        ));
+    }
+    Ok(())
 }
 
 fn normalize_backend(backend: &str) -> String {
@@ -1400,6 +1544,7 @@ impl ReconciliationSettings {
 /// Report produced by one reconciliation pass.
 #[derive(Debug, Clone)]
 pub struct ReconciliationReport {
+    pub project_id: String,
     pub source_table: String,
     pub target_backend: String,
     pub target_instance: String,
@@ -1410,16 +1555,16 @@ pub struct ReconciliationReport {
 /// Background worker that detects DEAD_LETTER tasks and re-enqueues them as
 /// PENDING (repair).
 pub struct ReconciliationWorker {
-    /// NW1-3b: PG pool retained ONLY for `replay_source_rows_for_repair`
-    /// which scans canonical tenant tables (PG-specific). All
-    /// projection-task reads/writes go through the trait.
+    /// Canonical PostgreSQL projection ledger used only to enqueue replay
+    /// tasks. Project source reads resolve through `runtime`; all normal task
+    /// lifecycle reads/writes go through the store trait.
     pool: PgPool,
     store: Arc<dyn crate::runtime::canonical_store::SystemStores>,
     config: SystemCatalogConfig,
     settings: ReconciliationSettings,
     metrics: Arc<dyn MetricsRecorder>,
-    manifest: Arc<CatalogManifest>,
-    project_id: String,
+    catalog: Arc<CatalogManager>,
+    runtime: Arc<crate::runtime::DataBrokerRuntime>,
 }
 
 impl ReconciliationWorker {
@@ -1427,8 +1572,8 @@ impl ReconciliationWorker {
         pool: PgPool,
         store: Arc<dyn crate::runtime::canonical_store::SystemStores>,
         metrics: Arc<dyn MetricsRecorder>,
-        manifest: Arc<CatalogManifest>,
-        project_id: String,
+        catalog: Arc<CatalogManager>,
+        runtime: Arc<crate::runtime::DataBrokerRuntime>,
     ) -> Self {
         Self {
             pool,
@@ -1436,8 +1581,8 @@ impl ReconciliationWorker {
             config: SystemCatalogConfig::current(),
             settings: ReconciliationSettings::from_env(),
             metrics,
-            manifest,
-            project_id,
+            catalog,
+            runtime,
         }
     }
 
@@ -1453,6 +1598,7 @@ impl ReconciliationWorker {
             let reports = self.run_once().await;
             for r in &reports {
                 tracing::info!(
+                    project_id = %r.project_id,
                     source_table = %r.source_table,
                     backend = %r.target_backend,
                     dead_letter = %r.dead_letter_count,
@@ -1467,11 +1613,12 @@ impl ReconciliationWorker {
     ///
     /// NW1-3b: routes through `reset_stale_in_progress_tasks` +
     /// `dead_letter_groups` + `requeue_dead_letter_by_source`. The
-    /// `replay_source_rows_for_repair` step stays PG-coupled because
-    /// it reads canonical tenant tables.
+    /// `replay_source_rows_for_repair` stays PG-coupled, but resolves a
+    /// project-authorized source pool rather than using the ledger pool.
     ///
-    /// Returns one report per (source_table, target_backend, target_instance)
-    /// combination that had dead-letter tasks.
+    /// Returns one report per
+    /// (project_id, source_table, target_backend, target_instance) combination
+    /// that had dead-letter tasks.
     pub async fn run_once(&self) -> Vec<ReconciliationReport> {
         use crate::runtime::canonical_store::system_store::ProjectionTaskStore;
         let mut reports = Vec::new();
@@ -1491,10 +1638,18 @@ impl ReconciliationWorker {
             }
         }
         let _ = &self.config; // PG-coupled replay below uses it
-        // 2. Replay canonical source rows (PG-only).
-        self.replay_source_rows_for_repair().await;
+        // 2. Replay canonical source rows (PG-only) only while catalog
+        // authority is fresh. The worker retains the manager, not a startup
+        // snapshot, so later project activation and catalog reload are seen.
+        if self.catalog.authority_is_fresh() {
+            self.replay_source_rows_for_repair().await;
+        } else {
+            tracing::warn!(
+                "projection reconciliation source replay skipped: catalog authority is stale"
+            );
+        }
 
-        // 3. Find all (source_table, target_backend, target_instance)
+        // 3. Find all (project_id, source_table, target_backend, target_instance)
         // groups with dead-letter tasks.
         let groups = match ProjectionTaskStore::dead_letter_groups(self.store.as_ref(), 500).await {
             Ok(g) => g,
@@ -1505,15 +1660,55 @@ impl ReconciliationWorker {
         };
 
         for group in groups {
+            let project_id = group.project_id.clone();
             let source_table = group.source_table.clone();
             let target_backend = group.target_backend.clone();
             let target_instance = group.target_instance.clone();
             let dead_count = group.dead_count;
 
+            if project_id.trim().is_empty() {
+                tracing::warn!(
+                    source_table = %source_table,
+                    backend = %target_backend,
+                    instance = %target_instance,
+                    "projection reconciliation refused legacy dead letters without project_id"
+                );
+                reports.push(ReconciliationReport {
+                    project_id,
+                    source_table,
+                    target_backend,
+                    target_instance,
+                    dead_letter_count: dead_count,
+                    repair_tasks_enqueued: 0,
+                });
+                continue;
+            }
+            if !self.catalog.authority_is_fresh()
+                || self.catalog.active_exact_for(&project_id).is_none()
+            {
+                tracing::warn!(
+                    project_id = %project_id,
+                    source_table = %source_table,
+                    backend = %target_backend,
+                    instance = %target_instance,
+                    "projection reconciliation refused dead letters without fresh exact project authority"
+                );
+                reports.push(ReconciliationReport {
+                    project_id,
+                    source_table,
+                    target_backend,
+                    target_instance,
+                    dead_letter_count: dead_count,
+                    repair_tasks_enqueued: 0,
+                });
+                continue;
+            }
+
             // 4. Per-group requeue: DEAD_LETTER → PENDING with
             // retry_count = 0.
             let repaired = match ProjectionTaskStore::requeue_dead_letter_by_source(
                 self.store.as_ref(),
+                &project_id,
                 &source_table,
                 &target_backend,
                 &target_instance,
@@ -1522,7 +1717,11 @@ impl ReconciliationWorker {
             {
                 Ok(n) => n,
                 Err(err) => {
-                    tracing::warn!(error = %err, "reconciliation repair failed");
+                    tracing::warn!(
+                        project_id = %project_id,
+                        error = %err,
+                        "reconciliation repair failed"
+                    );
                     0
                 }
             };
@@ -1532,6 +1731,7 @@ impl ReconciliationWorker {
             }
 
             reports.push(ReconciliationReport {
+                project_id,
                 source_table,
                 target_backend,
                 target_instance,
@@ -1545,40 +1745,60 @@ impl ReconciliationWorker {
 
     async fn replay_source_rows_for_repair(&self) {
         let engine = ProjectionEngine::new(self.pool.clone(), self.config.clone());
-        let mut seen = std::collections::BTreeSet::new();
-        for plan in ProjectionPlan::from_manifest(&self.manifest) {
-            if !seen.insert(plan.message_type.clone()) {
-                continue;
-            }
-            match engine
-                .replay_range(
-                    &self.manifest,
-                    &self.project_id,
-                    &plan.message_type,
-                    None,
-                    None,
-                    self.settings.max_source_scan_rows,
-                )
-                .await
-            {
-                Ok(inserted) if inserted > 0 => {
-                    tracing::info!(
-                        message_type = %plan.message_type,
-                        inserted,
-                        "projection reconciliation enqueued missing or stale source rows",
-                    );
+        for (project_id, manifest) in active_reconciliation_catalogs(&self.catalog) {
+            let mut seen = std::collections::BTreeSet::new();
+            for plan in ProjectionPlan::from_manifest(&manifest) {
+                if !seen.insert(plan.message_type.clone()) {
+                    continue;
                 }
-                Ok(_) => {}
-                Err(err) => {
-                    tracing::warn!(
-                        message_type = %plan.message_type,
-                        error = %err,
-                        "projection reconciliation source replay failed",
-                    );
+                match engine
+                    .replay_range(
+                        &self.runtime,
+                        &manifest,
+                        &project_id,
+                        &plan.message_type,
+                        None,
+                        None,
+                        self.settings.max_source_scan_rows,
+                    )
+                    .await
+                {
+                    Ok(inserted) if inserted > 0 => {
+                        tracing::info!(
+                            project_id = %project_id,
+                            message_type = %plan.message_type,
+                            inserted,
+                            "projection reconciliation enqueued missing or stale source rows",
+                        );
+                    }
+                    Ok(_) => {}
+                    Err(err) => {
+                        tracing::warn!(
+                            project_id = %project_id,
+                            message_type = %plan.message_type,
+                            error = %err,
+                            "projection reconciliation source replay failed",
+                        );
+                    }
                 }
             }
         }
     }
+}
+
+fn active_reconciliation_catalogs(catalog: &CatalogManager) -> Vec<(String, Arc<CatalogManifest>)> {
+    if !catalog.authority_is_fresh() {
+        return Vec::new();
+    }
+    catalog
+        .active_project_ids()
+        .into_iter()
+        .filter_map(|project_id| {
+            catalog
+                .active_exact_for(&project_id)
+                .map(|state| (project_id, Arc::clone(&state.manifest)))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -1592,6 +1812,87 @@ mod tests {
             key: key.to_string(),
             value: value.to_string(),
         }
+    }
+
+    #[tokio::test]
+    async fn reconciliation_catalog_selection_is_live_and_fails_closed_when_stale() {
+        let catalog = Arc::new(CatalogManager::new(CatalogManifest {
+            checksum_sha256: "initial-catalog".to_string(),
+            ..CatalogManifest::default()
+        }));
+        assert_eq!(active_reconciliation_catalogs(&catalog).len(), 1);
+        assert!(
+            validate_projection_task_catalog(
+                &catalog,
+                crate::runtime::catalog::DEFAULT_PROJECT_ID,
+                "initial-catalog",
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_projection_task_catalog(
+                &catalog,
+                crate::runtime::catalog::DEFAULT_PROJECT_ID,
+                "old-catalog",
+            )
+            .unwrap_err()
+            .contains("does not match active catalog")
+        );
+        assert!(
+            validate_projection_task_catalog(&catalog, "missing-project", "initial-catalog")
+                .unwrap_err()
+                .contains("no exact active catalog")
+        );
+
+        catalog.set_authority_fresh(false);
+        assert!(active_reconciliation_catalogs(&catalog).is_empty());
+        assert!(
+            validate_projection_task_catalog(
+                &catalog,
+                crate::runtime::catalog::DEFAULT_PROJECT_ID,
+                "initial-catalog",
+            )
+            .unwrap_err()
+            .contains("authority became stale")
+        );
+
+        catalog.set_authority_fresh(true);
+        catalog
+            .stage_catalog(
+                CatalogManifest {
+                    checksum_sha256: "late-activation".to_string(),
+                    ..CatalogManifest::default()
+                },
+                "later-project".to_string(),
+                "2.0.0".to_string(),
+                "exact".to_string(),
+            )
+            .await
+            .unwrap();
+        catalog
+            .activate_catalog_for("later-project", "2.0.0")
+            .await
+            .unwrap();
+        let after_activation = active_reconciliation_catalogs(&catalog);
+        assert!(after_activation.iter().any(|(project_id, manifest)| {
+            project_id == "later-project" && manifest.checksum_sha256 == "late-activation"
+        }));
+
+        catalog.replace_durable_active_catalogs(vec![(
+            "later-project".to_string(),
+            CatalogManifest {
+                checksum_sha256: "reloaded-catalog".to_string(),
+                ..CatalogManifest::default()
+            },
+            "2.0.1".to_string(),
+            "reloaded-catalog".to_string(),
+            "exact".to_string(),
+            1,
+        )]);
+        let after_reload = active_reconciliation_catalogs(&catalog);
+        assert!(after_reload.iter().any(|(project_id, manifest)| {
+            project_id == "later-project" && manifest.checksum_sha256 == "reloaded-catalog"
+        }));
     }
 
     #[test]

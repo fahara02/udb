@@ -4,8 +4,8 @@
 //! nothing enforced them: completed backup runs and their encrypted object
 //! artifacts accumulated without bound. This module is the bounded, fail-safe
 //! routine that closes that gap — it deletes the oldest runs (journal rows +
-//! their objects) beyond the policy window, tenant-scoped, and never on an
-//! unconfigured policy.
+//! their objects) beyond the policy window, tenant+project-scoped, and never on
+//! an unconfigured policy.
 //!
 //! Split responsibilities:
 //!   * [`runs_to_prune`] is the PURE selector (unit-tested without Postgres): it
@@ -15,12 +15,10 @@
 //!     object-store error can never wedge retention.
 //!
 //! Leader-lane drivers (the periodic sweep the leader-elected worker calls):
-//!   * [`enabled_backup_policies`] is the CROSS-TENANT control-plane read: one
-//!     bounded, RLS-bypassing raw-SQL scan of the backup-policy relation (owner
-//!     connection, `enable_rls` not FORCE — the same posture the lock/scheduler
-//!     sweeps use) returning every ENABLED policy across ALL tenants. This is a
-//!     control-plane enumeration and stays in the leader lane, never a per-tenant
-//!     handler.
+//!   * [`enabled_backup_policies`] is the CROSS-TENANT control-plane read: a
+//!     bounded, explicitly project-filtered raw-SQL scan on every active
+//!     project's canonical Backup store, returning every ENABLED policy across
+//!     all tenants without merging project authorities.
 //!   * [`run_backup_retention_once`] enumerates enabled policies and calls
 //!     [`prune_tenant_backups`] per tenant (log-and-continue so one failure never
 //!     aborts the sweep).
@@ -30,30 +28,8 @@
 //!     due decision ([`backup_due`]) is a PURE, unit-tested comparison of the
 //!     cron's next expected fire against the tenant's most-recent completed run.
 //!
-//! TODO(leader-wire): the periodic, leader-elected trigger lives in the shared
-//! scheduler lane (`service::serve()` leader election), not in this dir. Wire a
-//! leader-only interval task under `singleton::WORKER_BACKUP_RETENTION` that
-//! builds a `BackupServiceImpl` (mirroring the webhook/vault worker blocks via
-//! `DataBrokerService::build_backup_service`) and, each tick, calls
-//! `run_backup_retention_once(&svc)` and
-//! `run_scheduled_backups_once(&svc, scheduler_service::cron::next_cron_after)`
-//! on a `UDB_BACKUP_MAINTENANCE_INTERVAL_SECS` cadence (see
-//! `config::backup_maintenance_interval`). `run_scheduled_backups_once` takes the
-//! cron next-fire evaluator as an injected parameter because the shared
-//! `scheduler_service::cron` module is currently private to that service; the
-//! spawn must promote it (`pub(crate) mod cron;` / re-export `next_cron_after`)
-//! and pass it in, rather than this dir duplicating the cron grammar (no island).
-//! Until that spawn lands, retention + scheduled backups run only when these
-//! drivers are invoked explicitly.
-
-// Leader-lane entry points: `enabled_backup_policies`, `run_backup_retention_once`,
-// `run_scheduled_backups_once`, and `backup_due` are invoked by the leader-elected
-// backup-maintenance spawn (see the `TODO(leader-wire)` above), which lives in the
-// shared scheduler lane and is not yet wired. Allow dead_code here so those
-// not-yet-called drivers do not warn until that spawn lands; the pure
-// `runs_to_prune`/`backup_due` selectors are exercised by the unit tests below,
-// and `prune_tenant_backups` is now a live dependency of `run_backup_retention_once`.
-#![allow(dead_code)]
+//! The periodic trigger is already leader-elected under
+//! `singleton::WORKER_BACKUP_RETENTION` in `service::serve()`.
 
 use chrono::{DateTime, Utc};
 use sqlx::Row;
@@ -96,6 +72,9 @@ const NEVER_BACKED_UP_CATCHUP_SECS: i64 = SECONDS_PER_DAY;
 /// maintenance drivers need. Read cross-tenant by [`enabled_backup_policies`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct EnabledBackupPolicy {
+    pub project_id: String,
+    pub policy_id: String,
+    pub policy_name: String,
     pub tenant_id: String,
     pub retention_days: i32,
     pub max_retained_backups: i32,
@@ -112,7 +91,10 @@ fn backup_policy_model() -> NativeModel {
     native_model(
         BACKUP_POLICY_MSG,
         &[
+            "policy_id",
+            "policy_name",
             "tenant_id",
+            "project_id",
             "retention_days",
             "max_retained_backups",
             "schedule_cron",
@@ -123,27 +105,33 @@ fn backup_policy_model() -> NativeModel {
     )
 }
 
-/// The bounded cross-tenant enumeration SQL: every ENABLED policy's
-/// `(tenant_id, retention_days, max_retained_backups, schedule_cron, object
-/// destination)` across ALL tenants, capped by `LIMIT $1`. Exposed (and
+/// The bounded cross-tenant enumeration SQL for one exact active project:
+/// every ENABLED policy's identity, tenant, retention, schedule, and object
+/// destination, capped by `LIMIT $2`. Exposed (and
 /// unit-tested) so the read-only,
 /// bounded, enabled-only shape is asserted on the rendered SQL, mirroring
 /// `lock_service::expired_locks_claim_sql`. Columns are cast to stable scalar
 /// types so a UUID tenant column and a nullable cron both decode uniformly.
 pub(crate) fn enabled_policies_sql(m: &NativeModel) -> String {
     format!(
-        "SELECT {tenant}::text AS tenant_id, \
+        "SELECT {policy_id}::text AS policy_id, \
+                {policy_name}::text AS policy_name, \
+                {tenant}::text AS tenant_id, \
+                {project}::text AS project_id, \
                 {retention}::bigint AS retention_days, \
                 {max_ret}::bigint AS max_retained_backups, \
                 COALESCE({cron}::text, '') AS schedule_cron, \
                 COALESCE({object_backend}::text, '') AS object_backend, \
                 COALESCE({object_bucket}::text, '') AS object_bucket \
          FROM {rel} \
-         WHERE {enabled} = TRUE \
-         ORDER BY {tenant} \
-         LIMIT $1",
+         WHERE {enabled} = TRUE AND {project}::text = $1 \
+         ORDER BY {tenant}, {policy_name} \
+         LIMIT $2",
         rel = m.relation,
+        policy_id = m.q("policy_id"),
+        policy_name = m.q("policy_name"),
         tenant = m.q("tenant_id"),
+        project = m.q("project_id"),
         retention = m.q("retention_days"),
         max_ret = m.q("max_retained_backups"),
         cron = m.q("schedule_cron"),
@@ -153,48 +141,88 @@ pub(crate) fn enabled_policies_sql(m: &NativeModel) -> String {
     )
 }
 
-/// CROSS-TENANT control-plane read: every ENABLED backup policy across ALL
-/// tenants. This is RLS-bypassing by design (the native-store pool connects as
-/// the table owner, which `enable_rls` — not FORCE — exempts from the tenant RLS
-/// policy, the identical posture the lock expiry reaper and scheduler tick use)
-/// and belongs to the leader/scheduler lane, never a per-tenant handler. Bounded
-/// by `MAX_ENABLED_POLICIES_SCAN`; fail-safe (a blank tenant row is skipped, not
-/// acted on). Requires the Postgres-backed store — fails closed otherwise.
+/// CROSS-TENANT control-plane read: every ENABLED backup policy across all
+/// explicitly active projects. Each scan resolves that project's canonical
+/// Backup store and retains an explicit `project_id = $1` predicate even on an
+/// owner connection. The global result is bounded by
+/// `MAX_ENABLED_POLICIES_SCAN`; blank or mismatched tenant/project authority
+/// fails closed instead of being defaulted or skipped.
 pub(crate) async fn enabled_backup_policies(
     svc: &BackupServiceImpl,
 ) -> Result<Vec<EnabledBackupPolicy>, Status> {
-    let pool = svc.require_pool()?;
+    let runtime = svc.require_runtime()?;
+    let catalog = svc.catalog.as_deref().ok_or_else(|| {
+        super::errors::backup_capability_status(
+            "enumerate_enabled_policies",
+            "active_project_catalog",
+            "backup maintenance requires explicitly active project catalogs",
+        )
+    })?;
     let model = backup_policy_model();
     let sql = enabled_policies_sql(&model);
-    let rows = sqlx::query(&sql)
-        .bind(MAX_ENABLED_POLICIES_SCAN)
-        .fetch_all(pool)
-        .await
-        .map_err(|err| {
-            backup_internal_status(
+    let mut policies = Vec::new();
+    for project_id in catalog.active_project_ids() {
+        let remaining = MAX_ENABLED_POLICIES_SCAN.saturating_sub(policies.len() as i64);
+        let context = crate::RequestContext {
+            project_id: project_id.clone(),
+            ..crate::RequestContext::default()
+        };
+        let (pool, _instance) =
+            runtime.native_store_postgres_binding_for_service("backup", true, &context)?;
+        let rows = sqlx::query(&sql)
+            .bind(&project_id)
+            .bind(remaining.saturating_add(1))
+            .fetch_all(&pool)
+            .await
+            .map_err(|err| {
+                backup_internal_status(
+                    "enumerate_enabled_policies",
+                    format!("backup policy enumeration failed for project '{project_id}': {err}"),
+                )
+            })?;
+        if rows.len() as i64 > remaining {
+            return Err(backup_internal_status(
                 "enumerate_enabled_policies",
-                format!("backup policy enumeration failed: {err}"),
-            )
-        })?;
-    let mut policies = Vec::with_capacity(rows.len());
-    for row in &rows {
-        let tenant_id: String = row.try_get("tenant_id").unwrap_or_default();
-        if tenant_id.trim().is_empty() {
-            continue;
+                format!(
+                    "enabled backup policies exceed the bounded maintenance cap of {MAX_ENABLED_POLICIES_SCAN}; refusing a partial project sweep"
+                ),
+            ));
         }
-        let retention_days: i64 = row.try_get("retention_days").unwrap_or(0);
-        let max_retained_backups: i64 = row.try_get("max_retained_backups").unwrap_or(0);
-        let schedule_cron: String = row.try_get("schedule_cron").unwrap_or_default();
-        let object_backend: String = row.try_get("object_backend").unwrap_or_default();
-        let object_bucket: String = row.try_get("object_bucket").unwrap_or_default();
-        policies.push(EnabledBackupPolicy {
-            tenant_id,
-            retention_days: clamp_i32(retention_days),
-            max_retained_backups: clamp_i32(max_retained_backups),
-            schedule_cron,
-            object_backend,
-            object_bucket,
-        });
+        for row in &rows {
+            let row_project_id: String = row.try_get("project_id").unwrap_or_default();
+            let tenant_id: String = row.try_get("tenant_id").unwrap_or_default();
+            let policy_id: String = row.try_get("policy_id").unwrap_or_default();
+            let policy_name: String = row.try_get("policy_name").unwrap_or_default();
+            if tenant_id.trim().is_empty()
+                || row_project_id.trim().is_empty()
+                || row_project_id != project_id
+                || policy_id.trim().is_empty()
+                || policy_name.trim().is_empty()
+            {
+                return Err(backup_internal_status(
+                    "enumerate_enabled_policies",
+                    format!(
+                        "backup policy has blank or mismatched tenant/project authority in project '{project_id}'"
+                    ),
+                ));
+            }
+            let retention_days: i64 = row.try_get("retention_days").unwrap_or(0);
+            let max_retained_backups: i64 = row.try_get("max_retained_backups").unwrap_or(0);
+            let schedule_cron: String = row.try_get("schedule_cron").unwrap_or_default();
+            let object_backend: String = row.try_get("object_backend").unwrap_or_default();
+            let object_bucket: String = row.try_get("object_bucket").unwrap_or_default();
+            policies.push(EnabledBackupPolicy {
+                project_id: row_project_id,
+                policy_id,
+                policy_name,
+                tenant_id,
+                retention_days: clamp_i32(retention_days),
+                max_retained_backups: clamp_i32(max_retained_backups),
+                schedule_cron,
+                object_backend,
+                object_bucket,
+            });
+        }
     }
     Ok(policies)
 }
@@ -224,6 +252,7 @@ pub(crate) async fn run_backup_retention_once(svc: &BackupServiceImpl) -> Result
         match prune_tenant_backups(
             svc,
             &policy.tenant_id,
+            &policy.project_id,
             policy.retention_days,
             policy.max_retained_backups,
         )
@@ -236,6 +265,9 @@ pub(crate) async fn run_backup_retention_once(svc: &BackupServiceImpl) -> Result
                 tracing::warn!(
                     target: "udb.backup.retention",
                     tenant_id = %policy.tenant_id,
+                    project_id = %policy.project_id,
+                    policy_id = %policy.policy_id,
+                    policy_name = %policy.policy_name,
                     error = %err,
                     "retention sweep: per-tenant prune failed; continuing"
                 );
@@ -287,30 +319,40 @@ where
 /// the tenant has none. Reads the newest journal row via the SAME tenant-scoped
 /// native-entity dispatch the handlers use (`runs_list_read` sorts newest-first),
 /// preferring `completed_at` and falling back to `created_at`.
-async fn most_recent_backup_unix(svc: &BackupServiceImpl, tenant_id: &str) -> Result<i64, Status> {
+async fn most_recent_backup_unix(
+    svc: &BackupServiceImpl,
+    tenant_id: &str,
+    project_id: &str,
+) -> Result<i64, Status> {
     let runtime = svc.require_runtime()?;
     let context = crate::RequestContext {
         tenant_id: tenant_id.to_string(),
+        project_id: project_id.to_string(),
         ..crate::RequestContext::default()
     };
     let rows = runtime
         .native_entity_read_for_service(
             "backup",
             &context,
-            runs_list_read(tenant_id, Some(KIND_BACKUP), 1, 0),
+            runs_list_read(tenant_id, project_id, Some(KIND_BACKUP), 1, 0),
         )
         .await?;
-    let last = rows
-        .first()
-        .map(run_summary_from_json)
-        .map(|run| {
+    let last = match rows.first().map(run_summary_from_json) {
+        Some(run) if run.project_id != project_id => {
+            return Err(backup_internal_status(
+                "scheduled_backup_due",
+                "backup run project does not match the scheduled policy project",
+            ));
+        }
+        Some(run) => {
             if run.completed_at_unix > 0 {
                 run.completed_at_unix
             } else {
                 run.created_at_unix
             }
-        })
-        .unwrap_or(0);
+        }
+        None => 0,
+    };
     Ok(last)
 }
 
@@ -337,18 +379,22 @@ where
         if policy.schedule_cron.trim().is_empty() {
             continue;
         }
-        let last_backup_unix = match most_recent_backup_unix(svc, &policy.tenant_id).await {
-            Ok(unix) => unix,
-            Err(err) => {
-                tracing::warn!(
-                    target: "udb.backup.scheduled",
-                    tenant_id = %policy.tenant_id,
-                    error = %err,
-                    "scheduled backup: reading most-recent run failed; skipping tenant"
-                );
-                continue;
-            }
-        };
+        let last_backup_unix =
+            match most_recent_backup_unix(svc, &policy.tenant_id, &policy.project_id).await {
+                Ok(unix) => unix,
+                Err(err) => {
+                    tracing::warn!(
+                        target: "udb.backup.scheduled",
+                        tenant_id = %policy.tenant_id,
+                        project_id = %policy.project_id,
+                        policy_id = %policy.policy_id,
+                        policy_name = %policy.policy_name,
+                        error = %err,
+                        "scheduled backup: reading most-recent run failed; skipping tenant"
+                    );
+                    continue;
+                }
+            };
         if !backup_due(
             &next_fire,
             &policy.schedule_cron,
@@ -364,6 +410,7 @@ where
         // an operator-triggered backup.
         let context = crate::RequestContext {
             tenant_id: policy.tenant_id.clone(),
+            project_id: policy.project_id.clone(),
             ..crate::RequestContext::default()
         };
         match run_tenant_backup(
@@ -382,6 +429,9 @@ where
                 tracing::warn!(
                     target: "udb.backup.scheduled",
                     tenant_id = %policy.tenant_id,
+                    project_id = %policy.project_id,
+                    policy_id = %policy.policy_id,
+                    policy_name = %policy.policy_name,
                     error = %err,
                     "scheduled backup: fire failed; continuing"
                 );
@@ -442,19 +492,27 @@ pub(crate) fn runs_to_prune(
 /// (journal rows + their encrypted objects) beyond `retention_days` /
 /// `max_retained_backups`. Bounded (`PRUNE_SCAN_CAP`) and fail-safe: an
 /// unconfigured policy is a no-op, and object/journal deletions are best-effort
-/// so one transient error never wedges the whole pass. Tenant-scoped — only the
-/// given tenant's runs are ever touched.
+/// so one transient error never wedges the whole pass. Tenant+project-scoped —
+/// only the given project's runs for the tenant are ever touched.
 pub(crate) async fn prune_tenant_backups(
     svc: &BackupServiceImpl,
     tenant_id: &str,
+    project_id: &str,
     retention_days: i32,
     max_retained_backups: i32,
 ) -> Result<PruneOutcome, Status> {
     let tenant_id = tenant_id.trim();
+    let project_id = project_id.trim();
     if tenant_id.is_empty() {
         return Err(crate::runtime::executor_utils::invalid_argument_fields(
             "tenant_id is required",
             [("tenant_id", "must be a non-empty tenant id")],
+        ));
+    }
+    if project_id.is_empty() {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "project_id is required",
+            [("project_id", "must be a non-empty project id")],
         ));
     }
     // Fail-safe: nothing configured → no-op (never prune on an empty policy).
@@ -462,10 +520,9 @@ pub(crate) async fn prune_tenant_backups(
         return Ok(PruneOutcome::default());
     }
     let runtime = svc.require_runtime()?;
-    // Tenant-scoped context; retention is not project-scoped (a run belongs to a
-    // tenant), so project stays empty and the entity dispatch defaults it.
     let context = crate::RequestContext {
         tenant_id: tenant_id.to_string(),
+        project_id: project_id.to_string(),
         ..crate::RequestContext::default()
     };
 
@@ -478,12 +535,18 @@ pub(crate) async fn prune_tenant_backups(
             .native_entity_read_for_service(
                 "backup",
                 &context,
-                runs_list_read(tenant_id, Some(KIND_BACKUP), page, offset),
+                runs_list_read(tenant_id, project_id, Some(KIND_BACKUP), page, offset),
             )
             .await?;
         let fetched = rows.len();
         for row in &rows {
             let run = run_summary_from_json(row);
+            if run.project_id != project_id {
+                return Err(backup_internal_status(
+                    "retention_prune",
+                    "backup run project does not match the maintenance project",
+                ));
+            }
             runs.push((
                 run.backup_id,
                 run.created_at_unix,
@@ -517,9 +580,15 @@ pub(crate) async fn prune_tenant_backups(
         let location = location
             .as_ref()
             .ok_or_else(|| backup_run_location_missing_status("retention_prune"))?;
+        if location.project_id != project_id {
+            return Err(backup_internal_status(
+                "retention_prune",
+                "backup run location does not match the maintenance project",
+            ));
+        }
         outcome.objects_deleted +=
             delete_run_objects(runtime, location, object_prefix, manifest_checksum).await?;
-        if delete_run_journal_row(runtime, &context, tenant_id, backup_id).await? {
+        if delete_run_journal_row(runtime, &context, tenant_id, project_id, backup_id).await? {
             outcome.runs_pruned += 1;
         }
     }
@@ -628,6 +697,7 @@ async fn delete_run_journal_row(
     runtime: &DataBrokerRuntime,
     context: &crate::RequestContext,
     tenant_id: &str,
+    project_id: &str,
     backup_id: &str,
 ) -> Result<bool, Status> {
     let op = LogicalDelete {
@@ -637,6 +707,11 @@ async fn delete_run_journal_row(
                 field: "tenant_id".to_string(),
                 op: ComparisonOp::Eq,
                 value: logical_string(tenant_id),
+            },
+            LogicalFilter::Comparison {
+                field: "project_id".to_string(),
+                op: ComparisonOp::Eq,
+                value: logical_string(project_id),
             },
             LogicalFilter::Comparison {
                 field: "backup_id".to_string(),
@@ -740,14 +815,18 @@ mod tests {
 
     /// The enabled-policy enumeration SQL must be a READ-ONLY, ENABLED-only,
     /// BOUNDED scan over the manifest-derived backup-policy relation, projecting
-    /// exactly the six columns the leader-lane drivers consume. Asserted on the
+    /// the full project-bound identity and operation columns the leader-lane
+    /// drivers consume. Asserted on the
     /// rendered SQL (no Postgres), mirroring `lock_service::expired_locks_claim_sql`.
     #[test]
     fn enabled_policies_sql_shape() {
         let sql = enabled_policies_sql(&backup_policy_model());
         assert!(sql.starts_with("SELECT"), "read-only projection: {sql}");
         for alias in [
+            "AS policy_id",
+            "AS policy_name",
             "AS tenant_id",
+            "AS project_id",
             "AS retention_days",
             "AS max_retained_backups",
             "AS schedule_cron",
@@ -757,7 +836,11 @@ mod tests {
             assert!(sql.contains(alias), "must project {alias}: {sql}");
         }
         assert!(sql.contains("= TRUE"), "enabled-only filter: {sql}");
-        assert!(sql.contains("LIMIT $1"), "bounded scan: {sql}");
+        assert!(
+            sql.contains("::text = $1"),
+            "exact project predicate: {sql}"
+        );
+        assert!(sql.contains("LIMIT $2"), "bounded scan: {sql}");
         // A control-plane READ must never mutate the policy relation.
         for forbidden in ["UPDATE", "DELETE", "INSERT"] {
             assert!(

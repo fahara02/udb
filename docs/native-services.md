@@ -13,10 +13,10 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.7 | protocol v1.0.0                                          │
+│    crate v0.5.9 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-Alongside the data plane that reads and writes your app's tables, UDB 0.5.7 includes a native control plane
+Alongside the data plane that reads and writes your app's tables, UDB 0.5.9 includes a native control plane
 — a set of built-in gRPC services that handle the plumbing
 most applications end up building anyway. If you need login and access control, file
 storage, asset pipelines, realtime coordination, multi-tenancy, notifications,
@@ -147,7 +147,7 @@ control plane.
 
 | Service | What it does | Representative RPCs |
 |---|---|---|
-| `VaultService` | Encrypted secrets, transit crypto, and short-lived database credentials | `PutSecret`, `GetSecret`, `Encrypt`/`Decrypt`, `Sign`/`Verify`, `Hmac`, `GenerateDatabaseCredentials`, `SealStatus` |
+| `VaultService` | Encrypted secrets, transit crypto, and short-lived database credentials | `PutSecret`, `GetSecret`, `Encrypt`/`Decrypt`, `Sign`/`Verify`, `Hmac`, `GenerateDatabaseCredentials`, `RevokeDatabaseCredentials`, `EmergencyRevokeDatabaseCredentials`, `SealStatus` |
 | `MeteringService` | Records usage events and enforces per-tenant quotas | `RecordUsage`, `QueryUsage`, `PutQuota`, `GetQuota`, `CheckQuota` |
 | `SchedulerService` | Durable cron / one-shot job scheduling | `CreateJob`, `GetJob`, `ListJobs`, `PauseJob`, `ResumeJob`, `DeleteJob` |
 | `SearchService` | Managed search indexes over app data | `CreateIndex`, `Reindex`, `Search`, `ListIndexes`, `DeleteIndex` |
@@ -158,6 +158,20 @@ control plane.
 | `ConfigService` | Feature flags and evaluation | `PutFlag`, `GetFlag`, `ListFlags`, `EvaluateFlags`, `DeleteFlag` |
 | `BackupService` | Tenant-scoped backup and restore | `StartTenantBackup`, `RestoreTenant`, `ListBackups`, `PutBackupPolicy` |
 | `EmbeddingService` | Embedding sources and vector retrieval, with a leader-driven backfill enumerator | `RegisterSource`, `ReportEmbedding`, `Backfill`, `Retrieve`, `ListSources` |
+
+UDB 0.5.7 tightens the operational boundary behind several of these surfaces:
+
+- Vault secrets/transit operations and their outbox evidence pin one
+  active-project write authority; unsealing requires authenticated master-KEK
+  envelopes. Dynamic database credentials are read-only, fixed-policy,
+  tenant/project/instance/database/relation-bound leases with replay-safe issue
+  and durable single/project-wide revoke.
+- Backup export uses one project-pinned PostgreSQL repeatable-read snapshot and
+  records immutable topology and destination provenance. Unsupported
+  multi-instance project snapshots fail closed.
+- Storage, Scheduler, and Workflow apply claim-first project ownership to
+  creation, lookup, mutation, replay, and event lineage. Tenant-wide behavior is
+  retained only for credentials that intentionally carry no project authority.
 
 These services don't have `UdbProject` workflow facades yet. Until they do, call them
 through the **thin generated client** — the generated robustness layer

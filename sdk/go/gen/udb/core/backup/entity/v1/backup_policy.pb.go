@@ -28,13 +28,16 @@ const (
 // 9.10). The actual scheduling is driven by the native SchedulerService (9.3):
 // a leader-elected tick fires `udb.scheduler.job.fired.v1` for a due policy,
 // which a worker turns into a StartTenantBackup. THIS row is the durable,
-// tenant-scoped retention/schedule contract. RLS scopes rows to the tenant.
+// tenant+project-scoped retention/schedule contract. RLS scopes rows to both.
 // ---------------------------------------------------------------------------
 type BackupPolicy struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	PolicyId string                 `protobuf:"bytes,1,opt,name=policy_id,json=policyId,proto3" json:"policy_id,omitempty"`
 	TenantId string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	// Caller-chosen logical policy name, unique per tenant.
+	// First-class project owner. Blank is reserved for quarantined legacy rows;
+	// new serving-path writes always persist an explicitly active project.
+	ProjectId string `protobuf:"bytes,13,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Caller-chosen logical policy name, unique per tenant+project.
 	PolicyName string `protobuf:"bytes,3,opt,name=policy_name,json=policyName,proto3" json:"policy_name,omitempty"`
 	// Cron expression evaluated by the SchedulerService (9.3). Empty disables
 	// scheduled runs (manual StartTenantBackup still works).
@@ -94,6 +97,13 @@ func (x *BackupPolicy) GetPolicyId() string {
 func (x *BackupPolicy) GetTenantId() string {
 	if x != nil {
 		return x.TenantId
+	}
+	return ""
+}
+
+func (x *BackupPolicy) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -172,13 +182,17 @@ var File_udb_core_backup_entity_v1_backup_policy_proto protoreflect.FileDescript
 
 const file_udb_core_backup_entity_v1_backup_policy_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/backup/entity/v1/backup_policy.proto\x12\x19udb.core.backup.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x95\f\n" +
+	"-udb/core/backup/entity/v1/backup_policy.proto\x12\x19udb.core.backup.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x98\x0e\n" +
 	"\fBackupPolicy\x12I\n" +
 	"\tpolicy_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tpolicy_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bpolicyId\x12c\n" +
 	"\ttenant_id\x18\x02 \x01(\tBF\x82\xb7\x18B\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R#\n" +
-	"\x1aidx_backup_policies_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12B\n" +
+	"\x1aidx_backup_policies_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12F\n" +
+	"\n" +
+	"project_id\x18\r \x01(\tB'\x82\xb7\x18#\n" +
+	"\n" +
+	"project_id\x12\fVARCHAR(255)\x18\x01:\x02''\xa0\x02\x01R\tprojectId\x12B\n" +
 	"\vpolicy_name\x18\x03 \x01(\tB!\x82\xb7\x18\x1d\n" +
 	"\vpolicy_name\x12\fVARCHAR(255)\x18\x01R\n" +
 	"policyName\x12L\n" +
@@ -204,12 +218,14 @@ const file_udb_core_backup_entity_v1_backup_policy_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x12\vTIMESTAMPTZZ When the policy was last updatedR\tupdatedAt\x12l\n" +
 	"\rmetadata_json\x18\f \x01(\tBG\x82\xb7\x18C\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aNon-secret policy metadatax\x01R\fmetadataJson:\xdb\x03\xfa\xb6\x18\xc5\x02\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aNon-secret policy metadatax\x01R\fmetadataJson:\x96\x05\xfa\xb6\x18\xb0\x03\n" +
 	"\x0fbackup_policies\x12\n" +
-	"udb_backup\x18\x01 \x01*CPer-tenant logical-backup retention and schedule (master-plan 9.10)8\x01@\x01b^\n" +
-	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01I\n" +
-	"&idx_backup_policies_tenant_name_unique\x12\x05BTREE\x18\x01Z\ttenant_idZ\vpolicy_name\xf2\x01\x1eudb.backup.backup_policies.cdc\xfa\x01\vbackup:read\x8a\xb2\x19\x8c\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\rbackup.policy@\xc2\x1cH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x82\x02\n" +
+	"udb_backup\x18\x01 \x01*CPer-tenant logical-backup retention and schedule (master-plan 9.10)8\x01@\x01b\xb4\x01\n" +
+	"\x18tenant_project_isolation\x1a\x95\x01(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)(\x01\x8a\x01]\n" +
+	".idx_backup_policies_tenant_project_name_unique\x12\x05BTREE\x18\x01Z\ttenant_idZ\n" +
+	"project_idZ\vpolicy_name\xf2\x01\x1eudb.backup.backup_policies.cdc\xfa\x01\vbackup:read\x8a\xb2\x19\xdc\x01\n" +
+	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
+	"project_id*otenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')2\x04none:\rbackup.policy@\xc2\x1cH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x82\x02\n" +
 	"\x1dcom.udb.core.backup.entity.v1B\x11BackupPolicyProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/backup/entity/v1;entityv1\xa2\x02\x04UCBE\xaa\x02\x19udb.core.Backup.Entity.V1\xca\x02\x19Udb\\Core\\Backup\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Backup\\Entity\\V1\xea\x02\x1dUdb::Core::Backup::Entity::V1b\x06proto3"
 
 var (

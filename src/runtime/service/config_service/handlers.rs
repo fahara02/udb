@@ -13,8 +13,8 @@ use crate::proto::udb::core::config::services::v1 as config_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_next_page_token, native_offset_page_window,
-    native_service_context, non_empty_json, validate_request_scope,
+    admit_on as native_admit_on, native_next_page_token, native_offset_page_window, non_empty_json,
+    validated_native_service_context,
 };
 use super::ConfigServiceImpl;
 use super::codec::{flag_val_to_proto, flag_val_to_stored, proto_to_flag_val};
@@ -33,11 +33,11 @@ pub(crate) async fn put_flag(
 ) -> Result<Response<config_pb::PutFlagResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    // Cross-tenant guard FIRST: the body tenant_id must match the verified
-    // claim/header. After this passes, the body value IS the verified tenant.
-    validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
+    // Scope guard FIRST: body tenant/project must match the verified claim and
+    // request metadata before either value reaches the runtime context.
     let tenant_id = req.tenant_id.trim().to_string();
     let project_id = req.project_id.trim().to_string();
+    let context = validated_native_service_context(&metadata, &tenant_id, &project_id)?;
     let environment = req.environment.trim().to_string();
     let flag_key = require_flag_key(&req.flag_key)?;
     let value = proto_to_flag_val(&req.value)?;
@@ -56,7 +56,6 @@ pub(crate) async fn put_flag(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, &project_id);
 
     // Existing row at this exact scope (for stable flag_id + revision bump).
     let existing = runtime
@@ -117,9 +116,9 @@ pub(crate) async fn get_flag(
 ) -> Result<Response<config_pb::GetFlagResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
     let tenant_id = req.tenant_id.trim().to_string();
     let project_id = req.project_id.trim().to_string();
+    let context = validated_native_service_context(&metadata, &tenant_id, &project_id)?;
     let environment = req.environment.trim().to_string();
     let flag_key = require_flag_key(&req.flag_key)?;
     let _admit = native_admit_on(
@@ -132,7 +131,6 @@ pub(crate) async fn get_flag(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, &project_id);
 
     let found = runtime
         .native_entity_read_for_service(
@@ -158,9 +156,9 @@ pub(crate) async fn list_flags(
 ) -> Result<Response<config_pb::ListFlagsResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
     let tenant_id = req.tenant_id.trim().to_string();
     let project_id = req.project_id.trim().to_string();
+    let context = validated_native_service_context(&metadata, &tenant_id, &project_id)?;
     let environment = req.environment.trim().to_string();
     let legacy_limit = if req.limit == 0 {
         DEFAULT_LIST_LIMIT
@@ -188,7 +186,6 @@ pub(crate) async fn list_flags(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, &project_id);
 
     let project_filter = (!project_id.is_empty()).then_some(project_id.as_str());
     let env_filter = (!environment.is_empty()).then_some(environment.as_str());
@@ -225,9 +222,9 @@ pub(crate) async fn delete_flag(
 ) -> Result<Response<config_pb::DeleteFlagResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
     let tenant_id = req.tenant_id.trim().to_string();
     let project_id = req.project_id.trim().to_string();
+    let context = validated_native_service_context(&metadata, &tenant_id, &project_id)?;
     let environment = req.environment.trim().to_string();
     let flag_key = require_flag_key(&req.flag_key)?;
     let _admit = native_admit_on(
@@ -240,7 +237,6 @@ pub(crate) async fn delete_flag(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, &project_id);
 
     let existing = runtime
         .native_entity_read_for_service(
@@ -299,14 +295,14 @@ pub(crate) async fn evaluate_flags(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     let tenant_id = req.tenant_id.trim().to_string();
-    let ctx_pb = req.context.unwrap_or_default();
-    validate_request_scope(&metadata, &tenant_id, &ctx_pb.project_id)?;
     ensure_evaluate_key_limit(req.keys.len())?;
+    let ctx_pb = req.context.unwrap_or_default();
     let eval_ctx = EvalContext {
         project_id: ctx_pb.project_id.trim().to_string(),
         environment: ctx_pb.environment.trim().to_string(),
         attributes: ctx_pb.attributes,
     };
+    let context = validated_native_service_context(&metadata, &tenant_id, &eval_ctx.project_id)?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -317,7 +313,6 @@ pub(crate) async fn evaluate_flags(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, &eval_ctx.project_id);
 
     // Trimmed, non-empty, de-duplicated keys — preserves the previous
     // per-key loop's semantics (blank keys skipped; a duplicate key would

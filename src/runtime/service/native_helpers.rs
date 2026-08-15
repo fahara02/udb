@@ -517,6 +517,20 @@ pub(crate) fn native_service_context(
     }
 }
 
+/// Validate the request body's tenant/project identity against metadata and the
+/// already-verified bearer claim, then build the native runtime context from
+/// that same scope. Keeping the check and construction in one helper prevents
+/// handlers from validating only the tenant and subsequently trusting an
+/// unrelated body project.
+pub(crate) fn validated_native_service_context(
+    metadata: &MetadataMap,
+    tenant_id: &str,
+    project_id: &str,
+) -> Result<crate::RequestContext, Status> {
+    validate_request_scope(metadata, tenant_id, project_id)?;
+    Ok(native_service_context(metadata, tenant_id, project_id))
+}
+
 /// Build a native context for a PROJECT-SCOPED entity, resolving the project
 /// from the validated request scope ([`metadata_project_id`]: claim first,
 /// header only for a token that names no project).
@@ -1158,6 +1172,37 @@ mod tests {
             assert_eq!(detail.policy_decision_id, "project_claim_mismatch");
         })
         .await;
+    }
+
+    #[tokio::test]
+    async fn validated_native_context_rejects_body_project_before_construction() {
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "tenant-a",
+            "project-a",
+            &["udb:native:read"],
+            &[],
+        );
+        crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+            let err =
+                validated_native_service_context(&MetadataMap::new(), "tenant-a", "project-b")
+                    .expect_err("a body project cannot displace the verified claim project");
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            let detail = decode_detail(&err);
+            assert_eq!(detail.policy_decision_id, "project_claim_mismatch");
+        })
+        .await;
+    }
+
+    #[test]
+    fn validated_native_context_preserves_matching_project() {
+        let mut metadata = MetadataMap::new();
+        metadata.insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        metadata.insert("x-udb-project-id", MetadataValue::from_static("project-a"));
+        let context = validated_native_service_context(&metadata, "tenant-a", "project-a")
+            .expect("matching native scope should construct a context");
+        assert_eq!(context.tenant_id, "tenant-a");
+        assert_eq!(context.project_id, "project-a");
     }
 
     #[test]

@@ -63,6 +63,7 @@ fn node_to_projection_task(node: &Json) -> SystemStoreResult<ProjectionTaskRow> 
         task_id,
         idempotency_key: prop_str(node, "idempotency_key"),
         project_id: prop_str(node, "project_id"),
+        manifest_checksum: prop_str(node, "manifest_checksum"),
         target_backend: prop_str(node, "target_backend"),
         target_instance: prop_str(node, "target_instance"),
         projection_kind: prop_str(node, "projection_kind"),
@@ -420,9 +421,11 @@ impl ProjectionTaskStore for Neo4jCanonicalStore {
         let cypher = format!(
             "MATCH (t:{LABEL_PROJECTION_TASK} {{run_tag:$tag}}) \
              WHERE t.status = 'DEAD_LETTER' \
-             WITH t.source_table AS source_table, t.target_backend AS target_backend, \
+               AND NOT (coalesce(t.last_error, '') STARTS WITH 'projection authority rejected:') \
+             WITH t.project_id AS project_id, t.source_table AS source_table, \
+                  t.target_backend AS target_backend, \
                   t.target_instance AS target_instance, count(t) AS dead_count \
-             RETURN source_table, target_backend, target_instance, dead_count \
+             RETURN project_id, source_table, target_backend, target_instance, dead_count \
              LIMIT $limit"
         );
         let rows = self
@@ -436,6 +439,7 @@ impl ProjectionTaskStore for Neo4jCanonicalStore {
         let mut out = Vec::with_capacity(rows.len());
         for row in &rows {
             out.push(DeadLetterGroup {
+                project_id: prop_str(row, "project_id"),
                 source_table: prop_str(row, "source_table"),
                 target_backend: prop_str(row, "target_backend"),
                 target_instance: prop_str(row, "target_instance"),
@@ -447,6 +451,7 @@ impl ProjectionTaskStore for Neo4jCanonicalStore {
 
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
@@ -454,7 +459,9 @@ impl ProjectionTaskStore for Neo4jCanonicalStore {
         let now = now_unix_ms();
         let cypher = format!(
             "MATCH (t:{LABEL_PROJECTION_TASK} {{run_tag:$tag}}) \
-             WHERE t.status = 'DEAD_LETTER' AND t.source_table = $source_table \
+             WHERE t.status = 'DEAD_LETTER' AND t.project_id = $project_id \
+               AND NOT (coalesce(t.last_error, '') STARTS WITH 'projection authority rejected:') \
+               AND t.source_table = $source_table \
                AND t.target_backend = $target_backend AND t.target_instance = $target_instance \
              SET t.status='PENDING', t.retry_count=0, t.last_error='reconciliation repair', \
                  t.updated_at=$now \
@@ -467,6 +474,7 @@ impl ProjectionTaskStore for Neo4jCanonicalStore {
                 &cypher,
                 json!({
                     "tag": self.proj_tag(),
+                    "project_id": project_id,
                     "source_table": source_table,
                     "target_backend": target_backend,
                     "target_instance": target_instance,

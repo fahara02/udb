@@ -5,6 +5,133 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.9] - 2026-08-15
+
+Patch release correcting the exact-project catalog publication defect exposed
+by the v0.5.8 post-release benchmark and restoring trustworthy release evidence.
+
+### Fixed
+
+- **Catalog activation and rollback publish the requested project.** The served
+  handlers no longer reload a global last manifest or call the default-project
+  activation shim after committing a customer-project row. They reconcile the
+  exact durable ACTIVE row into the exact project slot, and recovery cannot
+  report default fallback as a successful customer-project activation.
+- **Catalog rollback restores a prior version.** Rollback transitions an
+  explicitly selected `ROLLED_BACK` row instead of aliasing the STAGED-only
+  activation path. Project advisory locking, a one-ACTIVE invariant, durable
+  idempotency fingerprints, and recorded replay results prevent concurrent or
+  stale retries from toggling a later version.
+- **Catalog authority is durable, project-bound, and replica-safe.** Stage and
+  activation verify payload integrity, the semantic schema checksum, canonical
+  validation, real compatibility-diff evidence, the exact prior binding, and
+  project identity. Startup and replica reload publish only matching catalog,
+  binding, compatibility-evidence, and transition rows; split or stale
+  authority fails closed.
+- **Catalog consumers no longer trust raw/default authority.** Capabilities,
+  health, schema discovery, admin summary, projection drift, migrations, and
+  long-lived workers resolve an exact claim-bound project. Health identifies
+  unproven raw ACTIVE rows instead of reporting them as healthy.
+- **The release benchmark activates its customer catalog.** Every clean reset
+  performs StageCatalog, ActivateCatalog, durable verification, and an
+  authority-sensitive served preflight before any SDK seed runs. The Backup and
+  Vault fail-closed project checks remain intact.
+- **Release benchmark evidence is cryptographically bound to the published
+  binary.** The reusable suite accepts only an anchored SemVer tag, verifies the
+  downloaded binary and manifest against both published checksum sidecars,
+  checks the manifest asset identity and `udb --version`, and records the binary
+  SHA-256 in the benchmark JSON. PR-time quick CI and workflow lint compile and
+  track the catalog bootstrap script.
+- **Pages deploys only exact post-release benchmark proof.** Manual and push-only
+  benchmark runs cannot trigger release-evidence publication. Pages binds the
+  artifact to the successful post-Release benchmark run and trigger SHA, resolves
+  the release tag to the benchmarked commit, and verifies its recorded binary
+  digest against the checksum published on that exact tag.
+- **Backup inventory remains readable during topology repair.** ListBackups
+  requires an exact active project/store binding but no longer demands the full
+  backup-execution topology merely to list its durable journal.
+- **Backup state is isolated by tenant and project.** Run and policy schemas,
+  RLS, indexes, conflicts, CRUD, export/import, scheduling, and retention carry
+  first-class project ownership. Blank legacy ownership is quarantined, and a
+  same-tenant project cannot list, guess, mutate, restore, or prune another
+  project's backup state.
+- **The native contract advances to 6.0.0.** Backup's new persisted
+  tenant+project security boundary is an intentional native database-contract
+  break, so the independent native contract major and descriptor baseline move
+  together instead of hiding the change behind the package patch version.
+- **PHP benchmark seed failures remain observable.** A failed native seed keeps
+  its original gRPC code and detail, marks only dependent RPCs `SEED_BLOCKED`,
+  and still emits a complete 381-RPC PHP report. Catalog lifecycle ordering is
+  pinned as Stage, Activate, then Rollback.
+- **Materialized views use the customer project's database.** Creation and TTL
+  refresh route through the exact project PostgreSQL write authority, and the
+  scheduler observes catalog activation/reload instead of capturing the default
+  manifest at startup.
+- **Projection repair is project-scoped.** Dead-letter grouping/requeue carries
+  `project_id` through every canonical-store adapter, and projection workers do
+  not dispatch through stale/default catalog or backend authority.
+- **Native body projects are bound to the verified claim.** Config flag,
+  Metering quota, and LiveQuery handlers validate tenant and project together
+  before constructing their runtime context; a same-tenant request can no
+  longer substitute another project's body identifier.
+- **Project-routing typos fail closed.** Startup rejects unknown routing-mode
+  tokens and a blank `strict_with_default:` project; direct runtime parsing
+  falls back to strict isolation instead of silently authorizing permissive
+  access to unlabeled backend instances.
+
+### Changed
+
+- Exact project catalog state, rather than default fallback, is now the control-
+  plane authority for activation responses and strict native-service admission.
+- Maintained README/site/diagram inventory text matches the generated descriptor,
+  while the coding skill links that inventory instead of duplicating a stale
+  count. Current release/Python publishing examples use 0.5.9, and the version
+  propagator now governs them; the consumer skill's Vault inventory reflects the
+  generated 22-RPC surface. Historical v0.4.28 benchmark evidence keeps its
+  original label.
+
+## [0.5.8] - 2026-08-15
+
+Patch release restoring tenant-backup import availability and closing the
+release-evidence drift exposed by the v0.5.7 post-release benchmark. No wire
+protocol change.
+
+### Fixed
+
+- **`RestoreTenant` no longer rejects every fresh destination because of its own
+  journal row.** Restore deliberately records a target-scoped `RUNNING`
+  `BackupRun` before opening the freshness transaction, but the guard then
+  counted that exact row as pre-existing tenant state. The descriptor-resolved
+  backup journal probe now excludes only the current restore id. Older backup or
+  restore history and every tenant-authored relation still make the target
+  non-fresh.
+- **The release benchmark follows canonical project and credential contracts.**
+  All SDKs use one UUID project identity, rotate a refresh token only once, run
+  tenant-wide session revocation last, and authenticate again before the final
+  self-purge. The harness therefore measures served RPC behavior instead of
+  stale project codes or deliberately invalidated bearer tokens.
+- **Pages cannot publish stale benchmark evidence from a validation-only run.**
+  Push validation of the benchmark workflow no longer triggers a deployment.
+  A genuine manual or post-release benchmark must succeed and supply its fresh
+  `sdk-benchmark-results` artifact; a missing artifact fails the Pages build
+  instead of falling back to the committed historical dashboard JSON.
+- **Windows release builds no longer depend on a single mutable NASM feed.** CI
+  uses the runner-provided Perl and first downloads a checksum-pinned NASM 3.02
+  archive from the official distribution. If that host is unavailable, it uses
+  the direct versioned Chocolatey package endpoint and verifies both the package
+  and embedded official-installer hashes before use.
+- **Generated UDB skill wrappers and references now match the 0.5.8 canonical
+  guidance.** The OpenAI, Ollama, and plugin-reference copies no longer
+  advertise 0.5.6 package commands; copied codebase/API inventories include the
+  completed Vault lifecycle surface; and PR quick-gate CI now rejects future
+  wrapper or reference drift before merge.
+
+### Changed
+
+- Maintained security, operations, native-service, changelog, generated-map,
+  example, and site version references now describe the completed v0.5.7 audit
+  wave and identify v0.5.8 as the current product/SDK release.
+
 ## [0.5.7] - 2026-08-14
 
 Patch release closing a production-reported migration defect and a cluster of
@@ -76,6 +203,49 @@ refuses to start instead of recording itself as done.
   and why a typed-aggregate defect could not be diagnosed from its symptom. A
   shape defect is now an error; SQL `NULL` remains a legitimate zero.
   `GetThroughput` likewise surfaces a decode failure instead of reporting `0`.
+- **Open CDC subscriptions no longer outlive their authority.** Long-running
+  `PublishCDC` streams periodically re-resolve bearer sessions, API keys, mTLS
+  bindings, tenant status, scopes, and the current policy decision. Revocation,
+  suspension, policy withdrawal, credential expiry, or a changed scope set now
+  terminates the existing stream instead of permitting delivery until disconnect.
+  Admission permits, inflight accounting, and the effective deadline also live
+  for the lifetime of the lazy response stream rather than ending at RPC return.
+- **CDC replay and topic-policy failures now fail closed.** Malformed or pruned
+  resume cursors are rejected instead of rewinding to the Unix epoch; journal
+  SQL/decode failures terminate replay instead of looking like an idle stream.
+  Topic policies load and reload as complete immutable generations, include
+  disabled rows, share one ingress/publish/subscriber matcher, and make CDC
+  unavailable when the current generation cannot be loaded.
+- **Backups are coherent and project-authoritative.** `BackupService` resolves
+  one active project catalog and canonical PostgreSQL write instance, then reads
+  all tenant tables in one `REPEATABLE READ READ ONLY` transaction. The durable
+  run and immutable manifest record the exact project, catalog checksum,
+  instance, snapshot/WAL provenance, destination, and object keys. Restore and
+  retention use that recorded identity instead of mutable process defaults;
+  unsupported multi-instance project topologies refuse completion rather than
+  advertising a fuzzy backup as atomic.
+- **Vault cannot unseal from plaintext DEK material.** Secret/transit DEKs must
+  be protected by an authenticated master-KEK envelope. Every served secret and
+  transit operation pins one active-project PostgreSQL write authority before
+  its first typed or raw access, and its outbox evidence reuses that same pin so
+  weighted routing cannot split key material from its audit event.
+- **Dynamic database credentials are tenant- and project-bound.** Issued
+  PostgreSQL logins are read-only, have no memberships or RLS-bypass authority,
+  receive only explicit relation grants, and enforce restrictive fixed-literal
+  tenant/project policies independent of caller-mutable GUCs. Lease issuance is
+  idempotent and replay-safe; revoke and emergency project revoke terminate
+  sessions, remove policy/grant/role state, prove absence, emit durable evidence,
+  and shred the KEK-wrapped recovery envelope at terminal revocation.
+- **Native project ownership is enforced consistently.** Storage file
+  operations, Scheduler jobs, and Workflow instances bind claim-first project
+  authority on creation and apply the same ownership predicate to reads,
+  mutations, idempotency replay, and outbox lineage. Non-representable project
+  authority fails before database access instead of widening to tenant scope.
+- **Storage GC-ledger readiness is scoped to its physical store.** A service or
+  database that created `udb_storage.gc_intents` can no longer mark a different
+  pool or a later schema lifetime ready through process-global state. Service
+  clones share readiness for one binding; a newly bound service rechecks and
+  recreates its ledger as required.
 
 ### Changed
 - **`native_service_context(.., "")` is banned.** The empty project argument fell

@@ -5,13 +5,17 @@
 //! violations). Copied verbatim from the former god file; imports are explicit
 //! (no `use super::*`).
 
+use std::sync::Arc;
+
 use tonic::metadata::MetadataValue;
 use tonic::{Request, Status};
 
 use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
+use crate::ir::{ComparisonOp, LogicalFilter, LogicalValue};
 use crate::proto::udb::core::backup::services::v1 as backup_pb;
 use crate::proto::udb::core::backup::services::v1::backup_service_server::BackupService;
 use crate::proto::{ErrorDetail, ErrorKind};
+use crate::runtime::catalog::CatalogManager;
 use crate::runtime::core::tenant_purge::plan_tenant_purge;
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 use crate::runtime::service::method_security;
@@ -21,7 +25,12 @@ use super::errors::{
     backup_capability_status, backup_internal_status, backup_not_found_status,
     backup_run_missing_object_prefix_status, ensure_target_is_fresh,
 };
+use super::export::backup_table_select_sql;
+use super::import::{is_restore_journal_relation, scope_restore_row_project};
 use super::model::run_location_from_json;
+use super::store::{
+    policies_list_read, policy_conflict, policy_read_by_name, run_read_by_id, runs_list_read,
+};
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -90,6 +99,157 @@ fn table(schema: &str, name: &str, columns: Vec<ManifestColumn>) -> ManifestTabl
     }
 }
 
+#[tokio::test]
+async fn backup_project_binding_refuses_default_fallback_and_accepts_exact_activation() {
+    let catalog = Arc::new(CatalogManager::new(CatalogManifest::default()));
+    let svc = BackupServiceImpl::new().with_catalog(Some(Arc::clone(&catalog)));
+
+    let err = svc
+        .require_active_project("customer-project")
+        .expect_err("missing project must not inherit the default catalog");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert_policy_detail(
+        &err,
+        "resolve_project_topology",
+        "backup_project_catalog_not_active",
+    );
+
+    catalog
+        .stage_catalog(
+            CatalogManifest::default(),
+            "customer-project".to_string(),
+            "1.0.0".to_string(),
+            "backward".to_string(),
+        )
+        .await
+        .expect("stage exact customer project");
+    catalog
+        .activate_catalog_for("customer-project", "1.0.0")
+        .await
+        .expect("activate exact customer project");
+
+    assert_eq!(
+        svc.require_active_project("customer-project")
+            .expect("exact active customer project is accepted"),
+        "customer-project"
+    );
+}
+
+fn filter_has_eq(filter: &LogicalFilter, field: &str, value: &str) -> bool {
+    match filter {
+        LogicalFilter::Comparison {
+            field: actual_field,
+            op: ComparisonOp::Eq,
+            value: LogicalValue::String(actual_value),
+        } => actual_field == field && actual_value == value,
+        LogicalFilter::And(filters) => filters
+            .iter()
+            .any(|nested| filter_has_eq(nested, field, value)),
+        _ => false,
+    }
+}
+
+#[test]
+fn backup_entities_declare_project_security_and_unique_authority() {
+    for (message, unique_columns) in [
+        (
+            super::config::BACKUP_RUN_MSG,
+            ["tenant_id", "project_id", "backup_id"],
+        ),
+        (
+            super::config::BACKUP_POLICY_MSG,
+            ["tenant_id", "project_id", "policy_name"],
+        ),
+    ] {
+        let model =
+            crate::runtime::native_catalog::native_model(message, &["tenant_id", "project_id"]);
+        assert_eq!(model.tenant_column.as_deref(), Some("tenant_id"));
+        assert_eq!(model.project_column.as_deref(), Some("project_id"));
+        assert_eq!(model.table_security.project_isolation_mode, "project");
+        assert_eq!(model.table_security.project_column, "project_id");
+        assert!(
+            model
+                .table_security
+                .rls_policy_template
+                .contains("app.current_project_id"),
+            "{message} RLS must bind the request project"
+        );
+
+        let manifest = crate::runtime::native_catalog::native_service_manifest()
+            .expect("embedded native manifest");
+        let table = manifest
+            .tables
+            .iter()
+            .find(|table| table.message_fqn() == message)
+            .expect("backup native table");
+        let project = table
+            .columns
+            .iter()
+            .find(|column| column.field_name == "project_id")
+            .expect("first-class project column");
+        assert!(project.not_null);
+        assert!(project.is_project_column);
+        assert!(table.indexes.iter().any(|index| {
+            index.unique
+                && index.columns
+                    == unique_columns
+                        .iter()
+                        .map(|value| value.to_string())
+                        .collect::<Vec<_>>()
+        }));
+    }
+}
+
+#[test]
+fn backup_store_reads_and_conflicts_bind_tenant_plus_project() {
+    let reads = [
+        run_read_by_id("tenant-a", "project-a", "run-a"),
+        runs_list_read("tenant-a", "project-a", None, 10, 0),
+        policy_read_by_name("tenant-a", "project-a", "daily"),
+        policies_list_read("tenant-a", "project-a", 10, 0),
+    ];
+    for read in reads {
+        let filter = read.filter.expect("project-scoped read filter");
+        assert!(filter_has_eq(&filter, "tenant_id", "tenant-a"));
+        assert!(filter_has_eq(&filter, "project_id", "project-a"));
+    }
+    assert_eq!(
+        policy_conflict().conflict_target(),
+        Some(
+            ["tenant_id", "project_id", "policy_name"]
+                .map(str::to_string)
+                .as_slice()
+        )
+    );
+}
+
+#[test]
+fn raw_backup_sql_and_restore_rows_preserve_project_scope() {
+    let sql = backup_table_select_sql("\"app\".\"orders\"", "tenant_id", Some("project_id"));
+    assert!(sql.contains("\"tenant_id\"::text = $1"));
+    assert!(sql.contains("\"project_id\"::text = $2"));
+
+    let tenant_only = backup_table_select_sql("\"app\".\"profile\"", "tenant_id", None);
+    assert!(tenant_only.contains("\"tenant_id\"::text = $1"));
+    assert!(!tenant_only.contains("$2"));
+
+    let mut matching = serde_json::json!({"tenant_id": "tenant-a", "project_id": "project-a"})
+        .as_object()
+        .expect("object row")
+        .clone();
+    scope_restore_row_project(&mut matching, "project_id", "project-a", "app", "orders")
+        .expect("matching project row");
+    assert_eq!(matching["project_id"], "project-a");
+
+    let mut foreign = serde_json::json!({"tenant_id": "tenant-a", "project_id": "project-b"})
+        .as_object()
+        .expect("object row")
+        .clone();
+    let err = scope_restore_row_project(&mut foreign, "project_id", "project-a", "app", "orders")
+        .expect_err("foreign project row must be rejected");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+}
+
 /// The backup PLAN must reuse the SHARED purge planner: tenant-columned
 /// tables become targets, and a tenant-less table is REPORTED as excluded
 /// with a human reason — never silently skipped (the capability-lie pattern).
@@ -136,6 +296,19 @@ fn restore_over_existing_tenant_is_rejected() {
 }
 
 #[test]
+fn restore_freshness_identifies_only_the_descriptor_backed_run_journal() {
+    let run =
+        crate::runtime::native_catalog::native_model(super::config::BACKUP_RUN_MSG, &["backup_id"]);
+    let unquoted = run.relation.replace('"', "");
+    let (schema, table) = unquoted
+        .split_once('.')
+        .expect("BackupRun relation must be schema-qualified");
+    assert!(is_restore_journal_relation(schema, table));
+    assert!(!is_restore_journal_relation(schema, "backup_policies"));
+    assert!(!is_restore_journal_relation("customer", table));
+}
+
+#[test]
 fn backup_run_missing_object_prefix_carries_policy_detail() {
     let err = backup_run_missing_object_prefix_status();
     assert_eq!(err.code(), tonic::Code::FailedPrecondition);
@@ -149,6 +322,7 @@ fn backup_run_missing_object_prefix_carries_policy_detail() {
 #[test]
 fn run_location_requires_complete_immutable_topology() {
     let row = serde_json::json!({
+        "project_id": "billing",
         "metadata_json": {
             "object_backend": "minio",
             "object_bucket": "tenant-backups",
@@ -164,6 +338,7 @@ fn run_location_requires_complete_immutable_topology() {
     assert_eq!(location.postgres_instance, "billing-primary");
 
     let missing_instance = serde_json::json!({
+        "project_id": "billing",
         "metadata_json": {
             "object_backend": "minio",
             "object_bucket": "tenant-backups",
@@ -175,6 +350,23 @@ fn run_location_requires_complete_immutable_topology() {
     assert!(
         run_location_from_json(&missing_instance).is_none(),
         "partial location must never trigger default-instance guessing"
+    );
+
+    let legacy_without_first_class_project = serde_json::json!({
+        "metadata_json": row["metadata_json"].clone()
+    });
+    assert!(
+        run_location_from_json(&legacy_without_first_class_project).is_none(),
+        "legacy rows must remain quarantined rather than inherit a default project"
+    );
+
+    let mismatched_project = serde_json::json!({
+        "project_id": "orders",
+        "metadata_json": row["metadata_json"].clone()
+    });
+    assert!(
+        run_location_from_json(&mismatched_project).is_none(),
+        "first-class and immutable metadata project authority must agree"
     );
 }
 

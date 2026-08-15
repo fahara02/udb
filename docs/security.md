@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.7 | protocol v1.0.0                                          │
+│    crate v0.5.9 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This page explains how UDB keeps data safe: who a request is, what it's allowed
@@ -189,12 +189,41 @@ Here's how to handle common classes of sensitive data:
 | MFA and WebAuthn state | Treat as account-security material with restricted admin access |
 | Audit payloads | Preserve identifiers and redaction context without leaking secrets |
 
+### Vault master-key and database-credential posture
+
+Native Vault remains sealed unless it can authenticate a real master-KEK
+envelope. Plaintext or base64-only DEK rows are not migration shortcuts: they
+fail closed and require a controlled offline inventory and rewrap. Secret,
+transit, raw-SQL, typed-store, and outbox work for one request is pinned to the
+same active-project PostgreSQL write authority so routing cannot split key
+material from the audit event that records its use.
+
+Dynamic PostgreSQL credentials are deliberately narrower than ordinary database
+roles. Each login is bound to the verified tenant, project, active instance,
+physical database, policy revision, and explicit relation set. It receives only
+direct `SELECT`, no role memberships, no administrative or RLS-bypass flags, and
+restrictive fixed-literal tenant/project RLS policies. Changing compatibility
+GUCs therefore cannot widen visibility. Callers must provide an idempotency key;
+use the single-lease or emergency project revoke RPCs to terminate sessions and
+remove the generated role, grants, and policies.
+
 ## Audit And Events
 
 Every auth, policy, native-service, and CDC (change-data-capture) event carries
 the full context you need for an audit trail: tenant/project, correlation, actor,
 operation, resource, and redaction context. Configure your event sinks and
 retention policy before you go to production.
+
+### Long-lived CDC authorization
+
+Authorization at stream creation is not permanent authority. `PublishCDC`
+periodically revalidates the original bearer session, API key, or certificate
+binding together with tenant status, scopes, and the current policy decision.
+Revocation, suspension, policy withdrawal, expiry, or a changed scope set closes
+the stream; clients reconnect to establish a fresh scope-derived topic filter.
+Malformed or no-longer-retained cursors are errors, and an unavailable topic
+policy generation or journal read/decode failure terminates delivery rather than
+falling back to open access, epoch replay, or a false-idle stream.
 
 ## Compliance Profiles
 

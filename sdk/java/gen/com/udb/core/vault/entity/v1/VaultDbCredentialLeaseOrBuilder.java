@@ -153,7 +153,9 @@ public interface VaultDbCredentialLeaseOrBuilder extends
 
   /**
    * <pre>
-   * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+   * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+   * plus FAILED rows with a pending revocation, is owned by the reconciliation
+   * worker. REVOKED is set only after session termination and role-absence proof.
    * </pre>
    *
    * <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -162,7 +164,9 @@ public interface VaultDbCredentialLeaseOrBuilder extends
   java.lang.String getState();
   /**
    * <pre>
-   * ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+   * STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+   * plus FAILED rows with a pending revocation, is owned by the reconciliation
+   * worker. REVOKED is set only after session termination and role-absence proof.
    * </pre>
    *
    * <code>string state = 10 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -182,4 +186,157 @@ public interface VaultDbCredentialLeaseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getMetadataJsonBytes();
+
+  /**
+   * <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <code>string project_id = 12 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
+
+  /**
+   * <pre>
+   * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+   * response-loss replay can never mint a second physical login.
+   * </pre>
+   *
+   * <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The idempotencyKey.
+   */
+  java.lang.String getIdempotencyKey();
+  /**
+   * <pre>
+   * Caller-supplied idempotency key. Its unique scope is tenant+project so a
+   * response-loss replay can never mint a second physical login.
+   * </pre>
+   *
+   * <code>string idempotency_key = 13 [json_name = "idempotencyKey", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for idempotencyKey.
+   */
+  com.google.protobuf.ByteString
+      getIdempotencyKeyBytes();
+
+  /**
+   * <pre>
+   * Hash of every authority-relevant issuance input; the same idempotency key
+   * with different inputs is a conflict, never a replay.
+   * </pre>
+   *
+   * <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The requestHash.
+   */
+  java.lang.String getRequestHash();
+  /**
+   * <pre>
+   * Hash of every authority-relevant issuance input; the same idempotency key
+   * with different inputs is a conflict, never a replay.
+   * </pre>
+   *
+   * <code>string request_hash = 14 [json_name = "requestHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for requestHash.
+   */
+  com.google.protobuf.ByteString
+      getRequestHashBytes();
+
+  /**
+   * <pre>
+   * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+   * only be selected by the trusted recovery path and never appears in normal
+   * entity/SDK output, logs, CDC payloads, or audit events.
+   * </pre>
+   *
+   * <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The credentialCiphertext.
+   */
+  java.lang.String getCredentialCiphertext();
+  /**
+   * <pre>
+   * Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+   * only be selected by the trusted recovery path and never appears in normal
+   * entity/SDK output, logs, CDC payloads, or audit events.
+   * </pre>
+   *
+   * <code>string credential_ciphertext = 15 [json_name = "credentialCiphertext", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for credentialCiphertext.
+   */
+  com.google.protobuf.ByteString
+      getCredentialCiphertextBytes();
+
+  /**
+   * <pre>
+   * Immutable physical authority selected at issuance. Reconciliation must use
+   * this exact instance and fails closed if it is no longer routable.
+   * </pre>
+   *
+   * <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The targetInstance.
+   */
+  java.lang.String getTargetInstance();
+  /**
+   * <pre>
+   * Immutable physical authority selected at issuance. Reconciliation must use
+   * this exact instance and fails closed if it is no longer routable.
+   * </pre>
+   *
+   * <code>string target_instance = 16 [json_name = "targetInstance", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for targetInstance.
+   */
+  com.google.protobuf.ByteString
+      getTargetInstanceBytes();
+
+  /**
+   * <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The lastError.
+   */
+  java.lang.String getLastError();
+  /**
+   * <code>string last_error = 17 [json_name = "lastError", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for lastError.
+   */
+  com.google.protobuf.ByteString
+      getLastErrorBytes();
+
+  /**
+   * <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The revokeReason.
+   */
+  java.lang.String getRevokeReason();
+  /**
+   * <code>string revoke_reason = 18 [json_name = "revokeReason", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for revokeReason.
+   */
+  com.google.protobuf.ByteString
+      getRevokeReasonBytes();
+
+  /**
+   * <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The revocationOperationId.
+   */
+  java.lang.String getRevocationOperationId();
+  /**
+   * <code>string revocation_operation_id = 19 [json_name = "revocationOperationId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for revocationOperationId.
+   */
+  com.google.protobuf.ByteString
+      getRevocationOperationIdBytes();
+
+  /**
+   * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return Whether the revocationRequestedAt field is set.
+   */
+  boolean hasRevocationRequestedAt();
+  /**
+   * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The revocationRequestedAt.
+   */
+  com.google.protobuf.Timestamp getRevocationRequestedAt();
+  /**
+   * <code>.google.protobuf.Timestamp revocation_requested_at = 20 [json_name = "revocationRequestedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getRevocationRequestedAtOrBuilder();
 }

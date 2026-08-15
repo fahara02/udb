@@ -63,6 +63,11 @@ pub enum ProjectionTaskStatus {
     DeadLetter,
 }
 
+/// Terminal materialization failures caused by missing/stale project catalog
+/// authority are not repairable by blind dead-letter replay. Reconciliation
+/// must leave them parked until an operator migrates or replaces the task.
+pub(crate) const PROJECTION_AUTHORITY_FAILURE_PREFIX: &str = "projection authority rejected:";
+
 impl ProjectionTaskStatus {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -168,6 +173,8 @@ pub struct ProjectionTaskRow {
     pub task_id: Uuid,
     pub idempotency_key: String,
     pub project_id: String,
+    #[serde(default)]
+    pub manifest_checksum: String,
     pub target_backend: String,
     pub target_instance: String,
     pub projection_kind: String,
@@ -264,6 +271,7 @@ pub struct PendingTaskMetric {
 /// reconciliation worker scans these groups and requeues each.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DeadLetterGroup {
+    pub project_id: String,
     pub source_table: String,
     pub target_backend: String,
     pub target_instance: String,
@@ -491,6 +499,7 @@ pub(crate) fn projection_task_row_from_insert(
         task_id,
         idempotency_key: task.idempotency_key.clone(),
         project_id: task.project_id.clone(),
+        manifest_checksum: task.manifest_checksum.clone(),
         target_backend: task.target_backend.clone(),
         target_instance: task.target_instance.clone(),
         projection_kind: task.projection_kind.clone(),
@@ -796,24 +805,34 @@ pub(crate) fn projection_dead_letter_groups(
     rows: impl IntoIterator<Item = ProjectionTaskRow>,
     limit: i64,
 ) -> Vec<DeadLetterGroup> {
-    let mut groups: BTreeMap<(String, String, String), i64> = BTreeMap::new();
-    for row in rows
-        .into_iter()
-        .filter(|row| row.status == ProjectionTaskStatus::DeadLetter)
-    {
+    let mut groups: BTreeMap<(String, String, String, String), i64> = BTreeMap::new();
+    for row in rows.into_iter().filter(|row| {
+        row.status == ProjectionTaskStatus::DeadLetter
+            && !row
+                .last_error
+                .starts_with(PROJECTION_AUTHORITY_FAILURE_PREFIX)
+    }) {
         *groups
-            .entry((row.resource_name, row.target_backend, row.target_instance))
+            .entry((
+                row.project_id,
+                row.resource_name,
+                row.target_backend,
+                row.target_instance,
+            ))
             .or_default() += 1;
     }
     groups
         .into_iter()
         .take(limit.max(0) as usize)
         .map(
-            |((source_table, target_backend, target_instance), dead_count)| DeadLetterGroup {
-                source_table,
-                target_backend,
-                target_instance,
-                dead_count,
+            |((project_id, source_table, target_backend, target_instance), dead_count)| {
+                DeadLetterGroup {
+                    project_id,
+                    source_table,
+                    target_backend,
+                    target_instance,
+                    dead_count,
+                }
             },
         )
         .collect()
@@ -821,6 +840,7 @@ pub(crate) fn projection_dead_letter_groups(
 
 pub(crate) async fn requeue_json_dead_letter_by_source<A>(
     adapter: &A,
+    project_id: &str,
     source_table: &str,
     target_backend: &str,
     target_instance: &str,
@@ -834,6 +854,10 @@ where
     let mut count = 0;
     for mut row in rows {
         if row.status != ProjectionTaskStatus::DeadLetter
+            || row
+                .last_error
+                .starts_with(PROJECTION_AUTHORITY_FAILURE_PREFIX)
+            || row.project_id != project_id
             || row.resource_name != source_table
             || row.target_backend != target_backend
             || row.target_instance != target_instance
@@ -971,17 +995,21 @@ pub trait ProjectionTaskStore: Send + Sync {
     async fn pending_task_metrics(&self, limit: i64) -> SystemStoreResult<Vec<PendingTaskMetric>>;
 
     /// NW1-3b — dead-letter task groups by
-    /// `(source_table, target_backend, target_instance)`. Returns
-    /// the count of DEAD_LETTER rows per group. The reconciliation
-    /// worker scans this to know which combinations to repair.
+    /// `(project_id, source_table, target_backend, target_instance)`. Returns
+    /// the count of automatically repairable DEAD_LETTER rows per group.
+    /// Authority-rejected rows remain parked and are deliberately excluded.
+    /// The reconciliation worker scans this to know which combinations to
+    /// repair.
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>>;
 
     /// NW1-3b — requeue dead-letter rows matching a specific
-    /// `(source_table, target_backend, target_instance)` triple back
+    /// `(project_id, source_table, target_backend, target_instance)` tuple back
     /// to PENDING (with `retry_count = 0` and last_error =
-    /// 'reconciliation repair'). Returns rows-affected.
+    /// 'reconciliation repair'). Authority-rejected rows are never selected.
+    /// Returns rows-affected.
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,

@@ -1229,6 +1229,7 @@ impl VectorSystemCanonicalStore {
     #[cfg(feature = "elasticsearch")]
     async fn requeue_elasticsearch_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
@@ -1237,6 +1238,10 @@ impl VectorSystemCanonicalStore {
         let mut count = 0_i64;
         for row in rows {
             if row.status != ProjectionTaskStatus::DeadLetter
+                || row
+                    .last_error
+                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                || row.project_id != project_id
                 || row.resource_name != source_table
                 || row.target_backend != target_backend
                 || row.target_instance != target_instance
@@ -1249,6 +1254,10 @@ impl VectorSystemCanonicalStore {
                     "projection source requeue",
                     |current| {
                         if current.status != ProjectionTaskStatus::DeadLetter
+                            || current.last_error.starts_with(
+                                super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX,
+                            )
+                            || current.project_id != project_id
                             || current.resource_name != source_table
                             || current.target_backend != target_backend
                             || current.target_instance != target_instance
@@ -2078,6 +2087,7 @@ impl ProjectionTaskStore for VectorSystemCanonicalStore {
 
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
@@ -2087,6 +2097,7 @@ impl ProjectionTaskStore for VectorSystemCanonicalStore {
             VectorSystemClient::Elasticsearch(_) => {
                 return self
                     .requeue_elasticsearch_dead_letter_by_source(
+                        project_id,
                         source_table,
                         target_backend,
                         target_instance,
@@ -2098,8 +2109,14 @@ impl ProjectionTaskStore for VectorSystemCanonicalStore {
         }
 
         let _guard = self.op_lock.lock().await;
-        requeue_json_dead_letter_by_source(self, source_table, target_backend, target_instance)
-            .await
+        requeue_json_dead_letter_by_source(
+            self,
+            project_id,
+            source_table,
+            target_backend,
+            target_instance,
+        )
+        .await
     }
 
     async fn pending_projection_task_count(

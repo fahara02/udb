@@ -1,10 +1,8 @@
 //! Neutral-IR read / record / conflict builders for the native `VaultService`:
 //! the per-path secret version scan, the list projection, the transit-key scan,
-//! and the `LogicalRecord` shapes for secrets, transit keys, and dynamic
-//! DB-credential leases. Extracted verbatim — the `LogicalRead`/`LogicalRecord`
-//! shapes and conflict targets are byte-for-byte identical to the former god file.
-
-use chrono::{DateTime, Utc};
+//! and the `LogicalRecord` shapes for secrets and transit keys. Extracted
+//! verbatim — the `LogicalRead`/`LogicalRecord` shapes and conflict targets are
+//! byte-for-byte identical to the former god file.
 
 use crate::ir::{
     ComparisonOp, ConflictStrategy, LogicalFilter, LogicalPagination, LogicalProjection,
@@ -155,34 +153,6 @@ pub(crate) fn transit_key_conflict() -> ConflictStrategy {
         "wrapped_key_material".to_string(),
         "state".to_string(),
     ])
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn db_credential_lease_record(
-    lease_id: &str,
-    tenant_id: &str,
-    role_name: &str,
-    username: &str,
-    parent_role: &str,
-    issued_at: DateTime<Utc>,
-    expires_at: DateTime<Utc>,
-    metadata_json: &str,
-) -> LogicalRecord {
-    let mut record = LogicalRecord::new();
-    record.insert("lease_id".to_string(), logical_string(lease_id));
-    record.insert("tenant_id".to_string(), logical_string(tenant_id));
-    record.insert("role_name".to_string(), logical_string(role_name));
-    record.insert("username".to_string(), logical_string(username));
-    record.insert("parent_role".to_string(), logical_string(parent_role));
-    record.insert("backend".to_string(), logical_string("postgres"));
-    record.insert("issued_at".to_string(), LogicalValue::Timestamp(issued_at));
-    record.insert(
-        "expires_at".to_string(),
-        LogicalValue::Timestamp(expires_at),
-    );
-    record.insert("state".to_string(), logical_string("ACTIVE"));
-    record.insert("metadata_json".to_string(), logical_string(metadata_json));
-    record
 }
 
 // ── Transactional raw-SQL builders (rotate / destroy / keyset list) ────────────

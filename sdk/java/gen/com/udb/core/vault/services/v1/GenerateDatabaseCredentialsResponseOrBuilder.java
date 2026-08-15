@@ -78,4 +78,22 @@ public interface GenerateDatabaseCredentialsResponseOrBuilder extends
    * <code>.udb.core.common.v1.ApiError error = 6 [json_name = "error"];</code>
    */
   com.udb.core.common.v1.ApiErrorOrBuilder getErrorOrBuilder();
+
+  /**
+   * <code>bool replayed = 7 [json_name = "replayed"];</code>
+   * @return The replayed.
+   */
+  boolean getReplayed();
+
+  /**
+   * <code>string state = 8 [json_name = "state"];</code>
+   * @return The state.
+   */
+  java.lang.String getState();
+  /**
+   * <code>string state = 8 [json_name = "state"];</code>
+   * @return The bytes for state.
+   */
+  com.google.protobuf.ByteString
+      getStateBytes();
 }

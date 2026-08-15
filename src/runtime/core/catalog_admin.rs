@@ -6,6 +6,21 @@ enum MigrationApplyOutcome {
     Verified,
 }
 
+type CatalogRecordRow = (
+    Uuid,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    i64,
+);
+
 fn migration_approval_tokens_match(provided: &str, stored: &str) -> bool {
     !provided.trim().is_empty()
         && !stored.trim().is_empty()
@@ -115,6 +130,184 @@ fn catalog_admin_internal_status(
     crate::runtime::executor_utils::internal_status("catalog_admin", operation, message)
 }
 
+fn catalog_idempotency_required_status(operation: &'static str) -> tonic::Status {
+    catalog_admin_invalid_field(
+        "idempotency_key",
+        "must be non-empty for durable catalog mutations",
+        format!("{operation} idempotency_key is required"),
+    )
+}
+
+fn catalog_idempotency_conflict_status(operation: &'static str) -> tonic::Status {
+    catalog_admin_schema_status(
+        operation,
+        "catalog_idempotency_conflict",
+        "idempotency_key was already used with a different catalog request",
+    )
+}
+
+fn catalog_request_fingerprint(parts: &[&[u8]]) -> String {
+    use sha2::{Digest, Sha256};
+
+    let mut hasher = Sha256::new();
+    for part in parts {
+        hasher.update((part.len() as u64).to_be_bytes());
+        hasher.update(part);
+    }
+    format!("{:x}", hasher.finalize())
+}
+
+fn canonical_catalog_project_id(project_id: &str) -> Result<String, tonic::Status> {
+    let project_id = project_id.trim();
+    if project_id.is_empty() {
+        return Err(catalog_admin_invalid_field(
+            "project_id",
+            "must identify an explicit canonical project",
+            "catalog project_id is required",
+        ));
+    }
+    Ok(project_id.to_string())
+}
+
+fn catalog_manifest_integrity_sha256(
+    operation: &'static str,
+    project_id: &str,
+    manifest: &CatalogManifest,
+) -> Result<String, tonic::Status> {
+    use sha2::{Digest, Sha256};
+
+    let canonical = serde_json::to_vec(manifest).map_err(|err| {
+        catalog_admin_internal_status(
+            operation,
+            format!(
+                "catalog manifest canonical serialization failed for project '{project_id}': {err}"
+            ),
+        )
+    })?;
+    Ok(format!("{:x}", Sha256::digest(canonical)))
+}
+
+fn validated_catalog_manifest(
+    operation: &'static str,
+    project_id: &str,
+    manifest_json: &str,
+    manifest_integrity_sha256: &str,
+    schema_checksum_sha256: &str,
+    checksum_kind: &str,
+    validation_checksum_sha256: &str,
+    compatibility_evidence_sha256: &str,
+) -> Result<CatalogManifest, tonic::Status> {
+    let value: serde_json::Value = serde_json::from_str(manifest_json).map_err(|err| {
+        catalog_admin_internal_status(
+            operation,
+            format!("catalog manifest JSON parse failed for project '{project_id}': {err}"),
+        )
+    })?;
+    let manifest: CatalogManifest = serde_json::from_value(value.clone()).map_err(|err| {
+        catalog_admin_internal_status(
+            operation,
+            format!("catalog manifest decode failed for project '{project_id}': {err}"),
+        )
+    })?;
+    let integrity = catalog_manifest_integrity_sha256(operation, project_id, &manifest)?;
+    let computed_schema_checksum = crate::generation::manifest::catalog_checksum_sha256(&manifest)
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                operation,
+                format!("catalog semantic checksum failed for project '{project_id}': {err}"),
+            )
+        })?;
+    if checksum_kind != "raw_request_sha256_v1"
+        || compatibility_evidence_sha256.trim().is_empty()
+        || manifest_integrity_sha256 != integrity
+        || validation_checksum_sha256 != integrity
+        || schema_checksum_sha256 != computed_schema_checksum
+        || manifest.checksum_sha256.trim() != computed_schema_checksum
+    {
+        return Err(catalog_admin_schema_status(
+            operation,
+            "catalog_provenance_invalid",
+            format!("catalog checksum/validation provenance is invalid for project '{project_id}'"),
+        ));
+    }
+    Ok(manifest)
+}
+
+fn catalog_semver(version: &str) -> Option<(u64, u64, u64)> {
+    let cleaned = version.trim().strip_prefix('v').unwrap_or(version.trim());
+    let mut parts = cleaned.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next().unwrap_or("0").parse().ok()?;
+    let patch = parts
+        .next()
+        .unwrap_or("0")
+        .split(|ch: char| !ch.is_ascii_digit())
+        .next()
+        .unwrap_or("0")
+        .parse()
+        .ok()?;
+    Some((major, minor, patch))
+}
+
+fn catalog_transition_is_compatible(level: &str, from: &str, to: &str) -> bool {
+    if from.trim().is_empty() {
+        return true;
+    }
+    match level {
+        "none" => true,
+        "exact" => from.trim() == to.trim(),
+        "backward" => match (catalog_semver(from), catalog_semver(to)) {
+            (Some(from), Some(to)) => from.0 == to.0 && to >= from,
+            _ => from.trim() == to.trim(),
+        },
+        _ => false,
+    }
+}
+
+fn catalog_compatibility_evidence(
+    operation: &'static str,
+    level: &str,
+    from_version: &str,
+    from_integrity: &str,
+    from_manifest: Option<&CatalogManifest>,
+    to_version: &str,
+    to_integrity: &str,
+    to_manifest: &CatalogManifest,
+) -> Result<String, tonic::Status> {
+    let allowed = match from_manifest {
+        None => true,
+        Some(from_manifest) => {
+            let report = crate::generation::build_drift_report(Some(from_manifest), to_manifest);
+            match level {
+                "none" => true,
+                "exact" => from_integrity == to_integrity,
+                "backward" => {
+                    catalog_transition_is_compatible(level, from_version, to_version)
+                        && report.critical == 0
+                        && report.blocked_count == 0
+                        && report.requires_review_count == 0
+                }
+                _ => false,
+            }
+        }
+    };
+    if !allowed {
+        return Err(catalog_admin_schema_status(
+            operation,
+            "catalog_transition_incompatible",
+            format!("catalog content is not {level}-compatible with the exact ACTIVE catalog"),
+        ));
+    }
+    Ok(catalog_request_fingerprint(&[
+        b"CATALOG_COMPATIBILITY_V1",
+        level.as_bytes(),
+        from_version.as_bytes(),
+        from_integrity.as_bytes(),
+        to_version.as_bytes(),
+        to_integrity.as_bytes(),
+    ]))
+}
+
 fn migration_approval_token_required_status() -> tonic::Status {
     catalog_admin_policy_status(
         "apply_migration",
@@ -161,6 +354,13 @@ fn migration_apply_state_changed_status() -> tonic::Status {
         "migration_approval_state_changed",
         "migration run approval state changed before apply",
     )
+}
+
+fn migration_authority_status(
+    schema_code: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    catalog_admin_schema_status("apply_migration", schema_code, message)
 }
 
 fn migration_apply_phase_refused_status(error: impl Into<String>) -> tonic::Status {
@@ -343,6 +543,35 @@ async fn ensure_migration_payload_json_column(
             format!("migration audit payload_json backfill failed: {err}"),
         )
     })?;
+    Ok(())
+}
+
+async fn ensure_migration_run_provenance_columns(
+    pool: &sqlx::PgPool,
+    runs_rel: &str,
+) -> Result<(), tonic::Status> {
+    for ddl in [
+        format!("ALTER TABLE {runs_rel} ADD COLUMN IF NOT EXISTS catalog_id UUID"),
+        format!(
+            "ALTER TABLE {runs_rel} ADD COLUMN IF NOT EXISTS catalog_checksum_sha256 TEXT NOT NULL DEFAULT ''"
+        ),
+        format!(
+            "ALTER TABLE {runs_rel} ADD COLUMN IF NOT EXISTS target_backend TEXT NOT NULL DEFAULT ''"
+        ),
+        format!(
+            "ALTER TABLE {runs_rel} ADD COLUMN IF NOT EXISTS target_instance TEXT NOT NULL DEFAULT ''"
+        ),
+        format!(
+            "ALTER TABLE {runs_rel} ADD COLUMN IF NOT EXISTS target_provenance_sha256 TEXT NOT NULL DEFAULT ''"
+        ),
+    ] {
+        sqlx::query(&ddl).execute(pool).await.map_err(|err| {
+            catalog_admin_internal_status(
+                "migration_authority_provenance_upgrade",
+                format!("migration authority provenance upgrade failed: {err}"),
+            )
+        })?;
+    }
     Ok(())
 }
 
@@ -802,43 +1031,320 @@ impl DataBrokerRuntime {
         version: &str,
         manifest_json: &[u8],
         reason: &str,
-    ) -> Result<String, tonic::Status> {
+        actor: &str,
+        compatibility_level: &str,
+        idempotency_key: &str,
+    ) -> Result<CatalogMutationResult, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let project_id = canonical_catalog_project_id(project_id)?;
+        let version = version.trim();
+        if version.is_empty() {
+            return Err(catalog_admin_invalid_field(
+                "version",
+                "must identify the staged catalog version",
+                "catalog version is required",
+            ));
+        }
+        let idempotency_key = idempotency_key.trim();
+        if idempotency_key.is_empty() {
+            return Err(catalog_idempotency_required_status("stage_catalog"));
+        }
         let manifest_value = parse_catalog_manifest_json(manifest_json)?;
+        let manifest: CatalogManifest =
+            serde_json::from_value(manifest_value.clone()).map_err(|err| {
+                catalog_admin_invalid_field(
+                    "manifest_json",
+                    "must decode as a CatalogManifest",
+                    format!("manifest_json is not a CatalogManifest: {err}"),
+                )
+            })?;
+        let lint = crate::generation::lint_catalog(&manifest);
+        let lint_errors: Vec<String> = lint
+            .items
+            .iter()
+            .filter(|item| matches!(item.severity, crate::generation::LintSeverity::Error))
+            .map(|item| item.description.clone())
+            .collect();
+        if !lint_errors.is_empty() {
+            return Err(catalog_admin_schema_status(
+                "stage_catalog",
+                "catalog_validation_failed",
+                format!("catalog validation failed: {}", lint_errors.join("; ")),
+            ));
+        }
+        let compatibility_level = match compatibility_level.trim().to_ascii_lowercase().as_str() {
+            "exact" => "exact",
+            "backward" => "backward",
+            "none" => "none",
+            _ => {
+                return Err(catalog_admin_invalid_field(
+                    "compatibility_level",
+                    "must be exact, backward, or none",
+                    "invalid catalog compatibility level",
+                ));
+            }
+        };
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         use sha2::{Digest, Sha256};
+        // Preserve the v0.5.8 public selector kind (raw request SHA-256), while
+        // storing a separate canonical decoded-payload integrity digest and the
+        // manifest's semantic schema checksum as explicit provenance.
         let checksum = format!("{:x}", Sha256::digest(manifest_json));
+        let manifest_integrity_sha256 =
+            catalog_manifest_integrity_sha256("stage_catalog", &project_id, &manifest)?;
+        let schema_checksum_sha256 = manifest.checksum_sha256.trim().to_string();
+        let computed_schema_checksum =
+            crate::generation::manifest::catalog_checksum_sha256(&manifest).map_err(|err| {
+                catalog_admin_invalid_field(
+                    "manifest_json",
+                    "must have a reproducible semantic catalog checksum",
+                    format!("catalog semantic checksum failed: {err}"),
+                )
+            })?;
+        if schema_checksum_sha256 != computed_schema_checksum {
+            return Err(catalog_admin_schema_status(
+                "stage_catalog",
+                "catalog_schema_checksum_mismatch",
+                "manifest checksum_sha256 does not match the decoded catalog content",
+            ));
+        }
+        let request_fingerprint = catalog_request_fingerprint(&[
+            b"STAGE",
+            project_id.as_bytes(),
+            version.as_bytes(),
+            checksum.as_bytes(),
+            manifest_integrity_sha256.as_bytes(),
+            compatibility_level.as_bytes(),
+            reason.as_bytes(),
+            actor.as_bytes(),
+        ]);
         let cat_rel = config.catalog_versions_relation();
         let reload_rel = config.catalog_reload_log_relation();
+        let mut tx = pool.begin().await.map_err(|err| {
+            catalog_admin_internal_status(
+                "stage_catalog_begin",
+                format!("stage_catalog begin failed: {err}"),
+            )
+        })?;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 534154))")
+            .bind(&project_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "stage_catalog_lock",
+                    format!("stage_catalog project lock failed: {err}"),
+                )
+            })?;
+
+        let existing: Option<(Option<Uuid>, String)> = sqlx::query_as(&format!(
+            "SELECT catalog_id, request_fingerprint FROM {reload_rel}
+             WHERE project_id = $1 AND action = 'STAGE' AND idempotency_key = $2"
+        ))
+        .bind(&project_id)
+        .bind(idempotency_key)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "stage_catalog_idempotency_lookup",
+                format!("stage_catalog idempotency lookup failed: {err}"),
+            )
+        })?;
+        if let Some((catalog_id, stored_fingerprint)) = existing {
+            if stored_fingerprint != request_fingerprint {
+                return Err(catalog_idempotency_conflict_status("stage_catalog"));
+            }
+            let catalog_id = catalog_id.ok_or_else(|| {
+                catalog_admin_internal_status(
+                    "stage_catalog_idempotency_lookup",
+                    "stage_catalog idempotency row has no catalog_id",
+                )
+            })?;
+            tx.commit().await.map_err(|err| {
+                catalog_admin_internal_status(
+                    "stage_catalog_commit",
+                    format!("stage_catalog replay commit failed: {err}"),
+                )
+            })?;
+            let catalog = self
+                .load_catalog_record_for_project(&project_id, catalog_id)
+                .await?;
+            let mut catalog = catalog;
+            catalog.status = "STAGED".to_string();
+            return Ok(CatalogMutationResult {
+                catalog,
+                replayed: true,
+            });
+        }
+
+        let validated_against: Option<(
+            Uuid,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+        )> = sqlx::query_as(&format!(
+            "SELECT catalog.catalog_id, catalog.version, catalog.checksum_sha256,
+                    catalog.manifest_json::TEXT, catalog.manifest_integrity_sha256,
+                    catalog.schema_checksum_sha256, catalog.checksum_kind,
+                    catalog.validation_checksum_sha256,
+                    catalog.compatibility_evidence_sha256
+             FROM {cat_rel} AS catalog
+             JOIN {} AS binding
+               ON binding.project_id = catalog.project_id
+              AND binding.active_catalog_id = catalog.catalog_id
+              AND binding.active_version = catalog.version
+              AND binding.active_checksum_sha256 = catalog.checksum_sha256
+              AND binding.compatibility_level = catalog.compatibility_level
+              AND binding.compatibility_evidence_sha256 = catalog.compatibility_evidence_sha256
+              AND binding.compatibility_evidence_sha256 <> ''
+              AND EXISTS (
+                    SELECT 1 FROM {reload_rel} AS reload
+                     WHERE reload.project_id = binding.project_id
+                       AND reload.catalog_id = binding.active_catalog_id
+                       AND reload.version = binding.active_version
+                       AND reload.checksum_sha256 = binding.active_checksum_sha256
+                       AND reload.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                       AND reload.action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD')
+                       AND reload.result = 'ok'
+              )
+             WHERE catalog.project_id = $1 AND catalog.status = 'ACTIVE' FOR UPDATE",
+            config.project_catalog_bindings_relation()
+        ))
+        .bind(&project_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "stage_catalog_compatibility_lookup",
+                format!("stage_catalog compatibility lookup failed: {err}"),
+            )
+        })?;
+        let active_rows: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*)::BIGINT FROM {cat_rel}
+             WHERE project_id = $1 AND status = 'ACTIVE'"
+        ))
+        .bind(&project_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "stage_catalog_active_authority_count",
+                format!("stage_catalog active authority count failed: {err}"),
+            )
+        })?;
+        let proven_active_rows = if validated_against.is_some() { 1 } else { 0 };
+        if active_rows != proven_active_rows {
+            return Err(catalog_admin_schema_status(
+                "stage_catalog",
+                "catalog_active_binding_mismatch",
+                "the project ACTIVE catalog lacks one exact binding and transition-evidence authority",
+            ));
+        }
+        let validated_against_manifest = validated_against
+            .as_ref()
+            .map(|row| {
+                validated_catalog_manifest(
+                    "stage_catalog",
+                    &project_id,
+                    &row.3,
+                    &row.4,
+                    &row.5,
+                    &row.6,
+                    &row.7,
+                    &row.8,
+                )
+            })
+            .transpose()?;
+        let compatibility_evidence_sha256 = catalog_compatibility_evidence(
+            "stage_catalog",
+            compatibility_level,
+            validated_against
+                .as_ref()
+                .map(|row| row.1.as_str())
+                .unwrap_or_default(),
+            validated_against
+                .as_ref()
+                .map(|row| row.4.as_str())
+                .unwrap_or_default(),
+            validated_against_manifest.as_ref(),
+            version,
+            &manifest_integrity_sha256,
+            &manifest,
+        )?;
+        let validated_against_id = validated_against.as_ref().map(|row| row.0);
+        let validated_against_checksum = validated_against
+            .as_ref()
+            .map(|row| row.2.as_str())
+            .unwrap_or_default();
+
         let catalog_id: Uuid = sqlx::query_scalar(&format!(
             "INSERT INTO {cat_rel}
-                 (project_id, version, checksum_sha256, manifest_json, status)
-             VALUES ($1, $2, $3, $4::JSONB, 'STAGED')
+                 (project_id, version, checksum_sha256, manifest_json,
+                  manifest_integrity_sha256, schema_checksum_sha256, checksum_kind,
+                  compatibility_level, validation_checksum_sha256, compatibility_evidence_sha256,
+                  validated_against_catalog_id, validated_against_checksum_sha256, status)
+             VALUES ($1, $2, $3, $4::JSONB, $5, $6, 'raw_request_sha256_v1',
+                     $7, $5, $8, $9, $10, 'STAGED')
              RETURNING catalog_id"
         ))
-        .bind(project_id)
+        .bind(&project_id)
         .bind(version)
         .bind(&checksum)
         .bind(manifest_value.to_string())
-        .fetch_one(pool)
+        .bind(&manifest_integrity_sha256)
+        .bind(&schema_checksum_sha256)
+        .bind(compatibility_level)
+        .bind(&compatibility_evidence_sha256)
+        .bind(validated_against_id)
+        .bind(validated_against_checksum)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|err| {
             catalog_admin_internal_status("stage_catalog", format!("stage_catalog failed: {err}"))
         })?;
-        let _ = sqlx::query(&format!(
+        sqlx::query(&format!(
             "INSERT INTO {reload_rel}
-                 (project_id, catalog_id, version, checksum_sha256, action, message)
-             VALUES ($1, $2, $3, $4, 'STAGE', $5)"
+                 (project_id, catalog_id, version, checksum_sha256, action, message,
+                  idempotency_key, request_fingerprint, actor, compatibility_evidence_sha256)
+             VALUES ($1, $2, $3, $4, 'STAGE', $5, $6, $7, $8, $9)"
         ))
-        .bind(project_id)
+        .bind(&project_id)
         .bind(catalog_id)
         .bind(version)
         .bind(&checksum)
         .bind(reason)
-        .execute(pool)
-        .await;
-        Ok(catalog_id.to_string())
+        .bind(idempotency_key)
+        .bind(&request_fingerprint)
+        .bind(actor)
+        .bind(&compatibility_evidence_sha256)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "stage_catalog_reload_log",
+                format!("stage_catalog reload log failed: {err}"),
+            )
+        })?;
+        tx.commit().await.map_err(|err| {
+            catalog_admin_internal_status(
+                "stage_catalog_commit",
+                format!("stage_catalog commit failed: {err}"),
+            )
+        })?;
+        let catalog = self
+            .load_catalog_record_for_project(&project_id, catalog_id)
+            .await?;
+        Ok(CatalogMutationResult {
+            catalog,
+            replayed: false,
+        })
     }
 
     /// Activate a catalog version (marks it ACTIVE, records activation log).
@@ -848,62 +1354,51 @@ impl DataBrokerRuntime {
         catalog_id: &str,
         reason: &str,
         actor: &str,
-    ) -> Result<(), tonic::Status> {
+        idempotency_key: &str,
+    ) -> Result<CatalogMutationResult, tonic::Status> {
+        self.transition_catalog(
+            project_id,
+            catalog_id,
+            reason,
+            actor,
+            "STAGED",
+            "ACTIVATE",
+            "activate_catalog",
+            idempotency_key,
+        )
+        .await
+    }
+
+    async fn transition_catalog(
+        &self,
+        project_id: &str,
+        catalog_id: &str,
+        reason: &str,
+        actor: &str,
+        required_status: &'static str,
+        reload_action: &'static str,
+        operation: &'static str,
+        idempotency_key: &str,
+    ) -> Result<CatalogMutationResult, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let project_id = canonical_catalog_project_id(project_id)?;
+        let idempotency_key = idempotency_key.trim();
+        if idempotency_key.is_empty() {
+            return Err(catalog_idempotency_required_status(operation));
+        }
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let cat_rel = config.catalog_versions_relation();
         let log_rel = config.catalog_activation_log_relation();
         let binding_rel = config.project_catalog_bindings_relation();
         let reload_rel = config.catalog_reload_log_relation();
-        let id: Uuid = if catalog_id.trim().is_empty() {
-            sqlx::query_scalar(&format!(
-                "SELECT catalog_id FROM {cat_rel}
-                 WHERE project_id = $1 AND status = 'STAGED'
-                 ORDER BY created_at DESC LIMIT 1"
-            ))
-            .bind(project_id)
-            .fetch_optional(pool)
-            .await
-            .map_err(|err| {
-                catalog_admin_internal_status(
-                    "activate_catalog_lookup",
-                    format!("activate_catalog lookup failed: {err}"),
-                )
-            })?
-            .ok_or_else(|| {
-                catalog_admin_not_found_status(
-                    "activate_catalog",
-                    "staged_catalog_not_found",
-                    "no staged catalog found for project",
-                )
-            })?
-        } else if let Ok(id) = catalog_id.parse::<Uuid>() {
-            id
-        } else {
-            sqlx::query_scalar(&format!(
-                "SELECT catalog_id FROM {cat_rel}
-                 WHERE project_id = $1 AND version = $2 AND status = 'STAGED'
-                 ORDER BY created_at DESC LIMIT 1"
-            ))
-            .bind(project_id)
-            .bind(catalog_id)
-            .fetch_optional(pool)
-            .await
-            .map_err(|err| {
-                catalog_admin_internal_status(
-                    "activate_catalog_lookup",
-                    format!("activate_catalog lookup failed: {err}"),
-                )
-            })?
-            .ok_or_else(|| {
-                catalog_admin_not_found_status(
-                    "activate_catalog",
-                    "staged_catalog_version_not_found",
-                    "staged catalog version not found",
-                )
-            })?
-        };
+        let request_fingerprint = catalog_request_fingerprint(&[
+            reload_action.as_bytes(),
+            project_id.as_bytes(),
+            catalog_id.as_bytes(),
+            reason.as_bytes(),
+            actor.as_bytes(),
+        ]);
         // Activation mutates five tables; run them in a single transaction so a
         // mid-sequence failure cannot leave the catalog with no ACTIVE row (or
         // two). The transaction is dropped (rolled back) on any early return.
@@ -913,13 +1408,217 @@ impl DataBrokerRuntime {
                 format!("activate_catalog begin failed: {err}"),
             )
         })?;
-        // Find current active version for this project
-        let from_version: Option<String> = sqlx::query_scalar(&format!(
-            "SELECT version FROM {cat_rel}
-             WHERE project_id = $1 AND status = 'ACTIVE'
-             ORDER BY activated_at DESC LIMIT 1"
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 534154))")
+            .bind(&project_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "activate_catalog_lock",
+                    format!("catalog transition project lock failed: {err}"),
+                )
+            })?;
+
+        let existing: Option<(Option<Uuid>, String)> = sqlx::query_as(&format!(
+            "SELECT catalog_id, request_fingerprint FROM {reload_rel}
+             WHERE project_id = $1 AND action = $2 AND idempotency_key = $3"
         ))
-        .bind(project_id)
+        .bind(&project_id)
+        .bind(reload_action)
+        .bind(idempotency_key)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "activate_catalog_idempotency_lookup",
+                format!("catalog transition idempotency lookup failed: {err}"),
+            )
+        })?;
+        if let Some((catalog_id, stored_fingerprint)) = existing {
+            if stored_fingerprint != request_fingerprint {
+                return Err(catalog_idempotency_conflict_status(operation));
+            }
+            let catalog_id = catalog_id.ok_or_else(|| {
+                catalog_admin_internal_status(
+                    "activate_catalog_idempotency_lookup",
+                    "catalog transition idempotency row has no catalog_id",
+                )
+            })?;
+            tx.commit().await.map_err(|err| {
+                catalog_admin_internal_status(
+                    "activate_catalog_commit",
+                    format!("catalog transition replay commit failed: {err}"),
+                )
+            })?;
+            let catalog = self
+                .load_catalog_record_for_project(&project_id, catalog_id)
+                .await?;
+            let mut catalog = catalog;
+            catalog.status = "ACTIVE".to_string();
+            return Ok(CatalogMutationResult {
+                catalog,
+                replayed: true,
+            });
+        }
+
+        let target: Option<(Uuid, String)> = if catalog_id.trim().is_empty() {
+            sqlx::query_as(&format!(
+                "SELECT catalog_id, status FROM {cat_rel}
+                 WHERE project_id = $1 AND status = $2
+                 ORDER BY created_at DESC LIMIT 1 FOR UPDATE"
+            ))
+            .bind(&project_id)
+            .bind(required_status)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "activate_catalog_lookup",
+                    format!("catalog transition lookup failed: {err}"),
+                )
+            })?
+        } else if let Ok(id) = catalog_id.parse::<Uuid>() {
+            sqlx::query_as(&format!(
+                "SELECT catalog_id, status FROM {cat_rel}
+                 WHERE project_id = $1 AND catalog_id = $2 FOR UPDATE"
+            ))
+            .bind(&project_id)
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "activate_catalog_lookup",
+                    format!("catalog transition lookup failed: {err}"),
+                )
+            })?
+        } else {
+            sqlx::query_as(&format!(
+                "SELECT catalog_id, status FROM {cat_rel}
+                 WHERE project_id = $1 AND (version = $2 OR checksum_sha256 = $2)
+                   AND status IN ($3, 'ACTIVE')
+                 ORDER BY CASE WHEN status = $3 THEN 0 ELSE 1 END, created_at DESC
+                 LIMIT 1 FOR UPDATE"
+            ))
+            .bind(&project_id)
+            .bind(catalog_id)
+            .bind(required_status)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "activate_catalog_lookup",
+                    format!("catalog transition lookup failed: {err}"),
+                )
+            })?
+        };
+        let (id, target_status) = target.ok_or_else(|| {
+            catalog_admin_not_found_status(
+                operation,
+                "catalog_transition_target_not_found",
+                format!("no {required_status} catalog found for project"),
+            )
+        })?;
+        let target_already_active = target_status == "ACTIVE";
+        if target_status != required_status
+            && !(reload_action == "ACTIVATE" && target_already_active)
+        {
+            return Err(catalog_admin_schema_status(
+                operation,
+                "catalog_transition_state_invalid",
+                format!("catalog must be {required_status} before transition"),
+            ));
+        }
+        let target_provenance: (
+            String,
+            String,
+            String,
+            Option<Uuid>,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+        ) = sqlx::query_as(&format!(
+            "SELECT validation_checksum_sha256, manifest_integrity_sha256, compatibility_level,
+                    validated_against_catalog_id, validated_against_checksum_sha256, version,
+                    compatibility_evidence_sha256, manifest_json::TEXT,
+                    schema_checksum_sha256, checksum_kind
+             FROM {cat_rel} WHERE catalog_id = $1 AND project_id = $2"
+        ))
+        .bind(id)
+        .bind(&project_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "activate_catalog_validation_lookup",
+                format!("catalog validation provenance lookup failed: {err}"),
+            )
+        })?;
+        if target_provenance.0.trim().is_empty()
+            || target_provenance.0 != target_provenance.1
+            || !matches!(target_provenance.2.as_str(), "exact" | "backward" | "none")
+            || target_provenance.6.trim().is_empty()
+        {
+            return Err(catalog_admin_schema_status(
+                operation,
+                "catalog_validation_provenance_invalid",
+                "catalog is not bound to valid manifest-integrity and compatibility evidence",
+            ));
+        }
+        let target_manifest = validated_catalog_manifest(
+            operation,
+            &project_id,
+            &target_provenance.7,
+            &target_provenance.1,
+            &target_provenance.8,
+            &target_provenance.9,
+            &target_provenance.0,
+            &target_provenance.6,
+        )?;
+
+        // Find and lock the exact current active version for this project.
+        let current_active: Option<(
+            Uuid,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+        )> = sqlx::query_as(&format!(
+            "SELECT catalog.catalog_id, catalog.version, catalog.checksum_sha256,
+                    catalog.manifest_json::TEXT, catalog.manifest_integrity_sha256,
+                    catalog.schema_checksum_sha256, catalog.checksum_kind,
+                    catalog.validation_checksum_sha256,
+                    catalog.compatibility_evidence_sha256
+             FROM {cat_rel} AS catalog
+             JOIN {binding_rel} AS binding
+               ON binding.project_id = catalog.project_id
+              AND binding.active_catalog_id = catalog.catalog_id
+              AND binding.active_version = catalog.version
+              AND binding.active_checksum_sha256 = catalog.checksum_sha256
+              AND binding.compatibility_level = catalog.compatibility_level
+              AND binding.compatibility_evidence_sha256 = catalog.compatibility_evidence_sha256
+              AND binding.compatibility_evidence_sha256 <> ''
+              AND EXISTS (
+                    SELECT 1 FROM {reload_rel} AS reload
+                     WHERE reload.project_id = binding.project_id
+                       AND reload.catalog_id = binding.active_catalog_id
+                       AND reload.version = binding.active_version
+                       AND reload.checksum_sha256 = binding.active_checksum_sha256
+                       AND reload.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                       AND reload.action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD')
+                       AND reload.result = 'ok'
+              )
+             WHERE catalog.project_id = $1 AND catalog.status = 'ACTIVE'
+             ORDER BY catalog.activated_at DESC LIMIT 1 FOR UPDATE"
+        ))
+        .bind(&project_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|err| {
@@ -928,42 +1627,137 @@ impl DataBrokerRuntime {
                 format!("activate_catalog lookup failed: {err}"),
             )
         })?;
-        // Deactivate old active
-        sqlx::query(&format!(
-            "UPDATE {cat_rel} SET status = 'ROLLED_BACK'
+        let active_rows: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*)::BIGINT FROM {cat_rel}
              WHERE project_id = $1 AND status = 'ACTIVE'"
         ))
-        .bind(project_id)
-        .execute(&mut *tx)
+        .bind(&project_id)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
-                "activate_catalog_deactivate",
-                format!("activate_catalog deactivate failed: {err}"),
+                "activate_catalog_active_authority_count",
+                format!("catalog transition active authority count failed: {err}"),
             )
         })?;
-        // Activate new
-        let rows = sqlx::query(&format!(
-            "UPDATE {cat_rel}
-             SET status = 'ACTIVE', activated_at = NOW()
-             WHERE catalog_id = $1 AND project_id = $2 AND status = 'STAGED'"
-        ))
-        .bind(id)
-        .bind(project_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| {
-            catalog_admin_internal_status(
-                "activate_catalog_update",
-                format!("activate_catalog update failed: {err}"),
-            )
-        })?;
-        if rows.rows_affected() == 0 {
-            return Err(catalog_admin_not_found_status(
-                "activate_catalog",
-                "staged_catalog_not_found",
-                "catalog not found or not in STAGED status",
+        let proven_active_rows = if current_active.is_some() { 1 } else { 0 };
+        if active_rows != proven_active_rows {
+            return Err(catalog_admin_schema_status(
+                operation,
+                "catalog_active_binding_mismatch",
+                "the project ACTIVE catalog lacks one exact binding and transition-evidence authority",
             ));
+        }
+        let current_active_manifest = current_active
+            .as_ref()
+            .map(|row| {
+                validated_catalog_manifest(
+                    operation,
+                    &project_id,
+                    &row.3,
+                    &row.4,
+                    &row.5,
+                    &row.6,
+                    &row.7,
+                    &row.8,
+                )
+            })
+            .transpose()?;
+        if !target_already_active && reload_action == "ACTIVATE" {
+            let current_id = current_active.as_ref().map(|row| row.0);
+            let current_checksum = current_active
+                .as_ref()
+                .map(|row| row.2.as_str())
+                .unwrap_or_default();
+            if current_id != target_provenance.3 || current_checksum != target_provenance.4 {
+                return Err(catalog_admin_schema_status(
+                    operation,
+                    "catalog_validation_base_changed",
+                    "the project ACTIVE catalog changed after this staged catalog was validated; re-stage against the current catalog",
+                ));
+            }
+        }
+        let transition_compatibility_evidence = if target_already_active {
+            target_provenance.6.clone()
+        } else {
+            catalog_compatibility_evidence(
+                operation,
+                &target_provenance.2,
+                current_active
+                    .as_ref()
+                    .map(|row| row.1.as_str())
+                    .unwrap_or_default(),
+                current_active
+                    .as_ref()
+                    .map(|row| row.4.as_str())
+                    .unwrap_or_default(),
+                current_active_manifest.as_ref(),
+                &target_provenance.5,
+                &target_provenance.1,
+                &target_manifest,
+            )?
+        };
+        if !target_already_active
+            && reload_action == "ACTIVATE"
+            && transition_compatibility_evidence != target_provenance.6
+        {
+            return Err(catalog_admin_schema_status(
+                operation,
+                "catalog_compatibility_evidence_mismatch",
+                "staged compatibility evidence does not match the exact current ACTIVE catalog",
+            ));
+        }
+        if !target_already_active {
+            // Deactivate old active, then activate the locked target. The
+            // project advisory lock plus the unique partial index preserve the
+            // one-ACTIVE invariant across every concurrent writer.
+            sqlx::query(&format!(
+                "UPDATE {cat_rel} SET status = 'ROLLED_BACK'
+                 WHERE project_id = $1 AND status = 'ACTIVE'"
+            ))
+            .bind(&project_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "activate_catalog_deactivate",
+                    format!("activate_catalog deactivate failed: {err}"),
+                )
+            })?;
+            let rows = sqlx::query(&format!(
+                "UPDATE {cat_rel}
+                 SET status = 'ACTIVE', activated_at = NOW(),
+                     compatibility_evidence_sha256 = $4,
+                     validated_against_catalog_id = $5,
+                     validated_against_checksum_sha256 = $6
+                 WHERE catalog_id = $1 AND project_id = $2 AND status = $3"
+            ))
+            .bind(id)
+            .bind(&project_id)
+            .bind(required_status)
+            .bind(&transition_compatibility_evidence)
+            .bind(current_active.as_ref().map(|row| row.0))
+            .bind(
+                current_active
+                    .as_ref()
+                    .map(|row| row.2.as_str())
+                    .unwrap_or_default(),
+            )
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "activate_catalog_update",
+                    format!("activate_catalog update failed: {err}"),
+                )
+            })?;
+            if rows.rows_affected() == 0 {
+                return Err(catalog_admin_not_found_status(
+                    operation,
+                    "catalog_transition_target_not_found",
+                    format!("catalog not found or not in {required_status} status"),
+                ));
+            }
         }
         // Log activation
         let to_version_row: (String, String) = sqlx::query_as(&format!(
@@ -978,38 +1772,50 @@ impl DataBrokerRuntime {
                 format!("activate_catalog version fetch failed: {err}"),
             )
         })?;
-        sqlx::query(&format!(
-            "INSERT INTO {log_rel}
-                 (project_id, from_version, to_version, actor, reason)
-             VALUES ($1, $2, $3, $4, $5)"
-        ))
-        .bind(project_id)
-        .bind(from_version.unwrap_or_default())
-        .bind(&to_version_row.0)
-        .bind(actor)
-        .bind(reason)
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| {
-            catalog_admin_internal_status(
-                "activate_catalog_log",
-                format!("activate_catalog log failed: {err}"),
+        if !target_already_active {
+            sqlx::query(&format!(
+                "INSERT INTO {log_rel}
+                     (project_id, from_version, to_version, actor, reason)
+                 VALUES ($1, $2, $3, $4, $5)"
+            ))
+            .bind(&project_id)
+            .bind(
+                current_active
+                    .as_ref()
+                    .map(|row| row.1.clone())
+                    .unwrap_or_default(),
             )
-        })?;
+            .bind(&to_version_row.0)
+            .bind(actor)
+            .bind(reason)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "activate_catalog_log",
+                    format!("activate_catalog log failed: {err}"),
+                )
+            })?;
+        }
         sqlx::query(&format!(
             "INSERT INTO {binding_rel}
-                 (project_id, active_catalog_id, active_version, active_checksum_sha256, compatibility_level, updated_at)
-             VALUES ($1, $2, $3, $4, 'backward', NOW())
+                 (project_id, active_catalog_id, active_version, active_checksum_sha256,
+                  compatibility_level, compatibility_evidence_sha256, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, NOW())
              ON CONFLICT (project_id) DO UPDATE
                 SET active_catalog_id = EXCLUDED.active_catalog_id,
                     active_version = EXCLUDED.active_version,
                     active_checksum_sha256 = EXCLUDED.active_checksum_sha256,
+                    compatibility_level = EXCLUDED.compatibility_level,
+                    compatibility_evidence_sha256 = EXCLUDED.compatibility_evidence_sha256,
                     updated_at = NOW()"
         ))
-        .bind(project_id)
+        .bind(&project_id)
         .bind(id)
         .bind(&to_version_row.0)
         .bind(&to_version_row.1)
+        .bind(&target_provenance.2)
+        .bind(&transition_compatibility_evidence)
         .execute(&mut *tx)
         .await
         .map_err(|err| {
@@ -1020,14 +1826,20 @@ impl DataBrokerRuntime {
         })?;
         sqlx::query(&format!(
             "INSERT INTO {reload_rel}
-                 (project_id, catalog_id, version, checksum_sha256, action, result, message)
-             VALUES ($1, $2, $3, $4, 'ACTIVATE', 'ok', $5)"
+                 (project_id, catalog_id, version, checksum_sha256, action, result, message,
+                  idempotency_key, request_fingerprint, actor, compatibility_evidence_sha256)
+             VALUES ($1, $2, $3, $4, $5, 'ok', $6, $7, $8, $9, $10)"
         ))
-        .bind(project_id)
+        .bind(&project_id)
         .bind(id)
         .bind(&to_version_row.0)
         .bind(&to_version_row.1)
+        .bind(reload_action)
         .bind(reason)
+        .bind(idempotency_key)
+        .bind(&request_fingerprint)
+        .bind(actor)
+        .bind(&transition_compatibility_evidence)
         .execute(&mut *tx)
         .await
         .map_err(|err| {
@@ -1036,13 +1848,31 @@ impl DataBrokerRuntime {
                 format!("activate_catalog reload log failed: {err}"),
             )
         })?;
+        sqlx::query("SELECT pg_notify('udb_catalog_reload', $1)")
+            .bind(&project_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "activate_catalog_notify",
+                    format!("catalog reload notification failed: {err}"),
+                )
+            })?;
         tx.commit().await.map_err(|err| {
             catalog_admin_internal_status(
                 "activate_catalog_commit",
                 format!("activate_catalog commit failed: {err}"),
             )
         })?;
-        Ok(())
+        let catalog = self
+            .load_catalog_record_for_project(&project_id, id)
+            .await?;
+        let mut catalog = catalog;
+        catalog.status = "ACTIVE".to_string();
+        Ok(CatalogMutationResult {
+            catalog,
+            replayed: false,
+        })
     }
 
     /// Rollback the active catalog version.
@@ -1052,9 +1882,748 @@ impl DataBrokerRuntime {
         target_catalog_id: &str,
         reason: &str,
         actor: &str,
-    ) -> Result<(), tonic::Status> {
-        self.activate_catalog(project_id, target_catalog_id, reason, actor)
+        idempotency_key: &str,
+    ) -> Result<CatalogMutationResult, tonic::Status> {
+        self.transition_catalog(
+            project_id,
+            target_catalog_id,
+            reason,
+            actor,
+            "ROLLED_BACK",
+            "ROLLBACK",
+            "rollback_catalog",
+            idempotency_key,
+        )
+        .await
+    }
+
+    async fn load_catalog_record_for_project(
+        &self,
+        project_id: &str,
+        catalog_id: Uuid,
+    ) -> Result<ProjectCatalogRecord, tonic::Status> {
+        use crate::runtime::system::SystemCatalogConfig;
+        let project_id = canonical_catalog_project_id(project_id)?;
+        let pool = self.pg_pool()?;
+        let config = SystemCatalogConfig::default();
+        let cat_rel = config.catalog_versions_relation();
+        let row: Option<CatalogRecordRow> = sqlx::query_as(&format!(
+            "SELECT catalog_id, version, checksum_sha256, manifest_json::TEXT, status,
+                        compatibility_level, manifest_integrity_sha256,
+                        schema_checksum_sha256, checksum_kind, validation_checksum_sha256,
+                        compatibility_evidence_sha256,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at_unix
+                 FROM {cat_rel} WHERE project_id = $1 AND catalog_id = $2"
+        ))
+        .bind(&project_id)
+        .bind(catalog_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "load_catalog_record_for_project",
+                format!("load project catalog record failed: {err}"),
+            )
+        })?;
+        let (
+            catalog_id,
+            version,
+            checksum_sha256,
+            manifest_json,
+            status,
+            compatibility_level,
+            manifest_integrity_sha256,
+            schema_checksum_sha256,
+            checksum_kind,
+            validation_checksum_sha256,
+            compatibility_evidence_sha256,
+            created_at_unix,
+        ) = row.ok_or_else(|| {
+            catalog_admin_not_found_status(
+                "load_catalog_record_for_project",
+                "catalog_record_not_found",
+                "catalog record not found for project",
+            )
+        })?;
+        let manifest = validated_catalog_manifest(
+            "load_catalog_record_for_project",
+            &project_id,
+            &manifest_json,
+            &manifest_integrity_sha256,
+            &schema_checksum_sha256,
+            &checksum_kind,
+            &validation_checksum_sha256,
+            &compatibility_evidence_sha256,
+        )?;
+        Ok(ProjectCatalogRecord {
+            catalog_id: catalog_id.to_string(),
+            version,
+            checksum_sha256,
+            manifest,
+            status,
+            compatibility_level,
+            created_at_unix,
+        })
+    }
+
+    /// Load the exact durable ACTIVE catalog for `project_id`.
+    ///
+    /// No default-project fallback is permitted here. The result is the
+    /// authoritative row written by [`activate_catalog`], including the
+    /// project-local manifest payload that must be published into this node's
+    /// in-memory [`CatalogManager`](crate::runtime::catalog::CatalogManager).
+    pub(crate) async fn load_active_catalog_for_project(
+        &self,
+        project_id: &str,
+    ) -> Result<Option<ProjectCatalogRecord>, tonic::Status> {
+        use crate::runtime::system::SystemCatalogConfig;
+        let project_id = canonical_catalog_project_id(project_id)?;
+        let pool = self.pg_pool()?;
+        let config = SystemCatalogConfig::default();
+        let cat_rel = config.catalog_versions_relation();
+        let binding_rel = config.project_catalog_bindings_relation();
+        let reload_rel = config.catalog_reload_log_relation();
+        let row: Option<CatalogRecordRow> = sqlx::query_as(&format!(
+            "SELECT catalog.catalog_id, catalog.version, catalog.checksum_sha256,
+                    catalog.manifest_json::TEXT, catalog.status, catalog.compatibility_level,
+                    catalog.manifest_integrity_sha256, catalog.schema_checksum_sha256,
+                    catalog.checksum_kind, catalog.validation_checksum_sha256,
+                    catalog.compatibility_evidence_sha256,
+                    EXTRACT(EPOCH FROM catalog.created_at)::BIGINT AS created_at_unix
+             FROM {cat_rel} AS catalog
+             JOIN {binding_rel} AS binding
+               ON binding.project_id = catalog.project_id
+              AND binding.active_catalog_id = catalog.catalog_id
+              AND binding.active_version = catalog.version
+              AND binding.active_checksum_sha256 = catalog.checksum_sha256
+              AND binding.compatibility_level = catalog.compatibility_level
+              AND binding.compatibility_evidence_sha256 = catalog.compatibility_evidence_sha256
+              AND binding.compatibility_evidence_sha256 <> ''
+              AND EXISTS (
+                    SELECT 1 FROM {reload_rel} AS reload
+                     WHERE reload.project_id = binding.project_id
+                       AND reload.catalog_id = binding.active_catalog_id
+                       AND reload.version = binding.active_version
+                       AND reload.checksum_sha256 = binding.active_checksum_sha256
+                       AND reload.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                       AND reload.action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD')
+                       AND reload.result = 'ok'
+              )
+             WHERE catalog.project_id = $1 AND catalog.status = 'ACTIVE'"
+        ))
+        .bind(&project_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "load_active_catalog_for_project",
+                format!("load active project catalog failed: {err}"),
+            )
+        })?;
+
+        row.map(
+            |(
+                catalog_id,
+                version,
+                checksum_sha256,
+                manifest_json,
+                status,
+                compatibility_level,
+                manifest_integrity_sha256,
+                schema_checksum_sha256,
+                checksum_kind,
+                validation_checksum_sha256,
+                compatibility_evidence_sha256,
+                created_at_unix,
+            )| {
+                let manifest = validated_catalog_manifest(
+                    "load_active_catalog_for_project",
+                    &project_id,
+                    &manifest_json,
+                    &manifest_integrity_sha256,
+                    &schema_checksum_sha256,
+                    &checksum_kind,
+                    &validation_checksum_sha256,
+                    &compatibility_evidence_sha256,
+                )?;
+                Ok(ProjectCatalogRecord {
+                    catalog_id: catalog_id.to_string(),
+                    version,
+                    checksum_sha256,
+                    manifest,
+                    status,
+                    compatibility_level,
+                    created_at_unix,
+                })
+            },
+        )
+        .transpose()
+    }
+
+    /// Load one authoritative snapshot of every durable ACTIVE project catalog.
+    /// Each broker node hydrates this on startup and periodically reconciles it,
+    /// so restarts and multi-replica routing cannot lose project bindings.
+    pub(crate) async fn load_all_active_project_catalogs(
+        &self,
+    ) -> Result<Vec<(String, ProjectCatalogRecord)>, tonic::Status> {
+        use crate::runtime::system::SystemCatalogConfig;
+        let pool = self.pg_pool()?;
+        let config = SystemCatalogConfig::default();
+        let cat_rel = config.catalog_versions_relation();
+        let binding_rel = config.project_catalog_bindings_relation();
+        let reload_rel = config.catalog_reload_log_relation();
+        let invalid_bindings: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*)::BIGINT
+             FROM {cat_rel} AS catalog
+             LEFT JOIN {binding_rel} AS binding
+               ON binding.project_id = catalog.project_id
+              AND binding.active_catalog_id = catalog.catalog_id
+              AND binding.active_version = catalog.version
+              AND binding.active_checksum_sha256 = catalog.checksum_sha256
+              AND binding.compatibility_level = catalog.compatibility_level
+              AND binding.compatibility_evidence_sha256 = catalog.compatibility_evidence_sha256
+              AND binding.compatibility_evidence_sha256 <> ''
+              AND EXISTS (
+                    SELECT 1 FROM {reload_rel} AS reload
+                     WHERE reload.project_id = binding.project_id
+                       AND reload.catalog_id = binding.active_catalog_id
+                       AND reload.version = binding.active_version
+                       AND reload.checksum_sha256 = binding.active_checksum_sha256
+                       AND reload.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                       AND reload.action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD')
+                       AND reload.result = 'ok'
+              )
+             WHERE catalog.status = 'ACTIVE' AND binding.project_id IS NULL"
+        ))
+        .fetch_one(pool)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "load_all_active_project_catalogs",
+                format!("active catalog binding verification failed: {err}"),
+            )
+        })?;
+        if invalid_bindings != 0 {
+            return Err(catalog_admin_schema_status(
+                "load_all_active_project_catalogs",
+                "catalog_active_binding_mismatch",
+                format!(
+                    "{invalid_bindings} ACTIVE catalog row(s) lack an exact canonical project binding"
+                ),
+            ));
+        }
+        let orphan_bindings: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*)::BIGINT
+             FROM {binding_rel} AS binding
+             LEFT JOIN {cat_rel} AS catalog
+               ON catalog.project_id = binding.project_id
+              AND catalog.catalog_id = binding.active_catalog_id
+              AND catalog.version = binding.active_version
+              AND catalog.checksum_sha256 = binding.active_checksum_sha256
+              AND catalog.compatibility_level = binding.compatibility_level
+              AND catalog.status = 'ACTIVE'
+              AND catalog.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+              AND binding.compatibility_evidence_sha256 <> ''
+              AND EXISTS (
+                    SELECT 1 FROM {reload_rel} AS reload
+                     WHERE reload.project_id = binding.project_id
+                       AND reload.catalog_id = binding.active_catalog_id
+                       AND reload.version = binding.active_version
+                       AND reload.checksum_sha256 = binding.active_checksum_sha256
+                       AND reload.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                       AND reload.action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD')
+                       AND reload.result = 'ok'
+              )
+             WHERE catalog.catalog_id IS NULL"
+        ))
+        .fetch_one(pool)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "load_all_active_project_catalogs",
+                format!("catalog binding reverse verification failed: {err}"),
+            )
+        })?;
+        if orphan_bindings != 0 {
+            return Err(catalog_admin_schema_status(
+                "load_all_active_project_catalogs",
+                "catalog_binding_active_mismatch",
+                format!(
+                    "{orphan_bindings} canonical project binding row(s) lack matching ACTIVE transition evidence"
+                ),
+            ));
+        }
+        let rows: Vec<(String, Uuid, String, String, String, String, String, String, String, String, String, String, i64)> =
+            sqlx::query_as(&format!(
+                "SELECT catalog.project_id, catalog.catalog_id, catalog.version,
+                        catalog.checksum_sha256, catalog.manifest_json::TEXT, catalog.status,
+                        catalog.compatibility_level, catalog.manifest_integrity_sha256,
+                        catalog.schema_checksum_sha256, catalog.checksum_kind,
+                        catalog.validation_checksum_sha256,
+                        catalog.compatibility_evidence_sha256,
+                        EXTRACT(EPOCH FROM COALESCE(catalog.activated_at, catalog.created_at))::BIGINT
+                 FROM {cat_rel} AS catalog
+                 JOIN {binding_rel} AS binding
+                   ON binding.project_id = catalog.project_id
+                  AND binding.active_catalog_id = catalog.catalog_id
+                  AND binding.active_version = catalog.version
+                  AND binding.active_checksum_sha256 = catalog.checksum_sha256
+                  AND binding.compatibility_level = catalog.compatibility_level
+                  AND binding.compatibility_evidence_sha256 = catalog.compatibility_evidence_sha256
+                  AND binding.compatibility_evidence_sha256 <> ''
+                  AND EXISTS (
+                        SELECT 1 FROM {reload_rel} AS reload
+                         WHERE reload.project_id = binding.project_id
+                           AND reload.catalog_id = binding.active_catalog_id
+                           AND reload.version = binding.active_version
+                           AND reload.checksum_sha256 = binding.active_checksum_sha256
+                           AND reload.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                           AND reload.action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD')
+                           AND reload.result = 'ok'
+                  )
+                 WHERE catalog.status = 'ACTIVE' ORDER BY catalog.project_id"
+            ))
+            .fetch_all(pool)
             .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "load_all_active_project_catalogs",
+                    format!("load active project catalog snapshot failed: {err}"),
+                )
+            })?;
+        rows.into_iter()
+            .map(
+                |(
+                    project_id,
+                    catalog_id,
+                    version,
+                    checksum_sha256,
+                    manifest_json,
+                    status,
+                    compatibility_level,
+                    manifest_integrity_sha256,
+                    schema_checksum_sha256,
+                    checksum_kind,
+                    validation_checksum_sha256,
+                    compatibility_evidence_sha256,
+                    created_at_unix,
+                )| {
+                    let manifest = validated_catalog_manifest(
+                        "load_all_active_project_catalogs",
+                        &project_id,
+                        &manifest_json,
+                        &manifest_integrity_sha256,
+                        &schema_checksum_sha256,
+                        &checksum_kind,
+                        &validation_checksum_sha256,
+                        &compatibility_evidence_sha256,
+                    )?;
+                    Ok((
+                        project_id,
+                        ProjectCatalogRecord {
+                            catalog_id: catalog_id.to_string(),
+                            version,
+                            checksum_sha256,
+                            manifest,
+                            status,
+                            compatibility_level,
+                            created_at_unix,
+                        },
+                    ))
+                },
+            )
+            .collect()
+    }
+
+    /// Backfill v0.5.8 rows with explicit checksum/validation provenance and
+    /// validate every durable catalog before any node hydrates it. The raw-byte
+    /// public checksum is preserved; canonical decoded-manifest integrity and
+    /// semantic schema checksums remain distinct.
+    pub(crate) async fn upgrade_and_validate_catalog_provenance(
+        &self,
+    ) -> Result<(), tonic::Status> {
+        use crate::runtime::system::SystemCatalogConfig;
+        let pool = self.pg_pool()?;
+        let config = SystemCatalogConfig::default();
+        let cat_rel = config.catalog_versions_relation();
+        let binding_rel = config.project_catalog_bindings_relation();
+        let reload_rel = config.catalog_reload_log_relation();
+        let mut tx = pool.begin().await.map_err(|err| {
+            catalog_admin_internal_status(
+                "catalog_provenance_begin",
+                format!("catalog provenance transaction failed: {err}"),
+            )
+        })?;
+        sqlx::query(
+            "SELECT pg_advisory_xact_lock(hashtextextended('udb.catalog.provenance', 534154))",
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "catalog_provenance_lock",
+                format!("catalog provenance lock failed: {err}"),
+            )
+        })?;
+        let rows: Vec<(
+            Uuid,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            Option<Uuid>,
+            String,
+            String,
+        )> = sqlx::query_as(&format!(
+            "SELECT catalog_id, project_id, version, checksum_sha256,
+                    manifest_json::TEXT, status, manifest_integrity_sha256,
+                    schema_checksum_sha256, checksum_kind, compatibility_level,
+                    validated_against_catalog_id, validated_against_checksum_sha256,
+                    compatibility_evidence_sha256
+             FROM {cat_rel} FOR UPDATE"
+        ))
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "catalog_provenance_load",
+                format!("catalog provenance load failed: {err}"),
+            )
+        })?;
+        for (
+            catalog_id,
+            project_id,
+            version,
+            checksum_sha256,
+            manifest_json,
+            status,
+            stored_integrity,
+            stored_schema_checksum,
+            checksum_kind,
+            compatibility_level,
+            validated_against_catalog_id,
+            validated_against_checksum_sha256,
+            stored_compatibility_evidence,
+        ) in rows
+        {
+            let value: serde_json::Value = serde_json::from_str(&manifest_json).map_err(|err| {
+                catalog_admin_schema_status(
+                    "catalog_provenance_upgrade",
+                    "catalog_manifest_invalid",
+                    format!(
+                        "catalog {catalog_id} for project '{project_id}' is invalid JSON: {err}"
+                    ),
+                )
+            })?;
+            let manifest: CatalogManifest =
+                serde_json::from_value(value.clone()).map_err(|err| {
+                    catalog_admin_schema_status(
+                        "catalog_provenance_upgrade",
+                        "catalog_manifest_invalid",
+                        format!(
+                            "catalog {catalog_id} for project '{project_id}' cannot decode: {err}"
+                        ),
+                    )
+                })?;
+            let integrity = catalog_manifest_integrity_sha256(
+                "catalog_provenance_upgrade",
+                &project_id,
+                &manifest,
+            )?;
+            let schema_checksum = manifest.checksum_sha256.trim();
+            let computed_schema_checksum =
+                crate::generation::manifest::catalog_checksum_sha256(&manifest).map_err(|err| {
+                    catalog_admin_schema_status(
+                        "catalog_provenance_upgrade",
+                        "catalog_schema_checksum_invalid",
+                        format!(
+                            "catalog {catalog_id} for project '{project_id}' has no reproducible semantic checksum: {err}"
+                        ),
+                    )
+                })?;
+            let lint = crate::generation::lint_catalog(&manifest);
+            let lint_errors: Vec<String> = lint
+                .items
+                .iter()
+                .filter(|item| matches!(item.severity, crate::generation::LintSeverity::Error))
+                .map(|item| item.description.clone())
+                .collect();
+            let raw_checksum_valid = checksum_sha256.len() == 64
+                && checksum_sha256.chars().all(|ch| ch.is_ascii_hexdigit());
+            if project_id.trim().is_empty()
+                || project_id != project_id.trim()
+                || version.trim().is_empty()
+                || !raw_checksum_valid
+                || schema_checksum != computed_schema_checksum
+                || !matches!(compatibility_level.as_str(), "exact" | "backward" | "none")
+                || !lint_errors.is_empty()
+                || (!stored_integrity.is_empty() && stored_integrity != integrity)
+                || (!stored_schema_checksum.is_empty() && stored_schema_checksum != schema_checksum)
+                || checksum_kind != "raw_request_sha256_v1"
+            {
+                return Err(catalog_admin_schema_status(
+                    "catalog_provenance_upgrade",
+                    "catalog_provenance_invalid",
+                    format!(
+                        "catalog {catalog_id} ({status}) for project '{project_id}' has invalid authority provenance{}",
+                        if lint_errors.is_empty() {
+                            String::new()
+                        } else {
+                            format!(": {}", lint_errors.join("; "))
+                        }
+                    ),
+                ));
+            }
+            let quarantine_legacy_transition = stored_compatibility_evidence.is_empty()
+                && matches!(status.as_str(), "STAGED" | "ROLLED_BACK");
+            let baseline: Option<(String, String, CatalogManifest)> =
+                if stored_compatibility_evidence.is_empty()
+                    || validated_against_catalog_id.is_none()
+                {
+                    None
+                } else {
+                    let baseline_id = validated_against_catalog_id.ok_or_else(|| {
+                        catalog_admin_internal_status(
+                            "catalog_provenance_baseline_load",
+                            "catalog compatibility baseline id disappeared during upgrade",
+                        )
+                    })?;
+                    let baseline_row: Option<(
+                        String,
+                        String,
+                        String,
+                        String,
+                        String,
+                        String,
+                        String,
+                    )> = sqlx::query_as(&format!(
+                        "SELECT version, checksum_sha256, manifest_json::TEXT,
+                                manifest_integrity_sha256, schema_checksum_sha256,
+                                checksum_kind, validation_checksum_sha256
+                           FROM {cat_rel}
+                          WHERE catalog_id = $1 AND project_id = $2"
+                    ))
+                    .bind(baseline_id)
+                    .bind(&project_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(|err| {
+                        catalog_admin_internal_status(
+                            "catalog_provenance_baseline_load",
+                            format!("catalog compatibility baseline load failed: {err}"),
+                        )
+                    })?;
+                    let (
+                        baseline_version,
+                        baseline_checksum,
+                        baseline_json,
+                        baseline_stored_integrity,
+                        baseline_stored_schema_checksum,
+                        baseline_checksum_kind,
+                        baseline_validation_checksum,
+                    ) = baseline_row.ok_or_else(|| {
+                        catalog_admin_schema_status(
+                            "catalog_provenance_upgrade",
+                            "catalog_compatibility_baseline_missing",
+                            format!(
+                                "catalog {catalog_id} references missing compatibility baseline {baseline_id}"
+                            ),
+                        )
+                    })?;
+                    let baseline_value: serde_json::Value = serde_json::from_str(&baseline_json)
+                        .map_err(|err| {
+                            catalog_admin_schema_status(
+                                "catalog_provenance_upgrade",
+                                "catalog_compatibility_baseline_invalid",
+                                format!("catalog compatibility baseline is invalid JSON: {err}"),
+                            )
+                        })?;
+                    let baseline_manifest: CatalogManifest =
+                        serde_json::from_value(baseline_value.clone()).map_err(|err| {
+                            catalog_admin_schema_status(
+                                "catalog_provenance_upgrade",
+                                "catalog_compatibility_baseline_invalid",
+                                format!("catalog compatibility baseline cannot decode: {err}"),
+                            )
+                        })?;
+                    let baseline_integrity = catalog_manifest_integrity_sha256(
+                        "catalog_provenance_upgrade",
+                        &project_id,
+                        &baseline_manifest,
+                    )?;
+                    let baseline_schema_checksum =
+                        crate::generation::manifest::catalog_checksum_sha256(&baseline_manifest)
+                            .map_err(|err| {
+                                catalog_admin_schema_status(
+                                    "catalog_provenance_upgrade",
+                                    "catalog_compatibility_baseline_invalid",
+                                    format!(
+                                        "catalog compatibility baseline checksum failed: {err}"
+                                    ),
+                                )
+                            })?;
+                    if baseline_checksum != validated_against_checksum_sha256
+                        || baseline_checksum_kind != "raw_request_sha256_v1"
+                        || (!baseline_stored_integrity.is_empty()
+                            && baseline_stored_integrity != baseline_integrity)
+                        || (!baseline_stored_schema_checksum.is_empty()
+                            && baseline_stored_schema_checksum != baseline_schema_checksum)
+                        || (!baseline_validation_checksum.is_empty()
+                            && baseline_validation_checksum != baseline_integrity)
+                        || baseline_manifest.checksum_sha256.trim() != baseline_schema_checksum
+                    {
+                        return Err(catalog_admin_schema_status(
+                            "catalog_provenance_upgrade",
+                            "catalog_compatibility_baseline_invalid",
+                            format!(
+                                "catalog {catalog_id} compatibility baseline has invalid provenance"
+                            ),
+                        ));
+                    }
+                    Some((baseline_version, baseline_integrity, baseline_manifest))
+                };
+            let compatibility_evidence = catalog_compatibility_evidence(
+                "catalog_provenance_upgrade",
+                &compatibility_level,
+                baseline
+                    .as_ref()
+                    .map(|row| row.0.as_str())
+                    .unwrap_or_default(),
+                baseline
+                    .as_ref()
+                    .map(|row| row.1.as_str())
+                    .unwrap_or_default(),
+                baseline.as_ref().map(|row| &row.2),
+                &version,
+                &integrity,
+                &manifest,
+            )?;
+            if !stored_compatibility_evidence.is_empty()
+                && stored_compatibility_evidence != compatibility_evidence
+            {
+                return Err(catalog_admin_schema_status(
+                    "catalog_provenance_upgrade",
+                    "catalog_compatibility_evidence_invalid",
+                    format!(
+                        "catalog {catalog_id} compatibility evidence does not match its exact baseline"
+                    ),
+                ));
+            }
+            sqlx::query(&format!(
+                "UPDATE {cat_rel}
+                    SET manifest_integrity_sha256 = $2,
+                        schema_checksum_sha256 = $3,
+                        checksum_kind = 'raw_request_sha256_v1',
+                        validation_checksum_sha256 = $2,
+                        compatibility_evidence_sha256 = $4,
+                        status = CASE WHEN $5 THEN 'REJECTED' ELSE status END
+                  WHERE catalog_id = $1"
+            ))
+            .bind(catalog_id)
+            .bind(&integrity)
+            .bind(schema_checksum)
+            .bind(&compatibility_evidence)
+            .bind(quarantine_legacy_transition)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "catalog_provenance_update",
+                    format!("catalog provenance update failed: {err}"),
+                )
+            })?;
+        }
+        sqlx::query(&format!(
+            "UPDATE {binding_rel} AS binding
+                SET compatibility_evidence_sha256 = catalog.compatibility_evidence_sha256,
+                    updated_at = NOW()
+               FROM {cat_rel} AS catalog
+              WHERE binding.project_id = catalog.project_id
+                AND binding.active_catalog_id = catalog.catalog_id
+                AND binding.active_version = catalog.version
+                AND binding.active_checksum_sha256 = catalog.checksum_sha256
+                AND binding.compatibility_level = catalog.compatibility_level
+                AND catalog.status = 'ACTIVE'
+                AND binding.compatibility_evidence_sha256 = ''"
+        ))
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "catalog_provenance_binding_backfill",
+                format!("catalog binding compatibility evidence backfill failed: {err}"),
+            )
+        })?;
+        sqlx::query(&format!(
+            "INSERT INTO {reload_rel}
+                 (project_id, catalog_id, version, checksum_sha256, action, result, message,
+                  idempotency_key, request_fingerprint, actor, compatibility_evidence_sha256)
+             SELECT binding.project_id, catalog.catalog_id, catalog.version,
+                    catalog.checksum_sha256, 'RELOAD', 'ok',
+                    'v0.5.9 catalog provenance upgrade',
+                    'catalog-provenance-upgrade:' || catalog.catalog_id::TEXT,
+                    binding.compatibility_evidence_sha256,
+                    'system:catalog-provenance-upgrade',
+                    binding.compatibility_evidence_sha256
+               FROM {binding_rel} AS binding
+               JOIN {cat_rel} AS catalog
+                 ON catalog.project_id = binding.project_id
+                AND catalog.catalog_id = binding.active_catalog_id
+                AND catalog.version = binding.active_version
+                AND catalog.checksum_sha256 = binding.active_checksum_sha256
+                AND catalog.compatibility_level = binding.compatibility_level
+                AND catalog.status = 'ACTIVE'
+              WHERE binding.compatibility_evidence_sha256 = catalog.compatibility_evidence_sha256
+                AND NOT EXISTS (
+                    SELECT 1 FROM {reload_rel} AS existing
+                     WHERE existing.project_id = binding.project_id
+                       AND existing.catalog_id = binding.active_catalog_id
+                       AND existing.version = binding.active_version
+                       AND existing.checksum_sha256 = binding.active_checksum_sha256
+                       AND existing.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                       AND existing.action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD')
+                       AND existing.result = 'ok'
+                )
+             ON CONFLICT (project_id, action, idempotency_key)
+               WHERE idempotency_key <> '' DO NOTHING"
+        ))
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "catalog_provenance_reload_record",
+                format!("catalog provenance reload record failed: {err}"),
+            )
+        })?;
+        tx.commit().await.map_err(|err| {
+            catalog_admin_internal_status(
+                "catalog_provenance_commit",
+                format!("catalog provenance commit failed: {err}"),
+            )
+        })
+    }
+
+    pub(crate) async fn catalog_reload_generation(&self) -> Result<i64, tonic::Status> {
+        use crate::runtime::system::SystemCatalogConfig;
+        let pool = self.pg_pool()?;
+        let relation = SystemCatalogConfig::default().catalog_reload_log_relation();
+        sqlx::query_scalar(&format!(
+            "SELECT COALESCE(MAX(reload_seq), 0)::BIGINT FROM {relation}
+             WHERE action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD') AND result = 'ok'"
+        ))
+        .fetch_one(pool)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "catalog_reload_generation",
+                format!("catalog reload generation query failed: {err}"),
+            )
+        })
     }
 
     /// Return all catalog versions for a project.
@@ -1063,6 +2632,7 @@ impl DataBrokerRuntime {
         project_id: &str,
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let project_id = canonical_catalog_project_id(project_id)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let cat_rel = config.catalog_versions_relation();
@@ -1074,7 +2644,7 @@ impl DataBrokerRuntime {
              WHERE project_id = $1
              ORDER BY created_at DESC"
         ))
-        .bind(project_id)
+        .bind(&project_id)
         .fetch_all(pool)
         .await
         .map_err(|err| {
@@ -1102,9 +2672,10 @@ impl DataBrokerRuntime {
     /// Create a migration plan (dry-run or real) and store it as a run record.
     ///
     /// Loads the ACTIVE `CatalogManifest` for `project_id` from the
-    /// `catalog_versions` table, diffs it against the live PostgreSQL schema
-    /// using `information_schema`, and writes one row per resource into
-    /// `migration_op_ledger`.  The `payload_json` column stores a JSON object
+    /// `catalog_versions` table, resolves the project's exact PostgreSQL write
+    /// target, diffs that database through `information_schema`, and writes one
+    /// row per resource into `migration_op_ledger`. The `payload_json` column
+    /// stores a JSON object
     /// `{"content": "<comment or DDL>", "checksum": "<sha>"}` that
     /// `apply_migration` reads to drive execution.
     pub async fn plan_migration(
@@ -1112,132 +2683,148 @@ impl DataBrokerRuntime {
         project_id: &str,
         dry_run: bool,
     ) -> Result<String, tonic::Status> {
-        use crate::generation::CatalogManifest;
         use crate::runtime::system::SystemCatalogConfig;
         use sha2::{Digest, Sha256};
-        let pool = self.pg_pool()?;
+        let project_id = canonical_catalog_project_id(project_id)?;
+        let control_pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let runs_rel = config.migration_runs_relation();
         let ledger_rel = config.migration_op_ledger_relation();
-        let cat_rel = config.catalog_versions_relation();
-        ensure_migration_payload_json_column(pool, &ledger_rel).await?;
+        ensure_migration_payload_json_column(control_pool, &ledger_rel).await?;
+        ensure_migration_run_provenance_columns(control_pool, &runs_rel).await?;
 
-        // ── 1. Load the ACTIVE catalog manifest for this project ──────────────
-        let manifest_row: Option<(String, String)> = sqlx::query_as(&format!(
-            "SELECT version, manifest_json::TEXT
-             FROM {cat_rel}
-             WHERE project_id = $1 AND status = 'ACTIVE'
-             ORDER BY activated_at DESC LIMIT 1"
-        ))
-        .bind(project_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| {
+        // Serialize planning with catalog transitions for this project. The
+        // plan rows are committed atomically through this transaction, while
+        // physical schema introspection uses the separately-routed target pool.
+        let mut plan_tx = control_pool.begin().await.map_err(|err| {
             catalog_admin_internal_status(
-                "plan_migration_manifest_load",
-                format!("plan_migration manifest load failed: {err}"),
+                "plan_migration_begin",
+                format!("plan_migration transaction failed: {err}"),
             )
         })?;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 534154))")
+            .bind(&project_id)
+            .execute(&mut *plan_tx)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "plan_migration_authority_lock",
+                    format!("plan_migration project authority lock failed: {err}"),
+                )
+            })?;
+
+        // ── 1. Load the proven ACTIVE catalog for this project ────────────────
+        // Reuse the exact binding + reload-evidence + checksum-validation seam
+        // used by serving and hydration. A raw ACTIVE row is not sufficient
+        // authority to plan or apply schema changes.
+        let active_catalog = self
+            .load_active_catalog_for_project(&project_id)
+            .await?
+            .ok_or_else(|| {
+                catalog_admin_schema_status(
+                    "plan_migration",
+                    "catalog_project_not_active",
+                    "migration planning requires an exact proven ACTIVE project catalog",
+                )
+            })?;
+        let catalog_id: Uuid = active_catalog.catalog_id.parse().map_err(|err| {
+            catalog_admin_internal_status(
+                "plan_migration_catalog_authority",
+                format!("exact ACTIVE catalog_id is not a UUID: {err}"),
+            )
+        })?;
+        let catalog_checksum_sha256 = active_catalog.checksum_sha256.clone();
+        let project_target = self
+            .project_postgres_write_target(&project_id, None)
+            .await?;
 
         // ── 2. Build operations list ──────────────────────────────────────────
         // Each entry: (backend, resource_uri, operation_kind, structured payload)
         let mut operations: Vec<(String, String, String, serde_json::Value)> = Vec::new();
-        let catalog_version;
+        let catalog_version = active_catalog.version;
+        let manifest = active_catalog.manifest;
 
-        if let Some((version, json_str)) = manifest_row {
-            catalog_version = version;
-            let manifest: CatalogManifest = serde_json::from_str(&json_str).map_err(|err| {
-                catalog_admin_internal_status(
-                    "plan_migration_manifest_parse",
-                    format!("plan_migration manifest parse failed: {err}"),
+        // Bulk-fetch existing tables so we can diff in memory.
+        let schema_names: Vec<&str> = manifest
+            .tables
+            .iter()
+            .map(|t| t.schema.as_str())
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
+
+        let existing_tables: std::collections::HashSet<(String, String)> =
+            if schema_names.is_empty() {
+                Default::default()
+            } else {
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT table_schema, table_name
+                     FROM information_schema.tables
+                     WHERE table_schema = ANY($1)",
                 )
-            })?;
-
-            // Bulk-fetch existing tables so we can diff in memory.
-            let schema_names: Vec<&str> = manifest
-                .tables
-                .iter()
-                .map(|t| t.schema.as_str())
-                .collect::<std::collections::HashSet<_>>()
+                .bind(&schema_names)
+                .fetch_all(&project_target.pool)
+                .await
+                .map_err(|err| {
+                    catalog_admin_internal_status(
+                        "plan_migration_schema_check",
+                        format!("plan_migration schema check failed: {err}"),
+                    )
+                })?
                 .into_iter()
-                .collect();
+                .collect()
+            };
 
-            let existing_tables: std::collections::HashSet<(String, String)> =
-                if schema_names.is_empty() {
-                    Default::default()
-                } else {
-                    sqlx::query_as::<_, (String, String)>(
-                        "SELECT table_schema, table_name
-                         FROM information_schema.tables
-                         WHERE table_schema = ANY($1)",
-                    )
-                    .bind(&schema_names)
-                    .fetch_all(pool)
-                    .await
-                    .map_err(|err| {
-                        catalog_admin_internal_status(
-                            "plan_migration_schema_check",
-                            format!("plan_migration schema check failed: {err}"),
-                        )
-                    })?
-                    .into_iter()
-                    .collect()
-                };
-
-            // One operation per manifest table.
-            for table in &manifest.tables {
-                let exists = existing_tables.contains(&(table.schema.clone(), table.table.clone()));
-                let (op_kind, payload) = if exists {
-                    (
-                        "verify_table",
-                        serde_json::json!({
-                            "action": "verify_table",
-                            "schema": table.schema,
-                            "table": table.table,
-                            "checksum": table.checksum_sha256,
-                        }),
-                    )
-                } else {
-                    (
-                        "create_table",
-                        postgres_create_table_payload(table, &manifest.checksum_sha256),
-                    )
-                };
-                operations.push((
-                    "postgres".to_string(),
-                    format!("postgres://{}/{}", table.schema, table.table),
-                    op_kind.to_string(),
-                    payload,
-                ));
-            }
-
-            // One structured verify operation per non-postgres store.
-            for store in &manifest.stores {
-                let (backend, uri_scheme) = match store.backend.as_str() {
-                    "qdrant" => ("qdrant", "qdrant"),
-                    "s3" | "minio" => ("minio", "s3"),
-                    "redis" => ("redis", "redis"),
-                    "mongodb" => ("mongodb", "mongodb"),
-                    "neo4j" => ("neo4j", "neo4j"),
-                    "clickhouse" => ("clickhouse", "clickhouse"),
-                    _ => continue,
-                };
-                operations.push((
-                    backend.to_string(),
-                    format!("{uri_scheme}://{}", store.resource_name),
-                    "verify_resource".to_string(),
+        // One operation per manifest table.
+        for table in &manifest.tables {
+            let exists = existing_tables.contains(&(table.schema.clone(), table.table.clone()));
+            let (op_kind, payload) = if exists {
+                (
+                    "verify_table",
                     serde_json::json!({
-                        "action": "verify_resource",
-                        "backend": backend,
-                        "resource_name": store.resource_name,
-                        "checksum": manifest.checksum_sha256,
-                        "spec": store,
+                        "action": "verify_table",
+                        "schema": table.schema,
+                        "table": table.table,
+                        "checksum": table.checksum_sha256,
                     }),
-                ));
-            }
-        } else {
-            // No active catalog staged yet — plan is empty.
-            catalog_version = String::new();
+                )
+            } else {
+                (
+                    "create_table",
+                    postgres_create_table_payload(table, &manifest.checksum_sha256),
+                )
+            };
+            operations.push((
+                "postgres".to_string(),
+                format!("postgres://{}/{}", table.schema, table.table),
+                op_kind.to_string(),
+                payload,
+            ));
+        }
+
+        // One structured verify operation per non-postgres store.
+        for store in &manifest.stores {
+            let (backend, uri_scheme) = match store.backend.as_str() {
+                "qdrant" => ("qdrant", "qdrant"),
+                "s3" | "minio" => ("minio", "s3"),
+                "redis" => ("redis", "redis"),
+                "mongodb" => ("mongodb", "mongodb"),
+                "neo4j" => ("neo4j", "neo4j"),
+                "clickhouse" => ("clickhouse", "clickhouse"),
+                _ => continue,
+            };
+            operations.push((
+                backend.to_string(),
+                format!("{uri_scheme}://{}", store.resource_name),
+                "verify_resource".to_string(),
+                serde_json::json!({
+                    "action": "verify_resource",
+                    "backend": backend,
+                    "resource_name": store.resource_name,
+                    "checksum": manifest.checksum_sha256,
+                    "spec": store,
+                }),
+            ));
         }
 
         // ── 3. Compute operations hash ────────────────────────────────────────
@@ -1253,15 +2840,21 @@ impl DataBrokerRuntime {
         let state = if dry_run { "DRY_RUN" } else { "PREFLIGHT" };
         let run_id: Uuid = sqlx::query_scalar(&format!(
             "INSERT INTO {runs_rel}
-                 (project_id, catalog_version, state, operations_hash)
-             VALUES ($1, $2, $3, $4)
+                 (project_id, catalog_version, catalog_id, catalog_checksum_sha256,
+                  target_backend, target_instance, target_provenance_sha256,
+                  state, operations_hash)
+             VALUES ($1, $2, $3, $4, 'postgres', $5, $6, $7, $8)
              RETURNING run_id"
         ))
-        .bind(project_id)
+        .bind(&project_id)
         .bind(&catalog_version)
+        .bind(catalog_id)
+        .bind(&catalog_checksum_sha256)
+        .bind(&project_target.instance)
+        .bind(&project_target.provenance_sha256)
         .bind(state)
         .bind(&operations_hash)
-        .fetch_one(pool)
+        .fetch_one(&mut *plan_tx)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
@@ -1285,7 +2878,7 @@ impl DataBrokerRuntime {
             .bind(resource_uri)
             .bind(operation_kind)
             .bind(payload.to_string())
-            .execute(pool)
+            .execute(&mut *plan_tx)
             .await
             .map_err(|err| {
                 catalog_admin_internal_status(
@@ -1294,6 +2887,13 @@ impl DataBrokerRuntime {
                 )
             })?;
         }
+
+        plan_tx.commit().await.map_err(|err| {
+            catalog_admin_internal_status(
+                "plan_migration_commit",
+                format!("plan_migration commit failed: {err}"),
+            )
+        })?;
 
         Ok(run_id.to_string())
     }
@@ -1307,23 +2907,30 @@ impl DataBrokerRuntime {
         approval_token: &str,
     ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let project_id = canonical_catalog_project_id(project_id)?;
         validate_approval_token_for_plan(approval_token)?;
         let id: Uuid = parse_migration_run_id(run_id)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let runs_rel = config.migration_runs_relation();
         ensure_migration_runs_approved_state(pool, &runs_rel, &config.migration_runs_table).await?;
+        ensure_migration_run_provenance_columns(pool, &runs_rel).await?;
 
         let rows = sqlx::query(&format!(
             "UPDATE {runs_rel}
              SET state = 'APPROVED', approval_token = $1, error = ''
              WHERE run_id = $2 AND project_id = $3
                AND state = 'PREFLIGHT'
-               AND approval_token = ''"
+               AND approval_token = ''
+               AND catalog_id IS NOT NULL
+               AND catalog_checksum_sha256 <> ''
+               AND target_backend = 'postgres'
+               AND target_instance <> ''
+               AND target_provenance_sha256 <> ''"
         ))
         .bind(approval_token.trim())
         .bind(id)
-        .bind(project_id)
+        .bind(&project_id)
         .execute(pool)
         .await
         .map_err(|err| {
@@ -1346,24 +2953,49 @@ impl DataBrokerRuntime {
         approval_token: &str,
     ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let project_id = canonical_catalog_project_id(project_id)?;
         require_migration_approval_token(approval_token)?;
         let id: Uuid = parse_migration_run_id(run_id)?;
-        let pool = self.pg_pool()?;
+        let control_pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let runs_rel = config.migration_runs_relation();
         let ledger_rel = config.migration_op_ledger_relation();
         let phase_ledger_rel = migration_phase_ledger_relation(&config);
-        ensure_migration_runs_approved_state(pool, &runs_rel, &config.migration_runs_table).await?;
-        ensure_migration_payload_json_column(pool, &ledger_rel).await?;
+        ensure_migration_runs_approved_state(control_pool, &runs_rel, &config.migration_runs_table)
+            .await?;
+        ensure_migration_payload_json_column(control_pool, &ledger_rel).await?;
+        ensure_migration_run_provenance_columns(control_pool, &runs_rel).await?;
+
+        // Keep the same project advisory lock held from authority verification
+        // through physical apply. Catalog transitions use this key too, so the
+        // exact catalog proven below cannot be superseded mid-DDL.
+        let mut authority_guard = control_pool.begin().await.map_err(|err| {
+            catalog_admin_internal_status(
+                "apply_migration_authority_begin",
+                format!("apply_migration authority transaction failed: {err}"),
+            )
+        })?;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 534154))")
+            .bind(&project_id)
+            .execute(&mut *authority_guard)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "apply_migration_authority_lock",
+                    format!("apply_migration project authority lock failed: {err}"),
+                )
+            })?;
 
         let run_row = sqlx::query(&format!(
-            "SELECT state, approval_token, catalog_version, operations_hash
+            "SELECT state, approval_token, catalog_version, operations_hash,
+                    catalog_id, catalog_checksum_sha256,
+                    target_backend, target_instance, target_provenance_sha256
              FROM {runs_rel}
              WHERE run_id = $1 AND project_id = $2"
         ))
         .bind(id)
-        .bind(project_id)
-        .fetch_optional(pool)
+        .bind(&project_id)
+        .fetch_optional(control_pool)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
@@ -1383,6 +3015,67 @@ impl DataBrokerRuntime {
         let operations_hash = run_row
             .try_get::<String, _>("operations_hash")
             .unwrap_or_default();
+        let stored_catalog_id = run_row
+            .try_get::<Option<Uuid>, _>("catalog_id")
+            .unwrap_or_default()
+            .ok_or_else(|| {
+                migration_authority_status(
+                    "migration_authority_provenance_missing",
+                    "migration run has no exact catalog authority; create a new plan",
+                )
+            })?;
+        let stored_catalog_checksum = run_row
+            .try_get::<String, _>("catalog_checksum_sha256")
+            .unwrap_or_default();
+        let stored_target_backend = run_row
+            .try_get::<String, _>("target_backend")
+            .unwrap_or_default();
+        let stored_target_instance = run_row
+            .try_get::<String, _>("target_instance")
+            .unwrap_or_default();
+        let stored_target_provenance = run_row
+            .try_get::<String, _>("target_provenance_sha256")
+            .unwrap_or_default();
+        if stored_catalog_checksum.is_empty()
+            || stored_target_backend != "postgres"
+            || stored_target_instance.is_empty()
+            || stored_target_provenance.is_empty()
+        {
+            return Err(migration_authority_status(
+                "migration_authority_provenance_missing",
+                "migration run lacks complete catalog/target authority; create a new plan",
+            ));
+        }
+
+        let active_catalog = self
+            .load_active_catalog_for_project(&project_id)
+            .await?
+            .ok_or_else(|| {
+                migration_authority_status(
+                    "migration_catalog_authority_changed",
+                    "the project has no exact proven ACTIVE catalog; migration apply refused",
+                )
+            })?;
+        if active_catalog.catalog_id != stored_catalog_id.to_string()
+            || active_catalog.version != catalog_version
+            || active_catalog.checksum_sha256 != stored_catalog_checksum
+        {
+            return Err(migration_authority_status(
+                "migration_catalog_authority_changed",
+                "the exact ACTIVE catalog no longer matches the catalog used to create this migration plan",
+            ));
+        }
+        let project_target = self
+            .project_postgres_write_target(&project_id, Some(&stored_target_instance))
+            .await?;
+        if project_target.instance != stored_target_instance
+            || project_target.provenance_sha256 != stored_target_provenance
+        {
+            return Err(migration_authority_status(
+                "migration_target_authority_changed",
+                "the project PostgreSQL target or routing policy changed after planning; create a new plan",
+            ));
+        }
 
         // Fetch and preflight all planned operations before moving the run into
         // APPLYING. On resume, previously APPLIED/VERIFIED/SKIPPED rows are
@@ -1397,7 +3090,7 @@ impl DataBrokerRuntime {
                  ORDER BY operation_index ASC"
             ))
             .bind(id)
-            .fetch_all(pool)
+            .fetch_all(control_pool)
             .await
             .map_err(|err| {
                 catalog_admin_internal_status(
@@ -1432,12 +3125,22 @@ impl DataBrokerRuntime {
                  error = ''
              WHERE run_id = $2 AND project_id = $3
                AND state IN ('APPROVED','APPLYING','VERIFYING')
-               AND approval_token = $1"
+               AND approval_token = $1
+               AND catalog_id = $4
+               AND catalog_checksum_sha256 = $5
+               AND target_backend = $6
+               AND target_instance = $7
+               AND target_provenance_sha256 = $8"
         ))
-        .bind(stored_token)
+        .bind(&stored_token)
         .bind(id)
-        .bind(project_id)
-        .execute(pool)
+        .bind(&project_id)
+        .bind(stored_catalog_id)
+        .bind(&stored_catalog_checksum)
+        .bind(&stored_target_backend)
+        .bind(&stored_target_instance)
+        .bind(&stored_target_provenance)
+        .execute(control_pool)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
@@ -1497,10 +3200,10 @@ impl DataBrokerRuntime {
             .collect();
         let target = CatalogMigrationApplyTarget {
             runtime: self,
-            pool,
+            pool: &project_target.pool,
         };
         let sink = ExistingRunMigrationAuditSink {
-            pool,
+            pool: control_pool,
             runs_rel: runs_rel.clone(),
             ledger_rel: ledger_rel.clone(),
             run_id: id,
@@ -1508,7 +3211,7 @@ impl DataBrokerRuntime {
             op_kinds,
         };
         let phase_ledger = crate::migration::phase_runner::PostgresPhaseLedger::new(
-            (*pool).clone(),
+            (*control_pool).clone(),
             phase_ledger_rel,
         );
         let phased = crate::migration::apply_artifacts_phased(
@@ -1532,7 +3235,7 @@ impl DataBrokerRuntime {
                 ))
                 .bind(&err)
                 .bind(id)
-                .execute(pool)
+                .execute(control_pool)
                 .await
                 .map_err(|update_err| {
                     catalog_admin_internal_status(
@@ -1559,7 +3262,7 @@ impl DataBrokerRuntime {
                 ))
                 .bind(format!("phase {} paused: {error}", phase.as_str()))
                 .bind(id)
-                .execute(pool)
+                .execute(control_pool)
                 .await
                 .map_err(|err| {
                     catalog_admin_internal_status(
@@ -1587,7 +3290,7 @@ impl DataBrokerRuntime {
                 ))
                 .bind(&error)
                 .bind(id)
-                .execute(pool)
+                .execute(control_pool)
                 .await
                 .map_err(|err| {
                     catalog_admin_internal_status(
@@ -1605,12 +3308,18 @@ impl DataBrokerRuntime {
              WHERE run_id = $1"
         ))
         .bind(id)
-        .execute(pool)
+        .execute(control_pool)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
                 "apply_migration_finalize",
                 format!("apply_migration finalize failed: {err}"),
+            )
+        })?;
+        authority_guard.commit().await.map_err(|err| {
+            catalog_admin_internal_status(
+                "apply_migration_authority_commit",
+                format!("apply_migration authority lock release failed: {err}"),
             )
         })?;
         Ok(())

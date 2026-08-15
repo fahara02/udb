@@ -68,7 +68,10 @@ mod dynamic;
 mod errors;
 mod events;
 mod handlers;
+mod lifecycle;
 mod model;
+#[cfg(test)]
+mod project_store_live;
 mod quota;
 mod store;
 #[cfg(test)]
@@ -457,13 +460,29 @@ impl VaultService for VaultServiceImpl {
         &self,
         request: Request<vault_pb::GenerateDatabaseCredentialsRequest>,
     ) -> Result<Response<vault_pb::GenerateDatabaseCredentialsResponse>, Status> {
-        handlers::generate_database_credentials(self, request).await
+        lifecycle::generate_database_credentials(self, request).await
+    }
+
+    async fn revoke_database_credentials(
+        &self,
+        request: Request<vault_pb::RevokeDatabaseCredentialsRequest>,
+    ) -> Result<Response<vault_pb::RevokeDatabaseCredentialsResponse>, Status> {
+        lifecycle::revoke_database_credentials(self, request).await
+    }
+
+    async fn emergency_revoke_database_credentials(
+        &self,
+        request: Request<vault_pb::EmergencyRevokeDatabaseCredentialsRequest>,
+    ) -> Result<Response<vault_pb::EmergencyRevokeDatabaseCredentialsResponse>, Status> {
+        lifecycle::emergency_revoke_database_credentials(self, request).await
     }
 }
 
 impl DataBrokerService {
-    /// Build the native `VaultService`, wired to the broker's Postgres pool, the
-    /// master-key envelope runtime, and the shared outbox.
+    /// Build the native `VaultService`, wired to the runtime's project-aware
+    /// Postgres authority resolver, live catalog, master-key envelope, and shared
+    /// outbox. No default/startup pool is captured: every durable RPC resolves
+    /// and pins its active project's write authority at request time.
     pub(crate) fn build_vault_service(&self) -> VaultServiceImpl {
         let runtime = self.runtime.load_full();
         let outbox = runtime.config().cdc.outbox_relation();

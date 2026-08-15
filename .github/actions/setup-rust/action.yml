@@ -24,6 +24,10 @@ inputs:
     description: Whether to install the platform native build deps. Set "false" to skip.
     required: false
     default: "true"
+  force-nasm-package-fallback:
+    description: CI proof hook that skips nasm.us and exercises the verified package fallback.
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -64,9 +68,98 @@ runs:
       if: runner.os == 'Windows' && inputs.install-build-deps == 'true'
       shell: pwsh
       run: |
-        choco install strawberryperl nasm --no-progress -y
-        "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = "Stop"
+
+        # windows-latest provides Strawberry Perl. Prefer that runner-owned copy
+        # and refuse to start a native build without a real Perl executable.
+        $strawberryPerl = "C:\Strawberry\perl\bin"
+        if (Test-Path -LiteralPath (Join-Path $strawberryPerl "perl.exe")) {
+          $strawberryPerl | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & (Join-Path $strawberryPerl "perl.exe") --version
+        } elseif ($null -ne (Get-Command perl -ErrorAction SilentlyContinue)) {
+          perl --version
+        } else {
+          throw "The Windows runner does not provide the required Perl executable"
+        }
+
+        # Fetch the pinned official executable archive and verify it before use.
+        # If nasm.us is temporarily unreachable, use the direct, versioned
+        # Chocolatey package endpoint and verify both its package and embedded
+        # official-installer hashes. Never perform a mutable "latest" lookup.
+        $nasmVersion = "3.02"
+        $nasmSha256 = "161D0BFAFF53C2F9E9F3E69FD0672323EBABAFD1268976A5CEC11BE92A19AEE7"
+        $nasmUri = "https://www.nasm.us/pub/nasm/releasebuilds/$nasmVersion/win64/nasm-$nasmVersion-win64.zip"
+        $nasmArchive = Join-Path $env:RUNNER_TEMP "nasm-$nasmVersion-win64.zip"
+        $nasmRoot = Join-Path $env:RUNNER_TOOL_CACHE "nasm\$nasmVersion\x64"
+        $nasmBin = Join-Path $nasmRoot "nasm-$nasmVersion"
+
+        $forcePackageFallback = "${{ inputs.force-nasm-package-fallback }}" -eq "true"
+        $downloadedOfficialArchive = $false
+        if ($forcePackageFallback) {
+          Write-Host "CI proof hook selected the checksum-pinned NASM package fallback"
+        } else {
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              Invoke-WebRequest -UseBasicParsing -Uri $nasmUri -OutFile $nasmArchive -TimeoutSec 60
+              $downloadedOfficialArchive = $true
+              break
+            } catch {
+              if ($attempt -eq 3) {
+                Write-Warning "Official NASM download failed after 3 attempts; using the pinned package fallback"
+                break
+              }
+              Write-Warning "NASM download attempt $attempt/3 failed; retrying in 5 seconds"
+              Start-Sleep -Seconds 5
+            }
+          }
+        }
+        if ($downloadedOfficialArchive) {
+          $actualSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $nasmArchive).Hash
+          if ($actualSha256 -ne $nasmSha256) {
+            throw "NASM archive SHA-256 mismatch: expected $nasmSha256, got $actualSha256"
+          }
+          New-Item -ItemType Directory -Force -Path $nasmRoot | Out-Null
+          Expand-Archive -LiteralPath $nasmArchive -DestinationPath $nasmRoot -Force
+        } else {
+          $nasmPackageVersion = "3.2.0"
+          $nasmPackageSha256 = "9A72BA9D6F6F0DC2A5598EC160366B2BDD925A23E229DFB5D854F63C0F2A2160"
+          $nasmInstallerSha256 = "0DDB40310861EB29F4D649FEB9466779982A2D251C0DB2B9CF0D21CF591171F3"
+          $nasmPackageUri = "https://community.chocolatey.org/api/v2/package/nasm/$nasmPackageVersion"
+          $nasmPackageArchive = Join-Path $env:RUNNER_TEMP "nasm.$nasmPackageVersion.package.zip"
+          $nasmPackageRoot = Join-Path $env:RUNNER_TEMP "nasm-package-$nasmPackageVersion"
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              Invoke-WebRequest -UseBasicParsing -Uri $nasmPackageUri -OutFile $nasmPackageArchive -TimeoutSec 120
+              break
+            } catch {
+              if ($attempt -eq 3) { throw }
+              Write-Warning "NASM package fallback attempt $attempt/3 failed; retrying in 5 seconds"
+              Start-Sleep -Seconds 5
+            }
+          }
+          $actualPackageSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $nasmPackageArchive).Hash
+          if ($actualPackageSha256 -ne $nasmPackageSha256) {
+            throw "NASM package SHA-256 mismatch: expected $nasmPackageSha256, got $actualPackageSha256"
+          }
+          New-Item -ItemType Directory -Force -Path $nasmPackageRoot | Out-Null
+          Expand-Archive -LiteralPath $nasmPackageArchive -DestinationPath $nasmPackageRoot -Force
+          $nasmInstaller = Join-Path $nasmPackageRoot "tools\nasm-3.02-installer-x64.exe"
+          $actualInstallerSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $nasmInstaller).Hash
+          if ($actualInstallerSha256 -ne $nasmInstallerSha256) {
+            throw "NASM installer SHA-256 mismatch: expected $nasmInstallerSha256, got $actualInstallerSha256"
+          }
+          $installProcess = Start-Process -FilePath $nasmInstaller -ArgumentList "/S" -Wait -PassThru
+          if ($installProcess.ExitCode -ne 0) {
+            throw "NASM installer exited with code $($installProcess.ExitCode)"
+          }
+          $nasmBin = "C:\Program Files\NASM"
+        }
+        if (-not (Test-Path -LiteralPath (Join-Path $nasmBin "nasm.exe"))) {
+          throw "Verified NASM installation did not contain nasm.exe at $nasmBin"
+        }
+        $nasmBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        & (Join-Path $nasmBin "nasm.exe") -v
 
     - name: Configure MSVC build tools (Windows)
       if: runner.os == 'Windows' && inputs.install-build-deps == 'true'

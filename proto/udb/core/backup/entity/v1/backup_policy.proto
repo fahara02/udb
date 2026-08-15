@@ -17,7 +17,7 @@ option php_namespace = "Udb\\Core\\Backup\\Entity\\V1";
 // 9.10). The actual scheduling is driven by the native SchedulerService (9.3):
 // a leader-elected tick fires `udb.scheduler.job.fired.v1` for a due policy,
 // which a worker turns into a StartTenantBackup. THIS row is the durable,
-// tenant-scoped retention/schedule contract. RLS scopes rows to the tenant.
+// tenant+project-scoped retention/schedule contract. RLS scopes rows to both.
 // ---------------------------------------------------------------------------
 message BackupPolicy {
   option (udb.core.common.v1.pg_table) = {
@@ -30,15 +30,16 @@ message BackupPolicy {
     audit_fields: true
     enable_rls: true
     rls_policies: {
-      policy_name: "tenant_isolation"
-      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      policy_name: "tenant_project_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)"
       permissive: true
     }
     indexes: {
-      index_name: "idx_backup_policies_tenant_name_unique"
+      index_name: "idx_backup_policies_tenant_project_name_unique"
       index_type: "BTREE"
       unique: true
       columns: "tenant_id"
+      columns: "project_id"
       columns: "policy_name"
     }
     cdc_topic: "udb.backup.backup_policies.cdc"
@@ -46,8 +47,10 @@ message BackupPolicy {
   };
   option (udb.core.common.v1.db_table_security) = {
     tenant_isolation_mode: "tenant"
+    project_isolation_mode: "project"
     tenant_column: "tenant_id"
-    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    project_column: "project_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')"
     soft_delete_mode: "none"
     retention_class: "backup.policy"
     retention_days: 3650
@@ -62,7 +65,11 @@ message BackupPolicy {
 
   string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_backup_policies_tenant" index_type: "BTREE" } }];
 
-  // Caller-chosen logical policy name, unique per tenant.
+  // First-class project owner. Blank is reserved for quarantined legacy rows;
+  // new serving-path writes always persist an explicitly active project.
+  string project_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "project_id" project_column: true sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // Caller-chosen logical policy name, unique per tenant+project.
   string policy_name = 3 [(udb.core.common.v1.pg_column) = { column_name: "policy_name" sql_type: "VARCHAR(255)" not_null: true }];
 
   // Cron expression evaluated by the SchedulerService (9.3). Empty disables

@@ -219,6 +219,8 @@ processTriple("sdk-readme generated code comment", "sdk/README.md", C.udb.versio
   /(crate\/package version `)(\d+\.\d+\.\d+)(`;)/);
 processTriple("ops bench label", "docs/operations.md", C.udb.version,
   /(bench_snapshot\.py --label "release-)(\d+\.\d+\.\d+)(")/);
+processTriple("example go arbitrary release tag", "examples/go_arbitary_project/README.md", C.udb.version,
+  /(e\.g\. `v)(\d+\.\d+\.\d+)(`)/);
 processAll("versioning release refs", "VERSIONING.md", C.udb.version,
   /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
 
@@ -382,8 +384,29 @@ processTriple("native contract json", "docs/generated/udb-native-contract.json",
   /("udb_version": ")(\d+\.\d+\.\d+)(")/);
 
 // ── CI workflow descriptions ──────────────────────────────────────────────────
-processTriple("ci release-csharp description", ".github/workflows/release-csharp-sdk.yml", C.udb.version,
-  /(Expected UDB release version, for example )(\d+\.\d+\.\d+)(")/);
+for (const workflow of [
+  "release-csharp-sdk.yml",
+  "release-docker.yml",
+  "release-go-sdk.yml",
+  "release-packagist.yml",
+  "release-python-sdk.yml",
+  "release-typescript-sdk.yml",
+]) {
+  processTriple(`ci ${workflow} description`, `.github/workflows/${workflow}`, C.udb.version,
+    /(Expected UDB release version, for example )(\d+\.\d+\.\d+)(")/);
+}
+
+// ── Maintainer publishing/skill examples ──────────────────────────────────────
+processTriple("python publishing TestPyPI install", "sdk/python/PUBLISHING.md", C["sdk-python"].version,
+  /(udb-client==)(\d+\.\d+\.\d+)(\n)/);
+processTriple("python publishing tag", "sdk/python/PUBLISHING.md", C["sdk-python"].version,
+  /(git tag v)(\d+\.\d+\.\d+)(\n)/);
+processTriple("python publishing push", "sdk/python/PUBLISHING.md", C["sdk-python"].version,
+  /(git push origin v)(\d+\.\d+\.\d+)(\n)/);
+processTriple("python publishing dispatch", "sdk/python/PUBLISHING.md", C["sdk-python"].version,
+  /(workflow manually and enter `)(\d+\.\d+\.\d+)(`\.)/);
+processTriple("udb-coding skill baseline", "udb-skill/plugins/udb/skills/udb-coding/SKILL.md", C.udb.version,
+  /(Current code\/SDK baseline is \*\*)(\d+\.\d+\.\d+)(\*\*)/);
 
 // ── SDK launcher templates (example text) ─────────────────────────────────────
 processTriple("java tmpl version example", "sdk-templates/java/src/main/java/dev/udb/cli/Launcher.java.tmpl", C.udb.version,

@@ -49,11 +49,25 @@ def test_replay_safe_map_matches_proto_contract() -> None:
         "/udb.services.v1.DataBroker/Delete",
         "/udb.services.v1.DataBroker/Update",
         "/udb.core.asset.services.v1.AssetService/StartPipeline",
+        "/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials",
+        "/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials",
     }
     assert _is_replay_safe("/udb.services.v1.DataBroker/Upsert") is True
     assert _is_replay_safe("/udb.services.v1.DataBroker/Delete") is True
     assert _is_replay_safe("/udb.services.v1.DataBroker/Update") is True
     assert _is_replay_safe("/udb.core.asset.services.v1.AssetService/StartPipeline") is True
+    assert (
+        _is_replay_safe(
+            "/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials"
+        )
+        is True
+    )
+    assert (
+        _is_replay_safe(
+            "/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials"
+        )
+        is True
+    )
     assert _is_replay_safe("/udb.services.v1.DataBroker/Select") is False
     assert _is_replay_safe("/unknown/Rpc") is False
 

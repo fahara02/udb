@@ -58,11 +58,12 @@ never drifts from the server's.
 `bench-results.json` is produced by `scripts/collect_sdk_bench_results.py` from
 SDK Markdown reports. The post-release benchmark workflow uploads it as the
 `sdk-benchmark-results` artifact; `pages.yml` consumes that artifact on benchmark
-completion and falls back to the already-published dashboard JSON for
-non-benchmark publishes. Per-RPC rows prefer descriptor-derived `operation_id`,
-then `api_alias`, then the legacy `service/rpc` wire identity. The dashboard
-keeps the wire RPC as row detail so users can filter by canonical API identity
-without losing transport diagnostics.
+completion and fails closed if a real benchmark has no fresh artifact.
+Validation-only benchmark runs do not deploy Pages; direct non-benchmark Pages
+publishes retain the committed last-known dashboard JSON. Per-RPC rows prefer
+descriptor-derived `operation_id`, then `api_alias`, then the legacy
+`service/rpc` wire identity. The dashboard keeps the wire RPC as row detail so
+users can filter by canonical API identity without losing transport diagnostics.
 
 ## Assets
 

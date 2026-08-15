@@ -28,7 +28,7 @@ namespace udb.core.Vault.Entity.V1 {
             "bF9sZWFzZS5wcm90bxIYdWRiLmNvcmUudmF1bHQuZW50aXR5LnYxGh9nb29n",
             "bGUvcHJvdG9idWYvdGltZXN0YW1wLnByb3RvGht1ZGIvY29yZS9jb21tb24v",
             "djEvZGIucHJvdG8aIXVkYi9jb3JlL2NvbW1vbi92MS9zZWN1cml0eS5wcm90",
-            "byKsDAoWVmF1bHREYkNyZWRlbnRpYWxMZWFzZRJGCghsZWFzZV9pZBgBIAEo",
+            "byLAFQoWVmF1bHREYkNyZWRlbnRpYWxMZWFzZRJGCghsZWFzZV9pZBgBIAEo",
             "CUIrgrcYJwoIbGVhc2VfaWQSBFVVSUQYASgBOhFnZW5fcmFuZG9tX3V1aWQo",
             "KVIHbGVhc2VJZBJuCgl0ZW5hbnRfaWQYAiABKAlCUYK3GE0KCXRlbmFudF9p",
             "ZBILVkFSQ0hBUig2NCkYAVIuCiVpZHhfdmF1bHRfZGJfY3JlZGVudGlhbF9s",
@@ -44,36 +44,62 @@ namespace udb.core.Vault.Entity.V1 {
             "ZXNfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQh+Ctxgb",
             "CgpleHBpcmVzX2F0EgtUSU1FU1RBTVBUWhgBUglleHBpcmVzQXQSWAoKcmV2",
             "b2tlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCHYK3",
-            "GBkKCnJldm9rZWRfYXQSC1RJTUVTVEFNUFRaUglyZXZva2VkQXQSOgoFc3Rh",
-            "dGUYCiABKAlCJIK3GCAKBXN0YXRlEgtWQVJDSEFSKDIwKRgBOggnQUNUSVZF",
-            "J1IFc3RhdGUShAEKDW1ldGFkYXRhX2pzb24YCyABKAlCX4K3GFsKDW1ldGFk",
-            "YXRhX2pzb24SBUpTT05CGAE6Cyd7fSc6Ompzb25iWjJOb24tc2VjcmV0IGlz",
-            "c3VhbmNlIG1ldGFkYXRhIGZvciBhdWRpdCBhbmQgcm91dGluZ3gBUgxtZXRh",
-            "ZGF0YUpzb2469AT6thjbAwoadmF1bHRfZGJfY3JlZGVudGlhbF9sZWFzZXMS",
-            "CXVkYl92YXVsdBgDIAEqQlNob3J0LWxpdmVkIGRhdGFiYXNlIGNyZWRlbnRp",
-            "YWxzIG1pbnRlZCBieSBWYXVsdCAobWFzdGVyLXBsYW4gOS4xKTgBQAFiXgoQ",
-            "dGVuYW50X2lzb2xhdGlvbhpIKHRlbmFudF9pZDo6dGV4dCA9IGN1cnJlbnRf",
-            "c2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJywgdHJ1ZSk6OnRleHQp",
-            "KAGKAUMKLmlkeF92YXVsdF9kYl9jcmVkZW50aWFsX2xlYXNlc191c2VybmFt",
-            "ZV91bmlxdWUSBUJUUkVFGAFaCHVzZXJuYW1ligFJCippZHhfdmF1bHRfZGJf",
-            "Y3JlZGVudGlhbF9sZWFzZXNfdGVuYW50X3JvbGUSBUJUUkVFWgl0ZW5hbnRf",
-            "aWRaCXJvbGVfbmFtZYoBQQolaWR4X3ZhdWx0X2RiX2NyZWRlbnRpYWxfbGVh",
-            "c2VzX2V4cGlyeRIFQlRSRUVaBXN0YXRlWgpleHBpcmVzX2F08gEidWRiLnZh",
-            "dWx0LmRiX2NyZWRlbnRpYWxfbGVhc2VzLmNkY/oBCnZhdWx0OnJlYWSKshmP",
-            "AQoGdGVuYW50Ggl0ZW5hbnRfaWQqNHRlbmFudF9pZCA9IGN1cnJlbnRfc2V0",
-            "dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJykyBG5vbmU6EXZhdWx0Lm9w",
-            "ZXJhdGlvbmFsQFpIAlIGdGVuYW50WghzdGFuZGFyZHIVdGVuYW50LmRhdGFf",
-            "cmVzaWRlbmN5QoYCChxjb20udWRiLmNvcmUudmF1bHQuZW50aXR5LnYxQhtW",
-            "YXVsdERiQ3JlZGVudGlhbExlYXNlUHJvdG9QAVpEZ2l0aHViLmNvbS9mYWhh",
-            "cmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS92YXVsdC9lbnRpdHkvdjE7",
-            "ZW50aXR5djGiAgRVQ1ZFqgIYdWRiLmNvcmUuVmF1bHQuRW50aXR5LlYxygIY",
-            "VWRiXENvcmVcVmF1bHRcRW50aXR5XFYx4gIkVWRiXEdQQk1ldGFkYXRhXENv",
-            "cmVcVmF1bHRcRW50aXR5XFYx6gIcVWRiOjpDb3JlOjpWYXVsdDo6RW50aXR5",
-            "OjpWMWIGcHJvdG8z"));
+            "GBkKCnJldm9rZWRfYXQSC1RJTUVTVEFNUFRaUglyZXZva2VkQXQSPAoFc3Rh",
+            "dGUYCiABKAlCJoK3GCIKBXN0YXRlEgtWQVJDSEFSKDIwKRgBOgonU1RBUlRJ",
+            "TkcnUgVzdGF0ZRKEAQoNbWV0YWRhdGFfanNvbhgLIAEoCUJfgrcYWwoNbWV0",
+            "YWRhdGFfanNvbhIFSlNPTkIYAToLJ3t9Jzo6anNvbmJaMk5vbi1zZWNyZXQg",
+            "aXNzdWFuY2UgbWV0YWRhdGEgZm9yIGF1ZGl0IGFuZCByb3V0aW5neAFSDG1l",
+            "dGFkYXRhSnNvbhJNCgpwcm9qZWN0X2lkGAwgASgJQi6CtxgqCgpwcm9qZWN0",
+            "X2lkEgxWQVJDSEFSKDI1NSkYAToJJ2RlZmF1bHQnoAIBUglwcm9qZWN0SWQS",
+            "UgoPaWRlbXBvdGVuY3lfa2V5GA0gASgJQimCtxglCg9pZGVtcG90ZW5jeV9r",
+            "ZXkSDFZBUkNIQVIoMTI4KRgBOgInJ1IOaWRlbXBvdGVuY3lLZXkSSQoMcmVx",
+            "dWVzdF9oYXNoGA4gASgJQiaCtxgiCgxyZXF1ZXN0X2hhc2gSDFZBUkNIQVIo",
+            "MTI4KRgBOgInJ1ILcmVxdWVzdEhhc2gSxAEKFWNyZWRlbnRpYWxfY2lwaGVy",
+            "dGV4dBgPIAEoCUKOAei1GAHwtRgBgrcYaAoVY3JlZGVudGlhbF9jaXBoZXJ0",
+            "ZXh0EgRURVhUGAE6AicnWkNNYXN0ZXItS0VLLXdyYXBwZWQgcmVjb3Zlcnkg",
+            "ZW52ZWxvcGUgZm9yIGlkZW1wb3RlbnQgcmVzcG9uc2UgcmVwbGF5ircYFggD",
+            "EAEYAzoIdmF1bHQtZGJKBG5vbmVSFGNyZWRlbnRpYWxDaXBoZXJ0ZXh0ElIK",
+            "D3RhcmdldF9pbnN0YW5jZRgQIAEoCUIpgrcYJQoPdGFyZ2V0X2luc3RhbmNl",
+            "EgxWQVJDSEFSKDI1NSkYAToCJydSDnRhcmdldEluc3RhbmNlEjsKCmxhc3Rf",
+            "ZXJyb3IYESABKAlCHIK3GBgKCmxhc3RfZXJyb3ISBFRFWFQYAToCJydSCWxh",
+            "c3RFcnJvchJECg1yZXZva2VfcmVhc29uGBIgASgJQh+CtxgbCg1yZXZva2Vf",
+            "cmVhc29uEgRURVhUGAE6AicnUgxyZXZva2VSZWFzb24SWwoXcmV2b2NhdGlv",
+            "bl9vcGVyYXRpb25faWQYEyABKAlCI4K3GB8KF3Jldm9jYXRpb25fb3BlcmF0",
+            "aW9uX2lkEgRVVUlEUhVyZXZvY2F0aW9uT3BlcmF0aW9uSWQSfgoXcmV2b2Nh",
+            "dGlvbl9yZXF1ZXN0ZWRfYXQYFCABKAsyGi5nb29nbGUucHJvdG9idWYuVGlt",
+            "ZXN0YW1wQiqCtxgmChdyZXZvY2F0aW9uX3JlcXVlc3RlZF9hdBILVElNRVNU",
+            "QU1QVFpSFXJldm9jYXRpb25SZXF1ZXN0ZWRBdDqdB/q2GLQFChp2YXVsdF9k",
+            "Yl9jcmVkZW50aWFsX2xlYXNlcxIJdWRiX3ZhdWx0GAMgASpCU2hvcnQtbGl2",
+            "ZWQgZGF0YWJhc2UgY3JlZGVudGlhbHMgbWludGVkIGJ5IFZhdWx0IChtYXN0",
+            "ZXItcGxhbiA5LjEpOAFAAWKsAQoQdGVuYW50X2lzb2xhdGlvbhqVASh0ZW5h",
+            "bnRfaWQ6OnRleHQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3Rl",
+            "bmFudF9pZCcsIHRydWUpOjp0ZXh0IEFORCBwcm9qZWN0X2lkOjp0ZXh0ID0g",
+            "Y3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF9wcm9qZWN0X2lkJywgdHJ1",
+            "ZSk6OnRleHQpKAGKAUMKLmlkeF92YXVsdF9kYl9jcmVkZW50aWFsX2xlYXNl",
+            "c191c2VybmFtZV91bmlxdWUSBUJUUkVFGAFaCHVzZXJuYW1ligFVCippZHhf",
+            "dmF1bHRfZGJfY3JlZGVudGlhbF9sZWFzZXNfdGVuYW50X3JvbGUSBUJUUkVF",
+            "Wgl0ZW5hbnRfaWRaCnByb2plY3RfaWRaCXJvbGVfbmFtZYoBewoxaWR4X3Zh",
+            "dWx0X2RiX2NyZWRlbnRpYWxfbGVhc2VzX2lkZW1wb3RlbmN5X3VuaXF1ZRIF",
+            "QlRSRUUYAToVaWRlbXBvdGVuY3lfa2V5IDw+ICcnWgl0ZW5hbnRfaWRaCnBy",
+            "b2plY3RfaWRaD2lkZW1wb3RlbmN5X2tleYoBQQolaWR4X3ZhdWx0X2RiX2Ny",
+            "ZWRlbnRpYWxfbGVhc2VzX2V4cGlyeRIFQlRSRUVaBXN0YXRlWgpleHBpcmVz",
+            "X2F08gEidWRiLnZhdWx0LmRiX2NyZWRlbnRpYWxfbGVhc2VzLmNkY/oBCnZh",
+            "dWx0OnJlYWSKshnfAQoGdGVuYW50Egdwcm9qZWN0Ggl0ZW5hbnRfaWQiCnBy",
+            "b2plY3RfaWQqb3RlbmFudF9pZCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1",
+            "cnJlbnRfdGVuYW50X2lkJykgQU5EIHByb2plY3RfaWQgPSBjdXJyZW50X3Nl",
+            "dHRpbmcoJ2FwcC5jdXJyZW50X3Byb2plY3RfaWQnKTIEbm9uZToRdmF1bHQu",
+            "b3BlcmF0aW9uYWxAWkgCUgZ0ZW5hbnRaCHN0YW5kYXJkchV0ZW5hbnQuZGF0",
+            "YV9yZXNpZGVuY3lChgIKHGNvbS51ZGIuY29yZS52YXVsdC5lbnRpdHkudjFC",
+            "G1ZhdWx0RGJDcmVkZW50aWFsTGVhc2VQcm90b1ABWkRnaXRodWIuY29tL2Zh",
+            "aGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL3ZhdWx0L2VudGl0eS92",
+            "MTtlbnRpdHl2MaICBFVDVkWqAhh1ZGIuY29yZS5WYXVsdC5FbnRpdHkuVjHK",
+            "AhhVZGJcQ29yZVxWYXVsdFxFbnRpdHlcVjHiAiRVZGJcR1BCTWV0YWRhdGFc",
+            "Q29yZVxWYXVsdFxFbnRpdHlcVjHqAhxVZGI6OkNvcmU6OlZhdWx0OjpFbnRp",
+            "dHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Vault.Entity.V1.VaultDbCredentialLease), global::udb.core.Vault.Entity.V1.VaultDbCredentialLease.Parser, new[]{ "LeaseId", "TenantId", "RoleName", "Username", "ParentRole", "Backend", "IssuedAt", "ExpiresAt", "RevokedAt", "State", "MetadataJson" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Vault.Entity.V1.VaultDbCredentialLease), global::udb.core.Vault.Entity.V1.VaultDbCredentialLease.Parser, new[]{ "LeaseId", "TenantId", "RoleName", "Username", "ParentRole", "Backend", "IssuedAt", "ExpiresAt", "RevokedAt", "State", "MetadataJson", "ProjectId", "IdempotencyKey", "RequestHash", "CredentialCiphertext", "TargetInstance", "LastError", "RevokeReason", "RevocationOperationId", "RevocationRequestedAt" }, null, null, null, null)
           }));
     }
     #endregion
@@ -84,12 +110,12 @@ namespace udb.core.Vault.Entity.V1 {
   /// ---------------------------------------------------------------------------
   /// VaultDbCredentialLease — one short-lived database login minted by Vault.
   ///
-  /// The password is returned only in GenerateDatabaseCredentialsResponse and is
-  /// never stored. The durable row tracks the generated username, tenant, configured
-  /// role alias, parent Postgres role, and expiry so WORKER_VAULT_LEASE_REAPER can
-  /// revoke/drop the login after its lease expires. RLS scopes rows to the current
-  /// tenant; operators should grant the parent role only the privileges that alias
-  /// is allowed to delegate.
+  /// The password is returned only in GenerateDatabaseCredentialsResponse. A
+  /// master-KEK-wrapped recovery envelope is stored so an authenticated replay of
+  /// the same idempotent request can recover the original one-time response without
+  /// creating a second login. The durable STARTING/ACTIVE/REVOKING/REVOKED/FAILED
+  /// state machine lets WORKER_VAULT_LEASE_REAPER reconcile every split boundary.
+  /// RLS scopes rows to the current tenant and project.
   /// ---------------------------------------------------------------------------
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
@@ -138,6 +164,15 @@ namespace udb.core.Vault.Entity.V1 {
       revokedAt_ = other.revokedAt_ != null ? other.revokedAt_.Clone() : null;
       state_ = other.state_;
       metadataJson_ = other.metadataJson_;
+      projectId_ = other.projectId_;
+      idempotencyKey_ = other.idempotencyKey_;
+      requestHash_ = other.requestHash_;
+      credentialCiphertext_ = other.credentialCiphertext_;
+      targetInstance_ = other.targetInstance_;
+      lastError_ = other.lastError_;
+      revokeReason_ = other.revokeReason_;
+      revocationOperationId_ = other.revocationOperationId_;
+      revocationRequestedAt_ = other.revocationRequestedAt_ != null ? other.revocationRequestedAt_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -268,7 +303,9 @@ namespace udb.core.Vault.Entity.V1 {
     public const int StateFieldNumber = 10;
     private string state_ = "";
     /// <summary>
-    /// ACTIVE | REVOKED. Expired ACTIVE rows are owned by WORKER_VAULT_LEASE_REAPER.
+    /// STARTING | ACTIVE | REVOKING | REVOKED | FAILED. Every non-terminal state,
+    /// plus FAILED rows with a pending revocation, is owned by the reconciliation
+    /// worker. REVOKED is set only after session termination and role-absence proof.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -288,6 +325,131 @@ namespace udb.core.Vault.Entity.V1 {
       get { return metadataJson_; }
       set {
         metadataJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 12;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "idempotency_key" field.</summary>
+    public const int IdempotencyKeyFieldNumber = 13;
+    private string idempotencyKey_ = "";
+    /// <summary>
+    /// Caller-supplied idempotency key. Its unique scope is tenant+project so a
+    /// response-loss replay can never mint a second physical login.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string IdempotencyKey {
+      get { return idempotencyKey_; }
+      set {
+        idempotencyKey_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "request_hash" field.</summary>
+    public const int RequestHashFieldNumber = 14;
+    private string requestHash_ = "";
+    /// <summary>
+    /// Hash of every authority-relevant issuance input; the same idempotency key
+    /// with different inputs is a conflict, never a replay.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RequestHash {
+      get { return requestHash_; }
+      set {
+        requestHash_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "credential_ciphertext" field.</summary>
+    public const int CredentialCiphertextFieldNumber = 15;
+    private string credentialCiphertext_ = "";
+    /// <summary>
+    /// Password encrypted by the broker's master KEK. STORAGE_ONLY ensures it can
+    /// only be selected by the trusted recovery path and never appears in normal
+    /// entity/SDK output, logs, CDC payloads, or audit events.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CredentialCiphertext {
+      get { return credentialCiphertext_; }
+      set {
+        credentialCiphertext_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "target_instance" field.</summary>
+    public const int TargetInstanceFieldNumber = 16;
+    private string targetInstance_ = "";
+    /// <summary>
+    /// Immutable physical authority selected at issuance. Reconciliation must use
+    /// this exact instance and fails closed if it is no longer routable.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TargetInstance {
+      get { return targetInstance_; }
+      set {
+        targetInstance_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "last_error" field.</summary>
+    public const int LastErrorFieldNumber = 17;
+    private string lastError_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string LastError {
+      get { return lastError_; }
+      set {
+        lastError_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "revoke_reason" field.</summary>
+    public const int RevokeReasonFieldNumber = 18;
+    private string revokeReason_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RevokeReason {
+      get { return revokeReason_; }
+      set {
+        revokeReason_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "revocation_operation_id" field.</summary>
+    public const int RevocationOperationIdFieldNumber = 19;
+    private string revocationOperationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RevocationOperationId {
+      get { return revocationOperationId_; }
+      set {
+        revocationOperationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "revocation_requested_at" field.</summary>
+    public const int RevocationRequestedAtFieldNumber = 20;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp revocationRequestedAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp RevocationRequestedAt {
+      get { return revocationRequestedAt_; }
+      set {
+        revocationRequestedAt_ = value;
       }
     }
 
@@ -317,6 +479,15 @@ namespace udb.core.Vault.Entity.V1 {
       if (!object.Equals(RevokedAt, other.RevokedAt)) return false;
       if (State != other.State) return false;
       if (MetadataJson != other.MetadataJson) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (IdempotencyKey != other.IdempotencyKey) return false;
+      if (RequestHash != other.RequestHash) return false;
+      if (CredentialCiphertext != other.CredentialCiphertext) return false;
+      if (TargetInstance != other.TargetInstance) return false;
+      if (LastError != other.LastError) return false;
+      if (RevokeReason != other.RevokeReason) return false;
+      if (RevocationOperationId != other.RevocationOperationId) return false;
+      if (!object.Equals(RevocationRequestedAt, other.RevocationRequestedAt)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -335,6 +506,15 @@ namespace udb.core.Vault.Entity.V1 {
       if (revokedAt_ != null) hash ^= RevokedAt.GetHashCode();
       if (State.Length != 0) hash ^= State.GetHashCode();
       if (MetadataJson.Length != 0) hash ^= MetadataJson.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (RequestHash.Length != 0) hash ^= RequestHash.GetHashCode();
+      if (CredentialCiphertext.Length != 0) hash ^= CredentialCiphertext.GetHashCode();
+      if (TargetInstance.Length != 0) hash ^= TargetInstance.GetHashCode();
+      if (LastError.Length != 0) hash ^= LastError.GetHashCode();
+      if (RevokeReason.Length != 0) hash ^= RevokeReason.GetHashCode();
+      if (RevocationOperationId.Length != 0) hash ^= RevocationOperationId.GetHashCode();
+      if (revocationRequestedAt_ != null) hash ^= RevocationRequestedAt.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -397,6 +577,42 @@ namespace udb.core.Vault.Entity.V1 {
         output.WriteRawTag(90);
         output.WriteString(MetadataJson);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(ProjectId);
+      }
+      if (IdempotencyKey.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(IdempotencyKey);
+      }
+      if (RequestHash.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(RequestHash);
+      }
+      if (CredentialCiphertext.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(CredentialCiphertext);
+      }
+      if (TargetInstance.Length != 0) {
+        output.WriteRawTag(130, 1);
+        output.WriteString(TargetInstance);
+      }
+      if (LastError.Length != 0) {
+        output.WriteRawTag(138, 1);
+        output.WriteString(LastError);
+      }
+      if (RevokeReason.Length != 0) {
+        output.WriteRawTag(146, 1);
+        output.WriteString(RevokeReason);
+      }
+      if (RevocationOperationId.Length != 0) {
+        output.WriteRawTag(154, 1);
+        output.WriteString(RevocationOperationId);
+      }
+      if (revocationRequestedAt_ != null) {
+        output.WriteRawTag(162, 1);
+        output.WriteMessage(RevocationRequestedAt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -451,6 +667,42 @@ namespace udb.core.Vault.Entity.V1 {
         output.WriteRawTag(90);
         output.WriteString(MetadataJson);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(ProjectId);
+      }
+      if (IdempotencyKey.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(IdempotencyKey);
+      }
+      if (RequestHash.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(RequestHash);
+      }
+      if (CredentialCiphertext.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(CredentialCiphertext);
+      }
+      if (TargetInstance.Length != 0) {
+        output.WriteRawTag(130, 1);
+        output.WriteString(TargetInstance);
+      }
+      if (LastError.Length != 0) {
+        output.WriteRawTag(138, 1);
+        output.WriteString(LastError);
+      }
+      if (RevokeReason.Length != 0) {
+        output.WriteRawTag(146, 1);
+        output.WriteString(RevokeReason);
+      }
+      if (RevocationOperationId.Length != 0) {
+        output.WriteRawTag(154, 1);
+        output.WriteString(RevocationOperationId);
+      }
+      if (revocationRequestedAt_ != null) {
+        output.WriteRawTag(162, 1);
+        output.WriteMessage(RevocationRequestedAt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -493,6 +745,33 @@ namespace udb.core.Vault.Entity.V1 {
       }
       if (MetadataJson.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(MetadataJson);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (IdempotencyKey.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
+      }
+      if (RequestHash.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RequestHash);
+      }
+      if (CredentialCiphertext.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CredentialCiphertext);
+      }
+      if (TargetInstance.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(TargetInstance);
+      }
+      if (LastError.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(LastError);
+      }
+      if (RevokeReason.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(RevokeReason);
+      }
+      if (RevocationOperationId.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(RevocationOperationId);
+      }
+      if (revocationRequestedAt_ != null) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(RevocationRequestedAt);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -547,6 +826,36 @@ namespace udb.core.Vault.Entity.V1 {
       }
       if (other.MetadataJson.Length != 0) {
         MetadataJson = other.MetadataJson;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.IdempotencyKey.Length != 0) {
+        IdempotencyKey = other.IdempotencyKey;
+      }
+      if (other.RequestHash.Length != 0) {
+        RequestHash = other.RequestHash;
+      }
+      if (other.CredentialCiphertext.Length != 0) {
+        CredentialCiphertext = other.CredentialCiphertext;
+      }
+      if (other.TargetInstance.Length != 0) {
+        TargetInstance = other.TargetInstance;
+      }
+      if (other.LastError.Length != 0) {
+        LastError = other.LastError;
+      }
+      if (other.RevokeReason.Length != 0) {
+        RevokeReason = other.RevokeReason;
+      }
+      if (other.RevocationOperationId.Length != 0) {
+        RevocationOperationId = other.RevocationOperationId;
+      }
+      if (other.revocationRequestedAt_ != null) {
+        if (revocationRequestedAt_ == null) {
+          RevocationRequestedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        RevocationRequestedAt.MergeFrom(other.RevocationRequestedAt);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -620,6 +929,45 @@ namespace udb.core.Vault.Entity.V1 {
             MetadataJson = input.ReadString();
             break;
           }
+          case 98: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 106: {
+            IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 114: {
+            RequestHash = input.ReadString();
+            break;
+          }
+          case 122: {
+            CredentialCiphertext = input.ReadString();
+            break;
+          }
+          case 130: {
+            TargetInstance = input.ReadString();
+            break;
+          }
+          case 138: {
+            LastError = input.ReadString();
+            break;
+          }
+          case 146: {
+            RevokeReason = input.ReadString();
+            break;
+          }
+          case 154: {
+            RevocationOperationId = input.ReadString();
+            break;
+          }
+          case 162: {
+            if (revocationRequestedAt_ == null) {
+              RevocationRequestedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(RevocationRequestedAt);
+            break;
+          }
         }
       }
     #endif
@@ -690,6 +1038,45 @@ namespace udb.core.Vault.Entity.V1 {
           }
           case 90: {
             MetadataJson = input.ReadString();
+            break;
+          }
+          case 98: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 106: {
+            IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 114: {
+            RequestHash = input.ReadString();
+            break;
+          }
+          case 122: {
+            CredentialCiphertext = input.ReadString();
+            break;
+          }
+          case 130: {
+            TargetInstance = input.ReadString();
+            break;
+          }
+          case 138: {
+            LastError = input.ReadString();
+            break;
+          }
+          case 146: {
+            RevokeReason = input.ReadString();
+            break;
+          }
+          case 154: {
+            RevocationOperationId = input.ReadString();
+            break;
+          }
+          case 162: {
+            if (revocationRequestedAt_ == null) {
+              RevocationRequestedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(RevocationRequestedAt);
             break;
           }
         }

@@ -109,6 +109,34 @@ pub(crate) fn vault_db_role_creation_status(message: impl Into<String>) -> Statu
     )
 }
 
+pub(crate) fn vault_db_idempotency_conflict_status() -> Status {
+    crate::runtime::executor_utils::retryable_aborted_status(
+        "vault",
+        "generate_database_credentials",
+        0,
+        "idempotency_key was already used with different database-credential inputs",
+    )
+}
+
+pub(crate) fn vault_db_lease_not_found_status() -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "vault",
+        "revoke_database_credentials",
+        "vault_db_credential_lease_not_found",
+        "database credential lease was not found in the authenticated tenant/project",
+    )
+}
+
+pub(crate) fn vault_db_reconciliation_status(message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::retryable_aborted_status(
+        "vault",
+        "database_credential_reconciliation",
+        250,
+        message,
+    )
+}
+
 pub(crate) fn vault_schema_not_found_status(
     operation: &'static str,
     schema_code: &'static str,

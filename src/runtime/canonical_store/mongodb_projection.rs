@@ -134,6 +134,7 @@ fn doc_to_projection_task(doc: &Document) -> SystemStoreResult<ProjectionTaskRow
         task_id,
         idempotency_key: get_str(doc, "idempotency_key"),
         project_id: get_str(doc, "project_id"),
+        manifest_checksum: get_str(doc, "manifest_checksum"),
         target_backend: get_str(doc, "target_backend"),
         target_instance: get_str(doc, "target_instance"),
         projection_kind: get_str(doc, "projection_kind"),
@@ -495,9 +496,13 @@ impl ProjectionTaskStore for MongoDbCanonicalStore {
 
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>> {
         let pipeline = vec![
-            doc! { "$match": { "status": ProjectionTaskStatus::DeadLetter.as_str() } },
+            doc! { "$match": {
+                "status": ProjectionTaskStatus::DeadLetter.as_str(),
+                "last_error": { "$not": { "$regex": "^projection authority rejected:" } },
+            } },
             doc! { "$group": {
                 "_id": {
+                    "project_id": "$project_id",
                     "source_table": "$source_table",
                     "target_backend": "$target_backend",
                     "target_instance": "$target_instance",
@@ -519,6 +524,7 @@ impl ProjectionTaskStore for MongoDbCanonicalStore {
         {
             let group = d.get_document("_id").cloned().unwrap_or_default();
             out.push(DeadLetterGroup {
+                project_id: get_str(&group, "project_id"),
                 source_table: get_str(&group, "source_table"),
                 target_backend: get_str(&group, "target_backend"),
                 target_instance: get_str(&group, "target_instance"),
@@ -530,6 +536,7 @@ impl ProjectionTaskStore for MongoDbCanonicalStore {
 
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
@@ -540,6 +547,8 @@ impl ProjectionTaskStore for MongoDbCanonicalStore {
             .update_many(
                 doc! {
                     "status": ProjectionTaskStatus::DeadLetter.as_str(),
+                    "last_error": { "$not": { "$regex": "^projection authority rejected:" } },
+                    "project_id": project_id,
                     "source_table": source_table,
                     "target_backend": target_backend,
                     "target_instance": target_instance,

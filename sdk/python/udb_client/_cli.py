@@ -7,12 +7,12 @@ Installing ``udb-client`` exposes a console script named ``udb`` (wired in
 version-matched ``udb`` binary and execs it, transparently forwarding all
 arguments and the exit code. Resolution order:
 
-  1. An ``udb`` binary whose ``--version`` matches 0.5.7 already on
+  1. An ``udb`` binary whose ``--version`` matches 0.5.9 already on
      ``PATH`` (but not this launcher itself).
   2. A previously downloaded binary cached for this version under the per-user
      cache dir.
   3. The matching release asset downloaded from
-     ``https://github.com/fahara02/udb/releases/tag/v0.5.7`` for the
+     ``https://github.com/fahara02/udb/releases/tag/v0.5.9`` for the
      current OS/arch, cached, then exec'd.
 
 Set ``UDB_BIN`` to force a specific binary, or ``UDB_SKIP_DOWNLOAD=1`` to forbid
@@ -32,7 +32,7 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
-UDB_VERSION = "0.5.7"
+UDB_VERSION = "0.5.9"
 PROTOCOL_VERSION = "1.0.0"
 _REPO = "fahara02/udb"
 _RELEASE_BASE = f"https://github.com/{_REPO}/releases/download/v{UDB_VERSION}"

@@ -1,113 +1,157 @@
-//! The leader-elected dynamic DB-credential lease reaper for the native
-//! `VaultService`: revokes expired generated Postgres login roles and marks their
-//! durable lease rows REVOKED. Extracted verbatim from the former god file — the
-//! manifest-derived select/update SQL and the drop-then-mark ordering are
-//! byte-for-byte identical. Spawned by the leader via
-//! `NativeWorkerHost::spawn_while_leader` (`run_vault_db_lease_reaper_once` is
-//! re-exported from `mod.rs` for `serve()`).
+//! Leader-elected reconciliation for Vault dynamic database credentials.
+//!
+//! The worker owns every non-terminal split boundary: STARTING issuance claims,
+//! expired ACTIVE leases, REVOKING intents, and FAILED revocations. It resolves
+//! the immutable physical target recorded on each lease, terminates sessions,
+//! removes the role, verifies absence, and only then commits REVOKED plus the
+//! strict transactional outbox evidence.
 
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
+use uuid::Uuid;
 
-use super::config::{VAULT_DB_CREDENTIAL_LEASE_MSG, vault_db_lease_reaper_batch};
-use super::dynamic::{
-    drop_postgres_login_role, postgres_role_exists, terminate_postgres_login_sessions,
+use crate::runtime::DataBrokerRuntime;
+
+use super::config::{DB_LEASE_ACTIVE, DB_LEASE_FAILED, DB_LEASE_REVOKING, DB_LEASE_STARTING};
+use super::dynamic::postgres_role_exists;
+use super::lifecycle::{
+    activate_lease, finalize_revocation, load_reconciliation_candidates, mark_lease_failed,
+    transition_to_revoking,
 };
 
-pub async fn run_vault_db_lease_reaper_once(pool: &PgPool, batch: i64) -> Result<i64, String> {
-    let model = crate::runtime::native_catalog::native_model(
-        VAULT_DB_CREDENTIAL_LEASE_MSG,
-        &["lease_id", "username", "state", "expires_at", "revoked_at"],
-    );
-    let limit = batch.clamp(1, vault_db_lease_reaper_batch());
-    let select_sql = format!(
-        "SELECT {}, {} FROM {} WHERE {} = 'ACTIVE' AND {} IS NULL AND {} <= NOW() \
-         ORDER BY {} ASC LIMIT $1",
-        model.text_as("lease_id", "lease_id"),
-        model.text_as("username", "username"),
-        model.relation,
-        model.q("state"),
-        model.q("revoked_at"),
-        model.q("expires_at"),
-        model.q("expires_at")
-    );
-    let rows = sqlx::query(&select_sql)
-        .bind(limit)
-        .fetch_all(pool)
+pub async fn run_vault_db_lease_reaper_once(
+    runtime: &DataBrokerRuntime,
+    discovery_pool: &PgPool,
+    project_id: &str,
+    outbox_relation: Option<&str>,
+    batch: i64,
+) -> Result<i64, String> {
+    let leases = load_reconciliation_candidates(discovery_pool, batch)
         .await
-        .map_err(|err| format!("read expired vault DB credential leases failed: {err}"))?;
+        .map_err(|status| status.message().to_string())?;
+    let mut reconciled = 0i64;
+    for mut lease in leases {
+        if lease.project_id != project_id {
+            let err = format!(
+                "discovered lease project '{}' does not match worker project '{}'",
+                lease.project_id, project_id
+            );
+            let _ = mark_lease_failed(discovery_pool, &lease.lease_id, &err).await;
+            tracing::error!(lease_id = %lease.lease_id, error = %err,
+                "vault DB credential reconciliation refused cross-project row");
+            continue;
+        }
+        let context = crate::RequestContext {
+            tenant_id: lease.tenant_id.clone(),
+            project_id: lease.project_id.clone(),
+            target_backend: "postgres".to_string(),
+            target_instance: lease.target_instance.clone(),
+            ..crate::RequestContext::default()
+        };
+        let (physical_pool, resolved_instance) =
+            match runtime.native_store_postgres_binding_for_service("vault", true, &context) {
+                Ok(binding) => binding,
+                Err(status) => {
+                    let err = format!(
+                        "immutable database credential target is not routable: {}",
+                        status.message()
+                    );
+                    let _ = mark_lease_failed(discovery_pool, &lease.lease_id, &err).await;
+                    tracing::error!(lease_id = %lease.lease_id, error = %err,
+                    "vault DB credential reconciliation target resolution failed");
+                    continue;
+                }
+            };
+        if resolved_instance.unwrap_or_default() != lease.target_instance {
+            let err = "resolved database credential target does not match immutable lease target";
+            let _ = mark_lease_failed(discovery_pool, &lease.lease_id, err).await;
+            tracing::error!(lease_id = %lease.lease_id, target_instance = %lease.target_instance,
+                "vault DB credential reconciliation target drift refused");
+            continue;
+        }
 
-    let update_sql = format!(
-        "UPDATE {} SET {} = 'REVOKED', {} = NOW() \
-         WHERE {} = $1::uuid AND {} = 'ACTIVE'",
-        model.relation,
-        model.q("state"),
-        model.q("revoked_at"),
-        model.q("lease_id"),
-        model.q("state")
-    );
-    let mut revoked = 0i64;
-    for row in rows {
-        let lease_id: String = row
-            .try_get("lease_id")
-            .map_err(|err| format!("expired lease row missing lease_id: {err}"))?;
-        let username: String = row
-            .try_get("username")
-            .map_err(|err| format!("expired lease row missing username: {err}"))?;
-        // Fence sessions before role deletion. VALID UNTIL only blocks fresh
-        // logins; without this step a pre-expiry connection can outlive the
-        // advertised lease indefinitely.
-        if let Err(err) = terminate_postgres_login_sessions(pool, &username).await {
-            tracing::warn!(
-                lease_id = %lease_id,
-                username = %username,
-                error = %err,
-                "vault DB lease reaper: terminating expired login sessions failed; \
-                 lease remains ACTIVE for retry"
-            );
+        if lease.state == DB_LEASE_STARTING {
+            match postgres_role_exists(&physical_pool, &lease.username).await {
+                Ok(true) => match activate_lease(
+                    discovery_pool,
+                    outbox_relation,
+                    &lease,
+                    "reconcile_database_credential_issuance",
+                )
+                .await
+                {
+                    Ok(true) => reconciled += 1,
+                    Ok(false) => {}
+                    Err(status) => {
+                        tracing::warn!(lease_id = %lease.lease_id, error = %status,
+                            "vault DB credential STARTING activation retry failed");
+                    }
+                },
+                Ok(false) => {
+                    let err = "STARTING lease has no physical role after reconciliation grace";
+                    if mark_lease_failed(discovery_pool, &lease.lease_id, err)
+                        .await
+                        .is_ok()
+                    {
+                        reconciled += 1;
+                    }
+                }
+                Err(err) => {
+                    tracing::warn!(lease_id = %lease.lease_id, error = %err,
+                        "vault DB credential STARTING role proof failed");
+                }
+            }
             continue;
         }
-        // Log-and-continue: one un-droppable role (e.g. a role the broker can no
-        // longer manage, or a transient backend error) must not stall revocation
-        // of the rest of the batch. Skip marking THIS lease REVOKED — it stays
-        // ACTIVE and is retried on the next reaper pass — and move on.
-        if let Err(err) = drop_postgres_login_role(pool, &username).await {
-            tracing::warn!(
-                lease_id = %lease_id,
-                username = %username,
-                error = %err,
-                "vault DB lease reaper: dropping expired login role failed; \
-                 continuing with the rest of the batch"
-            );
+
+        let needs_revocation = (lease.state == DB_LEASE_ACTIVE
+            && lease.expires_at <= chrono::Utc::now())
+            || lease.state == DB_LEASE_REVOKING
+            || (lease.state == DB_LEASE_FAILED && lease.revocation_requested);
+        if !needs_revocation {
             continue;
         }
-        match postgres_role_exists(pool, &username).await {
-            Ok(false) => {}
-            Ok(true) => {
-                tracing::warn!(
-                    lease_id = %lease_id,
-                    username = %username,
-                    "vault DB lease reaper: generated role still exists after DROP; \
-                     lease remains ACTIVE for retry"
-                );
-                continue;
-            }
-            Err(err) => {
-                tracing::warn!(
-                    lease_id = %lease_id,
-                    username = %username,
-                    error = %err,
-                    "vault DB lease reaper: role-absence verification failed; \
-                     lease remains ACTIVE for retry"
-                );
-                continue;
-            }
-        }
-        let updated = sqlx::query(&update_sql)
-            .bind(&lease_id)
-            .execute(pool)
+        let operation_id = if lease.revocation_operation_id.is_empty() {
+            Uuid::new_v4().to_string()
+        } else {
+            lease.revocation_operation_id.clone()
+        };
+        if lease.state != DB_LEASE_REVOKING {
+            if let Err(status) = transition_to_revoking(
+                discovery_pool,
+                &lease.lease_id,
+                &operation_id,
+                if lease.state == DB_LEASE_ACTIVE {
+                    "lease expired"
+                } else {
+                    "retry failed revocation"
+                },
+            )
             .await
-            .map_err(|err| format!("mark vault DB credential lease revoked failed: {err}"))?;
-        revoked += updated.rows_affected() as i64;
+            {
+                tracing::warn!(lease_id = %lease.lease_id, error = %status,
+                    "vault DB credential REVOKING transition failed");
+                continue;
+            }
+            lease.state = DB_LEASE_REVOKING.to_string();
+            lease.revocation_operation_id = operation_id.clone();
+            lease.revocation_requested = true;
+        }
+        match finalize_revocation(
+            &physical_pool,
+            outbox_relation,
+            &lease,
+            &operation_id,
+            "reconcile_database_credential_revocation",
+        )
+        .await
+        {
+            Ok(()) => reconciled += 1,
+            Err(status) => {
+                let _ = mark_lease_failed(discovery_pool, &lease.lease_id, status.message()).await;
+                tracing::warn!(lease_id = %lease.lease_id, error = %status,
+                    "vault DB credential revocation reconciliation failed; durable intent retained");
+            }
+        }
     }
-    Ok(revoked)
+    Ok(reconciled)
 }

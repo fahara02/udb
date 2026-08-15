@@ -38,20 +38,18 @@
 //!
 //! The leader-lane DRIVERS both triggers call are implemented here in
 //! [`retention`]: [`retention::enabled_backup_policies`] is the bounded,
-//! RLS-bypassing cross-tenant read of every ENABLED `BackupPolicy`;
+//! project-by-project cross-tenant read of every ENABLED `BackupPolicy`;
 //! [`retention::run_backup_retention_once`] prunes each tenant's over-retention
 //! runs; and [`retention::run_scheduled_backups_once`] fires a due scheduled
 //! backup per policy through the SAME internal routine `StartTenantBackup` uses
 //! ([`export::run_tenant_backup`]), never through the gRPC layer. The due
 //! decision ([`retention::backup_due`]) is a PURE, unit-tested comparison.
 //!
-//! Only the periodic, leader-elected SPAWN that calls these drivers on an
-//! interval lives in the shared scheduler lane (`service::serve()` leader
-//! election under `singleton::WORKER_BACKUP_RETENTION`), not in this dir; see the
-//! `TODO(leader-wire)` in `retention.rs` for the exact spawn. Until it lands, the
-//! drivers run only when invoked explicitly. This module owns the durable policy
-//! contract, the backup/restore mechanics, the retention prune routine, and the
-//! leader-lane maintenance drivers.
+//! The periodic, leader-elected spawn that calls these drivers lives in the
+//! shared scheduler lane (`service::serve()` under
+//! `singleton::WORKER_BACKUP_RETENTION`). This module owns the durable policy
+//! contract, backup/restore mechanics, retention pruning, and maintenance
+//! drivers.
 
 use std::sync::Arc;
 
@@ -90,9 +88,8 @@ mod tests;
 
 /// Postgres-backed `BackupService` handler.
 pub struct BackupServiceImpl {
-    /// Backup native-store pool used only for leader-lane cross-tenant policy
-    /// enumeration (and bare tests). Production tenant row movement resolves its
-    /// project-bound canonical Postgres instance at operation start.
+    /// Startup Backup pool used for best-effort outbox emission and bare tests.
+    /// Project data and maintenance reads resolve their exact canonical store.
     pub(crate) pg_pool: Option<PgPool>,
     /// Runtime handle: typed native-entity dispatch (journal + policy), the
     /// encrypt/decrypt-at-rest envelope, and the object-store helpers.
@@ -176,15 +173,36 @@ impl BackupServiceImpl {
         })
     }
 
-    /// Raw tenant-row movement is durable-only: fail closed when no PG pool exists.
-    pub(crate) fn require_pool(&self) -> Result<&PgPool, Status> {
-        self.pg_pool.as_ref().ok_or_else(|| {
+    /// Resolve an explicitly published project catalog without demanding that
+    /// the project's current table topology is executable as a logical backup.
+    /// Inventory reads need the exact project/store authority, but must remain
+    /// available while an operator repairs a temporarily non-backup-capable
+    /// topology.
+    pub(crate) fn require_active_project(
+        &self,
+        requested_project_id: &str,
+    ) -> Result<String, Status> {
+        let catalog = self.catalog.as_deref().ok_or_else(|| {
             errors::backup_capability_status(
-                "postgres_store",
-                "postgres_store",
-                "backup service requires a Postgres-backed store (no PG pool configured)",
+                "project_catalog_binding",
+                "catalog_manifest",
+                "backup service requires the live project catalog",
             )
-        })
+        })?;
+        let project_id = match requested_project_id.trim() {
+            "" => DEFAULT_PROJECT_ID.to_string(),
+            value => value.to_string(),
+        };
+        if catalog.active_exact_for(&project_id).is_none() {
+            return Err(errors::backup_policy_status(
+                "resolve_project_topology",
+                "backup_project_catalog_not_active",
+                format!(
+                    "project '{project_id}' has no explicitly active catalog; default-project fallback is refused"
+                ),
+            ));
+        }
+        Ok(project_id)
     }
 
     /// Resolve one explicitly active project, its current catalog, and the single
@@ -204,25 +222,10 @@ impl BackupServiceImpl {
                 "backup service requires the live project catalog to enumerate tenant tables",
             )
         })?;
-        let project_id = match requested_project_id.trim() {
-            "" => DEFAULT_PROJECT_ID.to_string(),
-            value => value.to_string(),
-        };
-        if !catalog
-            .active_project_ids()
-            .iter()
-            .any(|active| active == &project_id)
-        {
-            return Err(errors::backup_policy_status(
-                "resolve_project_topology",
-                "backup_project_catalog_not_active",
-                format!(
-                    "project '{project_id}' has no explicitly active catalog; default-project fallback is refused"
-                ),
-            ));
-        }
-
-        let state = catalog.active_for(&project_id);
+        let project_id = self.require_active_project(requested_project_id)?;
+        let state = catalog
+            .active_exact_for(&project_id)
+            .expect("require_active_project established exact catalog authority");
         let plan = crate::runtime::core::tenant_purge::plan_tenant_purge(&state.manifest);
         let default_instance = runtime
             .choose_instance_name_for_project("postgres", true, &project_id)
@@ -396,10 +399,9 @@ impl DataBrokerService {
     /// tenant-table enumeration source), and the default object-store target.
     pub(crate) fn build_backup_service(&self) -> BackupServiceImpl {
         let runtime = self.runtime.load_full();
-        // Cross-tenant maintenance policy enumeration still needs the backup
-        // native store. Raw tenant movement never uses this startup pool; export
-        // and restore resolve a concrete project topology per operation.
-        let maintenance_pool = runtime
+        // Best-effort outbox emission keeps a startup pool. Project data and
+        // maintenance operations resolve an exact project store per operation.
+        let event_pool = runtime
             .native_store_pool_for_service("backup", true, DEFAULT_PROJECT_ID)
             .ok();
         let outbox = runtime.config().cdc.outbox_relation();
@@ -409,7 +411,7 @@ impl DataBrokerService {
             std::env::var("UDB_STORAGE_BUCKET").ok(),
         );
         BackupServiceImpl::new()
-            .with_postgres(maintenance_pool)
+            .with_postgres(event_pool)
             .with_runtime(Some(runtime))
             .with_outbox(Some(outbox))
             .with_channels(channels)

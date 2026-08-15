@@ -583,7 +583,7 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     saml_provider_id: "saml-provider-1", scim_group_id: "sdk-perf-group", scim_user_id: "scim-user-1",
     signal_peer_id: "signal-peer-1", step_id: "step-1", topic_pattern: "topic.*", ts_table: "sdk_timeseries",
     unpublish_track_id: "unpublish-track-1", update_key_id: "update-key-1", username: "perf-u",
-    vault_ciphertext: "vault-ciphertext-1", vault_db_role: "readonly", vault_delete_secret_path: "secret/delete",
+    vault_ciphertext: "vault-ciphertext-1", vault_db_role: "readonly", vault_db_idempotency_key: "vault-db-idempotency-1", vault_db_lease_id: "vault-db-lease-1", vault_delete_secret_path: "secret/delete",
     vault_destroy_secret_path: "secret/destroy", vault_key_name: "transit-key", vault_secret_path: "secret/path",
     vault_signature: "vault-signature-1", vault_signing_key_name: "transit-signing-key", vault_hmac_key_name: "transit-hmac-key", reissue_file_id: "reissue-file-1", workflow_id: "workflow-1",
     approve_draft_id: "approve-draft-1", canary_version_id: "canary-version-1",
@@ -1612,6 +1612,7 @@ test("manifest JSON body hydrates WebRTC turn and signaling rows", () => {
 test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   const fixtures = new PerfFixtures();
   fixtures.set("tenant_id", "tenant-1");
+  fixtures.set("project", "project-1");
   fixtures.set("vault_key_name", "sdk-perf-key");
   fixtures.set("vault_signing_key_name", "sdk-perf-signing-key");
   fixtures.set("vault_hmac_key_name", "sdk-perf-hmac-key");
@@ -1621,6 +1622,8 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   fixtures.set("vault_delete_secret_path", "app/delete");
   fixtures.set("vault_destroy_secret_path", "app/destroy");
   fixtures.set("vault_db_role", "sdk-readonly");
+  fixtures.set("vault_db_idempotency_key", "sdk-vault-db-idempotency");
+  fixtures.set("vault_db_lease_id", "sdk-vault-db-lease");
   fixtures.set("vault_create_key_name", "sdk-perf-create-key");
   fixtures.set("vault_put_secret_path", "app/put");
   const created = manifestJSONBody("VaultService", "create_transit_key", fixtures);
@@ -1629,6 +1632,7 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   const destroyed = manifestJSONBody("VaultService", "destroy_secret", fixtures);
   const encrypted = manifestJSONBody("VaultService", "encrypt", fixtures);
   const dbCreds = manifestJSONBody("VaultService", "generate_database_credentials", fixtures);
+  const revokedDbCreds = manifestJSONBody("VaultService", "revoke_database_credentials", fixtures);
   const secret = manifestJSONBody("VaultService", "get_secret", fixtures);
   const hmac = manifestJSONBody("VaultService", "hmac", fixtures);
   const secrets = manifestJSONBody("VaultService", "list_secrets", fixtures);
@@ -1645,7 +1649,10 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   assert.equal(destroyed?.confirmation_token, destroyed?.secret_path);
   assert.equal(encrypted?.plaintext, "perf");
   assert.equal(dbCreds?.role_name, "sdk-readonly");
+  assert.equal(dbCreds?.project_id, "project-1");
   assert.equal(dbCreds?.ttl_seconds, 900);
+  assert.equal(dbCreds?.idempotency_key, "sdk-vault-db-idempotency");
+  assert.equal(revokedDbCreds?.lease_id, "sdk-vault-db-lease");
   assert.equal(secret?.secret_path, "app/config");
   assert.equal(hmac?.input, "perf");
   assert.equal(hmac?.key_name, "sdk-perf-hmac-key");
@@ -2466,9 +2473,9 @@ async function seedPerfFixtures(
     fix.set("ts_table", "sdk_perf_ts");
   });
 
-  // ── Capture the live catalog manifest (READ-ONLY) so the measured StageCatalog has a
-  // valid CatalogManifest (Go passes StageCatalog with the new binary). activate/rollback/
-  // get_version stay broker-blocked (K2). If staging still poisons, revert this.
+  // ── Reset already activated the release manifest for this exact project. Capture it
+  // so the measured StageCatalog -> ActivateCatalog -> RollbackCatalog lifecycle uses a
+  // real manifest while preserving the active 1.0.0 compatibility contract.
   await tryRun("CaptureCatalogManifest", async () => {
     const cm = await data.get_catalog_manifest({ context: { ...ctx, scopes: ["udb:admin"] }, redact: false }, opts);
     if (cm?.manifest_json) {
@@ -2477,10 +2484,6 @@ async function seedPerfFixtures(
       fix.set("catalog_manifest_b64", bytes.toString("base64"));
     }
   });
-
-  // NOTE: NOT staging a catalog here — staging the manifest puts the broker into a
-  // pending-catalog state that fails-precondition EVERY DataBroker data op (76 RPCs).
-  // The 4 catalog RPCs aren't worth that; leave them red until a safe seed path exists.
 
   // ── AnalyticsService: a recorded metric → a stage_name with data ───────────────
   const stage = `sdk_perf_stage_${suffix}`;
@@ -4144,7 +4147,13 @@ test("live per-RPC perf", {
       let anyOk = false;
       let firstErr = "OK";
       let firstDetail: string | undefined;
-      for (let i = 0; i < itersFor(kind); i++) {
+      // v0.5.7 treats refresh-token replay as credential theft and revokes the
+      // principal's sessions. Measure the single-use rotation once; repeating the
+      // same fixture token would invalidate the bearer used by every later RPC.
+      const iterations = serviceName === "AuthnService" && methodName === "refresh_token"
+        ? 1
+        : itersFor(kind);
+      for (let i = 0; i < iterations; i++) {
         const r = await timeMethod(fn, mkBody());
         allDurs.push(r.ms);
         if (r.err === "OK") { anyOk = true; okDurs.push(r.ms); }
@@ -4227,7 +4236,17 @@ test("live per-RPC perf", {
     // that same entity earlier in the run (Go orderRPCsByAuthPhase). Stable sort.
     const okRank: Record<string, number> = { read_only: 0, mutation: 1, destructive: 2 };
     const rankOf = (u: Unit) => okRank[operationKindOf((u.api as any).serviceFull, u.methodName) ?? "read_only"] ?? 0;
-    phase2 = phase2.map((u, i) => [u, i] as [Unit, number]).sort((a, b) => (rankOf(a[0]) - rankOf(b[0])) || (a[1] - b[1])).map(([u]) => u);
+    const catalogLifecycleRank: Record<string, number> = { stage_catalog: 0, activate_catalog: 1, rollback_catalog: 2 };
+    const catalogRankOf = (u: Unit) => u.serviceName === "DataBroker" ? (catalogLifecycleRank[u.methodName] ?? 3) : 3;
+    phase2 = phase2.map((u, i) => [u, i] as [Unit, number]).sort((a, b) =>
+      (rankOf(a[0]) - rankOf(b[0])) ||
+      (catalogRankOf(a[0]) - catalogRankOf(b[0])) ||
+      (a[1] - b[1])
+    ).map(([u]) => u);
+    // Tenant-wide revocation intentionally invalidates the benchmark session.
+    // Run it after every disposable-principal teardown, then log in once more
+    // before the final self-PurgeTenant.
+    phase3.sort((a, b) => Number(a.methodName === "admin_revoke_all_tenant_sessions") - Number(b.methodName === "admin_revoke_all_tenant_sessions"));
 
     // Phase 1: establish/validate the session FIRST (the seed phase already ran above
     // and captured the session/token fixtures these RPCs consume).
@@ -4238,11 +4257,17 @@ test("live per-RPC perf", {
     // targets. Some rows intentionally deactivate/revoke the current tenant's
     // authn state, so no later measurement may depend on that principal.
     for (const u of phase3) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
-    // Terminal destructive RPCs can invalidate broad tenant state. Keep them
-    // after Authn teardown, using the same verified tenant-scoped credential as
-    // the other SDK harnesses instead of performing another login after
-    // tenant-wide session revocation has run.
+    // Terminal destructive RPCs can invalidate broad tenant state. The preceding
+    // tenant-wide session revoke invalidated the old bearer by design, so acquire
+    // a new verified session before measuring the final self-purge.
     if (terminalDestructive.length > 0) {
+      await project.login({
+        username,
+        password,
+        tenant_hint: tenantId,
+        project_hint: projectId,
+        device_name: "ts-sdk-perf-final-purge",
+      });
       tenantId = fixtures.lookup("purge_tenant_id") || tenantId;
       project.setTenant(tenantId);
     }
@@ -4270,8 +4295,8 @@ test("live per-RPC perf", {
       + "validate_token → introspect_token → get_jwks), then the seed phase; Phase 2 measures everything "
       + "else; Phase 3 LAST runs the session/credential-teardown AuthnService RPCs (logout, revoke_*, "
       + "change/reset password, admin_reset_mfa, disable_mfa_factor, …) against the seeded DISPOSABLE "
-      + "user/session so the admin's own session is never killed mid-run. The final terminal destructive "
-      + "tenant purge uses the verified tenant-scoped benchmark credential, matching the other SDK harnesses.", "",
+      + "user/session. Tenant-wide revocation runs last in that phase; the harness then logs in again so "
+      + "the final terminal tenant purge measures the handler rather than a stale-bearer rejection.", "",
       "## Seeded fixtures", "",
       `Captured semantic field → seeded value keys used to resolve request fields: ${fkeys.join(", ")}`, "",
       "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];

@@ -30,6 +30,8 @@ private static final long serialVersionUID = 0L;
   private GenerateDatabaseCredentialsRequest() {
     tenantId_ = "";
     roleName_ = "";
+    projectId_ = "";
+    idempotencyKey_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -134,6 +136,106 @@ private static final long serialVersionUID = 0L;
     return ttlSeconds_;
   }
 
+  public static final int PROJECT_ID_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object projectId_ = "";
+  /**
+   * <pre>
+   * Must match the verified project claim/header. Empty resolves to the
+   * canonical default project, never to an arbitrary catalog fallback.
+   * </pre>
+   *
+   * <code>string project_id = 4 [json_name = "projectId"];</code>
+   * @return The projectId.
+   */
+  @java.lang.Override
+  public java.lang.String getProjectId() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      projectId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Must match the verified project claim/header. Empty resolves to the
+   * canonical default project, never to an arbitrary catalog fallback.
+   * </pre>
+   *
+   * <code>string project_id = 4 [json_name = "projectId"];</code>
+   * @return The bytes for projectId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getProjectIdBytes() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      projectId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int IDEMPOTENCY_KEY_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object idempotencyKey_ = "";
+  /**
+   * <pre>
+   * Required caller-supplied replay key. Reusing it with identical authoritative
+   * inputs returns the original KEK-protected credential response; reusing it
+   * with different inputs is an ABORTED conflict.
+   * </pre>
+   *
+   * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+   * @return The idempotencyKey.
+   */
+  @java.lang.Override
+  public java.lang.String getIdempotencyKey() {
+    java.lang.Object ref = idempotencyKey_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      idempotencyKey_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Required caller-supplied replay key. Reusing it with identical authoritative
+   * inputs returns the original KEK-protected credential response; reusing it
+   * with different inputs is an ABORTED conflict.
+   * </pre>
+   *
+   * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+   * @return The bytes for idempotencyKey.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getIdempotencyKeyBytes() {
+    java.lang.Object ref = idempotencyKey_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      idempotencyKey_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -157,6 +259,12 @@ private static final long serialVersionUID = 0L;
     if (ttlSeconds_ != 0) {
       output.writeInt32(3, ttlSeconds_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, projectId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, idempotencyKey_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -175,6 +283,12 @@ private static final long serialVersionUID = 0L;
     if (ttlSeconds_ != 0) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(3, ttlSeconds_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, projectId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, idempotencyKey_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -197,6 +311,10 @@ private static final long serialVersionUID = 0L;
         .equals(other.getRoleName())) return false;
     if (getTtlSeconds()
         != other.getTtlSeconds()) return false;
+    if (!getProjectId()
+        .equals(other.getProjectId())) return false;
+    if (!getIdempotencyKey()
+        .equals(other.getIdempotencyKey())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -214,6 +332,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getRoleName().hashCode();
     hash = (37 * hash) + TTL_SECONDS_FIELD_NUMBER;
     hash = (53 * hash) + getTtlSeconds();
+    hash = (37 * hash) + PROJECT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getProjectId().hashCode();
+    hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
+    hash = (53 * hash) + getIdempotencyKey().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -348,6 +470,8 @@ private static final long serialVersionUID = 0L;
       tenantId_ = "";
       roleName_ = "";
       ttlSeconds_ = 0;
+      projectId_ = "";
+      idempotencyKey_ = "";
       return this;
     }
 
@@ -390,6 +514,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.ttlSeconds_ = ttlSeconds_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.projectId_ = projectId_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.idempotencyKey_ = idempotencyKey_;
+      }
     }
 
     @java.lang.Override
@@ -416,6 +546,16 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getTtlSeconds() != 0) {
         setTtlSeconds(other.getTtlSeconds());
+      }
+      if (!other.getProjectId().isEmpty()) {
+        projectId_ = other.projectId_;
+        bitField0_ |= 0x00000008;
+        onChanged();
+      }
+      if (!other.getIdempotencyKey().isEmpty()) {
+        idempotencyKey_ = other.idempotencyKey_;
+        bitField0_ |= 0x00000010;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -458,6 +598,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 24
+            case 34: {
+              projectId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
+            case 42: {
+              idempotencyKey_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -647,6 +797,205 @@ private static final long serialVersionUID = 0L;
     public Builder clearTtlSeconds() {
       bitField0_ = (bitField0_ & ~0x00000004);
       ttlSeconds_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object projectId_ = "";
+    /**
+     * <pre>
+     * Must match the verified project claim/header. Empty resolves to the
+     * canonical default project, never to an arbitrary catalog fallback.
+     * </pre>
+     *
+     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * @return The projectId.
+     */
+    public java.lang.String getProjectId() {
+      java.lang.Object ref = projectId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        projectId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Must match the verified project claim/header. Empty resolves to the
+     * canonical default project, never to an arbitrary catalog fallback.
+     * </pre>
+     *
+     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * @return The bytes for projectId.
+     */
+    public com.google.protobuf.ByteString
+        getProjectIdBytes() {
+      java.lang.Object ref = projectId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        projectId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Must match the verified project claim/header. Empty resolves to the
+     * canonical default project, never to an arbitrary catalog fallback.
+     * </pre>
+     *
+     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * @param value The projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      projectId_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Must match the verified project claim/header. Empty resolves to the
+     * canonical default project, never to an arbitrary catalog fallback.
+     * </pre>
+     *
+     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProjectId() {
+      projectId_ = getDefaultInstance().getProjectId();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Must match the verified project claim/header. Empty resolves to the
+     * canonical default project, never to an arbitrary catalog fallback.
+     * </pre>
+     *
+     * <code>string project_id = 4 [json_name = "projectId"];</code>
+     * @param value The bytes for projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      projectId_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object idempotencyKey_ = "";
+    /**
+     * <pre>
+     * Required caller-supplied replay key. Reusing it with identical authoritative
+     * inputs returns the original KEK-protected credential response; reusing it
+     * with different inputs is an ABORTED conflict.
+     * </pre>
+     *
+     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+     * @return The idempotencyKey.
+     */
+    public java.lang.String getIdempotencyKey() {
+      java.lang.Object ref = idempotencyKey_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        idempotencyKey_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Required caller-supplied replay key. Reusing it with identical authoritative
+     * inputs returns the original KEK-protected credential response; reusing it
+     * with different inputs is an ABORTED conflict.
+     * </pre>
+     *
+     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+     * @return The bytes for idempotencyKey.
+     */
+    public com.google.protobuf.ByteString
+        getIdempotencyKeyBytes() {
+      java.lang.Object ref = idempotencyKey_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        idempotencyKey_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Required caller-supplied replay key. Reusing it with identical authoritative
+     * inputs returns the original KEK-protected credential response; reusing it
+     * with different inputs is an ABORTED conflict.
+     * </pre>
+     *
+     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+     * @param value The idempotencyKey to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIdempotencyKey(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      idempotencyKey_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Required caller-supplied replay key. Reusing it with identical authoritative
+     * inputs returns the original KEK-protected credential response; reusing it
+     * with different inputs is an ABORTED conflict.
+     * </pre>
+     *
+     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIdempotencyKey() {
+      idempotencyKey_ = getDefaultInstance().getIdempotencyKey();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Required caller-supplied replay key. Reusing it with identical authoritative
+     * inputs returns the original KEK-protected credential response; reusing it
+     * with different inputs is an ABORTED conflict.
+     * </pre>
+     *
+     * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
+     * @param value The bytes for idempotencyKey to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIdempotencyKeyBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      idempotencyKey_ = value;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }

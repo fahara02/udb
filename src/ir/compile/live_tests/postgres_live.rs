@@ -528,7 +528,19 @@ async fn execute_legacy_delete(
     let plan = build_delete_plan(manifest, request);
     assert!(plan.errors.is_empty(), "{:?}", plan.errors);
     let table = table_for_message(manifest, &request.message_type).expect("manifest table");
-    let values = filter_bind_values(&request.filter);
+    // Mirror the production planner fallback exactly: bind physical-column
+    // filter values first, then the verified tenant/project predicates that
+    // `build_delete_plan` appends after the caller-owned filter placeholders.
+    let normalized_filter = crate::planning::broker::normalize_filter_keys(
+        &crate::planning::broker::column_resolver(table),
+        &request.filter,
+    );
+    let mut values = filter_bind_values(&normalized_filter);
+    values.extend(
+        plan.context_parameter_values
+            .iter()
+            .map(|value| serde_json::Value::String(value.clone())),
+    );
     let query = bind_values(
         sqlx::query(&plan.sql),
         table,

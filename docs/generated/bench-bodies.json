@@ -1820,8 +1820,8 @@
     "operation_id": "activateCatalog",
     "op_kind": "DESTRUCTIVE",
     "request_msg": "CatalogVersionRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\", \"scopes\": [\"udb:admin\"] }, \"project_id\": \"<seed:project>\", \"version\": \"\" }`",
-    "notes": "version from a prior StageCatalog (empty = latest STAGED). `reason`,`idempotency_key` optional."
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\", \"scopes\": [\"udb:admin\"] }, \"project_id\": \"<seed:project>\", \"version\": \"\", \"idempotency_key\": \"sdk-perf-catalog-activate\" }`",
+    "notes": "version from a prior StageCatalog (empty = latest STAGED). `idempotency_key` is required; `reason` optional."
   },
   {
     "file": "data_broker.md",
@@ -2576,8 +2576,8 @@
     "operation_id": "rollbackCatalog",
     "op_kind": "DESTRUCTIVE",
     "request_msg": "CatalogVersionRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\", \"scopes\": [\"udb:admin\"] }, \"project_id\": \"<seed:project>\" }`",
-    "notes": "rolls back to previous ACTIVE. `version`/`reason`/`idempotency_key` optional. Needs ≥2 catalog versions."
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\", \"scopes\": [\"udb:admin\"] }, \"project_id\": \"<seed:project>\", \"version\": \"1.0.0\", \"idempotency_key\": \"sdk-perf-catalog-rollback\" }`",
+    "notes": "StageCatalog then ActivateCatalog creates the prior ROLLED_BACK 1.0.0 row. Both explicit `version` and `idempotency_key` are required so retries cannot toggle catalogs; `reason` optional."
   },
   {
     "file": "data_broker.md",
@@ -2624,8 +2624,8 @@
     "operation_id": "stageCatalog",
     "op_kind": "DESTRUCTIVE",
     "request_msg": "StageCatalogRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\", \"scopes\": [\"udb:admin\"] }, \"manifest_json\": \"<seed:catalog_manifest_b64>\", \"project_id\": \"<seed:project>\", \"reason\": \"stage\" }`",
-    "notes": "manifest_json is field 1000 (not 2). Needs a real serialized CatalogManifest. `idempotency_key` optional."
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\", \"scopes\": [\"udb:admin\"] }, \"manifest_json\": \"<seed:catalog_manifest_b64>\", \"project_id\": \"<seed:project>\", \"reason\": \"stage\", \"idempotency_key\": \"sdk-perf-catalog-stage\" }`",
+    "notes": "manifest_json is field 1000 (not 2). Needs a valid CatalogManifest. `idempotency_key` is required."
   },
   {
     "file": "data_broker.md",
@@ -4009,6 +4009,18 @@
   },
   {
     "file": "vault.md",
+    "rpc": "EmergencyRevokeDatabaseCredentials",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/EmergencyRevokeDatabaseCredentials",
+    "api_alias": "emergency_revoke_database_credentials",
+    "operation_id": "emergencyRevokeDatabaseCredentials",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "EmergencyRevokeDatabaseCredentialsRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"reason\": \"benchmark emergency cleanup\", \"confirmation_token\": \"<seed:tenant_id>:<seed:project>\" }`",
+    "notes": "durably marks and revokes every non-terminal lease in the exact tenant/project."
+  },
+  {
+    "file": "vault.md",
     "rpc": "Encrypt",
     "service": "VaultService",
     "wire_rpc": "VaultService/Encrypt",
@@ -4040,8 +4052,8 @@
     "operation_id": "generateDatabaseCredentials",
     "op_kind": "MUTATION",
     "request_msg": "GenerateDatabaseCredentialsRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"role_name\": \"<seed:vault_db_role>\", \"ttl_seconds\": 900 }`",
-    "notes": "requests the seeded dynamic database role."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"role_name\": \"<seed:vault_db_role>\", \"ttl_seconds\": 900, \"idempotency_key\": \"<seed:vault_db_idempotency_key>\" }`",
+    "notes": "requests the seeded dynamic database role with replay-safe recovery."
   },
   {
     "file": "vault.md",
@@ -4102,6 +4114,18 @@
     "request_msg": "PutSecretRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"secret_path\": \"<seed:vault_put_secret_path>\", \"secret_value\": \"perf-secret\", \"expected_version\": 0, \"metadata_json\": \"{}\" }`",
     "notes": "writes a disposable secret path with compare-and-swap; GetSecret uses `<seed:vault_secret_path>` so PutSecret does not conflict with the preseeded read fixture."
+  },
+  {
+    "file": "vault.md",
+    "rpc": "RevokeDatabaseCredentials",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/RevokeDatabaseCredentials",
+    "api_alias": "revoke_database_credentials",
+    "operation_id": "revokeDatabaseCredentials",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "RevokeDatabaseCredentialsRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"lease_id\": \"<seed:vault_db_lease_id>\", \"reason\": \"benchmark cleanup\" }`",
+    "notes": "terminates sessions and revokes one seeded lease."
   },
   {
     "file": "vault.md",

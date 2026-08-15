@@ -451,8 +451,8 @@ fn gc_intent_from_row(row: &sqlx::postgres::PgRow) -> Result<GcIntentRow, Status
     })
 }
 
-/// Idempotent DDL for the GC-intent ledger, applied once per process (guarded by a
-/// `OnceCell` in [`StorageServiceImpl::ensure_gc_intents_table`]).
+/// Idempotent DDL for the GC-intent ledger, applied once per service/pool instance
+/// (guarded by `StorageServiceImpl::gc_intents_ready`).
 const GC_INTENTS_DDL: &[&str] = &[
     "CREATE SCHEMA IF NOT EXISTS udb_storage",
     "CREATE TABLE IF NOT EXISTS udb_storage.gc_intents ( \
@@ -505,12 +505,11 @@ impl StorageServiceImpl {
     }
 
     /// Create the durable GC-intent ledger if absent (idempotent DDL, run once per
-    /// process). Fails closed when no Postgres pool is wired (metadata-only mode
-    /// cannot durably track HARD deletes).
+    /// service/pool instance). Fails closed when no Postgres pool is wired
+    /// (metadata-only mode cannot durably track HARD deletes).
     pub(crate) async fn ensure_gc_intents_table(&self) -> Result<(), Status> {
-        static GC_INTENTS_READY: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
         let pool = self.gc_intent_pool()?;
-        GC_INTENTS_READY
+        self.gc_intents_ready
             .get_or_try_init(|| async {
                 for stmt in GC_INTENTS_DDL {
                     sqlx::query(stmt).execute(pool).await.map_err(|err| {

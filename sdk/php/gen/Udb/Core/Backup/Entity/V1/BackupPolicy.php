@@ -15,7 +15,7 @@ use Google\Protobuf\RepeatedField;
  * 9.10). The actual scheduling is driven by the native SchedulerService (9.3):
  * a leader-elected tick fires `udb.scheduler.job.fired.v1` for a due policy,
  * which a worker turns into a StartTenantBackup. THIS row is the durable,
- * tenant-scoped retention/schedule contract. RLS scopes rows to the tenant.
+ * tenant+project-scoped retention/schedule contract. RLS scopes rows to both.
  * ---------------------------------------------------------------------------
  *
  * Generated from protobuf message <code>udb.core.backup.entity.v1.BackupPolicy</code>
@@ -31,7 +31,14 @@ class BackupPolicy extends \Google\Protobuf\Internal\Message
      */
     protected $tenant_id = '';
     /**
-     * Caller-chosen logical policy name, unique per tenant.
+     * First-class project owner. Blank is reserved for quarantined legacy rows;
+     * new serving-path writes always persist an explicitly active project.
+     *
+     * Generated from protobuf field <code>string project_id = 13 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $project_id = '';
+    /**
+     * Caller-chosen logical policy name, unique per tenant+project.
      *
      * Generated from protobuf field <code>string policy_name = 3 [json_name = "policyName", (.udb.core.common.v1.pg_column) = {</code>
      */
@@ -90,8 +97,11 @@ class BackupPolicy extends \Google\Protobuf\Internal\Message
      *
      *     @type string $policy_id
      *     @type string $tenant_id
+     *     @type string $project_id
+     *           First-class project owner. Blank is reserved for quarantined legacy rows;
+     *           new serving-path writes always persist an explicitly active project.
      *     @type string $policy_name
-     *           Caller-chosen logical policy name, unique per tenant.
+     *           Caller-chosen logical policy name, unique per tenant+project.
      *     @type string $schedule_cron
      *           Cron expression evaluated by the SchedulerService (9.3). Empty disables
      *           scheduled runs (manual StartTenantBackup still works).
@@ -158,7 +168,35 @@ class BackupPolicy extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Caller-chosen logical policy name, unique per tenant.
+     * First-class project owner. Blank is reserved for quarantined legacy rows;
+     * new serving-path writes always persist an explicitly active project.
+     *
+     * Generated from protobuf field <code>string project_id = 13 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * First-class project owner. Blank is reserved for quarantined legacy rows;
+     * new serving-path writes always persist an explicitly active project.
+     *
+     * Generated from protobuf field <code>string project_id = 13 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->project_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Caller-chosen logical policy name, unique per tenant+project.
      *
      * Generated from protobuf field <code>string policy_name = 3 [json_name = "policyName", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
@@ -169,7 +207,7 @@ class BackupPolicy extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Caller-chosen logical policy name, unique per tenant.
+     * Caller-chosen logical policy name, unique per tenant+project.
      *
      * Generated from protobuf field <code>string policy_name = 3 [json_name = "policyName", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var

@@ -99,7 +99,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"saml_provider_id": "saml-provider-1", "scim_group_id": "sdk-perf-group", "scim_user_id": "scim-user-1", "delete_scim_user_id": "delete-scim-user-1",
 		"signal_peer_id": "signal-peer-1", "step_id": "step-1", "topic_pattern": "topic.*", "ts_table": "sdk_timeseries",
 		"unpublish_track_id": "unpublish-track-1", "update_draft_id": "update-draft-1", "update_key_id": "update-key-1", "username": "perf-u",
-		"vault_ciphertext": "vault-ciphertext-1", "vault_db_role": "readonly", "vault_delete_secret_path": "secret/delete",
+		"vault_ciphertext": "vault-ciphertext-1", "vault_db_role": "readonly", "vault_db_idempotency_key": "vault-db-idempotency-1", "vault_db_lease_id": "vault-db-lease-1", "vault_delete_secret_path": "secret/delete",
 		"vault_create_key_name": "transit-create-key", "vault_destroy_secret_path": "secret/destroy", "vault_key_name": "transit-key", "vault_put_secret_path": "secret/put", "vault_secret_path": "secret/path",
 		"vault_signature": "vault-signature-1", "vault_signing_key_name": "transit-signing-key", "vault_hmac_key_name": "transit-hmac-key", "reissue_file_id": "reissue-file-1", "workflow_id": "workflow-1",
 	} {
@@ -166,13 +166,74 @@ func orderRPCsByAuthPhase(all []RPCInfo) []RPCInfo {
 	// seeded entity (GetRole/GetApiKey/GetPolicyRule) is never invalidated by a
 	// delete/revoke of that same entity later in the run.
 	okRank := map[string]int{"read_only": 0, "mutation": 1, "destructive": 2}
-	sort.SliceStable(p2, func(i, j int) bool { return okRank[p2[i].OperationKind] < okRank[p2[j].OperationKind] })
+	catalogLifecycleRank := map[string]int{"StageCatalog": 0, "ActivateCatalog": 1, "RollbackCatalog": 2}
+	sort.SliceStable(p2, func(i, j int) bool {
+		leftKind, rightKind := okRank[p2[i].OperationKind], okRank[p2[j].OperationKind]
+		if leftKind != rightKind {
+			return leftKind < rightKind
+		}
+		leftLifecycle, leftCatalog := catalogLifecycleRank[p2[i].Name]
+		rightLifecycle, rightCatalog := catalogLifecycleRank[p2[j].Name]
+		if p2[i].Service == "DataBroker" && leftCatalog {
+			if p2[j].Service == "DataBroker" && rightCatalog {
+				return leftLifecycle < rightLifecycle
+			}
+			return true
+		}
+		if p2[j].Service == "DataBroker" && rightCatalog {
+			return false
+		}
+		return false
+	})
+	// The tenant-wide revoke intentionally kills the benchmark administrator's
+	// current session. Keep it after every disposable-principal teardown; the
+	// harness re-authenticates once before the final self-PurgeTenant.
+	sort.SliceStable(p3, func(i, j int) bool {
+		return p3[i].Name != "AdminRevokeAllTenantSessions" && p3[j].Name == "AdminRevokeAllTenantSessions"
+	})
 	out := make([]RPCInfo, 0, len(all))
 	out = append(out, p1...)
 	out = append(out, p2...)
 	out = append(out, p3...)
 	out = append(out, final...)
 	return out
+}
+
+func TestOrderRPCsReauthBoundaryFollowsTenantWideRevoke(t *testing.T) {
+	ordered := orderRPCsByAuthPhase([]RPCInfo{
+		{
+			Service:    "TenantService",
+			FullMethod: "/udb.core.tenant.services.v1.TenantService/PurgeTenant",
+			Name:       "PurgeTenant",
+		},
+		{Service: "AuthnService", Name: "AdminRevokeAllTenantSessions"},
+		{Service: "AuthnService", Name: "Logout"},
+		{Service: "DataBroker", Name: "Select", OperationKind: "read_only"},
+	})
+
+	want := []string{"Select", "Logout", "AdminRevokeAllTenantSessions", "PurgeTenant"}
+	if len(ordered) != len(want) {
+		t.Fatalf("ordered RPC count = %d, want %d", len(ordered), len(want))
+	}
+	for i, name := range want {
+		if ordered[i].Name != name {
+			t.Fatalf("ordered RPC %d = %s, want %s", i, ordered[i].Name, name)
+		}
+	}
+}
+
+func TestOrderRPCsPinsCatalogLifecycle(t *testing.T) {
+	ordered := orderRPCsByAuthPhase([]RPCInfo{
+		{Service: "DataBroker", Name: "ActivateCatalog", OperationKind: "destructive"},
+		{Service: "DataBroker", Name: "RollbackCatalog", OperationKind: "destructive"},
+		{Service: "DataBroker", Name: "StageCatalog", OperationKind: "destructive"},
+	})
+	want := []string{"StageCatalog", "ActivateCatalog", "RollbackCatalog"}
+	for i, name := range want {
+		if ordered[i].Name != name {
+			t.Fatalf("ordered catalog RPC %d = %s, want %s", i, ordered[i].Name, name)
+		}
+	}
 }
 
 // Dev test-mode sentinel: the broker (UDB_WEBAUTHN_TEST_MODE) mints and verifies
@@ -1759,6 +1820,8 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	fix.set("vault_delete_secret_path", "app/delete")
 	fix.set("vault_destroy_secret_path", "app/destroy")
 	fix.set("vault_db_role", "sdk-readonly")
+	fix.set("vault_db_idempotency_key", "sdk-vault-db-idempotency")
+	fix.set("vault_db_lease_id", "sdk-vault-db-lease")
 	vaultIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/Verify", fix)
 	if !ok {
 		t.Fatalf("VaultService manifest JSON body was not hydrated")
@@ -1773,6 +1836,24 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	if got := vaultMsg.Get(vaultFields.ByName("signature")).String(); got != "udb-vault-sig:v1:seed" {
 		t.Fatalf("vault signature = %q, want seeded signature", got)
+	}
+	dbCredentialsIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials", fix)
+	if !ok {
+		t.Fatalf("VaultService GenerateDatabaseCredentials manifest JSON body was not hydrated")
+	}
+	dbCredentialsMsg := dbCredentialsIn.ProtoReflect()
+	dbCredentialsFields := dbCredentialsMsg.Descriptor().Fields()
+	if got := dbCredentialsMsg.Get(dbCredentialsFields.ByName("idempotency_key")).String(); got != "sdk-vault-db-idempotency" {
+		t.Fatalf("vault GenerateDatabaseCredentials idempotency_key = %q, want sdk-vault-db-idempotency", got)
+	}
+	revokeCredentialsIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials", fix)
+	if !ok {
+		t.Fatalf("VaultService RevokeDatabaseCredentials manifest JSON body was not hydrated")
+	}
+	revokeCredentialsMsg := revokeCredentialsIn.ProtoReflect()
+	revokeCredentialsFields := revokeCredentialsMsg.Descriptor().Fields()
+	if got := revokeCredentialsMsg.Get(revokeCredentialsFields.ByName("lease_id")).String(); got != "sdk-vault-db-lease" {
+		t.Fatalf("vault RevokeDatabaseCredentials lease_id = %q, want sdk-vault-db-lease", got)
 	}
 	createKeyIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/CreateTransitKey", fix)
 	if !ok {

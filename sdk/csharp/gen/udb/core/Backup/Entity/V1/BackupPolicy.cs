@@ -27,52 +27,58 @@ namespace udb.core.Backup.Entity.V1 {
             "Ci11ZGIvY29yZS9iYWNrdXAvZW50aXR5L3YxL2JhY2t1cF9wb2xpY3kucHJv",
             "dG8SGXVkYi5jb3JlLmJhY2t1cC5lbnRpdHkudjEaH2dvb2dsZS9wcm90b2J1",
             "Zi90aW1lc3RhbXAucHJvdG8aG3VkYi9jb3JlL2NvbW1vbi92MS9kYi5wcm90",
-            "bxohdWRiL2NvcmUvY29tbW9uL3YxL3NlY3VyaXR5LnByb3RvIpUMCgxCYWNr",
+            "bxohdWRiL2NvcmUvY29tbW9uL3YxL3NlY3VyaXR5LnByb3RvIpgOCgxCYWNr",
             "dXBQb2xpY3kSSQoJcG9saWN5X2lkGAEgASgJQiyCtxgoCglwb2xpY3lfaWQS",
             "BFVVSUQYASgBOhFnZW5fcmFuZG9tX3V1aWQoKVIIcG9saWN5SWQSYwoJdGVu",
             "YW50X2lkGAIgASgJQkaCtxhCCgl0ZW5hbnRfaWQSC1ZBUkNIQVIoNjQpGAFS",
             "IwoaaWR4X2JhY2t1cF9wb2xpY2llc190ZW5hbnQSBUJUUkVFmAIBUgh0ZW5h",
-            "bnRJZBJCCgtwb2xpY3lfbmFtZRgDIAEoCUIhgrcYHQoLcG9saWN5X25hbWUS",
-            "DFZBUkNIQVIoMjU1KRgBUgpwb2xpY3lOYW1lEkwKDXNjaGVkdWxlX2Nyb24Y",
-            "BCABKAlCJ4K3GCMKDXNjaGVkdWxlX2Nyb24SDFZBUkNIQVIoMjU1KRgBOgIn",
-            "J1IMc2NoZWR1bGVDcm9uEkoKDnJldGVudGlvbl9kYXlzGAUgASgFQiOCtxgf",
-            "Cg5yZXRlbnRpb25fZGF5cxIHSU5URUdFUhgBOgIzMFINcmV0ZW50aW9uRGF5",
-            "cxJaChRtYXhfcmV0YWluZWRfYmFja3VwcxgGIAEoBUIogrcYJAoUbWF4X3Jl",
-            "dGFpbmVkX2JhY2t1cHMSB0lOVEVHRVIYAToBMFISbWF4UmV0YWluZWRCYWNr",
-            "dXBzEjgKB2VuYWJsZWQYByABKAhCHoK3GBoKB2VuYWJsZWQSB0JPT0xFQU4Y",
-            "AToEdHJ1ZVIHZW5hYmxlZBJOCg5vYmplY3RfYmFja2VuZBgIIAEoCUIngrcY",
-            "IwoOb2JqZWN0X2JhY2tlbmQSC1ZBUkNIQVIoNjQpGAE6AicnUg1vYmplY3RC",
-            "YWNrZW5kEkwKDW9iamVjdF9idWNrZXQYCSABKAlCJ4K3GCMKDW9iamVjdF9i",
-            "dWNrZXQSDFZBUkNIQVIoMjU1KRgBOgInJ1IMb2JqZWN0QnVja2V0EnsKCmNy",
-            "ZWF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQkCC",
-            "txg8CgpjcmVhdGVkX2F0EgtUSU1FU1RBTVBUWlohV2hlbiB0aGUgcG9saWN5",
-            "IHdhcyBmaXJzdCBjcmVhdGVkUgljcmVhdGVkQXQSegoKdXBkYXRlZF9hdBgL",
-            "IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCP4K3GDsKCnVwZGF0",
-            "ZWRfYXQSC1RJTUVTVEFNUFRaWiBXaGVuIHRoZSBwb2xpY3kgd2FzIGxhc3Qg",
-            "dXBkYXRlZFIJdXBkYXRlZEF0EmwKDW1ldGFkYXRhX2pzb24YDCABKAlCR4K3",
-            "GEMKDW1ldGFkYXRhX2pzb24SBUpTT05CGAE6Cyd7fSc6Ompzb25iWhpOb24t",
-            "c2VjcmV0IHBvbGljeSBtZXRhZGF0YXgBUgxtZXRhZGF0YUpzb2462wP6thjF",
-            "AgoPYmFja3VwX3BvbGljaWVzEgp1ZGJfYmFja3VwGAEgASpDUGVyLXRlbmFu",
-            "dCBsb2dpY2FsLWJhY2t1cCByZXRlbnRpb24gYW5kIHNjaGVkdWxlIChtYXN0",
-            "ZXItcGxhbiA5LjEwKTgBQAFiXgoQdGVuYW50X2lzb2xhdGlvbhpIKHRlbmFu",
-            "dF9pZDo6dGV4dCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVu",
-            "YW50X2lkJywgdHJ1ZSk6OnRleHQpKAGKAUkKJmlkeF9iYWNrdXBfcG9saWNp",
-            "ZXNfdGVuYW50X25hbWVfdW5pcXVlEgVCVFJFRRgBWgl0ZW5hbnRfaWRaC3Bv",
-            "bGljeV9uYW1l8gEedWRiLmJhY2t1cC5iYWNrdXBfcG9saWNpZXMuY2Rj+gEL",
-            "YmFja3VwOnJlYWSKshmMAQoGdGVuYW50Ggl0ZW5hbnRfaWQqNHRlbmFudF9p",
-            "ZCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJyky",
-            "BG5vbmU6DWJhY2t1cC5wb2xpY3lAwhxIAlIGdGVuYW50WghzdGFuZGFyZHIV",
-            "dGVuYW50LmRhdGFfcmVzaWRlbmN5QoICCh1jb20udWRiLmNvcmUuYmFja3Vw",
-            "LmVudGl0eS52MUIRQmFja3VwUG9saWN5UHJvdG9QAVpFZ2l0aHViLmNvbS9m",
-            "YWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9iYWNrdXAvZW50aXR5",
-            "L3YxO2VudGl0eXYxogIEVUNCRaoCGXVkYi5jb3JlLkJhY2t1cC5FbnRpdHku",
-            "VjHKAhlVZGJcQ29yZVxCYWNrdXBcRW50aXR5XFYx4gIlVWRiXEdQQk1ldGFk",
-            "YXRhXENvcmVcQmFja3VwXEVudGl0eVxWMeoCHVVkYjo6Q29yZTo6QmFja3Vw",
-            "OjpFbnRpdHk6OlYxYgZwcm90bzM="));
+            "bnRJZBJGCgpwcm9qZWN0X2lkGA0gASgJQieCtxgjCgpwcm9qZWN0X2lkEgxW",
+            "QVJDSEFSKDI1NSkYAToCJyegAgFSCXByb2plY3RJZBJCCgtwb2xpY3lfbmFt",
+            "ZRgDIAEoCUIhgrcYHQoLcG9saWN5X25hbWUSDFZBUkNIQVIoMjU1KRgBUgpw",
+            "b2xpY3lOYW1lEkwKDXNjaGVkdWxlX2Nyb24YBCABKAlCJ4K3GCMKDXNjaGVk",
+            "dWxlX2Nyb24SDFZBUkNIQVIoMjU1KRgBOgInJ1IMc2NoZWR1bGVDcm9uEkoK",
+            "DnJldGVudGlvbl9kYXlzGAUgASgFQiOCtxgfCg5yZXRlbnRpb25fZGF5cxIH",
+            "SU5URUdFUhgBOgIzMFINcmV0ZW50aW9uRGF5cxJaChRtYXhfcmV0YWluZWRf",
+            "YmFja3VwcxgGIAEoBUIogrcYJAoUbWF4X3JldGFpbmVkX2JhY2t1cHMSB0lO",
+            "VEVHRVIYAToBMFISbWF4UmV0YWluZWRCYWNrdXBzEjgKB2VuYWJsZWQYByAB",
+            "KAhCHoK3GBoKB2VuYWJsZWQSB0JPT0xFQU4YAToEdHJ1ZVIHZW5hYmxlZBJO",
+            "Cg5vYmplY3RfYmFja2VuZBgIIAEoCUIngrcYIwoOb2JqZWN0X2JhY2tlbmQS",
+            "C1ZBUkNIQVIoNjQpGAE6AicnUg1vYmplY3RCYWNrZW5kEkwKDW9iamVjdF9i",
+            "dWNrZXQYCSABKAlCJ4K3GCMKDW9iamVjdF9idWNrZXQSDFZBUkNIQVIoMjU1",
+            "KRgBOgInJ1IMb2JqZWN0QnVja2V0EnsKCmNyZWF0ZWRfYXQYCiABKAsyGi5n",
+            "b29nbGUucHJvdG9idWYuVGltZXN0YW1wQkCCtxg8CgpjcmVhdGVkX2F0EgtU",
+            "SU1FU1RBTVBUWlohV2hlbiB0aGUgcG9saWN5IHdhcyBmaXJzdCBjcmVhdGVk",
+            "UgljcmVhdGVkQXQSegoKdXBkYXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90",
+            "b2J1Zi5UaW1lc3RhbXBCP4K3GDsKCnVwZGF0ZWRfYXQSC1RJTUVTVEFNUFRa",
+            "WiBXaGVuIHRoZSBwb2xpY3kgd2FzIGxhc3QgdXBkYXRlZFIJdXBkYXRlZEF0",
+            "EmwKDW1ldGFkYXRhX2pzb24YDCABKAlCR4K3GEMKDW1ldGFkYXRhX2pzb24S",
+            "BUpTT05CGAE6Cyd7fSc6Ompzb25iWhpOb24tc2VjcmV0IHBvbGljeSBtZXRh",
+            "ZGF0YXgBUgxtZXRhZGF0YUpzb246lgX6thiwAwoPYmFja3VwX3BvbGljaWVz",
+            "Egp1ZGJfYmFja3VwGAEgASpDUGVyLXRlbmFudCBsb2dpY2FsLWJhY2t1cCBy",
+            "ZXRlbnRpb24gYW5kIHNjaGVkdWxlIChtYXN0ZXItcGxhbiA5LjEwKTgBQAFi",
+            "tAEKGHRlbmFudF9wcm9qZWN0X2lzb2xhdGlvbhqVASh0ZW5hbnRfaWQ6OnRl",
+            "eHQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3RlbmFudF9pZCcs",
+            "IHRydWUpOjp0ZXh0IEFORCBwcm9qZWN0X2lkOjp0ZXh0ID0gY3VycmVudF9z",
+            "ZXR0aW5nKCdhcHAuY3VycmVudF9wcm9qZWN0X2lkJywgdHJ1ZSk6OnRleHQp",
+            "KAGKAV0KLmlkeF9iYWNrdXBfcG9saWNpZXNfdGVuYW50X3Byb2plY3RfbmFt",
+            "ZV91bmlxdWUSBUJUUkVFGAFaCXRlbmFudF9pZFoKcHJvamVjdF9pZFoLcG9s",
+            "aWN5X25hbWXyAR51ZGIuYmFja3VwLmJhY2t1cF9wb2xpY2llcy5jZGP6AQti",
+            "YWNrdXA6cmVhZIqyGdwBCgZ0ZW5hbnQSB3Byb2plY3QaCXRlbmFudF9pZCIK",
+            "cHJvamVjdF9pZCpvdGVuYW50X2lkID0gY3VycmVudF9zZXR0aW5nKCdhcHAu",
+            "Y3VycmVudF90ZW5hbnRfaWQnKSBBTkQgcHJvamVjdF9pZCA9IGN1cnJlbnRf",
+            "c2V0dGluZygnYXBwLmN1cnJlbnRfcHJvamVjdF9pZCcpMgRub25lOg1iYWNr",
+            "dXAucG9saWN5QMIcSAJSBnRlbmFudFoIc3RhbmRhcmRyFXRlbmFudC5kYXRh",
+            "X3Jlc2lkZW5jeUKCAgodY29tLnVkYi5jb3JlLmJhY2t1cC5lbnRpdHkudjFC",
+            "EUJhY2t1cFBvbGljeVByb3RvUAFaRWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRi",
+            "L3Nkay9nby9nZW4vdWRiL2NvcmUvYmFja3VwL2VudGl0eS92MTtlbnRpdHl2",
+            "MaICBFVDQkWqAhl1ZGIuY29yZS5CYWNrdXAuRW50aXR5LlYxygIZVWRiXENv",
+            "cmVcQmFja3VwXEVudGl0eVxWMeICJVVkYlxHUEJNZXRhZGF0YVxDb3JlXEJh",
+            "Y2t1cFxFbnRpdHlcVjHqAh1VZGI6OkNvcmU6OkJhY2t1cDo6RW50aXR5OjpW",
+            "MWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Backup.Entity.V1.BackupPolicy), global::udb.core.Backup.Entity.V1.BackupPolicy.Parser, new[]{ "PolicyId", "TenantId", "PolicyName", "ScheduleCron", "RetentionDays", "MaxRetainedBackups", "Enabled", "ObjectBackend", "ObjectBucket", "CreatedAt", "UpdatedAt", "MetadataJson" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Backup.Entity.V1.BackupPolicy), global::udb.core.Backup.Entity.V1.BackupPolicy.Parser, new[]{ "PolicyId", "TenantId", "ProjectId", "PolicyName", "ScheduleCron", "RetentionDays", "MaxRetainedBackups", "Enabled", "ObjectBackend", "ObjectBucket", "CreatedAt", "UpdatedAt", "MetadataJson" }, null, null, null, null)
           }));
     }
     #endregion
@@ -85,7 +91,7 @@ namespace udb.core.Backup.Entity.V1 {
   /// 9.10). The actual scheduling is driven by the native SchedulerService (9.3):
   /// a leader-elected tick fires `udb.scheduler.job.fired.v1` for a due policy,
   /// which a worker turns into a StartTenantBackup. THIS row is the durable,
-  /// tenant-scoped retention/schedule contract. RLS scopes rows to the tenant.
+  /// tenant+project-scoped retention/schedule contract. RLS scopes rows to both.
   /// ---------------------------------------------------------------------------
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
@@ -125,6 +131,7 @@ namespace udb.core.Backup.Entity.V1 {
     public BackupPolicy(BackupPolicy other) : this() {
       policyId_ = other.policyId_;
       tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
       policyName_ = other.policyName_;
       scheduleCron_ = other.scheduleCron_;
       retentionDays_ = other.retentionDays_;
@@ -168,11 +175,27 @@ namespace udb.core.Backup.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 13;
+    private string projectId_ = "";
+    /// <summary>
+    /// First-class project owner. Blank is reserved for quarantined legacy rows;
+    /// new serving-path writes always persist an explicitly active project.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     /// <summary>Field number for the "policy_name" field.</summary>
     public const int PolicyNameFieldNumber = 3;
     private string policyName_ = "";
     /// <summary>
-    /// Caller-chosen logical policy name, unique per tenant.
+    /// Caller-chosen logical policy name, unique per tenant+project.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -321,6 +344,7 @@ namespace udb.core.Backup.Entity.V1 {
       }
       if (PolicyId != other.PolicyId) return false;
       if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
       if (PolicyName != other.PolicyName) return false;
       if (ScheduleCron != other.ScheduleCron) return false;
       if (RetentionDays != other.RetentionDays) return false;
@@ -340,6 +364,7 @@ namespace udb.core.Backup.Entity.V1 {
       int hash = 1;
       if (PolicyId.Length != 0) hash ^= PolicyId.GetHashCode();
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (PolicyName.Length != 0) hash ^= PolicyName.GetHashCode();
       if (ScheduleCron.Length != 0) hash ^= ScheduleCron.GetHashCode();
       if (RetentionDays != 0) hash ^= RetentionDays.GetHashCode();
@@ -416,6 +441,10 @@ namespace udb.core.Backup.Entity.V1 {
         output.WriteRawTag(98);
         output.WriteString(MetadataJson);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -474,6 +503,10 @@ namespace udb.core.Backup.Entity.V1 {
         output.WriteRawTag(98);
         output.WriteString(MetadataJson);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -489,6 +522,9 @@ namespace udb.core.Backup.Entity.V1 {
       }
       if (TenantId.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
       }
       if (PolicyName.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(PolicyName);
@@ -537,6 +573,9 @@ namespace udb.core.Backup.Entity.V1 {
       }
       if (other.TenantId.Length != 0) {
         TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
       }
       if (other.PolicyName.Length != 0) {
         PolicyName = other.PolicyName;
@@ -647,6 +686,10 @@ namespace udb.core.Backup.Entity.V1 {
             MetadataJson = input.ReadString();
             break;
           }
+          case 106: {
+            ProjectId = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -718,6 +761,10 @@ namespace udb.core.Backup.Entity.V1 {
           }
           case 98: {
             MetadataJson = input.ReadString();
+            break;
+          }
+          case 106: {
+            ProjectId = input.ReadString();
             break;
           }
         }

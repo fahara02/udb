@@ -108,6 +108,10 @@ async fn notification_event_outbox_to_cdc_to_kafka_end_to_end() {
     )
     .expect("build CDC engine");
     engine
+        .load_topic_policies()
+        .await
+        .expect("load live CDC topic policies");
+    engine
         .process_outbox_event(
             event_id,
             topic.clone(),

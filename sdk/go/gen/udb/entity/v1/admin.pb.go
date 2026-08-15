@@ -1912,9 +1912,10 @@ type StageCatalogRequest struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Context *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
 	// Full CatalogManifest serialised as JSON.
-	ManifestJson   []byte `protobuf:"bytes,1000,opt,name=manifest_json,json=manifestJson,proto3" json:"manifest_json,omitempty"`
-	ProjectId      string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Reason         string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	ManifestJson []byte `protobuf:"bytes,1000,opt,name=manifest_json,json=manifestJson,proto3" json:"manifest_json,omitempty"`
+	ProjectId    string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Reason       string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	// Required for durable StageCatalog retries.
 	IdempotencyKey string `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -1989,9 +1990,11 @@ type CatalogVersionRequest struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Context   *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
 	ProjectId string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	// Target catalog version string (empty = latest STAGED).
-	Version        string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
-	Reason         string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	// Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+	// RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
+	Version string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	Reason  string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	// Required for ActivateCatalog and RollbackCatalog retries.
 	IdempotencyKey string `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache

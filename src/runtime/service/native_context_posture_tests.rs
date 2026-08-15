@@ -330,6 +330,28 @@ fn a_file_consuming_the_project_does_not_build_a_tenant_only_context() {
     );
 }
 
+#[test]
+fn explicit_body_project_handlers_validate_and_construct_scope_atomically() {
+    let root = service_dir();
+    let required = [
+        ("config_service/handlers.rs", 5usize),
+        ("metering_service/handlers.rs", 4usize),
+        ("livequery_service/handlers.rs", 1usize),
+    ];
+    for (relative, minimum_calls) in required {
+        let path = root.join(relative);
+        let source = std::fs::read_to_string(&path)
+            .unwrap_or_else(|err| panic!("read {}: {err}", path.display()));
+        let calls = source.matches("validated_native_service_context(").count();
+        assert!(
+            calls >= minimum_calls,
+            "{relative} has {calls} atomic native scope checks, expected at least {minimum_calls}; \
+             a handler with a body project must not validate only tenant_id and then construct a \
+             context from an unchecked project_id"
+        );
+    }
+}
+
 /// BLUNDER GUARD 2: a startup guard that REFUSES must name its own way out.
 ///
 /// The unappliable-backend-delta guard shipped as a deadlock: the diff is

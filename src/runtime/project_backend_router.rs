@@ -125,28 +125,45 @@ impl Default for ProjectRoutingMode {
 }
 
 impl ProjectRoutingMode {
-    /// Parse the env-driven config value. Unknown tokens fall back
-    /// to `Permissive` (preserves backward compatibility).
-    pub fn parse(value: &str) -> Self {
+    /// Parse and validate the env-driven config value.
+    ///
+    /// Empty and the documented permissive/strict aliases retain their legacy
+    /// meaning. Unknown tokens and a blank `strict_with_default:` name are
+    /// configuration errors because treating an operator typo as permissive
+    /// would silently widen every unlabeled backend instance to every project.
+    pub fn try_parse(value: &str) -> Result<Self, String> {
         let trimmed = value.trim();
         if trimmed.is_empty() {
-            return Self::Permissive;
+            return Ok(Self::Permissive);
         }
         let lowered = trimmed.to_ascii_lowercase();
         if let Some(rest) = lowered.strip_prefix("strict_with_default:") {
             let name = rest.trim();
             if name.is_empty() {
-                return Self::Strict;
+                return Err(
+                    "project_routing_mode strict_with_default requires a non-empty project name"
+                        .to_string(),
+                );
             }
-            return Self::StrictWithDefault {
+            return Ok(Self::StrictWithDefault {
                 name: name.to_string(),
-            };
+            });
         }
         match lowered.as_str() {
-            "permissive" | "compat" | "lax" => Self::Permissive,
-            "strict" | "isolated" | "tenant" => Self::Strict,
-            _ => Self::Permissive,
+            "permissive" | "compat" | "lax" => Ok(Self::Permissive),
+            "strict" | "isolated" | "tenant" => Ok(Self::Strict),
+            _ => Err(format!(
+                "project_routing_mode '{trimmed}' is invalid; expected permissive, compat, lax, strict, isolated, tenant, or strict_with_default:<project>"
+            )),
         }
+    }
+
+    /// Runtime routing must stay fail closed even if a caller bypasses startup
+    /// validation and constructs `UdbConfig` directly. Startup reports the
+    /// configuration error; this fallback prevents the invalid value from ever
+    /// becoming permissive authority in the meantime.
+    pub fn parse(value: &str) -> Self {
+        Self::try_parse(value).unwrap_or(Self::Strict)
     }
 }
 
@@ -393,17 +410,33 @@ mod tests {
                 name: "alpha".to_string()
             }
         );
-        // Empty / unknown falls back to permissive — keeps existing
-        // deployments unchanged.
+        // Empty retains the documented legacy permissive behavior.
         assert_eq!(
             ProjectRoutingMode::parse(""),
             ProjectRoutingMode::Permissive
         );
+        for alias in ["compat", "lax"] {
+            assert_eq!(
+                ProjectRoutingMode::try_parse(alias),
+                Ok(ProjectRoutingMode::Permissive)
+            );
+        }
+        for alias in ["isolated", "tenant"] {
+            assert_eq!(
+                ProjectRoutingMode::try_parse(alias),
+                Ok(ProjectRoutingMode::Strict)
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_routing_modes_fail_closed_and_report_configuration_errors() {
+        assert!(ProjectRoutingMode::try_parse("garbage").is_err());
         assert_eq!(
             ProjectRoutingMode::parse("garbage"),
-            ProjectRoutingMode::Permissive
+            ProjectRoutingMode::Strict
         );
-        // strict_with_default with no name degrades to plain Strict.
+        assert!(ProjectRoutingMode::try_parse("strict_with_default:").is_err());
         assert_eq!(
             ProjectRoutingMode::parse("strict_with_default:"),
             ProjectRoutingMode::Strict

@@ -949,6 +949,36 @@ impl DataBrokerRuntime {
         .await
     }
 
+    pub async fn query_backend_target_for_project(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        request_json: &str,
+    ) -> Result<String, tonic::Status> {
+        parse_dispatch_json(request_json)?;
+        let target =
+            self.resolve_projection_read_target_for_project(backend, instance, project_id)?;
+        let context = crate::broker::RequestContext {
+            project_id: project_id.trim().to_string(),
+            target_backend: target.backend.clone(),
+            target_instance: target.instance.clone().unwrap_or_default(),
+            ..crate::broker::RequestContext::default()
+        };
+        use crate::runtime::executors::QueryExecutor;
+        QueryExecutor::query(
+            &self.resolve_dispatch_executor(
+                &target.backend,
+                target.instance.as_deref(),
+                false,
+                tonic::Code::FailedPrecondition,
+                Some(&context),
+            )?,
+            request_json,
+        )
+        .await
+    }
+
     /// Execute a generic write/mutation operation against a configured backend.
     ///
     /// Supported shapes:
@@ -984,6 +1014,36 @@ impl DataBrokerRuntime {
                 // Probe/admin paths: no request context, so RLS settings
                 // aren't installed (these are infrastructure calls).
                 None,
+            )?,
+            request_json,
+        )
+        .await
+    }
+
+    pub async fn mutate_backend_target_for_project(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        request_json: &str,
+    ) -> Result<String, tonic::Status> {
+        parse_dispatch_json(request_json)?;
+        let target =
+            self.resolve_projection_write_target_for_project(backend, instance, project_id)?;
+        let context = crate::broker::RequestContext {
+            project_id: project_id.trim().to_string(),
+            target_backend: target.backend.clone(),
+            target_instance: target.instance.clone().unwrap_or_default(),
+            ..crate::broker::RequestContext::default()
+        };
+        use crate::runtime::executors::MutationExecutor;
+        MutationExecutor::mutate(
+            &self.resolve_dispatch_executor(
+                &target.backend,
+                target.instance.as_deref(),
+                true,
+                tonic::Code::FailedPrecondition,
+                Some(&context),
             )?,
             request_json,
         )

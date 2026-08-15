@@ -15,8 +15,9 @@ use Google\Protobuf\RepeatedField;
  * 9.10). Each StartTenantBackup / RestoreTenant appends a row here recording
  * the object prefix, the manifest checksum, the per-run row/table counts, and
  * the count of tables EXCLUDED for lack of a tenant column (reported, never
- * silently skipped). RLS scopes rows to the tenant. ListBackups/GetBackup read
- * this journal; the encrypted artifacts themselves live in object storage.
+ * silently skipped). RLS scopes rows to the tenant AND project. ListBackups/
+ * GetBackup read this journal; the encrypted artifacts themselves live in
+ * object storage.
  * ---------------------------------------------------------------------------
  *
  * Generated from protobuf message <code>udb.core.backup.entity.v1.BackupRun</code>
@@ -31,6 +32,14 @@ class BackupRun extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string tenant_id = 2 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $tenant_id = '';
+    /**
+     * First-class project owner. The empty default is a migration quarantine for
+     * pre-v0.5.9 rows: serving paths always write a resolved active project and
+     * no request/worker is allowed to claim a blank legacy row as `default`.
+     *
+     * Generated from protobuf field <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $project_id = '';
     /**
      * BACKUP | RESTORE — which movement produced this journal row.
      *
@@ -108,6 +117,10 @@ class BackupRun extends \Google\Protobuf\Internal\Message
      *
      *     @type string $backup_id
      *     @type string $tenant_id
+     *     @type string $project_id
+     *           First-class project owner. The empty default is a migration quarantine for
+     *           pre-v0.5.9 rows: serving paths always write a resolved active project and
+     *           no request/worker is allowed to claim a blank legacy row as `default`.
      *     @type string $kind
      *           BACKUP | RESTORE — which movement produced this journal row.
      *     @type string $status
@@ -177,6 +190,36 @@ class BackupRun extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * First-class project owner. The empty default is a migration quarantine for
+     * pre-v0.5.9 rows: serving paths always write a resolved active project and
+     * no request/worker is allowed to claim a blank legacy row as `default`.
+     *
+     * Generated from protobuf field <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * First-class project owner. The empty default is a migration quarantine for
+     * pre-v0.5.9 rows: serving paths always write a resolved active project and
+     * no request/worker is allowed to claim a blank legacy row as `default`.
+     *
+     * Generated from protobuf field <code>string project_id = 16 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->project_id = $var;
 
         return $this;
     }

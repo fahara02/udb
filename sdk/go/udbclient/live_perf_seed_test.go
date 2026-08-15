@@ -1350,14 +1350,10 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		}
 	}
 
-	// ── DataBroker catalog: capture the live manifest ONLY (for the measured StageCatalog
-	// body, which needs a valid CatalogManifest with checksum_sha256). Do NOT Stage+Activate
-	// a catalog here: activating the live manifest relabels the active catalog version to
-	// "generator-3" (the manifest carries no client-style "version"; catalog_payload_version
-	// derives it from generator_version, and the in-memory stage path keeps that label), which
-	// the client's pinned "1.0.0" then fails as incompatible — breaking ~80 DataBroker RPCs.
-	// This is a broker round-trip limitation (bug_report.md K2), not a harness gap:
-	// GetCatalogManifest → StageCatalog → ActivateCatalog cannot preserve the "1.0.0" contract.
+	// ── DataBroker catalog: reset already staged and activated the release manifest for
+	// this exact customer project. Capture it for the measured StageCatalog body. The
+	// served catalog path now preserves the active 1.0.0 fallback version and publishes
+	// project-local activation, so the old generator-3/default-project warning is obsolete.
 	if cm, err := broker.GetCatalogManifest(brokerCtx, &entityv1.CatalogManifestRequest{Context: rc, Redact: false}); err == nil && len(cm.GetManifestJson()) > 0 {
 		fix.set("catalog_manifest", string(cm.GetManifestJson()))
 		fix.set("catalog_manifest_b64", base64.StdEncoding.EncodeToString(cm.GetManifestJson()))

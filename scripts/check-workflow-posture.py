@@ -811,7 +811,20 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ("CARGO_HTTP_TIMEOUT=120", "Cargo timeout env"),
         ("sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev", "Linux native build deps"),
         ("brew install cmake nasm ninja", "macOS native build deps"),
-        ("choco install strawberryperl nasm --no-progress -y", "Windows native build deps"),
+        ('$strawberryPerl = "C:\\Strawberry\\perl\\bin"', "Windows runner Perl discovery"),
+        ('$nasmVersion = "3.02"', "Windows NASM version pin"),
+        ("https://www.nasm.us/pub/nasm/releasebuilds/", "official NASM download source"),
+        ('$nasmSha256 = "161D0BFAFF53C2F9E9F3E69FD0672323EBABAFD1268976A5CEC11BE92A19AEE7"', "Windows NASM checksum pin"),
+        ("Get-FileHash -Algorithm SHA256", "Windows NASM checksum verification"),
+        ("NASM archive SHA-256 mismatch", "Windows NASM checksum fail-closed gate"),
+        ('$nasmPackageVersion = "3.2.0"', "Windows NASM fallback package version pin"),
+        ("https://community.chocolatey.org/api/v2/package/nasm/", "Windows NASM direct package fallback"),
+        ('$nasmPackageSha256 = "9A72BA9D6F6F0DC2A5598EC160366B2BDD925A23E229DFB5D854F63C0F2A2160"', "Windows NASM fallback package checksum"),
+        ('$nasmInstallerSha256 = "0DDB40310861EB29F4D649FEB9466779982A2D251C0DB2B9CF0D21CF591171F3"', "Windows NASM embedded installer checksum"),
+        ("NASM package SHA-256 mismatch", "Windows NASM fallback package fail-closed gate"),
+        ("NASM installer SHA-256 mismatch", "Windows NASM embedded installer fail-closed gate"),
+        ("force-nasm-package-fallback:", "Windows NASM fallback proof input"),
+        ("CI proof hook selected the checksum-pinned NASM package fallback", "Windows NASM fallback proof branch"),
         ("ilammy/msvc-dev-cmd@v1", "MSVC dev command setup"),
     ),
     ".github/actions/setup-sdk-toolchains/action.yml": (
@@ -1114,6 +1127,11 @@ CI_TOPOLOGY_REQUIREMENTS = (
     ("concurrency:\n  group: ci-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true", "CI concurrency cancellation"),
     ("permissions:\n  contents: read", "read-only CI permissions"),
     ("LIVE_BROKER_FEATURES:", "single live broker feature tier"),
+    ("UDB skill wrapper drift guard", "skill wrapper drift CI step"),
+    ("python3 udb-skill/sync_skills.py --check", "using-udb wrapper drift command"),
+    ("python3 udb-skill/sync_udb_coding.py --check", "udb-coding wrapper drift command"),
+    ("python3 udb-skill/sync_references.py --check", "skill reference drift command"),
+    ("force-nasm-package-fallback: ${{ github.event_name == 'pull_request' && matrix.os == 'windows-latest' && 'true' || 'false' }}", "PR Windows NASM fallback proof"),
 )
 
 CI_TOPOLOGY_DEPENDENCY_FREE_JOBS = (
@@ -1226,16 +1244,16 @@ CI_RUST_GENERATED_CONTRACT_DOC_GATES = (
         "Native contract manifest drift + lint (F13 hard gate)",
         "native contract manifest drift/lint",
         (
-            "cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json",
+            "target/debug/udb native manifest > docs/generated/udb-native-contract.json",
             "git diff --quiet -- docs/generated/udb-native-contract.json",
-            "cargo run --locked -q --bin udb -- native lint",
+            "target/debug/udb native lint",
         ),
     ),
     (
         "Native docs markdown drift",
         "native docs markdown drift",
         (
-            "cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md",
+            "target/debug/udb native docs > docs/generated/native-services.md",
             "git diff --quiet -- docs/generated/native-services.md",
         ),
     ),
@@ -1250,7 +1268,7 @@ CI_RUST_GENERATED_CONTRACT_DOC_GATES = (
         "Native contract breaking-change gate (Phase 3)",
         "native contract breaking-change",
         (
-            "cargo run --locked -q --bin udb -- native contract-diff",
+            "target/debug/udb native contract-diff",
             "--baseline docs/generated/contract-baseline.bin",
         ),
     ),
@@ -1397,22 +1415,35 @@ BENCHMARK_WORKFLOW_REQUIREMENTS = (
     ("release-asset:", "release asset workflow input"),
     ("default: udb-linux-amd64-full", "default full Linux release asset"),
     ("Resolve release binary (perf)", "release binary resolution step"),
+    (r'^v[0-9]+\.[0-9]+\.[0-9]+$', "anchored release SemVer validation"),
     ("gh release view", "release existence check"),
     ("gh release download", "release asset download command"),
     ('--pattern "${RELEASE_ASSET}"', "configured release asset download pattern"),
+    ('--pattern "${RELEASE_ASSET}.sha256"', "release asset checksum download"),
+    ('--pattern "manifest.json"', "release manifest download"),
+    ('--pattern "manifest.json.sha256"', "release manifest checksum download"),
+    ('manifest.get("tag") != tag', "release manifest tag verification"),
+    ('entry.get("sha256") != binary_digest', "release manifest asset digest verification"),
+    ('"bench-output/bin/${RELEASE_ASSET}" --version', "release binary version verification"),
     ("bench-output/bin", "benchmark binary staging directory"),
     ('chmod +x "bench-output/bin/${RELEASE_ASSET}"', "release binary executable bit"),
     ("UDB_BENCH_RELEASE_TAG", "benchmark release tag metadata"),
     ("UDB_BENCH_RELEASE_ASSET", "benchmark release asset metadata"),
     ("UDB_BENCH_RELEASE_URL", "benchmark release URL metadata"),
+    ("UDB_BENCH_BINARY_SHA256", "benchmark release binary digest metadata"),
     ("UDB_BENCH_BIN", "benchmark binary env path"),
     ("Resolve broker binary path", "benchmark broker binary path step"),
     ("Start backends", "benchmark backend startup step"),
     ("Write broker env", "benchmark broker env step"),
     ('echo "UDB_LIVE_PERF=1" >> "$GITHUB_ENV"', "benchmark perf opt-in"),
     ("Prepare per-SDK reset script", "per-SDK reset script step"),
+    (
+        "python scripts/bootstrap_benchmark_project_catalog.py",
+        "exact-project catalog bootstrap and served preflight",
+    ),
     ("Collect benchmark JSON", "benchmark collection step"),
     ("python scripts/collect_sdk_bench_results.py", "benchmark collector command"),
+    ('--release-sha256 "${UDB_BENCH_BINARY_SHA256:-}"', "benchmark binary digest evidence handoff"),
     ("Upload benchmark report artifact", "benchmark artifact upload step"),
     ("name: sdk-benchmark-results", "benchmark artifact name"),
     ("docs/site/bench-results.json", "benchmark JSON artifact path"),
@@ -1450,6 +1481,10 @@ BENCHMARK_ORCHESTRATOR_TRIGGER_PATHS = (
     (("sdk-templates/**",), "SDK template trigger path"),
     (("scripts/openapi-postprocess.mjs",), "OpenAPI postprocess trigger path"),
     (("scripts/collect_sdk_bench_results.py",), "benchmark collector trigger path"),
+    (
+        ("scripts/bootstrap_benchmark_project_catalog.py",),
+        "benchmark project catalog bootstrap trigger path",
+    ),
     (("scripts/gen-bench-bodies-skeleton.mjs",), "benchmark body skeleton trigger path"),
     (("scripts/gen-bench-bodies-json.mjs",), "benchmark body parser trigger path"),
     (("docs/bench-bodies/**",), "benchmark body source trigger path"),
@@ -1471,9 +1506,13 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ("pages: write", "Pages write permission"),
     ("id-token: write", "Pages OIDC permission"),
     ("actions: read", "benchmark artifact read permission"),
+    ("github.event.workflow_run.conclusion == 'success'", "successful benchmark Pages gate"),
+    ("github.event.workflow_run.event == 'workflow_run'", "post-release-only benchmark Pages gate"),
     ("Pull latest benchmark results into the site", "benchmark result handoff step"),
     ("GH_TOKEN: ${{ github.token }}", "benchmark artifact download token"),
     ("TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}", "benchmark workflow_run id handoff"),
+    ("TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}", "benchmark workflow_run commit handoff"),
+    ("TRIGGER_EVENT: ${{ github.event.workflow_run.event }}", "benchmark trigger provenance handoff"),
     ('gh run download "${TRIGGER_RUN_ID}"', "benchmark artifact download command"),
     ('--repo "${GITHUB_REPOSITORY}"', "benchmark artifact repository scope"),
     ("--name sdk-benchmark-results", "benchmark artifact name"),
@@ -1482,6 +1521,13 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ("docs/site/bench-results.json", "site benchmark JSON destination"),
     ("got_fresh=0", "benchmark fallback state initialization"),
     ("got_fresh=1", "benchmark fresh artifact state"),
+    ("completed without a fresh sdk-benchmark-results artifact", "missing benchmark artifact hard failure"),
+    ("benchmark artifact run_id does not match triggering run", "benchmark artifact run identity validation"),
+    ("benchmark artifact commit does not match triggering workflow head SHA", "benchmark artifact commit validation"),
+    ("benchmark history digest disagrees with release provenance", "benchmark history digest validation"),
+    ('gh api "repos/${GITHUB_REPOSITORY}/commits/${release_tag}" --jq .sha', "published tag commit resolution"),
+    ('--pattern "${release_asset}.sha256"', "published benchmark asset checksum resolution"),
+    ("benchmark binary digest does not match", "published benchmark digest validation"),
     ("keeping committed docs/site/bench-results.json", "no-stale-republish benchmark fallback"),
     ("Build UDB's parser to WebAssembly", "fresh wasm build step"),
     ("rustup target add wasm32-unknown-unknown", "wasm target install"),
@@ -1569,7 +1615,10 @@ PAGES_SITE_README_REQUIREMENTS = (
     ("before deploy", "README deploy validation boundary"),
     ("`benchmarks.js`", "README benchmark script inventory"),
     ("`sdk-benchmark-results` artifact", "README benchmark artifact name"),
-    ("falls back to the already-published dashboard JSON", "README benchmark fallback contract"),
+    ("fails closed if a real benchmark has no fresh artifact", "README fresh benchmark hard-failure contract"),
+    ("Validation-only benchmark runs do not deploy Pages", "README benchmark validation exclusion"),
+    ("direct non-benchmark Pages", "README direct-push benchmark fallback scope"),
+    ("publishes retain the committed last-known dashboard JSON", "README committed benchmark fallback contract"),
     ("current-editor WASM smoke", "README playground smoke contract"),
     ("verifies every first-class page/script/data artifact", "README full artifact contract"),
     ("HTML `href`/`src`", "README local-ref crawl contract"),
@@ -4176,6 +4225,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/ffmpeg_transcode_smoke.py", "ffmpeg transcode smoke"),
     ("scripts/playground_wasm_smoke.mjs", "playground WASM smoke"),
     ("scripts/collect_sdk_bench_results.py", "benchmark collector"),
+    ("scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap"),
     ("scripts/check-openapi-api-rules.mjs", "OpenAPI API-rule guard"),
     ("scripts/check-http-api-style.mjs", "HTTP API route-style guard"),
     ("scripts/rest_route_gateway_smoke.py", "REST route gateway smoke guard"),
@@ -5084,6 +5134,9 @@ def check_ci_quick_gate_source_guards(root: Path = ROOT) -> list[str]:
             scoped.append(f"missing {label} selftest: {selftest}")
         if repo_scan not in lines:
             scoped.append(f"missing {label} repo scan: {repo_scan}")
+    bootstrap_compile = "python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py"
+    if bootstrap_compile not in lines:
+        scoped.append(f"missing benchmark catalog bootstrap syntax check: {bootstrap_compile}")
     return [f"ci.yml: {failure}" for failure in scoped]
 
 
@@ -5649,6 +5702,7 @@ def check_lint_workflow_trigger_paths(root: Path = ROOT) -> list[str]:
         ("python3 scripts/idempotency_served_replay_smoke.py --selftest", "idempotency served replay smoke selftest"),
         ("python3 scripts/retry_safe_served_smoke.py --selftest", "retry-safe served smoke selftest"),
         ("python3 scripts/native_load_gate.py --selftest", "native load gate selftest"),
+        ("python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap syntax check"),
         ("python3 scripts/check-workflow-posture.py --selftest", "workflow posture selftest"),
         ("python3 scripts/check-workflow-posture.py", "workflow posture repo scan"),
     ):
@@ -6533,6 +6587,11 @@ jobs:
   quick-gate:
     runs-on: ubuntu-latest
     steps:
+      - name: UDB skill wrapper drift guard
+        run: |
+          python3 udb-skill/sync_skills.py --check
+          python3 udb-skill/sync_udb_coding.py --check
+          python3 udb-skill/sync_references.py --check
       - name: SDK service-coverage guard
         run: |
           python3 scripts/check-sdk-service-coverage.py --selftest
@@ -6574,6 +6633,7 @@ jobs:
           node --check scripts/gen-bench-bodies-skeleton.mjs
           node scripts/gen-bench-bodies-skeleton.mjs --selftest
           node scripts/gen-bench-bodies-skeleton.mjs --check
+          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py
           python3 scripts/check-bench-harness-posture.py --selftest
           python3 scripts/check-bench-harness-posture.py
       - name: Docs/CI freshness posture guard
@@ -6647,18 +6707,21 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup-rust
+        with:
+          force-nasm-package-fallback: ${{ github.event_name == 'pull_request' && matrix.os == 'windows-latest' && 'true' || 'false' }}
       - name: Native contract manifest drift + lint (F13 hard gate)
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json
+          target/debug/udb native manifest > docs/generated/udb-native-contract.json
           if ! git diff --quiet -- docs/generated/udb-native-contract.json; then
             exit 1
           fi
-          cargo run --locked -q --bin udb -- native lint
+          target/debug/udb native lint
       - name: Native docs markdown drift
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md
+          target/debug/udb native docs > docs/generated/native-services.md
           if ! git diff --quiet -- docs/generated/native-services.md; then
             exit 1
           fi
@@ -6678,7 +6741,7 @@ jobs:
       - name: Native contract breaking-change gate (Phase 3)
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native contract-diff \
+          target/debug/udb native contract-diff \
             --baseline docs/generated/contract-baseline.bin
   build-broker:
     needs: quick-gate
@@ -6924,7 +6987,7 @@ jobs:
           docker compose -f docker-compose.integration.yml down -v --remove-orphans
           docker compose -f docker-compose.canonical.yml down -v --remove-orphans
 """
-        live_sdk_suite_good = """name: _live-sdk-suite
+        live_sdk_suite_good = r"""name: _live-sdk-suite
 on:
   workflow_call:
     inputs:
@@ -6939,12 +7002,17 @@ jobs:
       - name: Resolve release binary (perf)
         run: |
           tag="${RELEASE_TAG}"
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then exit 1; fi
           gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null
-          gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --dir bench-output/bin
+          gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --pattern "${RELEASE_ASSET}.sha256" --pattern "manifest.json" --pattern "manifest.json.sha256" --dir bench-output/bin
+          manifest.get("tag") != tag
+          entry.get("sha256") != binary_digest
           chmod +x "bench-output/bin/${RELEASE_ASSET}"
+          "bench-output/bin/${RELEASE_ASSET}" --version
           echo "UDB_BENCH_RELEASE_TAG=${tag}" >> "$GITHUB_ENV"
           echo "UDB_BENCH_RELEASE_ASSET=${RELEASE_ASSET}" >> "$GITHUB_ENV"
           echo "UDB_BENCH_RELEASE_URL=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}" >> "$GITHUB_ENV"
+          echo "UDB_BENCH_BINARY_SHA256=${binary_sha256}" >> "$GITHUB_ENV"
           echo "UDB_BENCH_BIN=${GITHUB_WORKSPACE}/bench-output/bin/${RELEASE_ASSET}" >> "$GITHUB_ENV"
       - name: Resolve broker binary path
         run: echo "path=${UDB_BENCH_BIN}" >> "$GITHUB_OUTPUT"
@@ -6956,12 +7024,15 @@ jobs:
         run: echo "UDB_LIVE_PERF=1" >> "$GITHUB_ENV"
       - name: Prepare per-SDK reset script
         run: mkdir -p bench-output/status bench-output/logs
+      - name: Bootstrap exact benchmark project catalog
+        run: python scripts/bootstrap_benchmark_project_catalog.py
       - name: Collect benchmark JSON
         if: always()
         run: |
           python scripts/collect_sdk_bench_results.py \\
             --out docs/site/bench-results.json \\
-            --status-dir bench-output/status
+            --status-dir bench-output/status \\
+            --release-sha256 "${UDB_BENCH_BINARY_SHA256:-}"
       - name: Upload benchmark report artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -6992,6 +7063,7 @@ on:
       - "sdk-templates/**"
       - "scripts/openapi-postprocess.mjs"
       - "scripts/collect_sdk_bench_results.py"
+      - "scripts/bootstrap_benchmark_project_catalog.py"
       - "scripts/gen-bench-bodies-skeleton.mjs"
       - "scripts/gen-bench-bodies-json.mjs"
       - "docs/bench-bodies/**"
@@ -7191,6 +7263,10 @@ permissions:
   actions: read
 jobs:
   build:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'workflow_run')
     runs-on: ubuntu-latest
     steps:
       - name: Sync brand assets into the site
@@ -7205,11 +7281,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
         run: |
           got_fresh=0
           gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
           cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
           got_fresh=1
+          if [ -n "${TRIGGER_RUN_ID:-}" ] && [ "$got_fresh" != 1 ]; then
+            echo "completed without a fresh sdk-benchmark-results artifact"
+            exit 1
+          fi
+          if [ "$got_fresh" = 1 ]; then
+            echo "benchmark artifact run_id does not match triggering run"
+            echo "benchmark artifact commit does not match triggering workflow head SHA"
+            echo "benchmark history digest disagrees with release provenance"
+            published_commit="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${release_tag}" --jq .sha)"
+            gh release download "${release_tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${release_asset}.sha256" --dir release-proof
+            echo "benchmark binary digest does not match"
+          fi
           if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
       - name: Build UDB's parser to WebAssembly
         run: |
@@ -7345,7 +7435,7 @@ The authoring surface is static HTML/CSS plus vanilla JS. The GitHub Pages workf
 
 Shared: `styles.css`, `app.js`, `playground.js`, `benchmarks.js`, `udb.wasm`.
 
-`bench-results.json` is uploaded as the `sdk-benchmark-results` artifact and pages.yml falls back to the already-published dashboard JSON for non-benchmark publishes.
+`bench-results.json` is uploaded as the `sdk-benchmark-results` artifact. pages.yml fails closed if a real benchmark has no fresh artifact. Validation-only benchmark runs do not deploy Pages; direct non-benchmark Pages publishes retain the committed last-known dashboard JSON.
 
 The workflow runs the current-editor WASM smoke, verifies every first-class page/script/data artifact, and crawls local HTML `href`/`src` references before upload.
 """
@@ -8722,6 +8812,7 @@ jobs:
           node scripts/check-branch-protection-lockstep.mjs --selftest
           node --check scripts/check-ci-runner-evidence.mjs
           node scripts/check-ci-runner-evidence.mjs --selftest
+          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py
           python3 scripts/error_detail_served_smoke.py --selftest
           python3 scripts/idempotency_served_replay_smoke.py --selftest
           python3 scripts/retry_safe_served_smoke.py --selftest
@@ -9731,6 +9822,16 @@ jobs:
 
         (wf / "ci.yml").write_text(
             ci_good.replace(
+                "          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py\n",
+                "",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_ci_quick_gate_source_guards(root)
+        assert any("benchmark catalog bootstrap syntax check" in failure for failure in failures), failures
+
+        (wf / "ci.yml").write_text(
+            ci_good.replace(
                 "python3 scripts/check-beta-versioning-posture.py --selftest",
                 "python3 scripts/check-beta-versioning-posture.py --help",
             ),
@@ -9980,8 +10081,8 @@ jobs:
 
         (wf / "ci.yml").write_text(
             ci_good.replace(
-                "          cargo run --locked -q --bin udb -- native lint\n",
-                "          cargo run --locked -q --bin udb -- native help\n",
+                "          target/debug/udb native lint\n",
+                "          target/debug/udb native help\n",
             ),
             encoding="utf-8",
         )
@@ -10108,8 +10209,8 @@ jobs:
 
         (wf / "_live-sdk-suite.yml").write_text(
             live_sdk_suite_good.replace(
-                'gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --dir bench-output/bin',
-                "cargo build --release --bin udb",
+                "gh release download",
+                "cargo build --release --bin udb #",
             ),
             encoding="utf-8",
         )
@@ -10199,17 +10300,9 @@ jobs:
         failures = check_pages_playground_wasm_gate(root)
         assert any("benchmark artifact name" in failure for failure in failures), failures
 
-        benchmark_block = """      - name: Pull latest benchmark results into the site
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
-        run: |
-          got_fresh=0
-          gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
-          cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
-          got_fresh=1
-          if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
-"""
+        benchmark_at = pages_good.index("      - name: Pull latest benchmark results into the site")
+        build_at = pages_good.index("      - name: Build UDB's parser to WebAssembly", benchmark_at)
+        benchmark_block = pages_good[benchmark_at:build_at]
         (wf / "pages.yml").write_text(
             pages_good.replace(benchmark_block, "").replace(
                 "      - uses: actions/upload-pages-artifact@v3",
@@ -10406,6 +10499,23 @@ jobs:
         )
         failures = check_lint_workflow_trigger_paths(root)
         assert any("version guard trigger path" in failure for failure in failures), failures
+
+        (wf / "lint-workflows.yml").write_text(
+            lint_good.replace('      - "scripts/bootstrap_benchmark_project_catalog.py"\n', ""),
+            encoding="utf-8",
+        )
+        failures = check_lint_workflow_trigger_paths(root)
+        assert any("benchmark catalog bootstrap trigger path" in failure for failure in failures), failures
+
+        (wf / "lint-workflows.yml").write_text(
+            lint_good.replace(
+                "          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py\n",
+                "",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_lint_workflow_trigger_paths(root)
+        assert any("benchmark catalog bootstrap syntax check" in failure for failure in failures), failures
 
         (wf / "lint-workflows.yml").write_text(
             lint_good.replace("          python3 scripts/native_load_gate.py --selftest\n", ""),

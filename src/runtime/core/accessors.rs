@@ -249,6 +249,20 @@ impl DataBrokerRuntime {
         &self.backend_instances
     }
 
+    /// Return only backend instances whose canonical project-routing policy
+    /// permits `project_id`. This is the read-only discovery counterpart of the
+    /// dispatch resolvers: project-scoped capability surfaces must not disclose
+    /// instances that are explicitly labelled for another project.
+    pub(crate) fn backend_instances_for_project(
+        &self,
+        project_id: &str,
+    ) -> Vec<&RuntimeBackendInstance> {
+        self.backend_instances
+            .iter()
+            .filter(|instance| self.instance_matches_project(instance, project_id))
+            .collect()
+    }
+
     pub fn executor_registry(&self) -> &BackendExecutorRegistry {
         &self.executor_registry
     }
@@ -428,6 +442,183 @@ impl DataBrokerRuntime {
                     "PostgreSQL is not configured",
                 )
             })
+    }
+
+    /// Resolve one exact project-authorized PostgreSQL write target.
+    ///
+    /// `expected_instance` is supplied when replaying deferred work. In that
+    /// mode the persisted alias is revalidated rather than load-balanced onto a
+    /// different instance. The returned provenance binds the routing policy to
+    /// a physical PostgreSQL identity without persisting a DSN or credential.
+    pub(crate) async fn project_postgres_write_target(
+        &self,
+        project_id: &str,
+        expected_instance: Option<&str>,
+    ) -> Result<ProjectPostgresWriteTarget, tonic::Status> {
+        use sha2::{Digest, Sha256};
+
+        let project_id = project_id.trim();
+        if project_id.is_empty() {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "project PostgreSQL write routing requires an explicit project_id",
+                [("project_id", "must identify an explicit project")],
+            ));
+        }
+
+        let postgres_instances: Vec<&RuntimeBackendInstance> = self
+            .backend_instances
+            .iter()
+            .filter(|instance| instance.backend == "postgres")
+            .collect();
+        let expected_instance = expected_instance
+            .map(str::trim)
+            .filter(|instance| !instance.is_empty());
+        let eligible_instances: Vec<&RuntimeBackendInstance> = postgres_instances
+            .iter()
+            .copied()
+            .filter(|instance| {
+                instance.enabled
+                    && instance.configured
+                    && instance.connected
+                    && instance.healthy
+                    && instance.write_weight > 0
+                    && matches!(instance.role.as_str(), "write" | "read_write" | "admin")
+                    && self.circuit_breaker_allows("postgres", Some(&instance.name))
+                    && self.instance_matches_project(instance, project_id)
+            })
+            .collect();
+        let selected = if let Some(expected) = expected_instance {
+            expected.to_string()
+        } else if eligible_instances.len() == 1 {
+            eligible_instances[0].name.clone()
+        } else if eligible_instances.len() > 1 {
+            return Err(crate::runtime::executor_utils::schema_status(
+                tonic::Code::FailedPrecondition,
+                "postgres",
+                "project_write_authority",
+                "project_write_authority_ambiguous",
+                format!(
+                    "project '{project_id}' has multiple eligible PostgreSQL write instances; schema authority requires one explicit canonical owner"
+                ),
+            ));
+        } else if postgres_instances.is_empty() {
+            self.ensure_unlabeled_default_allowed_for_project("postgres", project_id)?;
+            "primary".to_string()
+        } else {
+            return Err(backend_instance_not_connected_status(
+                "postgres",
+                format!(
+                    "no enabled, healthy, write-capable PostgreSQL instance is routed to project '{project_id}'"
+                ),
+            ));
+        };
+
+        let registration = postgres_instances
+            .iter()
+            .copied()
+            .find(|instance| instance.name == selected);
+        let (role, dsn_env, labels) = if let Some(instance) = registration {
+            self.ensure_instance_matches_project(instance, project_id)?;
+            if !instance.enabled
+                || !instance.configured
+                || !instance.connected
+                || !instance.healthy
+                || instance.write_weight == 0
+                || !matches!(instance.role.as_str(), "write" | "read_write" | "admin")
+            {
+                return Err(backend_instance_not_connected_status(
+                    "postgres",
+                    format!(
+                        "postgres instance '{}' is not an enabled, healthy write target",
+                        instance.name
+                    ),
+                ));
+            }
+            if !self.circuit_breaker_allows("postgres", Some(&instance.name)) {
+                return Err(crate::runtime::executor_utils::retryable_status(
+                    "postgres",
+                    "circuit_breaker_open",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    format!(
+                        "postgres instance '{}' circuit breaker is open",
+                        instance.name
+                    ),
+                ));
+            }
+            (
+                instance.role.clone(),
+                instance.dsn_env.clone().unwrap_or_default(),
+                instance
+                    .labels
+                    .iter()
+                    .map(|(key, value)| (key.clone(), value.clone()))
+                    .collect::<std::collections::BTreeMap<_, _>>(),
+            )
+        } else {
+            if !postgres_instances.is_empty() || selected != "primary" {
+                return Err(backend_instance_not_configured_status(
+                    "postgres", &selected,
+                ));
+            }
+            self.ensure_unlabeled_default_allowed_for_project("postgres", project_id)?;
+            (
+                "legacy_primary".to_string(),
+                String::new(),
+                std::collections::BTreeMap::new(),
+            )
+        };
+
+        let pool = self.pg_pool_for_instance(Some(&selected))?.clone();
+        let (database, user, server_address, server_port): (
+            String,
+            String,
+            Option<String>,
+            Option<i32>,
+        ) = sqlx::query_as(
+            "SELECT current_database()::TEXT, current_user::TEXT,
+                    inet_server_addr()::TEXT, inet_server_port()",
+        )
+        .fetch_one(&pool)
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::retryable_status(
+                "postgres",
+                "project_write_target_provenance_unavailable",
+                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                format!(
+                    "failed to prove PostgreSQL write target '{}' for project '{}': {err}",
+                    selected, project_id
+                ),
+            )
+        })?;
+        let labels_json = serde_json::to_string(&labels).unwrap_or_default();
+        let routing_mode = self.config.project_routing_mode.trim().to_ascii_lowercase();
+        let server_address = server_address.unwrap_or_default();
+        let server_port = server_port.unwrap_or_default().to_string();
+        let mut hasher = Sha256::new();
+        for part in [
+            "UDB_PROJECT_POSTGRES_TARGET_V1",
+            project_id,
+            "postgres",
+            selected.as_str(),
+            role.as_str(),
+            dsn_env.as_str(),
+            labels_json.as_str(),
+            routing_mode.as_str(),
+            database.as_str(),
+            user.as_str(),
+            server_address.as_str(),
+            server_port.as_str(),
+        ] {
+            hasher.update((part.len() as u64).to_be_bytes());
+            hasher.update(part.as_bytes());
+        }
+
+        Ok(ProjectPostgresWriteTarget {
+            instance: selected,
+            pool,
+            provenance_sha256: format!("{:x}", hasher.finalize()),
+        })
     }
 
     /// NW3-1: MySQL pool resolver. Mirrors `pg_pool_for_instance`.
@@ -645,6 +836,123 @@ impl DataBrokerRuntime {
             }
         }
         Ok(ResolvedBackendSelector { backend, instance })
+    }
+
+    fn resolve_projection_target_for_project(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        write: bool,
+    ) -> Result<ResolvedBackendSelector, tonic::Status> {
+        let project_id = project_id.trim();
+        let operation = if write {
+            "projection_write"
+        } else {
+            "projection_read"
+        };
+        if project_id.is_empty() {
+            return Err(crate::runtime::executor_utils::schema_status(
+                tonic::Code::FailedPrecondition,
+                backend,
+                operation,
+                "projection_project_required",
+                "projection routing requires a non-empty project_id",
+            ));
+        }
+        if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
+            let resolved = self.resolve_backend_selector_for_project(
+                &format!("{backend}:{}", instance.trim()),
+                project_id,
+            )?;
+            let registration = self.backend_instances.iter().find(|candidate| {
+                candidate.backend == resolved.backend
+                    && resolved.instance.as_deref() == Some(candidate.name.as_str())
+            });
+            if let Some(registration) = registration {
+                let role_allowed = if write {
+                    matches!(registration.role.as_str(), "write" | "read_write" | "admin")
+                        && registration.write_weight > 0
+                } else {
+                    matches!(registration.role.as_str(), "read" | "read_write" | "admin")
+                        && registration.read_weight > 0
+                };
+                if !registration.configured || !registration.healthy || !role_allowed {
+                    return Err(backend_instance_not_connected_status(
+                        resolved.backend,
+                        format!(
+                            "backend instance '{}:{}' is not a configured, healthy {} target",
+                            registration.backend,
+                            registration.name,
+                            if write { "write" } else { "read" }
+                        ),
+                    ));
+                }
+            } else if project_id != crate::runtime::catalog::DEFAULT_PROJECT_ID {
+                return Err(backend_selector_not_found_status(
+                    resolved.backend,
+                    operation,
+                    "project_backend_instance_missing",
+                    format!(
+                        "backend instance '{}:{}' has no explicit project binding for '{project_id}'",
+                        backend,
+                        instance.trim()
+                    ),
+                ));
+            }
+            return Ok(resolved);
+        }
+
+        let base = self.resolve_backend_selector_for_project(backend, project_id)?;
+        let selected = if base.backend == "s3" {
+            self.choose_instance_name_for_project("minio", write, project_id)
+                .or_else(|| self.choose_instance_name_for_project("s3", write, project_id))
+        } else {
+            self.choose_instance_name_for_project(&base.backend, write, project_id)
+        };
+        if let Some(selected) = selected {
+            return self.resolve_projection_target_for_project(
+                &base.backend,
+                Some(selected),
+                project_id,
+                write,
+            );
+        }
+        if project_id != crate::runtime::catalog::DEFAULT_PROJECT_ID {
+            return Err(backend_selector_not_found_status(
+                base.backend,
+                operation,
+                "project_backend_instance_missing",
+                format!(
+                    "no {}-capable backend instance is bound to project '{project_id}'",
+                    if write { "write" } else { "read" }
+                ),
+            ));
+        }
+        Ok(base)
+    }
+
+    /// Resolve the exact write target for a queued projection task. Customer
+    /// projects must resolve to a registered instance; they never fall back to
+    /// a process-wide default client that has no project binding.
+    pub(crate) fn resolve_projection_write_target_for_project(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+    ) -> Result<ResolvedBackendSelector, tonic::Status> {
+        self.resolve_projection_target_for_project(backend, instance, project_id, true)
+    }
+
+    /// Resolve the exact read target for a projection drift scan. As with
+    /// writes, a non-default project cannot use an unlabeled process default.
+    pub(crate) fn resolve_projection_read_target_for_project(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+    ) -> Result<ResolvedBackendSelector, tonic::Status> {
+        self.resolve_projection_target_for_project(backend, instance, project_id, false)
     }
 
     pub fn resolve_backend_targets(

@@ -153,11 +153,10 @@ const TASK_COLS: &str = "task_id, idempotency_key, project_id, target_backend, t
      source_payload, source_checksum, status, retry_count, last_error, \
      created_at, updated_at, next_retry_at, completed_at";
 
-/// The four "static" columns NOT carried on [`ProjectionTaskRow`]
-/// (`manifest_checksum` / `message_type` / `source_schema` / `source_table`) but
-/// stored on the table. Every mutation (which rewrites the whole row at
-/// version+1) MUST preserve them so `dead_letter_groups` /
-/// `requeue_dead_letter_by_source` keep seeing the original `source_table`.
+/// Static columns stored alongside the claim row. `manifest_checksum` is also
+/// copied into [`ProjectionTaskRow`] so dispatch can bind work to the active
+/// catalog; every version+1 mutation must still preserve all four values so
+/// reconciliation keeps seeing the original source identity.
 const TASK_STATIC_COLS: &str = "manifest_checksum, message_type, source_schema, source_table";
 
 /// The static-column values read alongside a task row, threaded through each
@@ -197,6 +196,7 @@ fn row_to_projection_task(row: &Json) -> SystemStoreResult<ProjectionTaskRow> {
         task_id,
         idempotency_key: ch_str(row, "idempotency_key"),
         project_id: ch_str(row, "project_id"),
+        manifest_checksum: ch_str(row, "manifest_checksum"),
         target_backend: ch_str(row, "target_backend"),
         target_instance: ch_str(row, "target_instance"),
         projection_kind: ch_str(row, "projection_kind"),
@@ -743,7 +743,7 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
         // source_table isn't in TASK_COLS, so select it directly. FINAL collapses
         // to the latest version per task_id.
         let scan = format!(
-            "SELECT source_table, target_backend, target_instance, status FROM {tbl} FINAL"
+            "SELECT project_id, source_table, target_backend, target_instance, status, last_error FROM {tbl} FINAL"
         );
         let rows = self
             .executor()
@@ -751,13 +751,17 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
             .await
             .map_err(|e| ch_err("dead_letter_groups scan", e))?;
         use std::collections::HashMap;
-        let mut groups: HashMap<(String, String, String), i64> = HashMap::new();
+        let mut groups: HashMap<(String, String, String, String), i64> = HashMap::new();
         for row in &rows {
-            if ch_str(row, "status") != ProjectionTaskStatus::DeadLetter.as_str() {
+            if ch_str(row, "status") != ProjectionTaskStatus::DeadLetter.as_str()
+                || ch_str(row, "last_error")
+                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+            {
                 continue;
             }
             *groups
                 .entry((
+                    ch_str(row, "project_id"),
                     ch_str(row, "source_table"),
                     ch_str(row, "target_backend"),
                     ch_str(row, "target_instance"),
@@ -767,11 +771,14 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
         let mut out: Vec<DeadLetterGroup> = groups
             .into_iter()
             .map(
-                |((source_table, target_backend, target_instance), dead_count)| DeadLetterGroup {
-                    source_table,
-                    target_backend,
-                    target_instance,
-                    dead_count,
+                |((project_id, source_table, target_backend, target_instance), dead_count)| {
+                    DeadLetterGroup {
+                        project_id,
+                        source_table,
+                        target_backend,
+                        target_instance,
+                        dead_count,
+                    }
                 },
             )
             .collect();
@@ -781,6 +788,7 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
 
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
@@ -804,11 +812,16 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
             let mut n = 0i64;
             for row in &rows {
                 let mut task = row_to_projection_task(row)?;
-                if task.status != ProjectionTaskStatus::DeadLetter {
+                if task.status != ProjectionTaskStatus::DeadLetter
+                    || task
+                        .last_error
+                        .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                {
                     continue;
                 }
                 let statics = row_to_static_cols(row);
-                if statics.source_table != source_table
+                if task.project_id != project_id
+                    || statics.source_table != source_table
                     || task.target_backend != target_backend
                     || task.target_instance != target_instance
                 {

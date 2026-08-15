@@ -153,6 +153,7 @@ fn row_to_projection_task(row: &Row) -> SystemStoreResult<ProjectionTaskRow> {
         task_id,
         idempotency_key: str_col(row, "idempotency_key"),
         project_id: str_col(row, "project_id"),
+        manifest_checksum: str_col(row, "manifest_checksum"),
         target_backend: str_col(row, "target_backend"),
         target_instance: str_col(row, "target_instance"),
         projection_kind: str_col(row, "projection_kind"),
@@ -306,6 +307,7 @@ impl ProjectionTaskStore for MssqlCanonicalStore {
              SET status = 'IN_PROGRESS', updated_at = SYSUTCDATETIME() \
              OUTPUT \
                 CONVERT(NVARCHAR(36), inserted.task_id) AS task_id, inserted.idempotency_key, inserted.project_id, \
+                inserted.manifest_checksum, \
                 inserted.target_backend, inserted.target_instance, inserted.projection_kind, inserted.resource_name, \
                 inserted.operation, inserted.source_row_key, inserted.target_options, inserted.source_payload, \
                 inserted.source_checksum, inserted.status, inserted.retry_count, inserted.last_error, \
@@ -482,11 +484,12 @@ impl ProjectionTaskStore for MssqlCanonicalStore {
         let rel = Self::safe_object_name(self.projection_relation_ref())
             .map_err(SystemStoreError::InvalidInput)?;
         let sql = format!(
-            "SELECT TOP (@P1) source_table, target_backend, target_instance, \
+            "SELECT TOP (@P1) project_id, source_table, target_backend, target_instance, \
                     COUNT(*) AS dead_count \
              FROM {rel} \
              WHERE status = 'DEAD_LETTER' \
-             GROUP BY source_table, target_backend, target_instance"
+               AND last_error NOT LIKE 'projection authority rejected:%' \
+             GROUP BY project_id, source_table, target_backend, target_instance"
         );
         let params = [SqlParam::Int(limit.max(1))];
         let rows = self
@@ -497,6 +500,7 @@ impl ProjectionTaskStore for MssqlCanonicalStore {
         let mut out = Vec::with_capacity(rows.len());
         for row in &rows {
             out.push(DeadLetterGroup {
+                project_id: str_col(row, "project_id"),
                 source_table: str_col(row, "source_table"),
                 target_backend: str_col(row, "target_backend"),
                 target_instance: str_col(row, "target_instance"),
@@ -508,6 +512,7 @@ impl ProjectionTaskStore for MssqlCanonicalStore {
 
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
@@ -519,11 +524,14 @@ impl ProjectionTaskStore for MssqlCanonicalStore {
              SET status = 'PENDING', retry_count = 0, \
                  last_error = 'reconciliation repair', updated_at = SYSUTCDATETIME() \
              WHERE status = 'DEAD_LETTER' \
-               AND source_table = @P1 \
-               AND target_backend = @P2 \
-               AND target_instance = @P3"
+               AND last_error NOT LIKE 'projection authority rejected:%' \
+               AND project_id = @P1 \
+               AND source_table = @P2 \
+               AND target_backend = @P3 \
+               AND target_instance = @P4"
         );
         let params = [
+            SqlParam::Str(project_id.to_string()),
             SqlParam::Str(source_table.to_string()),
             SqlParam::Str(target_backend.to_string()),
             SqlParam::Str(target_instance.to_string()),
