@@ -550,3 +550,45 @@ fn register_is_public_defaults_to_private_when_absent() {
     assert!(register_is_public_bind(Some(true)));
     assert!(!register_is_public_bind(Some(false)));
 }
+
+/// UDB's project id is an OPAQUE non-empty string everywhere — control plane
+/// (`udb_projects.project_id` is TEXT), AuthN principals, policy documents and
+/// the DataBroker. Storage alone parsed it as a UUID, so a registered project
+/// such as `ambulife` was rejected at `RegisterUpload` before any object or
+/// metadata write, even though that same authenticated identity had already
+/// completed broker-mediated CRUD.
+///
+/// The value must be preserved EXACTLY — never hashed or remapped, which would
+/// create a second identity namespace and make policy/audit lineage
+/// unverifiable.
+#[test]
+fn storage_project_scope_accepts_opaque_and_uuid_projects() {
+    use tonic::metadata::MetadataMap;
+
+    let md = MetadataMap::new();
+    let resolve = |body: &str| super::handlers::resolved_storage_project_scope(&md, body);
+
+    // The reported failure: a valid opaque project.
+    assert_eq!(
+        resolve("ambulife").expect("opaque project must be accepted"),
+        "ambulife"
+    );
+
+    // Preserved byte-for-byte, not normalized into another namespace.
+    assert_eq!(resolve("Ambu-Life_01").unwrap(), "Ambu-Life_01");
+
+    // UUID-shaped projects keep working; their text form is a valid opaque id.
+    let uuid = "8f14e45f-ea8d-4b1a-9c2e-1f0a5b7d3c22";
+    assert_eq!(resolve(uuid).unwrap(), uuid);
+
+    // A tenant-wide credential with no project keeps tenant-wide behavior.
+    assert_eq!(resolve("").unwrap(), "");
+    assert_eq!(resolve("   ").unwrap(), "");
+
+    // Bounded to the column width, as a typed InvalidArgument rather than a
+    // backend value-too-long surfaced as INTERNAL.
+    let too_long = "p".repeat(121);
+    let err = resolve(&too_long).expect_err("over-length project must be rejected");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(resolve(&"p".repeat(120)).unwrap().len(), 120);
+}

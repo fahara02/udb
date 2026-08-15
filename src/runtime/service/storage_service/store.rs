@@ -88,7 +88,7 @@ fn file_tenant_active_clauses(tenant_id: &str, project_id: &str) -> Vec<LogicalF
         LogicalFilter::IsNull("deleted_at".to_string()),
     ];
     if !project_id.trim().is_empty() {
-        clauses.push(file_uuid_eq("project_id", project_id.trim()));
+        clauses.push(file_eq("project_id", project_id.trim()));
     }
     clauses
 }
@@ -182,7 +182,7 @@ pub(crate) fn file_register_record(
     record.insert("tenant_id".to_string(), logical_string(tenant_id));
     record.insert(
         "project_id".to_string(),
-        logical_uuid_or_null(&req.project_id),
+        logical_text_or_null(req.project_id.trim()),
     );
     record.insert("filename".to_string(), logical_string(req.filename.clone()));
     record.insert(
@@ -226,7 +226,7 @@ pub(crate) fn file_full_record(file: &storage_entity_pb::File) -> LogicalRecord 
     );
     record.insert(
         "project_id".to_string(),
-        logical_uuid_or_null(&file.project_id),
+        logical_text_or_null(file.project_id.trim()),
     );
     record.insert(
         "filename".to_string(),
@@ -393,7 +393,7 @@ pub(crate) fn gc_intent_fingerprint(file_id: &str, mode: &str) -> String {
 }
 
 /// A durable GC-intent ledger row, decoded for the idempotency-replay and sweep
-/// paths. `intent_id`/`tenant_id`/`project_id` are carried as text (UUIDs never
+/// paths. `intent_id`/`tenant_id` are carried as text (UUIDs never
 /// leave Postgres typed here) to avoid depending on sqlx's uuid feature.
 pub(crate) struct GcIntentRow {
     pub(crate) intent_id: String,
@@ -458,7 +458,7 @@ const GC_INTENTS_DDL: &[&str] = &[
     "CREATE TABLE IF NOT EXISTS udb_storage.gc_intents ( \
         intent_id           UUID PRIMARY KEY, \
         tenant_id           UUID NOT NULL, \
-        project_id          UUID, \
+        project_id          VARCHAR(120), \
         file_id             UUID NOT NULL, \
         backend             TEXT NOT NULL DEFAULT '', \
         bucket              TEXT NOT NULL DEFAULT '', \
@@ -481,6 +481,26 @@ const GC_INTENTS_DDL: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_udb_storage_gc_intents_pending \
         ON udb_storage.gc_intents (status, created_at) \
         WHERE status = 'PENDING'",
+    // Migrate a ledger created before project ids were opaque. `CREATE TABLE IF
+    // NOT EXISTS` above only fixes NEW deployments, so an existing table would
+    // keep its UUID column and keep rejecting a project such as `ambulife`.
+    // Guarded on the current column type so it is a no-op after the first run
+    // rather than rewriting the table on every startup, and rollback-safe: a
+    // UUID's text form is a valid opaque project id, so no value changes
+    // meaning and the reverse cast still parses.
+    "DO $$ \
+     BEGIN \
+       IF EXISTS ( \
+         SELECT 1 FROM information_schema.columns \
+         WHERE table_schema = 'udb_storage' \
+           AND table_name = 'gc_intents' \
+           AND column_name = 'project_id' \
+           AND data_type = 'uuid' \
+       ) THEN \
+         ALTER TABLE udb_storage.gc_intents \
+           ALTER COLUMN project_id TYPE VARCHAR(120) USING project_id::text; \
+       END IF; \
+     END $$",
 ];
 
 impl StorageServiceImpl {

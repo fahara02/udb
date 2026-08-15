@@ -57,22 +57,47 @@ pub(crate) type DownloadFileStream = std::pin::Pin<
     >,
 >;
 
+/// Maximum stored length of an opaque project id, matching the
+/// `VARCHAR(120)` Storage/AuthN/AuthZ project columns. Bounding here turns a
+/// too-long project into a typed InvalidArgument instead of a backend
+/// value-too-long error surfaced as INTERNAL.
+const MAX_STORAGE_PROJECT_ID_LEN: usize = 120;
+
 /// Resolve Storage's authorization project claim-first while preserving the
 /// existing tenant-wide placement model. A tenant-scoped credential with no
-/// project claim/header gets an empty project and keeps tenant-wide behavior;
-/// every non-empty value is validated for the UUID column before it reaches IR.
-fn resolved_storage_project_scope(
+/// project claim/header gets an empty project and keeps tenant-wide behavior.
+///
+/// The project id is an OPAQUE non-empty string everywhere else in UDB — the
+/// control plane (`udb_projects.project_id` is TEXT), AuthN principals, policy
+/// documents and the DataBroker all treat it that way. Storage alone parsed it
+/// as a UUID, so a registered project such as `ambulife` was rejected here
+/// before any object or metadata write, even though the same authenticated
+/// identity had already completed broker-mediated CRUD. The value is now
+/// preserved EXACTLY (never hashed or remapped, which would create a second
+/// identity namespace and break policy/audit lineage) and only bounded to the
+/// column width. UUID-shaped projects keep working — their text form is a
+/// valid opaque id.
+pub(super) fn resolved_storage_project_scope(
     metadata: &MetadataMap,
     request_project_id: &str,
 ) -> Result<String, Status> {
     let project_id = metadata_project_id(metadata)
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| request_project_id.trim().to_string());
+    let project_id = project_id.trim();
     if project_id.is_empty() {
-        Ok(String::new())
-    } else {
-        Ok(parse_uuid("project_id", &project_id)?.to_string())
+        return Ok(String::new());
     }
+    if project_id.chars().count() > MAX_STORAGE_PROJECT_ID_LEN {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "project_id is too long",
+            [(
+                "project_id",
+                format!("must be at most {MAX_STORAGE_PROJECT_ID_LEN} characters"),
+            )],
+        ));
+    }
+    Ok(project_id.to_string())
 }
 
 /// Register a new upload's metadata row in `PENDING` state and mint the

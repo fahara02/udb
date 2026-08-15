@@ -70,7 +70,14 @@ message File {
   string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" not_null: true }];
   // @inject_tag: gorm:"column:tenant_id;not null"
 
-  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "UUID" }];
+  // Project is an OPAQUE non-empty string across the control plane, AuthN,
+  // policy and the DataBroker (`udb_projects.project_id` is TEXT). Storage alone
+  // declared it UUID, so a valid registered project such as `ambulife` was
+  // rejected at RegisterUpload even though the same identity had already
+  // completed broker-mediated CRUD. VARCHAR(120) matches the AuthN/AuthZ project
+  // columns; a UUID's text form remains a valid opaque id, so existing rows
+  // migrate losslessly via the USING cast below.
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" using_expression: "project_id::text" }];
   // @inject_tag: gorm:"column:project_id"
 
   string filename = 4 [(udb.core.common.v1.pg_column) = { column_name: "filename" sql_type: "VARCHAR(512)" not_null: true }];
