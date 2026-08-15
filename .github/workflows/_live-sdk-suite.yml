@@ -513,7 +513,8 @@ jobs:
             --release-tag "${UDB_BENCH_RELEASE_TAG:-}" \
             --release-asset "${UDB_BENCH_RELEASE_ASSET:-}" \
             --release-url "${UDB_BENCH_RELEASE_URL:-}" \
-            --release-sha256 "${UDB_BENCH_BINARY_SHA256:-}"
+            --release-sha256 "${UDB_BENCH_BINARY_SHA256:-}" \
+            --canonical-manifest docs/generated/bench-bodies.json
 
       - name: Upload benchmark report artifact
         if: always()
@@ -536,7 +537,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/collect_sdk_bench_results.py --gate docs/site/bench-results.json
+          python scripts/collect_sdk_bench_results.py \
+            --gate docs/site/bench-results.json \
+            --canonical-manifest docs/generated/bench-bodies.json
 
       # ── Always-run cleanup: stop broker(s) + docker ──────────────────
       - name: Stop broker and backends

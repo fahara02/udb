@@ -87,6 +87,9 @@ jobs:
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
           TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
+          # Exact SHA-256 of the committed v0.4.28 historical artifact. Any new
+          # benchmark evidence must arrive through Release -> Benchmark.
+          PINNED_LEGACY_BENCH_SHA256: 52461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6
         run: |
           set -euo pipefail
           mkdir -p docs/site
@@ -189,11 +192,33 @@ jobs:
               echo "::error::benchmark binary digest does not match ${release_tag}/${release_asset}.sha256"
               exit 1
             fi
+            # Reuse the benchmark's one canonical completeness validator. Fetch
+            # the generated RPC manifest from the immutable benchmarked commit,
+            # not the potentially newer default-branch checkout used to build
+            # Pages, then require every measured SDK to contain that exact set.
+            gh api -H "Accept: application/vnd.github.raw+json" \
+              "repos/${GITHUB_REPOSITORY}/contents/docs/generated/bench-bodies.json?ref=${artifact_commit}" \
+              > release-proof/bench-bodies.json
+            python3 scripts/collect_sdk_bench_results.py \
+              --gate docs/site/bench-results.json \
+              --canonical-manifest release-proof/bench-bodies.json
           else
-            # No triggering benchmark means this is a direct docs/wasm push.
-            # Keep the COMMITTED docs/site/bench-results.json. Do NOT re-fetch
-            # the currently-published board: if it ever went stale, curling it
-            # back would republish the stale copy forever.
+            # Push and workflow_dispatch have no fresh immutable artifact. They
+            # may publish only the exact committed v0.4.28 historical bytes.
+            # Comparing only with the preceding commit is insufficient: a
+            # predecessor could change the file in a failed deploy and a later
+            # unchanged successor could otherwise publish it.
+            if grep -Eq '"schema_version"[[:space:]]*:[[:space:]]*2|"evidence_status"[[:space:]]*:[[:space:]]*"canonical_complete"' docs/site/bench-results.json; then
+              echo "::error::committed schema-v2/canonical_complete benchmark payloads are forbidden; publish green proof through Release -> Benchmark"
+              exit 1
+            fi
+            legacy_digest="$(sha256sum docs/site/bench-results.json | awk '{print $1}')"
+            if [ "${legacy_digest}" != "${PINNED_LEGACY_BENCH_SHA256}" ]; then
+              echo "::error::no-fresh-artifact Pages run accepts only pinned v0.4.28 benchmark SHA-256 ${PINNED_LEGACY_BENCH_SHA256}; got ${legacy_digest}"
+              exit 1
+            fi
+            # Never re-fetch the currently-published board: if it ever went
+            # stale, curling it back would republish the stale copy forever.
             echo "no fresh benchmark artifact; keeping committed docs/site/bench-results.json"
           fi
       - name: Build UDB's parser to WebAssembly (real udb-portable, not a mock)
@@ -262,28 +287,16 @@ jobs:
           assert "failed_rpc_count" in summary, "benchmark JSON has no failed_rpc_count"
           assert isinstance(bench.get("sdks"), list), "benchmark JSON sdks must be a list"
           assert isinstance(bench.get("history"), list), "benchmark JSON history must be a list"
-          full_rows = []
           for sdk in bench.get("sdks", []):
               rows = sdk.get("full_rpcs") or []
               assert isinstance(rows, list), f"benchmark full_rpcs for {sdk.get('id')} must be a list"
               for row in rows:
-                  service = str(row.get("service") or "")
-                  rpc = str(row.get("wire_rpc") or row.get("rpc") or "")
-                  wire_api = row.get("wire_api") or (f"{service}/{rpc}" if service and rpc else rpc)
-                  row.setdefault("wire_api", wire_api)
-                  row.setdefault("api_alias", "")
-                  row.setdefault("operation_id", "")
-                  row.setdefault("api", row.get("operation_id") or row.get("api_alias") or wire_api)
-              full_rows.extend(rows)
-          if full_rows:
-              missing_identity = [
-                  row for row in full_rows
-                  if "wire_api" not in row or "api_alias" not in row or "operation_id" not in row
-              ]
-              assert not missing_identity, "benchmark full_rpcs rows must include wire_api, api_alias, and operation_id"
-              assert any(row.get("operation_id") or row.get("api_alias") or row.get("wire_api") for row in full_rows), "benchmark full_rpcs rows lack public API identity"
-          Path("docs/site/bench-results.json").write_text(json.dumps(bench, indent=2, sort_keys=True) + "\n")
-
+                  assert isinstance(row, dict), f"benchmark full_rpcs for {sdk.get('id')} contains a non-object row"
+                  for field in ("wire_api", "api_alias", "operation_id"):
+                      value = row.get(field)
+                      assert isinstance(value, str) and value.strip(), (
+                          f"benchmark full_rpcs for {sdk.get('id')} has empty {field}"
+                      )
           from html.parser import HTMLParser
           from urllib.parse import urlparse
 

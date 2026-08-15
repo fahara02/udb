@@ -139,6 +139,8 @@ jobs:
           node scripts/gen-bench-bodies-skeleton.mjs --check
           node --check scripts/gen-sdk-benchmark-docs.mjs
           node scripts/gen-sdk-benchmark-docs.mjs --check
+          python3 -m py_compile scripts/collect_sdk_bench_results.py
+          python3 scripts/collect_sdk_bench_results.py --selftest
           python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py
           python3 scripts/check-bench-harness-posture.py --selftest
           python3 scripts/check-bench-harness-posture.py

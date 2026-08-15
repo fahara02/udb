@@ -59,8 +59,13 @@ never drifts from the server's.
 SDK Markdown reports. The post-release benchmark workflow uploads it as the
 `sdk-benchmark-results` artifact; `pages.yml` consumes that artifact on benchmark
 completion and fails closed if a real benchmark has no fresh artifact.
-Validation-only benchmark runs do not deploy Pages; direct non-benchmark Pages
-publishes retain the committed last-known dashboard JSON. Per-RPC rows prefer
+Validation-only benchmark runs do not deploy Pages. Direct pushes and manual
+deploys may publish only the exact pinned SHA-256 of the committed v0.4.28
+historical JSON; committed schema-v2/canonical evidence is rejected, and new
+evidence is published only by the Release -> Benchmark artifact chain. The
+historical JSON is visibly marked legacy/incomplete and never rendered as green
+proof. Per-RPC
+rows prefer
 descriptor-derived `operation_id`, then `api_alias`, then the legacy
 `service/rpc` wire identity. The dashboard keeps the wire RPC as row detail so
 users can filter by canonical API identity without losing transport diagnostics.

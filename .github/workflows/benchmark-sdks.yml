@@ -25,6 +25,7 @@ on:
       - "docs/site/README.md"
       - "docs/site/styles.css"
       - "docs/bench-bodies/**"
+      - "docs/generated/bench-bodies.json"
       - "sdk/go/udbclient/live_perf_bodies.go"
       - "sdk/go/udbclient/live_perf_bodies_test.go"
       - "sdk/go/udbclient/live_perf_seed_test.go"

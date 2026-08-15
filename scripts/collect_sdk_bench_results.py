@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import datetime as dt
+import hashlib
 import json
+import math
 import os
 import re
 import subprocess
@@ -35,6 +38,11 @@ MISSING_HARNESS = {
     "csharp": "No live per-RPC benchmark harness exists yet; SDK build/unit conformance still runs in CI.",
     "java": "No live per-RPC benchmark harness exists yet; SDK compile/unit conformance still runs in CI.",
 }
+
+CANONICAL_RPC_MANIFEST = ROOT / "docs/generated/bench-bodies.json"
+CANONICAL_RPC_MANIFEST_LABEL = "docs/generated/bench-bodies.json"
+MEASURED_SDK_IDS = tuple(SDK_REPORTS)
+SKIPPED_SDK_IDS = tuple(MISSING_HARNESS)
 
 GRPC_STATUS_CODES = {
     "CANCELLED",
@@ -73,6 +81,95 @@ HARNESS_STATUS_ALIASES = {
     "NO_BODY": "SKIP_NO_BODY",
     "NOBODY": "SKIP_NO_BODY",
 }
+
+
+def _benchmark_contract(
+    canonical_rpcs: dict[str, tuple[str, str]],
+    manifest_sha256: str,
+) -> dict[str, Any]:
+    return {
+        "canonical_manifest": CANONICAL_RPC_MANIFEST_LABEL,
+        "canonical_manifest_sha256": manifest_sha256,
+        "canonical_rpc_count": len(canonical_rpcs),
+        "measured_sdk_ids": list(MEASURED_SDK_IDS),
+        "skipped_sdk_ids": list(SKIPPED_SDK_IDS),
+        "expected_attempted_rpc_count": len(canonical_rpcs) * len(MEASURED_SDK_IDS),
+    }
+
+
+def _load_canonical_rpc_contract(
+    path: Path = CANONICAL_RPC_MANIFEST,
+) -> tuple[dict[str, Any], dict[str, tuple[str, str]]]:
+    try:
+        raw = path.read_bytes()
+        rows = json.loads(raw)
+    except Exception as exc:
+        raise ValueError(f"cannot read canonical benchmark RPC manifest {path}: {exc}") from exc
+    if not isinstance(rows, list) or not rows:
+        raise ValueError(f"canonical benchmark RPC manifest {path} must be a non-empty JSON array")
+
+    canonical_rows: list[tuple[str, str, str]] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"canonical benchmark RPC manifest row {index} must be an object")
+        service = row.get("service")
+        rpc = row.get("rpc")
+        wire_rpc = row.get("wire_rpc")
+        api_alias = row.get("api_alias")
+        operation_id = row.get("operation_id")
+        if not all(
+            isinstance(value, str) and value.strip()
+            for value in (service, rpc, wire_rpc, api_alias, operation_id)
+        ):
+            raise ValueError(
+                f"canonical benchmark RPC manifest row {index} must contain non-empty "
+                "service/rpc/wire_rpc/api_alias/operation_id"
+            )
+        if "." in rpc:
+            rpc_service, rpc_name = rpc.rsplit(".", 1)
+            if rpc_service != service:
+                raise ValueError(
+                    f"canonical benchmark RPC manifest row {index} has qualified rpc={rpc!r} "
+                    f"outside service={service!r}"
+                )
+        else:
+            rpc_name = rpc
+        expected_wire_rpc = f"{service}/{rpc_name}"
+        if wire_rpc != expected_wire_rpc:
+            raise ValueError(
+                f"canonical benchmark RPC manifest row {index} has wire_rpc={wire_rpc!r}, "
+                f"expected {expected_wire_rpc!r}"
+            )
+        canonical_rows.append((wire_rpc, api_alias, operation_id))
+
+    duplicates = sorted(
+        rpc for rpc, count in Counter(wire_rpc for wire_rpc, _, _ in canonical_rows).items() if count != 1
+    )
+    if duplicates:
+        raise ValueError(
+            "canonical benchmark RPC manifest contains duplicate wire identities: "
+            + _preview(duplicates)
+        )
+    surface = {
+        wire_rpc: (api_alias, operation_id)
+        for wire_rpc, api_alias, operation_id in canonical_rows
+    }
+    return _benchmark_contract(surface, hashlib.sha256(raw).hexdigest()), surface
+
+
+def _preview(values: list[str], limit: int = 5) -> str:
+    shown = values[:limit]
+    suffix = f" (+{len(values) - limit} more)" if len(values) > limit else ""
+    return ", ".join(shown) + suffix
+
+
+def _full_row_wire_api(row: Any) -> str | None:
+    if not isinstance(row, dict):
+        return None
+    wire_api = row.get("wire_api")
+    if not isinstance(wire_api, str) or not wire_api.strip():
+        return None
+    return wire_api
 
 
 def _cmd(args: list[str]) -> str | None:
@@ -147,6 +244,37 @@ def _canonical_grpc_status(raw: str) -> str:
     return token
 
 
+def _normalized_failure_status(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"benchmark report err token must be a string or null, got {value!r}")
+    raw = value.strip()
+    if raw in {"", "-", "OK", "ok"}:
+        return None
+    return _canonical_grpc_status(raw)
+
+
+def _is_fatal_status(status: str | None) -> bool:
+    return status is not None and status not in NON_FATAL_HARNESS_STATUS_CODES
+
+
+def _is_exact_int(value: Any) -> bool:
+    return type(value) is int
+
+
+def _is_positive_int(value: Any) -> bool:
+    return _is_exact_int(value) and value > 0
+
+
+def _is_finite_nonnegative_number(value: Any) -> bool:
+    return (
+        type(value) in {int, float}
+        and math.isfinite(float(value))
+        and value >= 0
+    )
+
+
 def _parse_report(path: Path) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
@@ -165,18 +293,6 @@ def _parse_report(path: Path) -> dict[str, Any]:
     full_rpcs: list[dict[str, Any]] = []
     section = ""
     headers: list[str] = []
-
-    # An err cell of "OK"/""/"-" means the RPC succeeded; anything else is a non-OK
-    # gRPC or harness status (UNAVAILABLE, SEED_BLOCKED, …) and counts as a failure
-    # unless it is an explicitly non-fatal capability skip.
-    def _norm_err(value: str | None) -> str | None:
-        raw = (value or "").strip()
-        if raw in {"", "-", "OK", "ok"}:
-            return None
-        status = _canonical_grpc_status(raw)
-        if status in NON_FATAL_HARNESS_STATUS_CODES:
-            return None
-        return status
 
     for line in lines:
         low = line.lower()
@@ -242,7 +358,7 @@ def _parse_report(path: Path) -> dict[str, Any]:
                 "operation_id": operation_id,
                 "kind": row.get("kind", ""),
                 # err_code: None for OK rows; absent column (older report) also → None.
-                "err_code": _norm_err(row.get("err")),
+                "err_code": _normalized_failure_status(row.get("err")),
                 "p50_ms": _duration_ms(row.get("p50_ms") or row.get("p50") or ""),
                 "p99_ms": _duration_ms(row.get("p99_ms") or row.get("p99") or ""),
                 "mean_ms": _duration_ms(row.get("mean_ms") or row.get("mean") or ""),
@@ -268,7 +384,7 @@ def _parse_report(path: Path) -> dict[str, Any]:
                 "api_alias": api_alias,
                 "operation_id": operation_id,
                 "kind": row.get("kind", ""),
-                "err_code": _norm_err(row.get("err")) or "UNKNOWN",
+                "err_code": _normalized_failure_status(row.get("err")) or "UNKNOWN",
                 "p99_ms": _duration_ms(row.get("p99_ms") or row.get("p99") or ""),
                 "mean_ms": _duration_ms(row.get("mean_ms") or row.get("mean") or ""),
             })
@@ -286,6 +402,14 @@ def _parse_report(path: Path) -> dict[str, Any]:
                 iters = int(raw_iters) if raw_iters.strip() else None
             except ValueError:
                 iters = None
+            row_status = _normalized_failure_status(row.get("err"))
+            result_status = (
+                "failed"
+                if _is_fatal_status(row_status)
+                else "capability_skipped"
+                if row_status in NON_FATAL_HARNESS_STATUS_CODES
+                else "ok"
+            )
             full_rpcs.append({
                 "service": service,
                 "rpc": rpc,
@@ -294,7 +418,8 @@ def _parse_report(path: Path) -> dict[str, Any]:
                 "api_alias": api_alias,
                 "operation_id": operation_id,
                 "kind": row.get("kind", ""),
-                "err_code": _norm_err(row.get("err")),
+                "err_code": row_status,
+                "result_status": result_status,
                 "p50_ms": _duration_ms(row.get("p50_ms") or row.get("p50") or ""),
                 "p99_ms": _duration_ms(row.get("p99_ms") or row.get("p99") or ""),
                 "mean_ms": _duration_ms(row.get("mean_ms") or row.get("mean") or ""),
@@ -315,10 +440,11 @@ def _parse_report(path: Path) -> dict[str, Any]:
 
     failed_by_rpc: dict[str, dict[str, Any]] = {}
     for f in failures:
-        failed_by_rpc[failure_key(f)] = f
+        if _is_fatal_status(f.get("err_code")):
+            failed_by_rpc[failure_key(f)] = f
     for s in slowest:
         key = failure_key(s)
-        if s.get("err_code") and key not in failed_by_rpc:
+        if _is_fatal_status(s.get("err_code")) and key not in failed_by_rpc:
             failed_by_rpc[key] = {
                 "rpc": s["rpc"], "service": s.get("service", ""), "wire_rpc": s.get("wire_rpc", ""),
                 "wire_api": s.get("wire_api", ""), "api": s.get("api", ""),
@@ -327,7 +453,7 @@ def _parse_report(path: Path) -> dict[str, Any]:
             }
     for r in full_rpcs:
         key = failure_key(r)
-        if r.get("err_code") and key not in failed_by_rpc:
+        if _is_fatal_status(r.get("err_code")) and key not in failed_by_rpc:
             failed_by_rpc[key] = {
                 "rpc": r["rpc"], "service": r.get("service", ""), "wire_rpc": r.get("rpc", ""),
                 "wire_api": r.get("wire_api", ""), "api": r.get("api", ""),
@@ -336,9 +462,16 @@ def _parse_report(path: Path) -> dict[str, Any]:
                 "p99_ms": r.get("p99_ms"), "mean_ms": r.get("mean_ms"),
             }
     failed_rpcs = sorted(failed_by_rpc.values(), key=lambda x: x.get("wire_api") or x["rpc"])
+    capability_skipped_rpc_count = sum(
+        1 for row in full_rpcs if row.get("err_code") in NON_FATAL_HARNESS_STATUS_CODES
+    )
+    successful_rpc_count = sum(1 for row in full_rpcs if row.get("err_code") is None)
 
     summary: dict[str, Any] = {
         "rpc_count": measured,
+        "attempted_rpc_count": len(full_rpcs),
+        "measured_rpc_count": successful_rpc_count,
+        "capability_skipped_rpc_count": capability_skipped_rpc_count,
         "service_count": len(services),
         "slowest_count": len(slowest),
         "failed_rpc_count": len(failed_rpcs),
@@ -365,12 +498,21 @@ def _parse_report(path: Path) -> dict[str, Any]:
     return parsed
 
 
-def _benchmark_gate_failures(payload: dict[str, Any]) -> list[str]:
+def _benchmark_gate_failures(
+    payload: dict[str, Any],
+    expected_contract: dict[str, Any],
+    canonical_rpcs: dict[str, tuple[str, str]],
+) -> list[str]:
     summary = payload.get("summary", {})
+    sdks = payload.get("sdks", [])
+    if not isinstance(summary, dict):
+        summary = {}
+    if not isinstance(sdks, list):
+        sdks = []
     bad_sdks = [
         s.get("name") or s.get("id")
-        for s in payload.get("sdks", [])
-        if s.get("status") not in {"ok", "skipped"}
+        for s in sdks
+        if isinstance(s, dict) and s.get("status") not in {"ok", "skipped"}
     ]
     try:
         failed_rpcs = int(summary.get("failed_rpc_count") or 0)
@@ -378,24 +520,412 @@ def _benchmark_gate_failures(payload: dict[str, Any]) -> list[str]:
         failed_rpcs = 0
 
     failures: list[str] = []
+    if payload.get("schema_version") != 2 or not _is_exact_int(payload.get("schema_version")):
+        failures.append("benchmark schema_version must be the exact integer 2")
+    if payload.get("evidence_status") != "canonical_complete":
+        failures.append("benchmark evidence_status must be canonical_complete")
     if bad_sdks:
         failures.append(f"bad_sdks={bad_sdks}")
     if failed_rpcs:
         failures.append(f"failed_rpc_count={failed_rpcs}")
+
+    if payload.get("benchmark_contract") != expected_contract:
+        failures.append("benchmark_contract does not match the canonical RPC manifest")
+
+    sdk_rows = [sdk for sdk in sdks if isinstance(sdk, dict)]
+    sdk_ids = [sdk.get("id") for sdk in sdk_rows]
+    invalid_ids = [sdk_id for sdk_id in sdk_ids if not isinstance(sdk_id, str) or not sdk_id]
+    if invalid_ids or len(sdk_rows) != len(sdks):
+        failures.append("benchmark SDK entries must be objects with non-empty string ids")
+    counts = Counter(sdk_id for sdk_id in sdk_ids if isinstance(sdk_id, str) and sdk_id)
+    duplicate_sdk_ids = sorted(sdk_id for sdk_id, count in counts.items() if count != 1)
+    if duplicate_sdk_ids:
+        failures.append(f"duplicate SDK entries: {_preview(duplicate_sdk_ids)}")
+
+    expected_sdk_ids = set(MEASURED_SDK_IDS) | set(SKIPPED_SDK_IDS)
+    actual_sdk_ids = set(counts)
+    missing_sdk_ids = sorted(expected_sdk_ids - actual_sdk_ids)
+    unexpected_sdk_ids = sorted(actual_sdk_ids - expected_sdk_ids)
+    if missing_sdk_ids:
+        failures.append(f"missing SDK entries: {_preview(missing_sdk_ids)}")
+    if unexpected_sdk_ids:
+        failures.append(f"unexpected SDK entries: {_preview(unexpected_sdk_ids)}")
+
+    expected_rpc_count = len(canonical_rpcs)
+    canonical_counts = Counter(canonical_rpcs.keys())
+    aggregate_attempted_rpc_count = 0
+    aggregate_measured_rpc_count = 0
+    aggregate_capability_skipped_rpc_count = 0
+    aggregate_failed_rpc_count = 0
+    current_sdk_evidence: dict[str, dict[str, Any]] = {}
+    by_id: dict[str, dict[str, Any]] = {}
+    for sdk in sdk_rows:
+        sdk_id = sdk.get("id")
+        if isinstance(sdk_id, str) and counts.get(sdk_id) == 1:
+            by_id[sdk_id] = sdk
+    for sdk_id in MEASURED_SDK_IDS:
+        sdk = by_id.get(sdk_id)
+        if sdk is None:
+            continue
+        if sdk.get("status") != "ok":
+            failures.append(f"measured SDK {sdk_id} must have status=ok")
+        sdk_summary = sdk.get("summary")
+        if not isinstance(sdk_summary, dict):
+            sdk_summary = {}
+        if not _is_exact_int(sdk_summary.get("rpc_count")) or sdk_summary.get("rpc_count") != expected_rpc_count:
+            failures.append(
+                f"measured SDK {sdk_id} rpc_count={sdk_summary.get('rpc_count')!r}, "
+                f"expected {expected_rpc_count}"
+            )
+
+        full_rows = sdk.get("full_rpcs")
+        if not isinstance(full_rows, list):
+            failures.append(f"measured SDK {sdk_id} full_rpcs must be a list")
+            continue
+        if len(full_rows) != expected_rpc_count:
+            failures.append(
+                f"measured SDK {sdk_id} full_rpcs has {len(full_rows)} rows, "
+                f"expected {expected_rpc_count}"
+            )
+        row_identities = [_full_row_wire_api(row) for row in full_rows]
+        invalid_row_count = sum(identity is None for identity in row_identities)
+        if invalid_row_count:
+            failures.append(
+                f"measured SDK {sdk_id} has {invalid_row_count} full_rpcs rows without wire_api"
+            )
+        row_counts = Counter(identity for identity in row_identities if identity is not None)
+        missing_rpcs = sorted((canonical_counts - row_counts).elements())
+        unexpected_rpcs = sorted((row_counts - canonical_counts).elements())
+        duplicate_rpcs = sorted(rpc for rpc, count in row_counts.items() if count > 1)
+        if missing_rpcs:
+            failures.append(f"measured SDK {sdk_id} missing RPCs: {_preview(missing_rpcs)}")
+        if unexpected_rpcs:
+            failures.append(f"measured SDK {sdk_id} unexpected RPCs: {_preview(unexpected_rpcs)}")
+        if duplicate_rpcs:
+            failures.append(f"measured SDK {sdk_id} duplicate RPCs: {_preview(duplicate_rpcs)}")
+
+        failed_full_rows: list[str] = []
+        computed_failed_rows: dict[str, str] = {}
+        computed_capability_skipped_rpc_count = 0
+        computed_measured_rpc_count = 0
+        for index, row in enumerate(full_rows):
+            wire_api = row_identities[index]
+            row_label = wire_api or f"row[{index}]"
+            if isinstance(row, dict) and wire_api in canonical_rpcs:
+                expected_alias, expected_operation_id = canonical_rpcs[wire_api]
+                if row.get("api_alias") != expected_alias:
+                    failures.append(
+                        f"measured SDK {sdk_id} {wire_api} api_alias={row.get('api_alias')!r}, "
+                        f"expected {expected_alias!r}"
+                    )
+                if row.get("operation_id") != expected_operation_id:
+                    failures.append(
+                        f"measured SDK {sdk_id} {wire_api} operation_id={row.get('operation_id')!r}, "
+                        f"expected {expected_operation_id!r}"
+                    )
+
+            if not isinstance(row, dict):
+                failed_full_rows.append(f"row[{index}]=invalid")
+                continue
+            service = row.get("service")
+            rpc = row.get("rpc")
+            if not (
+                isinstance(service, str)
+                and service.strip()
+                and isinstance(rpc, str)
+                and rpc.strip()
+                and f"{service}/{rpc}" == wire_api
+            ):
+                failures.append(
+                    f"measured SDK {sdk_id} full_rpcs row {row_label!r} has "
+                    f"service/rpc={service!r}/{rpc!r} inconsistent with wire_api"
+                )
+
+            if not _is_positive_int(row.get("iters")):
+                failures.append(
+                    f"measured SDK {sdk_id} full_rpcs row {row_label!r} "
+                    f"iters={row.get('iters')!r}, expected a positive integer"
+                )
+            for field in ("p50_ms", "p99_ms", "mean_ms"):
+                if not _is_finite_nonnegative_number(row.get(field)):
+                    failures.append(
+                        f"measured SDK {sdk_id} full_rpcs row {row_label!r} "
+                        f"{field}={row.get(field)!r}, expected a finite nonnegative number"
+                    )
+            for field in ("min_ms", "max_ms"):
+                if row.get(field) is not None and not _is_finite_nonnegative_number(row.get(field)):
+                    failures.append(
+                        f"measured SDK {sdk_id} full_rpcs row {row_label!r} "
+                        f"{field}={row.get(field)!r}, expected a finite nonnegative number when emitted"
+                    )
+
+            error_fields = [field for field in ("err_code", "err") if field in row]
+            if not error_fields:
+                failures.append(
+                    f"measured SDK {sdk_id} full_rpcs row {row_label!r} has no err_code/err evidence"
+                )
+                failed_full_rows.append(f"{row_label}=missing-status")
+                continue
+            row_statuses: set[str] = set()
+            normalized_field_statuses: list[str | None] = []
+            for field in error_fields:
+                try:
+                    status = _normalized_failure_status(row.get(field))
+                except ValueError as exc:
+                    failures.append(
+                        f"measured SDK {sdk_id} full_rpcs row {row_label!r} "
+                        f"has invalid {field}: {exc}"
+                    )
+                    row_statuses.add("INVALID_STATUS")
+                    continue
+                if status is not None:
+                    row_statuses.add(status)
+                normalized_field_statuses.append(status)
+            if len(set(normalized_field_statuses)) > 1:
+                failures.append(
+                    f"measured SDK {sdk_id} full_rpcs row {row_label!r} has disagreeing err_code/err evidence"
+                )
+            fatal_statuses = sorted(
+                status for status in row_statuses if _is_fatal_status(status)
+            )
+            capability_statuses = sorted(
+                status for status in row_statuses if status in NON_FATAL_HARNESS_STATUS_CODES
+            )
+            if fatal_statuses and capability_statuses:
+                failures.append(
+                    f"measured SDK {sdk_id} full_rpcs row {row_label!r} mixes fatal and capability statuses"
+                )
+            if fatal_statuses:
+                fatal_status = "+".join(fatal_statuses)
+                expected_result_status = "failed"
+                failed_full_rows.append(
+                    f"{row_label}={fatal_status}"
+                )
+                if wire_api:
+                    computed_failed_rows[wire_api] = fatal_status
+            elif capability_statuses:
+                expected_result_status = "capability_skipped"
+                computed_capability_skipped_rpc_count += 1
+            else:
+                expected_result_status = "ok"
+                computed_measured_rpc_count += 1
+            if row.get("result_status") != expected_result_status:
+                failures.append(
+                    f"measured SDK {sdk_id} full_rpcs row {row_label!r} "
+                    f"result_status={row.get('result_status')!r}, expected {expected_result_status!r}"
+                )
+        if failed_full_rows:
+            failures.append(
+                f"measured SDK {sdk_id} has {len(failed_full_rows)} failed/invalid full_rpcs rows: "
+                + _preview(failed_full_rows)
+            )
+
+        attempted_rpc_count = len(full_rows)
+        if attempted_rpc_count != expected_rpc_count:
+            failures.append(
+                f"measured SDK {sdk_id} recomputed attempted_rpc_count={attempted_rpc_count}, "
+                f"expected canonical {expected_rpc_count}"
+            )
+        expected_sdk_summary = {
+            "attempted_rpc_count": attempted_rpc_count,
+            "measured_rpc_count": computed_measured_rpc_count,
+            "capability_skipped_rpc_count": computed_capability_skipped_rpc_count,
+            "failed_rpc_count": len(computed_failed_rows),
+        }
+        for field, expected in expected_sdk_summary.items():
+            actual = sdk_summary.get(field)
+            if not _is_exact_int(actual) or actual != expected:
+                failures.append(
+                    f"measured SDK {sdk_id} {field}={actual!r}, expected recomputed {expected}"
+                )
+
+        claimed_failed_rows = sdk.get("failed_rpcs")
+        claimed_failed_by_wire: dict[str, str] = {}
+        invalid_claimed_failures = False
+        if not isinstance(claimed_failed_rows, list):
+            failures.append(f"measured SDK {sdk_id} failed_rpcs must be a list")
+            invalid_claimed_failures = True
+        else:
+            for index, row in enumerate(claimed_failed_rows):
+                wire_api = _full_row_wire_api(row)
+                if not isinstance(row, dict) or wire_api is None:
+                    failures.append(
+                        f"measured SDK {sdk_id} failed_rpcs row {index} has no wire_api"
+                    )
+                    invalid_claimed_failures = True
+                    continue
+                try:
+                    status = _normalized_failure_status(row.get("err_code", row.get("err")))
+                except ValueError as exc:
+                    failures.append(
+                        f"measured SDK {sdk_id} failed_rpcs row {wire_api!r} has invalid status: {exc}"
+                    )
+                    invalid_claimed_failures = True
+                    continue
+                if not _is_fatal_status(status):
+                    failures.append(
+                        f"measured SDK {sdk_id} failed_rpcs row {wire_api!r} is not fatal"
+                    )
+                    invalid_claimed_failures = True
+                    continue
+                if wire_api in claimed_failed_by_wire:
+                    failures.append(
+                        f"measured SDK {sdk_id} failed_rpcs duplicates {wire_api}"
+                    )
+                    invalid_claimed_failures = True
+                claimed_failed_by_wire[wire_api] = status
+        if not invalid_claimed_failures and claimed_failed_by_wire != computed_failed_rows:
+            failures.append(
+                f"measured SDK {sdk_id} failed_rpcs does not equal the recomputed fatal full_rpcs set"
+            )
+
+        aggregate_attempted_rpc_count += attempted_rpc_count
+        aggregate_measured_rpc_count += computed_measured_rpc_count
+        aggregate_capability_skipped_rpc_count += computed_capability_skipped_rpc_count
+        aggregate_failed_rpc_count += len(computed_failed_rows)
+        current_sdk_evidence[sdk_id] = {
+            "id": sdk_id,
+            "status": sdk.get("status"),
+            "rpc_count": sdk_summary.get("rpc_count"),
+            **expected_sdk_summary,
+        }
+
+    for sdk_id in SKIPPED_SDK_IDS:
+        sdk = by_id.get(sdk_id)
+        if sdk is None:
+            continue
+        if sdk.get("status") != "skipped":
+            failures.append(f"non-measured SDK {sdk_id} must remain an explicit skip")
+        sdk_summary = sdk.get("summary")
+        if not isinstance(sdk_summary, dict) or sdk_summary.get("rpc_count") is not None:
+            failures.append(f"non-measured SDK {sdk_id} must have rpc_count=null")
+        for field in (
+            "attempted_rpc_count",
+            "measured_rpc_count",
+            "capability_skipped_rpc_count",
+            "failed_rpc_count",
+        ):
+            actual = sdk_summary.get(field) if isinstance(sdk_summary, dict) else None
+            if not _is_exact_int(actual) or actual != 0:
+                failures.append(f"non-measured SDK {sdk_id} must have exact integer {field}=0")
+        if sdk.get("full_rpcs") != []:
+            failures.append(f"non-measured SDK {sdk_id} must not contain full_rpcs rows")
+        if sdk.get("failed_rpcs") != []:
+            failures.append(f"non-measured SDK {sdk_id} must not contain failed_rpcs rows")
+        current_sdk_evidence[sdk_id] = {
+            "id": sdk_id,
+            "status": sdk.get("status"),
+            "rpc_count": None,
+            "attempted_rpc_count": 0,
+            "measured_rpc_count": 0,
+            "capability_skipped_rpc_count": 0,
+            "failed_rpc_count": 0,
+        }
+
+    expected_attempted_rpc_count = expected_rpc_count * len(MEASURED_SDK_IDS)
+    if aggregate_attempted_rpc_count != expected_attempted_rpc_count:
+        failures.append(
+            f"recomputed attempted_rpc_count={aggregate_attempted_rpc_count}, "
+            f"expected canonical aggregate {expected_attempted_rpc_count}"
+        )
+    expected_summary = {
+        "sdk_count": len(expected_sdk_ids),
+        "ok": len(MEASURED_SDK_IDS),
+        "failed": 0,
+        "skipped": len(SKIPPED_SDK_IDS),
+        "canonical_rpc_count": expected_rpc_count,
+        "measured_sdk_count": len(MEASURED_SDK_IDS),
+        "expected_attempted_rpc_count": expected_attempted_rpc_count,
+        "attempted_rpc_count": expected_attempted_rpc_count,
+        "measured_rpc_count": aggregate_measured_rpc_count,
+        "capability_skipped_rpc_count": aggregate_capability_skipped_rpc_count,
+        "failed_rpc_count": aggregate_failed_rpc_count,
+    }
+    for field, expected in expected_summary.items():
+        if not _is_exact_int(summary.get(field)) or summary.get(field) != expected:
+            failures.append(f"summary.{field}={summary.get(field)!r}, expected {expected!r}")
+
+    history = payload.get("history")
+    if not isinstance(history, list) or not history or not isinstance(history[-1], dict):
+        failures.append("benchmark history must contain a current object point")
+    else:
+        current = history[-1]
+        if current.get("evidence_status") != payload.get("evidence_status"):
+            failures.append("current benchmark history evidence_status does not match payload")
+        history_summary = current.get("summary")
+        if not isinstance(history_summary, dict):
+            failures.append("current benchmark history point must contain summary counts")
+        else:
+            for field in (
+                "attempted_rpc_count",
+                "measured_rpc_count",
+                "capability_skipped_rpc_count",
+                "failed_rpc_count",
+            ):
+                expected = expected_summary[field]
+                actual = history_summary.get(field)
+                if not _is_exact_int(actual) or actual != expected:
+                    failures.append(
+                        f"current history summary.{field}={actual!r}, expected {expected!r}"
+                    )
+        history_sdks = current.get("sdks")
+        if not isinstance(history_sdks, list):
+            failures.append("current benchmark history point sdks must be a list")
+        else:
+            history_by_id: dict[str, dict[str, Any]] = {}
+            duplicate_history_ids: set[str] = set()
+            for row in history_sdks:
+                sdk_id = row.get("id") if isinstance(row, dict) else None
+                if not isinstance(sdk_id, str) or not sdk_id:
+                    failures.append("current benchmark history contains an SDK row without an id")
+                    continue
+                if sdk_id in history_by_id:
+                    duplicate_history_ids.add(sdk_id)
+                history_by_id[sdk_id] = row
+            if duplicate_history_ids:
+                failures.append(
+                    "current benchmark history duplicates SDKs: "
+                    + _preview(sorted(duplicate_history_ids))
+                )
+            if set(history_by_id) != set(current_sdk_evidence):
+                failures.append("current benchmark history SDK membership does not match payload")
+            for sdk_id, expected in current_sdk_evidence.items():
+                actual = history_by_id.get(sdk_id)
+                if actual is None:
+                    continue
+                for field, expected_value in expected.items():
+                    actual_value = actual.get(field)
+                    if field.endswith("_count") and expected_value is not None:
+                        matches = _is_exact_int(actual_value) and actual_value == expected_value
+                    else:
+                        matches = actual_value == expected_value
+                    if not matches:
+                        failures.append(
+                            f"current history SDK {sdk_id} {field}={actual_value!r}, "
+                            f"expected {expected_value!r}"
+                        )
     return failures
 
 
-def _gate_results(path: Path) -> int:
+def _gate_results(
+    path: Path,
+    expected_contract: dict[str, Any],
+    canonical_rpcs: dict[str, tuple[str, str]],
+) -> int:
     target = path if path.is_absolute() else ROOT / path
     if not target.is_file():
         print(f"ERROR: benchmark results JSON was not produced: {target}")
         return 1
     payload = json.loads(target.read_text(encoding="utf-8"))
-    failures = _benchmark_gate_failures(payload)
+    failures = _benchmark_gate_failures(payload, expected_contract, canonical_rpcs)
     if failures:
         print(f"Benchmark gate failed: {', '.join(failures)}")
         return 1
-    print("Benchmark gate passed: no failed SDKs and no failed RPCs.")
+    print(
+        "Benchmark gate passed: every measured SDK contains the complete canonical RPC surface "
+        "exactly once with real measurement evidence; successful calls, explicit capability "
+        "skips, and fatal failures are independently accounted for, and no RPC failed."
+    )
     return 0
 
 
@@ -497,6 +1027,26 @@ RPCs measured: 2
 
 RPCs measured: 1
 
+## Full per-RPC table
+
+| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | iters |
+|---|---|---|---|---|---|--:|--:|--:|--:|
+| RoomService | StartRoomComposite | start_room_composite | startRoomComposite | mutation | CAPABILITY_SKIPPED | 0.20 | 0.30 | 0.22 | 1 |
+""",
+            encoding="utf-8",
+        )
+        parsed = _parse_report(path)
+        assert parsed["full_rpcs"][0]["err_code"] == "CAPABILITY_SKIPPED", parsed
+        assert parsed["full_rpcs"][0]["result_status"] == "capability_skipped", parsed
+        assert parsed["summary"]["capability_skipped_rpc_count"] == 1, parsed
+        assert parsed["summary"]["measured_rpc_count"] == 0, parsed
+        assert parsed["summary"]["failed_rpc_count"] == 0, parsed
+
+        path.write_text(
+            """# UDB SDK Live Perf
+
+RPCs measured: 1
+
 ## Full per-RPC table (sorted by service, then RPC)
 
 | Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |
@@ -530,18 +1080,340 @@ RPCs measured: 2
         parsed = _parse_report(path)
         assert parsed["summary"]["failed_rpc_count"] == 2, parsed
 
-        assert _benchmark_gate_failures({
-            "summary": {"failed_rpc_count": 0},
-            "sdks": [{"name": "Go", "status": "ok"}, {"name": "Java", "status": "skipped"}],
-        }) == []
-        assert _benchmark_gate_failures({
-            "summary": {"failed_rpc_count": 3},
-            "sdks": [{"name": "Go", "status": "ok"}],
-        }) == ["failed_rpc_count=3"]
-        assert _benchmark_gate_failures({
-            "summary": {"failed_rpc_count": 0},
-            "sdks": [{"name": "PHP", "status": "failed"}],
-        }) == ["bad_sdks=['PHP']"]
+        canonical_rpcs = {
+            "AlphaService/GetAlpha": ("get_alpha", "getAlpha"),
+            "BetaService/PutBeta": ("put_beta", "putBeta"),
+        }
+        contract = _benchmark_contract(canonical_rpcs, "a" * 64)
+
+        def complete_payload() -> dict[str, Any]:
+            measured = [
+                {
+                    "id": sdk_id,
+                    "name": SDK_NAMES[sdk_id],
+                    "status": "ok",
+                    "summary": {
+                        "rpc_count": 2,
+                        "attempted_rpc_count": 2,
+                        "measured_rpc_count": 2,
+                        "capability_skipped_rpc_count": 0,
+                        "failed_rpc_count": 0,
+                    },
+                    "full_rpcs": [
+                        {
+                            "service": rpc.split("/", 1)[0],
+                            "rpc": rpc.split("/", 1)[1],
+                            "wire_api": rpc,
+                            "api_alias": canonical_rpcs[rpc][0],
+                            "operation_id": canonical_rpcs[rpc][1],
+                            "err_code": None,
+                            "result_status": "ok",
+                            "p50_ms": 0.1,
+                            "p99_ms": 0.2,
+                            "mean_ms": 0.15,
+                            "iters": 3,
+                        }
+                        for rpc in canonical_rpcs
+                    ],
+                    "failed_rpcs": [],
+                }
+                for sdk_id in MEASURED_SDK_IDS
+            ]
+            skipped = [
+                {
+                    "id": sdk_id,
+                    "name": SDK_NAMES[sdk_id],
+                    "status": "skipped",
+                    "summary": {
+                        "rpc_count": None,
+                        "attempted_rpc_count": 0,
+                        "measured_rpc_count": 0,
+                        "capability_skipped_rpc_count": 0,
+                        "failed_rpc_count": 0,
+                    },
+                    "full_rpcs": [],
+                    "failed_rpcs": [],
+                }
+                for sdk_id in SKIPPED_SDK_IDS
+            ]
+            aggregate_summary = {
+                "sdk_count": len(MEASURED_SDK_IDS) + len(SKIPPED_SDK_IDS),
+                "ok": len(MEASURED_SDK_IDS),
+                "failed": 0,
+                "skipped": len(SKIPPED_SDK_IDS),
+                "canonical_rpc_count": 2,
+                "measured_sdk_count": len(MEASURED_SDK_IDS),
+                "expected_attempted_rpc_count": 2 * len(MEASURED_SDK_IDS),
+                "attempted_rpc_count": 2 * len(MEASURED_SDK_IDS),
+                "measured_rpc_count": 2 * len(MEASURED_SDK_IDS),
+                "capability_skipped_rpc_count": 0,
+                "failed_rpc_count": 0,
+            }
+            history_sdks = [
+                {
+                    "id": sdk["id"],
+                    "status": sdk["status"],
+                    "rpc_count": sdk["summary"]["rpc_count"],
+                    "attempted_rpc_count": sdk["summary"]["attempted_rpc_count"],
+                    "measured_rpc_count": sdk["summary"]["measured_rpc_count"],
+                    "capability_skipped_rpc_count": sdk["summary"]["capability_skipped_rpc_count"],
+                    "failed_rpc_count": sdk["summary"]["failed_rpc_count"],
+                }
+                for sdk in measured + skipped
+            ]
+            return {
+                "schema_version": 2,
+                "evidence_status": "canonical_complete",
+                "benchmark_contract": contract,
+                "summary": aggregate_summary,
+                "history": [{"evidence_status": "canonical_complete", "summary": {
+                    "attempted_rpc_count": aggregate_summary["attempted_rpc_count"],
+                    "measured_rpc_count": aggregate_summary["measured_rpc_count"],
+                    "capability_skipped_rpc_count": aggregate_summary["capability_skipped_rpc_count"],
+                    "failed_rpc_count": aggregate_summary["failed_rpc_count"],
+                }, "sdks": history_sdks}],
+                "sdks": measured + skipped,
+            }
+
+        def cloned_payload() -> dict[str, Any]:
+            return json.loads(json.dumps(complete_payload()))
+
+        assert _benchmark_gate_failures(complete_payload(), contract, canonical_rpcs) == []
+
+        missing_rpc = cloned_payload()
+        missing_rpc["sdks"][0]["full_rpcs"].pop()
+        failures = _benchmark_gate_failures(missing_rpc, contract, canonical_rpcs)
+        assert any("full_rpcs has 1 rows" in failure for failure in failures), failures
+        assert any("missing RPCs: BetaService/PutBeta" in failure for failure in failures), failures
+
+        extra_rpc = cloned_payload()
+        extra_rpc["sdks"][0]["full_rpcs"].append({"wire_api": "GammaService/GetGamma"})
+        failures = _benchmark_gate_failures(extra_rpc, contract, canonical_rpcs)
+        assert any("unexpected RPCs: GammaService/GetGamma" in failure for failure in failures), failures
+
+        duplicate_rpc = cloned_payload()
+        duplicate_rpc["sdks"][0]["full_rpcs"][1] = {
+            "wire_api": "AlphaService/GetAlpha",
+            "api_alias": "get_alpha",
+            "operation_id": "getAlpha",
+            "err_code": None,
+        }
+        failures = _benchmark_gate_failures(duplicate_rpc, contract, canonical_rpcs)
+        assert any("duplicate RPCs: AlphaService/GetAlpha" in failure for failure in failures), failures
+        assert any("missing RPCs: BetaService/PutBeta" in failure for failure in failures), failures
+
+        header_mismatch = cloned_payload()
+        header_mismatch["sdks"][0]["summary"]["rpc_count"] = 1
+        failures = _benchmark_gate_failures(header_mismatch, contract, canonical_rpcs)
+        assert any("rpc_count=1, expected 2" in failure for failure in failures), failures
+
+        failed_row_zero_summary = cloned_payload()
+        failed_row_zero_summary["sdks"][0]["full_rpcs"][0]["err"] = "FAILED (ResourceExhausted)"
+        failed_row_zero_summary["sdks"][0]["full_rpcs"][0]["result_status"] = "failed"
+        failures = _benchmark_gate_failures(failed_row_zero_summary, contract, canonical_rpcs)
+        assert any("failed/invalid full_rpcs rows" in failure for failure in failures), failures
+        assert any("disagreeing err_code/err evidence" in failure for failure in failures), failures
+
+        missing_measurement = cloned_payload()
+        del missing_measurement["sdks"][0]["full_rpcs"][0]["iters"]
+        failures = _benchmark_gate_failures(missing_measurement, contract, canonical_rpcs)
+        assert any("expected a positive integer" in failure for failure in failures), failures
+
+        invalid_measurement = cloned_payload()
+        invalid_measurement["sdks"][0]["full_rpcs"][0]["p99_ms"] = -0.1
+        failures = _benchmark_gate_failures(invalid_measurement, contract, canonical_rpcs)
+        assert any("finite nonnegative number" in failure for failure in failures), failures
+
+        boolean_iterations = cloned_payload()
+        boolean_iterations["sdks"][0]["full_rpcs"][0]["iters"] = True
+        failures = _benchmark_gate_failures(boolean_iterations, contract, canonical_rpcs)
+        assert any("iters=True, expected a positive integer" in failure for failure in failures), failures
+
+        service_rpc_mismatch = cloned_payload()
+        service_rpc_mismatch["sdks"][0]["full_rpcs"][0]["rpc"] = "WrongAlpha"
+        failures = _benchmark_gate_failures(service_rpc_mismatch, contract, canonical_rpcs)
+        assert any("service/rpc=" in failure for failure in failures), failures
+
+        missing_identity = cloned_payload()
+        del missing_identity["sdks"][0]["full_rpcs"][0]["wire_api"]
+        failures = _benchmark_gate_failures(missing_identity, contract, canonical_rpcs)
+        assert any("rows without wire_api" in failure for failure in failures), failures
+
+        alias_mismatch = cloned_payload()
+        alias_mismatch["sdks"][0]["full_rpcs"][0]["api_alias"] = "wrong_alias"
+        failures = _benchmark_gate_failures(alias_mismatch, contract, canonical_rpcs)
+        assert any("api_alias='wrong_alias'" in failure for failure in failures), failures
+
+        operation_mismatch = cloned_payload()
+        operation_mismatch["sdks"][0]["full_rpcs"][0]["operation_id"] = "wrongOperation"
+        failures = _benchmark_gate_failures(operation_mismatch, contract, canonical_rpcs)
+        assert any("operation_id='wrongOperation'" in failure for failure in failures), failures
+
+        missing_sdk = cloned_payload()
+        missing_sdk["sdks"] = [sdk for sdk in missing_sdk["sdks"] if sdk["id"] != "php"]
+        failures = _benchmark_gate_failures(missing_sdk, contract, canonical_rpcs)
+        assert any("missing SDK entries: php" in failure for failure in failures), failures
+
+        extra_sdk = cloned_payload()
+        extra_sdk["sdks"].append({
+            "id": "ruby",
+            "name": "Ruby",
+            "status": "ok",
+            "summary": {"rpc_count": 2, "failed_rpc_count": 0},
+            "full_rpcs": [
+                {
+                    "wire_api": rpc,
+                    "api_alias": canonical_rpcs[rpc][0],
+                    "operation_id": canonical_rpcs[rpc][1],
+                    "err_code": None,
+                }
+                for rpc in canonical_rpcs
+            ],
+        })
+        failures = _benchmark_gate_failures(extra_sdk, contract, canonical_rpcs)
+        assert any("unexpected SDK entries: ruby" in failure for failure in failures), failures
+
+        duplicate_sdk = cloned_payload()
+        duplicate_sdk["sdks"].append(duplicate_sdk["sdks"][0])
+        failures = _benchmark_gate_failures(duplicate_sdk, contract, canonical_rpcs)
+        assert any("duplicate SDK entries: go" in failure for failure in failures), failures
+
+        aggregate_tamper = cloned_payload()
+        aggregate_tamper["summary"]["measured_rpc_count"] -= 1
+        failures = _benchmark_gate_failures(aggregate_tamper, contract, canonical_rpcs)
+        assert any("summary.measured_rpc_count" in failure for failure in failures), failures
+
+        attempted_aggregate_tamper = cloned_payload()
+        attempted_aggregate_tamper["summary"]["attempted_rpc_count"] -= 1
+        failures = _benchmark_gate_failures(attempted_aggregate_tamper, contract, canonical_rpcs)
+        assert any("summary.attempted_rpc_count" in failure for failure in failures), failures
+
+        capability_skip = cloned_payload()
+        capability_skip["sdks"][0]["full_rpcs"][0]["err_code"] = "CAPABILITY_SKIPPED"
+        capability_skip["sdks"][0]["full_rpcs"][0]["result_status"] = "capability_skipped"
+        capability_skip["sdks"][0]["summary"]["measured_rpc_count"] = 1
+        capability_skip["sdks"][0]["summary"]["capability_skipped_rpc_count"] = 1
+        capability_skip["summary"]["measured_rpc_count"] -= 1
+        capability_skip["summary"]["capability_skipped_rpc_count"] = 1
+        capability_skip["history"][-1]["summary"]["measured_rpc_count"] -= 1
+        capability_skip["history"][-1]["summary"]["capability_skipped_rpc_count"] = 1
+        capability_history = next(
+            row for row in capability_skip["history"][-1]["sdks"] if row["id"] == "go"
+        )
+        capability_history["measured_rpc_count"] = 1
+        capability_history["capability_skipped_rpc_count"] = 1
+        assert _benchmark_gate_failures(capability_skip, contract, canonical_rpcs) == []
+
+        capability_aggregate_tamper = json.loads(json.dumps(capability_skip))
+        capability_aggregate_tamper["summary"]["capability_skipped_rpc_count"] = 0
+        failures = _benchmark_gate_failures(capability_aggregate_tamper, contract, canonical_rpcs)
+        assert any("summary.capability_skipped_rpc_count" in failure for failure in failures), failures
+
+        claimed_failure_tamper = cloned_payload()
+        claimed_failure_tamper["sdks"][0]["failed_rpcs"] = [{
+            "wire_api": "AlphaService/GetAlpha",
+            "err_code": "INTERNAL",
+        }]
+        failures = _benchmark_gate_failures(claimed_failure_tamper, contract, canonical_rpcs)
+        assert any("failed_rpcs does not equal" in failure for failure in failures), failures
+
+        history_tamper = cloned_payload()
+        history_tamper["history"][-1]["sdks"][0]["attempted_rpc_count"] = 1
+        failures = _benchmark_gate_failures(history_tamper, contract, canonical_rpcs)
+        assert any("current history SDK go attempted_rpc_count" in failure for failure in failures), failures
+
+        history_status_tamper = cloned_payload()
+        history_status_tamper["history"][-1]["sdks"][0]["status"] = "failed"
+        failures = _benchmark_gate_failures(history_status_tamper, contract, canonical_rpcs)
+        assert any("current history SDK go status='failed'" in failure for failure in failures), failures
+
+        boolean_count = cloned_payload()
+        boolean_count["summary"]["failed_rpc_count"] = False
+        failures = _benchmark_gate_failures(boolean_count, contract, canonical_rpcs)
+        assert any("summary.failed_rpc_count=False" in failure for failure in failures), failures
+
+        illegal_measured_skip = cloned_payload()
+        illegal_measured_skip["sdks"][0]["status"] = "skipped"
+        failures = _benchmark_gate_failures(illegal_measured_skip, contract, canonical_rpcs)
+        assert any("measured SDK go must have status=ok" in failure for failure in failures), failures
+
+        illegal_static_measurement = cloned_payload()
+        java = next(sdk for sdk in illegal_static_measurement["sdks"] if sdk["id"] == "java")
+        java["status"] = "ok"
+        failures = _benchmark_gate_failures(illegal_static_measurement, contract, canonical_rpcs)
+        assert any("non-measured SDK java must remain an explicit skip" in failure for failure in failures), failures
+
+        contract_tamper = cloned_payload()
+        contract_tamper["benchmark_contract"]["canonical_rpc_count"] = 1
+        failures = _benchmark_gate_failures(contract_tamper, contract, canonical_rpcs)
+        assert any("benchmark_contract does not match" in failure for failure in failures), failures
+
+        manifest = Path(tmp) / "bench-bodies.json"
+        manifest.write_text(
+            json.dumps([
+                {
+                    "service": "AlphaService",
+                    "rpc": "GetAlpha",
+                    "wire_rpc": "AlphaService/GetAlpha",
+                    "api_alias": "get_alpha",
+                    "operation_id": "getAlpha",
+                },
+                {
+                    "service": "BetaService",
+                    "rpc": "PutBeta",
+                    "wire_rpc": "BetaService/PutBeta",
+                    "api_alias": "put_beta",
+                    "operation_id": "putBeta",
+                },
+            ]),
+            encoding="utf-8",
+        )
+        loaded_contract, loaded_rpcs = _load_canonical_rpc_contract(manifest)
+        assert loaded_rpcs == canonical_rpcs, loaded_rpcs
+        assert loaded_contract["canonical_rpc_count"] == len(canonical_rpcs), loaded_contract
+        assert loaded_contract["expected_attempted_rpc_count"] == len(canonical_rpcs) * len(MEASURED_SDK_IDS)
+
+        manifest.write_text(
+            json.dumps([
+                {
+                    "service": "CacheService",
+                    "rpc": "CacheService.Delete",
+                    "wire_rpc": "CacheService/Delete",
+                    "api_alias": "cache_delete",
+                    "operation_id": "cacheDelete",
+                },
+            ]),
+            encoding="utf-8",
+        )
+        _, qualified_rpcs = _load_canonical_rpc_contract(manifest)
+        assert qualified_rpcs == {
+            "CacheService/Delete": ("cache_delete", "cacheDelete")
+        }, qualified_rpcs
+
+        manifest.write_text(
+            json.dumps([
+                {
+                    "service": "AlphaService",
+                    "rpc": "GetAlpha",
+                    "wire_rpc": "AlphaService/GetAlpha",
+                    "api_alias": "get_alpha",
+                    "operation_id": "getAlpha",
+                },
+                {
+                    "service": "AlphaService",
+                    "rpc": "GetAlpha",
+                    "wire_rpc": "AlphaService/GetAlpha",
+                    "api_alias": "get_alpha",
+                    "operation_id": "getAlpha",
+                },
+            ]),
+            encoding="utf-8",
+        )
+        try:
+            _load_canonical_rpc_contract(manifest)
+            raise AssertionError("duplicate canonical RPC identity regression was not caught")
+        except ValueError as exc:
+            assert "duplicate wire identities" in str(exc), exc
 
     print("collect_sdk_bench_results selftest passed")
     return 0
@@ -558,11 +1430,24 @@ def main() -> int:
     ap.add_argument("--release-sha256", default=os.getenv("UDB_BENCH_BINARY_SHA256", ""))
     ap.add_argument("--previous", default="", help="previous bench-results.json to append history from")
     ap.add_argument("--gate", default="", help="fail if an existing bench-results.json has bad SDKs or failed RPCs")
+    ap.add_argument(
+        "--canonical-manifest",
+        default=str(CANONICAL_RPC_MANIFEST.relative_to(ROOT)),
+        help="canonical generated benchmark RPC manifest used for completeness validation",
+    )
     args = ap.parse_args()
     if args.selftest:
         return _selftest()
+    canonical_manifest = Path(args.canonical_manifest)
+    if not canonical_manifest.is_absolute():
+        canonical_manifest = ROOT / canonical_manifest
+    try:
+        benchmark_contract, canonical_rpcs = _load_canonical_rpc_contract(canonical_manifest)
+    except ValueError as exc:
+        print(f"ERROR: {exc}")
+        return 1
     if args.gate:
-        return _gate_results(Path(args.gate))
+        return _gate_results(Path(args.gate), benchmark_contract, canonical_rpcs)
 
     status_dir = (ROOT / args.status_dir).resolve()
     sdks: list[dict[str, Any]] = []
@@ -587,6 +1472,9 @@ def main() -> int:
                 entry["note"] = f"Benchmark report parse failed: {exc}"
                 entry["summary"] = {
                     "rpc_count": None,
+                    "attempted_rpc_count": 0,
+                    "measured_rpc_count": 0,
+                    "capability_skipped_rpc_count": 0,
                     "service_count": 0,
                     "slowest_count": 0,
                     "failed_rpc_count": 0,
@@ -613,17 +1501,39 @@ def main() -> int:
             "status": "skipped",
             "exit_code": None,
             "note": note,
-            "summary": {"rpc_count": None, "service_count": 0, "slowest_count": 0, "failed_rpc_count": 0},
+            "summary": {
+                "rpc_count": None,
+                "attempted_rpc_count": 0,
+                "measured_rpc_count": 0,
+                "capability_skipped_rpc_count": 0,
+                "service_count": 0,
+                "slowest_count": 0,
+                "failed_rpc_count": 0,
+            },
             "services": [],
             "slowest": [],
             "failed_rpcs": [],
+            "full_rpcs": [],
         })
 
     ok = sum(1 for s in sdks if s["status"] == "ok")
     failed = sum(1 for s in sdks if s["status"] == "failed")
     skipped = sum(1 for s in sdks if s["status"] == "skipped")
+    attempted_rpc_count = sum(
+        (s.get("summary", {}).get("attempted_rpc_count") or 0) for s in sdks
+    )
+    measured_rpc_count = sum(
+        (s.get("summary", {}).get("measured_rpc_count") or 0) for s in sdks
+    )
+    capability_skipped_rpc_count = sum(
+        (s.get("summary", {}).get("capability_skipped_rpc_count") or 0) for s in sdks
+    )
+    failed_rpc_count = sum(
+        (s.get("summary", {}).get("failed_rpc_count") or 0) for s in sdks
+    )
 
     run_point = {
+        "evidence_status": "canonical_complete",
         "generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         "release_tag": args.release_tag,
         "release_sha256": args.release_sha256,
@@ -633,12 +1543,21 @@ def main() -> int:
                 "id": s["id"],
                 "status": s["status"],
                 "rpc_count": s.get("summary", {}).get("rpc_count"),
+                "attempted_rpc_count": s.get("summary", {}).get("attempted_rpc_count", 0),
+                "measured_rpc_count": s.get("summary", {}).get("measured_rpc_count", 0),
+                "capability_skipped_rpc_count": s.get("summary", {}).get("capability_skipped_rpc_count", 0),
                 "failed_rpc_count": s.get("summary", {}).get("failed_rpc_count", 0),
                 "mean_service_latency_ms": s.get("summary", {}).get("mean_service_latency_ms"),
                 "slowest_service_mean_ms": s.get("summary", {}).get("slowest_service_mean_ms"),
             }
             for s in sdks
         ],
+        "summary": {
+            "attempted_rpc_count": attempted_rpc_count,
+            "measured_rpc_count": measured_rpc_count,
+            "capability_skipped_rpc_count": capability_skipped_rpc_count,
+            "failed_rpc_count": failed_rpc_count,
+        },
     }
 
     history: list[dict[str, Any]] = []
@@ -659,6 +1578,9 @@ def main() -> int:
                             "id": s.get("id"),
                             "status": s.get("status"),
                             "rpc_count": s.get("summary", {}).get("rpc_count"),
+                            "attempted_rpc_count": s.get("summary", {}).get("attempted_rpc_count", 0),
+                            "measured_rpc_count": s.get("summary", {}).get("measured_rpc_count", 0),
+                            "capability_skipped_rpc_count": s.get("summary", {}).get("capability_skipped_rpc_count", 0),
                             "failed_rpc_count": s.get("summary", {}).get("failed_rpc_count", 0),
                             "mean_service_latency_ms": s.get("summary", {}).get("mean_service_latency_ms"),
                             "slowest_service_mean_ms": s.get("summary", {}).get("slowest_service_mean_ms"),
@@ -671,9 +1593,11 @@ def main() -> int:
     history.append(run_point)
 
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
+        "evidence_status": "canonical_complete",
         "generated_at": run_point["generated_at"],
         "source": "github-actions",
+        "benchmark_contract": benchmark_contract,
         "release": {
             "tag": args.release_tag,
             "asset": args.release_asset,
@@ -696,8 +1620,13 @@ def main() -> int:
             "ok": ok,
             "failed": failed,
             "skipped": skipped,
-            "measured_rpc_count": sum((s.get("summary", {}).get("rpc_count") or 0) for s in sdks),
-            "failed_rpc_count": sum((s.get("summary", {}).get("failed_rpc_count") or 0) for s in sdks),
+            "canonical_rpc_count": benchmark_contract["canonical_rpc_count"],
+            "measured_sdk_count": len(MEASURED_SDK_IDS),
+            "expected_attempted_rpc_count": benchmark_contract["expected_attempted_rpc_count"],
+            "attempted_rpc_count": attempted_rpc_count,
+            "measured_rpc_count": measured_rpc_count,
+            "capability_skipped_rpc_count": capability_skipped_rpc_count,
+            "failed_rpc_count": failed_rpc_count,
         },
         "history": history[-25:],
         "sdks": sdks,
