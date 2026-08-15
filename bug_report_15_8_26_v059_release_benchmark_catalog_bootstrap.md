@@ -41,6 +41,10 @@ benchmark fixture had not been updated with the new bootstrap trigger path.
 The same run showed that the TypeScript Vault body regression fixture seeded
 tenant and lease values but not the new `<seed:project>` placeholder, so SDK
 conformance failed before it could assert exact-project database credentials.
+After adding the trigger-path fixture, the next selftest reached a second stale
+positive fixture: the reusable-suite sample asserted the bootstrap command was
+required but did not contain it. Its non-raw regex literal also emitted a Python
+invalid-escape warning.
 
 ## Impact
 
@@ -90,6 +94,8 @@ conformance failed before it could assert exact-project database credentials.
   repair remains CI-authored and reproducible without a local build.
 - Keep the benchmark orchestrator selftest fixture in lockstep with every
   required trigger path, including the catalog bootstrap script.
+- Keep the reusable-suite positive fixture in lockstep with the required
+  bootstrap command and represent its release regex as a raw Python literal.
 - Seed and assert the exact project in TypeScript's Vault manifest-body test so
   the project-authority benchmark body is covered by offline SDK conformance.
 
@@ -102,3 +108,13 @@ must contain 1,524 measured RPCs, all four SDK statuses `ok`, and zero failed
 RPCs before Pages may deploy it. The benchmark artifact must additionally carry
 the SHA-256 of its verified release binary, and the Pages run must prove that
 digest against the exact tag's published checksum.
+
+GitHub CI run `31895052655` produced the authoritative Rust formatting patch
+and pinned Buf 1.65.0 SDK-generation patch. Both patches applied cleanly and are
+part of the follow-up commit; acceptance still requires a later run with no
+repair artifact because no drift remains.
+
+That run also showed the first native-repair implementation could wait on
+Cargo's target lock after an earlier test failure. Recovery now executes the
+already-built `target/debug/udb` directly; if the build did not produce that
+binary, the recovery step declines to fabricate native artifacts.

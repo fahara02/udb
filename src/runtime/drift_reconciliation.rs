@@ -858,7 +858,10 @@ mod tests {
 
     #[test]
     fn repair_uses_only_payloads_from_the_claimed_project_scan() {
-        let samples = vec![sample("billing-1", json!({"id": "billing-1", "amount": 42}))];
+        let samples = vec![sample(
+            "billing-1",
+            json!({"id": "billing-1", "amount": 42}),
+        )];
         let report = DriftReport {
             target_backend: "mongodb".into(),
             target_instance: "billing-mongo".into(),

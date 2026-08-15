@@ -66,8 +66,7 @@ pub enum ProjectionTaskStatus {
 /// Terminal materialization failures caused by missing/stale project catalog
 /// authority are not repairable by blind dead-letter replay. Reconciliation
 /// must leave them parked until an operator migrates or replaces the task.
-pub(crate) const PROJECTION_AUTHORITY_FAILURE_PREFIX: &str =
-    "projection authority rejected:";
+pub(crate) const PROJECTION_AUTHORITY_FAILURE_PREFIX: &str = "projection authority rejected:";
 
 impl ProjectionTaskStatus {
     pub fn as_str(self) -> &'static str {
@@ -807,15 +806,12 @@ pub(crate) fn projection_dead_letter_groups(
     limit: i64,
 ) -> Vec<DeadLetterGroup> {
     let mut groups: BTreeMap<(String, String, String, String), i64> = BTreeMap::new();
-    for row in rows
-        .into_iter()
-        .filter(|row| {
-            row.status == ProjectionTaskStatus::DeadLetter
-                && !row
-                    .last_error
-                    .starts_with(PROJECTION_AUTHORITY_FAILURE_PREFIX)
-        })
-    {
+    for row in rows.into_iter().filter(|row| {
+        row.status == ProjectionTaskStatus::DeadLetter
+            && !row
+                .last_error
+                .starts_with(PROJECTION_AUTHORITY_FAILURE_PREFIX)
+    }) {
         *groups
             .entry((
                 row.project_id,
@@ -829,15 +825,14 @@ pub(crate) fn projection_dead_letter_groups(
         .into_iter()
         .take(limit.max(0) as usize)
         .map(
-            |(
-                (project_id, source_table, target_backend, target_instance),
-                dead_count,
-            )| DeadLetterGroup {
-                project_id,
-                source_table,
-                target_backend,
-                target_instance,
-                dead_count,
+            |((project_id, source_table, target_backend, target_instance), dead_count)| {
+                DeadLetterGroup {
+                    project_id,
+                    source_table,
+                    target_backend,
+                    target_instance,
+                    dead_count,
+                }
             },
         )
         .collect()

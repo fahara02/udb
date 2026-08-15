@@ -311,8 +311,9 @@ jobs:
         if: failure() && runner.os == 'Linux'
         continue-on-error: true
         run: |
-          cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json
-          cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md
+          test -x target/debug/udb
+          target/debug/udb native manifest > docs/generated/udb-native-contract.json
+          target/debug/udb native docs > docs/generated/native-services.md
           git diff --binary -- docs/generated/udb-native-contract.json docs/generated/native-services.md > ci-native-docs.patch
       - name: Upload CI-generated native documentation repair patch
         if: failure() && runner.os == 'Linux'

@@ -194,13 +194,11 @@ fn validated_catalog_manifest(
         )
     })?;
     let integrity = format!("{:x}", Sha256::digest(value.to_string().as_bytes()));
-    let computed_schema_checksum =
-        crate::generation::manifest::catalog_checksum_sha256(&manifest).map_err(|err| {
+    let computed_schema_checksum = crate::generation::manifest::catalog_checksum_sha256(&manifest)
+        .map_err(|err| {
             catalog_admin_internal_status(
                 operation,
-                format!(
-                    "catalog semantic checksum failed for project '{project_id}': {err}"
-                ),
+                format!("catalog semantic checksum failed for project '{project_id}': {err}"),
             )
         })?;
     if checksum_kind != "raw_request_sha256_v1"
@@ -281,9 +279,7 @@ fn catalog_compatibility_evidence(
         return Err(catalog_admin_schema_status(
             operation,
             "catalog_transition_incompatible",
-            format!(
-                "catalog content is not {level}-compatible with the exact ACTIVE catalog"
-            ),
+            format!("catalog content is not {level}-compatible with the exact ACTIVE catalog"),
         ));
     }
     Ok(catalog_request_fingerprint(&[
@@ -1038,13 +1034,14 @@ impl DataBrokerRuntime {
             return Err(catalog_idempotency_required_status("stage_catalog"));
         }
         let manifest_value = parse_catalog_manifest_json(manifest_json)?;
-        let manifest: CatalogManifest = serde_json::from_value(manifest_value.clone()).map_err(|err| {
-            catalog_admin_invalid_field(
-                "manifest_json",
-                "must decode as a CatalogManifest",
-                format!("manifest_json is not a CatalogManifest: {err}"),
-            )
-        })?;
+        let manifest: CatalogManifest =
+            serde_json::from_value(manifest_value.clone()).map_err(|err| {
+                catalog_admin_invalid_field(
+                    "manifest_json",
+                    "must decode as a CatalogManifest",
+                    format!("manifest_json is not a CatalogManifest: {err}"),
+                )
+            })?;
         let lint = crate::generation::lint_catalog(&manifest);
         let lint_errors: Vec<String> = lint
             .items
@@ -1658,9 +1655,7 @@ impl DataBrokerRuntime {
                 .as_ref()
                 .map(|row| row.2.as_str())
                 .unwrap_or_default();
-            if current_id != target_provenance.3
-                || current_checksum != target_provenance.4
-            {
+            if current_id != target_provenance.3 || current_checksum != target_provenance.4 {
                 return Err(catalog_admin_schema_status(
                     operation,
                     "catalog_validation_base_changed",
@@ -1888,23 +1883,23 @@ impl DataBrokerRuntime {
         let config = SystemCatalogConfig::default();
         let cat_rel = config.catalog_versions_relation();
         let row: Option<CatalogRecordRow> = sqlx::query_as(&format!(
-                "SELECT catalog_id, version, checksum_sha256, manifest_json::TEXT, status,
+            "SELECT catalog_id, version, checksum_sha256, manifest_json::TEXT, status,
                         compatibility_level, manifest_integrity_sha256,
                         schema_checksum_sha256, checksum_kind, validation_checksum_sha256,
                         compatibility_evidence_sha256,
                         EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at_unix
                  FROM {cat_rel} WHERE project_id = $1 AND catalog_id = $2"
-            ))
-            .bind(&project_id)
-            .bind(catalog_id)
-            .fetch_optional(pool)
-            .await
-            .map_err(|err| {
-                catalog_admin_internal_status(
-                    "load_catalog_record_for_project",
-                    format!("load project catalog record failed: {err}"),
-                )
-            })?;
+        ))
+        .bind(&project_id)
+        .bind(catalog_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "load_catalog_record_for_project",
+                format!("load project catalog record failed: {err}"),
+            )
+        })?;
         let (
             catalog_id,
             version,
@@ -1919,12 +1914,12 @@ impl DataBrokerRuntime {
             compatibility_evidence_sha256,
             created_at_unix,
         ) = row.ok_or_else(|| {
-                catalog_admin_not_found_status(
-                    "load_catalog_record_for_project",
-                    "catalog_record_not_found",
-                    "catalog record not found for project",
-                )
-            })?;
+            catalog_admin_not_found_status(
+                "load_catalog_record_for_project",
+                "catalog_record_not_found",
+                "catalog record not found for project",
+            )
+        })?;
         let manifest = validated_catalog_manifest(
             "load_catalog_record_for_project",
             &project_id,
@@ -2236,15 +2231,17 @@ impl DataBrokerRuntime {
                 format!("catalog provenance transaction failed: {err}"),
             )
         })?;
-        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended('udb.catalog.provenance', 534154))")
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| {
-                catalog_admin_internal_status(
-                    "catalog_provenance_lock",
-                    format!("catalog provenance lock failed: {err}"),
-                )
-            })?;
+        sqlx::query(
+            "SELECT pg_advisory_xact_lock(hashtextextended('udb.catalog.provenance', 534154))",
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "catalog_provenance_lock",
+                format!("catalog provenance lock failed: {err}"),
+            )
+        })?;
         let rows: Vec<(
             Uuid,
             String,
@@ -2295,16 +2292,21 @@ impl DataBrokerRuntime {
                 catalog_admin_schema_status(
                     "catalog_provenance_upgrade",
                     "catalog_manifest_invalid",
-                    format!("catalog {catalog_id} for project '{project_id}' is invalid JSON: {err}"),
+                    format!(
+                        "catalog {catalog_id} for project '{project_id}' is invalid JSON: {err}"
+                    ),
                 )
             })?;
-            let manifest: CatalogManifest = serde_json::from_value(value.clone()).map_err(|err| {
-                catalog_admin_schema_status(
-                    "catalog_provenance_upgrade",
-                    "catalog_manifest_invalid",
-                    format!("catalog {catalog_id} for project '{project_id}' cannot decode: {err}"),
-                )
-            })?;
+            let manifest: CatalogManifest =
+                serde_json::from_value(value.clone()).map_err(|err| {
+                    catalog_admin_schema_status(
+                        "catalog_provenance_upgrade",
+                        "catalog_manifest_invalid",
+                        format!(
+                            "catalog {catalog_id} for project '{project_id}' cannot decode: {err}"
+                        ),
+                    )
+                })?;
             let integrity = format!("{:x}", Sha256::digest(value.to_string().as_bytes()));
             let schema_checksum = manifest.checksum_sha256.trim();
             let computed_schema_checksum =
@@ -2334,8 +2336,7 @@ impl DataBrokerRuntime {
                 || !matches!(compatibility_level.as_str(), "exact" | "backward" | "none")
                 || !lint_errors.is_empty()
                 || (!stored_integrity.is_empty() && stored_integrity != integrity)
-                || (!stored_schema_checksum.is_empty()
-                    && stored_schema_checksum != schema_checksum)
+                || (!stored_schema_checksum.is_empty() && stored_schema_checksum != schema_checksum)
                 || checksum_kind != "raw_request_sha256_v1"
             {
                 return Err(catalog_admin_schema_status(
@@ -2354,7 +2355,8 @@ impl DataBrokerRuntime {
             let quarantine_legacy_transition = stored_compatibility_evidence.is_empty()
                 && matches!(status.as_str(), "STAGED" | "ROLLED_BACK");
             let baseline: Option<(String, String, CatalogManifest)> =
-                if stored_compatibility_evidence.is_empty() || validated_against_catalog_id.is_none()
+                if stored_compatibility_evidence.is_empty()
+                    || validated_against_catalog_id.is_none()
                 {
                     None
                 } else {
@@ -2406,8 +2408,8 @@ impl DataBrokerRuntime {
                             ),
                         )
                     })?;
-                    let baseline_value: serde_json::Value =
-                        serde_json::from_str(&baseline_json).map_err(|err| {
+                    let baseline_value: serde_json::Value = serde_json::from_str(&baseline_json)
+                        .map_err(|err| {
                             catalog_admin_schema_status(
                                 "catalog_provenance_upgrade",
                                 "catalog_compatibility_baseline_invalid",
@@ -2931,12 +2933,8 @@ impl DataBrokerRuntime {
         let runs_rel = config.migration_runs_relation();
         let ledger_rel = config.migration_op_ledger_relation();
         let phase_ledger_rel = migration_phase_ledger_relation(&config);
-        ensure_migration_runs_approved_state(
-            control_pool,
-            &runs_rel,
-            &config.migration_runs_table,
-        )
-        .await?;
+        ensure_migration_runs_approved_state(control_pool, &runs_rel, &config.migration_runs_table)
+            .await?;
         ensure_migration_payload_json_column(control_pool, &ledger_rel).await?;
         ensure_migration_run_provenance_columns(control_pool, &runs_rel).await?;
 

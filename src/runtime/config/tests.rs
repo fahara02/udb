@@ -221,9 +221,11 @@ fn blank_strict_default_project_fails_startup_validation() {
 
     let report = config.validate();
     assert!(!report.passed);
-    assert!(report.errors.iter().any(|error| {
-        error.contains("strict_with_default requires a non-empty project name")
-    }));
+    assert!(
+        report.errors.iter().any(|error| {
+            error.contains("strict_with_default requires a non-empty project name")
+        })
+    );
 }
 
 #[test]

@@ -702,15 +702,12 @@ impl ProjectionTaskStore for RedisCanonicalStore {
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>> {
         let rows: Vec<ProjectionTaskRow> = self.load_all(&self.key("projection:all")).await?;
         let mut groups: BTreeMap<(String, String, String, String), i64> = BTreeMap::new();
-        for row in rows
-            .into_iter()
-            .filter(|row| {
-                row.status == ProjectionTaskStatus::DeadLetter
-                    && !row
-                        .last_error
-                        .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
-            })
-        {
+        for row in rows.into_iter().filter(|row| {
+            row.status == ProjectionTaskStatus::DeadLetter
+                && !row
+                    .last_error
+                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+        }) {
             *groups
                 .entry((
                     row.project_id,
@@ -724,15 +721,14 @@ impl ProjectionTaskStore for RedisCanonicalStore {
             .into_iter()
             .take(limit.max(0) as usize)
             .map(
-                |(
-                    (project_id, source_table, target_backend, target_instance),
-                    dead_count,
-                )| DeadLetterGroup {
-                    project_id,
-                    source_table,
-                    target_backend,
-                    target_instance,
-                    dead_count,
+                |((project_id, source_table, target_backend, target_instance), dead_count)| {
+                    DeadLetterGroup {
+                        project_id,
+                        source_table,
+                        target_backend,
+                        target_instance,
+                        dead_count,
+                    }
                 },
             )
             .collect())

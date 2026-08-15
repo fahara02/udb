@@ -8815,6 +8815,9 @@ namespace Udb.Entity.V1 {
     /// <summary>Field number for the "idempotency_key" field.</summary>
     public const int IdempotencyKeyFieldNumber = 4;
     private string idempotencyKey_ = "";
+    /// <summary>
+    /// Required for durable StageCatalog retries.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string IdempotencyKey {
@@ -9147,7 +9150,8 @@ namespace Udb.Entity.V1 {
     public const int VersionFieldNumber = 3;
     private string version_ = "";
     /// <summary>
-    /// Target catalog version string (empty = latest STAGED).
+    /// Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+    /// RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -9173,6 +9177,9 @@ namespace Udb.Entity.V1 {
     /// <summary>Field number for the "idempotency_key" field.</summary>
     public const int IdempotencyKeyFieldNumber = 5;
     private string idempotencyKey_ = "";
+    /// <summary>
+    /// Required for ActivateCatalog and RollbackCatalog retries.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string IdempotencyKey {

@@ -677,13 +677,11 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
             .await
             .map_err(|e| cass_err("dead_letter_groups scan", e))?;
         use std::collections::HashMap;
-        let mut groups: HashMap<(String, String, String, String), i64> =
-            HashMap::new();
+        let mut groups: HashMap<(String, String, String, String), i64> = HashMap::new();
         for row in &rows {
             if get_text(row, 4) != ProjectionTaskStatus::DeadLetter.as_str()
-                || get_text(row, 5).starts_with(
-                    super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX,
-                )
+                || get_text(row, 5)
+                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
             {
                 continue;
             }
@@ -699,15 +697,14 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
         let mut out: Vec<DeadLetterGroup> = groups
             .into_iter()
             .map(
-                |(
-                    (project_id, source_table, target_backend, target_instance),
-                    dead_count,
-                )| DeadLetterGroup {
-                    project_id,
-                    source_table,
-                    target_backend,
-                    target_instance,
-                    dead_count,
+                |((project_id, source_table, target_backend, target_instance), dead_count)| {
+                    DeadLetterGroup {
+                        project_id,
+                        source_table,
+                        target_backend,
+                        target_instance,
+                        dead_count,
+                    }
                 },
             )
             .collect();
@@ -740,9 +737,8 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
         for row in &rows {
             let status = get_text(row, 5);
             if status != ProjectionTaskStatus::DeadLetter.as_str()
-                || get_text(row, 6).starts_with(
-                    super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX,
-                )
+                || get_text(row, 6)
+                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
             {
                 continue;
             }

@@ -6987,7 +6987,7 @@ jobs:
           docker compose -f docker-compose.integration.yml down -v --remove-orphans
           docker compose -f docker-compose.canonical.yml down -v --remove-orphans
 """
-        live_sdk_suite_good = """name: _live-sdk-suite
+        live_sdk_suite_good = r"""name: _live-sdk-suite
 on:
   workflow_call:
     inputs:
@@ -7024,6 +7024,8 @@ jobs:
         run: echo "UDB_LIVE_PERF=1" >> "$GITHUB_ENV"
       - name: Prepare per-SDK reset script
         run: mkdir -p bench-output/status bench-output/logs
+      - name: Bootstrap exact benchmark project catalog
+        run: python scripts/bootstrap_benchmark_project_catalog.py
       - name: Collect benchmark JSON
         if: always()
         run: |

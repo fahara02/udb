@@ -3,8 +3,8 @@
 use std::fs;
 use std::net::SocketAddr;
 use std::pin::Pin;
-use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicI64, Ordering as AtomicOrdering};
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 use arc_swap::ArcSwap;
@@ -612,8 +612,7 @@ impl DataBrokerService {
         let compatibility_detail = if catalog_control_operation {
             None
         } else {
-            self
-                .catalog
+            self.catalog
                 .compatibility_error(&security.client_catalog_version, &security.project_id)
         };
         if let Some(detail) = compatibility_detail {
@@ -2327,14 +2326,13 @@ pub async fn serve(
         // admit traffic. Otherwise hydration could mark authority fresh while
         // the listener task had not yet run (or had already failed to connect).
         service.catalog.set_authority_fresh(false);
-        let mut initial_catalog_listener =
-            sqlx::postgres::PgListener::connect_with(&catalog_pool)
-                .await
-                .map_err(|err| {
-                    std::io::Error::other(format!(
-                        "catalog reload listener startup connect failed closed: {err}"
-                    ))
-                })?;
+        let mut initial_catalog_listener = sqlx::postgres::PgListener::connect_with(&catalog_pool)
+            .await
+            .map_err(|err| {
+                std::io::Error::other(format!(
+                    "catalog reload listener startup connect failed closed: {err}"
+                ))
+            })?;
         initial_catalog_listener
             .listen("udb_catalog_reload")
             .await
@@ -2375,16 +2373,17 @@ pub async fn serve(
                 let mut listener = if let Some(listener) = startup_listener.take() {
                     listener
                 } else {
-                    let mut listener =
-                        match sqlx::postgres::PgListener::connect_with(&catalog_pool).await {
-                            Ok(listener) => listener,
-                            Err(err) => {
-                                catalog_service.catalog.set_authority_fresh(false);
-                                tracing::error!(error = %err, "catalog reload listener connect failed closed");
-                                tokio::time::sleep(Duration::from_secs(1)).await;
-                                continue;
-                            }
-                        };
+                    let mut listener = match sqlx::postgres::PgListener::connect_with(&catalog_pool)
+                        .await
+                    {
+                        Ok(listener) => listener,
+                        Err(err) => {
+                            catalog_service.catalog.set_authority_fresh(false);
+                            tracing::error!(error = %err, "catalog reload listener connect failed closed");
+                            tokio::time::sleep(Duration::from_secs(1)).await;
+                            continue;
+                        }
+                    };
                     if let Err(err) = listener.listen("udb_catalog_reload").await {
                         catalog_service.catalog.set_authority_fresh(false);
                         tracing::error!(error = %err, "catalog reload listener subscribe failed closed");
@@ -2403,7 +2402,9 @@ pub async fn serve(
                             tracing::error!(error = %err, "catalog reload listener reconnect reconciliation failed closed");
                         }
                         Err(_) => {
-                            tracing::error!("catalog reload listener reconnect reconciliation timed out and failed closed");
+                            tracing::error!(
+                                "catalog reload listener reconnect reconciliation timed out and failed closed"
+                            );
                         }
                     }
                     listener
@@ -2442,7 +2443,9 @@ pub async fn serve(
                         }
                         Err(_) => {
                             catalog_service.catalog.set_authority_fresh(false);
-                            tracing::error!("durable project catalog reconciliation timed out and failed closed");
+                            tracing::error!(
+                                "durable project catalog reconciliation timed out and failed closed"
+                            );
                         }
                     }
                 }

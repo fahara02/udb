@@ -808,7 +808,6 @@ mod tests {
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
     }
-
 }
 
 /// Build a `tonic_health` service for a single UDB listener, with each gRPC

@@ -1028,11 +1028,8 @@ impl DataBrokerRuntime {
         request_json: &str,
     ) -> Result<String, tonic::Status> {
         parse_dispatch_json(request_json)?;
-        let target = self.resolve_projection_write_target_for_project(
-            backend,
-            instance,
-            project_id,
-        )?;
+        let target =
+            self.resolve_projection_write_target_for_project(backend, instance, project_id)?;
         let context = crate::broker::RequestContext {
             project_id: project_id.trim().to_string(),
             target_backend: target.backend.clone(),

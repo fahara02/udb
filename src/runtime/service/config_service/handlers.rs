@@ -13,8 +13,8 @@ use crate::proto::udb::core::config::services::v1 as config_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_next_page_token, native_offset_page_window,
-    non_empty_json, validated_native_service_context,
+    admit_on as native_admit_on, native_next_page_token, native_offset_page_window, non_empty_json,
+    validated_native_service_context,
 };
 use super::ConfigServiceImpl;
 use super::codec::{flag_val_to_proto, flag_val_to_stored, proto_to_flag_val};
@@ -302,8 +302,7 @@ pub(crate) async fn evaluate_flags(
         environment: ctx_pb.environment.trim().to_string(),
         attributes: ctx_pb.attributes,
     };
-    let context =
-        validated_native_service_context(&metadata, &tenant_id, &eval_ctx.project_id)?;
+    let context = validated_native_service_context(&metadata, &tenant_id, &eval_ctx.project_id)?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,

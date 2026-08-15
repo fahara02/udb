@@ -9,9 +9,7 @@ use crate::ir::{LogicalPagination, LogicalRead};
 use crate::proto::udb::core::livequery::services::v1 as lq_pb;
 use crate::runtime::channels::OperationChannel;
 
-use super::super::native_helpers::{
-    admit_on as native_admit_on, validated_native_service_context,
-};
+use super::super::native_helpers::{admit_on as native_admit_on, validated_native_service_context};
 use super::LiveQueryServiceImpl;
 use super::budget::try_acquire_stream_slot;
 use super::config::{

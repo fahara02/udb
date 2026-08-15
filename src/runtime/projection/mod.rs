@@ -611,10 +611,9 @@ fn project_source_pool<'a>(
     runtime: &'a crate::runtime::DataBrokerRuntime,
     project_id: &str,
 ) -> Result<&'a PgPool, tonic::Status> {
-    let source_target = runtime
-        .resolve_projection_read_target_for_project("postgres", None, project_id)?;
-    runtime
-        .pg_pool_for_instance(source_target.instance.as_deref())
+    let source_target =
+        runtime.resolve_projection_read_target_for_project("postgres", None, project_id)?;
+    runtime.pg_pool_for_instance(source_target.instance.as_deref())
 }
 
 /// PostgreSQL JSONB rejects `\u0000` escapes with "unsupported Unicode escape
@@ -861,9 +860,7 @@ impl ProjectionWorker {
             ProjectionClaimFilter, ProjectionTaskStatus, ProjectionTaskStore,
         };
         if !self.catalog.authority_is_fresh() {
-            tracing::warn!(
-                "projection worker pass skipped: catalog authority is stale"
-            );
+            tracing::warn!("projection worker pass skipped: catalog authority is stale");
             return (0, 0);
         }
         self.refresh_pending_metrics().await;
@@ -1789,9 +1786,7 @@ impl ReconciliationWorker {
     }
 }
 
-fn active_reconciliation_catalogs(
-    catalog: &CatalogManager,
-) -> Vec<(String, Arc<CatalogManifest>)> {
+fn active_reconciliation_catalogs(catalog: &CatalogManager) -> Vec<(String, Arc<CatalogManifest>)> {
     if !catalog.authority_is_fresh() {
         return Vec::new();
     }
@@ -1826,32 +1821,40 @@ mod tests {
             ..CatalogManifest::default()
         }));
         assert_eq!(active_reconciliation_catalogs(&catalog).len(), 1);
-        assert!(validate_projection_task_catalog(
-            &catalog,
-            crate::runtime::catalog::DEFAULT_PROJECT_ID,
-            "initial-catalog",
-        )
-        .is_ok());
-        assert!(validate_projection_task_catalog(
-            &catalog,
-            crate::runtime::catalog::DEFAULT_PROJECT_ID,
-            "old-catalog",
-        )
-        .unwrap_err()
-        .contains("does not match active catalog"));
-        assert!(validate_projection_task_catalog(&catalog, "missing-project", "initial-catalog")
+        assert!(
+            validate_projection_task_catalog(
+                &catalog,
+                crate::runtime::catalog::DEFAULT_PROJECT_ID,
+                "initial-catalog",
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_projection_task_catalog(
+                &catalog,
+                crate::runtime::catalog::DEFAULT_PROJECT_ID,
+                "old-catalog",
+            )
             .unwrap_err()
-            .contains("no exact active catalog"));
+            .contains("does not match active catalog")
+        );
+        assert!(
+            validate_projection_task_catalog(&catalog, "missing-project", "initial-catalog")
+                .unwrap_err()
+                .contains("no exact active catalog")
+        );
 
         catalog.set_authority_fresh(false);
         assert!(active_reconciliation_catalogs(&catalog).is_empty());
-        assert!(validate_projection_task_catalog(
-            &catalog,
-            crate::runtime::catalog::DEFAULT_PROJECT_ID,
-            "initial-catalog",
-        )
-        .unwrap_err()
-        .contains("authority became stale"));
+        assert!(
+            validate_projection_task_catalog(
+                &catalog,
+                crate::runtime::catalog::DEFAULT_PROJECT_ID,
+                "initial-catalog",
+            )
+            .unwrap_err()
+            .contains("authority became stale")
+        );
 
         catalog.set_authority_fresh(true);
         catalog

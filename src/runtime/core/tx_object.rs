@@ -1344,10 +1344,8 @@ impl DataBrokerRuntime {
         tokio::spawn(async move {
             const STALE_ALERT_THRESHOLD: u32 = 3;
             let mut interval = tokio::time::interval(Duration::from_secs(seconds));
-            let mut consecutive_failures = std::collections::HashMap::<
-                (String, String, String),
-                u32,
-            >::new();
+            let mut consecutive_failures =
+                std::collections::HashMap::<(String, String, String), u32>::new();
             let mut project_write_instances =
                 std::collections::HashMap::<(String, String), String>::new();
             loop {
@@ -1435,8 +1433,7 @@ impl DataBrokerRuntime {
                         }
                     }
                 }
-                project_write_instances
-                    .retain(|binding, _| active_bindings.contains(binding));
+                project_write_instances.retain(|binding, _| active_bindings.contains(binding));
             }
         });
         scheduled

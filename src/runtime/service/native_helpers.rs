@@ -1150,12 +1150,9 @@ mod tests {
             &[],
         );
         crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
-            let err = validated_native_service_context(
-                &MetadataMap::new(),
-                "tenant-a",
-                "project-b",
-            )
-            .expect_err("a body project cannot displace the verified claim project");
+            let err =
+                validated_native_service_context(&MetadataMap::new(), "tenant-a", "project-b")
+                    .expect_err("a body project cannot displace the verified claim project");
             assert_eq!(err.code(), tonic::Code::PermissionDenied);
             let detail = decode_detail(&err);
             assert_eq!(detail.policy_decision_id, "project_claim_mismatch");
@@ -1167,16 +1164,9 @@ mod tests {
     fn validated_native_context_preserves_matching_project() {
         let mut metadata = MetadataMap::new();
         metadata.insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
-        metadata.insert(
-            "x-udb-project-id",
-            MetadataValue::from_static("project-a"),
-        );
-        let context = validated_native_service_context(
-            &metadata,
-            "tenant-a",
-            "project-a",
-        )
-        .expect("matching native scope should construct a context");
+        metadata.insert("x-udb-project-id", MetadataValue::from_static("project-a"));
+        let context = validated_native_service_context(&metadata, "tenant-a", "project-a")
+            .expect("matching native scope should construct a context");
         assert_eq!(context.tenant_id, "tenant-a");
         assert_eq!(context.project_id, "project-a");
     }

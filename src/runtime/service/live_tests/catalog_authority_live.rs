@@ -16,12 +16,10 @@ use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::StageCatalogRequest;
 use crate::runtime::config::UdbConfig;
 use crate::runtime::security::SecurityConfig;
-use crate::runtime::service::method_security::{
-    scope_claim_context_for_test, test_claim_context,
-};
 use crate::runtime::service::DataBrokerService;
+use crate::runtime::service::method_security::{scope_claim_context_for_test, test_claim_context};
 use crate::runtime::system::SystemCatalogConfig;
-use crate::runtime::{native_catalog, DataBrokerRuntime};
+use crate::runtime::{DataBrokerRuntime, native_catalog};
 
 fn catalog_live_dsn() -> Option<String> {
     [
@@ -139,7 +137,10 @@ async fn live_postgres_catalog_authority_end_to_end() {
         .expect("serialize canonical native catalog manifest");
     let pretty_manifest = serde_json::to_vec_pretty(native_catalog::native_manifest())
         .expect("pretty-serialize canonical native catalog manifest");
-    assert_ne!(manifest, pretty_manifest, "raw request evidence must differ");
+    assert_ne!(
+        manifest, pretty_manifest,
+        "raw request evidence must differ"
+    );
 
     let runtime = Arc::new(DataBrokerRuntime::from_config(catalog_live_config(&dsn)).await);
 
@@ -255,8 +256,7 @@ async fn live_postgres_catalog_authority_end_to_end() {
         .filter(|result| result.is_ok())
         .count();
     assert_eq!(
-        activation_successes,
-        1,
+        activation_successes, 1,
         "two service instances racing from one baseline must commit exactly one ACTIVE"
     );
     let (winner_id, binding_id, active_count) = durable_active(&pool, &project_id).await;
@@ -311,7 +311,10 @@ async fn live_postgres_catalog_authority_end_to_end() {
         durable_active(&pool, &project_id).await;
     assert_eq!(after_replay, staged_d.catalog.catalog_id);
     assert_eq!(after_replay, binding_after_replay);
-    assert_eq!(active_count, 1, "stale replay must not toggle durable state");
+    assert_eq!(
+        active_count, 1,
+        "stale replay must not toggle durable state"
+    );
 
     let service_one = catalog_live_service(&dsn).await;
     let service_two = catalog_live_service(&dsn).await;
@@ -352,12 +355,14 @@ async fn live_postgres_catalog_authority_end_to_end() {
     denied_request
         .metadata_mut()
         .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
-    denied_request
-        .metadata_mut()
-        .insert("x-project-id", project_id.parse().expect("project metadata"));
-    denied_request
-        .metadata_mut()
-        .insert("x-purpose", "catalog.live".parse().expect("purpose metadata"));
+    denied_request.metadata_mut().insert(
+        "x-project-id",
+        project_id.parse().expect("project metadata"),
+    );
+    denied_request.metadata_mut().insert(
+        "x-purpose",
+        "catalog.live".parse().expect("purpose metadata"),
+    );
     denied_request
         .metadata_mut()
         .insert("x-scopes", "udb:admin".parse().expect("scope metadata"));
@@ -368,12 +373,10 @@ async fn live_postgres_catalog_authority_end_to_end() {
         &["udb:admin"],
         &[],
     );
-    let denied = scope_claim_context_for_test(
-        claim,
-        service_one.stage_catalog_inner(denied_request),
-    )
-    .await
-    .expect_err("project-scoped admin must not stage another project's catalog");
+    let denied =
+        scope_claim_context_for_test(claim, service_one.stage_catalog_inner(denied_request))
+            .await
+            .expect_err("project-scoped admin must not stage another project's catalog");
     assert_eq!(denied.code(), Code::PermissionDenied);
 
     let config = SystemCatalogConfig::default();
@@ -460,7 +463,10 @@ async fn live_postgres_catalog_authority_end_to_end() {
     .fetch_one(&pool)
     .await
     .expect("count migration operations changed by refused stale apply");
-    assert_eq!(changed_ops, 0, "authority refusal must precede physical apply");
+    assert_eq!(
+        changed_ops, 0,
+        "authority refusal must precede physical apply"
+    );
 
     cleanup_catalog_project(&pool, &project_id).await;
     cleanup_catalog_project(&pool, &denied_project_id).await;

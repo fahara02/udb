@@ -13,8 +13,7 @@ use crate::runtime::channels::OperationChannel;
 use super::super::native_helpers::{
     NativeEventContext, admit_on as native_admit_on, enqueue_outbox_event_with_context,
     native_next_page_token, native_offset_page_window, non_empty_json,
-    tenant_only_native_service_context, validate_request_tenant,
-    validated_native_service_context,
+    tenant_only_native_service_context, validate_request_tenant, validated_native_service_context,
 };
 use super::MeteringServiceImpl;
 use super::calc::{bump_revision, now_unix, quota_decision, window_start_unix};

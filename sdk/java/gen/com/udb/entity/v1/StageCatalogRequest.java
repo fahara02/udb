@@ -171,6 +171,10 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object idempotencyKey_ = "";
   /**
+   * <pre>
+   * Required for durable StageCatalog retries.
+   * </pre>
+   *
    * <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
    * @return The idempotencyKey.
    */
@@ -188,6 +192,10 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Required for durable StageCatalog retries.
+   * </pre>
+   *
    * <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
    * @return The bytes for idempotencyKey.
    */
@@ -927,6 +935,10 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object idempotencyKey_ = "";
     /**
+     * <pre>
+     * Required for durable StageCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      * @return The idempotencyKey.
      */
@@ -943,6 +955,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Required for durable StageCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      * @return The bytes for idempotencyKey.
      */
@@ -960,6 +976,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Required for durable StageCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      * @param value The idempotencyKey to set.
      * @return This builder for chaining.
@@ -973,6 +993,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Required for durable StageCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      * @return This builder for chaining.
      */
@@ -983,6 +1007,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Required for durable StageCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      * @param value The bytes for idempotencyKey to set.
      * @return This builder for chaining.

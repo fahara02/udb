@@ -1618,11 +1618,7 @@ mod outbox_envelope_tests {
         );
         assert!(
             runtime
-                .resolve_projection_read_target_for_project(
-                    "qdrant",
-                    Some("billing_vector"),
-                    "hr",
-                )
+                .resolve_projection_read_target_for_project("qdrant", Some("billing_vector"), "hr",)
                 .is_err()
         );
         assert!(

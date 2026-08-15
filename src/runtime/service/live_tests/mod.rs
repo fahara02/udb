@@ -6,10 +6,10 @@
 mod asset_image_live;
 mod asset_live;
 mod asset_trigger_live;
-mod catalog_authority_live;
 #[cfg(feature = "http-client")]
 mod asset_vector_live;
 mod backup_live;
+mod catalog_authority_live;
 mod data_plane_live;
 mod data_plane_tenant_rls_live;
 mod native_events_live;

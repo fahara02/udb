@@ -81,6 +81,9 @@ Release: 0.5.9
   are intentionally disabled.
 - The benchmark orchestrator's positive posture fixture now includes the
   catalog-bootstrap trigger path required by the production workflow.
+- The reusable live-suite positive fixture now executes the exact-project
+  bootstrap command and uses a raw release-regex literal, so the posture
+  selftest represents the production requirement without escape warnings.
 - CDC startup now retains the runtime snapshot and passes the borrowed runtime
   expected by the engine constructor, closing the CI compile mismatch without
   changing worker or authority ordering.
@@ -121,6 +124,11 @@ Release: 0.5.9
 - Any uploaded CI repair patch must be applied, reviewed, documented, committed
   as `fahara02`, and proven by a subsequent clean run; artifact creation alone
   is not acceptance evidence.
+- Applied the `ci-rustfmt-repair-1` and `ci-sdk-codegen-repair-1` artifacts from
+  GitHub CI run `31895052655`; the next CI run is the drift-free proof.
+- Native repair generation consumes the exact broker already built by the
+  Linux Rust job, avoiding a second Cargo invocation and its post-failure target
+  lock while preserving runner/toolchain provenance.
 - The v0.5.9 tag must point to the exact fully green `main` SHA.
 - Completion requires a successful Release workflow, 1,524 measured SDK RPCs,
   four `ok` SDK statuses, zero failed RPCs, and a successful Pages deployment

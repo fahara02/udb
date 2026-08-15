@@ -151,10 +151,7 @@ pub(crate) fn resolve_catalog_mutation_project(
     Ok(project_id.to_string())
 }
 
-fn catalog_transition_superseded_status(
-    operation: &'static str,
-    project_id: &str,
-) -> Status {
+fn catalog_transition_superseded_status(operation: &'static str, project_id: &str) -> Status {
     crate::runtime::executor_utils::schema_status(
         tonic::Code::Aborted,
         "catalog",
@@ -399,14 +396,11 @@ impl DataBrokerService {
             return self.record_grpc("StageCatalog", started, Err(err));
         }
         let req = request.into_inner();
-        let project_id = match resolve_catalog_mutation_project(
-            &security,
-            &req.project_id,
-            "StageCatalog",
-        ) {
-            Ok(project_id) => project_id,
-            Err(err) => return self.record_grpc("StageCatalog", started, Err(err)),
-        };
+        let project_id =
+            match resolve_catalog_mutation_project(&security, &req.project_id, "StageCatalog") {
+                Ok(project_id) => project_id,
+                Err(err) => return self.record_grpc("StageCatalog", started, Err(err)),
+            };
         let actor = security.service_identity.clone();
         let manifest = match parse_catalog_manifest_payload(&req.manifest_json) {
             Ok(manifest) => manifest,
@@ -482,14 +476,11 @@ impl DataBrokerService {
             return self.record_grpc("ActivateCatalog", started, Err(err));
         }
         let req = request.into_inner();
-        let project_id = match resolve_catalog_mutation_project(
-            &security,
-            &req.project_id,
-            "ActivateCatalog",
-        ) {
-            Ok(project_id) => project_id,
-            Err(err) => return self.record_grpc("ActivateCatalog", started, Err(err)),
-        };
+        let project_id =
+            match resolve_catalog_mutation_project(&security, &req.project_id, "ActivateCatalog") {
+                Ok(project_id) => project_id,
+                Err(err) => return self.record_grpc("ActivateCatalog", started, Err(err)),
+            };
         let actor = security.service_identity.clone();
         let runtime = self.runtime_snapshot();
         let project_id_for_activate = project_id.clone();
@@ -575,14 +566,11 @@ impl DataBrokerService {
             return self.record_grpc("RollbackCatalog", started, Err(err));
         }
         let req = request.into_inner();
-        let project_id = match resolve_catalog_mutation_project(
-            &security,
-            &req.project_id,
-            "RollbackCatalog",
-        ) {
-            Ok(project_id) => project_id,
-            Err(err) => return self.record_grpc("RollbackCatalog", started, Err(err)),
-        };
+        let project_id =
+            match resolve_catalog_mutation_project(&security, &req.project_id, "RollbackCatalog") {
+                Ok(project_id) => project_id,
+                Err(err) => return self.record_grpc("RollbackCatalog", started, Err(err)),
+            };
         if req.version.trim().is_empty() {
             return self.record_grpc(
                 "RollbackCatalog",
@@ -793,14 +781,12 @@ impl DataBrokerService {
             return self.record_grpc("GetCatalogVersion", started, Err(err));
         }
         let req = request.into_inner();
-        let project_id = match resolve_catalog_mutation_project(
-            &security,
-            &req.project_id,
-            "GetCatalogVersion",
-        ) {
-            Ok(project_id) => project_id,
-            Err(err) => return self.record_grpc("GetCatalogVersion", started, Err(err)),
-        };
+        let project_id =
+            match resolve_catalog_mutation_project(&security, &req.project_id, "GetCatalogVersion")
+            {
+                Ok(project_id) => project_id,
+                Err(err) => return self.record_grpc("GetCatalogVersion", started, Err(err)),
+            };
         let selector = req.version.trim().to_string();
         let runtime = self.runtime_snapshot();
         let project_id_for_query = project_id.clone();
@@ -861,14 +847,11 @@ impl DataBrokerService {
             return self.record_grpc("PlanMigration", started, Err(err));
         }
         let req = request.into_inner();
-        let project_id = match resolve_catalog_mutation_project(
-            &security,
-            &req.project_id,
-            "PlanMigration",
-        ) {
-            Ok(project_id) => project_id,
-            Err(err) => return self.record_grpc("PlanMigration", started, Err(err)),
-        };
+        let project_id =
+            match resolve_catalog_mutation_project(&security, &req.project_id, "PlanMigration") {
+                Ok(project_id) => project_id,
+                Err(err) => return self.record_grpc("PlanMigration", started, Err(err)),
+            };
         let runtime = self.runtime_snapshot();
         let project_id_for_plan = project_id.clone();
         let dry_run = req.dry_run;
@@ -906,14 +889,11 @@ impl DataBrokerService {
             return self.record_grpc("ApplyMigration", started, Err(err));
         }
         let req = request.into_inner();
-        let project_id = match resolve_catalog_mutation_project(
-            &security,
-            &req.project_id,
-            "ApplyMigration",
-        ) {
-            Ok(project_id) => project_id,
-            Err(err) => return self.record_grpc("ApplyMigration", started, Err(err)),
-        };
+        let project_id =
+            match resolve_catalog_mutation_project(&security, &req.project_id, "ApplyMigration") {
+                Ok(project_id) => project_id,
+                Err(err) => return self.record_grpc("ApplyMigration", started, Err(err)),
+            };
         let actor = security.service_identity.clone();
         let runtime = self.runtime_snapshot();
         let project_id_for_apply = project_id.clone();
@@ -1021,24 +1001,17 @@ impl DataBrokerService {
             return self.record_grpc("ListMigrationRuns", started, Err(err));
         }
         let req = request.into_inner();
-        let project_id = match resolve_catalog_mutation_project(
-            &security,
-            &req.project_id,
-            "ListMigrationRuns",
-        ) {
-            Ok(project_id) => project_id,
-            Err(err) => return self.record_grpc("ListMigrationRuns", started, Err(err)),
-        };
+        let project_id =
+            match resolve_catalog_mutation_project(&security, &req.project_id, "ListMigrationRuns")
+            {
+                Ok(project_id) => project_id,
+                Err(err) => return self.record_grpc("ListMigrationRuns", started, Err(err)),
+            };
         let limit = bounded_list_limit(req.limit);
         let offset = page_offset(&req.page_token);
         let result = self
             .runtime_snapshot()
-            .list_migration_runs(
-                &project_id,
-                &req.state_filter,
-                limit as i64,
-                offset as i64,
-            )
+            .list_migration_runs(&project_id, &req.state_filter, limit as i64, offset as i64)
             .await;
         match result {
             Ok(rows) => {
@@ -1103,11 +1076,7 @@ impl DataBrokerService {
                 crate::runtime::channels::OperationChannel::Migration,
                 || async move {
                     runtime
-                        .approve_migration_plan(
-                            &project_id_for_approve,
-                            &run_id,
-                            &token_for_store,
-                        )
+                        .approve_migration_plan(&project_id_for_approve, &run_id, &token_for_store)
                         .await
                 },
             )

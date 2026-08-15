@@ -539,7 +539,10 @@ impl DataBrokerRuntime {
                     "postgres",
                     "circuit_breaker_open",
                     crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                    format!("postgres instance '{}' circuit breaker is open", instance.name),
+                    format!(
+                        "postgres instance '{}' circuit breaker is open",
+                        instance.name
+                    ),
                 ));
             }
             (
@@ -554,8 +557,7 @@ impl DataBrokerRuntime {
         } else {
             if !postgres_instances.is_empty() || selected != "primary" {
                 return Err(backend_instance_not_configured_status(
-                    "postgres",
-                    &selected,
+                    "postgres", &selected,
                 ));
             }
             self.ensure_unlabeled_default_allowed_for_project("postgres", project_id)?;

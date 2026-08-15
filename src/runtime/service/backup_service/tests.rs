@@ -15,8 +15,8 @@ use crate::ir::{ComparisonOp, LogicalFilter, LogicalValue};
 use crate::proto::udb::core::backup::services::v1 as backup_pb;
 use crate::proto::udb::core::backup::services::v1::backup_service_server::BackupService;
 use crate::proto::{ErrorDetail, ErrorKind};
-use crate::runtime::core::tenant_purge::plan_tenant_purge;
 use crate::runtime::catalog::CatalogManager;
+use crate::runtime::core::tenant_purge::plan_tenant_purge;
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 use crate::runtime::service::method_security;
 

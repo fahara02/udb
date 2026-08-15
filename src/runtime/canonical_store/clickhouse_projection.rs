@@ -751,8 +751,7 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
             .await
             .map_err(|e| ch_err("dead_letter_groups scan", e))?;
         use std::collections::HashMap;
-        let mut groups: HashMap<(String, String, String, String), i64> =
-            HashMap::new();
+        let mut groups: HashMap<(String, String, String, String), i64> = HashMap::new();
         for row in &rows {
             if ch_str(row, "status") != ProjectionTaskStatus::DeadLetter.as_str()
                 || ch_str(row, "last_error")
@@ -772,15 +771,14 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
         let mut out: Vec<DeadLetterGroup> = groups
             .into_iter()
             .map(
-                |(
-                    (project_id, source_table, target_backend, target_instance),
-                    dead_count,
-                )| DeadLetterGroup {
-                    project_id,
-                    source_table,
-                    target_backend,
-                    target_instance,
-                    dead_count,
+                |((project_id, source_table, target_backend, target_instance), dead_count)| {
+                    DeadLetterGroup {
+                        project_id,
+                        source_table,
+                        target_backend,
+                        target_instance,
+                        dead_count,
+                    }
                 },
             )
             .collect();
