@@ -4546,6 +4546,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"activate_catalog_project_binding"',
             '"activate_catalog_reload_log"',
             '"activate_catalog_commit"',
+            '"load_active_catalog_for_project"',
             '"get_catalog_versions"',
             '"plan_migration_manifest_load"',
             '"plan_migration_manifest_parse"',

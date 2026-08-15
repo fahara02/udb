@@ -5,6 +5,78 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.9] - 2026-08-15
+
+Patch release correcting the exact-project catalog publication defect exposed
+by the v0.5.8 post-release benchmark and restoring trustworthy release evidence.
+
+### Fixed
+
+- **Catalog activation and rollback publish the requested project.** The served
+  handlers no longer reload a global last manifest or call the default-project
+  activation shim after committing a customer-project row. They reconcile the
+  exact durable ACTIVE row into the exact project slot, and recovery cannot
+  report default fallback as a successful customer-project activation.
+- **Catalog rollback restores a prior version.** Rollback transitions an
+  explicitly selected `ROLLED_BACK` row instead of aliasing the STAGED-only
+  activation path. Project advisory locking, a one-ACTIVE invariant, durable
+  idempotency fingerprints, and recorded replay results prevent concurrent or
+  stale retries from toggling a later version.
+- **Catalog authority is durable, project-bound, and replica-safe.** Stage and
+  activation verify payload integrity, the semantic schema checksum, canonical
+  validation, real compatibility-diff evidence, the exact prior binding, and
+  project identity. Startup and replica reload publish only matching catalog,
+  binding, compatibility-evidence, and transition rows; split or stale
+  authority fails closed.
+- **Catalog consumers no longer trust raw/default authority.** Capabilities,
+  health, schema discovery, admin summary, projection drift, migrations, and
+  long-lived workers resolve an exact claim-bound project. Health identifies
+  unproven raw ACTIVE rows instead of reporting them as healthy.
+- **The release benchmark activates its customer catalog.** Every clean reset
+  performs StageCatalog, ActivateCatalog, durable verification, and an
+  authority-sensitive served preflight before any SDK seed runs. The Backup and
+  Vault fail-closed project checks remain intact.
+- **Release benchmark evidence is cryptographically bound to the published
+  binary.** The reusable suite accepts only an anchored SemVer tag, verifies the
+  downloaded binary and manifest against both published checksum sidecars,
+  checks the manifest asset identity and `udb --version`, and records the binary
+  SHA-256 in the benchmark JSON. PR-time quick CI and workflow lint compile and
+  track the catalog bootstrap script.
+- **Pages deploys only exact post-release benchmark proof.** Manual and push-only
+  benchmark runs cannot trigger release-evidence publication. Pages binds the
+  artifact to the successful post-Release benchmark run and trigger SHA, resolves
+  the release tag to the benchmarked commit, and verifies its recorded binary
+  digest against the checksum published on that exact tag.
+- **Backup inventory remains readable during topology repair.** ListBackups
+  requires an exact active project/store binding but no longer demands the full
+  backup-execution topology merely to list its durable journal.
+- **Materialized views use the customer project's database.** Creation and TTL
+  refresh route through the exact project PostgreSQL write authority, and the
+  scheduler observes catalog activation/reload instead of capturing the default
+  manifest at startup.
+- **Projection repair is project-scoped.** Dead-letter grouping/requeue carries
+  `project_id` through every canonical-store adapter, and projection workers do
+  not dispatch through stale/default catalog or backend authority.
+- **Native body projects are bound to the verified claim.** Config flag,
+  Metering quota, and LiveQuery handlers validate tenant and project together
+  before constructing their runtime context; a same-tenant request can no
+  longer substitute another project's body identifier.
+- **Project-routing typos fail closed.** Startup rejects unknown routing-mode
+  tokens and a blank `strict_with_default:` project; direct runtime parsing
+  falls back to strict isolation instead of silently authorizing permissive
+  access to unlabeled backend instances.
+
+### Changed
+
+- Exact project catalog state, rather than default fallback, is now the control-
+  plane authority for activation responses and strict native-service admission.
+- Maintained README/site/diagram inventory text matches the generated descriptor,
+  while the coding skill links that inventory instead of duplicating a stale
+  count. Current release/Python publishing examples use 0.5.9, and the version
+  propagator now governs them; the consumer skill's Vault inventory reflects the
+  generated 22-RPC surface. Historical v0.4.28 benchmark evidence keeps its
+  original label.
+
 ## [0.5.8] - 2026-08-15
 
 Patch release restoring tenant-backup import availability and closing the

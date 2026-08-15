@@ -665,13 +665,20 @@ impl ProjectionTaskStore for QdrantCanonicalStore {
 
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
     ) -> SystemStoreResult<i64> {
         let _guard = self.op_lock.lock().await;
-        requeue_json_dead_letter_by_source(self, source_table, target_backend, target_instance)
-            .await
+        requeue_json_dead_letter_by_source(
+            self,
+            project_id,
+            source_table,
+            target_backend,
+            target_instance,
+        )
+        .await
     }
 
     async fn pending_projection_task_count(

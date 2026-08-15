@@ -7,12 +7,14 @@
 
 use tonic::metadata::MetadataValue;
 use tonic::{Request, Status};
+use std::sync::Arc;
 
 use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
 use crate::proto::udb::core::backup::services::v1 as backup_pb;
 use crate::proto::udb::core::backup::services::v1::backup_service_server::BackupService;
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::core::tenant_purge::plan_tenant_purge;
+use crate::runtime::catalog::CatalogManager;
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 use crate::runtime::service::method_security;
 
@@ -89,6 +91,42 @@ fn table(schema: &str, name: &str, columns: Vec<ManifestColumn>) -> ManifestTabl
         columns,
         ..ManifestTable::default()
     }
+}
+
+#[tokio::test]
+async fn backup_project_binding_refuses_default_fallback_and_accepts_exact_activation() {
+    let catalog = Arc::new(CatalogManager::new(CatalogManifest::default()));
+    let svc = BackupServiceImpl::new().with_catalog(Some(Arc::clone(&catalog)));
+
+    let err = svc
+        .require_active_project("customer-project")
+        .expect_err("missing project must not inherit the default catalog");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert_policy_detail(
+        &err,
+        "resolve_project_topology",
+        "backup_project_catalog_not_active",
+    );
+
+    catalog
+        .stage_catalog(
+            CatalogManifest::default(),
+            "customer-project".to_string(),
+            "1.0.0".to_string(),
+            "backward".to_string(),
+        )
+        .await
+        .expect("stage exact customer project");
+    catalog
+        .activate_catalog_for("customer-project", "1.0.0")
+        .await
+        .expect("activate exact customer project");
+
+    assert_eq!(
+        svc.require_active_project("customer-project")
+            .expect("exact active customer project is accepted"),
+        "customer-project"
+    );
 }
 
 /// The backup PLAN must reuse the SHARED purge planner: tenant-columned

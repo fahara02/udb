@@ -52,8 +52,7 @@ pub(crate) async fn list_backups(
     .await?;
     let runtime = svc.require_runtime()?;
     let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
-    let binding = svc.resolve_project_snapshot(&context.project_id)?;
-    context.project_id = binding.project_id.clone();
+    context.project_id = svc.require_active_project(&context.project_id)?;
     let limit = clamp_limit(req.page_size);
     let offset = parse_offset(&req.page_token);
     let kind = match req.kind.trim() {

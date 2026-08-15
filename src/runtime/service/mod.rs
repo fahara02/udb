@@ -4,6 +4,7 @@ use std::fs;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::{Arc, RwLock};
+use std::sync::atomic::{AtomicI64, Ordering as AtomicOrdering};
 use std::time::{Duration, Instant};
 
 use arc_swap::ArcSwap;
@@ -280,6 +281,11 @@ pub struct DataBrokerService {
     metrics: Arc<dyn MetricsRecorder>,
     cdc_engine: Option<Arc<CdcEngine>>,
     projection_engine: Option<Arc<crate::runtime::projection::ProjectionEngine>>,
+    /// Serializes each node's durable-catalog snapshot publication. Every pass
+    /// queries after taking this lock, so concurrent handlers cannot publish an
+    /// older snapshot after a newer transition.
+    catalog_reconcile_lock: Arc<tokio::sync::Mutex<()>>,
+    catalog_generation: Arc<AtomicI64>,
     #[cfg(feature = "redis")]
     rate_limit_redis: Arc<tokio::sync::Mutex<Option<redis::aio::MultiplexedConnection>>>,
     /// W4: set while the limiter is running on its declared failure-mode
@@ -293,6 +299,7 @@ pub struct DataBrokerService {
 }
 
 pub(crate) const UDB_PROTOCOL_VERSION: &str = "1.0.0";
+const CATALOG_RECONCILE_INTERVAL: Duration = Duration::from_secs(2);
 
 /// Whether the privilege-creating dev/bench baseline seed (`EnsureBaseline`) is
 /// enabled. Fail-closed: disabled unless the operator sets `UDB_ENABLE_ADMIN_SEED`.
@@ -404,6 +411,8 @@ impl DataBrokerService {
             metrics: service_metrics_recorder(),
             cdc_engine: None,
             projection_engine: None,
+            catalog_reconcile_lock: Arc::new(tokio::sync::Mutex::new(())),
+            catalog_generation: Arc::new(AtomicI64::new(-1)),
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
             rate_limit_degraded: Arc::new(std::sync::atomic::AtomicBool::new(false)),
@@ -424,6 +433,8 @@ impl DataBrokerService {
             metrics: service_metrics_recorder(),
             cdc_engine: None,
             projection_engine: None,
+            catalog_reconcile_lock: Arc::new(tokio::sync::Mutex::new(())),
+            catalog_generation: Arc::new(AtomicI64::new(-1)),
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
             rate_limit_degraded: Arc::new(std::sync::atomic::AtomicBool::new(false)),
@@ -453,6 +464,8 @@ impl DataBrokerService {
             metrics,
             cdc_engine,
             projection_engine: None,
+            catalog_reconcile_lock: Arc::new(tokio::sync::Mutex::new(())),
+            catalog_generation: Arc::new(AtomicI64::new(-1)),
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
             rate_limit_degraded: Arc::new(std::sync::atomic::AtomicBool::new(false)),
@@ -540,11 +553,70 @@ impl DataBrokerService {
     ) -> Result<String, Status> {
         self.ensure_ready()?;
 
-        // Phase 4 - Catalog Version Compatibility
-        if let Some(detail) = self
-            .catalog
-            .compatibility_error(&security.client_catalog_version, &security.project_id)
+        if !self.catalog.authority_is_fresh() {
+            return Err(crate::runtime::executor_utils::retryable_status(
+                "catalog",
+                "catalog_authority_stale",
+                1_000,
+                "project catalog authority is stale; request refused until durable reconciliation succeeds",
+            ));
+        }
+        // These control-plane handlers either establish catalog authority,
+        // diagnose it, or resolve an explicit body project under platform
+        // authority. They perform their own exact target checks. Comparing the
+        // caller's project/version here would block the operation needed to
+        // repair a missing or incompatible catalog.
+        let catalog_control_operation = matches!(
+            operation,
+            "GetCatalogManifest"
+                | "StageCatalog"
+                | "ValidateCatalog"
+                | "ActivateCatalog"
+                | "RollbackCatalog"
+                | "GetCatalogVersion"
+                | "GetCatalogVersions"
+                | "EnsureProject"
+                | "GetHealthReport"
+                | "GetCapabilities"
+                | "PlanMigration"
+                | "ApplyMigration"
+                | "GetMigrationStatus"
+                | "ListMigrationRuns"
+                | "ApproveMigrationPlan"
+                | "LookupMessageSchema"
+                | "ListMessageSchemas"
+                | "ScanProjectionDrift"
+                | "GetAdminSummary"
+        );
+        if security.project_id.trim() != crate::runtime::catalog::DEFAULT_PROJECT_ID
+            && !catalog_control_operation
+            && self
+                .catalog
+                .active_exact_for(&security.project_id)
+                .is_none()
         {
+            return Err(crate::runtime::executor_utils::schema_status(
+                tonic::Code::FailedPrecondition,
+                "catalog",
+                operation,
+                "catalog_project_not_active",
+                "the authenticated project has no exact ACTIVE catalog; default-project fallback is refused",
+            ));
+        }
+
+        // Phase 4 - Catalog Version Compatibility. A bootstrap operation for a
+        // project that has no exact ACTIVE catalog cannot be compared against
+        // a catalog version yet. Authn, Casbin and admin-scope checks still run;
+        // only this version comparison is deferred until activation succeeds.
+        let exact_active_catalog = self.catalog.active_exact_for(&security.project_id);
+        let compatibility_detail = if catalog_control_operation {
+            None
+        } else {
+            self
+                .catalog
+                .compatibility_error(&security.client_catalog_version, &security.project_id)
+        };
+        if let Some(detail) = compatibility_detail {
             let warn_only = self
                 .runtime_snapshot()
                 .config()
@@ -554,7 +626,10 @@ impl DataBrokerService {
             let msg = format!(
                 "incompatible catalog version: client is '{}', active is '{}': {}",
                 security.client_catalog_version,
-                self.catalog.active().metadata.version,
+                exact_active_catalog
+                    .as_ref()
+                    .map(|active| active.metadata.version.clone())
+                    .unwrap_or_default(),
                 detail
             );
 
@@ -2100,6 +2175,17 @@ pub async fn serve(
                 return Err(err.into());
             }
         };
+    if runtime.pg_pool_clone().is_some() {
+        runtime
+            .upgrade_and_validate_catalog_provenance()
+            .await
+            .map_err(|err| {
+                std::io::Error::other(format!(
+                    "catalog provenance upgrade failed: {}",
+                    err.message()
+                ))
+            })?;
+    }
     runtime.mark_indeterminate_sagas().await;
     // Items 3/5/23/24: XA recovery — drive in-doubt ledger rows terminal and
     // run the ledger-aware presumed-abort sweep over aged `udb-%` prepared
@@ -2213,29 +2299,156 @@ pub async fn serve(
             tracing::warn!("saga recovery worker disabled: no canonical store is registered");
         }
     }
-    let scheduled_views = runtime.start_materialized_view_refresh(&manifest);
-    if scheduled_views > 0 {
-        tracing::info!(
-            scheduled_views = scheduled_views,
-            "scheduled materialized view auto-refresh tasks"
-        );
-    }
     let abac_default_allow = runtime_config.service.abac_default_allow;
-    #[cfg(feature = "kafka")]
-    let cdc_engine = start_cdc_engine(&runtime, metrics.clone()).await;
-    #[cfg(not(feature = "kafka"))]
-    let cdc_engine: Option<Arc<CdcEngine>> = {
-        let _ = &metrics;
-        None
-    };
     let mut service = DataBrokerService::with_runtime_and_state(
         manifest,
         runtime,
         lifecycle_state,
         metrics.clone(),
-        cdc_engine,
+        None,
         abac_default_allow,
     );
+    // Project catalogs are durable control-plane state. Hydrate every exact
+    // ACTIVE binding before the listener can serve, then poll on every replica
+    // (not leader-only) so activation on one node reaches all peers and survives
+    // restarts. A failed startup hydration is fail-closed: serving only the
+    // bootstrap default would silently route customer projects through it.
+    if let Some(catalog_pool) = service.runtime_snapshot().pg_pool_clone() {
+        service
+            .reconcile_durable_active_project_catalogs()
+            .await
+            .map_err(|err| {
+                std::io::Error::other(format!(
+                    "catalog startup hydration failed: {}",
+                    err.message()
+                ))
+            })?;
+        // Subscribe before catalog-dependent workers start or the service can
+        // admit traffic. Otherwise hydration could mark authority fresh while
+        // the listener task had not yet run (or had already failed to connect).
+        service.catalog.set_authority_fresh(false);
+        let mut initial_catalog_listener =
+            sqlx::postgres::PgListener::connect_with(&catalog_pool)
+                .await
+                .map_err(|err| {
+                    std::io::Error::other(format!(
+                        "catalog reload listener startup connect failed closed: {err}"
+                    ))
+                })?;
+        initial_catalog_listener
+            .listen("udb_catalog_reload")
+            .await
+            .map_err(|err| {
+                std::io::Error::other(format!(
+                    "catalog reload listener startup subscribe failed closed: {err}"
+                ))
+            })?;
+        // Re-read after LISTEN so a transition committed between the first
+        // hydration and subscription is included before readiness is restored.
+        service
+            .reconcile_durable_active_project_catalogs()
+            .await
+            .map_err(|err| {
+                std::io::Error::other(format!(
+                    "catalog post-subscribe hydration failed: {}",
+                    err.message()
+                ))
+            })?;
+        let scheduled_views = service
+            .runtime_snapshot()
+            .start_materialized_view_refresh(service.catalog.clone());
+        if scheduled_views > 0 {
+            tracing::info!(
+                scheduled_views = scheduled_views,
+                "scheduled materialized view auto-refresh tasks"
+            );
+        }
+        #[cfg(feature = "kafka")]
+        {
+            service.cdc_engine =
+                start_cdc_engine(service.runtime_snapshot(), metrics.clone()).await;
+        }
+        let catalog_service = service.clone();
+        tokio::spawn(async move {
+            let mut startup_listener = Some(initial_catalog_listener);
+            loop {
+                let mut listener = if let Some(listener) = startup_listener.take() {
+                    listener
+                } else {
+                    let mut listener =
+                        match sqlx::postgres::PgListener::connect_with(&catalog_pool).await {
+                            Ok(listener) => listener,
+                            Err(err) => {
+                                catalog_service.catalog.set_authority_fresh(false);
+                                tracing::error!(error = %err, "catalog reload listener connect failed closed");
+                                tokio::time::sleep(Duration::from_secs(1)).await;
+                                continue;
+                            }
+                        };
+                    if let Err(err) = listener.listen("udb_catalog_reload").await {
+                        catalog_service.catalog.set_authority_fresh(false);
+                        tracing::error!(error = %err, "catalog reload listener subscribe failed closed");
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                        continue;
+                    }
+                    catalog_service.catalog.set_authority_fresh(false);
+                    match tokio::time::timeout(
+                        Duration::from_secs(2),
+                        catalog_service.reconcile_durable_active_project_catalogs(),
+                    )
+                    .await
+                    {
+                        Ok(Ok(_)) => {}
+                        Ok(Err(err)) => {
+                            tracing::error!(error = %err, "catalog reload listener reconnect reconciliation failed closed");
+                        }
+                        Err(_) => {
+                            tracing::error!("catalog reload listener reconnect reconciliation timed out and failed closed");
+                        }
+                    }
+                    listener
+                };
+                let mut interval = tokio::time::interval(CATALOG_RECONCILE_INTERVAL);
+                interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+                interval.tick().await;
+                loop {
+                    let listener_ok = tokio::select! {
+                        _ = interval.tick() => true,
+                        notification = listener.recv() => match notification {
+                            Ok(_) => {
+                                catalog_service.catalog.set_authority_fresh(false);
+                                true
+                            },
+                            Err(err) => {
+                                catalog_service.catalog.set_authority_fresh(false);
+                                tracing::error!(error = %err, "catalog reload listener failed closed");
+                                false
+                            }
+                        },
+                    };
+                    if !listener_ok {
+                        break;
+                    }
+                    match tokio::time::timeout(
+                        Duration::from_secs(2),
+                        catalog_service.reconcile_durable_active_project_catalogs_if_changed(),
+                    )
+                    .await
+                    {
+                        Ok(Ok(())) => {}
+                        Ok(Err(err)) => {
+                            catalog_service.catalog.set_authority_fresh(false);
+                            tracing::error!(error = %err, "durable project catalog reconciliation failed closed");
+                        }
+                        Err(_) => {
+                            catalog_service.catalog.set_authority_fresh(false);
+                            tracing::error!("durable project catalog reconciliation timed out and failed closed");
+                        }
+                    }
+                }
+            }
+        });
+    }
     spawn_config_reload_watcher(service.clone());
 
     // Authorization policy is warmed into the shared snapshot cell from the Casbin
@@ -2263,11 +2476,13 @@ pub async fn serve(
             let singleton_pool = pg_pool.clone();
             let singleton_relation = singleton_relation.clone();
             let runtime = service.runtime_snapshot().clone();
+            let catalog = service.catalog.clone();
             let store = store.clone();
             tokio::spawn(async move {
                 loop {
                     let metrics = metrics.clone();
                     let runtime = runtime.clone();
+                    let catalog = catalog.clone();
                     let store = store.clone();
                     match crate::runtime::singleton::run_while_leader(
                         &singleton_pool,
@@ -2275,7 +2490,7 @@ pub async fn serve(
                         crate::runtime::singleton::WORKER_PROJECTION_MATERIALIZER,
                         crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
                         || async move {
-                            ProjectionWorker::new(store, runtime, metrics)
+                            ProjectionWorker::new(store, runtime, metrics, catalog)
                                 .run_forever()
                                 .await;
                             Ok::<(), String>(())
@@ -2302,9 +2517,8 @@ pub async fn serve(
         }
         if ReconciliationWorker::is_enabled() {
             let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
-            let active_catalog = service.catalog.active();
-            let manifest = active_catalog.manifest.clone();
-            let project_id = active_catalog.metadata.project_id.clone();
+            let catalog = service.catalog.clone();
+            let runtime = service.runtime_snapshot().clone();
             let singleton_pool = pg_pool.clone();
             let singleton_relation = singleton_relation.clone();
             let worker_pool = pg_pool.clone();
@@ -2312,8 +2526,8 @@ pub async fn serve(
             tokio::spawn(async move {
                 loop {
                     let metrics = metrics.clone();
-                    let manifest = manifest.clone();
-                    let project_id = project_id.clone();
+                    let catalog = catalog.clone();
+                    let runtime = runtime.clone();
                     let store = store.clone();
                     let worker_pool = worker_pool.clone();
                     match crate::runtime::singleton::run_while_leader(
@@ -2326,8 +2540,8 @@ pub async fn serve(
                                 worker_pool,
                                 store,
                                 metrics,
-                                manifest,
-                                project_id,
+                                catalog,
+                                runtime,
                             )
                             .run_forever()
                             .await;

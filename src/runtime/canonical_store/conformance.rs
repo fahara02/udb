@@ -304,6 +304,10 @@ pub async fn run_projection_task_contract(store: Arc<dyn ProjectionTaskStore>) {
     assert_eq!(claimed[0].task_id, id_a);
     assert_eq!(claimed[0].status, ProjectionTaskStatus::InProgress);
     assert_eq!(claimed[0].retry_count, 0);
+    assert_eq!(
+        claimed[0].manifest_checksum, task.manifest_checksum,
+        "claimed tasks must retain catalog authority provenance"
+    );
     assert_eq!(claimed[0].source_payload, serde_json::json!({"v": 1}));
 
     // 6. Mark failed → retry_count bumps, status returns to FAILED,
@@ -352,6 +356,142 @@ pub async fn run_projection_task_contract(store: Arc<dyn ProjectionTaskStore>) {
         .await
         .expect_err("invalid failure status must be rejected");
     let _ = err; // exact variant covered in per-backend tests
+
+    // 9. Reconciliation groups and repairs are project-scoped. Two projects
+    // may target the same source/backend/instance tuple, but repairing one
+    // must leave the other project's dead-letter task untouched.
+    let mut project_a_task = task.clone();
+    project_a_task.idempotency_key = format!("conformance-project-a-{}", Uuid::new_v4());
+    project_a_task.project_id = "conformance-project-a".to_string();
+    let mut project_b_task = task.clone();
+    project_b_task.idempotency_key = format!("conformance-project-b-{}", Uuid::new_v4());
+    project_b_task.project_id = "conformance-project-b".to_string();
+
+    let project_a_id = store
+        .enqueue_projection_task(&project_a_task)
+        .await
+        .expect("enqueue project A dead-letter candidate");
+    let project_b_id = store
+        .enqueue_projection_task(&project_b_task)
+        .await
+        .expect("enqueue project B dead-letter candidate");
+    let claimed = store
+        .claim_projection_tasks(&ProjectionClaimFilter::default())
+        .await
+        .expect("claim cross-project dead-letter candidates");
+    assert_eq!(claimed.len(), 2);
+    store
+        .mark_projection_task_failed(
+            project_a_id,
+            5,
+            ProjectionTaskStatus::DeadLetter,
+            "project A synthetic dead letter",
+        )
+        .await
+        .expect("dead-letter project A task");
+    store
+        .mark_projection_task_failed(
+            project_b_id,
+            5,
+            ProjectionTaskStatus::DeadLetter,
+            "project B synthetic dead letter",
+        )
+        .await
+        .expect("dead-letter project B task");
+
+    let groups = store
+        .dead_letter_groups(10)
+        .await
+        .expect("group dead letters by project");
+    let project_a_group = groups
+        .iter()
+        .find(|group| group.project_id == project_a_task.project_id)
+        .expect("project A has its own dead-letter group")
+        .clone();
+    let project_b_group = groups
+        .iter()
+        .find(|group| group.project_id == project_b_task.project_id)
+        .expect("project B has its own dead-letter group");
+    assert_eq!(project_a_group.dead_count, 1);
+    assert_eq!(project_b_group.dead_count, 1);
+
+    let requeued = store
+        .requeue_dead_letter_by_source(
+            &project_a_group.project_id,
+            &project_a_group.source_table,
+            &project_a_group.target_backend,
+            &project_a_group.target_instance,
+        )
+        .await
+        .expect("requeue only project A dead letters");
+    assert_eq!(requeued, 1);
+    let project_a_claimed = store
+        .claim_projection_tasks(&ProjectionClaimFilter {
+            project_id: Some(project_a_task.project_id.clone()),
+            ..ProjectionClaimFilter::default()
+        })
+        .await
+        .expect("claim repaired project A task");
+    assert_eq!(project_a_claimed.len(), 1);
+    assert_eq!(project_a_claimed[0].task_id, project_a_id);
+    let project_b_claimed = store
+        .claim_projection_tasks(&ProjectionClaimFilter {
+            project_id: Some(project_b_task.project_id.clone()),
+            ..ProjectionClaimFilter::default()
+        })
+        .await
+        .expect("project B task remains dead-lettered");
+    assert!(project_b_claimed.is_empty());
+
+    let mut authority_task = task.clone();
+    authority_task.idempotency_key = format!("conformance-authority-{}", Uuid::new_v4());
+    authority_task.project_id = "conformance-authority-project".to_string();
+    let authority_id = store
+        .enqueue_projection_task(&authority_task)
+        .await
+        .expect("enqueue authority-failure candidate");
+    let authority_claimed = store
+        .claim_projection_tasks(&ProjectionClaimFilter {
+            project_id: Some(authority_task.project_id.clone()),
+            ..ProjectionClaimFilter::default()
+        })
+        .await
+        .expect("claim authority-failure candidate");
+    assert_eq!(authority_claimed.len(), 1);
+    assert_eq!(authority_claimed[0].task_id, authority_id);
+    store
+        .mark_projection_task_failed(
+            authority_id,
+            5,
+            ProjectionTaskStatus::DeadLetter,
+            &format!(
+                "{} stale catalog",
+                super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX
+            ),
+        )
+        .await
+        .expect("park authority-rejected task");
+    let groups = store
+        .dead_letter_groups(20)
+        .await
+        .expect("authority failures stay outside automatic repair groups");
+    assert!(
+        groups
+            .iter()
+            .all(|group| group.project_id != authority_task.project_id)
+    );
+    let authority_requeued = store
+        .requeue_dead_letter_by_source(
+            &authority_task.project_id,
+            &authority_task.source_table,
+            &authority_task.target_backend,
+            &authority_task.target_instance,
+        )
+        .await
+        .expect("authority failure requeue is safely ignored");
+    assert_eq!(authority_requeued, 0);
+    let final_summary = store.projection_task_summary().await.unwrap();
+    assert_eq!(final_summary.dead_letter, 2);
 }
 
 /// NW1-1b — Saga contract every `SagaStore` impl must satisfy.

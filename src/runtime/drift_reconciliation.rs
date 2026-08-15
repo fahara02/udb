@@ -19,12 +19,11 @@
 //! ## Detect + repair
 //!
 //! [`DriftScanner`] *detects* drift (pure logic, no engine handle, testable
-//! without live backends). [`repair_drift`] is the *repair* half: it takes a
-//! [`DriftReport`] and re-projects every divergent row through
-//! [`ProjectionEngine::replay_by_primary_key`], which enqueues an idempotent
-//! `upsert` projection task the standard worker then applies to the drifted
-//! target. The scanner stays pure; `repair_drift` lives at the runtime layer
-//! where the `ProjectionEngine` handle is available.
+//! without live backends). [`repair_drift`] is the *repair* half: it matches
+//! each divergent key to the source payload captured by the same project-bound
+//! scan, then enqueues idempotent `upsert` tasks for the standard worker. The
+//! scanner stays pure; `repair_drift` lives at the runtime layer where the
+//! `ProjectionEngine` handle is available.
 //!
 //! This module is pure logic — actual target reads (Mongo find,
 //! Qdrant retrieve, ClickHouse SELECT) are abstracted behind the
@@ -171,11 +170,15 @@ pub trait TargetChecksumProbe: Send + Sync {
 /// backend instances/operators configured for the broker.
 pub struct RuntimeTargetChecksumProbe {
     runtime: Arc<DataBrokerRuntime>,
+    project_id: String,
 }
 
 impl RuntimeTargetChecksumProbe {
-    pub fn new(runtime: Arc<DataBrokerRuntime>) -> Self {
-        Self { runtime }
+    pub fn new(runtime: Arc<DataBrokerRuntime>, project_id: String) -> Self {
+        Self {
+            runtime,
+            project_id,
+        }
     }
 
     pub fn support_warning(target: &ProjectionTarget) -> Option<String> {
@@ -240,7 +243,12 @@ impl TargetChecksumProbe for RuntimeTargetChecksumProbe {
         let request = Self::request_for_target(target, row_key)?;
         let response = self
             .runtime
-            .query_backend_target(&target.backend, Some(&target.instance), &request)
+            .query_backend_target_for_project(
+                &target.backend,
+                Some(&target.instance),
+                &self.project_id,
+                &request,
+            )
             .await
             .map_err(|err| format!("drift probe query failed for {}: {err}", target.backend))?;
         let response_json: serde_json::Value = serde_json::from_str(&response)
@@ -263,13 +271,15 @@ pub struct DriftScanTargetResult {
 pub struct DriftScannerWorker {
     scanner: DriftScanner,
     probe: RuntimeTargetChecksumProbe,
+    project_id: String,
 }
 
 impl DriftScannerWorker {
-    pub fn new(runtime: Arc<DataBrokerRuntime>, mode: ScanMode) -> Self {
+    pub fn new(runtime: Arc<DataBrokerRuntime>, project_id: String, mode: ScanMode) -> Self {
         Self {
             scanner: DriftScanner::new(mode),
-            probe: RuntimeTargetChecksumProbe::new(runtime),
+            probe: RuntimeTargetChecksumProbe::new(runtime, project_id.clone()),
+            project_id,
         }
     }
 
@@ -278,6 +288,18 @@ impl DriftScannerWorker {
         plan: &ProjectionPlan,
         samples: &[SourceSample],
     ) -> Vec<DriftScanTargetResult> {
+        if self.project_id.trim().is_empty() {
+            return plan
+                .targets
+                .iter()
+                .map(|target| DriftScanTargetResult {
+                    report: empty_report(target),
+                    warnings: vec![
+                        "projection drift scan requires a non-empty project_id".to_string(),
+                    ],
+                })
+                .collect();
+        }
         let mut results = Vec::new();
         for target in &plan.targets {
             if let Some(warning) = RuntimeTargetChecksumProbe::support_warning(target) {
@@ -306,10 +328,10 @@ impl DriftScannerWorker {
 /// authoritative source row through the projection engine.
 ///
 /// Closes the detect→repair loop (the scanner only *detects*; this is the
-/// repair half). For each `DivergentRow` it calls
-/// [`ProjectionEngine::replay_by_primary_key`], which loads the canonical
-/// source row by its PK and enqueues an idempotent `upsert` projection task —
-/// the standard projection worker then re-applies it to the drifted target.
+/// repair half). Each `DivergentRow` is resolved only against the project-bound
+/// source samples captured during the scan. This avoids a second source read
+/// through a different physical authority and enqueues an idempotent `upsert`
+/// projection task for the standard worker.
 ///
 /// `message_type` / `project_id` identify the source the report was scanned
 /// against (the scanner is intentionally pure and does not carry them).
@@ -320,26 +342,36 @@ pub async fn repair_drift(
     project_id: &str,
     message_type: &str,
     report: &DriftReport,
+    samples: &[SourceSample],
 ) -> Result<u64, String> {
-    let row_keys: Vec<serde_json::Value> = report
-        .divergent_rows
-        .iter()
-        .map(|row| row.row_key.clone())
-        .collect();
-    let (enqueued, _checkpoint) = engine
-        .replay_batch_rows(
-            manifest,
-            project_id,
-            message_type,
-            &row_keys,
-            DRIFT_REPAIR_BATCH_SIZE,
-            None,
-        )
-        .await?;
-    Ok(enqueued)
+    if project_id.trim().is_empty() {
+        return Err("projection drift repair requires a non-empty project_id".to_string());
+    }
+    let source_rows = repair_source_payloads(report, samples)?;
+    engine
+        .enqueue_replay_rows(manifest, project_id, message_type, source_rows)
+        .await
 }
 
-const DRIFT_REPAIR_BATCH_SIZE: usize = 100;
+fn repair_source_payloads(
+    report: &DriftReport,
+    samples: &[SourceSample],
+) -> Result<Vec<serde_json::Value>, String> {
+    let mut source_rows = Vec::with_capacity(report.divergent_rows.len());
+    for divergent in &report.divergent_rows {
+        let sample = samples
+            .iter()
+            .find(|sample| sample.row_key == divergent.row_key)
+            .ok_or_else(|| {
+                format!(
+                    "projection drift repair source sample disappeared for row key {}",
+                    divergent.row_key
+                )
+            })?;
+        source_rows.push(sample.source_payload.clone());
+    }
+    Ok(source_rows)
+}
 
 #[derive(Debug, Clone, Copy)]
 enum SqlProbeDialect {
@@ -483,8 +515,8 @@ fn empty_report(target: &ProjectionTarget) -> DriftReport {
 }
 
 /// Pure-logic scanner. Takes source samples + a probe, produces a
-/// drift report. The runtime feeds it source rows via
-/// `ProjectionEngine::load_source_rows`; tests feed it canned vectors.
+/// drift report. The runtime feeds it project-routed source rows via
+/// `ProjectionEngine::load_source_samples`; tests feed it canned vectors.
 pub struct DriftScanner {
     pub mode: ScanMode,
 }
@@ -822,6 +854,59 @@ mod tests {
         assert!(default_cost_units("qdrant") > default_cost_units("mongodb"));
         assert!(default_cost_units("redis") < default_cost_units("mongodb"));
         assert!(default_cost_units("clickhouse") > default_cost_units("postgres"));
+    }
+
+    #[test]
+    fn repair_uses_only_payloads_from_the_claimed_project_scan() {
+        let samples = vec![sample("billing-1", json!({"id": "billing-1", "amount": 42}))];
+        let report = DriftReport {
+            target_backend: "mongodb".into(),
+            target_instance: "billing-mongo".into(),
+            target_resource: "invoices".into(),
+            source_rows_scanned: 1,
+            divergent_rows: vec![DivergentRow {
+                row_key: json!({"id": "billing-1"}),
+                source_checksum: samples[0].source_checksum.clone(),
+                target_checksum: None,
+                kind: DivergenceKind::MissingOnTarget,
+            }],
+            estimated_repair_cost: RepairCostEstimate {
+                rows_to_repair: 1,
+                total_cost_units: 1.0,
+            },
+        };
+        assert_eq!(
+            repair_source_payloads(&report, &samples).unwrap(),
+            vec![json!({"id": "billing-1", "amount": 42})]
+        );
+
+        let mut wrong_project_report = report;
+        wrong_project_report.divergent_rows[0].row_key = json!({"id": "hr-1"});
+        assert!(
+            repair_source_payloads(&wrong_project_report, &samples)
+                .unwrap_err()
+                .contains("source sample disappeared")
+        );
+    }
+
+    #[tokio::test]
+    async fn drift_worker_fails_closed_before_probing_without_project() {
+        let plan = ProjectionPlan {
+            message_type: "acme.Invoice".into(),
+            source_schema: "public".into(),
+            source_table: "invoices".into(),
+            primary_key_columns: vec!["id".into()],
+            manifest_checksum: "catalog".into(),
+            targets: vec![target("mongodb")],
+        };
+        let worker = DriftScannerWorker::new(
+            Arc::new(DataBrokerRuntime::planning_only()),
+            String::new(),
+            ScanMode::Full,
+        );
+        let results = worker.scan_plan(&plan, &[]).await;
+        assert_eq!(results.len(), 1);
+        assert!(results[0].warnings[0].contains("non-empty project_id"));
     }
 
     /// The payload checksum is canonical — different field ordering or

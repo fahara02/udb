@@ -21,7 +21,7 @@ fn active_catalog_version_response(
     project_id: &str,
     selector: &str,
 ) -> Option<CatalogVersionResponse> {
-    let active = catalog.active_for(project_id);
+    let active = catalog.active_exact_for(project_id)?;
     let metadata = &active.metadata;
     let version = metadata.version.trim();
     let checksum = metadata.checksum.trim();
@@ -67,6 +67,103 @@ fn catalog_handler_internal_status(
     message: impl Into<String>,
 ) -> Status {
     crate::runtime::executor_utils::internal_status("catalog", operation, message)
+}
+
+fn catalog_record_response(
+    project_id: &str,
+    record: crate::runtime::core::ProjectCatalogRecord,
+    replayed: bool,
+) -> CatalogVersionResponse {
+    CatalogVersionResponse {
+        catalog_id: record.catalog_id,
+        project_id: project_id.to_string(),
+        version: record.version,
+        status: record.status,
+        checksum_sha256: record.checksum_sha256,
+        created_at_unix: record.created_at_unix,
+        warnings: replayed
+            .then(|| "idempotent replay returned the originally committed result".to_string())
+            .into_iter()
+            .collect(),
+        ..Default::default()
+    }
+}
+
+fn explicit_catalog_platform_authority() -> bool {
+    if !crate::runtime::service::method_security::claim_context_present() {
+        return false;
+    }
+    let claim = crate::runtime::service::method_security::current_claim_context();
+    claim.roles.iter().any(|role| {
+        matches!(
+            role.trim().to_ascii_lowercase().as_str(),
+            "platform_admin" | "udb:platform_admin" | "superadmin" | "super_admin"
+        )
+    }) || claim
+        .scopes
+        .iter()
+        .any(|scope| scope.trim() == "udb:platform_admin")
+}
+
+pub(crate) fn require_catalog_platform_authority(operation: &'static str) -> Result<(), Status> {
+    if crate::runtime::service::method_security::claim_context_present()
+        && !explicit_catalog_platform_authority()
+    {
+        return Err(service_policy_denied(
+            operation,
+            "catalog_platform_authority_required",
+            "explicit platform authority is required to enumerate projects across tenants",
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn resolve_catalog_mutation_project(
+    security: &SecurityContext,
+    requested_project_id: &str,
+    operation: &'static str,
+) -> Result<String, Status> {
+    let project_id = if requested_project_id.trim().is_empty() {
+        security.project_id.trim()
+    } else {
+        requested_project_id.trim()
+    };
+    if project_id.is_empty() {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "catalog project_id is required",
+            [("project_id", "must identify an explicit project")],
+        ));
+    }
+
+    if crate::runtime::service::method_security::claim_context_present() {
+        let claim = crate::runtime::service::method_security::current_claim_context();
+        let claim_project = claim.project_id.trim();
+        if (claim_project.is_empty() || claim_project != project_id)
+            && !explicit_catalog_platform_authority()
+        {
+            return Err(service_policy_denied(
+                operation,
+                "catalog_project_scope_mismatch",
+                "catalog project_id must match the authenticated project unless explicit platform authority is present",
+            ));
+        }
+    }
+    Ok(project_id.to_string())
+}
+
+fn catalog_transition_superseded_status(
+    operation: &'static str,
+    project_id: &str,
+) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::Aborted,
+        "catalog",
+        operation,
+        "catalog_transition_superseded",
+        format!(
+            "catalog transition for project '{project_id}' was committed but a newer transition is now ACTIVE"
+        ),
+    )
 }
 
 #[cfg(test)]
@@ -119,6 +216,10 @@ mod tests {
             active_catalog_version_response(&catalog, "default", "boot-checksum").is_some(),
             "active checksum selector should match the in-memory active catalog"
         );
+        assert!(
+            active_catalog_version_response(&catalog, "customer-project", "").is_none(),
+            "a missing customer project must not inherit the default active catalog"
+        );
     }
 
     #[test]
@@ -160,6 +261,63 @@ mod tests {
 }
 
 impl DataBrokerService {
+    /// Publish one authoritative durable ACTIVE snapshot into this node. The
+    /// mutex covers both the database read and atomic map replacement, so two
+    /// local handlers cannot apply snapshots out of commit order.
+    pub(crate) async fn reconcile_durable_active_project_catalogs(
+        &self,
+    ) -> Result<std::collections::BTreeMap<String, String>, Status> {
+        let _guard = self.catalog_reconcile_lock.lock().await;
+        self.catalog.set_authority_fresh(false);
+        let runtime = self.runtime_snapshot();
+        for _ in 0..3 {
+            let generation_before = runtime.catalog_reload_generation().await?;
+            let records = runtime.load_all_active_project_catalogs().await?;
+            let generation_after = runtime.catalog_reload_generation().await?;
+            if generation_before != generation_after {
+                continue;
+            }
+            let mut active_ids = std::collections::BTreeMap::new();
+            let catalogs = records
+                .into_iter()
+                .map(|(project_id, record)| {
+                    active_ids.insert(project_id.clone(), record.catalog_id.clone());
+                    (
+                        project_id,
+                        record.manifest,
+                        record.version,
+                        record.checksum_sha256,
+                        record.compatibility_level,
+                        record.created_at_unix,
+                    )
+                })
+                .collect();
+            self.catalog.replace_durable_active_catalogs(catalogs);
+            self.catalog_generation
+                .store(generation_after, AtomicOrdering::Release);
+            self.catalog.set_authority_fresh(true);
+            return Ok(active_ids);
+        }
+        Err(crate::runtime::executor_utils::retryable_status(
+            "catalog",
+            "catalog_reconcile_generation_changed",
+            100,
+            "catalog authority changed during reconciliation; request refused until a stable durable snapshot is loaded",
+        ))
+    }
+
+    pub(crate) async fn reconcile_durable_active_project_catalogs_if_changed(
+        &self,
+    ) -> Result<(), Status> {
+        let generation = self.runtime_snapshot().catalog_reload_generation().await?;
+        if generation == self.catalog_generation.load(AtomicOrdering::Acquire) {
+            self.catalog.set_authority_fresh(true);
+            return Ok(());
+        }
+        self.reconcile_durable_active_project_catalogs().await?;
+        Ok(())
+    }
+
     pub(crate) async fn get_catalog_manifest_inner(
         &self,
         request: Request<CatalogManifestRequest>,
@@ -169,8 +327,23 @@ impl DataBrokerService {
             return self.record_grpc("GetCatalogManifest", started, Err(err));
         }
         let request = request.into_inner();
-        let active = self.catalog.active();
-        let checksum = active.manifest.checksum_sha256.clone();
+        let active = match self.catalog.active_exact_for(&security.project_id) {
+            Some(active) => active,
+            None => {
+                return self.record_grpc(
+                    "GetCatalogManifest",
+                    started,
+                    Err(crate::runtime::executor_utils::schema_status(
+                        tonic::Code::FailedPrecondition,
+                        "catalog",
+                        "GetCatalogManifest",
+                        "catalog_project_not_active",
+                        "the authenticated project has no exact ACTIVE catalog; default-project fallback is refused",
+                    )),
+                );
+            }
+        };
+        let checksum = active.metadata.checksum.clone();
         let cache_key = (checksum.clone(), request.redact);
         // Fast path: serve the already-serialised bytes for this manifest version.
         if !checksum.is_empty() {
@@ -226,12 +399,24 @@ impl DataBrokerService {
             return self.record_grpc("StageCatalog", started, Err(err));
         }
         let req = request.into_inner();
+        let project_id = match resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "StageCatalog",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("StageCatalog", started, Err(err)),
+        };
         let actor = security.service_identity.clone();
         let manifest = match parse_catalog_manifest_payload(&req.manifest_json) {
             Ok(manifest) => manifest,
             Err(err) => return self.record_grpc("StageCatalog", started, Err(err)),
         };
-        let fallback_version = self.catalog.active_metadata_for(&req.project_id).version;
+        let fallback_version = self
+            .catalog
+            .active_exact_for(&project_id)
+            .map(|active| active.metadata.version.clone())
+            .unwrap_or_default();
         let version = catalog_payload_version(&req.manifest_json, &manifest, &fallback_version);
         let compatibility_level = self
             .runtime_snapshot()
@@ -240,10 +425,12 @@ impl DataBrokerService {
             .catalog_compatibility_level
             .clone();
         let runtime = self.runtime_snapshot();
-        let project_id_for_stage = req.project_id.clone();
+        let project_id_for_stage = project_id.clone();
         let version_for_stage = version.clone();
         let manifest_json = req.manifest_json.clone();
         let reason = req.reason.clone();
+        let actor_for_stage = actor.clone();
+        let idempotency_key = req.idempotency_key.clone();
         let result = self
             .execute_with_channel(
                 crate::runtime::channels::OperationChannel::Admin,
@@ -254,44 +441,32 @@ impl DataBrokerService {
                             &version_for_stage,
                             &manifest_json,
                             &reason,
+                            &actor_for_stage,
+                            &compatibility_level,
+                            &idempotency_key,
                         )
                         .await
                 },
             )
             .await;
         let response = match result {
-            Ok(catalog_id) => {
-                let staged_checksum = self
-                    .catalog
-                    .stage_catalog(
-                        manifest,
-                        req.project_id.clone(),
-                        version.clone(),
-                        compatibility_level,
-                    )
-                    .await
-                    .unwrap_or_default();
-                let _ = self
-                    .runtime_snapshot()
-                    .write_audit_log(
-                        &actor,
-                        "StageCatalog",
-                        &catalog_id,
-                        &serde_json::json!({"project_id": req.project_id, "version": version}),
-                        "ok",
-                        "",
-                        &req.project_id,
-                        "",
-                    )
-                    .await;
-                CatalogVersionResponse {
-                    catalog_id,
-                    project_id: req.project_id,
-                    version,
-                    status: "STAGED".into(),
-                    checksum_sha256: staged_checksum,
-                    ..Default::default()
+            Ok(result) => {
+                if !result.replayed {
+                    let _ = self
+                        .runtime_snapshot()
+                        .write_audit_log(
+                            &actor,
+                            "StageCatalog",
+                            &result.catalog.catalog_id,
+                            &serde_json::json!({"project_id": project_id, "version": version}),
+                            "ok",
+                            "",
+                            &project_id,
+                            "",
+                        )
+                        .await;
                 }
+                catalog_record_response(&project_id, result.catalog, result.replayed)
             }
             Err(err) => return self.record_grpc("StageCatalog", started, Err(err)),
         };
@@ -307,12 +482,22 @@ impl DataBrokerService {
             return self.record_grpc("ActivateCatalog", started, Err(err));
         }
         let req = request.into_inner();
+        let project_id = match resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "ActivateCatalog",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("ActivateCatalog", started, Err(err)),
+        };
         let actor = security.service_identity.clone();
         let runtime = self.runtime_snapshot();
-        let project_id_for_activate = req.project_id.clone();
+        let project_id_for_activate = project_id.clone();
         let version_for_activate = req.version.clone();
         let reason_for_activate = req.reason.clone();
         let actor_for_activate = actor.clone();
+        let idempotency_key = req.idempotency_key.clone();
+        self.catalog.set_authority_fresh(false);
         let result = self
             .execute_with_channel(
                 crate::runtime::channels::OperationChannel::Admin,
@@ -323,101 +508,57 @@ impl DataBrokerService {
                             &version_for_activate,
                             &reason_for_activate,
                             &actor_for_activate,
+                            &idempotency_key,
                         )
                         .await
                 },
             )
             .await;
         let response = match result {
-            Ok(()) => {
-                if let Ok(Some(manifest)) = self.runtime_snapshot().load_last_manifest().await {
-                    let checksum = manifest.checksum_sha256.clone();
-                    let active_version = if req.version.trim().is_empty() {
-                        let fallback_version =
-                            self.catalog.active_metadata_for(&req.project_id).version;
-                        catalog_payload_version(&[], &manifest, &fallback_version)
-                    } else {
-                        req.version.clone()
-                    };
-                    // Just in case it hasn't been staged in this exact node:
-                    if let Err(err) = self
-                        .catalog
-                        .stage_catalog(
-                            manifest,
-                            req.project_id.clone(),
-                            active_version,
-                            "backward".to_string(),
-                        )
-                        .await
-                    {
-                        return self.record_grpc(
-                            "ActivateCatalog",
-                            started,
-                            Err(catalog_handler_internal_status(
-                                "ActivateCatalog",
-                                format!("failed to stage active catalog in memory: {err}"),
-                            )),
-                        );
-                    }
-                    if let Err(err) = self.catalog.activate_catalog(&checksum).await {
-                        return self.record_grpc(
-                            "ActivateCatalog",
-                            started,
-                            Err(catalog_handler_internal_status(
-                                "ActivateCatalog",
-                                format!("failed to activate catalog in memory: {err}"),
-                            )),
-                        );
-                    }
-                }
-
-                if let Err(err) = self
-                    .runtime_snapshot()
-                    .write_audit_log(
-                        &actor,
-                        "ActivateCatalog",
-                        &req.version,
-                        &serde_json::json!({"project_id": req.project_id}),
-                        "ok",
-                        "",
-                        &req.project_id,
-                        "",
-                    )
-                    .await
+            Ok(result) => {
+                let active_ids = match self.reconcile_durable_active_project_catalogs().await {
+                    Ok(active_ids) => active_ids,
+                    Err(err) => return self.record_grpc("ActivateCatalog", started, Err(err)),
+                };
+                if !result.replayed
+                    && active_ids.get(&project_id) != Some(&result.catalog.catalog_id)
                 {
                     return self.record_grpc(
                         "ActivateCatalog",
                         started,
-                        Err(catalog_handler_internal_status(
+                        Err(catalog_transition_superseded_status(
                             "ActivateCatalog",
-                            format!(
-                                "failed to write ActivateCatalog audit log: {}",
-                                err.message()
-                            ),
+                            &project_id,
                         )),
                     );
                 }
-                CatalogVersionResponse {
-                    catalog_id: req.version.clone(),
-                    project_id: req.project_id,
-                    version: req.version,
-                    status: "ACTIVE".into(),
-                    ..Default::default()
+                if !result.replayed {
+                    if let Err(err) = self
+                        .runtime_snapshot()
+                        .write_audit_log(
+                            &actor,
+                            "ActivateCatalog",
+                            &req.version,
+                            &serde_json::json!({"project_id": project_id}),
+                            "ok",
+                            "",
+                            &project_id,
+                            "",
+                        )
+                        .await
+                    {
+                        tracing::warn!(
+                            error = %err,
+                            project_id = %project_id,
+                            "secondary ActivateCatalog audit mirror failed; durable catalog reload/activation logs remain authoritative"
+                        );
+                    }
                 }
+                catalog_record_response(&project_id, result.catalog, result.replayed)
             }
             Err(err) => {
-                if err.code() == tonic::Code::NotFound
-                    && let Some(response) = active_catalog_version_response(
-                        &self.catalog,
-                        &req.project_id,
-                        &req.version,
-                    )
-                {
-                    return self.record_grpc(
-                        "ActivateCatalog",
-                        started,
-                        Ok(Response::new(response)),
-                    );
+                if let Err(reconcile_err) = self.reconcile_durable_active_project_catalogs().await {
+                    return self.record_grpc("ActivateCatalog", started, Err(reconcile_err));
                 }
                 return self.record_grpc("ActivateCatalog", started, Err(err));
             }
@@ -434,12 +575,32 @@ impl DataBrokerService {
             return self.record_grpc("RollbackCatalog", started, Err(err));
         }
         let req = request.into_inner();
+        let project_id = match resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "RollbackCatalog",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("RollbackCatalog", started, Err(err)),
+        };
+        if req.version.trim().is_empty() {
+            return self.record_grpc(
+                "RollbackCatalog",
+                started,
+                Err(crate::runtime::executor_utils::invalid_argument_fields(
+                    "rollback catalog version is required",
+                    [("version", "must identify an explicit prior catalog version")],
+                )),
+            );
+        }
         let actor = security.service_identity.clone();
         let runtime = self.runtime_snapshot();
-        let project_id_for_rollback = req.project_id.clone();
+        let project_id_for_rollback = project_id.clone();
         let version_for_rollback = req.version.clone();
         let reason_for_rollback = req.reason.clone();
         let actor_for_rollback = actor.clone();
+        let idempotency_key = req.idempotency_key.clone();
+        self.catalog.set_authority_fresh(false);
         let result = self
             .execute_with_channel(
                 crate::runtime::channels::OperationChannel::Admin,
@@ -450,96 +611,61 @@ impl DataBrokerService {
                             &version_for_rollback,
                             &reason_for_rollback,
                             &actor_for_rollback,
+                            &idempotency_key,
                         )
                         .await
                 },
             )
             .await;
-        let response =
-            match result {
-                Ok(()) => {
-                    if let Ok(Some(manifest)) = self.runtime_snapshot().load_last_manifest().await {
-                        let checksum = manifest.checksum_sha256.clone();
-                        let active_version = if req.version.trim().is_empty() {
-                            let fallback_version =
-                                self.catalog.active_metadata_for(&req.project_id).version;
-                            catalog_payload_version(&[], &manifest, &fallback_version)
-                        } else {
-                            req.version.clone()
-                        };
-                        if let Err(err) = self
-                            .catalog
-                            .stage_catalog(
-                                manifest,
-                                req.project_id.clone(),
-                                active_version,
-                                "backward".to_string(),
-                            )
-                            .await
-                        {
-                            return self.record_grpc(
-                                "RollbackCatalog",
-                                started,
-                                Err(catalog_handler_internal_status(
-                                    "RollbackCatalog",
-                                    format!("failed to stage rollback catalog in memory: {err}"),
-                                )),
-                            );
-                        }
-                        if let Err(err) = self.catalog.activate_catalog(&checksum).await {
-                            return self.record_grpc(
-                                "RollbackCatalog",
-                                started,
-                                Err(catalog_handler_internal_status(
-                                    "RollbackCatalog",
-                                    format!("failed to activate rollback catalog in memory: {err}"),
-                                )),
-                            );
-                        }
-                    }
-
-                    if let Err(err) = self.runtime_snapshot().write_audit_log(
-                    &actor, "RollbackCatalog", &req.version,
-                    &serde_json::json!({"project_id": req.project_id, "reason": req.reason}),
-                    "ok", &security.tenant_id, &req.project_id, &security.correlation_id,
-                ).await {
-                        return self.record_grpc(
+        let response = match result {
+            Ok(result) => {
+                let active_ids = match self.reconcile_durable_active_project_catalogs().await {
+                    Ok(active_ids) => active_ids,
+                    Err(err) => return self.record_grpc("RollbackCatalog", started, Err(err)),
+                };
+                if !result.replayed
+                    && active_ids.get(&project_id) != Some(&result.catalog.catalog_id)
+                {
+                    return self.record_grpc(
+                        "RollbackCatalog",
+                        started,
+                        Err(catalog_transition_superseded_status(
                             "RollbackCatalog",
-                            started,
-                            Err(catalog_handler_internal_status(
-                                "RollbackCatalog",
-                                format!(
-                                    "failed to write RollbackCatalog audit log: {}",
-                                    err.message()
-                                ),
-                            )),
-                        );
-                    }
-                    CatalogVersionResponse {
-                        catalog_id: req.version.clone(),
-                        project_id: req.project_id,
-                        version: req.version,
-                        status: "ACTIVE".into(),
-                        ..Default::default()
-                    }
+                            &project_id,
+                        )),
+                    );
                 }
-                Err(err) => {
-                    if err.code() == tonic::Code::NotFound
-                        && let Some(response) = active_catalog_version_response(
-                            &self.catalog,
-                            &req.project_id,
+                if !result.replayed {
+                    if let Err(err) = self
+                        .runtime_snapshot()
+                        .write_audit_log(
+                            &actor,
+                            "RollbackCatalog",
                             &req.version,
+                            &serde_json::json!({"project_id": project_id, "reason": req.reason}),
+                            "ok",
+                            &security.tenant_id,
+                            &project_id,
+                            &security.correlation_id,
                         )
+                        .await
                     {
-                        return self.record_grpc(
-                            "RollbackCatalog",
-                            started,
-                            Ok(Response::new(response)),
+                        tracing::warn!(
+                            error = %err,
+                            project_id = %project_id,
+                            "secondary RollbackCatalog audit mirror failed; durable catalog reload/activation logs remain authoritative"
                         );
                     }
-                    return self.record_grpc("RollbackCatalog", started, Err(err));
                 }
-            };
+                catalog_record_response(&project_id, result.catalog, result.replayed)
+            }
+            Err(err) => {
+                if let Err(reconcile_err) = self.reconcile_durable_active_project_catalogs().await {
+                    return self.record_grpc("RollbackCatalog", started, Err(reconcile_err));
+                }
+                return self.record_grpc("RollbackCatalog", started, Err(err));
+            }
+        };
         self.record_grpc("RollbackCatalog", started, Ok(Response::new(response)))
     }
 
@@ -552,6 +678,11 @@ impl DataBrokerService {
             return self.record_grpc("ValidateCatalog", started, Err(err));
         }
         let req = request.into_inner();
+        if let Err(err) =
+            resolve_catalog_mutation_project(&security, &req.project_id, "ValidateCatalog")
+        {
+            return self.record_grpc("ValidateCatalog", started, Err(err));
+        }
         let manifest = match parse_catalog_manifest_payload(&req.manifest_json) {
             Ok(manifest) => manifest,
             Err(err) => {
@@ -627,11 +758,12 @@ impl DataBrokerService {
                         errors: Vec::new(),
                     })
                     .collect();
-                if !has_persisted_active
-                    && let Some(active) =
+                if !has_persisted_active {
+                    if let Some(active) =
                         active_catalog_version_response(&self.catalog, &project_id, "")
-                {
-                    proto_versions.push(active);
+                    {
+                        proto_versions.push(active);
+                    }
                 }
                 let active_version = proto_versions
                     .iter()
@@ -661,10 +793,13 @@ impl DataBrokerService {
             return self.record_grpc("GetCatalogVersion", started, Err(err));
         }
         let req = request.into_inner();
-        let project_id = if req.project_id.trim().is_empty() {
-            security.project_id.clone()
-        } else {
-            req.project_id.clone()
+        let project_id = match resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "GetCatalogVersion",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("GetCatalogVersion", started, Err(err)),
         };
         let selector = req.version.trim().to_string();
         let runtime = self.runtime_snapshot();
@@ -682,11 +817,12 @@ impl DataBrokerService {
         let selected = versions.iter().find(|v| {
             let catalog_id = v["catalog_id"].as_str().unwrap_or_default();
             let version = v["version"].as_str().unwrap_or_default();
+            let checksum = v["checksum_sha256"].as_str().unwrap_or_default();
             let status = v["status"].as_str().unwrap_or_default();
             if selector.is_empty() {
                 status == "ACTIVE"
             } else {
-                selector == catalog_id || selector == version
+                selector == catalog_id || selector == version || selector == checksum
             }
         });
         let Some(v) = selected else {
@@ -725,13 +861,21 @@ impl DataBrokerService {
             return self.record_grpc("PlanMigration", started, Err(err));
         }
         let req = request.into_inner();
+        let project_id = match resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "PlanMigration",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("PlanMigration", started, Err(err)),
+        };
         let runtime = self.runtime_snapshot();
-        let project_id = req.project_id.clone();
+        let project_id_for_plan = project_id.clone();
         let dry_run = req.dry_run;
         let result = self
             .execute_with_channel(
                 crate::runtime::channels::OperationChannel::Migration,
-                || async move { runtime.plan_migration(&project_id, dry_run).await },
+                || async move { runtime.plan_migration(&project_id_for_plan, dry_run).await },
             )
             .await;
         match result {
@@ -740,7 +884,7 @@ impl DataBrokerService {
                 started,
                 Ok(Response::new(MigrationPlanResponse {
                     run_id,
-                    project_id: req.project_id,
+                    project_id,
                     state: if req.dry_run {
                         "DRY_RUN".into()
                     } else {
@@ -762,9 +906,17 @@ impl DataBrokerService {
             return self.record_grpc("ApplyMigration", started, Err(err));
         }
         let req = request.into_inner();
+        let project_id = match resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "ApplyMigration",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("ApplyMigration", started, Err(err)),
+        };
         let actor = security.service_identity.clone();
         let runtime = self.runtime_snapshot();
-        let project_id = req.project_id.clone();
+        let project_id_for_apply = project_id.clone();
         let run_id = req.run_id.clone();
         let approval_token = req.approval_token.clone();
 
@@ -773,7 +925,7 @@ impl DataBrokerService {
                 crate::runtime::channels::OperationChannel::Migration,
                 || async move {
                     Ok(runtime
-                        .apply_migration(&project_id, &run_id, &approval_token)
+                        .apply_migration(&project_id_for_apply, &run_id, &approval_token)
                         .await)
                 },
             )
@@ -792,10 +944,10 @@ impl DataBrokerService {
                         &actor,
                         "ApplyMigration",
                         &req.run_id,
-                        &serde_json::json!({"project_id": req.project_id, "run_id": req.run_id}),
+                        &serde_json::json!({"project_id": project_id, "run_id": req.run_id}),
                         "ok",
                         &security.tenant_id,
-                        &req.project_id,
+                        &project_id,
                         &security.correlation_id,
                     )
                     .await;
@@ -804,7 +956,7 @@ impl DataBrokerService {
                     started,
                     Ok(Response::new(MigrationStatusResponse {
                         run_id: req.run_id,
-                        project_id: req.project_id,
+                        project_id,
                         state: "COMPLETED".into(),
                         ..Default::default()
                     })),
@@ -823,13 +975,25 @@ impl DataBrokerService {
             return self.record_grpc("GetMigrationStatus", started, Err(err));
         }
         let req = request.into_inner();
+        let project_id = match resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "GetMigrationStatus",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("GetMigrationStatus", started, Err(err)),
+        };
         let runtime = self.runtime_snapshot();
-        let project_id = req.project_id.clone();
+        let project_id_for_query = project_id.clone();
         let run_id = req.run_id.clone();
         let result = self
             .execute_with_channel(
                 crate::runtime::channels::OperationChannel::Migration,
-                || async move { runtime.get_migration_status(&project_id, &run_id).await },
+                || async move {
+                    runtime
+                        .get_migration_status(&project_id_for_query, &run_id)
+                        .await
+                },
             )
             .await;
         match result {
@@ -857,12 +1021,20 @@ impl DataBrokerService {
             return self.record_grpc("ListMigrationRuns", started, Err(err));
         }
         let req = request.into_inner();
+        let project_id = match resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "ListMigrationRuns",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("ListMigrationRuns", started, Err(err)),
+        };
         let limit = bounded_list_limit(req.limit);
         let offset = page_offset(&req.page_token);
         let result = self
             .runtime_snapshot()
             .list_migration_runs(
-                &req.project_id,
+                &project_id,
                 &req.state_filter,
                 limit as i64,
                 offset as i64,
@@ -913,9 +1085,17 @@ impl DataBrokerService {
             return self.record_grpc("ApproveMigrationPlan", started, Err(err));
         }
         let req = request.into_inner();
+        let project_id = match resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "ApproveMigrationPlan",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("ApproveMigrationPlan", started, Err(err)),
+        };
         let token = uuid::Uuid::new_v4().to_string();
         let runtime = self.runtime_snapshot();
-        let project_id = req.project_id.clone();
+        let project_id_for_approve = project_id.clone();
         let run_id = req.run_id.clone();
         let token_for_store = token.clone();
         let result = self
@@ -923,7 +1103,11 @@ impl DataBrokerService {
                 crate::runtime::channels::OperationChannel::Migration,
                 || async move {
                     runtime
-                        .approve_migration_plan(&project_id, &run_id, &token_for_store)
+                        .approve_migration_plan(
+                            &project_id_for_approve,
+                            &run_id,
+                            &token_for_store,
+                        )
                         .await
                 },
             )
@@ -937,20 +1121,20 @@ impl DataBrokerService {
                         "ApproveMigrationPlan",
                         &req.run_id,
                         &serde_json::json!({
-                            "project_id": req.project_id.clone(),
+                            "project_id": project_id.clone(),
                             "run_id": req.run_id.clone(),
                             "idempotency_key": req.idempotency_key.clone(),
                             "approval_token_issued": true,
                         }),
                         "ok",
                         &security.tenant_id,
-                        &req.project_id,
+                        &project_id,
                         &security.correlation_id,
                     )
                     .await;
                 let mut response = Response::new(MigrationStatusResponse {
                     run_id: req.run_id,
-                    project_id: req.project_id,
+                    project_id,
                     state: "APPROVED".into(),
                     approval_token: Some(token.clone()),
                     applyable: Some(true),

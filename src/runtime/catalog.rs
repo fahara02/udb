@@ -14,15 +14,18 @@
 //!   — protected by a write lock because stage / activate / rollback
 //!   transitions a single project's slot at a time.
 //!
-//! The pre-existing single-project API (`active()`, `staged()`,
-//! `activate_catalog`, `rollback_catalog`) is preserved as a back-compat
-//! shim that operates on the `"default"` project, so callers that haven't
-//! yet been migrated to pass a project_id keep working.
+//! The pre-existing single-project mutation API (`active()`, `staged()`,
+//! `activate_catalog`, `rollback_catalog`) remains a back-compat shim for the
+//! explicit `"default"` project. Project-aware reads never inherit that
+//! catalog: missing or stale customer authority resolves to an empty sentinel
+//! (or `None` through `active_exact_for`) so native/background paths fail
+//! closed rather than crossing project boundaries.
 
 use crate::CatalogManifest;
 use arc_swap::ArcSwap;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -60,6 +63,7 @@ pub struct CatalogManager {
     /// Staged catalogs keyed by project, each tagged with its staged-at instant
     /// so old un-activated stagings can be evicted (#211).
     staged_catalogs: RwLock<HashMap<String, (CatalogState, std::time::Instant)>>,
+    authority_fresh: AtomicBool,
 }
 
 impl CatalogManager {
@@ -94,6 +98,7 @@ impl CatalogManager {
         Self {
             active_catalogs: ArcSwap::from_pointee(initial_map),
             staged_catalogs: RwLock::new(HashMap::new()),
+            authority_fresh: AtomicBool::new(true),
         }
     }
 
@@ -103,40 +108,88 @@ impl CatalogManager {
         self.active_for(DEFAULT_PROJECT_ID)
     }
 
-    /// Active catalog for `project_id`. Falls back to the default
-    /// project's catalog when `project_id` is empty or has no active
-    /// catalog yet — this is what makes legacy single-project clients
-    /// keep working even after the broker grows multi-project support.
+    /// Active catalog for `project_id`. Blank identifiers retain the legacy
+    /// `default` mapping, but an explicit customer project never inherits the
+    /// default catalog. Missing or stale authority returns an empty project-
+    /// local state so background/native consumers cannot route with another
+    /// project's manifest even when they cannot return a typed error directly.
     pub fn active_for(&self, project_id: &str) -> Arc<CatalogState> {
         let key = canonical_project_key(project_id);
+        if !self.authority_fresh.load(Ordering::Acquire) {
+            return unavailable_catalog_state(key.into_owned());
+        }
         let map = self.active_catalogs.load();
         if let Some(state) = map.get(&*key) {
             return state.clone();
         }
-        if let Some(state) = map.get(DEFAULT_PROJECT_ID) {
-            return state.clone();
+        unavailable_catalog_state(key.into_owned())
+    }
+
+    /// Return the active catalog only when this exact project has been
+    /// published. Unlike [`active_for`], this never falls back to the default
+    /// project. Authority-sensitive control planes use this accessor so a
+    /// missing customer-project activation cannot be mistaken for a valid
+    /// default-project binding.
+    pub fn active_exact_for(&self, project_id: &str) -> Option<Arc<CatalogState>> {
+        if !self.authority_fresh.load(Ordering::Acquire) {
+            return None;
         }
-        // Should never trigger — `new` always inserts the default — but
-        // produce something rather than panicking, so a misconfigured
-        // broker doesn't take down requests at the catalog edge.
-        Arc::new(CatalogState {
-            manifest: Arc::new(CatalogManifest::default()),
-            metadata: CatalogMetadata {
-                version: "1.0.0".into(),
-                checksum: "empty".into(),
-                project_id: key.into_owned(),
-                compatibility_level: "exact".into(),
-                applied_at_unix: 0,
-            },
-        })
+        let key = canonical_project_key(project_id);
+        self.active_catalogs.load().get(&*key).cloned()
+    }
+
+    pub fn set_authority_fresh(&self, fresh: bool) {
+        self.authority_fresh.store(fresh, Ordering::Release);
+    }
+
+    pub fn authority_is_fresh(&self) -> bool {
+        self.authority_fresh.load(Ordering::Acquire)
     }
 
     /// All project IDs with an active catalog. Used by `GetAdminSummary`
     /// and the portal to enumerate live projects.
     pub fn active_project_ids(&self) -> Vec<String> {
+        if !self.authority_fresh.load(Ordering::Acquire) {
+            return Vec::new();
+        }
         let mut ids: Vec<String> = self.active_catalogs.load().keys().cloned().collect();
         ids.sort();
         ids
+    }
+
+    /// Atomically replace every durable customer-project catalog while keeping
+    /// the process bootstrap default until/unless a durable default row is
+    /// supplied. The caller serializes durable snapshots; replacing the whole
+    /// map prevents deleted or superseded project bindings from surviving a
+    /// restart/reconciliation pass.
+    pub fn replace_durable_active_catalogs(
+        &self,
+        catalogs: Vec<(String, CatalogManifest, String, String, String, i64)>,
+    ) {
+        let current = self.active_catalogs.load_full();
+        let mut next = HashMap::new();
+        if let Some(default) = current.get(DEFAULT_PROJECT_ID) {
+            next.insert(DEFAULT_PROJECT_ID.to_string(), Arc::clone(default));
+        }
+        for (project_id, manifest, version, checksum, compatibility_level, applied_at_unix) in
+            catalogs
+        {
+            let project_id = canonical_project_key(&project_id).into_owned();
+            next.insert(
+                project_id.clone(),
+                Arc::new(CatalogState {
+                    manifest: Arc::new(manifest),
+                    metadata: CatalogMetadata {
+                        version,
+                        checksum,
+                        project_id,
+                        compatibility_level,
+                        applied_at_unix,
+                    },
+                }),
+            );
+        }
+        self.active_catalogs.store(Arc::new(next));
     }
 
     /// Back-compat: metadata for the default project's active catalog.
@@ -144,7 +197,7 @@ impl CatalogManager {
         self.active().metadata.clone()
     }
 
-    /// Metadata for `project_id` (falls back to default per [`active_for`]).
+    /// Metadata for exact `project_id`; missing authority is empty/fail-closed.
     pub fn active_metadata_for(&self, project_id: &str) -> CatalogMetadata {
         self.active_for(project_id).metadata.clone()
     }
@@ -365,6 +418,19 @@ fn canonical_project_key(raw: &str) -> std::borrow::Cow<'_, str> {
     }
 }
 
+fn unavailable_catalog_state(project_id: String) -> Arc<CatalogState> {
+    Arc::new(CatalogState {
+        manifest: Arc::new(CatalogManifest::default()),
+        metadata: CatalogMetadata {
+            version: String::new(),
+            checksum: String::new(),
+            project_id,
+            compatibility_level: "exact".into(),
+            applied_at_unix: 0,
+        },
+    })
+}
+
 fn catalog_version_from_manifest(manifest: &CatalogManifest) -> String {
     if !manifest.generator_version.trim().is_empty() {
         format!("generator-{}", manifest.generator_version.trim())
@@ -498,12 +564,24 @@ mod tests {
         assert_eq!(analytics_state.metadata.checksum, "analytics-checksum");
         assert_eq!(default_state.metadata.checksum, "default-initial");
 
-        // Unknown project_id falls back to the default catalog — not to
-        // some other project's data. This is what stops a missing
-        // header from leaking project A's manifest to project B.
+        // Unknown explicit projects fail closed instead of inheriting any
+        // default or customer authority.
         assert_eq!(
-            unknown_state.metadata.checksum, "default-initial",
-            "unknown project must fall back to default, never another project"
+            unknown_state.metadata.checksum, "",
+            "unknown project must not inherit the default catalog"
+        );
+        assert!(unknown_state.manifest.tables.is_empty());
+        assert!(
+            manager.active_exact_for("unknown-project").is_none(),
+            "exact authority lookup must refuse the default fallback"
+        );
+        assert_eq!(
+            manager
+                .active_exact_for("billing")
+                .expect("billing was explicitly activated")
+                .metadata
+                .checksum,
+            "billing-checksum"
         );
 
         let ids = manager.active_project_ids();

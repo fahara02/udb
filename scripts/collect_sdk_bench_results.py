@@ -547,6 +547,7 @@ def main() -> int:
     ap.add_argument("--release-tag", default=os.getenv("UDB_BENCH_RELEASE_TAG", ""))
     ap.add_argument("--release-asset", default=os.getenv("UDB_BENCH_RELEASE_ASSET", ""))
     ap.add_argument("--release-url", default=os.getenv("UDB_BENCH_RELEASE_URL", ""))
+    ap.add_argument("--release-sha256", default=os.getenv("UDB_BENCH_BINARY_SHA256", ""))
     ap.add_argument("--previous", default="", help="previous bench-results.json to append history from")
     ap.add_argument("--gate", default="", help="fail if an existing bench-results.json has bad SDKs or failed RPCs")
     args = ap.parse_args()
@@ -617,6 +618,7 @@ def main() -> int:
     run_point = {
         "generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         "release_tag": args.release_tag,
+        "release_sha256": args.release_sha256,
         "short_commit": _cmd(["git", "rev-parse", "--short", "HEAD"]),
         "sdks": [
             {
@@ -642,6 +644,7 @@ def main() -> int:
                 history = [{
                     "generated_at": prev.get("generated_at"),
                     "release_tag": prev.get("release", {}).get("tag"),
+                    "release_sha256": prev.get("release", {}).get("sha256"),
                     "short_commit": prev.get("git", {}).get("short_commit"),
                     "sdks": [
                         {
@@ -667,6 +670,7 @@ def main() -> int:
             "tag": args.release_tag,
             "asset": args.release_asset,
             "url": args.release_url,
+            "sha256": args.release_sha256,
         },
         "git": {
             "commit": _cmd(["git", "rev-parse", "HEAD"]),

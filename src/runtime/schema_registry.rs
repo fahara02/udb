@@ -474,19 +474,13 @@ mod tests {
         assert_eq!(messages, vec!["acme.billing.v1.Customer".to_string()]);
     }
 
-    /// Unknown project_id falls back to the default catalog (U4's
-    /// back-compat shim). Schema registry inherits the same behaviour
-    /// for free — a missing `x-udb-project-id` header doesn't poison
-    /// lookups for callers running against the default project.
+    /// An explicit unknown project never inherits the default schema catalog.
     #[tokio::test]
-    async fn unknown_project_falls_back_to_default() {
+    async fn unknown_project_fails_closed_without_default_fallback() {
         let registry = registry_with_project("1.0.0", "backward").await;
-        // Lookup against unconfigured project — sees default's catalog,
-        // which has the same Customer table (we seeded both projects
-        // with the same fixture).
-        let descriptor = registry
+        let error = registry
             .lookup_message("nonexistent-project", "acme.billing.v1.Customer", "")
-            .expect("falls back to default");
-        assert_eq!(descriptor.project_id, "nonexistent-project");
+            .expect_err("unknown project must not inherit default schema authority");
+        assert!(matches!(error, LookupError::MessageNotFound { .. }));
     }
 }

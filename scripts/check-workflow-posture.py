@@ -1415,22 +1415,35 @@ BENCHMARK_WORKFLOW_REQUIREMENTS = (
     ("release-asset:", "release asset workflow input"),
     ("default: udb-linux-amd64-full", "default full Linux release asset"),
     ("Resolve release binary (perf)", "release binary resolution step"),
+    (r'^v[0-9]+\.[0-9]+\.[0-9]+$', "anchored release SemVer validation"),
     ("gh release view", "release existence check"),
     ("gh release download", "release asset download command"),
     ('--pattern "${RELEASE_ASSET}"', "configured release asset download pattern"),
+    ('--pattern "${RELEASE_ASSET}.sha256"', "release asset checksum download"),
+    ('--pattern "manifest.json"', "release manifest download"),
+    ('--pattern "manifest.json.sha256"', "release manifest checksum download"),
+    ('manifest.get("tag") != tag', "release manifest tag verification"),
+    ('entry.get("sha256") != binary_digest', "release manifest asset digest verification"),
+    ('"bench-output/bin/${RELEASE_ASSET}" --version', "release binary version verification"),
     ("bench-output/bin", "benchmark binary staging directory"),
     ('chmod +x "bench-output/bin/${RELEASE_ASSET}"', "release binary executable bit"),
     ("UDB_BENCH_RELEASE_TAG", "benchmark release tag metadata"),
     ("UDB_BENCH_RELEASE_ASSET", "benchmark release asset metadata"),
     ("UDB_BENCH_RELEASE_URL", "benchmark release URL metadata"),
+    ("UDB_BENCH_BINARY_SHA256", "benchmark release binary digest metadata"),
     ("UDB_BENCH_BIN", "benchmark binary env path"),
     ("Resolve broker binary path", "benchmark broker binary path step"),
     ("Start backends", "benchmark backend startup step"),
     ("Write broker env", "benchmark broker env step"),
     ('echo "UDB_LIVE_PERF=1" >> "$GITHUB_ENV"', "benchmark perf opt-in"),
     ("Prepare per-SDK reset script", "per-SDK reset script step"),
+    (
+        "python scripts/bootstrap_benchmark_project_catalog.py",
+        "exact-project catalog bootstrap and served preflight",
+    ),
     ("Collect benchmark JSON", "benchmark collection step"),
     ("python scripts/collect_sdk_bench_results.py", "benchmark collector command"),
+    ('--release-sha256 "${UDB_BENCH_BINARY_SHA256:-}"', "benchmark binary digest evidence handoff"),
     ("Upload benchmark report artifact", "benchmark artifact upload step"),
     ("name: sdk-benchmark-results", "benchmark artifact name"),
     ("docs/site/bench-results.json", "benchmark JSON artifact path"),
@@ -1468,6 +1481,10 @@ BENCHMARK_ORCHESTRATOR_TRIGGER_PATHS = (
     (("sdk-templates/**",), "SDK template trigger path"),
     (("scripts/openapi-postprocess.mjs",), "OpenAPI postprocess trigger path"),
     (("scripts/collect_sdk_bench_results.py",), "benchmark collector trigger path"),
+    (
+        ("scripts/bootstrap_benchmark_project_catalog.py",),
+        "benchmark project catalog bootstrap trigger path",
+    ),
     (("scripts/gen-bench-bodies-skeleton.mjs",), "benchmark body skeleton trigger path"),
     (("scripts/gen-bench-bodies-json.mjs",), "benchmark body parser trigger path"),
     (("docs/bench-bodies/**",), "benchmark body source trigger path"),
@@ -1490,10 +1507,12 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ("id-token: write", "Pages OIDC permission"),
     ("actions: read", "benchmark artifact read permission"),
     ("github.event.workflow_run.conclusion == 'success'", "successful benchmark Pages gate"),
-    ("github.event.workflow_run.event != 'push'", "benchmark validation Pages exclusion"),
+    ("github.event.workflow_run.event == 'workflow_run'", "post-release-only benchmark Pages gate"),
     ("Pull latest benchmark results into the site", "benchmark result handoff step"),
     ("GH_TOKEN: ${{ github.token }}", "benchmark artifact download token"),
     ("TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}", "benchmark workflow_run id handoff"),
+    ("TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}", "benchmark workflow_run commit handoff"),
+    ("TRIGGER_EVENT: ${{ github.event.workflow_run.event }}", "benchmark trigger provenance handoff"),
     ('gh run download "${TRIGGER_RUN_ID}"', "benchmark artifact download command"),
     ('--repo "${GITHUB_REPOSITORY}"', "benchmark artifact repository scope"),
     ("--name sdk-benchmark-results", "benchmark artifact name"),
@@ -1503,6 +1522,12 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ("got_fresh=0", "benchmark fallback state initialization"),
     ("got_fresh=1", "benchmark fresh artifact state"),
     ("completed without a fresh sdk-benchmark-results artifact", "missing benchmark artifact hard failure"),
+    ("benchmark artifact run_id does not match triggering run", "benchmark artifact run identity validation"),
+    ("benchmark artifact commit does not match triggering workflow head SHA", "benchmark artifact commit validation"),
+    ("benchmark history digest disagrees with release provenance", "benchmark history digest validation"),
+    ('gh api "repos/${GITHUB_REPOSITORY}/commits/${release_tag}" --jq .sha', "published tag commit resolution"),
+    ('--pattern "${release_asset}.sha256"', "published benchmark asset checksum resolution"),
+    ("benchmark binary digest does not match", "published benchmark digest validation"),
     ("keeping committed docs/site/bench-results.json", "no-stale-republish benchmark fallback"),
     ("Build UDB's parser to WebAssembly", "fresh wasm build step"),
     ("rustup target add wasm32-unknown-unknown", "wasm target install"),
@@ -4200,6 +4225,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/ffmpeg_transcode_smoke.py", "ffmpeg transcode smoke"),
     ("scripts/playground_wasm_smoke.mjs", "playground WASM smoke"),
     ("scripts/collect_sdk_bench_results.py", "benchmark collector"),
+    ("scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap"),
     ("scripts/check-openapi-api-rules.mjs", "OpenAPI API-rule guard"),
     ("scripts/check-http-api-style.mjs", "HTTP API route-style guard"),
     ("scripts/rest_route_gateway_smoke.py", "REST route gateway smoke guard"),
@@ -5108,6 +5134,9 @@ def check_ci_quick_gate_source_guards(root: Path = ROOT) -> list[str]:
             scoped.append(f"missing {label} selftest: {selftest}")
         if repo_scan not in lines:
             scoped.append(f"missing {label} repo scan: {repo_scan}")
+    bootstrap_compile = "python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py"
+    if bootstrap_compile not in lines:
+        scoped.append(f"missing benchmark catalog bootstrap syntax check: {bootstrap_compile}")
     return [f"ci.yml: {failure}" for failure in scoped]
 
 
@@ -5673,6 +5702,7 @@ def check_lint_workflow_trigger_paths(root: Path = ROOT) -> list[str]:
         ("python3 scripts/idempotency_served_replay_smoke.py --selftest", "idempotency served replay smoke selftest"),
         ("python3 scripts/retry_safe_served_smoke.py --selftest", "retry-safe served smoke selftest"),
         ("python3 scripts/native_load_gate.py --selftest", "native load gate selftest"),
+        ("python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap syntax check"),
         ("python3 scripts/check-workflow-posture.py --selftest", "workflow posture selftest"),
         ("python3 scripts/check-workflow-posture.py", "workflow posture repo scan"),
     ):
@@ -6603,6 +6633,7 @@ jobs:
           node --check scripts/gen-bench-bodies-skeleton.mjs
           node scripts/gen-bench-bodies-skeleton.mjs --selftest
           node scripts/gen-bench-bodies-skeleton.mjs --check
+          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py
           python3 scripts/check-bench-harness-posture.py --selftest
           python3 scripts/check-bench-harness-posture.py
       - name: Docs/CI freshness posture guard
@@ -6971,12 +7002,17 @@ jobs:
       - name: Resolve release binary (perf)
         run: |
           tag="${RELEASE_TAG}"
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then exit 1; fi
           gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null
-          gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --dir bench-output/bin
+          gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --pattern "${RELEASE_ASSET}.sha256" --pattern "manifest.json" --pattern "manifest.json.sha256" --dir bench-output/bin
+          manifest.get("tag") != tag
+          entry.get("sha256") != binary_digest
           chmod +x "bench-output/bin/${RELEASE_ASSET}"
+          "bench-output/bin/${RELEASE_ASSET}" --version
           echo "UDB_BENCH_RELEASE_TAG=${tag}" >> "$GITHUB_ENV"
           echo "UDB_BENCH_RELEASE_ASSET=${RELEASE_ASSET}" >> "$GITHUB_ENV"
           echo "UDB_BENCH_RELEASE_URL=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}" >> "$GITHUB_ENV"
+          echo "UDB_BENCH_BINARY_SHA256=${binary_sha256}" >> "$GITHUB_ENV"
           echo "UDB_BENCH_BIN=${GITHUB_WORKSPACE}/bench-output/bin/${RELEASE_ASSET}" >> "$GITHUB_ENV"
       - name: Resolve broker binary path
         run: echo "path=${UDB_BENCH_BIN}" >> "$GITHUB_OUTPUT"
@@ -6993,7 +7029,8 @@ jobs:
         run: |
           python scripts/collect_sdk_bench_results.py \\
             --out docs/site/bench-results.json \\
-            --status-dir bench-output/status
+            --status-dir bench-output/status \\
+            --release-sha256 "${UDB_BENCH_BINARY_SHA256:-}"
       - name: Upload benchmark report artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -7226,7 +7263,7 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event != 'push')
+      github.event.workflow_run.event == 'workflow_run')
     runs-on: ubuntu-latest
     steps:
       - name: Sync brand assets into the site
@@ -7241,6 +7278,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
         run: |
           got_fresh=0
           gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
@@ -7249,6 +7288,14 @@ jobs:
           if [ -n "${TRIGGER_RUN_ID:-}" ] && [ "$got_fresh" != 1 ]; then
             echo "completed without a fresh sdk-benchmark-results artifact"
             exit 1
+          fi
+          if [ "$got_fresh" = 1 ]; then
+            echo "benchmark artifact run_id does not match triggering run"
+            echo "benchmark artifact commit does not match triggering workflow head SHA"
+            echo "benchmark history digest disagrees with release provenance"
+            published_commit="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${release_tag}" --jq .sha)"
+            gh release download "${release_tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${release_asset}.sha256" --dir release-proof
+            echo "benchmark binary digest does not match"
           fi
           if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
       - name: Build UDB's parser to WebAssembly
@@ -8762,6 +8809,7 @@ jobs:
           node scripts/check-branch-protection-lockstep.mjs --selftest
           node --check scripts/check-ci-runner-evidence.mjs
           node scripts/check-ci-runner-evidence.mjs --selftest
+          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py
           python3 scripts/error_detail_served_smoke.py --selftest
           python3 scripts/idempotency_served_replay_smoke.py --selftest
           python3 scripts/retry_safe_served_smoke.py --selftest
@@ -9771,6 +9819,16 @@ jobs:
 
         (wf / "ci.yml").write_text(
             ci_good.replace(
+                "          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py\n",
+                "",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_ci_quick_gate_source_guards(root)
+        assert any("benchmark catalog bootstrap syntax check" in failure for failure in failures), failures
+
+        (wf / "ci.yml").write_text(
+            ci_good.replace(
                 "python3 scripts/check-beta-versioning-posture.py --selftest",
                 "python3 scripts/check-beta-versioning-posture.py --help",
             ),
@@ -10148,8 +10206,8 @@ jobs:
 
         (wf / "_live-sdk-suite.yml").write_text(
             live_sdk_suite_good.replace(
-                'gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --dir bench-output/bin',
-                "cargo build --release --bin udb",
+                "gh release download",
+                "cargo build --release --bin udb #",
             ),
             encoding="utf-8",
         )
@@ -10239,21 +10297,9 @@ jobs:
         failures = check_pages_playground_wasm_gate(root)
         assert any("benchmark artifact name" in failure for failure in failures), failures
 
-        benchmark_block = """      - name: Pull latest benchmark results into the site
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
-        run: |
-          got_fresh=0
-          gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
-          cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
-          got_fresh=1
-          if [ -n "${TRIGGER_RUN_ID:-}" ] && [ "$got_fresh" != 1 ]; then
-            echo "completed without a fresh sdk-benchmark-results artifact"
-            exit 1
-          fi
-          if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
-"""
+        benchmark_at = pages_good.index("      - name: Pull latest benchmark results into the site")
+        build_at = pages_good.index("      - name: Build UDB's parser to WebAssembly", benchmark_at)
+        benchmark_block = pages_good[benchmark_at:build_at]
         (wf / "pages.yml").write_text(
             pages_good.replace(benchmark_block, "").replace(
                 "      - uses: actions/upload-pages-artifact@v3",
@@ -10450,6 +10496,23 @@ jobs:
         )
         failures = check_lint_workflow_trigger_paths(root)
         assert any("version guard trigger path" in failure for failure in failures), failures
+
+        (wf / "lint-workflows.yml").write_text(
+            lint_good.replace('      - "scripts/bootstrap_benchmark_project_catalog.py"\n', ""),
+            encoding="utf-8",
+        )
+        failures = check_lint_workflow_trigger_paths(root)
+        assert any("benchmark catalog bootstrap trigger path" in failure for failure in failures), failures
+
+        (wf / "lint-workflows.yml").write_text(
+            lint_good.replace(
+                "          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py\n",
+                "",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_lint_workflow_trigger_paths(root)
+        assert any("benchmark catalog bootstrap syntax check" in failure for failure in failures), failures
 
         (wf / "lint-workflows.yml").write_text(
             lint_good.replace("          python3 scripts/native_load_gate.py --selftest\n", ""),

@@ -6,6 +6,7 @@
 mod asset_image_live;
 mod asset_live;
 mod asset_trigger_live;
+mod catalog_authority_live;
 #[cfg(feature = "http-client")]
 mod asset_vector_live;
 mod data_plane_live;

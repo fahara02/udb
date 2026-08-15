@@ -422,6 +422,7 @@ impl ProjectionTaskStore for RedisCanonicalStore {
             task_id,
             idempotency_key: task.idempotency_key.clone(),
             project_id: task.project_id.clone(),
+            manifest_checksum: task.manifest_checksum.clone(),
             target_backend: task.target_backend.clone(),
             target_instance: task.target_instance.clone(),
             projection_kind: task.projection_kind.clone(),
@@ -700,20 +701,34 @@ impl ProjectionTaskStore for RedisCanonicalStore {
 
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>> {
         let rows: Vec<ProjectionTaskRow> = self.load_all(&self.key("projection:all")).await?;
-        let mut groups: BTreeMap<(String, String, String), i64> = BTreeMap::new();
+        let mut groups: BTreeMap<(String, String, String, String), i64> = BTreeMap::new();
         for row in rows
             .into_iter()
-            .filter(|row| row.status == ProjectionTaskStatus::DeadLetter)
+            .filter(|row| {
+                row.status == ProjectionTaskStatus::DeadLetter
+                    && !row
+                        .last_error
+                        .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+            })
         {
             *groups
-                .entry((row.resource_name, row.target_backend, row.target_instance))
+                .entry((
+                    row.project_id,
+                    row.resource_name,
+                    row.target_backend,
+                    row.target_instance,
+                ))
                 .or_default() += 1;
         }
         Ok(groups
             .into_iter()
             .take(limit.max(0) as usize)
             .map(
-                |((source_table, target_backend, target_instance), dead_count)| DeadLetterGroup {
+                |(
+                    (project_id, source_table, target_backend, target_instance),
+                    dead_count,
+                )| DeadLetterGroup {
+                    project_id,
                     source_table,
                     target_backend,
                     target_instance,
@@ -725,6 +740,7 @@ impl ProjectionTaskStore for RedisCanonicalStore {
 
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
@@ -733,6 +749,10 @@ impl ProjectionTaskStore for RedisCanonicalStore {
         let mut count = 0;
         for mut row in rows {
             if row.status != ProjectionTaskStatus::DeadLetter
+                || row
+                    .last_error
+                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                || row.project_id != project_id
                 || row.resource_name != source_table
                 || row.target_backend != target_backend
                 || row.target_instance != target_instance

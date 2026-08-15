@@ -45,6 +45,7 @@ on:
       - "scripts/ffmpeg_transcode_smoke.py"
       - "scripts/playground_wasm_smoke.mjs"
       - "scripts/collect_sdk_bench_results.py"
+      - "scripts/bootstrap_benchmark_project_catalog.py"
       - "scripts/check-openapi-api-rules.mjs"
       - "scripts/check-http-api-style.mjs"
       - "scripts/rest_route_gateway_smoke.py"
@@ -138,6 +139,7 @@ on:
       - "scripts/ffmpeg_transcode_smoke.py"
       - "scripts/playground_wasm_smoke.mjs"
       - "scripts/collect_sdk_bench_results.py"
+      - "scripts/bootstrap_benchmark_project_catalog.py"
       - "scripts/check-openapi-api-rules.mjs"
       - "scripts/check-http-api-style.mjs"
       - "scripts/rest_route_gateway_smoke.py"
@@ -234,6 +236,7 @@ jobs:
           node scripts/check-branch-protection-lockstep.mjs --selftest
           node --check scripts/check-ci-runner-evidence.mjs
           node scripts/check-ci-runner-evidence.mjs --selftest
+          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py
           python3 scripts/error_detail_served_smoke.py --selftest
           python3 scripts/idempotency_served_replay_smoke.py --selftest
           python3 scripts/retry_safe_served_smoke.py --selftest

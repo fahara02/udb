@@ -185,6 +185,18 @@ pub struct RuntimeBackendInstance {
     pub circuit_open: bool,
 }
 
+/// One exact, project-authorized PostgreSQL write target. The instance alias is
+/// persisted with migration plans, while `provenance_sha256` binds that alias
+/// to both its routing policy and the physical PostgreSQL endpoint observed at
+/// resolution time. Callers must re-resolve and compare the provenance before
+/// executing deferred work.
+#[derive(Debug, Clone)]
+pub(crate) struct ProjectPostgresWriteTarget {
+    pub instance: String,
+    pub pool: PgPool,
+    pub provenance_sha256: String,
+}
+
 /// Canonical runtime routing target parsed from a backend selector.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedBackendSelector {
@@ -558,6 +570,30 @@ impl EncryptionMetrics {
             decrypt_error: self.decrypt_error.load(Ordering::Relaxed),
         }
     }
+}
+
+/// Exact durable catalog row for one project. This is deliberately distinct
+/// from the global proto-schema history used during process startup: served
+/// catalog transitions must publish the row committed for the requested
+/// project, never whichever manifest happened to migrate last.
+#[derive(Debug)]
+pub(crate) struct ProjectCatalogRecord {
+    pub(crate) catalog_id: String,
+    pub(crate) version: String,
+    pub(crate) checksum_sha256: String,
+    pub(crate) manifest: CatalogManifest,
+    pub(crate) status: String,
+    pub(crate) compatibility_level: String,
+    pub(crate) created_at_unix: i64,
+}
+
+/// Durable result of a catalog mutation. `replayed` means the same
+/// project/action/idempotency key was already committed; callers must return
+/// the recorded row without executing or publishing the mutation again.
+#[derive(Debug)]
+pub(crate) struct CatalogMutationResult {
+    pub(crate) catalog: ProjectCatalogRecord,
+    pub(crate) replayed: bool,
 }
 
 // Phase F: God-impl split into continuation impl blocks.
@@ -1534,6 +1570,70 @@ mod outbox_envelope_tests {
                 .unwrap_err()
                 .code(),
             tonic::Code::NotFound
+        );
+    }
+
+    #[test]
+    fn projection_routing_requires_project_bound_instance() {
+        let runtime = DataBrokerRuntime {
+            backend_instances: vec![RuntimeBackendInstance {
+                name: "billing_vector".to_string(),
+                backend: "qdrant".to_string(),
+                role: "read_write".to_string(),
+                enabled: true,
+                configured: true,
+                connected: true,
+                read_weight: 1,
+                write_weight: 1,
+                dsn_env: None,
+                labels: HashMap::from([("project_id".to_string(), "billing".to_string())]),
+                capabilities: Vec::new(),
+                healthy: true,
+                circuit_open: false,
+            }],
+            ..DataBrokerRuntime::default()
+        };
+
+        let selected = runtime
+            .resolve_projection_write_target_for_project("qdrant", None, "billing")
+            .unwrap();
+        assert_eq!(selected.instance.as_deref(), Some("billing_vector"));
+        let read_selected = runtime
+            .resolve_projection_read_target_for_project("qdrant", None, "billing")
+            .unwrap();
+        assert_eq!(read_selected.instance.as_deref(), Some("billing_vector"));
+        assert!(
+            runtime
+                .resolve_projection_write_target_for_project(
+                    "qdrant",
+                    Some("billing_vector"),
+                    "hr",
+                )
+                .is_err()
+        );
+        assert!(
+            runtime
+                .resolve_projection_write_target_for_project("qdrant", None, "hr")
+                .is_err()
+        );
+        assert!(
+            runtime
+                .resolve_projection_read_target_for_project(
+                    "qdrant",
+                    Some("billing_vector"),
+                    "hr",
+                )
+                .is_err()
+        );
+        assert!(
+            runtime
+                .resolve_projection_read_target_for_project("qdrant", None, "hr")
+                .is_err()
+        );
+        assert!(
+            runtime
+                .resolve_projection_write_target_for_project("qdrant", None, "")
+                .is_err()
         );
     }
 

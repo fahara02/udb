@@ -187,6 +187,38 @@ impl BackupServiceImpl {
         })
     }
 
+    /// Resolve an explicitly published project catalog without demanding that
+    /// the project's current table topology is executable as a logical backup.
+    /// Inventory reads need the exact project/store authority, but must remain
+    /// available while an operator repairs a temporarily non-backup-capable
+    /// topology.
+    pub(crate) fn require_active_project(
+        &self,
+        requested_project_id: &str,
+    ) -> Result<String, Status> {
+        let catalog = self.catalog.as_deref().ok_or_else(|| {
+            errors::backup_capability_status(
+                "project_catalog_binding",
+                "catalog_manifest",
+                "backup service requires the live project catalog",
+            )
+        })?;
+        let project_id = match requested_project_id.trim() {
+            "" => DEFAULT_PROJECT_ID.to_string(),
+            value => value.to_string(),
+        };
+        if catalog.active_exact_for(&project_id).is_none() {
+            return Err(errors::backup_policy_status(
+                "resolve_project_topology",
+                "backup_project_catalog_not_active",
+                format!(
+                    "project '{project_id}' has no explicitly active catalog; default-project fallback is refused"
+                ),
+            ));
+        }
+        Ok(project_id)
+    }
+
     /// Resolve one explicitly active project, its current catalog, and the single
     /// canonical Postgres write instance that owns every relational backup table.
     /// Multi-instance catalogs are refused until a coordinated distributed
@@ -204,25 +236,10 @@ impl BackupServiceImpl {
                 "backup service requires the live project catalog to enumerate tenant tables",
             )
         })?;
-        let project_id = match requested_project_id.trim() {
-            "" => DEFAULT_PROJECT_ID.to_string(),
-            value => value.to_string(),
-        };
-        if !catalog
-            .active_project_ids()
-            .iter()
-            .any(|active| active == &project_id)
-        {
-            return Err(errors::backup_policy_status(
-                "resolve_project_topology",
-                "backup_project_catalog_not_active",
-                format!(
-                    "project '{project_id}' has no explicitly active catalog; default-project fallback is refused"
-                ),
-            ));
-        }
-
-        let state = catalog.active_for(&project_id);
+        let project_id = self.require_active_project(requested_project_id)?;
+        let state = catalog
+            .active_exact_for(&project_id)
+            .expect("require_active_project established exact catalog authority");
         let plan = crate::runtime::core::tenant_purge::plan_tenant_purge(&state.manifest);
         let default_instance = runtime
             .choose_instance_name_for_project("postgres", true, &project_id)

@@ -10,7 +10,7 @@ use crate::proto::udb::core::livequery::services::v1 as lq_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, validate_request_tenant,
+    admit_on as native_admit_on, validated_native_service_context,
 };
 use super::LiveQueryServiceImpl;
 use super::budget::try_acquire_stream_slot;
@@ -35,12 +35,12 @@ pub(crate) async fn subscribe(
 ) -> Result<Response<LiveQueryStream>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    // Cross-tenant guard FIRST: the body tenant_id must match the verified
-    // claim/header. After this passes, the body value IS the verified tenant.
-    validate_request_tenant(&metadata, &req.tenant_id)?;
+    // Scope guard FIRST: body tenant/project must match the verified claim and
+    // request metadata before either value reaches the runtime context.
     let tenant_id = req.tenant_id.trim().to_string();
     let message_type = req.message_type.trim().to_string();
     let project_id = req.project_id.trim().to_string();
+    let context = validated_native_service_context(&metadata, &tenant_id, &project_id)?;
     if message_type.is_empty() {
         return Err(livequery_required_field(
             "message_type",
@@ -80,7 +80,6 @@ pub(crate) async fn subscribe(
     let stream_slot = try_acquire_stream_slot(&tenant_id)?;
 
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, &project_id);
 
     // Subscribe to the delta feed BEFORE the snapshot so events committed
     // during the snapshot are buffered on the broadcast receiver (not lost in

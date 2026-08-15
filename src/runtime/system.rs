@@ -798,6 +798,15 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 version TEXT NOT NULL,
                 checksum_sha256 TEXT NOT NULL,
                 manifest_json JSONB NOT NULL DEFAULT '{{}}'::JSONB,
+                manifest_integrity_sha256 TEXT NOT NULL DEFAULT '',
+                schema_checksum_sha256 TEXT NOT NULL DEFAULT '',
+                checksum_kind TEXT NOT NULL DEFAULT 'raw_request_sha256_v1',
+                compatibility_level TEXT NOT NULL DEFAULT 'backward'
+                    CHECK (compatibility_level IN ('exact','backward','none')),
+                validation_checksum_sha256 TEXT NOT NULL DEFAULT '',
+                compatibility_evidence_sha256 TEXT NOT NULL DEFAULT '',
+                validated_against_catalog_id UUID,
+                validated_against_checksum_sha256 TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL DEFAULT 'STAGED'
                     CHECK (status IN ('STAGED','ACTIVE','ROLLED_BACK','REJECTED')),
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -814,6 +823,38 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
         ),
         format!(
             "ALTER TABLE {} ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ",
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS manifest_integrity_sha256 TEXT NOT NULL DEFAULT ''",
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS schema_checksum_sha256 TEXT NOT NULL DEFAULT ''",
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS checksum_kind TEXT NOT NULL DEFAULT 'raw_request_sha256_v1'",
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS compatibility_level TEXT NOT NULL DEFAULT 'backward'",
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS validation_checksum_sha256 TEXT NOT NULL DEFAULT ''",
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS compatibility_evidence_sha256 TEXT NOT NULL DEFAULT ''",
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS validated_against_catalog_id UUID",
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS validated_against_checksum_sha256 TEXT NOT NULL DEFAULT ''",
             config.catalog_versions_relation()
         ),
         format!(
@@ -846,6 +887,7 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 active_checksum_sha256 TEXT NOT NULL DEFAULT '',
                 compatibility_level TEXT NOT NULL DEFAULT 'backward'
                     CHECK (compatibility_level IN ('exact','backward','none')),
+                compatibility_evidence_sha256 TEXT NOT NULL DEFAULT '',
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )",
             config.project_catalog_bindings_relation(),
@@ -860,8 +902,13 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             config.project_catalog_bindings_relation()
         ),
         format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS compatibility_evidence_sha256 TEXT NOT NULL DEFAULT ''",
+            config.project_catalog_bindings_relation()
+        ),
+        format!(
             "CREATE TABLE IF NOT EXISTS {} (
                 reload_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                reload_seq BIGSERIAL UNIQUE,
                 project_id TEXT NOT NULL DEFAULT '',
                 catalog_id UUID,
                 version TEXT NOT NULL DEFAULT '',
@@ -879,12 +926,283 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             qi(&format!("idx_{}_project", config.catalog_reload_log_table)),
             config.catalog_reload_log_relation()
         ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT ''",
+            config.catalog_reload_log_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS request_fingerprint TEXT NOT NULL DEFAULT ''",
+            config.catalog_reload_log_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS actor TEXT NOT NULL DEFAULT ''",
+            config.catalog_reload_log_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS compatibility_evidence_sha256 TEXT NOT NULL DEFAULT ''",
+            config.catalog_reload_log_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS reload_seq BIGSERIAL",
+            config.catalog_reload_log_relation()
+        ),
+        format!(
+            "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} (reload_seq)",
+            qi(&format!("uq_{}_reload_seq", config.catalog_reload_log_table)),
+            config.catalog_reload_log_relation()
+        ),
+        // Canonicalize legacy blank/whitespace project ids only when doing so
+        // cannot merge distinct authorities. Duplicate ACTIVE rows are repaired
+        // solely from the exact durable binding; every unproven split fails with
+        // an actionable startup error before the unique/check constraints land.
+        format!(
+            "DO $udb$
+             DECLARE
+               collisions TEXT;
+               invalid_active TEXT;
+             BEGIN
+               SELECT string_agg(normalized_project, ',') INTO collisions
+               FROM (
+                 SELECT COALESCE(NULLIF(BTRIM(project_id), ''), 'default') AS normalized_project
+                 FROM {cat_rel}
+                 GROUP BY COALESCE(NULLIF(BTRIM(project_id), ''), 'default')
+                 HAVING COUNT(DISTINCT project_id) > 1
+               ) AS collision_set;
+               IF collisions IS NOT NULL THEN
+                 RAISE EXCEPTION 'catalog project normalization collision(s): %', collisions
+                   USING HINT = 'repair catalog_versions/project bindings explicitly before starting UDB';
+               END IF;
+               SELECT string_agg(normalized_project, ',') INTO collisions
+               FROM (
+                 SELECT COALESCE(NULLIF(BTRIM(project_id), ''), 'default') AS normalized_project
+                 FROM {binding_rel}
+                 GROUP BY COALESCE(NULLIF(BTRIM(project_id), ''), 'default')
+                 HAVING COUNT(*) > 1
+               ) AS collision_set;
+               IF collisions IS NOT NULL THEN
+                 RAISE EXCEPTION 'catalog binding normalization collision(s): %', collisions
+                   USING HINT = 'repair project_catalog_bindings explicitly before starting UDB';
+               END IF;
+
+               UPDATE {cat_rel}
+                  SET project_id = COALESCE(NULLIF(BTRIM(project_id), ''), 'default')
+                WHERE project_id <> COALESCE(NULLIF(BTRIM(project_id), ''), 'default');
+               UPDATE {binding_rel}
+                  SET project_id = COALESCE(NULLIF(BTRIM(project_id), ''), 'default')
+                WHERE project_id <> COALESCE(NULLIF(BTRIM(project_id), ''), 'default');
+               UPDATE {activation_rel}
+                  SET project_id = COALESCE(NULLIF(BTRIM(project_id), ''), 'default')
+                WHERE project_id <> COALESCE(NULLIF(BTRIM(project_id), ''), 'default');
+               UPDATE {reload_rel}
+                  SET project_id = COALESCE(NULLIF(BTRIM(project_id), ''), 'default')
+                WHERE project_id <> COALESCE(NULLIF(BTRIM(project_id), ''), 'default');
+
+               UPDATE {cat_rel} AS candidate
+                  SET status = 'ROLLED_BACK'
+                 FROM {binding_rel} AS binding
+                WHERE candidate.project_id = binding.project_id
+                  AND candidate.status = 'ACTIVE'
+                  AND candidate.catalog_id <> binding.active_catalog_id
+                  AND EXISTS (
+                    SELECT 1 FROM {cat_rel} AS chosen
+                     WHERE chosen.catalog_id = binding.active_catalog_id
+                       AND chosen.project_id = binding.project_id
+                       AND chosen.status = 'ACTIVE'
+                  );
+
+               SELECT string_agg(project_id, ',') INTO invalid_active
+               FROM (
+                 SELECT active.project_id
+                   FROM {cat_rel} AS active
+                   LEFT JOIN {binding_rel} AS binding
+                     ON binding.project_id = active.project_id
+                    AND binding.active_catalog_id = active.catalog_id
+                    AND binding.active_version = active.version
+                    AND binding.active_checksum_sha256 = active.checksum_sha256
+                    AND binding.compatibility_level = active.compatibility_level
+                    AND binding.compatibility_evidence_sha256 = active.compatibility_evidence_sha256
+                    AND (
+                      binding.compatibility_evidence_sha256 = ''
+                      OR EXISTS (
+                        SELECT 1 FROM {reload_rel} AS reload
+                         WHERE reload.project_id = binding.project_id
+                           AND reload.catalog_id = binding.active_catalog_id
+                           AND reload.version = binding.active_version
+                           AND reload.checksum_sha256 = binding.active_checksum_sha256
+                           AND reload.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                           AND reload.action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD')
+                           AND reload.result = 'ok'
+                      )
+                    )
+                  WHERE active.status = 'ACTIVE'
+                  GROUP BY active.project_id
+                 HAVING COUNT(*) <> 1 OR COUNT(binding.project_id) <> 1
+               ) AS invalid_set;
+               IF invalid_active IS NOT NULL THEN
+                 RAISE EXCEPTION 'catalog ACTIVE/binding provenance invalid for project(s): %', invalid_active
+                   USING HINT = 'select one authoritative catalog_id per project and repair project_catalog_bindings';
+               END IF;
+
+               SELECT string_agg(binding.project_id, ',') INTO invalid_active
+                 FROM {binding_rel} AS binding
+                 LEFT JOIN {cat_rel} AS active
+                   ON active.project_id = binding.project_id
+                  AND active.catalog_id = binding.active_catalog_id
+                  AND active.version = binding.active_version
+                  AND active.checksum_sha256 = binding.active_checksum_sha256
+                  AND active.compatibility_level = binding.compatibility_level
+                  AND active.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                  AND active.status = 'ACTIVE'
+                  AND (
+                    binding.compatibility_evidence_sha256 = ''
+                    OR EXISTS (
+                      SELECT 1 FROM {reload_rel} AS reload
+                       WHERE reload.project_id = binding.project_id
+                         AND reload.catalog_id = binding.active_catalog_id
+                         AND reload.version = binding.active_version
+                         AND reload.checksum_sha256 = binding.active_checksum_sha256
+                         AND reload.compatibility_evidence_sha256 = binding.compatibility_evidence_sha256
+                         AND reload.action IN ('ACTIVATE', 'ROLLBACK', 'RELOAD')
+                         AND reload.result = 'ok'
+                    )
+                  )
+                WHERE active.catalog_id IS NULL;
+               IF invalid_active IS NOT NULL THEN
+                 RAISE EXCEPTION 'catalog binding/ACTIVE provenance invalid for project(s): %', invalid_active
+                   USING HINT = 'repair or remove orphan project_catalog_bindings before starting UDB';
+               END IF;
+             END;
+             $udb$",
+            cat_rel = config.catalog_versions_relation(),
+            binding_rel = config.project_catalog_bindings_relation(),
+            activation_rel = config.catalog_activation_log_relation(),
+            reload_rel = config.catalog_reload_log_relation()
+        ),
+        format!(
+            "ALTER TABLE {} DROP CONSTRAINT IF EXISTS {}",
+            config.catalog_versions_relation(),
+            qi(&format!("chk_{}_canonical_project", config.catalog_versions_table))
+        ),
+        format!(
+            "ALTER TABLE {} ADD CONSTRAINT {} CHECK (project_id = BTRIM(project_id) AND project_id <> '')",
+            config.catalog_versions_relation(),
+            qi(&format!("chk_{}_canonical_project", config.catalog_versions_table))
+        ),
+        format!(
+            "ALTER TABLE {} DROP CONSTRAINT IF EXISTS {}",
+            config.catalog_versions_relation(),
+            qi(&format!("chk_{}_checksum_kind", config.catalog_versions_table))
+        ),
+        format!(
+            "ALTER TABLE {} ADD CONSTRAINT {} CHECK (checksum_kind = 'raw_request_sha256_v1')",
+            config.catalog_versions_relation(),
+            qi(&format!("chk_{}_checksum_kind", config.catalog_versions_table))
+        ),
+        format!(
+            "ALTER TABLE {} DROP CONSTRAINT IF EXISTS {}",
+            config.catalog_versions_relation(),
+            qi(&format!(
+                "chk_{}_compatibility_level",
+                config.catalog_versions_table
+            ))
+        ),
+        format!(
+            "ALTER TABLE {} ADD CONSTRAINT {} CHECK (compatibility_level IN ('exact','backward','none'))",
+            config.catalog_versions_relation(),
+            qi(&format!(
+                "chk_{}_compatibility_level",
+                config.catalog_versions_table
+            ))
+        ),
+        format!(
+            "ALTER TABLE {} DROP CONSTRAINT IF EXISTS {}",
+            config.project_catalog_bindings_relation(),
+            qi(&format!("chk_{}_canonical_project", config.project_catalog_bindings_table))
+        ),
+        format!(
+            "ALTER TABLE {} ADD CONSTRAINT {} CHECK (project_id = BTRIM(project_id) AND project_id <> '')",
+            config.project_catalog_bindings_relation(),
+            qi(&format!("chk_{}_canonical_project", config.project_catalog_bindings_table))
+        ),
+        format!(
+            "ALTER TABLE {} DROP CONSTRAINT IF EXISTS {}",
+            config.project_catalog_bindings_relation(),
+            qi(&format!(
+                "chk_{}_compatibility_level",
+                config.project_catalog_bindings_table
+            ))
+        ),
+        format!(
+            "ALTER TABLE {} DROP CONSTRAINT IF EXISTS {}",
+            config.project_catalog_bindings_relation(),
+            qi(&format!(
+                "fk_{}_active_catalog",
+                config.project_catalog_bindings_table
+            ))
+        ),
+        format!(
+            "ALTER TABLE {} ADD CONSTRAINT {} CHECK (compatibility_level IN ('exact','backward','none'))",
+            config.project_catalog_bindings_relation(),
+            qi(&format!(
+                "chk_{}_compatibility_level",
+                config.project_catalog_bindings_table
+            ))
+        ),
+        format!(
+            "ALTER TABLE {} ALTER COLUMN active_catalog_id SET NOT NULL",
+            config.project_catalog_bindings_relation()
+        ),
+        format!(
+            "ALTER TABLE {} DROP CONSTRAINT IF EXISTS {}",
+            config.project_catalog_bindings_relation(),
+            qi(&format!(
+                "{}_active_catalog_id_fkey",
+                config.project_catalog_bindings_table
+            ))
+        ),
+        format!(
+            "ALTER TABLE {} ADD CONSTRAINT {} FOREIGN KEY (active_catalog_id) REFERENCES {} (catalog_id) ON DELETE RESTRICT",
+            config.project_catalog_bindings_relation(),
+            qi(&format!(
+                "fk_{}_active_catalog",
+                config.project_catalog_bindings_table
+            )),
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "ALTER TABLE {} DROP CONSTRAINT IF EXISTS {}",
+            config.catalog_reload_log_relation(),
+            qi(&format!("chk_{}_canonical_project", config.catalog_reload_log_table))
+        ),
+        format!(
+            "ALTER TABLE {} ADD CONSTRAINT {} CHECK (project_id = BTRIM(project_id) AND project_id <> '')",
+            config.catalog_reload_log_relation(),
+            qi(&format!("chk_{}_canonical_project", config.catalog_reload_log_table))
+        ),
+        // One project has exactly one durable ACTIVE catalog. The transition
+        // path also takes a project advisory lock; this index is the final
+        // fail-closed invariant if another writer bypasses that path.
+        format!(
+            "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} (project_id) WHERE status = 'ACTIVE'",
+            qi(&format!("uq_{}_one_active_project", config.catalog_versions_table)),
+            config.catalog_versions_relation()
+        ),
+        format!(
+            "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} (project_id, action, idempotency_key) WHERE idempotency_key <> ''",
+            qi(&format!("uq_{}_project_action_idem", config.catalog_reload_log_table)),
+            config.catalog_reload_log_relation()
+        ),
         // ── Phase 1.3 — Migration apply engine tables ─────────────────────────
         format!(
             "CREATE TABLE IF NOT EXISTS {} (
                 run_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 project_id TEXT NOT NULL DEFAULT '',
                 catalog_version TEXT NOT NULL DEFAULT '',
+                catalog_id UUID,
+                catalog_checksum_sha256 TEXT NOT NULL DEFAULT '',
+                target_backend TEXT NOT NULL DEFAULT '',
+                target_instance TEXT NOT NULL DEFAULT '',
+                target_provenance_sha256 TEXT NOT NULL DEFAULT '',
                 state TEXT NOT NULL DEFAULT 'DRY_RUN'
                     CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
                 operations_hash TEXT NOT NULL DEFAULT '',
@@ -893,6 +1211,26 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 finished_at TIMESTAMPTZ,
                 error TEXT NOT NULL DEFAULT ''
             )",
+            config.migration_runs_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS catalog_id UUID",
+            config.migration_runs_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS catalog_checksum_sha256 TEXT NOT NULL DEFAULT ''",
+            config.migration_runs_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS target_backend TEXT NOT NULL DEFAULT ''",
+            config.migration_runs_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS target_instance TEXT NOT NULL DEFAULT ''",
+            config.migration_runs_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS target_provenance_sha256 TEXT NOT NULL DEFAULT ''",
             config.migration_runs_relation()
         ),
         format!(

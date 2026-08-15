@@ -3829,9 +3829,9 @@ function perfSeedPhp(array $s): array
         ->setContext($rcSeed)->setResource((new \Udb\Entity\V1\StoreResource())->setBackend('mongodb')->setResourceName($mongoCollection))
         ->setDocumentId($documentId)->setDocument($doc), $meta));
 
-    // Capture the live catalog manifest (READ-ONLY) so the measured StageCatalog has a valid
-    // CatalogManifest (the new binary doesn't bump the active version on stage). K2 catalog
-    // activate/rollback/get_version stay broker-blocked.
+    // Reset already activated the release manifest for this exact project. Capture it so
+    // measured StageCatalog -> ActivateCatalog -> RollbackCatalog uses a real manifest and
+    // preserves the active 1.0.0 compatibility contract.
     $cm = $try('CaptureCatalogManifest', fn () => $data->get_catalog_manifest((new \Udb\Entity\V1\CatalogManifestRequest())->setContext($rcSeed)->setRedact(false), $meta));
     if ($cm && $cm->getManifestJson() !== '') {
         $fix->set('catalog_manifest', $cm->getManifestJson());

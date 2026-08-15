@@ -188,6 +188,45 @@ fn project_routing_mode_merge_env_overrides_file_values() {
 }
 
 #[test]
+fn invalid_project_routing_mode_fails_startup_validation() {
+    let config = UdbConfig {
+        primary: DbConfig {
+            direct_dsn: "postgresql://localhost/udb".to_string(),
+            ..DbConfig::default()
+        },
+        project_routing_mode: "strcit".to_string(),
+        ..UdbConfig::default()
+    };
+
+    let report = config.validate();
+    assert!(!report.passed);
+    assert!(
+        report
+            .errors
+            .iter()
+            .any(|error| error.contains("project_routing_mode 'strcit' is invalid"))
+    );
+}
+
+#[test]
+fn blank_strict_default_project_fails_startup_validation() {
+    let config = UdbConfig {
+        primary: DbConfig {
+            direct_dsn: "postgresql://localhost/udb".to_string(),
+            ..DbConfig::default()
+        },
+        project_routing_mode: "strict_with_default:   ".to_string(),
+        ..UdbConfig::default()
+    };
+
+    let report = config.validate();
+    assert!(!report.passed);
+    assert!(report.errors.iter().any(|error| {
+        error.contains("strict_with_default requires a non-empty project name")
+    }));
+}
+
+#[test]
 fn native_services_merge_env_precedence_and_legacy_alias() {
     let prior_new = std::env::var("UDB_NATIVE_SERVICES_ENABLED").ok();
     let prior_old = std::env::var("UDB_NATIVE_AUTH").ok();
