@@ -23,7 +23,8 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
      */
     protected $project_id = '';
     /**
-     * Target catalog version string (empty = latest STAGED).
+     * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+     * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
      *
      * Generated from protobuf field <code>string version = 3 [json_name = "version"];</code>
      */
@@ -33,6 +34,8 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
      */
     protected $reason = '';
     /**
+     * Required for ActivateCatalog and RollbackCatalog retries.
+     *
      * Generated from protobuf field <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
      */
     protected $idempotency_key = '';
@@ -46,9 +49,11 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\RequestContext $context
      *     @type string $project_id
      *     @type string $version
-     *           Target catalog version string (empty = latest STAGED).
+     *           Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+     *           RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
      *     @type string $reason
      *     @type string $idempotency_key
+     *           Required for ActivateCatalog and RollbackCatalog retries.
      * }
      */
     public function __construct($data = NULL) {
@@ -111,7 +116,8 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Target catalog version string (empty = latest STAGED).
+     * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+     * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
      *
      * Generated from protobuf field <code>string version = 3 [json_name = "version"];</code>
      * @return string
@@ -122,7 +128,8 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Target catalog version string (empty = latest STAGED).
+     * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+     * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
      *
      * Generated from protobuf field <code>string version = 3 [json_name = "version"];</code>
      * @param string $var
@@ -159,6 +166,8 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Required for ActivateCatalog and RollbackCatalog retries.
+     *
      * Generated from protobuf field <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
      * @return string
      */
@@ -168,6 +177,8 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Required for ActivateCatalog and RollbackCatalog retries.
+     *
      * Generated from protobuf field <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
      * @param string $var
      * @return $this

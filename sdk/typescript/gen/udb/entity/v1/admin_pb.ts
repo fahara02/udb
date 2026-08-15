@@ -1069,6 +1069,8 @@ export type StageCatalogRequest = Message<"udb.entity.v1.StageCatalogRequest"> &
   reason: string;
 
   /**
+   * Required for durable StageCatalog retries.
+   *
    * @generated from field: string idempotency_key = 4;
    */
   idempotencyKey: string;
@@ -1096,7 +1098,8 @@ export type CatalogVersionRequest = Message<"udb.entity.v1.CatalogVersionRequest
   projectId: string;
 
   /**
-   * Target catalog version string (empty = latest STAGED).
+   * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+   * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
    *
    * @generated from field: string version = 3;
    */
@@ -1108,6 +1111,8 @@ export type CatalogVersionRequest = Message<"udb.entity.v1.CatalogVersionRequest
   reason: string;
 
   /**
+   * Required for ActivateCatalog and RollbackCatalog retries.
+   *
    * @generated from field: string idempotency_key = 5;
    */
   idempotencyKey: string;

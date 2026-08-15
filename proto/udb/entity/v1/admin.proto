@@ -287,15 +287,18 @@ message StageCatalogRequest {
   bytes manifest_json = 1000;
   string project_id = 2;
   string reason = 3;
+  // Required for durable StageCatalog retries.
   string idempotency_key = 4;
 }
 
 message CatalogVersionRequest {
   RequestContext context = 1;
   string project_id = 2;
-  // Target catalog version string (empty = latest STAGED).
+  // Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+  // RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
   string version = 3;
   string reason = 4;
+  // Required for ActivateCatalog and RollbackCatalog retries.
   string idempotency_key = 5;
 }
 

@@ -71,6 +71,19 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: cargo fmt --check
         run: cargo fmt --all -- --check
+      - name: Prepare CI-generated rustfmt repair patch
+        if: failure()
+        run: |
+          cargo fmt --all
+          git diff --binary -- '*.rs' > ci-rustfmt.patch
+      - name: Upload CI-generated rustfmt repair patch
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-rustfmt-repair-${{ github.run_attempt }}
+          path: ci-rustfmt.patch
+          if-no-files-found: error
+          retention-days: 7
       - name: buf lint
         run: buf lint
       - name: buf breaking (against origin/main)
@@ -126,6 +139,7 @@ jobs:
           node scripts/gen-bench-bodies-skeleton.mjs --check
           node --check scripts/gen-sdk-benchmark-docs.mjs
           node scripts/gen-sdk-benchmark-docs.mjs --check
+          python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py
           python3 scripts/check-bench-harness-posture.py --selftest
           python3 scripts/check-bench-harness-posture.py
       - name: Docs/CI freshness posture guard
@@ -234,13 +248,13 @@ jobs:
         # findings. Runs once on Linux to avoid CRLF/path skew.
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json
+          target/debug/udb native manifest > docs/generated/udb-native-contract.json
           if ! git diff --quiet -- docs/generated/udb-native-contract.json; then
             echo "::error::Native contract manifest is stale. Run 'udb native manifest > docs/generated/udb-native-contract.json' and commit."
             git diff -- docs/generated/udb-native-contract.json | sed -n '1,120p'
             exit 1
           fi
-          cargo run --locked -q --bin udb -- native lint
+          target/debug/udb native lint
       - name: Native docs markdown drift
         # Mirror of the JSON gate above for docs/generated/native-services.md.
         # `udb native docs` renders the markdown table from the same embedded
@@ -251,7 +265,7 @@ jobs:
         # CRLF skew.
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md
+          target/debug/udb native docs > docs/generated/native-services.md
           if ! git diff --quiet -- docs/generated/native-services.md; then
             echo "::error::Native docs markdown is stale. Run 'udb native docs > docs/generated/native-services.md' and commit."
             git diff -- docs/generated/native-services.md | sed -n '1,120p'
@@ -291,8 +305,30 @@ jobs:
         #   udb native contract-baseline --baseline docs/generated/contract-baseline.bin
         if: runner.os == 'Linux'
         run: |
-          cargo run --locked -q --bin udb -- native contract-diff \
+          target/debug/udb native contract-diff \
             --baseline docs/generated/contract-baseline.bin
+      - name: Prepare CI-generated native documentation repair patch
+        if: failure() && runner.os == 'Linux'
+        continue-on-error: true
+        run: |
+          test -x target/debug/udb
+          target/debug/udb native manifest > docs/generated/udb-native-contract.json
+          target/debug/udb native docs > docs/generated/native-services.md
+          target/debug/udb native contract-baseline \
+            --baseline docs/generated/contract-baseline.bin
+          git diff --binary -- \
+            docs/generated/udb-native-contract.json \
+            docs/generated/native-services.md \
+            docs/generated/contract-baseline.bin \
+            > ci-native-docs.patch
+      - name: Upload CI-generated native documentation repair patch
+        if: failure() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-native-docs-repair-${{ github.run_attempt }}
+          path: ci-native-docs.patch
+          if-no-files-found: warn
+          retention-days: 7
 
   # ── Build the broker ONCE, share via same-run artifact ────────────
   # Builds the live feature tier consumed by smoke.
@@ -716,6 +752,18 @@ jobs:
             git diff --stat -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api
             exit 1
           fi
+      - name: Prepare CI-generated SDK repair patch
+        if: failure()
+        run: |
+          git diff --binary -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api > ci-sdk-codegen.patch
+      - name: Upload CI-generated SDK repair patch
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-sdk-codegen-repair-${{ github.run_attempt }}
+          path: ci-sdk-codegen.patch
+          if-no-files-found: error
+          retention-days: 7
       - name: Authn/Authz inventory drift (Phase 0A)
         # The committed RPC + sensitive-field inventories must match the protos.
         run: |

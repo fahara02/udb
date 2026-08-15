@@ -60,11 +60,19 @@ public interface StageCatalogRequestOrBuilder extends
       getReasonBytes();
 
   /**
+   * <pre>
+   * Required for durable StageCatalog retries.
+   * </pre>
+   *
    * <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
    * @return The idempotencyKey.
    */
   java.lang.String getIdempotencyKey();
   /**
+   * <pre>
+   * Required for durable StageCatalog retries.
+   * </pre>
+   *
    * <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
    * @return The bytes for idempotencyKey.
    */

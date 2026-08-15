@@ -44,52 +44,59 @@ public final class BackupPolicyProto {
       "y.proto\022\031udb.core.backup.entity.v1\032\037goog" +
       "le/protobuf/timestamp.proto\032\033udb/core/co" +
       "mmon/v1/db.proto\032!udb/core/common/v1/sec" +
-      "urity.proto\"\225\014\n\014BackupPolicy\022I\n\tpolicy_i" +
+      "urity.proto\"\230\016\n\014BackupPolicy\022I\n\tpolicy_i" +
       "d\030\001 \001(\tB,\202\267\030(\n\tpolicy_id\022\004UUID\030\001(\001:\021gen_" +
       "random_uuid()R\010policyId\022c\n\ttenant_id\030\002 \001" +
       "(\tBF\202\267\030B\n\ttenant_id\022\013VARCHAR(64)\030\001R#\n\032id" +
       "x_backup_policies_tenant\022\005BTREE\230\002\001R\010tena" +
-      "ntId\022B\n\013policy_name\030\003 \001(\tB!\202\267\030\035\n\013policy_" +
-      "name\022\014VARCHAR(255)\030\001R\npolicyName\022L\n\rsche" +
-      "dule_cron\030\004 \001(\tB\'\202\267\030#\n\rschedule_cron\022\014VA" +
-      "RCHAR(255)\030\001:\002\'\'R\014scheduleCron\022J\n\016retent" +
-      "ion_days\030\005 \001(\005B#\202\267\030\037\n\016retention_days\022\007IN" +
-      "TEGER\030\001:\00230R\rretentionDays\022Z\n\024max_retain" +
-      "ed_backups\030\006 \001(\005B(\202\267\030$\n\024max_retained_bac" +
-      "kups\022\007INTEGER\030\001:\0010R\022maxRetainedBackups\0228" +
-      "\n\007enabled\030\007 \001(\010B\036\202\267\030\032\n\007enabled\022\007BOOLEAN\030" +
-      "\001:\004trueR\007enabled\022N\n\016object_backend\030\010 \001(\t" +
-      "B\'\202\267\030#\n\016object_backend\022\013VARCHAR(64)\030\001:\002\'" +
-      "\'R\robjectBackend\022L\n\robject_bucket\030\t \001(\tB" +
-      "\'\202\267\030#\n\robject_bucket\022\014VARCHAR(255)\030\001:\002\'\'" +
-      "R\014objectBucket\022{\n\ncreated_at\030\n \001(\0132\032.goo" +
-      "gle.protobuf.TimestampB@\202\267\030<\n\ncreated_at" +
-      "\022\013TIMESTAMPTZZ!When the policy was first" +
-      " createdR\tcreatedAt\022z\n\nupdated_at\030\013 \001(\0132" +
-      "\032.google.protobuf.TimestampB?\202\267\030;\n\nupdat" +
-      "ed_at\022\013TIMESTAMPTZZ When the policy was " +
-      "last updatedR\tupdatedAt\022l\n\rmetadata_json" +
-      "\030\014 \001(\tBG\202\267\030C\n\rmetadata_json\022\005JSONB\030\001:\013\'{" +
-      "}\'::jsonbZ\032Non-secret policy metadatax\001R" +
-      "\014metadataJson:\333\003\372\266\030\305\002\n\017backup_policies\022\n" +
-      "udb_backup\030\001 \001*CPer-tenant logical-backu" +
-      "p retention and schedule (master-plan 9." +
-      "10)8\001@\001b^\n\020tenant_isolation\032H(tenant_id:" +
-      ":text = current_setting(\'app.current_ten" +
-      "ant_id\', true)::text)(\001\212\001I\n&idx_backup_p" +
-      "olicies_tenant_name_unique\022\005BTREE\030\001Z\tten" +
-      "ant_idZ\013policy_name\362\001\036udb.backup.backup_" +
-      "policies.cdc\372\001\013backup:read\212\262\031\214\001\n\006tenant\032" +
-      "\ttenant_id*4tenant_id = current_setting(" +
-      "\'app.current_tenant_id\')2\004none:\rbackup.p" +
-      "olicy@\302\034H\002R\006tenantZ\010standardr\025tenant.dat" +
-      "a_residencyB\202\002\n\035com.udb.core.backup.enti" +
-      "ty.v1B\021BackupPolicyProtoP\001ZEgithub.com/f" +
-      "ahara02/udb/sdk/go/gen/udb/core/backup/e" +
-      "ntity/v1;entityv1\242\002\004UCBE\252\002\031udb.core.Back" +
-      "up.Entity.V1\312\002\031Udb\\Core\\Backup\\Entity\\V1" +
-      "\342\002%Udb\\GPBMetadata\\Core\\Backup\\Entity\\V1" +
-      "\352\002\035Udb::Core::Backup::Entity::V1b\006proto3"
+      "ntId\022F\n\nproject_id\030\r \001(\tB\'\202\267\030#\n\nproject_" +
+      "id\022\014VARCHAR(255)\030\001:\002\'\'\240\002\001R\tprojectId\022B\n\013" +
+      "policy_name\030\003 \001(\tB!\202\267\030\035\n\013policy_name\022\014VA" +
+      "RCHAR(255)\030\001R\npolicyName\022L\n\rschedule_cro" +
+      "n\030\004 \001(\tB\'\202\267\030#\n\rschedule_cron\022\014VARCHAR(25" +
+      "5)\030\001:\002\'\'R\014scheduleCron\022J\n\016retention_days" +
+      "\030\005 \001(\005B#\202\267\030\037\n\016retention_days\022\007INTEGER\030\001:" +
+      "\00230R\rretentionDays\022Z\n\024max_retained_backu" +
+      "ps\030\006 \001(\005B(\202\267\030$\n\024max_retained_backups\022\007IN" +
+      "TEGER\030\001:\0010R\022maxRetainedBackups\0228\n\007enable" +
+      "d\030\007 \001(\010B\036\202\267\030\032\n\007enabled\022\007BOOLEAN\030\001:\004trueR" +
+      "\007enabled\022N\n\016object_backend\030\010 \001(\tB\'\202\267\030#\n\016" +
+      "object_backend\022\013VARCHAR(64)\030\001:\002\'\'R\robjec" +
+      "tBackend\022L\n\robject_bucket\030\t \001(\tB\'\202\267\030#\n\ro" +
+      "bject_bucket\022\014VARCHAR(255)\030\001:\002\'\'R\014object" +
+      "Bucket\022{\n\ncreated_at\030\n \001(\0132\032.google.prot" +
+      "obuf.TimestampB@\202\267\030<\n\ncreated_at\022\013TIMEST" +
+      "AMPTZZ!When the policy was first created" +
+      "R\tcreatedAt\022z\n\nupdated_at\030\013 \001(\0132\032.google" +
+      ".protobuf.TimestampB?\202\267\030;\n\nupdated_at\022\013T" +
+      "IMESTAMPTZZ When the policy was last upd" +
+      "atedR\tupdatedAt\022l\n\rmetadata_json\030\014 \001(\tBG" +
+      "\202\267\030C\n\rmetadata_json\022\005JSONB\030\001:\013\'{}\'::json" +
+      "bZ\032Non-secret policy metadatax\001R\014metadat" +
+      "aJson:\226\005\372\266\030\260\003\n\017backup_policies\022\nudb_back" +
+      "up\030\001 \001*CPer-tenant logical-backup retent" +
+      "ion and schedule (master-plan 9.10)8\001@\001b" +
+      "\264\001\n\030tenant_project_isolation\032\225\001(tenant_i" +
+      "d::text = current_setting(\'app.current_t" +
+      "enant_id\', true)::text AND project_id::t" +
+      "ext = current_setting(\'app.current_proje" +
+      "ct_id\', true)::text)(\001\212\001]\n.idx_backup_po" +
+      "licies_tenant_project_name_unique\022\005BTREE" +
+      "\030\001Z\ttenant_idZ\nproject_idZ\013policy_name\362\001" +
+      "\036udb.backup.backup_policies.cdc\372\001\013backup" +
+      ":read\212\262\031\334\001\n\006tenant\022\007project\032\ttenant_id\"\n" +
+      "project_id*otenant_id = current_setting(" +
+      "\'app.current_tenant_id\') AND project_id " +
+      "= current_setting(\'app.current_project_i" +
+      "d\')2\004none:\rbackup.policy@\302\034H\002R\006tenantZ\010s" +
+      "tandardr\025tenant.data_residencyB\202\002\n\035com.u" +
+      "db.core.backup.entity.v1B\021BackupPolicyPr" +
+      "otoP\001ZEgithub.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/core/backup/entity/v1;entityv1\242\002\004U" +
+      "CBE\252\002\031udb.core.Backup.Entity.V1\312\002\031Udb\\Co" +
+      "re\\Backup\\Entity\\V1\342\002%Udb\\GPBMetadata\\Co" +
+      "re\\Backup\\Entity\\V1\352\002\035Udb::Core::Backup:" +
+      ":Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -103,7 +110,7 @@ public final class BackupPolicyProto {
     internal_static_udb_core_backup_entity_v1_BackupPolicy_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_backup_entity_v1_BackupPolicy_descriptor,
-        new java.lang.String[] { "PolicyId", "TenantId", "PolicyName", "ScheduleCron", "RetentionDays", "MaxRetainedBackups", "Enabled", "ObjectBackend", "ObjectBucket", "CreatedAt", "UpdatedAt", "MetadataJson", });
+        new java.lang.String[] { "PolicyId", "TenantId", "ProjectId", "PolicyName", "ScheduleCron", "RetentionDays", "MaxRetainedBackups", "Enabled", "ObjectBackend", "ObjectBucket", "CreatedAt", "UpdatedAt", "MetadataJson", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();

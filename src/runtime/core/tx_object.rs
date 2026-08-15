@@ -1281,8 +1281,14 @@ impl DataBrokerRuntime {
             query,
             if with_data { "" } else { "WITH NO DATA" }
         );
+        let project_target = self
+            .project_postgres_write_target(
+                &context.project_id,
+                Some(context.target_instance.as_str()),
+            )
+            .await?;
         let result = sqlx::query(&sql)
-            .execute(self.pg_pool()?)
+            .execute(&project_target.pool)
             .await
             .map_err(|err| {
                 tx_object_internal_status(
@@ -1301,12 +1307,17 @@ impl DataBrokerRuntime {
                 request.schema.clone(),
                 request.name.clone(),
                 request.ttl_days,
+                context.project_id.clone(),
+                project_target.instance.clone(),
             );
         }
         Ok(response)
     }
 
-    pub fn start_materialized_view_refresh(&self, manifest: &CatalogManifest) -> usize {
+    pub fn start_materialized_view_refresh(
+        &self,
+        catalog: Arc<crate::runtime::catalog::CatalogManager>,
+    ) -> usize {
         let ttl_days = if self.config.materialized_view_ttl_days == 0 {
             7
         } else {
@@ -1315,24 +1326,128 @@ impl DataBrokerRuntime {
         if ttl_days <= 0 {
             return 0;
         }
-        let mut scheduled = 0usize;
-        for view in manifest
-            .tables
-            .iter()
-            .flat_map(|table| table.materialized_views.iter())
-        {
-            self.schedule_materialized_view_refresh(
-                view.schema.clone(),
-                view.name.clone(),
-                ttl_days,
-            );
-            scheduled += 1;
-        }
+        let scheduled = catalog
+            .active_project_ids()
+            .into_iter()
+            .filter_map(|project_id| catalog.active_exact_for(&project_id))
+            .map(|state| {
+                state
+                    .manifest
+                    .tables
+                    .iter()
+                    .map(|table| table.materialized_views.len())
+                    .sum::<usize>()
+            })
+            .sum();
+        let runtime = self.clone();
+        let seconds = (ttl_days as u64).saturating_mul(86_400).max(60);
+        tokio::spawn(async move {
+            const STALE_ALERT_THRESHOLD: u32 = 3;
+            let mut interval = tokio::time::interval(Duration::from_secs(seconds));
+            let mut consecutive_failures =
+                std::collections::HashMap::<(String, String, String), u32>::new();
+            let mut project_write_instances =
+                std::collections::HashMap::<(String, String), String>::new();
+            loop {
+                interval.tick().await;
+                if !catalog.authority_is_fresh() {
+                    tracing::warn!(
+                        "materialized view refresh skipped because catalog authority is stale"
+                    );
+                    continue;
+                }
+                let mut seen = std::collections::BTreeSet::new();
+                let mut active_bindings = std::collections::BTreeSet::new();
+                for project_id in catalog.active_project_ids() {
+                    let Some(state) = catalog.active_exact_for(&project_id) else {
+                        continue;
+                    };
+                    let binding = (project_id.clone(), state.metadata.checksum.clone());
+                    active_bindings.insert(binding.clone());
+                    let target_instance = match project_write_instances.get(&binding) {
+                        Some(instance) => instance.clone(),
+                        None => match runtime
+                            .project_postgres_write_target(&project_id, None)
+                            .await
+                        {
+                            Ok(target) => {
+                                project_write_instances
+                                    .insert(binding.clone(), target.instance.clone());
+                                target.instance
+                            }
+                            Err(err) => {
+                                tracing::error!(
+                                    project_id = %project_id,
+                                    catalog_checksum = %state.metadata.checksum,
+                                    error = %err,
+                                    "materialized view refresh cannot pin project write authority"
+                                );
+                                continue;
+                            }
+                        },
+                    };
+                    for view in state
+                        .manifest
+                        .tables
+                        .iter()
+                        .flat_map(|table| table.materialized_views.iter())
+                    {
+                        let key = (project_id.clone(), view.schema.clone(), view.name.clone());
+                        if !seen.insert(key.clone()) {
+                            continue;
+                        }
+                        match runtime
+                            .refresh_materialized_view_for_project(
+                                &view.schema,
+                                &view.name,
+                                &project_id,
+                                Some(&target_instance),
+                            )
+                            .await
+                        {
+                            Ok(()) => {
+                                consecutive_failures.remove(&key);
+                            }
+                            Err(err) => {
+                                let failures = consecutive_failures.entry(key).or_default();
+                                *failures = failures.saturating_add(1);
+                                if *failures >= STALE_ALERT_THRESHOLD {
+                                    tracing::error!(
+                                        project_id = %project_id,
+                                        schema = %view.schema,
+                                        view = %view.name,
+                                        consecutive_failures = *failures,
+                                        error = %err,
+                                        "project materialized view is staling"
+                                    );
+                                } else {
+                                    tracing::warn!(
+                                        project_id = %project_id,
+                                        schema = %view.schema,
+                                        view = %view.name,
+                                        error = %err,
+                                        "project materialized view refresh failed"
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+                project_write_instances.retain(|binding, _| active_bindings.contains(binding));
+            }
+        });
         scheduled
     }
 
-    pub fn schedule_materialized_view_refresh(&self, schema: String, name: String, ttl_days: i32) {
-        if self.pg_pool.is_none() || ttl_days <= 0 {
+    pub fn schedule_materialized_view_refresh(
+        &self,
+        schema: String,
+        name: String,
+        ttl_days: i32,
+        project_id: String,
+        target_instance: String,
+    ) {
+        if ttl_days <= 0 {
             return;
         }
         let runtime = self.clone();
@@ -1346,6 +1461,7 @@ impl DataBrokerRuntime {
             let mut interval = tokio::time::interval(Duration::from_secs(seconds));
             let mut consecutive_failures: u32 = 0;
             tracing::info!(
+                project_id = %project_id,
                 schema = %schema,
                 view = %name,
                 interval_secs = seconds,
@@ -1353,12 +1469,21 @@ impl DataBrokerRuntime {
             );
             loop {
                 interval.tick().await;
-                match runtime.refresh_materialized_view(&schema, &name).await {
+                match runtime
+                    .refresh_materialized_view_for_project(
+                        &schema,
+                        &name,
+                        &project_id,
+                        Some(&target_instance),
+                    )
+                    .await
+                {
                     Ok(()) => consecutive_failures = 0,
                     Err(err) => {
                         consecutive_failures = consecutive_failures.saturating_add(1);
                         if consecutive_failures >= STALE_ALERT_THRESHOLD {
                             tracing::error!(
+                                project_id = %project_id,
                                 schema = %schema,
                                 view = %name,
                                 consecutive_failures,
@@ -1367,6 +1492,7 @@ impl DataBrokerRuntime {
                             );
                         } else {
                             tracing::warn!(
+                                project_id = %project_id,
                                 schema = %schema,
                                 view = %name,
                                 error = %err,
@@ -1384,14 +1510,33 @@ impl DataBrokerRuntime {
         schema: &str,
         name: &str,
     ) -> Result<(), tonic::Status> {
+        self.refresh_materialized_view_for_project(
+            schema,
+            name,
+            crate::runtime::catalog::DEFAULT_PROJECT_ID,
+            None,
+        )
+        .await
+    }
+
+    async fn refresh_materialized_view_for_project(
+        &self,
+        schema: &str,
+        name: &str,
+        project_id: &str,
+        expected_instance: Option<&str>,
+    ) -> Result<(), tonic::Status> {
         validate_tx_identifier(schema, "schema")?;
         validate_tx_identifier(name, "name")?;
+        let project_target = self
+            .project_postgres_write_target(project_id, expected_instance)
+            .await?;
         let sql = format!(
             "REFRESH MATERIALIZED VIEW CONCURRENTLY {}.{}",
             qi_runtime(schema),
             qi_runtime(name)
         );
-        if let Err(err) = sqlx::query(&sql).execute(self.pg_pool()?).await {
+        if let Err(err) = sqlx::query(&sql).execute(&project_target.pool).await {
             let error_text = err.to_string();
             if !is_unpopulated_materialized_view_refresh_error(&error_text) {
                 return Err(tx_object_internal_status(
@@ -1405,7 +1550,7 @@ impl DataBrokerRuntime {
                 qi_runtime(name)
             );
             sqlx::query(&sql)
-                .execute(self.pg_pool()?)
+                .execute(&project_target.pool)
                 .await
                 .map_err(|err| {
                     tx_object_internal_status(
@@ -1547,6 +1692,31 @@ impl DataBrokerRuntime {
     }
 
     #[cfg(feature = "redis")]
+    pub(crate) async fn projection_cache_set_for_project(
+        &self,
+        instance: Option<&str>,
+        project_id: &str,
+        key: &str,
+        records: &[Vec<u8>],
+        ttl: u64,
+    ) -> Result<(), String> {
+        let target = self
+            .resolve_projection_write_target_for_project("redis", instance, project_id)
+            .map_err(|status| status.message().to_string())?;
+        let client = self
+            .redis_for_instance(target.instance.as_deref())
+            .map_err(|status| status.message().to_string())?;
+        let mut conn = client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| e.to_string())?;
+        let data = serde_json::to_vec(records).map_err(|e| e.to_string())?;
+        conn.set_ex::<_, _, ()>(key, data, ttl)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    #[cfg(feature = "redis")]
     pub(crate) async fn cache_set_stamped_from_pool(
         &self,
         key: &str,
@@ -1620,6 +1790,18 @@ impl DataBrokerRuntime {
     }
 
     #[cfg(not(feature = "redis"))]
+    pub(crate) async fn projection_cache_set_for_project(
+        &self,
+        _instance: Option<&str>,
+        _project_id: &str,
+        _key: &str,
+        _records: &[Vec<u8>],
+        _ttl: u64,
+    ) -> Result<(), String> {
+        Err("redis projection target is unavailable: redis feature is disabled".to_string())
+    }
+
+    #[cfg(not(feature = "redis"))]
     pub(crate) async fn cache_delete_pattern(&self, _pattern: &str) -> Result<(), String> {
         Ok(())
     }
@@ -1658,6 +1840,60 @@ impl DataBrokerRuntime {
             cursor = next;
         }
         Ok(())
+    }
+
+    #[cfg(feature = "redis")]
+    pub(crate) async fn projection_cache_delete_for_project(
+        &self,
+        instance: Option<&str>,
+        project_id: &str,
+        pattern: &str,
+    ) -> Result<(), String> {
+        let target = self
+            .resolve_projection_write_target_for_project("redis", instance, project_id)
+            .map_err(|status| status.message().to_string())?;
+        let client = self
+            .redis_for_instance(target.instance.as_deref())
+            .map_err(|status| status.message().to_string())?;
+        let mut conn = client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| e.to_string())?;
+        let mut cursor = 0_u64;
+        loop {
+            let (next, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg(pattern)
+                .arg("COUNT")
+                .arg(500_u32)
+                .query_async(&mut conn)
+                .await
+                .map_err(|e| e.to_string())?;
+            if !keys.is_empty() {
+                let deleted = redis::cmd("DEL")
+                    .arg(&keys)
+                    .query_async::<u64>(&mut conn)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                self.cache_metrics.invalidated(deleted);
+            }
+            if next == 0 {
+                break;
+            }
+            cursor = next;
+        }
+        Ok(())
+    }
+
+    #[cfg(not(feature = "redis"))]
+    pub(crate) async fn projection_cache_delete_for_project(
+        &self,
+        _instance: Option<&str>,
+        _project_id: &str,
+        _pattern: &str,
+    ) -> Result<(), String> {
+        Err("redis projection target is unavailable: redis feature is disabled".to_string())
     }
 
     /// W11 read side: transparently rewrite STRING-equality predicates on

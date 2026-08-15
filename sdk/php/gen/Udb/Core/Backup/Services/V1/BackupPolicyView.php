@@ -60,6 +60,12 @@ class BackupPolicyView extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int64 updated_at_unix = 11 [json_name = "updatedAtUnix"];</code>
      */
     protected $updated_at_unix = 0;
+    /**
+     * First-class project owner of this policy.
+     *
+     * Generated from protobuf field <code>string project_id = 12 [json_name = "projectId"];</code>
+     */
+    protected $project_id = '';
 
     /**
      * Constructor.
@@ -78,6 +84,8 @@ class BackupPolicyView extends \Google\Protobuf\Internal\Message
      *     @type string $object_bucket
      *     @type int|string $created_at_unix
      *     @type int|string $updated_at_unix
+     *     @type string $project_id
+     *           First-class project owner of this policy.
      * }
      */
     public function __construct($data = NULL) {
@@ -323,6 +331,32 @@ class BackupPolicyView extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt64($var);
         $this->updated_at_unix = $var;
+
+        return $this;
+    }
+
+    /**
+     * First-class project owner of this policy.
+     *
+     * Generated from protobuf field <code>string project_id = 12 [json_name = "projectId"];</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * First-class project owner of this policy.
+     *
+     * Generated from protobuf field <code>string project_id = 12 [json_name = "projectId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->project_id = $var;
 
         return $this;
     }

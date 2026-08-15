@@ -50,6 +50,24 @@ pub(crate) fn resolve_object_target(
     (backend, bucket)
 }
 
+pub(crate) fn backup_table_select_sql(
+    relation: &str,
+    tenant_column: &str,
+    project_column: Option<&str>,
+) -> String {
+    match project_column {
+        Some(project_column) => format!(
+            "SELECT row_to_json(t)::text FROM {relation} t WHERE {tenant_col}::text = $1 AND {project_col}::text = $2",
+            tenant_col = qi_runtime(tenant_column),
+            project_col = qi_runtime(project_column),
+        ),
+        None => format!(
+            "SELECT row_to_json(t)::text FROM {relation} t WHERE {tenant_col}::text = $1",
+            tenant_col = qi_runtime(tenant_column),
+        ),
+    }
+}
+
 pub(crate) async fn start_tenant_backup(
     svc: &BackupServiceImpl,
     request: Request<backup_pb::StartTenantBackupRequest>,
@@ -69,7 +87,9 @@ pub(crate) async fn start_tenant_backup(
     // The verified-tenant context carries project/correlation from request
     // metadata. A named policy supplies the fallback object destination promised
     // by the public request contract; explicit request fields still win.
-    let context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
+    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    context.project_id = binding.project_id.clone();
     let mut object_backend = req.object_backend.trim().to_string();
     let mut object_bucket = req.object_bucket.trim().to_string();
     if !req.policy_name.trim().is_empty() {
@@ -79,7 +99,7 @@ pub(crate) async fn start_tenant_backup(
             .native_entity_read_for_service(
                 "backup",
                 &context,
-                policy_read_by_name(&tenant_id, policy_name),
+                policy_read_by_name(&tenant_id, &binding.project_id, policy_name),
             )
             .await?
             .first()
@@ -232,6 +252,7 @@ pub(crate) async fn run_tenant_backup(
         &context,
         &backup_id,
         &tenant_id,
+        &binding.project_id,
         KIND_BACKUP,
         &object_prefix,
         &started_metadata,
@@ -242,25 +263,43 @@ pub(crate) async fn run_tenant_backup(
     let mut total_rows: i64 = 0;
     for target in &plan.targets {
         let rel = qualified_relation(&target.schema, &target.table);
-        // Compare the tenant column as text so a UUID column and a VARCHAR
-        // tenant column both match the bound tenant id (no text-cast trap).
-        let select_sql = format!(
-            "SELECT row_to_json(t)::text FROM {rel} t WHERE {col}::text = $1",
-            col = qi_runtime(&target.tenant_column),
-        );
-        let rows: Vec<String> = sqlx::query_scalar(&select_sql)
-            .bind(&tenant_id)
-            .fetch_all(&mut *snapshot_tx)
-            .await
-            .map_err(|err| {
+        let table = binding
+            .manifest
+            .tables
+            .iter()
+            .find(|table| table.schema == target.schema && table.table == target.table)
+            .ok_or_else(|| {
                 backup_internal_status(
-                    "start_backup_read_table",
+                    "start_backup_project_scope",
                     format!(
-                        "backup failed reading {}.{}: {err}",
+                        "purge planner target {}.{} is absent from the active project manifest",
                         target.schema, target.table
                     ),
                 )
             })?;
+        let project_column = crate::generation::sql::resolve_project_column(table);
+        // Compare the tenant column as text so a UUID column and a VARCHAR
+        // tenant column both match the bound tenant id (no text-cast trap). A
+        // project-isolated table also gets the manifest-derived project
+        // predicate; tenant-only tables retain their declared tenant-wide scope.
+        let select_sql = backup_table_select_sql(&rel, &target.tenant_column, project_column);
+        let query = sqlx::query_scalar(&select_sql).bind(&tenant_id);
+        let rows: Vec<String> = if project_column.is_some() {
+            query.bind(&binding.project_id)
+        } else {
+            query
+        }
+        .fetch_all(&mut *snapshot_tx)
+        .await
+        .map_err(|err| {
+            backup_internal_status(
+                "start_backup_read_table",
+                format!(
+                    "backup failed reading {}.{}: {err}",
+                    target.schema, target.table
+                ),
+            )
+        })?;
         let row_count = rows.len() as i64;
         total_rows += row_count;
         let jsonl = rows.join("\n");
@@ -352,6 +391,10 @@ pub(crate) async fn run_tenant_backup(
             "schema": t.schema,
             "table": t.table,
             "tenant_column": t.tenant_column,
+            "project_column": binding.manifest.tables.iter()
+                .find(|table| table.schema == t.schema && table.table == t.table)
+                .and_then(crate::generation::sql::resolve_project_column)
+                .unwrap_or_default(),
             "object_key": t.object_key,
             "row_count": t.row_count,
             "checksum_sha256": t.checksum_sha256,
@@ -406,6 +449,7 @@ pub(crate) async fn run_tenant_backup(
         &context,
         &backup_id,
         &tenant_id,
+        &binding.project_id,
         KIND_BACKUP,
         &object_prefix,
         &manifest_checksum,
@@ -428,6 +472,7 @@ pub(crate) async fn run_tenant_backup(
         serde_json::json!({
             "backup_id": backup_id,
             "tenant_id": tenant_id,
+            "project_id": binding.project_id,
             "object_prefix": object_prefix,
             "manifest_checksum": manifest_checksum,
             "table_count": table_count,

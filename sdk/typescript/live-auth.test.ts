@@ -1612,6 +1612,7 @@ test("manifest JSON body hydrates WebRTC turn and signaling rows", () => {
 test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   const fixtures = new PerfFixtures();
   fixtures.set("tenant_id", "tenant-1");
+  fixtures.set("project", "project-1");
   fixtures.set("vault_key_name", "sdk-perf-key");
   fixtures.set("vault_signing_key_name", "sdk-perf-signing-key");
   fixtures.set("vault_hmac_key_name", "sdk-perf-hmac-key");
@@ -1648,6 +1649,7 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   assert.equal(destroyed?.confirmation_token, destroyed?.secret_path);
   assert.equal(encrypted?.plaintext, "perf");
   assert.equal(dbCreds?.role_name, "sdk-readonly");
+  assert.equal(dbCreds?.project_id, "project-1");
   assert.equal(dbCreds?.ttl_seconds, 900);
   assert.equal(dbCreds?.idempotency_key, "sdk-vault-db-idempotency");
   assert.equal(revokedDbCreds?.lease_id, "sdk-vault-db-lease");
@@ -2471,9 +2473,9 @@ async function seedPerfFixtures(
     fix.set("ts_table", "sdk_perf_ts");
   });
 
-  // ── Capture the live catalog manifest (READ-ONLY) so the measured StageCatalog has a
-  // valid CatalogManifest (Go passes StageCatalog with the new binary). activate/rollback/
-  // get_version stay broker-blocked (K2). If staging still poisons, revert this.
+  // ── Reset already activated the release manifest for this exact project. Capture it
+  // so the measured StageCatalog -> ActivateCatalog -> RollbackCatalog lifecycle uses a
+  // real manifest while preserving the active 1.0.0 compatibility contract.
   await tryRun("CaptureCatalogManifest", async () => {
     const cm = await data.get_catalog_manifest({ context: { ...ctx, scopes: ["udb:admin"] }, redact: false }, opts);
     if (cm?.manifest_json) {
@@ -2482,10 +2484,6 @@ async function seedPerfFixtures(
       fix.set("catalog_manifest_b64", bytes.toString("base64"));
     }
   });
-
-  // NOTE: NOT staging a catalog here — staging the manifest puts the broker into a
-  // pending-catalog state that fails-precondition EVERY DataBroker data op (76 RPCs).
-  // The 4 catalog RPCs aren't worth that; leave them red until a safe seed path exists.
 
   // ── AnalyticsService: a recorded metric → a stage_name with data ───────────────
   const stage = `sdk_perf_stage_${suffix}`;
@@ -4238,7 +4236,13 @@ test("live per-RPC perf", {
     // that same entity earlier in the run (Go orderRPCsByAuthPhase). Stable sort.
     const okRank: Record<string, number> = { read_only: 0, mutation: 1, destructive: 2 };
     const rankOf = (u: Unit) => okRank[operationKindOf((u.api as any).serviceFull, u.methodName) ?? "read_only"] ?? 0;
-    phase2 = phase2.map((u, i) => [u, i] as [Unit, number]).sort((a, b) => (rankOf(a[0]) - rankOf(b[0])) || (a[1] - b[1])).map(([u]) => u);
+    const catalogLifecycleRank: Record<string, number> = { stage_catalog: 0, activate_catalog: 1, rollback_catalog: 2 };
+    const catalogRankOf = (u: Unit) => u.serviceName === "DataBroker" ? (catalogLifecycleRank[u.methodName] ?? 3) : 3;
+    phase2 = phase2.map((u, i) => [u, i] as [Unit, number]).sort((a, b) =>
+      (rankOf(a[0]) - rankOf(b[0])) ||
+      (catalogRankOf(a[0]) - catalogRankOf(b[0])) ||
+      (a[1] - b[1])
+    ).map(([u]) => u);
     // Tenant-wide revocation intentionally invalidates the benchmark session.
     // Run it after every disposable-principal teardown, then log in once more
     // before the final self-PurgeTenant.

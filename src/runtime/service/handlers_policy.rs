@@ -20,15 +20,6 @@ fn policy_required_field(
     crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
 }
 
-fn admin_summary_project_scope_status() -> Status {
-    crate::runtime::executor_utils::policy_status_with_code(
-        tonic::Code::PermissionDenied,
-        "GetAdminSummary",
-        "project_scope_mismatch",
-        "requested project_id does not match authenticated project",
-    )
-}
-
 fn validate_ensure_project_id(project_id: &str) -> Result<(), Status> {
     if project_id.trim().is_empty() {
         return Err(policy_required_field(
@@ -251,12 +242,20 @@ impl DataBrokerService {
             return self.record_grpc("EnsureProject", started, Err(err));
         }
         let req = request.into_inner();
-        if let Err(err) = validate_ensure_project_id(&req.project_id) {
+        let project_id = match super::handlers_catalog::resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "EnsureProject",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("EnsureProject", started, Err(err)),
+        };
+        if let Err(err) = validate_ensure_project_id(&project_id) {
             return self.record_grpc("EnsureProject", started, Err(err));
         }
         match self
             .runtime_snapshot()
-            .ensure_project(&req.project_id, &req.name, &req.cdc_topic_prefix)
+            .ensure_project(&project_id, &req.name, &req.cdc_topic_prefix)
             .await
         {
             Ok(()) => {
@@ -265,11 +264,11 @@ impl DataBrokerService {
                     .write_audit_log(
                         &security.service_identity,
                         "EnsureProject",
-                        &req.project_id,
-                        &serde_json::json!({"project_id": req.project_id, "name": req.name}),
+                        &project_id,
+                        &serde_json::json!({"project_id": project_id.clone(), "name": req.name}),
                         "ok",
                         &security.tenant_id,
-                        &req.project_id,
+                        &project_id,
                         &security.correlation_id,
                     )
                     .await;
@@ -277,8 +276,8 @@ impl DataBrokerService {
                     "EnsureProject",
                     started,
                     Ok(Response::new(MutationResponse {
-                        mutation_id: req.project_id.clone(),
-                        resource_uri: format!("udb:project:{}", req.project_id),
+                        mutation_id: project_id.clone(),
+                        resource_uri: format!("udb:project:{project_id}"),
                         affected_rows: 1,
                         ..MutationResponse::default()
                     })),
@@ -294,6 +293,11 @@ impl DataBrokerService {
     ) -> Result<Response<ProjectListResponse>, Status> {
         let (started, security) = authorized_call!(self, request, "ListProjects");
         if let Err(err) = require_admin_scope(&security) {
+            return self.record_grpc("ListProjects", started, Err(err));
+        }
+        if let Err(err) =
+            super::handlers_catalog::require_catalog_platform_authority("ListProjects")
+        {
             return self.record_grpc("ListProjects", started, Err(err));
         }
         let req = request.into_inner();
@@ -344,56 +348,38 @@ impl DataBrokerService {
         }
         let req = request.into_inner();
         let mut warnings: Vec<String> = Vec::new();
-        if let (Some(requested), Some(bound)) =
-            (non_empty(&req.project_id), non_empty(&security.project_id))
-        {
-            if requested != bound && !security.has_scope("udb:admin") {
+        let project_id = match super::handlers_catalog::resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "GetAdminSummary",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("GetAdminSummary", started, Err(err)),
+        };
+        let active_catalog = match self.catalog.active_exact_for(&project_id) {
+            Some(active) => active,
+            None => {
                 return self.record_grpc(
                     "GetAdminSummary",
                     started,
-                    Err(admin_summary_project_scope_status()),
+                    Err(crate::runtime::executor_utils::schema_status(
+                        tonic::Code::FailedPrecondition,
+                        "catalog",
+                        "GetAdminSummary",
+                        "catalog_project_not_active",
+                        "admin summary requires an exact ACTIVE project catalog",
+                    )),
                 );
             }
-        }
-        let project_id = non_empty(&req.project_id)
-            .or_else(|| non_empty(&security.project_id))
-            .unwrap_or("default")
-            .to_string();
+        };
 
         // ── Catalog summary ───────────────────────────────────────────────────
         let catalog = {
-            use sha2::Digest;
-            let active_catalog = self.catalog.active_for(&project_id);
-            let mut hasher = sha2::Sha256::new();
-            for t in &active_catalog.manifest.tables {
-                hasher.update(t.message_name.as_bytes());
-            }
-            let checksum = format!("{:x}", hasher.finalize());
-            // Try to fetch active version from DB.
-            let (active_version, active_since) = self
-                .runtime_snapshot()
-                .get_catalog_versions(&project_id)
-                .await
-                .ok()
-                .and_then(|rows| {
-                    rows.into_iter()
-                        .find(|r| r["status"].as_str() == Some("ACTIVE"))
-                        .map(|r| {
-                            (
-                                r["version"].as_str().unwrap_or("in-memory").to_string(),
-                                r["activated_at_unix"]
-                                    .as_i64()
-                                    .map(|ts| ts.to_string())
-                                    .unwrap_or_default(),
-                            )
-                        })
-                })
-                .unwrap_or_else(|| ("in-memory".to_string(), String::new()));
             vec![AdminCatalogSummary {
                 project_id: project_id.clone(),
-                active_version,
-                active_checksum: checksum,
-                active_since,
+                active_version: active_catalog.metadata.version.clone(),
+                active_checksum: active_catalog.metadata.checksum.clone(),
+                active_since: active_catalog.metadata.applied_at_unix.to_string(),
                 table_count: active_catalog.manifest.tables.len() as i32,
                 store_count: active_catalog.manifest.stores.len() as i32,
                 pending_migration_state: String::new(),
@@ -897,21 +883,5 @@ mod tests {
             detail.field_violations[0].description,
             "must be a non-empty project id"
         );
-    }
-
-    #[test]
-    fn admin_summary_project_scope_mismatch_carries_policy_detail() {
-        let err = admin_summary_project_scope_status();
-        assert_eq!(err.code(), Code::PermissionDenied);
-        assert_eq!(
-            err.message(),
-            "requested project_id does not match authenticated project"
-        );
-        let detail = decode_detail(&err);
-        assert_eq!(detail.kind, ErrorKind::Policy as i32);
-        assert_eq!(detail.operation, "GetAdminSummary");
-        assert_eq!(detail.policy_decision_id, "project_scope_mismatch");
-        assert!(!detail.retryable);
-        assert_eq!(detail.retry_after_ms, 0);
     }
 }

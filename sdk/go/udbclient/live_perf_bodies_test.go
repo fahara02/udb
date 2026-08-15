@@ -166,7 +166,25 @@ func orderRPCsByAuthPhase(all []RPCInfo) []RPCInfo {
 	// seeded entity (GetRole/GetApiKey/GetPolicyRule) is never invalidated by a
 	// delete/revoke of that same entity later in the run.
 	okRank := map[string]int{"read_only": 0, "mutation": 1, "destructive": 2}
-	sort.SliceStable(p2, func(i, j int) bool { return okRank[p2[i].OperationKind] < okRank[p2[j].OperationKind] })
+	catalogLifecycleRank := map[string]int{"StageCatalog": 0, "ActivateCatalog": 1, "RollbackCatalog": 2}
+	sort.SliceStable(p2, func(i, j int) bool {
+		leftKind, rightKind := okRank[p2[i].OperationKind], okRank[p2[j].OperationKind]
+		if leftKind != rightKind {
+			return leftKind < rightKind
+		}
+		leftLifecycle, leftCatalog := catalogLifecycleRank[p2[i].Name]
+		rightLifecycle, rightCatalog := catalogLifecycleRank[p2[j].Name]
+		if p2[i].Service == "DataBroker" && leftCatalog {
+			if p2[j].Service == "DataBroker" && rightCatalog {
+				return leftLifecycle < rightLifecycle
+			}
+			return true
+		}
+		if p2[j].Service == "DataBroker" && rightCatalog {
+			return false
+		}
+		return false
+	})
 	// The tenant-wide revoke intentionally kills the benchmark administrator's
 	// current session. Keep it after every disposable-principal teardown; the
 	// harness re-authenticates once before the final self-PurgeTenant.
@@ -200,6 +218,20 @@ func TestOrderRPCsReauthBoundaryFollowsTenantWideRevoke(t *testing.T) {
 	for i, name := range want {
 		if ordered[i].Name != name {
 			t.Fatalf("ordered RPC %d = %s, want %s", i, ordered[i].Name, name)
+		}
+	}
+}
+
+func TestOrderRPCsPinsCatalogLifecycle(t *testing.T) {
+	ordered := orderRPCsByAuthPhase([]RPCInfo{
+		{Service: "DataBroker", Name: "ActivateCatalog", OperationKind: "destructive"},
+		{Service: "DataBroker", Name: "RollbackCatalog", OperationKind: "destructive"},
+		{Service: "DataBroker", Name: "StageCatalog", OperationKind: "destructive"},
+	})
+	want := []string{"StageCatalog", "ActivateCatalog", "RollbackCatalog"}
+	for i, name := range want {
+		if ordered[i].Name != name {
+			t.Fatalf("ordered catalog RPC %d = %s, want %s", i, ordered[i].Name, name)
 		}
 	}
 }

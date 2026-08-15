@@ -154,6 +154,30 @@ pub(crate) async fn vault_service() -> crate::runtime::service::vault_service::V
     native_broker_service().await.build_vault_service()
 }
 
+pub(super) async fn backup_service_for_projects(
+    project_ids: &[&str],
+) -> crate::runtime::service::backup_service::BackupServiceImpl {
+    let broker = native_broker_service().await;
+    for project_id in project_ids {
+        let checksum = broker
+            .catalog
+            .stage_catalog(
+                broker.manifest.clone(),
+                (*project_id).to_string(),
+                "backup-live-project-isolation".to_string(),
+                "exact".to_string(),
+            )
+            .await
+            .unwrap_or_else(|err| panic!("stage backup catalog for {project_id}: {err}"));
+        broker
+            .catalog
+            .activate_catalog_for(project_id, &checksum)
+            .await
+            .unwrap_or_else(|err| panic!("activate backup catalog for {project_id}: {err}"));
+    }
+    broker.build_backup_service()
+}
+
 fn live_native_config() -> UdbConfig {
     let mut config = UdbConfig::from_env();
     config.primary.direct_dsn = live_pg_dsn();

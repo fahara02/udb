@@ -1954,6 +1954,12 @@ pub fn validate_udb_config(
         errors.push("failover.enabled=true requires a configured backup database".to_string());
     }
 
+    if let Err(error) = crate::runtime::project_backend_router::ProjectRoutingMode::try_parse(
+        &config.project_routing_mode,
+    ) {
+        errors.push(error);
+    }
+
     if let Some(redis) = &config.redis
         && redis.is_configured()
         && redis.mode == "sentinel"

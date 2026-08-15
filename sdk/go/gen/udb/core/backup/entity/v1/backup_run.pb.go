@@ -28,13 +28,18 @@ const (
 // 9.10). Each StartTenantBackup / RestoreTenant appends a row here recording
 // the object prefix, the manifest checksum, the per-run row/table counts, and
 // the count of tables EXCLUDED for lack of a tenant column (reported, never
-// silently skipped). RLS scopes rows to the tenant. ListBackups/GetBackup read
-// this journal; the encrypted artifacts themselves live in object storage.
+// silently skipped). RLS scopes rows to the tenant AND project. ListBackups/
+// GetBackup read this journal; the encrypted artifacts themselves live in
+// object storage.
 // ---------------------------------------------------------------------------
 type BackupRun struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	BackupId string                 `protobuf:"bytes,1,opt,name=backup_id,json=backupId,proto3" json:"backup_id,omitempty"`
 	TenantId string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// First-class project owner. The empty default is a migration quarantine for
+	// pre-v0.5.9 rows: serving paths always write a resolved active project and
+	// no request/worker is allowed to claim a blank legacy row as `default`.
+	ProjectId string `protobuf:"bytes,16,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	// BACKUP | RESTORE — which movement produced this journal row.
 	Kind string `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
 	// RUNNING | COMPLETED | FAILED.
@@ -101,6 +106,13 @@ func (x *BackupRun) GetBackupId() string {
 func (x *BackupRun) GetTenantId() string {
 	if x != nil {
 		return x.TenantId
+	}
+	return ""
+}
+
+func (x *BackupRun) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }
@@ -200,13 +212,17 @@ var File_udb_core_backup_entity_v1_backup_run_proto protoreflect.FileDescriptor
 
 const file_udb_core_backup_entity_v1_backup_run_proto_rawDesc = "" +
 	"\n" +
-	"*udb/core/backup/entity/v1/backup_run.proto\x12\x19udb.core.backup.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8f\x0e\n" +
+	"*udb/core/backup/entity/v1/backup_run.proto\x12\x19udb.core.backup.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xfe\x10\n" +
 	"\tBackupRun\x12I\n" +
 	"\tbackup_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tbackup_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bbackupId\x12_\n" +
 	"\ttenant_id\x18\x02 \x01(\tBB\x82\xb7\x18>\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\x1f\n" +
-	"\x16idx_backup_runs_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x127\n" +
+	"\x16idx_backup_runs_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12F\n" +
+	"\n" +
+	"project_id\x18\x10 \x01(\tB'\x82\xb7\x18#\n" +
+	"\n" +
+	"project_id\x12\fVARCHAR(255)\x18\x01:\x02''\xa0\x02\x01R\tprojectId\x127\n" +
 	"\x04kind\x18\x03 \x01(\tB#\x82\xb7\x18\x1f\n" +
 	"\x04kind\x12\vVARCHAR(20)\x18\x01:\b'BACKUP'R\x04kind\x12_\n" +
 	"\x06status\x18\x04 \x01(\tBG\x82\xb7\x18C\n" +
@@ -239,14 +255,19 @@ const file_udb_core_backup_entity_v1_backup_run_proto_rawDesc = "" +
 	"\fcompleted_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
 	"\fcompleted_at\x12\vTIMESTAMPTZZ\x15When the run finishedR\vcompletedAt\x12i\n" +
 	"\rmetadata_json\x18\x0f \x01(\tBD\x82\xb7\x18@\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x17Non-secret run metadatax\x01R\fmetadataJson:\x86\x04\xfa\xb6\x18\xf3\x02\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x17Non-secret run metadatax\x01R\fmetadataJson:\xad\x06\xfa\xb6\x18\xca\x04\n" +
 	"\vbackup_runs\x12\n" +
-	"udb_backup\x18\x02 \x01*HDurable journal of tenant logical backup/restore runs (master-plan 9.10)8\x01@\x01b^\n" +
-	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01>\n" +
-	"\x1eidx_backup_runs_tenant_created\x12\x05BTREEZ\ttenant_idZ\n" +
-	"created_at\x8a\x019\n" +
-	"\x1didx_backup_runs_tenant_status\x12\x05BTREEZ\ttenant_idZ\x06status\xf2\x01\x1audb.backup.backup_runs.cdc\xfa\x01\vbackup:read\x8a\xb2\x19\x89\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\n" +
+	"udb_backup\x18\x02 \x01*HDurable journal of tenant logical backup/restore runs (master-plan 9.10)8\x01@\x01b\xb4\x01\n" +
+	"\x18tenant_project_isolation\x1a\x95\x01(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)(\x01\x8a\x01R\n" +
+	"&idx_backup_runs_tenant_project_created\x12\x05BTREEZ\ttenant_idZ\n" +
+	"project_idZ\n" +
+	"created_at\x8a\x01M\n" +
+	"%idx_backup_runs_tenant_project_status\x12\x05BTREEZ\ttenant_idZ\n" +
+	"project_idZ\x06status\x8a\x01U\n" +
+	"(idx_backup_runs_tenant_project_id_unique\x12\x05BTREE\x18\x01Z\ttenant_idZ\n" +
+	"project_idZ\tbackup_id\xf2\x01\x1audb.backup.backup_runs.cdc\xfa\x01\vbackup:read\x8a\xb2\x19\xd9\x01\n" +
+	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
+	"project_id*otenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')2\x04none:\n" +
 	"backup.run@\xc2\x1cH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xff\x01\n" +
 	"\x1dcom.udb.core.backup.entity.v1B\x0eBackupRunProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/backup/entity/v1;entityv1\xa2\x02\x04UCBE\xaa\x02\x19udb.core.Backup.Entity.V1\xca\x02\x19Udb\\Core\\Backup\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Backup\\Entity\\V1\xea\x02\x1dUdb::Core::Backup::Entity::V1b\x06proto3"
 

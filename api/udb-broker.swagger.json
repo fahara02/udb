@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.5.8",
+    "version": "0.5.9",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -49064,6 +49064,10 @@
         "updatedAtUnix": {
           "type": "string",
           "format": "int64"
+        },
+        "projectId": {
+          "type": "string",
+          "description": "First-class project owner of this policy."
         }
       },
       "description": "A backup retention/schedule policy."
@@ -49114,6 +49118,10 @@
         "completedAtUnix": {
           "type": "string",
           "format": "int64"
+        },
+        "projectId": {
+          "type": "string",
+          "description": "First-class project owner of this journal row."
         }
       },
       "description": "A backup/restore journal row."

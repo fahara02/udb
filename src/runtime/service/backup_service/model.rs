@@ -86,6 +86,7 @@ pub(crate) fn run_summary_from_json(row: &serde_json::Value) -> backup_pb::Backu
     backup_pb::BackupRunSummary {
         backup_id: json_str(m, "backup_id"),
         tenant_id: json_str(m, "tenant_id"),
+        project_id: json_str(m, "project_id"),
         kind: json_str(m, "kind"),
         status: json_str(m, "status"),
         object_prefix: json_str(m, "object_prefix"),
@@ -116,6 +117,10 @@ pub(crate) struct BackupRunLocation {
 /// metadata return `None`; callers must surface an explicit migration condition
 /// rather than guessing from mutable process defaults.
 pub(crate) fn run_location_from_json(row: &serde_json::Value) -> Option<BackupRunLocation> {
+    let first_class_project_id = json_str(row_object(row), "project_id");
+    if first_class_project_id.trim().is_empty() {
+        return None;
+    }
     let value = match row_object(row).get("metadata_json")? {
         serde_json::Value::Object(value) => serde_json::Value::Object(value.clone()),
         serde_json::Value::String(value) => serde_json::from_str(value).ok()?,
@@ -136,6 +141,7 @@ pub(crate) fn run_location_from_json(row: &serde_json::Value) -> Option<BackupRu
         || location.project_id.trim().is_empty()
         || location.catalog_checksum.trim().is_empty()
         || location.postgres_instance.trim().is_empty()
+        || location.project_id != first_class_project_id
     {
         None
     } else {
@@ -148,6 +154,7 @@ pub(crate) fn policy_view_from_json(row: &serde_json::Value) -> backup_pb::Backu
     backup_pb::BackupPolicyView {
         policy_id: json_str(m, "policy_id"),
         tenant_id: json_str(m, "tenant_id"),
+        project_id: json_str(m, "project_id"),
         policy_name: json_str(m, "policy_name"),
         schedule_cron: json_str(m, "schedule_cron"),
         retention_days: json_i64(m, "retention_days") as i32,

@@ -540,10 +540,13 @@ impl DataBrokerService {
             return self.record_grpc("ScanProjectionDrift", started, Err(err));
         }
         let req = request.into_inner();
-        let project_id = if req.project_id.trim().is_empty() {
-            security.project_id.clone()
-        } else {
-            req.project_id.trim().to_string()
+        let project_id = match super::handlers_catalog::resolve_catalog_mutation_project(
+            &security,
+            &req.project_id,
+            "ScanProjectionDrift",
+        ) {
+            Ok(project_id) => project_id,
+            Err(err) => return self.record_grpc("ScanProjectionDrift", started, Err(err)),
         };
         let message_type = req.message_type.trim().to_string();
         if let Err(err) = validate_projection_drift_request(&project_id, &message_type) {
@@ -568,7 +571,22 @@ impl DataBrokerService {
         };
         let (mode, source_limit, mode_label) =
             projection_drift_scan_mode(&req.scan_mode, rows_per_target, req.limit)?;
-        let active = self.catalog.active_for(&project_id);
+        let active = match self.catalog.active_exact_for(&project_id) {
+            Some(active) => active,
+            None => {
+                return self.record_grpc(
+                    "ScanProjectionDrift",
+                    started,
+                    Err(crate::runtime::executor_utils::schema_status(
+                        tonic::Code::FailedPrecondition,
+                        "catalog",
+                        "ScanProjectionDrift",
+                        "catalog_project_not_active",
+                        "projection drift scanning requires an exact ACTIVE project catalog",
+                    )),
+                );
+            }
+        };
         let plan = crate::runtime::projection::ProjectionPlan::from_manifest(&active.manifest)
             .into_iter()
             .find(|plan| {
@@ -586,18 +604,25 @@ impl DataBrokerService {
                     )],
                 )
             })?;
-        let samples = engine
-            .load_source_samples(&active.manifest, &message_type, source_limit)
-            .await
-            .map_err(|err| {
-                admin_internal_status(
-                    "ScanProjectionDrift",
-                    format!("projection source scan failed: {err}"),
-                )
-            })?;
         let runtime = self.runtime_snapshot();
-        let worker =
-            crate::runtime::drift_reconciliation::DriftScannerWorker::new(runtime.clone(), mode);
+        let samples = match engine
+            .load_source_samples(
+                runtime.as_ref(),
+                &project_id,
+                &active.manifest,
+                &message_type,
+                source_limit,
+            )
+            .await
+        {
+            Ok(samples) => samples,
+            Err(err) => return self.record_grpc("ScanProjectionDrift", started, Err(err)),
+        };
+        let worker = crate::runtime::drift_reconciliation::DriftScannerWorker::new(
+            runtime.clone(),
+            project_id.clone(),
+            mode,
+        );
         let scan_results = worker.scan_plan(&plan, &samples).await;
         let mut reports = Vec::new();
         let mut summary_reports = Vec::new();
@@ -614,6 +639,7 @@ impl DataBrokerService {
                     &project_id,
                     &message_type,
                     &result.report,
+                    &samples,
                 )
                 .await
                 {

@@ -441,6 +441,8 @@ message BackupRunSummary {
   string target_tenant_id = 11;
   int64 created_at_unix = 12;
   int64 completed_at_unix = 13;
+  // First-class project owner of this journal row.
+  string project_id = 14;
 }
 
 // A backup retention/schedule policy.
@@ -456,6 +458,8 @@ message BackupPolicyView {
   string object_bucket = 9;
   int64 created_at_unix = 10;
   int64 updated_at_unix = 11;
+  // First-class project owner of this policy.
+  string project_id = 12;
 }
 
 // ── Request / response envelopes ─────────────────────────────────────────────

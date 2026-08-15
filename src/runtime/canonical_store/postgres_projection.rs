@@ -84,6 +84,7 @@ fn row_to_projection_task(row: sqlx::postgres::PgRow) -> SystemStoreResult<Proje
         task_id,
         idempotency_key: row.try_get("idempotency_key").unwrap_or_default(),
         project_id: row.try_get("project_id").unwrap_or_default(),
+        manifest_checksum: row.try_get("manifest_checksum").unwrap_or_default(),
         target_backend: row.try_get("target_backend").unwrap_or_default(),
         target_instance: row.try_get("target_instance").unwrap_or_default(),
         projection_kind: row.try_get("projection_kind").unwrap_or_default(),
@@ -265,7 +266,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
             UPDATE {rel}
             SET status = 'IN_PROGRESS', updated_at = NOW()
             WHERE task_id IN (SELECT task_id FROM candidates)
-            RETURNING task_id, idempotency_key, project_id,
+            RETURNING task_id, idempotency_key, project_id, manifest_checksum,
                       target_backend, target_instance, projection_kind, resource_name,
                       operation, source_row_key, target_options, source_payload,
                       source_checksum, status, retry_count, last_error,
@@ -445,11 +446,12 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>> {
         let rel = self.projection_relation_ref();
         let sql = format!(
-            r#"SELECT source_table, target_backend, target_instance,
+            r#"SELECT project_id, source_table, target_backend, target_instance,
                       COUNT(*)::BIGINT AS dead_count
                FROM {rel}
                WHERE status = 'DEAD_LETTER'
-               GROUP BY source_table, target_backend, target_instance
+                 AND last_error NOT LIKE 'projection authority rejected:%'
+               GROUP BY project_id, source_table, target_backend, target_instance
                LIMIT $1"#
         );
         let rows = sqlx::query(&sql)
@@ -460,6 +462,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
             out.push(DeadLetterGroup {
+                project_id: row.try_get("project_id").unwrap_or_default(),
                 source_table: row.try_get("source_table").unwrap_or_default(),
                 target_backend: row.try_get("target_backend").unwrap_or_default(),
                 target_instance: row.try_get("target_instance").unwrap_or_default(),
@@ -471,6 +474,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
 
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
@@ -481,11 +485,14 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
                SET status = 'PENDING', retry_count = 0,
                    last_error = 'reconciliation repair', updated_at = NOW()
                WHERE status = 'DEAD_LETTER'
-                 AND source_table = $1
-                 AND target_backend = $2
-                 AND target_instance = $3"#
+                 AND last_error NOT LIKE 'projection authority rejected:%'
+                 AND project_id = $1
+                 AND source_table = $2
+                 AND target_backend = $3
+                 AND target_instance = $4"#
         );
         let result = sqlx::query(&sql)
+            .bind(project_id)
             .bind(source_table)
             .bind(target_backend)
             .bind(target_instance)

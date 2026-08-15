@@ -39,7 +39,8 @@ public interface CatalogVersionRequestOrBuilder extends
 
   /**
    * <pre>
-   * Target catalog version string (empty = latest STAGED).
+   * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+   * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
    * </pre>
    *
    * <code>string version = 3 [json_name = "version"];</code>
@@ -48,7 +49,8 @@ public interface CatalogVersionRequestOrBuilder extends
   java.lang.String getVersion();
   /**
    * <pre>
-   * Target catalog version string (empty = latest STAGED).
+   * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+   * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
    * </pre>
    *
    * <code>string version = 3 [json_name = "version"];</code>
@@ -70,11 +72,19 @@ public interface CatalogVersionRequestOrBuilder extends
       getReasonBytes();
 
   /**
+   * <pre>
+   * Required for ActivateCatalog and RollbackCatalog retries.
+   * </pre>
+   *
    * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
    * @return The idempotencyKey.
    */
   java.lang.String getIdempotencyKey();
   /**
+   * <pre>
+   * Required for ActivateCatalog and RollbackCatalog retries.
+   * </pre>
+   *
    * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
    * @return The bytes for idempotencyKey.
    */

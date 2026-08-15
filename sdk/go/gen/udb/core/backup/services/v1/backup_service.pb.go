@@ -187,8 +187,10 @@ type BackupRunSummary struct {
 	TargetTenantId   string                 `protobuf:"bytes,11,opt,name=target_tenant_id,json=targetTenantId,proto3" json:"target_tenant_id,omitempty"`
 	CreatedAtUnix    int64                  `protobuf:"varint,12,opt,name=created_at_unix,json=createdAtUnix,proto3" json:"created_at_unix,omitempty"`
 	CompletedAtUnix  int64                  `protobuf:"varint,13,opt,name=completed_at_unix,json=completedAtUnix,proto3" json:"completed_at_unix,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// First-class project owner of this journal row.
+	ProjectId     string `protobuf:"bytes,14,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BackupRunSummary) Reset() {
@@ -312,6 +314,13 @@ func (x *BackupRunSummary) GetCompletedAtUnix() int64 {
 	return 0
 }
 
+func (x *BackupRunSummary) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 // A backup retention/schedule policy.
 type BackupPolicyView struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
@@ -326,8 +335,10 @@ type BackupPolicyView struct {
 	ObjectBucket       string                 `protobuf:"bytes,9,opt,name=object_bucket,json=objectBucket,proto3" json:"object_bucket,omitempty"`
 	CreatedAtUnix      int64                  `protobuf:"varint,10,opt,name=created_at_unix,json=createdAtUnix,proto3" json:"created_at_unix,omitempty"`
 	UpdatedAtUnix      int64                  `protobuf:"varint,11,opt,name=updated_at_unix,json=updatedAtUnix,proto3" json:"updated_at_unix,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// First-class project owner of this policy.
+	ProjectId     string `protobuf:"bytes,12,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BackupPolicyView) Reset() {
@@ -435,6 +446,13 @@ func (x *BackupPolicyView) GetUpdatedAtUnix() int64 {
 		return x.UpdatedAtUnix
 	}
 	return 0
+}
+
+func (x *BackupPolicyView) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
 }
 
 type StartTenantBackupRequest struct {
@@ -1577,7 +1595,7 @@ const file_udb_core_backup_services_v1_backup_service_proto_rawDesc = "" +
 	"\x13BackupExcludedTable\x12\x16\n" +
 	"\x06schema\x18\x01 \x01(\tR\x06schema\x12\x14\n" +
 	"\x05table\x18\x02 \x01(\tR\x05table\x12\x16\n" +
-	"\x06reason\x18\x03 \x01(\tR\x06reason\"\xd9\x03\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"\xf8\x03\n" +
 	"\x10BackupRunSummary\x12\x1b\n" +
 	"\tbackup_id\x18\x01 \x01(\tR\bbackupId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x12\n" +
@@ -1594,7 +1612,9 @@ const file_udb_core_backup_services_v1_backup_service_proto_rawDesc = "" +
 	" \x01(\tR\x0esourceTenantId\x12(\n" +
 	"\x10target_tenant_id\x18\v \x01(\tR\x0etargetTenantId\x12&\n" +
 	"\x0fcreated_at_unix\x18\f \x01(\x03R\rcreatedAtUnix\x12*\n" +
-	"\x11completed_at_unix\x18\r \x01(\x03R\x0fcompletedAtUnix\"\xa1\x03\n" +
+	"\x11completed_at_unix\x18\r \x01(\x03R\x0fcompletedAtUnix\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x0e \x01(\tR\tprojectId\"\xc0\x03\n" +
 	"\x10BackupPolicyView\x12\x1b\n" +
 	"\tpolicy_id\x18\x01 \x01(\tR\bpolicyId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1f\n" +
@@ -1608,7 +1628,9 @@ const file_udb_core_backup_services_v1_backup_service_proto_rawDesc = "" +
 	"\robject_bucket\x18\t \x01(\tR\fobjectBucket\x12&\n" +
 	"\x0fcreated_at_unix\x18\n" +
 	" \x01(\x03R\rcreatedAtUnix\x12&\n" +
-	"\x0fupdated_at_unix\x18\v \x01(\x03R\rupdatedAtUnix\"\xe8\x01\n" +
+	"\x0fupdated_at_unix\x18\v \x01(\x03R\rupdatedAtUnix\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\f \x01(\tR\tprojectId\"\xe8\x01\n" +
 	"\x18StartTenantBackupRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vpolicy_name\x18\x02 \x01(\tR\n" +

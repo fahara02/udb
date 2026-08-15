@@ -52,13 +52,13 @@ concurrency:
 
 jobs:
   build:
-    # Benchmark workflow_run events are deployable only when a real benchmark
-    # (manual or post-release) succeeded. The push event is definition validation
-    # and intentionally produces no sdk-benchmark-results artifact.
+    # Benchmark workflow_run events are deployable only when the benchmark was
+    # itself triggered by a completed Release workflow. Manual and push-only
+    # benchmark runs may validate the harness, but cannot publish release proof.
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event != 'push')
+      github.event.workflow_run.event == 'workflow_run')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,8 +85,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
         run: |
-          set -uo pipefail
+          set -euo pipefail
           mkdir -p docs/site
           got_fresh=0
           if [ -n "${TRIGGER_RUN_ID:-}" ]; then
@@ -113,7 +115,81 @@ jobs:
             echo "::error::benchmark run ${TRIGGER_RUN_ID} completed without a fresh sdk-benchmark-results artifact"
             exit 1
           fi
-          if [ "$got_fresh" != 1 ]; then
+          if [ "$got_fresh" = 1 ]; then
+            # Bind the downloaded JSON to this exact post-release benchmark run,
+            # its checked-out release commit, and the release's published binary
+            # checksum. Merely possessing an artifact with the expected name is
+            # not sufficient release provenance.
+            mapfile -t release_proof < <(python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          bench = json.loads(Path("docs/site/bench-results.json").read_text(encoding="utf-8"))
+          release = bench.get("release") or {}
+          git = bench.get("git") or {}
+          environment = bench.get("environment") or {}
+          tag = str(release.get("tag") or "")
+          asset = str(release.get("asset") or "")
+          digest = str(release.get("sha256") or "")
+          commit = str(git.get("commit") or "")
+          run_id = str(environment.get("run_id") or "")
+          trigger_run_id = os.environ.get("TRIGGER_RUN_ID", "")
+          trigger_head_sha = os.environ.get("TRIGGER_HEAD_SHA", "")
+          repository = os.environ.get("GITHUB_REPOSITORY", "")
+
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+
+          require(os.environ.get("TRIGGER_EVENT") == "workflow_run", "benchmark was not triggered by Release workflow_run")
+          require(bench.get("source") == "github-actions", "benchmark artifact source is not github-actions")
+          require(environment.get("workflow") == "Benchmark · SDKs", "benchmark artifact workflow identity mismatch")
+          require(run_id == trigger_run_id and run_id.isdigit(), "benchmark artifact run_id does not match triggering run")
+          require(re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag), f"invalid release tag provenance: {tag!r}")
+          require(re.fullmatch(r"udb-linux-amd64(?:-[a-z0-9]+)?", asset), f"invalid release asset provenance: {asset!r}")
+          require(re.fullmatch(r"[0-9a-f]{64}", digest), "benchmark artifact has no canonical binary SHA-256")
+          require(re.fullmatch(r"[0-9a-f]{40}", commit), f"invalid release commit provenance: {commit!r}")
+          require(commit == trigger_head_sha, "benchmark artifact commit does not match triggering workflow head SHA")
+          expected_url = f"https://github.com/{repository}/releases/tag/{tag}"
+          require(release.get("url") == expected_url, "benchmark artifact release URL does not match repository/tag")
+          history = bench.get("history") or []
+          require(history, "benchmark artifact has no current history point")
+          require(history[-1].get("release_tag") == tag, "benchmark history tag disagrees with release provenance")
+          require(history[-1].get("release_sha256") == digest, "benchmark history digest disagrees with release provenance")
+          print(tag)
+          print(asset)
+          print(digest)
+          print(commit)
+          PY
+            )
+            if [ "${#release_proof[@]}" -ne 4 ]; then
+              echo "::error::benchmark artifact did not yield complete release provenance"
+              exit 1
+            fi
+            release_tag="${release_proof[0]}"
+            release_asset="${release_proof[1]}"
+            artifact_digest="${release_proof[2]}"
+            artifact_commit="${release_proof[3]}"
+            published_commit="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${release_tag}" --jq .sha)"
+            if [ "${published_commit}" != "${artifact_commit}" ]; then
+              echo "::error::${release_tag} resolves to ${published_commit}, not benchmarked commit ${artifact_commit}"
+              exit 1
+            fi
+            rm -rf release-proof
+            gh release download "${release_tag}" --repo "${GITHUB_REPOSITORY}" \
+              --pattern "${release_asset}.sha256" --dir release-proof
+            read -r published_digest published_asset extra < "release-proof/${release_asset}.sha256"
+            published_asset="${published_asset#\*}"
+            if [[ ! "${published_digest}" =~ ^[0-9a-fA-F]{64}$ ]] || \
+               [ "${published_asset}" != "${release_asset}" ] || \
+               [ -n "${extra:-}" ] || \
+               [ "${published_digest,,}" != "${artifact_digest}" ]; then
+              echo "::error::benchmark binary digest does not match ${release_tag}/${release_asset}.sha256"
+              exit 1
+            fi
+          else
             # No triggering benchmark means this is a direct docs/wasm push.
             # Keep the COMMITTED docs/site/bench-results.json. Do NOT re-fetch
             # the currently-published board: if it ever went stale, curling it

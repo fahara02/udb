@@ -36,7 +36,7 @@ class BackupExcludedTable(_message.Message):
     def __init__(self, schema: _Optional[str] = ..., table: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class BackupRunSummary(_message.Message):
-    __slots__ = ("backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "created_at_unix", "completed_at_unix")
+    __slots__ = ("backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "created_at_unix", "completed_at_unix", "project_id")
     BACKUP_ID_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
@@ -50,6 +50,7 @@ class BackupRunSummary(_message.Message):
     TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
     COMPLETED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     backup_id: str
     tenant_id: str
     kind: str
@@ -63,10 +64,11 @@ class BackupRunSummary(_message.Message):
     target_tenant_id: str
     created_at_unix: int
     completed_at_unix: int
-    def __init__(self, backup_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., kind: _Optional[str] = ..., status: _Optional[str] = ..., object_prefix: _Optional[str] = ..., manifest_checksum: _Optional[str] = ..., table_count: _Optional[int] = ..., total_rows: _Optional[int] = ..., excluded_count: _Optional[int] = ..., source_tenant_id: _Optional[str] = ..., target_tenant_id: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., completed_at_unix: _Optional[int] = ...) -> None: ...
+    project_id: str
+    def __init__(self, backup_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., kind: _Optional[str] = ..., status: _Optional[str] = ..., object_prefix: _Optional[str] = ..., manifest_checksum: _Optional[str] = ..., table_count: _Optional[int] = ..., total_rows: _Optional[int] = ..., excluded_count: _Optional[int] = ..., source_tenant_id: _Optional[str] = ..., target_tenant_id: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., completed_at_unix: _Optional[int] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class BackupPolicyView(_message.Message):
-    __slots__ = ("policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at_unix", "updated_at_unix")
+    __slots__ = ("policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at_unix", "updated_at_unix", "project_id")
     POLICY_ID_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     POLICY_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -78,6 +80,7 @@ class BackupPolicyView(_message.Message):
     OBJECT_BUCKET_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     policy_id: str
     tenant_id: str
     policy_name: str
@@ -89,7 +92,8 @@ class BackupPolicyView(_message.Message):
     object_bucket: str
     created_at_unix: int
     updated_at_unix: int
-    def __init__(self, policy_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., policy_name: _Optional[str] = ..., schedule_cron: _Optional[str] = ..., retention_days: _Optional[int] = ..., max_retained_backups: _Optional[int] = ..., enabled: bool = ..., object_backend: _Optional[str] = ..., object_bucket: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., updated_at_unix: _Optional[int] = ...) -> None: ...
+    project_id: str
+    def __init__(self, policy_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., policy_name: _Optional[str] = ..., schedule_cron: _Optional[str] = ..., retention_days: _Optional[int] = ..., max_retained_backups: _Optional[int] = ..., enabled: bool = ..., object_backend: _Optional[str] = ..., object_bucket: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., updated_at_unix: _Optional[int] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class StartTenantBackupRequest(_message.Message):
     __slots__ = ("tenant_id", "policy_name", "object_backend", "object_bucket", "metadata_json")

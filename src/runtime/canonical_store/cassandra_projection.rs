@@ -151,7 +151,7 @@ pub(super) fn cql_ts(millis: i64) -> scylla::frame::value::CqlTimestamp {
 const TASK_COLS: &str = "task_id, idempotency_key, project_id, target_backend, target_instance, \
      projection_kind, resource_name, operation, source_row_key, target_options, \
      source_payload, source_checksum, status, retry_count, last_error, \
-     created_at, updated_at, next_retry_at, completed_at";
+     created_at, updated_at, next_retry_at, completed_at, manifest_checksum";
 
 fn row_to_projection_task(row: &Row) -> SystemStoreResult<ProjectionTaskRow> {
     let task_id = get_uuid(row, 0)?;
@@ -171,6 +171,7 @@ fn row_to_projection_task(row: &Row) -> SystemStoreResult<ProjectionTaskRow> {
         task_id,
         idempotency_key: get_text(row, 1),
         project_id: get_text(row, 2),
+        manifest_checksum: get_text(row, 19),
         target_backend: get_text(row, 3),
         target_instance: get_text(row, 4),
         projection_kind: get_text(row, 5),
@@ -663,9 +664,10 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
 
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>> {
         // `source_table` isn't in the claim-row column set, so this scan selects
-        // it directly: (source_table, target_backend, target_instance, status).
+        // it directly: (project_id, source_table, target_backend,
+        // target_instance, status, last_error).
         let scan = format!(
-            "SELECT source_table, target_backend, target_instance, status \
+            "SELECT project_id, source_table, target_backend, target_instance, status, last_error \
              FROM {tbl} ALLOW FILTERING",
             tbl = self.projection_table(),
         );
@@ -675,23 +677,34 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
             .await
             .map_err(|e| cass_err("dead_letter_groups scan", e))?;
         use std::collections::HashMap;
-        let mut groups: HashMap<(String, String, String), i64> = HashMap::new();
+        let mut groups: HashMap<(String, String, String, String), i64> = HashMap::new();
         for row in &rows {
-            if get_text(row, 3) != ProjectionTaskStatus::DeadLetter.as_str() {
+            if get_text(row, 4) != ProjectionTaskStatus::DeadLetter.as_str()
+                || get_text(row, 5)
+                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+            {
                 continue;
             }
             *groups
-                .entry((get_text(row, 0), get_text(row, 1), get_text(row, 2)))
+                .entry((
+                    get_text(row, 0),
+                    get_text(row, 1),
+                    get_text(row, 2),
+                    get_text(row, 3),
+                ))
                 .or_insert(0) += 1;
         }
         let mut out: Vec<DeadLetterGroup> = groups
             .into_iter()
             .map(
-                |((source_table, target_backend, target_instance), dead_count)| DeadLetterGroup {
-                    source_table,
-                    target_backend,
-                    target_instance,
-                    dead_count,
+                |((project_id, source_table, target_backend, target_instance), dead_count)| {
+                    DeadLetterGroup {
+                        project_id,
+                        source_table,
+                        target_backend,
+                        target_instance,
+                        dead_count,
+                    }
                 },
             )
             .collect();
@@ -701,15 +714,16 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
 
     async fn requeue_dead_letter_by_source(
         &self,
+        project_id: &str,
         source_table: &str,
         target_backend: &str,
         target_instance: &str,
     ) -> SystemStoreResult<i64> {
-        // Scan + per-row update for the matching (source_table, backend,
-        // instance) triple. source_table is read via the dedicated SELECT below
-        // (it isn't in the claim-row column set).
+        // Scan + per-row update for the matching (project_id, source_table,
+        // backend, instance) tuple. source_table is read via the dedicated
+        // SELECT below (it isn't in the claim-row column set).
         let scan = format!(
-            "SELECT task_id, source_table, target_backend, target_instance, status \
+            "SELECT task_id, project_id, source_table, target_backend, target_instance, status, last_error \
              FROM {tbl} ALLOW FILTERING",
             tbl = self.projection_table(),
         );
@@ -721,13 +735,17 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
         let now = now_unix_ms();
         let mut n = 0i64;
         for row in &rows {
-            let status = get_text(row, 4);
-            if status != ProjectionTaskStatus::DeadLetter.as_str() {
+            let status = get_text(row, 5);
+            if status != ProjectionTaskStatus::DeadLetter.as_str()
+                || get_text(row, 6)
+                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+            {
                 continue;
             }
-            if get_text(row, 1) != source_table
-                || get_text(row, 2) != target_backend
-                || get_text(row, 3) != target_instance
+            if get_text(row, 1) != project_id
+                || get_text(row, 2) != source_table
+                || get_text(row, 3) != target_backend
+                || get_text(row, 4) != target_instance
             {
                 continue;
             }

@@ -1,8 +1,8 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "31045c3465107a61b65700b8df0016a7e7d3a2572f66058d00e7df6989d18190",
-  "contract_version": "5.0.0",
-  "udb_version": "0.5.8",
+  "descriptor_sha256": "5ac4f9b3db8a63bcadce075c883b8090267aa636bf4fd79a998893bf44be8288",
+  "contract_version": "6.0.0",
+  "udb_version": "0.5.9",
   "protocol_version": "1.0.0",
   "service_count": 28,
   "services": [
@@ -77156,10 +77156,10 @@
       "dependency_contract": null,
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "backup.policy",
         "retention_days": 3650,
@@ -77170,7 +77170,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 12,
+      "field_count": 13,
       "fields": [
         {
           "name": "policy_id",
@@ -77194,6 +77194,25 @@
         {
           "name": "tenant_id",
           "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 13,
           "type": "9",
           "column_security": null,
           "scalar_security": {
@@ -77410,10 +77429,10 @@
       "dependency_contract": null,
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "backup.run",
         "retention_days": 3650,
@@ -77424,7 +77443,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 15,
+      "field_count": 16,
       "fields": [
         {
           "name": "backup_id",
@@ -77448,6 +77467,25 @@
         {
           "name": "tenant_id",
           "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 16,
           "type": "9",
           "column_security": null,
           "scalar_security": {
@@ -77788,7 +77826,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 11,
+      "field_count": 12,
       "fields": [
         {
           "name": "policy_id",
@@ -77998,6 +78036,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 12,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -78008,7 +78065,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 13,
+      "field_count": 14,
       "fields": [
         {
           "name": "backup_id",
@@ -78242,6 +78299,25 @@
           "name": "completed_at_unix",
           "number": 13,
           "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 14,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -169091,10 +169167,10 @@
       "file": "udb/core/backup/entity/v1/backup_policy.proto",
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "backup.policy",
         "retention_days": 3650,
@@ -169105,7 +169181,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 12,
+      "field_count": 13,
       "fields": [
         {
           "name": "policy_id",
@@ -169129,6 +169205,25 @@
         {
           "name": "tenant_id",
           "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 13,
           "type": "9",
           "column_security": null,
           "scalar_security": {
@@ -169342,10 +169437,10 @@
       "file": "udb/core/backup/entity/v1/backup_run.proto",
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "backup.run",
         "retention_days": 3650,
@@ -169356,7 +169451,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 15,
+      "field_count": 16,
       "fields": [
         {
           "name": "backup_id",
@@ -169380,6 +169475,25 @@
         {
           "name": "tenant_id",
           "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 16,
           "type": "9",
           "column_security": null,
           "scalar_security": {

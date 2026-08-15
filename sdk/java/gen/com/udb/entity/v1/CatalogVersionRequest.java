@@ -118,7 +118,8 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object version_ = "";
   /**
    * <pre>
-   * Target catalog version string (empty = latest STAGED).
+   * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+   * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
    * </pre>
    *
    * <code>string version = 3 [json_name = "version"];</code>
@@ -139,7 +140,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * Target catalog version string (empty = latest STAGED).
+   * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+   * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
    * </pre>
    *
    * <code>string version = 3 [json_name = "version"];</code>
@@ -203,6 +205,10 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object idempotencyKey_ = "";
   /**
+   * <pre>
+   * Required for ActivateCatalog and RollbackCatalog retries.
+   * </pre>
+   *
    * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
    * @return The idempotencyKey.
    */
@@ -220,6 +226,10 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Required for ActivateCatalog and RollbackCatalog retries.
+   * </pre>
+   *
    * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
    * @return The bytes for idempotencyKey.
    */
@@ -845,7 +855,8 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object version_ = "";
     /**
      * <pre>
-     * Target catalog version string (empty = latest STAGED).
+     * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+     * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
      * </pre>
      *
      * <code>string version = 3 [json_name = "version"];</code>
@@ -865,7 +876,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Target catalog version string (empty = latest STAGED).
+     * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+     * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
      * </pre>
      *
      * <code>string version = 3 [json_name = "version"];</code>
@@ -886,7 +898,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Target catalog version string (empty = latest STAGED).
+     * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+     * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
      * </pre>
      *
      * <code>string version = 3 [json_name = "version"];</code>
@@ -903,7 +916,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Target catalog version string (empty = latest STAGED).
+     * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+     * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
      * </pre>
      *
      * <code>string version = 3 [json_name = "version"];</code>
@@ -917,7 +931,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Target catalog version string (empty = latest STAGED).
+     * Target catalog selector. ActivateCatalog accepts empty = latest STAGED;
+     * RollbackCatalog requires an explicit prior ROLLED_BACK id/version/checksum.
      * </pre>
      *
      * <code>string version = 3 [json_name = "version"];</code>
@@ -1008,6 +1023,10 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object idempotencyKey_ = "";
     /**
+     * <pre>
+     * Required for ActivateCatalog and RollbackCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
      * @return The idempotencyKey.
      */
@@ -1024,6 +1043,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Required for ActivateCatalog and RollbackCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
      * @return The bytes for idempotencyKey.
      */
@@ -1041,6 +1064,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Required for ActivateCatalog and RollbackCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
      * @param value The idempotencyKey to set.
      * @return This builder for chaining.
@@ -1054,6 +1081,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Required for ActivateCatalog and RollbackCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
      * @return This builder for chaining.
      */
@@ -1064,6 +1095,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Required for ActivateCatalog and RollbackCatalog retries.
+     * </pre>
+     *
      * <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
      * @param value The bytes for idempotencyKey to set.
      * @return This builder for chaining.
