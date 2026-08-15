@@ -135,7 +135,7 @@ EMBEDDING_ROUNDTRIP_SCRIPT_REQUIREMENTS = (
     ("--use-reflection", "ReportEmbedding reflection opt-in"),
     ("cmd.extend([\"-proto\", str((ROOT / args.proto).resolve())])", "ReportEmbedding proto-mode grpcurl"),
     ("sidecar_embed(args.sidecar_url, work)", "sidecar embed call"),
-    ("call_report_embedding(args, report, work[\"tenant_id\"], args.project_id)", "ReportEmbedding callback call"),
+    ("call_report_embedding(args, report, work[\"tenant_id\"], work[\"project_id\"])", "ReportEmbedding callback call"),
     ("x-udb-scopes: udb:embedding:report-embedding", "ReportEmbedding scope metadata"),
     ("authorization: Bearer REDACTED", "redacted bearer command output"),
     ("payload.get(\"upserted\") is not True", "ReportEmbedding upsert assertion"),
@@ -154,7 +154,7 @@ NOTIFY_ROUNDTRIP_SCRIPT_REQUIREMENTS = (
     ("--use-reflection", "ReportDelivery reflection opt-in"),
     ("cmd.extend([\"-proto\", str((ROOT / args.proto).resolve())])", "ReportDelivery proto-mode grpcurl"),
     ("sidecar_send(args.sidecar_url, intent, args.provider_credential)", "sidecar send call"),
-    ("call_report_delivery(args, report, intent[\"tenant_id\"], args.project_id)", "ReportDelivery callback call"),
+    ("call_report_delivery(args, report, intent[\"tenant_id\"], project_id)", "ReportDelivery callback call"),
     ("x-udb-scopes: udb:notification:report-delivery", "ReportDelivery scope metadata"),
     ("authorization: Bearer REDACTED", "redacted bearer command output"),
     ("\"attempt\" not in payload", "ReportDelivery attempt assertion"),
@@ -8325,7 +8325,7 @@ def main():
     report = sidecar_embed(args.sidecar_url, work)
     if args.dry_run:
         return 0
-    call_report_embedding(args, report, work["tenant_id"], args.project_id)
+    call_report_embedding(args, report, work["tenant_id"], work["project_id"])
 '''
         notify_roundtrip_good = '''REPORT_METHOD = "udb.core.notification.services.v1.NotificationService/ReportDelivery"
 CALLBACK_PROTO = "proto/udb/core/notification/services/v1/notification_service.proto"
@@ -8347,7 +8347,7 @@ def main():
     outcome = sidecar_send(args.sidecar_url, intent, args.provider_credential)
     if args.dry_run:
         return 0
-    call_report_delivery(args, report, intent["tenant_id"], args.project_id)
+    call_report_delivery(args, report, intent["tenant_id"], project_id)
 '''
         xa_script_good = """#!/usr/bin/env bash
 KILL_SERVICE="${UDB_HA_XA_KILL_SERVICE:-udb-xa-ha-a}"
@@ -9218,7 +9218,7 @@ jobs:
 
         (scripts_dir / "embedding_sidecar_roundtrip_smoke.py").write_text(
             embedding_roundtrip_good.replace(
-                "call_report_embedding(args, report, work[\"tenant_id\"], args.project_id)",
+                "call_report_embedding(args, report, work[\"tenant_id\"], work[\"project_id\"])",
                 "print(report)",
             ),
             encoding="utf-8",
