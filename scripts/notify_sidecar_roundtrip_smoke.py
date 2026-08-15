@@ -72,6 +72,7 @@ def normalize_intent(value: dict[str, Any]) -> dict[str, str]:
     channel_key, channel_enum = normalize_channel(value.get("channel", "EMAIL"))
     return {
         "tenant_id": required_str(value, "tenant_id"),
+        "project_id": str(value.get("project_id", "")).strip(),
         "log_id": required_str(value, "log_id"),
         "channel": channel_key,
         "channel_enum": channel_enum,
@@ -161,6 +162,7 @@ def load_intent_from_postgres(args: argparse.Namespace) -> dict[str, str]:
         "SELECT json_build_object("
         "'log_id', l.log_id::text, "
         "'tenant_id', l.tenant_id::text, "
+        "'project_id', COALESCE(l.project_id::text, ''), "
         "'channel', l.channel::text, "
         "'recipient_address', COALESCE(l.recipient_address::text, ''), "
         "'rendered_subject', COALESCE(l.rendered_subject::text, ''), "
@@ -211,14 +213,16 @@ def grpcurl_command(args: argparse.Namespace, tenant_id: str, project_id: str) -
         for import_path in args.proto_import_path or DEFAULT_PROTO_IMPORT_PATHS:
             cmd.extend(["-import-path", str((ROOT / import_path).resolve())])
         cmd.extend(["-proto", str((ROOT / args.proto).resolve())])
-    for header in [
+    headers = [
         f"x-tenant-id: {tenant_id}",
-        f"x-project-id: {project_id}",
         "x-purpose: notify-sidecar-roundtrip-smoke",
         "x-request-id: notify-sidecar-roundtrip-smoke",
         "x-correlation-id: notify-sidecar-roundtrip-smoke",
         "x-udb-scopes: udb:notification:report-delivery",
-    ]:
+    ]
+    if project_id:
+        headers.append(f"x-udb-project-id: {project_id}")
+    for header in headers:
         cmd.extend(["-H", header])
     if args.bearer_token:
         cmd.extend(["-H", "authorization: Bearer REDACTED"])
@@ -254,6 +258,7 @@ def selftest() -> int:
     intent = normalize_intent(
         {
             "tenant_id": "tenant-a",
+            "project_id": "project-a",
             "log_id": "00000000-0000-0000-0000-000000000001",
             "channel": "EMAIL",
             "recipient_address": "ops@example.com",
@@ -287,6 +292,15 @@ def selftest() -> int:
         pass
     else:
         raise SmokeError("unsupported channel was not rejected")
+    mismatch_args = parser.parse_args(
+        ["--intent-json", json.dumps(intent), "--dry-run", "--project-id", "project-b"]
+    )
+    try:
+        assert_project(mismatch_args, intent)
+    except SmokeError:
+        pass
+    else:
+        raise SmokeError("--project-id mismatch was not rejected")
     print(json.dumps({"ok": True, "selftest": "notify-sidecar-roundtrip"}, separators=(",", ":")))
     return 0
 
@@ -298,7 +312,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--provider", default=os.environ.get("UDB_NOTIFY_PROVIDER", "smtp"))
     parser.add_argument("--provider-credential", default=os.environ.get("UDB_NOTIFY_PROVIDER_CREDENTIAL", "smoke-credential"))
     parser.add_argument("--broker", default="127.0.0.1:50061", help="internal/control-plane gRPC target")
-    parser.add_argument("--project-id", default=os.environ.get("UDB_PROJECT_ID", "default"))
+    parser.add_argument(
+        "--project-id",
+        default=os.environ.get("UDB_PROJECT_ID", ""),
+        help="optional assertion; must equal the project stored on the queued intent",
+    )
     parser.add_argument("--bearer-token", default=os.environ.get("UDB_BEARER_TOKEN", ""))
     parser.add_argument("--grpcurl", default=os.environ.get("GRPCURL", "grpcurl"))
     parser.add_argument("--plaintext", action=argparse.BooleanOptionalAction, default=True)
@@ -322,12 +340,23 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def assert_project(args: argparse.Namespace, intent: dict[str, str]) -> str:
+    stored = intent["project_id"]
+    expected = args.project_id.strip()
+    if expected and expected != stored:
+        raise SmokeError(
+            f"queued intent project {stored!r} does not match --project-id {expected!r}"
+        )
+    return stored
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     if args.selftest:
         return selftest()
     intent = load_intent(args)
+    project_id = assert_project(args, intent)
     outcome = sidecar_send(args.sidecar_url, intent, args.provider_credential)
     report = build_report(intent, args.provider, outcome)
     if args.dry_run:
@@ -336,20 +365,24 @@ def main() -> int:
                 {
                     "ok": True,
                     "dry_run": True,
-                    "intent": {k: intent[k] for k in ["tenant_id", "log_id", "channel"]},
+                    "intent": {
+                        k: intent[k]
+                        for k in ["tenant_id", "project_id", "log_id", "channel"]
+                    },
                     "report_delivery_request": report,
-                    "grpcurl": grpcurl_command(args, intent["tenant_id"], args.project_id),
+                    "grpcurl": grpcurl_command(args, intent["tenant_id"], project_id),
                 },
                 separators=(",", ":"),
             )
         )
         return 0
-    response = call_report_delivery(args, report, intent["tenant_id"], args.project_id)
+    response = call_report_delivery(args, report, intent["tenant_id"], project_id)
     print(
         json.dumps(
             {
                 "ok": True,
                 "tenant_id": intent["tenant_id"],
+                "project_id": project_id,
                 "log_id": intent["log_id"],
                 "provider": args.provider,
                 "report_delivery": response,

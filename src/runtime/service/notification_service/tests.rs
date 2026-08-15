@@ -1,24 +1,30 @@
 //! Unit guards for the native `NotificationService`: request-body cross-tenant
 //! rejection, the field-violation shapes, the typed policy/schema/capability/
 //! internal details with their `error-reason` trailers, the per-channel send
-//! decision + emit-set computation, the hybrid-tenant template selection scope,
+//! decision + transactional event computation, the hybrid-tenant template selection scope,
 //! and the master-plan 9.13 delivery-adapter guards (credential redaction, the
 //! reused SSRF guard, provider-config parsing). Copied verbatim from the former
 //! god file's `tenant_scope_tests`; imports are explicit (no `use super::*`).
+
+use std::sync::Arc;
 
 use tonic::metadata::MetadataValue;
 use tonic::{Request, Status};
 use uuid::Uuid;
 
+use crate::proto::udb::core::common::v1 as common_pb;
 use crate::proto::udb::core::notification::entity::v1 as notif_entity_pb;
 use crate::proto::udb::core::notification::services::v1 as notif_pb;
 use crate::proto::udb::core::notification::services::v1::notification_service_server::NotificationService;
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+use crate::runtime::DataBrokerRuntime;
+use crate::runtime::catalog::CatalogManager;
 
 use super::NotificationServiceImpl;
 use super::config::{
     NOT_RETRYABLE_STATE, TEMPLATE_NOT_FOUND, VARIABLE_MISSING, delivery_event_topic,
+    legacy_delivery_event_topic,
 };
 #[cfg(feature = "http-client")]
 use super::delivery::parse_notification_delivery_providers_json;
@@ -29,10 +35,14 @@ use super::errors::{
     notification_schema_not_found_status, notification_template_not_found_status,
     notification_tenant_metadata_required_status, status_with_reason,
 };
+use super::events::{
+    NotificationDeliveryEvent, delivery_event_payloads, sent_event_transaction_op,
+    suppressed_event_transaction_op,
+};
 use super::model::{
-    channel_send_decision, deliverable_channels, delivery_attempt_model, log_model,
-    notification_delivery_payload, preference_model, status_to_db, template_locale_or_default,
-    template_model, template_selection_sql,
+    channel_send_decision, delivery_attempt_model, log_model, notification_sent_payload,
+    preference_model, status_to_db, template_locale_or_default, template_model,
+    template_selection_sql,
 };
 use super::store::{
     recipient_opted_out_sql, reset_delivery_attempts_sql, suppress_log_if_pending_sql,
@@ -198,6 +208,58 @@ async fn report_delivery_unspecified_status_carries_field_violation() {
 }
 
 #[tokio::test]
+async fn report_delivery_unspecified_channel_carries_field_violation() {
+    let svc = NotificationServiceImpl::new(); // no pool; validation runs first
+    let mut request = Request::new(notif_pb::ReportDeliveryRequest {
+        tenant_id: "tenant-a".to_string(),
+        log_id: Uuid::new_v4().to_string(),
+        channel: notif_entity_pb::NotificationChannel::Unspecified as i32,
+        provider: "fixture".to_string(),
+        status: notif_entity_pb::NotificationStatus::Delivered as i32,
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+
+    let err = svc
+        .report_delivery(request)
+        .await
+        .expect_err("unspecified delivery channel must fail");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(err.message(), "channel is required");
+    let detail = decode_detail(&err);
+    assert_eq!(detail.field_violations.len(), 1);
+    assert_eq!(detail.field_violations[0].field, "channel");
+}
+
+#[tokio::test]
+async fn report_delivery_empty_provider_carries_field_violation() {
+    let svc = NotificationServiceImpl::new(); // no pool; validation runs first
+    let mut request = Request::new(notif_pb::ReportDeliveryRequest {
+        tenant_id: "tenant-a".to_string(),
+        log_id: Uuid::new_v4().to_string(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        provider: " ".to_string(),
+        status: notif_entity_pb::NotificationStatus::Delivered as i32,
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+
+    let err = svc
+        .report_delivery(request)
+        .await
+        .expect_err("empty delivery provider must fail");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(err.message(), "provider is required");
+    let detail = decode_detail(&err);
+    assert_eq!(detail.field_violations.len(), 1);
+    assert_eq!(detail.field_violations[0].field, "provider");
+}
+
+#[tokio::test]
 async fn upsert_template_missing_event_type_carries_field_violation() {
     let svc = NotificationServiceImpl::new(); // no pool; validation runs first
     let request = Request::new(notif_pb::UpsertTemplateRequest {
@@ -255,48 +317,149 @@ fn set_preference_missing_tenant_status_carries_field_violation() {
 }
 
 #[test]
-fn delivery_channels_exclude_suppressed_logs() {
-    let logs = vec![
-        notif_entity_pb::NotificationLog {
-            channel: notif_entity_pb::NotificationChannel::Email as i32,
-            status: notif_entity_pb::NotificationStatus::Suppressed as i32,
-            ..Default::default()
-        },
-        notif_entity_pb::NotificationLog {
-            channel: notif_entity_pb::NotificationChannel::Sms as i32,
-            status: notif_entity_pb::NotificationStatus::Pending as i32,
-            ..Default::default()
-        },
-    ];
+fn delivery_payload_marks_retry_events() {
+    let log = notif_entity_pb::NotificationLog {
+        log_id: "log-1".to_string(),
+        template_id: "template-1".to_string(),
+        event_type: "REVIEW_ASSIGNED".to_string(),
+        recipient_id: "user-1".to_string(),
+        tenant_id: "tenant-a".to_string(),
+        project_id: "project-a".to_string(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        correlation_id: "corr-1".to_string(),
+        ..Default::default()
+    };
+    let payload = notification_sent_payload(&log, true);
 
-    assert_eq!(
-        deliverable_channels(&logs),
-        vec![notif_entity_pb::NotificationChannel::Sms as i32]
-    );
+    assert_eq!(payload["retry"], true);
+    assert_eq!(payload["channel"], "EMAIL");
+    assert_eq!(payload["channels"][0], "EMAIL");
+    assert_eq!(payload["log_id"], "log-1");
+    assert_eq!(payload["template_id"], "template-1");
+    assert_eq!(payload["recipient_ref"], "user-1");
+    assert_eq!(payload["recipient_id"], "user-1");
+    assert_eq!(payload["correlation_id"], "corr-1");
+    assert_eq!(payload["channels"].as_array().map(Vec::len), Some(1));
 }
 
 #[test]
-fn delivery_payload_marks_retry_events() {
-    let payload = notification_delivery_payload(
-        "log-1",
-        "REVIEW_ASSIGNED",
-        "user-1",
-        "tenant-a",
-        "project-a",
-        &[notif_entity_pb::NotificationChannel::Email as i32],
-        true,
-    );
+fn initial_sent_event_transaction_step_preserves_customer_scope() {
+    let log = notif_entity_pb::NotificationLog {
+        log_id: "log-atomic".to_string(),
+        template_id: "template-atomic".to_string(),
+        event_type: "ORDER_READY".to_string(),
+        recipient_id: "recipient-1".to_string(),
+        tenant_id: "tenant-a".to_string(),
+        project_id: "project-a".to_string(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        correlation_id: "corr-atomic".to_string(),
+        ..Default::default()
+    };
+    let op = sent_event_transaction_op(Some("\"udb_system\".\"outbox_events\""), &log)
+        .expect("build sent-event transaction step")
+        .expect("configured outbox produces a transaction step");
 
-    assert_eq!(payload["retry"], true);
-    assert_eq!(payload["channels"][0], "EMAIL");
-    // TEST-46: the retry emit threads the retried log's id and EXACTLY its
-    // one channel alongside the retry marker — the same
-    // `notification_delivery_payload` call `retry_notification` makes via
-    // `emit_sent_event(pool, &log.log_id, …, &[log.channel], true)`. The
-    // outbox row itself (UPDATE … RETURNING → enqueue) is asserted by the
-    // env-gated live pipeline suite.
-    assert_eq!(payload["log_id"], "log-1");
-    assert_eq!(payload["channels"].as_array().map(Vec::len), Some(1));
+    let crate::runtime::core::native_store::NativeEntityTransactionOp::Outbox(write) = op else {
+        panic!("sent-event helper must return the canonical outbox operation");
+    };
+    assert_eq!(write.topic, "udb.notification.sent.v1");
+    assert_eq!(write.partition_key, "recipient-1");
+    assert_eq!(write.envelope["tenant_id"], "tenant-a");
+    assert_eq!(write.envelope["project_id"], "project-a");
+    assert_eq!(write.envelope["payload"]["log_id"], "log-atomic");
+    assert_eq!(write.envelope["payload"]["recipient_ref"], "recipient-1");
+    assert_eq!(write.envelope["payload"]["channel"], "EMAIL");
+    assert_eq!(write.envelope["payload"]["retry"], false);
+}
+
+#[test]
+fn suppression_event_transaction_step_is_tenant_partitioned_and_redacted() {
+    let log = notif_entity_pb::NotificationLog {
+        log_id: "log-suppressed".to_string(),
+        template_id: "template-suppressed".to_string(),
+        event_type: "ORDER_READY".to_string(),
+        recipient_id: "recipient-1".to_string(),
+        recipient_address: "secret@example.invalid".to_string(),
+        tenant_id: "tenant-a".to_string(),
+        project_id: "project-a".to_string(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        rendered_body: "private body".to_string(),
+        ..Default::default()
+    };
+    let op = suppressed_event_transaction_op(Some("\"udb_system\".\"outbox_events\""), &log)
+        .expect("build suppression event transaction step")
+        .expect("configured outbox produces a transaction step");
+
+    let crate::runtime::core::native_store::NativeEntityTransactionOp::Outbox(write) = op else {
+        panic!("suppression helper must return the canonical outbox operation");
+    };
+    assert_eq!(write.topic, "udb.notification.suppressed.v1");
+    assert_eq!(write.partition_key, "tenant-a");
+    assert_eq!(write.envelope["tenant_id"], "tenant-a");
+    assert_eq!(write.envelope["project_id"], "project-a");
+    assert_eq!(
+        write.envelope["payload"]["suppression_reason"],
+        "USER_OPT_OUT"
+    );
+    let encoded = write.envelope.to_string();
+    assert!(!encoded.contains("secret@example.invalid"));
+    assert!(!encoded.contains("private body"));
+}
+
+#[test]
+fn delivery_alias_payloads_match_the_public_v1_messages() {
+    let event = NotificationDeliveryEvent {
+        log_id: "log-delivery",
+        template_id: "template-delivery",
+        event_type: "ORDER_READY",
+        tenant_id: "tenant-a",
+        project_id: "project-a",
+        correlation_id: "corr-delivery",
+        channel_db: "EMAIL",
+        provider: "fixture-provider",
+        status_db: "FAILED",
+        provider_message_id: "provider-message-1",
+        error_detail: "provider timeout",
+        retry_attempt: 2,
+        will_retry: true,
+    };
+    let (canonical, failed) = delivery_event_payloads(&event);
+    let failed = failed.expect("FAILED has a public compatibility payload");
+
+    assert_eq!(canonical["provider"], "fixture-provider");
+    assert_eq!(canonical["provider_message_id"], "provider-message-1");
+    assert_eq!(failed["log_id"], "log-delivery");
+    assert_eq!(failed["template_id"], "template-delivery");
+    assert_eq!(failed["event_type"], "ORDER_READY");
+    assert_eq!(failed["channel"], "EMAIL");
+    assert_eq!(failed["tenant_id"], "tenant-a");
+    assert_eq!(failed["project_id"], "project-a");
+    assert_eq!(failed["error_code"], "DELIVERY_FAILED");
+    assert_eq!(failed["error_detail"], "provider timeout");
+    assert_eq!(failed["retry_attempt"], 2);
+    assert_eq!(failed["will_retry"], true);
+    assert_eq!(failed["correlation_id"], "corr-delivery");
+    assert!(failed["occurred_at"].as_str().is_some());
+    assert!(failed.get("provider").is_none());
+    assert!(failed.get("provider_message_id").is_none());
+
+    let delivered_event = NotificationDeliveryEvent {
+        status_db: "DELIVERED",
+        error_detail: "",
+        retry_attempt: 0,
+        will_retry: false,
+        ..event
+    };
+    let (_, delivered) = delivery_event_payloads(&delivered_event);
+    let delivered = delivered.expect("DELIVERED has a public compatibility payload");
+    assert_eq!(delivered["log_id"], "log-delivery");
+    assert_eq!(delivered["channel"], "EMAIL");
+    assert_eq!(delivered["tenant_id"], "tenant-a");
+    assert_eq!(delivered["project_id"], "project-a");
+    assert_eq!(delivered["correlation_id"], "corr-delivery");
+    assert!(delivered["occurred_at"].as_str().is_some());
+    assert!(delivered.get("template_id").is_none());
+    assert!(delivered.get("provider").is_none());
 }
 
 #[test]
@@ -455,10 +618,10 @@ fn tenant_metadata_required_status_carries_permission_denied_policy_detail() {
 
 /// TEST-44: an opted-out (recipient, channel) produces the SUPPRESSED row
 /// decision and is excluded from the outbox emit set — driving the REAL
-/// per-channel decision (`channel_send_decision`) and the REAL emit-set
-/// computation (`deliverable_channels`) that `send_notification` runs; the
-/// DB-side preference lookup feeding `opted_out` is covered by the
-/// env-gated live suite.
+/// per-channel decision (`channel_send_decision`) and the same PENDING-log
+/// selection that `send_notification` uses for per-channel sent events; the
+/// DB-side preference lookup feeding `opted_out` is covered by the env-gated
+/// live suite.
 #[test]
 fn opted_out_channel_is_suppressed_and_excluded_from_emit_set() {
     use notif_entity_pb::{NotificationChannel as C, NotificationStatus as S};
@@ -479,11 +642,16 @@ fn opted_out_channel_is_suppressed_and_excluded_from_emit_set() {
             ..Default::default()
         })
         .collect();
-    assert_eq!(deliverable_channels(&logs), vec![C::Sms as i32]);
+    let deliverable_channels: Vec<i32> = logs
+        .iter()
+        .filter(|log| log.status == S::Pending as i32)
+        .map(|log| log.channel)
+        .collect();
+    assert_eq!(deliverable_channels, vec![C::Sms as i32]);
 }
 
 /// TEST-45: template tenant scoping — the real selection query (the one
-/// `get_template` executes) only admits the platform-global default
+/// `get_template` executes) only admits the project-global default
 /// (`tenant_id IS NULL`) or the CALLER's bound tenant (`$4`), so with two
 /// overrides in the table a tenant-B override can never be selected for a
 /// tenant-A caller, and the caller's own override outranks the global
@@ -493,9 +661,14 @@ fn template_selection_scopes_overrides_to_the_caller_tenant() {
     let m = template_model();
     let sql = template_selection_sql(&m);
     let tenant = m.q("tenant_id");
+    let project = m.q("project_id");
     assert!(
         sql.contains(&format!("({tenant} IS NULL OR {tenant} = $4)")),
         "selection must only admit the global default or the caller's tenant: {sql}"
+    );
+    assert!(
+        sql.contains(&format!("{project} = $5")),
+        "selection must be scoped to the exact project: {sql}"
     );
     assert!(
         sql.contains(&format!("ORDER BY {tenant} NULLS LAST LIMIT 1")),
@@ -533,6 +706,84 @@ async fn report_delivery_rejects_cross_tenant_body() {
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
 }
 
+/// The sidecar callback may carry both transport metadata and the protobuf
+/// RequestContext. They must name the same project before any physical store is
+/// selected, otherwise a same-tenant callback could be replayed into another
+/// project's notification database.
+#[tokio::test]
+async fn report_delivery_rejects_cross_project_body_context() {
+    let svc = NotificationServiceImpl::new();
+    let mut request = Request::new(notif_pb::ReportDeliveryRequest {
+        tenant_id: "tenant-a".to_string(),
+        log_id: Uuid::new_v4().to_string(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        provider: "fixture".to_string(),
+        status: notif_entity_pb::NotificationStatus::Delivered as i32,
+        context: Some(common_pb::RequestContext {
+            tenant: Some(common_pb::TenantContext {
+                tenant_id: "tenant-a".to_string(),
+                project_id: "project-b".to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    request.metadata_mut().insert(
+        "x-udb-project-id",
+        MetadataValue::from_static("project-a"),
+    );
+
+    let err = svc
+        .report_delivery(request)
+        .await
+        .expect_err("cross-project callback body must be rejected before store access");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+#[test]
+fn project_store_resolution_requires_live_catalog() {
+    let svc = NotificationServiceImpl::new()
+        .with_runtime(Some(Arc::new(DataBrokerRuntime::default())));
+    let err = svc
+        .resolve_project_store(
+            crate::RequestContext {
+                project_id: "project-a".to_string(),
+                ..crate::RequestContext::default()
+            },
+            true,
+            "test_notification_project_store",
+        )
+        .expect_err("a direct store operation without the live catalog must fail closed");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert!(err.message().contains("requires the live project catalog"));
+}
+
+#[test]
+fn unknown_project_cannot_inherit_default_catalog_or_store() {
+    let catalog = Arc::new(CatalogManager::new(
+        crate::runtime::native_catalog::native_manifest().clone(),
+    ));
+    let svc = NotificationServiceImpl::new()
+        .with_runtime(Some(Arc::new(DataBrokerRuntime::default())))
+        .with_catalog(Some(catalog));
+    let err = svc
+        .resolve_project_store(
+            crate::RequestContext {
+                project_id: "unknown-project".to_string(),
+                ..crate::RequestContext::default()
+            },
+            true,
+            "test_notification_project_store",
+        )
+        .expect_err("an unknown project must not fall back to default authority");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert!(err.message().contains("default-project fallback is refused"));
+}
+
 /// TEST-9.13b: the terminal delivery event name is
 /// `udb.notification.delivery.<status>.v1`, derived from the SAME status
 /// mapping `ReportDelivery` records, and an unknown/0 status fails closed.
@@ -553,6 +804,19 @@ fn delivery_event_topic_names_the_status() {
     assert_eq!(
         delivery_event_topic(status_to_db(S::Sent as i32)),
         "udb.notification.delivery.sent.v1"
+    );
+    assert_eq!(
+        legacy_delivery_event_topic(status_to_db(S::Failed as i32)),
+        Some("udb.notification.failed.v1")
+    );
+    assert_eq!(
+        legacy_delivery_event_topic(status_to_db(S::Delivered as i32)),
+        Some("udb.notification.delivered.v1")
+    );
+    assert_eq!(
+        legacy_delivery_event_topic(status_to_db(S::Sent as i32)),
+        None,
+        "the initial notification.sent event is not a delivery-status alias"
     );
 }
 
@@ -748,7 +1012,7 @@ fn log_transition_allowed_prev_is_a_forward_only_state_machine() {
 
 /// The manual-retry attempt reset grants a FRESH bounded-retry budget: it zeroes
 /// `attempt_count` (so the next worker pass can't instantly exhaust and re-emit the
-/// dead-letter event) and is tenant-scoped. This is the fix for the double
+/// dead-letter event) and is tenant+project scoped. This is the fix for the double
 /// dead-letter after RetryNotification — without the reset a resurrected log is
 /// re-scanned with `attempt_count` still at the ceiling.
 #[test]
@@ -764,7 +1028,7 @@ fn reset_delivery_attempts_grants_a_fresh_budget_tenant_scoped() {
         sql.contains(&format!("{} = 'PENDING'", m.q("status"))),
         "reset must clear the terminal FAILED attempt state: {sql}"
     );
-    // Scoped by notification id AND tenant (never resets another tenant's rows).
+    // Scoped by notification id, tenant, and project.
     assert!(
         sql.contains(&format!("{} = $1::UUID", m.q("notification_id"))),
         "reset must key on the notification id: {sql}"
@@ -773,10 +1037,14 @@ fn reset_delivery_attempts_grants_a_fresh_budget_tenant_scoped() {
         sql.contains(&format!("{} = $2", m.q("tenant_id"))),
         "reset must be tenant-scoped: {sql}"
     );
+    assert!(
+        sql.contains(&format!("{} = $3", m.q("project_id"))),
+        "reset must be project-scoped: {sql}"
+    );
 }
 
 /// The delivery-time opt-out lookup prefers the event-specific preference over the
-/// tenant-wide default, and is scoped to (user_id, tenant, channel) — so an opt-out
+/// tenant-wide default, and is scoped to (user_id, tenant, project, channel) — so an opt-out
 /// recorded after send suppresses delivery on the worker/retry path.
 #[test]
 fn recipient_opted_out_prefers_event_specific_and_is_scoped() {
@@ -785,25 +1053,26 @@ fn recipient_opted_out_prefers_event_specific_and_is_scoped() {
     // Event-specific preference OR the tenant-wide ('') default...
     let event_type = m.q("event_type");
     assert!(
-        sql.contains(&format!("({event_type} = $4 OR {event_type} = '')")),
+        sql.contains(&format!("({event_type} = $5 OR {event_type} = '')")),
         "opt-out must consider the event-specific and global preferences: {sql}"
     );
     // ...with the event-specific row preferred (sorts first).
     assert!(
-        sql.contains(&format!("ORDER BY ({event_type} = $4) DESC")),
+        sql.contains(&format!("ORDER BY ({event_type} = $5) DESC")),
         "the event-specific preference must outrank the tenant-wide default: {sql}"
     );
-    // Keyed on the recipient user id, tenant, and channel.
+    // Keyed on the recipient user id, tenant, project, and channel.
     assert!(
         sql.contains(&format!("{} = $1::UUID", m.q("user_id"))),
         "{sql}"
     );
     assert!(sql.contains(&format!("{} = $2", m.q("tenant_id"))), "{sql}");
-    assert!(sql.contains(&format!("{} = $3", m.q("channel"))), "{sql}");
+    assert!(sql.contains(&format!("{} = $3", m.q("project_id"))), "{sql}");
+    assert!(sql.contains(&format!("{} = $4", m.q("channel"))), "{sql}");
 }
 
 /// Suppression only ever moves a still-PENDING log to SUPPRESSED (never downgrades
-/// a SENT/DELIVERED notification), and is tenant-scoped.
+/// a SENT/DELIVERED notification), and is tenant+project scoped.
 #[test]
 fn suppress_only_moves_pending_logs_tenant_scoped() {
     let m = log_model();
@@ -821,4 +1090,5 @@ fn suppress_only_moves_pending_logs_tenant_scoped() {
         "{sql}"
     );
     assert!(sql.contains(&format!("{} = $2", m.q("tenant_id"))), "{sql}");
+    assert!(sql.contains(&format!("{} = $3", m.q("project_id"))), "{sql}");
 }

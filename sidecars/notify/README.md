@@ -54,6 +54,10 @@ that actually exposes reflection. This is the runnable proof command; the item
 remains partial until it is observed green against an SSRF-allowed HTTPS sidecar
 endpoint and real broker state.
 
+The harness loads `tenant_id` and `project_id` from that same durable intent and
+uses them for callback metadata. `--project-id` is an optional assertion only;
+it fails on a mismatch instead of relabeling another project's queued work.
+
 Example broker provider config before vault wrapping:
 
 ```json

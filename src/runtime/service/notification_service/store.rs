@@ -5,7 +5,6 @@
 //! `(notification_id, channel, provider)` conflict-keyed upsert are byte-for-byte
 //! identical to the former god file.
 
-use sqlx::PgPool;
 use tonic::Status;
 use uuid::Uuid;
 
@@ -157,6 +156,7 @@ fn template_projection() -> LogicalProjection {
         "is_active".to_string(),
         "created_by".to_string(),
         "tenant_id".to_string(),
+        "project_id".to_string(),
     ])
 }
 
@@ -169,6 +169,7 @@ fn preference_projection() -> LogicalProjection {
         "event_type".to_string(),
         "is_opted_out".to_string(),
         "created_by".to_string(),
+        "project_id".to_string(),
     ])
 }
 
@@ -188,15 +189,19 @@ pub(crate) fn notification_log_read(log_id: &str, tenant_id: &str) -> LogicalRea
 
 pub(crate) fn template_scope_filter(
     tenant_id: &str,
+    project_id: &str,
     event_type: &str,
     channel: &str,
     locale: Option<&str>,
     active_only: bool,
 ) -> LogicalFilter {
-    let mut filters = vec![LogicalFilter::Or(vec![
-        LogicalFilter::IsNull("tenant_id".to_string()),
-        eq_filter("tenant_id", tenant_id.to_string()),
-    ])];
+    let mut filters = vec![
+        LogicalFilter::Or(vec![
+            LogicalFilter::IsNull("tenant_id".to_string()),
+            eq_filter("tenant_id", tenant_id.to_string()),
+        ]),
+        eq_filter("project_id", project_id.to_string()),
+    ];
     if !event_type.trim().is_empty() {
         filters.push(eq_filter("event_type", event_type.trim()));
     }
@@ -252,12 +257,14 @@ pub(crate) fn template_read(filter: LogicalFilter, offset: u64, limit: u32) -> L
 fn preference_filter(
     user_id: &str,
     tenant_id: &str,
+    project_id: &str,
     channel: i32,
     event_type: &str,
 ) -> LogicalFilter {
     LogicalFilter::And(vec![
         eq_filter("user_id", user_id.to_string()),
         eq_filter("tenant_id", tenant_id.to_string()),
+        eq_filter("project_id", project_id.to_string()),
         eq_filter("channel", channel_to_db(channel).to_string()),
         eq_filter("event_type", event_type.to_string()),
     ])
@@ -266,12 +273,19 @@ fn preference_filter(
 pub(crate) fn preference_read(
     user_id: &str,
     tenant_id: &str,
+    project_id: &str,
     channel: i32,
     event_type: &str,
 ) -> LogicalRead {
     LogicalRead {
         message_type: PREFERENCE_MSG.to_string(),
-        filter: Some(preference_filter(user_id, tenant_id, channel, event_type)),
+        filter: Some(preference_filter(
+            user_id,
+            tenant_id,
+            project_id,
+            channel,
+            event_type,
+        )),
         projection: Some(preference_projection()),
         sort: Vec::new(),
         include: Vec::new(),
@@ -279,11 +293,16 @@ pub(crate) fn preference_read(
     }
 }
 
-pub(crate) fn preference_list_filter(user_id: &str, tenant_id: &str) -> LogicalFilter {
+pub(crate) fn preference_list_filter(
+    user_id: &str,
+    tenant_id: &str,
+    project_id: &str,
+) -> LogicalFilter {
     let mut filters = vec![eq_filter("user_id", user_id.to_string())];
     if !tenant_id.trim().is_empty() {
         filters.push(eq_filter("tenant_id", tenant_id.to_string()));
     }
+    filters.push(eq_filter("project_id", project_id.to_string()));
     LogicalFilter::And(filters)
 }
 
@@ -393,7 +412,13 @@ pub(crate) async fn is_notification_opted_out(
             .native_entity_read_for_service(
                 "notification",
                 context,
-                preference_read(&user_id, tenant_id, channel, candidate_event),
+                preference_read(
+                    &user_id,
+                    tenant_id,
+                    &context.project_id,
+                    channel,
+                    candidate_event,
+                ),
             )
             .await?;
         if let Some(row) = rows.first() {
@@ -404,40 +429,46 @@ pub(crate) async fn is_notification_opted_out(
 }
 
 /// Upsert the single `NotificationDeliveryAttempt` row keyed on
-/// (notification_id, channel, provider): set the terminal status, BUMP
+/// (tenant, project, notification_id, channel, provider): set the terminal status, BUMP
 /// `attempt_count`, record `last_error`/`provider_message_id`, and stamp the
 /// updated timestamp. Shared by the `ReportDelivery` handler and the delivery
 /// worker so the durable delivery record has ONE writer shape. Returns the stored
 /// row (the handler maps it to the response; the worker ignores it).
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn write_delivery_attempt(
-    pool: &PgPool,
+pub(crate) async fn write_delivery_attempt<'e, E>(
+    executor: E,
     notification_id: Uuid,
     tenant_id: &str,
+    project_id: &str,
     channel_db: &str,
     provider: &str,
     status_db: &str,
     last_error: &str,
     provider_message_id: &str,
-) -> Result<Option<sqlx::postgres::PgRow>, sqlx::Error> {
+) -> Result<Option<sqlx::postgres::PgRow>, sqlx::Error>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
     let m = delivery_attempt_model();
     let rel = m.relation.clone();
     let projection = delivery_attempt_select_projection(&m);
     sqlx::query(&format!(
         "INSERT INTO {rel} AS existing \
-         ({attempt_id}, {notification_id}, {tenant_id}, {channel}, {provider}, {status}, {attempt_count}, {last_error}, {provider_message_id}, {updated_at}) \
-         VALUES (gen_random_uuid(), $1::UUID, $2, $3, $4, $5, 1, NULLIF($6, ''), NULLIF($7, ''), now()) \
-         ON CONFLICT ({notification_id}, {channel}, {provider}) \
+         ({attempt_id}, {notification_id}, {tenant_id}, {project_id}, {channel}, {provider}, {status}, {attempt_count}, {last_error}, {provider_message_id}, {updated_at}) \
+         VALUES (gen_random_uuid(), $1::UUID, $2, $3, $4, $5, $6, 1, NULLIF($7, ''), NULLIF($8, ''), now()) \
+         ON CONFLICT ({tenant_id}, {project_id}, {notification_id}, {channel}, {provider}) \
          DO UPDATE SET {status} = EXCLUDED.{status}, \
                        {attempt_count} = existing.{attempt_count} + 1, \
                        {last_error} = EXCLUDED.{last_error}, \
                        {provider_message_id} = COALESCE(EXCLUDED.{provider_message_id}, existing.{provider_message_id}), \
                        {tenant_id} = EXCLUDED.{tenant_id}, \
+                       {project_id} = EXCLUDED.{project_id}, \
                        {updated_at} = now() \
          RETURNING {projection}",
         attempt_id = m.q("attempt_id"),
         notification_id = m.q("notification_id"),
         tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
         channel = m.q("channel"),
         provider = m.q("provider"),
         status = m.q("status"),
@@ -448,25 +479,26 @@ pub(crate) async fn write_delivery_attempt(
     ))
     .bind(notification_id)
     .bind(tenant_id)
+    .bind(project_id)
     .bind(channel_db)
     .bind(provider)
     .bind(status_db)
     .bind(last_error)
     .bind(provider_message_id)
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await
 }
 
 /// The `UPDATE` that grants a manually-retried notification a FRESH delivery
 /// budget: reset every `NotificationDeliveryAttempt` row for the notification back
 /// to `attempt_count = 0`, status `PENDING`, and cleared `last_error`. Extracted so
-/// the reset shape (tenant-scoped, budget reset) is unit-testable without a live
+/// the reset shape (tenant+project scoped, budget reset) is unit-testable without a live
 /// Postgres.
 pub(crate) fn reset_delivery_attempts_sql(m: &NativeModel) -> String {
     format!(
         "UPDATE {rel} SET {attempt_count} = 0, {status} = 'PENDING', \
                           {last_error} = NULL, {updated_at} = now() \
-         WHERE {notification_id} = $1::UUID AND {tenant_id} = $2",
+         WHERE {notification_id} = $1::UUID AND {tenant_id} = $2 AND {project_id} = $3",
         rel = m.relation,
         attempt_count = m.q("attempt_count"),
         status = m.q("status"),
@@ -474,6 +506,7 @@ pub(crate) fn reset_delivery_attempts_sql(m: &NativeModel) -> String {
         updated_at = m.q("updated_at"),
         notification_id = m.q("notification_id"),
         tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
     )
 }
 
@@ -482,13 +515,14 @@ pub(crate) fn reset_delivery_attempts_sql(m: &NativeModel) -> String {
 /// re-failing. Without this, a resurrected (FAILED → PENDING) log is re-scanned by
 /// the worker with `attempt_count` still at the ceiling, so the next attempt
 /// immediately exhausts and re-emits the dead-letter event (a double dead-letter)
-/// while granting the manual retry only a single attempt. Tenant-scoped. Runs in
+/// while granting the manual retry only a single attempt. Tenant+project scoped. Runs in
 /// the SAME transaction as the log's FAILED → PENDING flip so the delivery worker
 /// never observes a PENDING log paired with a stale, already-exhausted attempt row.
 pub(crate) async fn reset_delivery_attempts_for_retry<'e, E>(
     executor: E,
     notification_id: Uuid,
     tenant_id: &str,
+    project_id: &str,
 ) -> Result<(), sqlx::Error>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -497,6 +531,7 @@ where
     sqlx::query(&reset_delivery_attempts_sql(&m))
         .bind(notification_id)
         .bind(tenant_id)
+        .bind(project_id)
         .execute(executor)
         .await?;
     Ok(())
@@ -504,21 +539,23 @@ where
 
 /// The opt-out lookup the delivery worker and retry path run against the durable
 /// preference table before handing a PENDING notification to a provider. Keyed on
-/// (user_id, tenant, channel), it prefers the event-specific preference over the
-/// tenant-wide (`''`) default — the SAME precedence `is_notification_opted_out`
-/// applies at send time — via `ORDER BY (event_type = $4) DESC`. Extracted so the
+/// (user_id, tenant, project, channel), it prefers the event-specific preference
+/// over the tenant-wide (`''`) default — the SAME precedence
+/// `is_notification_opted_out` applies at send time — via
+/// `ORDER BY (event_type = $5) DESC`. Extracted so the
 /// scoping + precedence are unit-testable without a live Postgres.
 pub(crate) fn recipient_opted_out_sql(m: &NativeModel) -> String {
     format!(
         "SELECT {is_opted_out} FROM {rel} \
-         WHERE {user_id} = $1::UUID AND {tenant_id} = $2 AND {channel} = $3 \
-           AND ({event_type} = $4 OR {event_type} = '') \
-         ORDER BY ({event_type} = $4) DESC \
+         WHERE {user_id} = $1::UUID AND {tenant_id} = $2 AND {project_id} = $3 \
+           AND {channel} = $4 AND ({event_type} = $5 OR {event_type} = '') \
+         ORDER BY ({event_type} = $5) DESC \
          LIMIT 1",
         rel = m.relation,
         is_opted_out = m.q("is_opted_out"),
         user_id = m.q("user_id"),
         tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
         channel = m.q("channel"),
         event_type = m.q("event_type"),
     )
@@ -535,6 +572,7 @@ pub(crate) async fn recipient_opted_out_db<'e, E>(
     executor: E,
     recipient_id: Uuid,
     tenant_id: &str,
+    project_id: &str,
     channel: i32,
     event_type: &str,
 ) -> Result<bool, sqlx::Error>
@@ -545,6 +583,7 @@ where
     let opted: Option<bool> = sqlx::query_scalar(&recipient_opted_out_sql(&m))
         .bind(recipient_id)
         .bind(tenant_id)
+        .bind(project_id)
         .bind(channel_to_db(channel))
         .bind(event_type)
         .fetch_optional(executor)
@@ -554,26 +593,29 @@ where
 
 /// The `UPDATE` that moves a still-PENDING log to the terminal SUPPRESSED state
 /// when the recipient has opted out. Gated on PENDING so a delivered/sent
-/// notification is never downgraded, and tenant-scoped. Extracted for unit tests.
+/// notification is never downgraded, and tenant+project scoped. Extracted for unit tests.
 pub(crate) fn suppress_log_if_pending_sql(m: &NativeModel) -> String {
     format!(
         "UPDATE {rel} SET {status} = 'SUPPRESSED' \
-         WHERE {log_id} = $1::UUID AND {tenant_id} = $2 AND {status} = 'PENDING'",
+         WHERE {log_id} = $1::UUID AND {tenant_id} = $2 AND {project_id} = $3 \
+           AND {status} = 'PENDING'",
         rel = m.relation,
         status = m.q("status"),
         log_id = m.q("log_id"),
         tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
     )
 }
 
 /// Suppress an opted-out notification: move a still-PENDING log to the terminal
 /// SUPPRESSED state (fail-closed — the recipient is never contacted) instead of
-/// delivering. Tenant-scoped and gated on PENDING so it never downgrades a
+/// delivering. Tenant+project scoped and gated on PENDING so it never downgrades a
 /// notification that already reached SENT/DELIVERED. Returns whether a row moved.
 pub(crate) async fn suppress_log_if_pending<'e, E>(
     executor: E,
     log_id: Uuid,
     tenant_id: &str,
+    project_id: &str,
 ) -> Result<bool, sqlx::Error>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -582,6 +624,7 @@ where
     let result = sqlx::query(&suppress_log_if_pending_sql(&m))
         .bind(log_id)
         .bind(tenant_id)
+        .bind(project_id)
         .execute(executor)
         .await?;
     Ok(result.rows_affected() > 0)
@@ -590,22 +633,26 @@ where
 /// Transition a `NotificationLog.status` when a terminal delivery outcome is
 /// recorded, but ONLY from an allowed prior state (`allowed_prev`). This is the
 /// forward state machine `PENDING → SENT → DELIVERED`: a later attempt can never
-/// downgrade a delivered notification, and the `(log_id, tenant_id)` predicate
-/// keeps the write tenant-scoped. Idempotent — a no-op when the log is already
-/// in a further state or belongs to another tenant. Returns whether a row moved.
+/// downgrade a delivered notification, and the `(log_id, tenant_id, project_id)`
+/// predicate keeps the write scoped. Idempotent — a no-op when the log is already
+/// in a further state or belongs to another tenant/project. Returns whether a row moved.
 ///
 /// Before this, the log stayed `PENDING` forever after a real send, so
 /// `GetNotification`/`GetDeliveryStats` never reflected actual deliveries. The
 /// FAILED transition is deliberately NOT handled here — it belongs with the
 /// bounded-retry model (max-attempts + backoff) rather than marking a log failed
 /// on the first transient error.
-pub(crate) async fn transition_log_status(
-    pool: &PgPool,
+pub(crate) async fn transition_log_status<'e, E>(
+    executor: E,
     log_id: Uuid,
     tenant_id: &str,
+    project_id: &str,
     new_status: &str,
     allowed_prev: &[&str],
-) -> Result<bool, sqlx::Error> {
+) -> Result<bool, sqlx::Error>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
     if allowed_prev.is_empty() {
         return Ok(false);
     }
@@ -614,16 +661,19 @@ pub(crate) async fn transition_log_status(
     let prev: Vec<String> = allowed_prev.iter().map(|state| state.to_string()).collect();
     let result = sqlx::query(&format!(
         "UPDATE {rel} SET {status} = $1 \
-         WHERE {log_id} = $2::UUID AND {tenant_id} = $3 AND {status} = ANY($4)",
+         WHERE {log_id} = $2::UUID AND {tenant_id} = $3 AND {project_id} = $4 \
+           AND {status} = ANY($5)",
         status = m.q("status"),
         log_id = m.q("log_id"),
         tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
     ))
     .bind(new_status)
     .bind(log_id)
     .bind(tenant_id)
+    .bind(project_id)
     .bind(&prev)
-    .execute(pool)
+    .execute(executor)
     .await?;
     Ok(result.rows_affected() > 0)
 }

@@ -1159,6 +1159,18 @@ jobs:
           UDB_VAULT_DB_ROLES_JSON: '[{"role_name":"authority-test-read","tenant_id":"tenant-a","project_id":"default","target_instance":"primary","database_name":"udb","policy_revision":"ci-v1","relations":[{"schema":"udb_vault_authority_test","table":"records","tenant_column":"tenant_id","project_column":"project_id","privileges":["SELECT"]}],"ttl_seconds_max":600}]'
         run: cargo test --locked --lib -- --ignored --nocapture --test-threads=1
 
+      - name: Wire-codec served live tests
+        # These regressions write and read through the real served executor paths.
+        # The required flag converts a missing/renamed provisioned DSN from a
+        # false-green runtime skip into a test failure.
+        env:
+          UDB_WIRE_CODEC_LIVE_TESTS: "1"
+          UDB_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_MYSQL_DSN: mysql://udb:udb@127.0.0.1:53306/udb
+          UDB_MSSQL_DSN: Server=127.0.0.1,51433;User=sa;Password=Udb_Strong#2026;Database=udb;TrustServerCertificate=true
+          UDB_CASSANDRA_DSN: 127.0.0.1:59042
+        run: cargo test --locked --lib runtime::wire_codec_live_tests -- --nocapture --test-threads=1
+
       - name: Canonical store live conformance
         env:
           UDB_PG_DSN: postgres://udb:udb@localhost:55432/udb

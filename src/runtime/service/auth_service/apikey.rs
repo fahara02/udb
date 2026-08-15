@@ -230,12 +230,7 @@ impl ApiKeyServiceImpl {
         }
         if !expected_project.trim().is_empty() && expected_project.trim() != grant.project_id.trim()
         {
-            return Err(Self::policy_status_with_code(
-                Code::PermissionDenied,
-                "api_key_project_scope",
-                "caller_project_mismatch",
-                "API key grant belongs to a different project",
-            ));
+            return Err(Self::project_mismatch_status());
         }
         Ok(grant)
     }
@@ -255,6 +250,15 @@ impl ApiKeyServiceImpl {
             "api_key_tenant_scope",
             "caller_tenant_mismatch",
             "api key belongs to a different tenant",
+        )
+    }
+
+    fn project_mismatch_status() -> Status {
+        Self::policy_status_with_code(
+            Code::PermissionDenied,
+            "api_key_project_scope",
+            "caller_project_mismatch",
+            "API key belongs to a different project",
         )
     }
 
@@ -420,35 +424,50 @@ impl ApiKeyServiceImpl {
         Ok(())
     }
 
-    /// Whether the caller holds a genuine cross-tenant (platform) admin role,
-    /// the only identity permitted to act on a tenant-scoped key without
-    /// supplying a matching tenant context. Mirrors the `app.platform_admin`
-    /// escape hatch used by the native RLS policies (storage/webrtc/tenant) so
-    /// the trait-level gate and the row-level gate recognize the SAME role set.
-    /// Empty caller / no recognized role → not an admin (fail-closed default).
+    /// Enforce the full tenant/project lineage of a resolved API-key record.
+    /// A project-bound claim is restricted to that exact project, including
+    /// denial of tenant-wide (empty-project) keys. A deliberately tenant-bound
+    /// claim with no project retains tenant-wide administration inside its own
+    /// tenant. The existing platform-admin escape hatch remains authoritative.
+    fn enforce_caller_scope(
+        &self,
+        context: Option<&common_pb::RequestContext>,
+        record_tenant: &str,
+        record_project: &str,
+    ) -> Result<(), Status> {
+        self.enforce_caller_tenant(context, record_tenant)?;
+        if Self::caller_is_cross_tenant_admin(context) {
+            return Ok(());
+        }
+        let caller_project = context
+            .and_then(|c| c.tenant.as_ref())
+            .map(|tenant| tenant.project_id.trim())
+            .unwrap_or_default();
+        if !caller_project.is_empty() && caller_project != record_project.trim() {
+            return Err(Self::project_mismatch_status());
+        }
+        Ok(())
+    }
+
+    /// Whether the caller holds genuine cross-tenant/project platform authority.
+    /// Reuse the method-security predicate so API-key handlers cannot interpret a
+    /// project-bound broad admin scope as permission to escape that project.
+    /// Empty caller / no recognized authority → deny by default.
     fn caller_is_cross_tenant_admin(context: Option<&common_pb::RequestContext>) -> bool {
-        const CROSS_TENANT_ADMIN_ROLES: &[&str] = &[
-            "platform_admin",
-            "udb:platform_admin",
-            "superadmin",
-            "super_admin",
-        ];
-        const CROSS_TENANT_ADMIN_SCOPES: &[&str] = &["*", "udb:*", "udb:admin", "udb:auth:admin"];
-        context
-            .map(|c| {
-                let role_admin = c.roles.iter().any(|role| {
-                    let role = role.trim();
-                    CROSS_TENANT_ADMIN_ROLES
-                        .iter()
-                        .any(|admin| role.eq_ignore_ascii_case(admin))
-                });
-                let scope_admin = c.scopes.iter().any(|scope| {
-                    let scope = scope.trim();
-                    CROSS_TENANT_ADMIN_SCOPES.contains(&scope)
-                });
-                role_admin || scope_admin
-            })
-            .unwrap_or(false)
+        let Some(context) = context else {
+            return false;
+        };
+        let (tenant_id, project_id) = context
+            .tenant
+            .as_ref()
+            .map(|tenant| (tenant.tenant_id.as_str(), tenant.project_id.as_str()))
+            .unwrap_or(("", ""));
+        crate::runtime::service::method_security::has_cross_tenant_platform_authority(
+            tenant_id,
+            project_id,
+            &context.scopes,
+            &context.roles,
+        )
     }
 
     fn current_claim_request_context() -> Option<common_pb::RequestContext> {
@@ -492,6 +511,19 @@ impl ApiKeyServiceImpl {
             return Err(Self::read_tenant_required_status());
         }
         Ok(Some(caller_tenant))
+    }
+
+    /// Optional project restriction for list/read surfaces. Platform admins and
+    /// intentionally tenant-bound callers retain their broader posture; a
+    /// project-bound claim is filtered before pagination.
+    fn read_project_filter(context: Option<&common_pb::RequestContext>) -> Option<String> {
+        if Self::caller_is_cross_tenant_admin(context) {
+            return None;
+        }
+        context
+            .and_then(|c| c.tenant.as_ref())
+            .map(|tenant| tenant.project_id.trim().to_string())
+            .filter(|project| !project.is_empty())
     }
 
     fn api_key_matches_status(
@@ -820,6 +852,17 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .and_then(|ctx| ctx.tenant.as_ref())
             .map(|tenant| tenant.project_id.clone())
             .unwrap_or_default();
+        let caller_context = Self::current_claim_request_context();
+        // Reject an explicitly foreign body scope before owner/grant lookup. The
+        // body is not authoritative, so this is only a preflight; the resolved
+        // grant is checked again below before any key material is persisted.
+        if !requested_tenant.trim().is_empty() || !requested_project.trim().is_empty() {
+            self.enforce_caller_scope(
+                caller_context.as_ref(),
+                &requested_tenant,
+                &requested_project,
+            )?;
+        }
         let grant = self
             .active_service_account_grant(
                 req.owner_id.trim(),
@@ -831,8 +874,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
         // `req.context`) to the grant's authoritative tenant — a tenant-A caller
         // must not mint a key inheriting a tenant-B service account's grant/scopes.
         // Mirrors the sibling get/update/revoke/rotate handlers.
-        let caller_context = Self::current_claim_request_context();
-        self.enforce_caller_tenant(caller_context.as_ref(), &grant.tenant_id)?;
+        self.enforce_caller_scope(caller_context.as_ref(), &grant.tenant_id, &grant.project_id)?;
         let key_scopes = super::grants::validate_service_scopes(&req.scopes, &grant.scopes)?;
         let rec = ApiKeyRecord {
             key_prefix: authn::api_key_prefix(&plain_key),
@@ -924,7 +966,11 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .map_err(|err| Self::internal_status("get_api_key_load", err))?
         {
             Some(rec) => {
-                self.enforce_caller_tenant(caller_context.as_ref(), &rec.tenant_id)?;
+                self.enforce_caller_scope(
+                    caller_context.as_ref(),
+                    &rec.tenant_id,
+                    &rec.project_id,
+                )?;
                 Some(api_key_to_pb(&rec, now))
             }
             None => return Err(Self::api_key_not_found_status("get_api_key")),
@@ -952,6 +998,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
         let (limit, offset, _) = bounded_page_window(page);
         let caller_context = Self::current_claim_request_context();
         let tenant_filter = Self::read_tenant_filter(caller_context.as_ref())?;
+        let project_filter = Self::read_project_filter(caller_context.as_ref());
         let mut records = self
             .api_keys
             .list_for_principal(&req.owner_id, false, now)
@@ -961,8 +1008,11 @@ impl ApiKeyService for ApiKeyServiceImpl {
         if let Some(tenant_filter) = tenant_filter {
             records.retain(|rec| rec.tenant_id.trim() == tenant_filter);
         }
+        if let Some(project_filter) = project_filter {
+            records.retain(|rec| rec.project_id.trim() == project_filter);
+        }
         for rec in &records {
-            self.enforce_caller_tenant(caller_context.as_ref(), &rec.tenant_id)?;
+            self.enforce_caller_scope(caller_context.as_ref(), &rec.tenant_id, &rec.project_id)?;
         }
         let total = records.len();
         let keys = records
@@ -995,7 +1045,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
         // matching the read paths (`list`/`get`/`validate`) and never trusting a
         // spoofable/absent body tenant.
         let caller_context = Self::current_claim_request_context();
-        self.enforce_caller_tenant(caller_context.as_ref(), &rec.tenant_id)?;
+        self.enforce_caller_scope(caller_context.as_ref(), &rec.tenant_id, &rec.project_id)?;
         let grant = self
             .active_service_account_grant(&rec.principal_id, &rec.tenant_id, &rec.project_id)
             .await?;
@@ -1052,7 +1102,11 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .ok_or_else(|| Self::api_key_not_found_status("revoke_api_key"))?;
         // Caller tenant from the VALIDATED claim, not the spoofable body context.
         let caller_context = Self::current_claim_request_context();
-        self.enforce_caller_tenant(caller_context.as_ref(), &existing.tenant_id)?;
+        self.enforce_caller_scope(
+            caller_context.as_ref(),
+            &existing.tenant_id,
+            &existing.project_id,
+        )?;
         let ok = self
             .api_keys
             .revoke(&req.key_id, now)
@@ -1110,7 +1164,11 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .ok_or_else(|| Self::api_key_not_found_status("rotate_api_key"))?;
         // Caller tenant from the VALIDATED claim, not the spoofable body context.
         let caller_context = Self::current_claim_request_context();
-        self.enforce_caller_tenant(caller_context.as_ref(), &existing.tenant_id)?;
+        self.enforce_caller_scope(
+            caller_context.as_ref(),
+            &existing.tenant_id,
+            &existing.project_id,
+        )?;
         let grant = self
             .active_service_account_grant(
                 &existing.principal_id,
@@ -1213,6 +1271,11 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .and_then(|c| c.tenant.as_ref())
             .map(|t| t.tenant_id.clone())
             .unwrap_or_default();
+        let caller_project = caller_context
+            .as_ref()
+            .and_then(|c| c.tenant.as_ref())
+            .map(|t| t.project_id.trim().to_string())
+            .unwrap_or_default();
         let tenant_filter = if !req.tenant_id.trim().is_empty() {
             self.enforce_caller_tenant(caller_context.as_ref(), &req.tenant_id)?;
             req.tenant_id.clone()
@@ -1226,6 +1289,23 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 "emergency revoke requires tenant_id or tenant context",
             ));
         }
+        if !req.project_id.trim().is_empty() {
+            self.enforce_caller_scope(
+                caller_context.as_ref(),
+                &tenant_filter,
+                req.project_id.trim(),
+            )?;
+        }
+        // A project-bound claim can never widen the bulk selector by omitting
+        // project_id. Tenant-bound callers (empty claim project) retain their
+        // intentional tenant-wide posture; platform admins may choose either.
+        let project_filter = if Self::caller_is_cross_tenant_admin(caller_context.as_ref())
+            || caller_project.is_empty()
+        {
+            req.project_id.trim().to_string()
+        } else {
+            caller_project.clone()
+        };
         let Some(pool) = self.pg_pool.as_ref() else {
             return Err(Self::capability_status(
                 "emergency_revoke",
@@ -1307,7 +1387,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .bind(&tenant_filter)
             .bind(req.key_prefix.trim())
             .bind(req.owner_id.trim())
-            .bind(req.project_id.trim())
+            .bind(&project_filter)
             .bind(req.scope.trim())
             .bind(created_before)
             .fetch_all(pool)
@@ -1339,6 +1419,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
             "operation": "emergency_revoke",
             "result": "ok",
             "tenant_id": tenant_filter.clone(),
+            "project_id": project_filter.clone(),
             "revoked_count": revoked.len(),
             "revoked_key_ids": revoked.clone(),
             "reason": req.reason.clone(),
@@ -1354,14 +1435,14 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .with_correlation(operation_id.clone())
             .with_compliance(ComplianceEnvelope {
                 actor,
-                actor_project: req.project_id.clone(),
+                actor_project: caller_project,
                 target_resource: if req.key_prefix.trim().is_empty() {
                     format!("apikey:tenant:{}", tenant_filter)
                 } else {
                     format!("apikey:{}", req.key_prefix)
                 },
                 target_tenant: tenant_filter.clone(),
-                target_project: req.project_id.clone(),
+                target_project: project_filter,
                 operation: "emergency_revoke".to_string(),
                 outcome: "success".to_string(),
                 reason_code: if req.reason.trim().is_empty() {
@@ -1652,8 +1733,50 @@ impl ApiKeyService for ApiKeyServiceImpl {
         // directly; otherwise resolve the prefix → UUID via the `api_keys` table.
         let ak = native_model(
             "udb.core.apikey.entity.v1.ApiKey",
-            &["key_id", "key_prefix"],
+            &["key_id", "key_prefix", "tenant_id", "project_id"],
         );
+        let target_pred = if Uuid::parse_str(key_ref).is_ok() {
+            format!("{key_id} = $1::UUID", key_id = ak.q("key_id"))
+        } else {
+            format!("{key_prefix} = $1", key_prefix = ak.q("key_prefix"))
+        };
+        let active = ak
+            .soft_delete_is_null()
+            .unwrap_or_else(|| "TRUE".to_string());
+        let target_sql = format!(
+            "SELECT {tenant}::TEXT AS tenant_id, COALESCE({project}::TEXT, '') AS project_id \
+             FROM {rel} WHERE {active} AND {target_pred} LIMIT 1",
+            tenant = ak.q("tenant_id"),
+            project = ak.q("project_id"),
+            rel = ak.relation,
+            active = active,
+            target_pred = target_pred,
+        );
+        let target = sqlx::query(&target_sql)
+            .bind(key_ref)
+            .fetch_optional(pool)
+            .await
+            .map_err(|err| {
+                Self::internal_status(
+                    "usage_stats_key_scope",
+                    format!("usage stats key scope lookup failed: {err}"),
+                )
+            })?
+            .ok_or_else(|| Self::api_key_not_found_status("get_api_key_usage_stats"))?;
+        let target_tenant: String = target.try_get("tenant_id").map_err(|err| {
+            Self::internal_status(
+                "usage_stats_key_scope",
+                format!("decode usage stats key tenant failed: {err}"),
+            )
+        })?;
+        let target_project: String = target.try_get("project_id").map_err(|err| {
+            Self::internal_status(
+                "usage_stats_key_scope",
+                format!("decode usage stats key project failed: {err}"),
+            )
+        })?;
+        let caller_context = Self::current_claim_request_context();
+        self.enforce_caller_scope(caller_context.as_ref(), &target_tenant, &target_project)?;
         let key_pred = if Uuid::parse_str(key_ref).is_ok() {
             format!("{key_id} = $1::UUID", key_id = m.q("key_id"))
         } else {
@@ -1923,15 +2046,30 @@ mod tests {
     }
 
     fn ctx(tenant: &str, roles: &[&str]) -> RequestContext {
+        ctx_project(tenant, "", roles)
+    }
+
+    fn ctx_project(tenant: &str, project: &str, roles: &[&str]) -> RequestContext {
+        ctx_project_with_scopes(tenant, project, &[], roles)
+    }
+
+    fn ctx_project_with_scopes(
+        tenant: &str,
+        project: &str,
+        scopes: &[&str],
+        roles: &[&str],
+    ) -> RequestContext {
         RequestContext {
-            tenant: if tenant.is_empty() {
+            tenant: if tenant.is_empty() && project.is_empty() {
                 None
             } else {
                 Some(TenantContext {
                     tenant_id: tenant.to_string(),
+                    project_id: project.to_string(),
                     ..Default::default()
                 })
             },
+            scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
             roles: roles.iter().map(|r| r.to_string()).collect(),
             ..Default::default()
         }
@@ -1948,6 +2086,13 @@ mod tests {
         )
     }
 
+    fn svc_with_config_records(
+        config: AuthnConfig,
+        records: Vec<ApiKeyRecord>,
+    ) -> ApiKeyServiceImpl {
+        ApiKeyServiceImpl::with_store(config, Arc::new(MemoryApiKeyStore { records }))
+    }
+
     fn config_with_api_key_hash_secret() -> AuthnConfig {
         AuthnConfig {
             api_key_hash_secret: "test-hash-secret".to_string(),
@@ -1956,11 +2101,21 @@ mod tests {
     }
 
     fn api_key_rec(prefix: &str, owner: &str, tenant: &str) -> ApiKeyRecord {
+        api_key_rec_in_project(prefix, owner, tenant, "")
+    }
+
+    fn api_key_rec_in_project(
+        prefix: &str,
+        owner: &str,
+        tenant: &str,
+        project: &str,
+    ) -> ApiKeyRecord {
         ApiKeyRecord {
             key_prefix: prefix.to_string(),
             key_hash: "hmac-sha256:test".to_string(),
             principal_id: owner.to_string(),
             tenant_id: tenant.to_string(),
+            project_id: project.to_string(),
             scopes: vec!["data:read".to_string()],
             created_at_unix: 1,
             ..Default::default()
@@ -2322,6 +2477,73 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_api_key_denies_bound_broad_scope_before_owner_lookup() {
+        let svc = svc_with_config_records(config_with_api_key_hash_secret(), Vec::new());
+        let project_claim = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "acme",
+            "project-a",
+            &["udb:auth:admin"],
+            &[],
+        );
+
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            project_claim,
+            async {
+                svc.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+                    owner_id: "foreign-service-account".to_string(),
+                    context: Some(ctx_project("acme", "project-b", &[])),
+                    ..Default::default()
+                }))
+                .await
+            },
+        )
+        .await
+        .expect_err("bound broad admin must be denied before foreign owner lookup");
+        assert_policy_detail(
+            &err,
+            "api_key_project_scope",
+            "caller_project_mismatch",
+            "API key belongs to a different project",
+        );
+    }
+
+    #[tokio::test]
+    async fn get_api_key_enforces_claim_project_after_resolve() {
+        let svc = svc_with_records(vec![api_key_rec_in_project(
+            "key-billing",
+            "owner-1",
+            "acme",
+            "billing",
+        )]);
+        let other_project = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "acme",
+            "support",
+            &["udb:admin"],
+            &[],
+        );
+
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            other_project,
+            async {
+                svc.get_api_key(Request::new(apikey_pb::GetApiKeyRequest {
+                    key_id: "key-billing".to_string(),
+                }))
+                .await
+            },
+        )
+        .await
+        .expect_err("cross-project GetApiKey must be denied");
+        assert_policy_detail(
+            &err,
+            "api_key_project_scope",
+            "caller_project_mismatch",
+            "API key belongs to a different project",
+        );
+    }
+
+    #[tokio::test]
     async fn get_api_key_miss_returns_not_found() {
         let svc = svc_with_records(Vec::new());
 
@@ -2380,6 +2602,153 @@ mod tests {
         let page = listed.page.expect("page metadata");
         assert_eq!(page.total_items, 2);
         assert_eq!(page.total_pages, 2);
+    }
+
+    #[tokio::test]
+    async fn list_api_keys_filters_to_claim_project_before_paging() {
+        let svc = svc_with_records(vec![
+            api_key_rec_in_project("key-a-1", "owner-1", "acme", "project-a"),
+            api_key_rec_in_project("key-b", "owner-1", "acme", "project-b"),
+            api_key_rec_in_project("key-a-2", "owner-1", "acme", "project-a"),
+            api_key_rec("key-tenant-wide", "owner-1", "acme"),
+        ]);
+        let project_claim = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "acme",
+            "project-a",
+            &["*"],
+            &[],
+        );
+
+        let listed = crate::runtime::service::method_security::scope_claim_context_for_test(
+            project_claim,
+            async {
+                svc.list_api_keys(Request::new(apikey_pb::ListApiKeysRequest {
+                    owner_id: "owner-1".to_string(),
+                    status: apikey_entity_pb::ApiKeyStatus::Active as i32,
+                    page: Some(common_pb::PageRequest {
+                        page: 2,
+                        page_size: 1,
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }))
+                .await
+            },
+        )
+        .await
+        .expect("same-project ListApiKeys must be allowed")
+        .into_inner();
+
+        assert_eq!(listed.keys.len(), 1);
+        assert_eq!(listed.keys[0].key_id, "key-a-2");
+        let page = listed.page.expect("page metadata");
+        assert_eq!(page.total_items, 2);
+        assert_eq!(page.total_pages, 2);
+    }
+
+    #[tokio::test]
+    async fn api_key_mutations_deny_cross_project_before_store_access() {
+        let record = api_key_rec_in_project("key-b", "owner-1", "acme", "project-b");
+        let assert_project_denied = |err: &Status| {
+            assert_policy_detail(
+                err,
+                "api_key_project_scope",
+                "caller_project_mismatch",
+                "API key belongs to a different project",
+            );
+        };
+
+        let svc = svc_with_records(vec![record.clone()]);
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "acme",
+            "project-a",
+            &["udb:*"],
+            &[],
+        );
+        let err =
+            crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+                svc.update_api_key(Request::new(apikey_pb::UpdateApiKeyRequest {
+                    key_id: "key-b".to_string(),
+                    ..Default::default()
+                }))
+                .await
+            })
+            .await
+            .expect_err("cross-project UpdateApiKey must be denied");
+        assert_project_denied(&err);
+
+        let svc = svc_with_records(vec![record.clone()]);
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "acme",
+            "project-a",
+            &["udb:admin"],
+            &[],
+        );
+        let err =
+            crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+                svc.revoke_api_key(Request::new(apikey_pb::RevokeApiKeyRequest {
+                    key_id: "key-b".to_string(),
+                    ..Default::default()
+                }))
+                .await
+            })
+            .await
+            .expect_err("cross-project RevokeApiKey must be denied");
+        assert_project_denied(&err);
+
+        let svc = svc_with_config_records(config_with_api_key_hash_secret(), vec![record]);
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "acme",
+            "project-a",
+            &["*"],
+            &[],
+        );
+        let err =
+            crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+                svc.rotate_api_key(Request::new(apikey_pb::RotateApiKeyRequest {
+                    key_id: "key-b".to_string(),
+                    ..Default::default()
+                }))
+                .await
+            })
+            .await
+            .expect_err("cross-project RotateApiKey must be denied");
+        assert_project_denied(&err);
+    }
+
+    #[tokio::test]
+    async fn emergency_revoke_denies_cross_project_before_postgres_access() {
+        let svc = svc();
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "acme",
+            "project-a",
+            &["udb:auth:admin"],
+            &[],
+        );
+        let err =
+            crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+                svc.emergency_revoke_api_keys(Request::new(
+                    apikey_pb::EmergencyRevokeApiKeysRequest {
+                        tenant_id: "acme".to_string(),
+                        project_id: "project-b".to_string(),
+                        ..Default::default()
+                    },
+                ))
+                .await
+            })
+            .await
+            .expect_err("cross-project emergency revoke must fail before Postgres access");
+        assert_policy_detail(
+            &err,
+            "api_key_project_scope",
+            "caller_project_mismatch",
+            "API key belongs to a different project",
+        );
     }
 
     #[tokio::test]
@@ -2519,11 +2888,64 @@ mod tests {
     }
 
     #[test]
+    fn enforce_caller_scope_separates_projects_and_preserves_tenant_admin() {
+        let svc = svc();
+        assert!(
+            svc.enforce_caller_scope(
+                Some(&ctx_project("acme", "project-a", &[])),
+                "acme",
+                "project-a",
+            )
+            .is_ok()
+        );
+        assert!(
+            svc.enforce_caller_scope(
+                Some(&ctx_project("acme", "project-a", &[])),
+                "acme",
+                "project-b",
+            )
+            .is_err()
+        );
+        assert!(
+            svc.enforce_caller_scope(Some(&ctx_project("acme", "project-a", &[])), "acme", "",)
+                .is_err(),
+            "project-bound callers must not manage tenant-wide keys"
+        );
+        assert!(
+            svc.enforce_caller_scope(Some(&ctx("acme", &[])), "acme", "project-b")
+                .is_ok(),
+            "tenant-bound callers intentionally retain cross-project administration"
+        );
+    }
+
+    #[test]
     fn cross_tenant_admin_role_detection_is_case_insensitive_and_default_deny() {
         assert!(ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(&ctx(
             "",
             &["Platform_Admin"]
         ))));
+        assert!(ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(
+            &ctx_project_with_scopes(
+                "acme",
+                "project-a",
+                &["udb:platform_admin"],
+                &[],
+            )
+        )));
+        for scope in ["*", "udb:*", "udb:admin", "udb:auth:admin"] {
+            assert!(
+                !ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(
+                    &ctx_project_with_scopes("acme", "project-a", &[scope], &[])
+                )),
+                "project-bound broad scope {scope} must not be platform authority"
+            );
+            assert!(
+                ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(
+                    &ctx_project_with_scopes("", "", &[scope], &[])
+                )),
+                "unbound broad scope {scope} must preserve operator compatibility"
+            );
+        }
         assert!(!ApiKeyServiceImpl::caller_is_cross_tenant_admin(None));
         assert!(!ApiKeyServiceImpl::caller_is_cross_tenant_admin(Some(
             &ctx("acme", &["member"])

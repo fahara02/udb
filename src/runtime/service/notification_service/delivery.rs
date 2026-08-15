@@ -30,12 +30,16 @@ use crate::proto::udb::core::notification::entity::v1 as notif_entity_pb;
 use crate::runtime::DataBrokerRuntime;
 
 #[cfg(feature = "http-client")]
-use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with_context};
+use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_in_tx};
 #[cfg(feature = "http-client")]
 use super::config::{
-    NOTIFICATION_DELIVERY_PROVIDERS_ENV, TOPIC_NOTIFICATION_DEAD_LETTERED, delivery_event_topic,
+    NOTIFICATION_DELIVERY_PROVIDERS_ENV, TOPIC_NOTIFICATION_DEAD_LETTERED,
     delivery_exhausted_retries, max_delivery_attempts, notification_backoff_base_secs,
     notification_backoff_cap_secs,
+};
+#[cfg(feature = "http-client")]
+use super::events::{
+    NotificationDeliveryEvent, enqueue_delivery_event_in_tx, enqueue_suppressed_event_in_tx,
 };
 #[cfg(feature = "http-client")]
 use super::model::{channel_from_db, channel_to_db, delivery_attempt_model, log_model};
@@ -454,7 +458,9 @@ fn notification_delivery_providers() -> &'static Vec<NotificationDeliveryProvide
 #[derive(Debug, Clone)]
 pub(crate) struct NotificationDeliveryIntent {
     pub log_id: String,
+    pub template_id: String,
     pub tenant_id: String,
+    pub project_id: String,
     pub channel: i32,
     /// The recipient's user id (preference key) — carried so the worker can run the
     /// durable opt-out check at delivery time, not only at send.
@@ -462,6 +468,7 @@ pub(crate) struct NotificationDeliveryIntent {
     /// The originating event type — the second half of the opt-out preference key
     /// (event-specific preference, falling back to the tenant-wide default).
     pub event_type: String,
+    pub correlation_id: String,
     pub recipient_address: String,
     pub rendered_subject: String,
     pub rendered_body: String,
@@ -476,9 +483,15 @@ fn intent_from_row(row: &sqlx::postgres::PgRow) -> Result<NotificationDeliveryIn
         log_id: row
             .try_get("log_id")
             .map_err(|err| format!("decode notification delivery log id failed: {err}"))?,
+        template_id: row
+            .try_get("template_id")
+            .map_err(|err| format!("decode notification delivery template failed: {err}"))?,
         tenant_id: row
             .try_get("tenant_id")
             .map_err(|err| format!("decode notification delivery tenant failed: {err}"))?,
+        project_id: row
+            .try_get("project_id")
+            .map_err(|err| format!("decode notification delivery project failed: {err}"))?,
         channel: channel_from_db(&channel_db),
         recipient_id: row
             .try_get("recipient_id")
@@ -486,6 +499,9 @@ fn intent_from_row(row: &sqlx::postgres::PgRow) -> Result<NotificationDeliveryIn
         event_type: row
             .try_get("event_type")
             .map_err(|err| format!("decode notification delivery event type failed: {err}"))?,
+        correlation_id: row
+            .try_get("correlation_id")
+            .map_err(|err| format!("decode notification delivery correlation failed: {err}"))?,
         recipient_address: row
             .try_get("recipient_address")
             .map_err(|err| format!("decode notification delivery recipient failed: {err}"))?,
@@ -501,6 +517,7 @@ fn intent_from_row(row: &sqlx::postgres::PgRow) -> Result<NotificationDeliveryIn
 #[cfg(feature = "http-client")]
 async fn load_notification_delivery_intents(
     pool: &PgPool,
+    project_id: &str,
     batch: i64,
 ) -> Result<Vec<NotificationDeliveryIntent>, String> {
     let log = log_model();
@@ -515,13 +532,32 @@ async fn load_notification_delivery_intents(
     // hardcode, carries the tunables.
     let backoff_base = notification_backoff_base_secs();
     let backoff_cap = notification_backoff_cap_secs();
+    // The worker is intentionally cross-tenant inside ONE exact project. Delivery
+    // attempts enforce FORCE RLS, so install the internal platform-admin escape
+    // only transaction-locally; explicit log/attempt project predicates below
+    // remain mandatory and prevent the bypass from becoming cross-project.
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|err| format!("begin notification delivery scan failed: {err}"))?;
+    sqlx::query(
+        "SELECT set_config('app.platform_admin', 'true', true), \
+                set_config('app.current_project_id', $1, true)",
+    )
+    .bind(project_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|err| format!("set notification delivery scan context failed: {err}"))?;
     let rows = sqlx::query(&format!(
         "SELECT \
             l.{log_id}::TEXT AS log_id, \
+            COALESCE(l.{template_id}::TEXT, '') AS template_id, \
             l.{tenant_id}::TEXT AS tenant_id, \
+            COALESCE(l.{project_id}::TEXT, '') AS project_id, \
             l.{channel}::TEXT AS channel, \
             COALESCE(l.{recipient_id}::TEXT, '') AS recipient_id, \
             COALESCE(l.{event_type}::TEXT, '') AS event_type, \
+            COALESCE(l.{correlation_id}::TEXT, '') AS correlation_id, \
             COALESCE(l.{recipient_address}::TEXT, '') AS recipient_address, \
             COALESCE(l.{rendered_subject}::TEXT, '') AS rendered_subject, \
             COALESCE(l.{rendered_body}::TEXT, '') AS rendered_body \
@@ -538,17 +574,20 @@ async fn load_notification_delivery_intents(
              WHERE a.{attempt_notification_id} = l.{log_id} \
                AND a.{attempt_channel} = l.{channel} \
                AND a.{attempt_tenant} = l.{tenant_id} \
+               AND a.{attempt_project} = l.{project_id} \
                AND a.{attempt_status} = 'FAILED' \
              ORDER BY a.{attempt_updated_at} DESC \
              LIMIT 1 \
          ) last_fail ON TRUE \
          WHERE l.{status} = $1 \
            AND COALESCE(l.{tenant_id}::TEXT, '') <> '' \
+           AND l.{project_id} = $6 \
            AND NOT EXISTS ( \
                SELECT 1 FROM {attempt_rel} a \
                WHERE a.{attempt_notification_id} = l.{log_id} \
                  AND a.{attempt_channel} = l.{channel} \
                  AND a.{attempt_tenant} = l.{tenant_id} \
+                 AND a.{attempt_project} = l.{project_id} \
                  AND a.{attempt_status} IN ($2, $3) \
            ) \
            AND ( \
@@ -557,12 +596,15 @@ async fn load_notification_delivery_intents(
                     + make_interval(secs => (0.5 + 0.5 * random()) * last_fail.delay_cap) \
            ) \
          ORDER BY l.{created_at} ASC, l.{log_id} ASC \
-         LIMIT $6",
+         LIMIT $7",
         log_id = log.q("log_id"),
+        template_id = log.q("template_id"),
         tenant_id = log.q("tenant_id"),
+        project_id = log.q("project_id"),
         channel = log.q("channel"),
         recipient_id = log.q("recipient_id"),
         event_type = log.q("event_type"),
+        correlation_id = log.q("correlation_id"),
         recipient_address = log.q("recipient_address"),
         rendered_subject = log.q("rendered_subject"),
         rendered_body = log.q("rendered_body"),
@@ -571,6 +613,7 @@ async fn load_notification_delivery_intents(
         attempt_notification_id = attempt.q("notification_id"),
         attempt_channel = attempt.q("channel"),
         attempt_tenant = attempt.q("tenant_id"),
+        attempt_project = attempt.q("project_id"),
         attempt_status = attempt.q("status"),
         attempt_count = attempt.q("attempt_count"),
         attempt_updated_at = attempt.q("updated_at"),
@@ -580,24 +623,81 @@ async fn load_notification_delivery_intents(
     .bind("DELIVERED")
     .bind(backoff_base)
     .bind(backoff_cap)
+    .bind(project_id)
     .bind(limit)
-    .fetch_all(pool)
+    .fetch_all(&mut *tx)
     .await
     .map_err(|err| format!("load notification delivery intents failed: {err}"))?;
+    tx.commit()
+        .await
+        .map_err(|err| format!("commit notification delivery scan failed: {err}"))?;
 
     rows.iter().map(intent_from_row).collect()
 }
 
-/// Write the terminal `NotificationDeliveryAttempt` (via the shared
-/// `write_delivery_attempt` upsert) and emit `udb.notification.delivery.<status>.v1`.
-/// Best-effort: a journal/emit failure is logged, never aborts the pass. The
-/// `last_error` argument is a delivery diagnostic — NEVER a credential.
+/// Atomically move a queued notification to SUPPRESSED and publish the public
+/// opt-out event. A missing/misconfigured outbox therefore leaves the row
+/// PENDING for a later safe retry instead of creating silent terminal state.
+#[cfg(feature = "http-client")]
+async fn record_suppression_outcome(
+    pool: &PgPool,
+    outbox_relation: Option<&str>,
+    notification_id: Uuid,
+    intent: &NotificationDeliveryIntent,
+) -> Result<(), String> {
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|err| format!("begin notification suppression transaction failed: {err}"))?;
+    let context = crate::RequestContext {
+        tenant_id: intent.tenant_id.clone(),
+        project_id: intent.project_id.clone(),
+        ..crate::RequestContext::default()
+    };
+    crate::runtime::core::set_request_local_settings(&mut tx, &context)
+        .await
+        .map_err(|err| format!("set notification suppression context failed: {err}"))?;
+    let moved = suppress_log_if_pending(
+        &mut *tx,
+        notification_id,
+        &intent.tenant_id,
+        &intent.project_id,
+    )
+        .await
+        .map_err(|err| format!("notification suppression transition failed: {err}"))?;
+    if !moved {
+        return Ok(());
+    }
+    let log = notif_entity_pb::NotificationLog {
+        log_id: intent.log_id.clone(),
+        template_id: intent.template_id.clone(),
+        event_type: intent.event_type.clone(),
+        channel: intent.channel,
+        recipient_id: intent.recipient_id.clone(),
+        tenant_id: intent.tenant_id.clone(),
+        project_id: intent.project_id.clone(),
+        correlation_id: intent.correlation_id.clone(),
+        status: notif_entity_pb::NotificationStatus::Suppressed as i32,
+        ..Default::default()
+    };
+    enqueue_suppressed_event_in_tx(&mut *tx, outbox_relation, &log).await?;
+    tx.commit()
+        .await
+        .map_err(|err| format!("commit notification suppression transaction failed: {err}"))?;
+    Ok(())
+}
+
+/// Atomically write the terminal `NotificationDeliveryAttempt` (via the shared
+/// `write_delivery_attempt` upsert), transition the parent, and enqueue canonical
+/// plus compatibility events. The worker logs a transaction failure and safely
+/// retries the idempotency-keyed dispatch on a later pass. `last_error` is a
+/// delivery diagnostic — NEVER a credential.
 #[cfg(feature = "http-client")]
 #[allow(clippy::too_many_arguments)]
 async fn record_attempt_outcome(
     pool: &PgPool,
     outbox_relation: Option<&str>,
-    metrics: Option<&Arc<dyn MetricsRecorder>>,
+    _metrics: Option<&Arc<dyn MetricsRecorder>>,
     notification_id: Uuid,
     intent: &NotificationDeliveryIntent,
     provider: &str,
@@ -610,87 +710,86 @@ async fn record_attempt_outcome(
     force_terminal: bool,
 ) {
     let channel_db = channel_to_db(intent.channel);
-    // Capture the stored attempt row: its `attempt_count` (bumped by the upsert on
-    // every attempt) drives the bounded-retry FAILED transition below.
-    let attempt_row = match write_delivery_attempt(
-        pool,
-        notification_id,
-        &intent.tenant_id,
-        channel_db,
-        provider,
-        status_db,
-        last_error,
-        provider_message_id,
-    )
-    .await
-    {
-        Ok(row) => row,
-        Err(err) => {
-            tracing::warn!(log_id = %intent.log_id, error = %err, "notification delivery attempt write failed");
-            return;
-        }
-    };
-    // Reflect a successful delivery on the parent log (PENDING→SENT→DELIVERED) so
-    // GetNotification/GetDeliveryStats stop reporting a delivered notification as
-    // PENDING. Best-effort: a transition failure is logged, never aborts the pass.
-    let allowed_prev = log_transition_allowed_prev(status_db);
-    if !allowed_prev.is_empty() {
-        if let Err(err) = transition_log_status(
-            pool,
+    let recorded: Result<(), String> = async {
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|err| format!("begin delivery outcome transaction failed: {err}"))?;
+        let context = crate::RequestContext {
+            tenant_id: intent.tenant_id.clone(),
+            project_id: intent.project_id.clone(),
+            ..crate::RequestContext::default()
+        };
+        crate::runtime::core::set_request_local_settings(&mut tx, &context)
+            .await
+            .map_err(|err| format!("set delivery outcome context failed: {err}"))?;
+        // Capture the stored attempt row: its `attempt_count` (bumped by the
+        // upsert on every attempt) drives the bounded-retry FAILED transition.
+        let attempt_row = write_delivery_attempt(
+            &mut *tx,
             notification_id,
             &intent.tenant_id,
+            &intent.project_id,
+            channel_db,
+            provider,
             status_db,
-            allowed_prev,
+            last_error,
+            provider_message_id,
         )
         .await
-        {
-            tracing::warn!(log_id = %intent.log_id, error = %err, "notification log status transition failed");
-        }
-    } else if status_db == "FAILED" {
-        // Bounded-retry (F7): a FAILED attempt leaves the log PENDING (the loader
-        // only excludes SENT/DELIVERED), so a permanently-failing provider would be
-        // re-POSTed every interval forever. Once the stored `attempt_count` reaches
-        // `max_delivery_attempts()`, move the log to the terminal FAILED state so it
-        // drops out of the PENDING queue. Below the ceiling it stays PENDING for the
-        // next bounded auto-retry. FAILED can be reached from PENDING or SENT (never
-        // downgrade a DELIVERED). Best-effort: a transition failure is logged.
+        .map_err(|err| format!("delivery attempt write failed: {err}"))?;
         let attempt_count = attempt_row
             .as_ref()
             .and_then(|row| row.try_get::<i32, _>("attempt_count").ok())
             .unwrap_or(0);
-        if force_terminal || delivery_exhausted_retries(attempt_count, max_delivery_attempts()) {
-            match transition_log_status(
-                pool,
+        let mut will_retry = status_db == "FAILED";
+
+        // The attempt, parent state, dead-letter event (when applicable), and
+        // delivery event commit together. Provider dispatch is idempotency-keyed,
+        // so a rollback is safely retried by the next leader pass.
+        let allowed_prev = log_transition_allowed_prev(status_db);
+        if !allowed_prev.is_empty() {
+            transition_log_status(
+                &mut *tx,
                 notification_id,
                 &intent.tenant_id,
-                "FAILED",
-                &["PENDING", "SENT"],
+                &intent.project_id,
+                status_db,
+                allowed_prev,
             )
             .await
+            .map_err(|err| format!("notification log status transition failed: {err}"))?;
+        } else if status_db == "FAILED" {
+            if force_terminal || delivery_exhausted_retries(attempt_count, max_delivery_attempts())
             {
-                // DLQ: the log just crossed into the terminal FAILED (dead-letter)
-                // state — either the bounded-retry budget is exhausted or this is a
-                // permanent failure. `transition_log_status` moves a row out of
-                // PENDING/SENT exactly once, so `moved == true` fires the dead-letter
-                // event ONCE (a later scan can't re-select a non-PENDING log). Reuse
-                // the outbox path the worker already uses — no new table — so operators
-                // can alert on DLQ depth via `TOPIC_NOTIFICATION_DEAD_LETTERED`.
-                Ok(true) => {
+                will_retry = false;
+                let moved = transition_log_status(
+                    &mut *tx,
+                    notification_id,
+                    &intent.tenant_id,
+                    &intent.project_id,
+                    "FAILED",
+                    &["PENDING", "SENT"],
+                )
+                .await
+                .map_err(|err| format!("notification log FAILED transition failed: {err}"))?;
+                if moved {
                     let reason = if force_terminal {
                         "permanent_failure"
                     } else {
                         "max_attempts_exhausted"
                     };
-                    enqueue_outbox_event_with_context(
-                        pool,
+                    enqueue_outbox_event_in_tx(
+                        &mut *tx,
                         outbox_relation,
                         TOPIC_NOTIFICATION_DEAD_LETTERED,
                         &intent.log_id,
                         &intent.tenant_id,
-                        "",
+                        &intent.project_id,
                         serde_json::json!({
                             "log_id": intent.log_id,
                             "tenant_id": intent.tenant_id,
+                            "project_id": intent.project_id,
                             "channel": channel_db,
                             "provider": provider,
                             "status": "FAILED",
@@ -704,48 +803,40 @@ async fn record_attempt_outcome(
                             target_resource: intent.log_id.clone(),
                             ..NativeEventContext::default()
                         },
-                        metrics,
                     )
-                    .await;
-                }
-                // Already terminal / not owned by this tenant — no dead-letter event
-                // (avoids a duplicate DLQ notification on a repeated scan).
-                Ok(false) => {}
-                Err(err) => {
-                    tracing::warn!(log_id = %intent.log_id, error = %err, "notification log FAILED transition failed");
+                    .await?;
                 }
             }
         }
+        enqueue_delivery_event_in_tx(
+            &mut *tx,
+            outbox_relation,
+            &NotificationDeliveryEvent {
+                log_id: &intent.log_id,
+                template_id: &intent.template_id,
+                event_type: &intent.event_type,
+                tenant_id: &intent.tenant_id,
+                project_id: &intent.project_id,
+                correlation_id: &intent.correlation_id,
+                channel_db,
+                provider,
+                status_db,
+                provider_message_id,
+                error_detail: last_error,
+                retry_attempt: attempt_count.saturating_sub(1),
+                will_retry,
+            },
+        )
+        .await?;
+        tx.commit()
+            .await
+            .map_err(|err| format!("commit delivery outcome transaction failed: {err}"))?;
+        Ok(())
     }
-    let outcome = if status_db == "FAILED" {
-        "failure"
-    } else {
-        "allow"
-    };
-    enqueue_outbox_event_with_context(
-        pool,
-        outbox_relation,
-        &delivery_event_topic(status_db),
-        &intent.log_id,
-        &intent.tenant_id,
-        "",
-        serde_json::json!({
-            "log_id": intent.log_id,
-            "tenant_id": intent.tenant_id,
-            "channel": channel_db,
-            "provider": provider,
-            "status": status_db,
-            "provider_message_id": provider_message_id,
-        }),
-        NativeEventContext {
-            operation: "notification.deliver".to_string(),
-            outcome: outcome.to_string(),
-            target_resource: intent.log_id.clone(),
-            ..NativeEventContext::default()
-        },
-        metrics,
-    )
     .await;
+    if let Err(error) = recorded {
+        tracing::warn!(log_id = %intent.log_id, %error, "notification delivery outcome transaction rolled back");
+    }
 }
 
 /// Run ONE leader pass of notification delivery (the consumer shape `serve()`
@@ -783,18 +874,20 @@ pub(crate) async fn run_notification_delivery_once(
                 pool,
                 recipient_uuid,
                 &intent.tenant_id,
+                &intent.project_id,
                 intent.channel,
                 &intent.event_type,
             )
             .await
             {
                 Ok(true) => {
-                    // Suppress: move the log out of PENDING to SUPPRESSED and skip
-                    // the provider POST entirely — no attempt row, no dead-letter.
+                    // Suppress and emit in one transaction, then skip the provider
+                    // POST entirely — no attempt row, no dead-letter.
                     if let Err(err) =
-                        suppress_log_if_pending(pool, notification_id, &intent.tenant_id).await
+                        record_suppression_outcome(pool, outbox_relation, notification_id, intent)
+                            .await
                     {
-                        tracing::warn!(log_id = %intent.log_id, error = %err, "notification opt-out suppression failed");
+                        tracing::warn!(log_id = %intent.log_id, error = %err, "notification opt-out suppression transaction rolled back");
                     }
                     continue;
                 }
@@ -1032,6 +1125,7 @@ pub(crate) async fn run_notification_delivery_worker_once(
     http: &reqwest::Client,
     runtime: Arc<DataBrokerRuntime>,
     pool: &PgPool,
+    project_id: &str,
     outbox_relation: Option<&str>,
     batch: i64,
     metrics: Option<&Arc<dyn MetricsRecorder>>,
@@ -1040,7 +1134,7 @@ pub(crate) async fn run_notification_delivery_worker_once(
     if providers.is_empty() {
         return Ok(0);
     }
-    let intents = load_notification_delivery_intents(pool, batch).await?;
+    let intents = load_notification_delivery_intents(pool, project_id, batch).await?;
     let deliverable = intents
         .into_iter()
         .filter(|intent| {

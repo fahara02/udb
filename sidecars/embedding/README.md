@@ -3,7 +3,11 @@
 The broker owns durable work, model identity, tenant scope, vector routing, and
 ACK/NACK state. This sidecar owns inference and document parsing. Provider
 credentials never enter broker events: work carries a `vault://` reference and
-the sidecar resolves it through `UDB_VAULT_RESOLVER_URL` with a short cache.
+the sidecar resolves it through `UDB_VAULT_RESOLVER_URL` with an authenticated,
+tenant-and-project-scoped short cache. Set `UDB_VAULT_RESOLVER_TOKEN`; the
+resolver receives JSON `{reference, tenant_id, project_id}` and a bearer token.
+The sidecar refuses production Vault resolution without all three scope/auth
+inputs.
 
 Endpoints:
 
@@ -17,10 +21,16 @@ Endpoints:
 - `GET /healthz`: provider and dimension readiness.
 
 Work includes `work_item_id`, `chunk_hash`, model dimensions/dtype/task,
-`provider_endpoint_ref`, and optional parent text plus character/token boundaries
+`tenant_id`, `project_id`, `provider_endpoint_ref`, and optional parent text plus character/token boundaries
 for contextual retrieval or late chunking. Reports echo the durable identity so
 the broker can validate the model, dimensions, hash, source, and point before it
 stores and ACKs the vector.
+
+This image exposes the HTTP inference contract; it is not itself a Kafka/CDC
+consumer. A deployment must run a durable consumer that reads
+`udb.embedding.work.v1`, calls these endpoints, and submits the returned report
+to the broker callback. The live round-trip command below validates that wiring,
+but the default sidecar smoke only validates the HTTP contract.
 
 `UDB_EMBED_PROVIDER=deterministic` is only for local smoke and fixtures.
 Production OpenAI-compatible providers require a Vault secret with `endpoint`

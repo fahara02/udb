@@ -23,7 +23,7 @@ message NotificationSentEvent {
   option (udb.core.common.v1.message_event_contract) = {
     event_type: "udb.core.notification.events.v1.NotificationSentEvent"
     outbox_topic: "udb.notification.sent.v1"
-    partition_key_field: "tenant_id"
+    partition_key_field: "recipient_ref"
     payload_redaction_profile: "standard"
     delivery_guarantee: "at_least_once"
     replay_compatibility: "stable"

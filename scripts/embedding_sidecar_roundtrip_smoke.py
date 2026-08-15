@@ -69,10 +69,13 @@ def required_str(mapping: dict[str, Any], key: str) -> str:
 def normalize_work(value: dict[str, Any]) -> dict[str, Any]:
     check_no_credentials(value)
     candidate = value
-    while not candidate.get("tenant_id") and isinstance(candidate.get("payload"), dict):
+    domain_keys = ("row_pk", "text", "model_id")
+    while not all(candidate.get(key) for key in domain_keys) and isinstance(
+        candidate.get("payload"), dict
+    ):
         candidate = candidate["payload"]
     normalized = dict(candidate)
-    for key in ("tenant_id", "source", "row_pk", "text", "model_id"):
+    for key in ("tenant_id", "project_id", "source", "row_pk", "text", "model_id"):
         normalized[key] = required_str(candidate, key)
     normalized["target_collection"] = str(candidate.get("target_collection", "")).strip()
     return normalized
@@ -250,6 +253,7 @@ def selftest() -> int:
     work = normalize_work(
         {
             "tenant_id": "tenant-a",
+            "project_id": "project-a",
             "source": "contacts",
             "row_pk": "contact-1",
             "text": "Ada Lovelace",
@@ -257,6 +261,16 @@ def selftest() -> int:
             "target_collection": "contacts_vec",
         }
     )
+    wrapped = normalize_work(
+        {
+            "tenant_id": "tenant-a",
+            "project_id": "project-a",
+            "source": "udb.native/tenant-a",
+            "payload": work,
+        }
+    )
+    if wrapped["source"] != "contacts" or wrapped["project_id"] != "project-a":
+        raise SmokeError("compliance envelope was not unwrapped to canonical embedding work")
     report = validate_report(
         work,
         {
@@ -298,7 +312,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--selftest", action="store_true", help="run offline parser/command selftest")
     parser.add_argument("--sidecar-url", default="http://127.0.0.1:58090")
     parser.add_argument("--broker", default="127.0.0.1:50061", help="internal/control-plane gRPC target")
-    parser.add_argument("--project-id", default=os.environ.get("UDB_PROJECT_ID", "default"))
+    parser.add_argument(
+        "--project-id",
+        default="",
+        help="optional assertion that the work envelope carries this project id",
+    )
     parser.add_argument("--bearer-token", default=os.environ.get("UDB_BEARER_TOKEN", ""))
     parser.add_argument("--grpcurl", default=os.environ.get("GRPCURL", "grpcurl"))
     parser.add_argument("--plaintext", action=argparse.BooleanOptionalAction, default=True)
@@ -329,6 +347,10 @@ def main() -> int:
     if args.selftest:
         return selftest()
     work = load_work(args)
+    if args.project_id and args.project_id != work["project_id"]:
+        raise SmokeError(
+            f"work project_id={work['project_id']!r} does not match --project-id={args.project_id!r}"
+        )
     report = sidecar_embed(args.sidecar_url, work)
     if args.dry_run:
         print(
@@ -336,14 +358,14 @@ def main() -> int:
                 {
                     "ok": True,
                     "dry_run": True,
-                    "work": {k: work[k] for k in ["tenant_id", "source", "row_pk", "model_id"]},
-                    "grpcurl": grpcurl_command(args, work["tenant_id"], args.project_id),
+                    "work": {k: work[k] for k in ["tenant_id", "project_id", "source", "row_pk", "model_id"]},
+                    "grpcurl": grpcurl_command(args, work["tenant_id"], work["project_id"]),
                 },
                 separators=(",", ":"),
             )
         )
         return 0
-    response = call_report_embedding(args, report, work["tenant_id"], args.project_id)
+    response = call_report_embedding(args, report, work["tenant_id"], work["project_id"])
     print(
         json.dumps(
             {

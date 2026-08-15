@@ -64,17 +64,94 @@ fn count_empty_project_contexts(source: &str) -> usize {
                     .is_some_and(|c| c.is_alphanumeric() || c == '_')
         })
         .filter(|(start, _)| {
-            let tail = &source[*start..];
-            // The call ends at the first ');' — an empty project literal immediately
-            // before it is the pattern under guard. Handles both one-line calls and
-            // rustfmt-wrapped ones.
-            let end = match tail.find(");") {
-                Some(end) => end,
-                None => return false,
+            let call = &source[*start + "native_service_context(".len()..];
+            // Find THIS call's balanced closing parenthesis. Looking for `);`
+            // missed chained consumers such as `native_service_context(...,
+            // "").project_id`, allowing the exact header-inheritance defect this
+            // guard claims to ban.
+            let mut paren_depth = 1usize;
+            let mut in_string = false;
+            let mut escaped = false;
+            let mut close = None;
+            for (offset, ch) in call.char_indices() {
+                if in_string {
+                    if escaped {
+                        escaped = false;
+                    } else if ch == '\\' {
+                        escaped = true;
+                    } else if ch == '"' {
+                        in_string = false;
+                    }
+                    continue;
+                }
+                match ch {
+                    '"' => in_string = true,
+                    '(' => paren_depth += 1,
+                    ')' => {
+                        paren_depth -= 1;
+                        if paren_depth == 0 {
+                            close = Some(offset);
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            let Some(close) = close else {
+                return false;
             };
-            let args = &tail[..end];
-            let trimmed = args.trim_end();
-            trimmed.ends_with("\"\"") || trimmed.ends_with("\"\",")
+            let args = &call[..close];
+            let mut nested = 0usize;
+            let mut commas = 0usize;
+            let mut in_string = false;
+            let mut escaped = false;
+            let mut last_comma = None;
+            for (offset, ch) in args.char_indices() {
+                if in_string {
+                    if escaped {
+                        escaped = false;
+                    } else if ch == '\\' {
+                        escaped = true;
+                    } else if ch == '"' {
+                        in_string = false;
+                    }
+                    continue;
+                }
+                match ch {
+                    '"' => in_string = true,
+                    '(' | '[' | '{' => nested += 1,
+                    ')' | ']' | '}' => nested = nested.saturating_sub(1),
+                    ',' if nested == 0 => {
+                        commas += 1;
+                        last_comma = Some(offset);
+                    }
+                    _ => {}
+                }
+            }
+            // Exactly three arguments, with an optional rustfmt trailing comma,
+            // and an empty string as the third/project argument.
+            let trailing_comma = args.trim_end().ends_with(',');
+            let expected_commas = if trailing_comma { 3 } else { 2 };
+            if commas != expected_commas {
+                return false;
+            }
+            let Some(last_comma) = last_comma else {
+                return false;
+            };
+            let third_start = if trailing_comma {
+                args[..last_comma]
+                    .rfind(',')
+                    .map(|offset| offset + 1)
+                    .unwrap_or(0)
+            } else {
+                last_comma + 1
+            };
+            let third_end = if trailing_comma {
+                last_comma
+            } else {
+                args.len()
+            };
+            args[third_start..third_end].trim() == "\"\""
         })
         .count()
 }
@@ -136,6 +213,15 @@ fn empty_project_context_detector_matches_the_real_patterns() {
     assert_eq!(
         count_empty_project_contexts(
             r#"let context = native_service_context(&metadata, &req.tenant_id, "");"#
+        ),
+        1
+    );
+    // REGRESSION: a chained field/method consumer does not put `;` immediately
+    // after the helper call. The former `find(");")` detector skipped it and
+    // scanned into a later call, letting a real offender ship green.
+    assert_eq!(
+        count_empty_project_contexts(
+            r#"let project = native_service_context(&metadata, &tenant, "").project_id;"#
         ),
         1
     );

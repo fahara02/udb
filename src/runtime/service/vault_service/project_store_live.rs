@@ -390,6 +390,63 @@ async fn served_vault_pins_typed_raw_and_outbox_paths_to_each_project_instance()
     drop(client);
     let _ = shutdown_tx.send(());
     server.await.expect("join Vault live server");
+
+    // An outbox failure must roll the irreversible shred back. Serve the same
+    // project-routed Vault with a deliberately missing relation, then prove the
+    // failed DestroySecret leaves project B's ciphertext readable.
+    let failing_vault = service.build_vault_service().with_outbox(Some(
+        "\"udb_system\".\"missing_vault_destroy_outbox\"".to_string(),
+    ));
+    let failing_listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind failing Vault live server");
+    let failing_address = failing_listener
+        .local_addr()
+        .expect("failing Vault live server address");
+    let failing_incoming = TcpListenerStream::new(failing_listener);
+    let (failing_shutdown_tx, failing_shutdown_rx) = oneshot::channel::<()>();
+    let failing_server = tokio::spawn(async move {
+        Server::builder()
+            .add_service(VaultServiceServer::new(failing_vault))
+            .serve_with_incoming_shutdown(failing_incoming, async move {
+                let _ = failing_shutdown_rx.await;
+            })
+            .await
+            .expect("serve failing Vault project-store regression");
+    });
+    let mut failing_client = VaultServiceClient::connect(format!("http://{failing_address}"))
+        .await
+        .expect("connect failing Vault client");
+    let destroy_error = failing_client
+        .destroy_secret(scoped_request(
+            vault_pb::DestroySecretRequest {
+                tenant_id: TENANT.to_string(),
+                secret_path: SECRET_PATH.to_string(),
+                confirmation_token: SECRET_PATH.to_string(),
+            },
+            PROJECT_B,
+        ))
+        .await
+        .expect_err("missing outbox must abort Vault destruction");
+    assert_eq!(destroy_error.code(), tonic::Code::Internal);
+    let rolled_back_b = failing_client
+        .get_secret(scoped_request(
+            vault_pb::GetSecretRequest {
+                tenant_id: TENANT.to_string(),
+                secret_path: SECRET_PATH.to_string(),
+                version: 0,
+            },
+            PROJECT_B,
+        ))
+        .await
+        .expect("failed destroy must leave project B secret readable")
+        .into_inner();
+    assert_eq!(rolled_back_b.secret_value, "beta-secret");
+    drop(failing_client);
+    let _ = failing_shutdown_tx.send(());
+    failing_server
+        .await
+        .expect("join failing Vault live server");
     drop(service);
 
     for database in [&database_a, &database_b] {

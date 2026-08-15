@@ -32,6 +32,19 @@ pub(crate) enum NativeEntityTransactionOp {
     Write(LogicalWrite),
     Update(LogicalUpdate),
     Delete(LogicalDelete),
+    /// A pre-enriched native event row that must commit with the entity writes.
+    /// The shared native-event helper builds the envelope; this substrate only
+    /// owns transaction ordering and the canonical CDC outbox insert.
+    Outbox(NativeOutboxTransactionWrite),
+}
+
+#[allow(dead_code)]
+pub(crate) struct NativeOutboxTransactionWrite {
+    pub(crate) relation: String,
+    pub(crate) event_id: uuid::Uuid,
+    pub(crate) topic: String,
+    pub(crate) partition_key: String,
+    pub(crate) envelope: serde_json::Value,
 }
 
 #[allow(dead_code)]
@@ -626,32 +639,40 @@ impl DataBrokerRuntime {
             ));
         }
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
-        let mut compiled_steps = Vec::with_capacity(ops.len());
+        enum PreparedStep {
+            Mutation(crate::runtime::service::handlers_data::CompiledDispatchRequest),
+            Outbox(NativeOutboxTransactionWrite),
+        }
+
+        let mut prepared_steps = Vec::with_capacity(ops.len());
         for op in ops {
-            let compiled = match op {
-                NativeEntityTransactionOp::Write(op) => {
+            let prepared = match op {
+                NativeEntityTransactionOp::Write(op) => PreparedStep::Mutation(
                     crate::runtime::service::handlers_data::compile_logical_write_dispatch(
                         &kind,
                         &op,
                         &compile_ctx,
-                    )?
-                }
-                NativeEntityTransactionOp::Update(op) => {
+                    )?,
+                ),
+                NativeEntityTransactionOp::Update(op) => PreparedStep::Mutation(
                     crate::runtime::service::handlers_data::compile_logical_update_dispatch(
                         &kind,
                         &op,
                         &compile_ctx,
-                    )?
-                }
-                NativeEntityTransactionOp::Delete(op) => {
+                    )?,
+                ),
+                NativeEntityTransactionOp::Delete(op) => PreparedStep::Mutation(
                     crate::runtime::service::handlers_data::compile_logical_delete_dispatch(
                         &kind,
                         &op,
                         &compile_ctx,
-                    )?
-                }
+                    )?,
+                ),
+                NativeEntityTransactionOp::Outbox(write) => PreparedStep::Outbox(write),
             };
-            if compiled.operation != "mutate" {
+            if let PreparedStep::Mutation(compiled) = &prepared
+                && compiled.operation != "mutate"
+            {
                 return Err(native_store_capability_status(
                     target.backend.clone(),
                     "typed_transaction_compile",
@@ -662,7 +683,7 @@ impl DataBrokerRuntime {
                     ),
                 ));
             }
-            compiled_steps.push(compiled);
+            prepared_steps.push(prepared);
         }
 
         let pool = self
@@ -676,8 +697,33 @@ impl DataBrokerRuntime {
         })?;
         crate::runtime::core::set_request_local_settings(&mut tx, context).await?;
 
-        let mut results = Vec::with_capacity(compiled_steps.len());
-        for compiled in compiled_steps {
+        let mut results = Vec::with_capacity(prepared_steps.len());
+        for prepared in prepared_steps {
+            let compiled = match prepared {
+                PreparedStep::Mutation(compiled) => compiled,
+                PreparedStep::Outbox(write) => {
+                    crate::runtime::cdc::insert_outbox_row(
+                        &mut *tx,
+                        &write.relation,
+                        write.event_id,
+                        &write.topic,
+                        &write.partition_key,
+                        &write.envelope,
+                    )
+                    .await
+                    .map_err(|err| {
+                        native_store_internal_status(
+                            "native_entity_transaction_outbox",
+                            format!("native entity transaction outbox insert failed: {err}"),
+                        )
+                    })?;
+                    results.push(NativeEntityTransactionStepResult {
+                        affected_rows: 1,
+                        rows: Vec::new(),
+                    });
+                    continue;
+                }
+            };
             let spec: serde_json::Value =
                 serde_json::from_str(&compiled.spec_json).map_err(|err| {
                     native_store_internal_status(

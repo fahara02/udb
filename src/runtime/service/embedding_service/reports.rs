@@ -418,30 +418,20 @@ pub(crate) async fn report_embedding_failure(
             "embedding failure tracking requires Postgres",
         )
     })?;
+    let context = project_scoped_native_service_context(&metadata, req.tenant_id.trim());
     let result = fail_work_item(
         pool,
+        svc.outbox_relation.as_deref(),
         req.tenant_id.trim(),
+        &context.project_id,
         req.work_item_id.trim(),
         req.error.trim(),
         req.retryable,
+        req.error_code.trim(),
     )
     .await?;
     svc.metrics
         .inc_embedding_work(if result.dead { "dead" } else { "retry" });
-    if result.dead {
-        let context = project_scoped_native_service_context(&metadata, req.tenant_id.trim());
-        svc.emit_source_event(
-            super::config::TOPIC_WORK_DEAD_LETTER,
-            req.tenant_id.trim(),
-            &context.project_id,
-            req.work_item_id.trim(),
-            serde_json::json!({
-                "work_item_id": req.work_item_id, "error_code": req.error_code,
-                "error": req.error, "attempt_count": result.attempt_count,
-            }),
-        )
-        .await;
-    }
     Ok(Response::new(
         embedding_pb::ReportEmbeddingFailureResponse {
             recorded: true,

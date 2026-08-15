@@ -737,7 +737,7 @@ var File_udb_core_notification_events_v1_notification_events_proto protoreflect.
 
 const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "" +
 	"\n" +
-	"9udb/core/notification/events/v1/notification_events.proto\x12\x1fudb.core.notification.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!udb/core/common/v1/security.proto\"\xcd\x03\n" +
+	"9udb/core/notification/events/v1/notification_events.proto\x12\x1fudb.core.notification.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!udb/core/common/v1/security.proto\"\xd2\x03\n" +
 	"\x15NotificationSentEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06log_id\x18\x02 \x01(\tR\x05logId\x12\x1f\n" +
@@ -750,8 +750,8 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\ttenant_id\x18\a \x01(\tR\btenantId\x12%\n" +
 	"\x0ecorrelation_id\x18\b \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt:\x81\x01\x92\xb2\x19}\n" +
-	"5udb.core.notification.events.v1.NotificationSentEvent\x12\x18udb.notification.sent.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xb5\x04\n" +
+	"occurredAt:\x86\x01\x92\xb2\x19\x81\x01\n" +
+	"5udb.core.notification.events.v1.NotificationSentEvent\x12\x18udb.notification.sent.v1\x1a\rrecipient_ref\"\bstandard*\rat_least_once2\x06stable\"\xb5\x04\n" +
 	"\x17NotificationFailedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06log_id\x18\x02 \x01(\tR\x05logId\x12\x1f\n" +

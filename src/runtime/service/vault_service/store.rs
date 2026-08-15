@@ -6,7 +6,7 @@
 
 use crate::ir::{
     ComparisonOp, ConflictStrategy, LogicalFilter, LogicalPagination, LogicalProjection,
-    LogicalRead, LogicalRecord, LogicalValue,
+    LogicalRead, LogicalRecord, LogicalSort, LogicalValue, NullOrder, SortDirection,
 };
 use crate::runtime::native_catalog::native_model;
 
@@ -42,7 +42,14 @@ pub(crate) fn secret_path_read(tenant_id: &str, secret_path: &str) -> LogicalRea
             "state".to_string(),
             "metadata_json".to_string(),
         ])),
-        sort: Vec::new(),
+        // The scan is deliberately bounded, so newest-first ordering is a
+        // correctness boundary: latest/CAS/delete callers must never receive an
+        // arbitrary old subset once the path exceeds max_versions_scan().
+        sort: vec![LogicalSort {
+            field: "version".to_string(),
+            direction: SortDirection::Desc,
+            nulls: NullOrder::default(),
+        }],
         include: Vec::new(),
         pagination: Some(LogicalPagination::limit(max_versions_scan())),
     }
@@ -70,7 +77,12 @@ pub(crate) fn transit_key_read(tenant_id: &str, key_name: &str) -> LogicalRead {
             "wrapped_key_material".to_string(),
             "state".to_string(),
         ])),
-        sort: Vec::new(),
+        // Keep ACTIVE/current versions inside the bounded latest-N window.
+        sort: vec![LogicalSort {
+            field: "version".to_string(),
+            direction: SortDirection::Desc,
+            nulls: NullOrder::default(),
+        }],
         include: Vec::new(),
         pagination: Some(LogicalPagination::limit(max_versions_scan())),
     }

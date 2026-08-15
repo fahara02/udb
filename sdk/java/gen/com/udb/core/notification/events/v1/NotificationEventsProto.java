@@ -69,7 +69,7 @@ public final class NotificationEventsProto {
       "cation_events.proto\022\037udb.core.notificati" +
       "on.events.v1\032\037google/protobuf/timestamp." +
       "proto\032!udb/core/common/v1/security.proto" +
-      "\"\315\003\n\025NotificationSentEvent\022\031\n\010event_id\030\001" +
+      "\"\322\003\n\025NotificationSentEvent\022\031\n\010event_id\030\001" +
       " \001(\tR\007eventId\022\025\n\006log_id\030\002 \001(\tR\005logId\022\037\n\013" +
       "template_id\030\003 \001(\tR\ntemplateId\022\035\n\nevent_t" +
       "ype\030\004 \001(\tR\teventType\022\030\n\007channel\030\005 \001(\tR\007c" +
@@ -77,84 +77,84 @@ public final class NotificationEventsProto {
       "Ref\022\033\n\ttenant_id\030\007 \001(\tR\010tenantId\022%\n\016corr" +
       "elation_id\030\010 \001(\tR\rcorrelationId\022;\n\013occur" +
       "red_at\030\t \001(\0132\032.google.protobuf.Timestamp" +
-      "R\noccurredAt:\201\001\222\262\031}\n5udb.core.notificati" +
-      "on.events.v1.NotificationSentEvent\022\030udb." +
-      "notification.sent.v1\032\ttenant_id\"\010standar" +
-      "d*\rat_least_once2\006stable\"\265\004\n\027Notificatio" +
-      "nFailedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022" +
-      "\025\n\006log_id\030\002 \001(\tR\005logId\022\037\n\013template_id\030\003 " +
-      "\001(\tR\ntemplateId\022\035\n\nevent_type\030\004 \001(\tR\teve" +
-      "ntType\022\030\n\007channel\030\005 \001(\tR\007channel\022\033\n\ttena" +
-      "nt_id\030\006 \001(\tR\010tenantId\022\035\n\nerror_code\030\007 \001(" +
-      "\tR\terrorCode\022!\n\014error_detail\030\010 \001(\tR\013erro" +
-      "rDetail\022#\n\rretry_attempt\030\t \001(\005R\014retryAtt" +
-      "empt\022\035\n\nwill_retry\030\n \001(\010R\twillRetry\022%\n\016c" +
-      "orrelation_id\030\013 \001(\tR\rcorrelationId\022;\n\013oc" +
-      "curred_at\030\014 \001(\0132\032.google.protobuf.Timest" +
-      "ampR\noccurredAt:\206\001\222\262\031\201\001\n7udb.core.notifi" +
-      "cation.events.v1.NotificationFailedEvent" +
-      "\022\032udb.notification.failed.v1\032\ttenant_id\"" +
-      "\010standard*\rat_least_once2\006stable\"\370\003\n\033Not" +
-      "ificationSuppressedEvent\022\031\n\010event_id\030\001 \001" +
-      "(\tR\007eventId\022\037\n\013template_id\030\002 \001(\tR\ntempla" +
-      "teId\022\035\n\nevent_type\030\003 \001(\tR\teventType\022\030\n\007c" +
-      "hannel\030\004 \001(\tR\007channel\022#\n\rrecipient_ref\030\005" +
-      " \001(\tR\014recipientRef\022\033\n\ttenant_id\030\006 \001(\tR\010t" +
-      "enantId\022-\n\022suppression_reason\030\007 \001(\tR\021sup" +
-      "pressionReason\022%\n\016correlation_id\030\010 \001(\tR\r" +
-      "correlationId\022;\n\013occurred_at\030\t \001(\0132\032.goo" +
-      "gle.protobuf.TimestampR\noccurredAt:\216\001\222\262\031" +
-      "\211\001\n;udb.core.notification.events.v1.Noti" +
-      "ficationSuppressedEvent\022\036udb.notificatio" +
-      "n.suppressed.v1\032\ttenant_id\"\010standard*\rat" +
-      "_least_once2\006stable\"\370\002\n\032NotificationDeli" +
-      "veredEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\025\n" +
-      "\006log_id\030\002 \001(\tR\005logId\022\030\n\007channel\030\003 \001(\tR\007c" +
-      "hannel\022\033\n\ttenant_id\030\004 \001(\tR\010tenantId\022%\n\016c" +
-      "orrelation_id\030\005 \001(\tR\rcorrelationId\022;\n\013oc" +
-      "curred_at\030\006 \001(\0132\032.google.protobuf.Timest" +
-      "ampR\noccurredAt:\214\001\222\262\031\207\001\n:udb.core.notifi" +
-      "cation.events.v1.NotificationDeliveredEv" +
-      "ent\022\035udb.notification.delivered.v1\032\ttena" +
-      "nt_id\"\010standard*\rat_least_once2\006stable\"\364" +
-      "\003\n NotificationTemplateChangedEvent\022\031\n\010e" +
-      "vent_id\030\001 \001(\tR\007eventId\022\037\n\013template_id\030\002 " +
-      "\001(\tR\ntemplateId\022\035\n\nevent_type\030\003 \001(\tR\teve" +
-      "ntType\022\030\n\007channel\030\004 \001(\tR\007channel\022\037\n\013chan" +
-      "ge_type\030\005 \001(\tR\nchangeType\022\035\n\nchanged_by\030" +
-      "\006 \001(\tR\tchangedBy\022%\n\016correlation_id\030\007 \001(\t" +
-      "R\rcorrelationId\022;\n\013occurred_at\030\010 \001(\0132\032.g" +
-      "oogle.protobuf.TimestampR\noccurredAt\022\033\n\t" +
-      "tenant_id\030\t \001(\tR\010tenantId:\231\001\222\262\031\224\001\n@udb.c" +
-      "ore.notification.events.v1.NotificationT" +
-      "emplateChangedEvent\022$udb.notification.te" +
-      "mplate.changed.v1\032\ttenant_id\"\010standard*\r" +
-      "at_least_once2\006stable\"\255\005\n\031ResourceIngest" +
-      "StatusEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\037" +
-      "\n\013resource_id\030\002 \001(\tR\nresourceId\022\033\n\ttenan" +
-      "t_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030\004 \001(\t" +
-      "R\tprojectId\022\026\n\006status\030\005 \001(\tR\006status\022\032\n\010f" +
-      "ilename\030\006 \001(\tR\010filename\022\033\n\tmime_type\030\007 \001" +
-      "(\tR\010mimeType\022\035\n\nsize_bytes\030\010 \001(\003R\tsizeBy" +
-      "tes\022\026\n\006sha256\030\t \001(\tR\006sha256\022#\n\rerror_mes" +
-      "sage\030\n \001(\tR\014errorMessage\022\"\n\ringest_job_i" +
-      "d\030\013 \001(\tR\013ingestJobId\022%\n\016correlation_id\030\014" +
-      " \001(\tR\rcorrelationId\022;\n\013occurred_at\030\r \001(\013" +
-      "2\032.google.protobuf.TimestampR\noccurredAt" +
-      "\022#\n\rresource_type\030\016 \001(\tR\014resourceType\022#\n" +
-      "\rresource_name\030\017 \001(\tR\014resourceName:\230\001\222\262\031" +
-      "\223\001\n9udb.core.notification.events.v1.Reso" +
-      "urceIngestStatusEvent\022*udb.notification." +
-      "resource.ingest.status.v1\032\ttenant_id\"\010st" +
-      "andard*\rat_least_once2\006stableB\254\002\n#com.ud" +
-      "b.core.notification.events.v1B\027Notificat" +
-      "ionEventsProtoP\001ZKgithub.com/fahara02/ud" +
-      "b/sdk/go/gen/udb/core/notification/event" +
-      "s/v1;eventsv1\242\002\004UCNE\252\002\037udb.core.Notifica" +
-      "tion.Events.V1\312\002\037Udb\\Core\\Notification\\E" +
-      "vents\\V1\342\002+Udb\\GPBMetadata\\Core\\Notifica" +
-      "tion\\Events\\V1\352\002#Udb::Core::Notification" +
-      "::Events::V1b\006proto3"
+      "R\noccurredAt:\206\001\222\262\031\201\001\n5udb.core.notificat" +
+      "ion.events.v1.NotificationSentEvent\022\030udb" +
+      ".notification.sent.v1\032\rrecipient_ref\"\010st" +
+      "andard*\rat_least_once2\006stable\"\265\004\n\027Notifi" +
+      "cationFailedEvent\022\031\n\010event_id\030\001 \001(\tR\007eve" +
+      "ntId\022\025\n\006log_id\030\002 \001(\tR\005logId\022\037\n\013template_" +
+      "id\030\003 \001(\tR\ntemplateId\022\035\n\nevent_type\030\004 \001(\t" +
+      "R\teventType\022\030\n\007channel\030\005 \001(\tR\007channel\022\033\n" +
+      "\ttenant_id\030\006 \001(\tR\010tenantId\022\035\n\nerror_code" +
+      "\030\007 \001(\tR\terrorCode\022!\n\014error_detail\030\010 \001(\tR" +
+      "\013errorDetail\022#\n\rretry_attempt\030\t \001(\005R\014ret" +
+      "ryAttempt\022\035\n\nwill_retry\030\n \001(\010R\twillRetry" +
+      "\022%\n\016correlation_id\030\013 \001(\tR\rcorrelationId\022" +
+      ";\n\013occurred_at\030\014 \001(\0132\032.google.protobuf.T" +
+      "imestampR\noccurredAt:\206\001\222\262\031\201\001\n7udb.core.n" +
+      "otification.events.v1.NotificationFailed" +
+      "Event\022\032udb.notification.failed.v1\032\ttenan" +
+      "t_id\"\010standard*\rat_least_once2\006stable\"\370\003" +
+      "\n\033NotificationSuppressedEvent\022\031\n\010event_i" +
+      "d\030\001 \001(\tR\007eventId\022\037\n\013template_id\030\002 \001(\tR\nt" +
+      "emplateId\022\035\n\nevent_type\030\003 \001(\tR\teventType" +
+      "\022\030\n\007channel\030\004 \001(\tR\007channel\022#\n\rrecipient_" +
+      "ref\030\005 \001(\tR\014recipientRef\022\033\n\ttenant_id\030\006 \001" +
+      "(\tR\010tenantId\022-\n\022suppression_reason\030\007 \001(\t" +
+      "R\021suppressionReason\022%\n\016correlation_id\030\010 " +
+      "\001(\tR\rcorrelationId\022;\n\013occurred_at\030\t \001(\0132" +
+      "\032.google.protobuf.TimestampR\noccurredAt:" +
+      "\216\001\222\262\031\211\001\n;udb.core.notification.events.v1" +
+      ".NotificationSuppressedEvent\022\036udb.notifi" +
+      "cation.suppressed.v1\032\ttenant_id\"\010standar" +
+      "d*\rat_least_once2\006stable\"\370\002\n\032Notificatio" +
+      "nDeliveredEvent\022\031\n\010event_id\030\001 \001(\tR\007event" +
+      "Id\022\025\n\006log_id\030\002 \001(\tR\005logId\022\030\n\007channel\030\003 \001" +
+      "(\tR\007channel\022\033\n\ttenant_id\030\004 \001(\tR\010tenantId" +
+      "\022%\n\016correlation_id\030\005 \001(\tR\rcorrelationId\022" +
+      ";\n\013occurred_at\030\006 \001(\0132\032.google.protobuf.T" +
+      "imestampR\noccurredAt:\214\001\222\262\031\207\001\n:udb.core.n" +
+      "otification.events.v1.NotificationDelive" +
+      "redEvent\022\035udb.notification.delivered.v1\032" +
+      "\ttenant_id\"\010standard*\rat_least_once2\006sta" +
+      "ble\"\364\003\n NotificationTemplateChangedEvent" +
+      "\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\037\n\013template_" +
+      "id\030\002 \001(\tR\ntemplateId\022\035\n\nevent_type\030\003 \001(\t" +
+      "R\teventType\022\030\n\007channel\030\004 \001(\tR\007channel\022\037\n" +
+      "\013change_type\030\005 \001(\tR\nchangeType\022\035\n\nchange" +
+      "d_by\030\006 \001(\tR\tchangedBy\022%\n\016correlation_id\030" +
+      "\007 \001(\tR\rcorrelationId\022;\n\013occurred_at\030\010 \001(" +
+      "\0132\032.google.protobuf.TimestampR\noccurredA" +
+      "t\022\033\n\ttenant_id\030\t \001(\tR\010tenantId:\231\001\222\262\031\224\001\n@" +
+      "udb.core.notification.events.v1.Notifica" +
+      "tionTemplateChangedEvent\022$udb.notificati" +
+      "on.template.changed.v1\032\ttenant_id\"\010stand" +
+      "ard*\rat_least_once2\006stable\"\255\005\n\031ResourceI" +
+      "ngestStatusEvent\022\031\n\010event_id\030\001 \001(\tR\007even" +
+      "tId\022\037\n\013resource_id\030\002 \001(\tR\nresourceId\022\033\n\t" +
+      "tenant_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030" +
+      "\004 \001(\tR\tprojectId\022\026\n\006status\030\005 \001(\tR\006status" +
+      "\022\032\n\010filename\030\006 \001(\tR\010filename\022\033\n\tmime_typ" +
+      "e\030\007 \001(\tR\010mimeType\022\035\n\nsize_bytes\030\010 \001(\003R\ts" +
+      "izeBytes\022\026\n\006sha256\030\t \001(\tR\006sha256\022#\n\rerro" +
+      "r_message\030\n \001(\tR\014errorMessage\022\"\n\ringest_" +
+      "job_id\030\013 \001(\tR\013ingestJobId\022%\n\016correlation" +
+      "_id\030\014 \001(\tR\rcorrelationId\022;\n\013occurred_at\030" +
+      "\r \001(\0132\032.google.protobuf.TimestampR\noccur" +
+      "redAt\022#\n\rresource_type\030\016 \001(\tR\014resourceTy" +
+      "pe\022#\n\rresource_name\030\017 \001(\tR\014resourceName:" +
+      "\230\001\222\262\031\223\001\n9udb.core.notification.events.v1" +
+      ".ResourceIngestStatusEvent\022*udb.notifica" +
+      "tion.resource.ingest.status.v1\032\ttenant_i" +
+      "d\"\010standard*\rat_least_once2\006stableB\254\002\n#c" +
+      "om.udb.core.notification.events.v1B\027Noti" +
+      "ficationEventsProtoP\001ZKgithub.com/fahara" +
+      "02/udb/sdk/go/gen/udb/core/notification/" +
+      "events/v1;eventsv1\242\002\004UCNE\252\002\037udb.core.Not" +
+      "ification.Events.V1\312\002\037Udb\\Core\\Notificat" +
+      "ion\\Events\\V1\342\002+Udb\\GPBMetadata\\Core\\Not" +
+      "ification\\Events\\V1\352\002#Udb::Core::Notific" +
+      "ation::Events::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

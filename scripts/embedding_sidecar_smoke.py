@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import socket
@@ -119,6 +120,58 @@ def run_selftest() -> None:
     bad_status = {"status": "queued", "report_embedding_request": report}
     expect_runtime_error("unexpected status", lambda: assert_report(bad_status, 3))
 
+    spec = importlib.util.spec_from_file_location("udb_embedding_sidecar_security", SIDECAR)
+    if spec is None or spec.loader is None:
+        raise AssertionError("could not load embedding sidecar for security selftest")
+    sidecar = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = sidecar
+    spec.loader.exec_module(sidecar)
+    if sidecar.vault_cache_key("tenant-a", "project-a", "vault://provider") == sidecar.vault_cache_key(
+        "tenant-b", "project-a", "vault://provider"
+    ):
+        raise AssertionError("Vault cache key is not tenant-scoped")
+    if sidecar.vault_cache_key("tenant-a", "project-a", "vault://provider") == sidecar.vault_cache_key(
+        "tenant-a", "project-b", "vault://provider"
+    ):
+        raise AssertionError("Vault cache key is not project-scoped")
+
+    saved_resolver = os.environ.get("UDB_VAULT_RESOLVER_URL")
+    saved_token = os.environ.get("UDB_VAULT_RESOLVER_TOKEN")
+    calls: list[tuple[str, dict[str, Any], dict[str, str]]] = []
+    try:
+        os.environ["UDB_VAULT_RESOLVER_URL"] = "https://vault-resolver.invalid/resolve"
+        os.environ["UDB_VAULT_RESOLVER_TOKEN"] = "resolver-test-token"
+        sidecar._vault_cache.clear()
+
+        def fake_post(url: str, body: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+            calls.append((url, body, headers))
+            return {"data": {"endpoint": "https://provider.invalid", "api_key": "redacted"}}
+
+        sidecar.post_json = fake_post
+        sidecar.resolve_vault_reference("vault://provider", "tenant-a", "project-a")
+        sidecar.resolve_vault_reference("vault://provider", "tenant-a", "project-a")
+        sidecar.resolve_vault_reference("vault://provider", "tenant-a", "project-b")
+        if len(calls) != 2:
+            raise AssertionError("Vault cache did not isolate project scope or reuse identical scope")
+        if calls[0][1] != {
+            "reference": "vault://provider",
+            "tenant_id": "tenant-a",
+            "project_id": "project-a",
+        }:
+            raise AssertionError(f"Vault resolver did not receive canonical scope: {calls[0][1]}")
+        if calls[0][2].get("Authorization") != "Bearer resolver-test-token":
+            raise AssertionError("Vault resolver call was not authenticated")
+    finally:
+        sidecar._vault_cache.clear()
+        if saved_resolver is None:
+            os.environ.pop("UDB_VAULT_RESOLVER_URL", None)
+        else:
+            os.environ["UDB_VAULT_RESOLVER_URL"] = saved_resolver
+        if saved_token is None:
+            os.environ.pop("UDB_VAULT_RESOLVER_TOKEN", None)
+        else:
+            os.environ["UDB_VAULT_RESOLVER_TOKEN"] = saved_token
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Smoke-test the UDB embedding sidecar")
@@ -161,6 +214,7 @@ def main() -> int:
             dims = health_dims
         work = {
             "tenant_id": "tenant-a",
+            "project_id": "project-a",
             "source": "contacts",
             "row_pk": "contact-1",
             "text": "Ada Lovelace wrote the first algorithm.",
@@ -215,6 +269,7 @@ def main() -> int:
             raise RuntimeError(f"batch embed contract failed: status={status} payload={batch_payload}")
 
         status, rerank_payload = request_json("POST", f"{base_url}/rerank", {
+            "tenant_id": "tenant-a", "project_id": "project-a",
             "query": "first algorithm", "top_n": 2,
             "candidates": [{"id": "weak", "text": "weather report", "score": 0.9},
                            {"id": "strong", "text": "first algorithm", "score": 0.5}],
@@ -223,7 +278,8 @@ def main() -> int:
             raise RuntimeError(f"rerank contract failed: status={status} payload={rerank_payload}")
 
         status, parse_payload = request_json("POST", f"{base_url}/parse", {
-            "tenant_id": "tenant-a", "document_id": "doc-1", "job_id": "job-1",
+            "tenant_id": "tenant-a", "project_id": "project-a",
+            "document_id": "doc-1", "job_id": "job-1",
             "text": "<h1>Title</h1><p>Useful body.</p>",
         })
         parsed = parse_payload.get("report_parsed_document_request")

@@ -1488,6 +1488,88 @@ mod tests {
         assert!(!security.rate_limit_policy_ref.is_empty());
     }
 
+    #[test]
+    fn notification_retry_descriptor_allows_failed_only() {
+        if !embedded_contract_available() {
+            return;
+        }
+        let manifest = descriptor_contract_manifest();
+        let retry = manifest
+            .services
+            .iter()
+            .find(|service| {
+                service.full_name() == "udb.core.notification.services.v1.NotificationService"
+            })
+            .and_then(|service| {
+                service
+                    .methods
+                    .iter()
+                    .find(|rpc| rpc.method == "RetryNotification")
+            })
+            .expect("NotificationService.RetryNotification must be present");
+        let lifecycle = retry
+            .lifecycle_contract
+            .as_ref()
+            .expect("RetryNotification must carry a lifecycle contract");
+
+        assert_eq!(lifecycle.legal_source_states, vec!["FAILED".to_string()]);
+        assert_eq!(lifecycle.target_state, "PENDING");
+        assert!(
+            !lifecycle
+                .legal_source_states
+                .iter()
+                .any(|state| state == "SUPPRESSED"),
+            "an opt-out suppression must never be advertised as retryable"
+        );
+    }
+
+    #[test]
+    fn notification_sent_descriptors_use_recipient_ref_partition() {
+        if !embedded_contract_available() {
+            return;
+        }
+        let manifest = descriptor_contract_manifest();
+        let sent_message = manifest
+            .messages
+            .iter()
+            .find(|message| {
+                message.full_name == "udb.core.notification.events.v1.NotificationSentEvent"
+            })
+            .and_then(|message| message.event_contract.as_ref())
+            .expect("NotificationSentEvent must carry an event contract");
+        assert_eq!(sent_message.outbox_topic, "udb.notification.sent.v1");
+        assert_eq!(sent_message.partition_key_field, "recipient_ref");
+
+        let send = manifest
+            .services
+            .iter()
+            .find(|service| {
+                service.full_name() == "udb.core.notification.services.v1.NotificationService"
+            })
+            .and_then(|service| {
+                service
+                    .methods
+                    .iter()
+                    .find(|rpc| rpc.method == "SendNotification")
+            })
+            .expect("NotificationService.SendNotification must be present");
+        let sent_emit = send
+            .emits
+            .iter()
+            .find(|emit| emit.topic == "udb.notification.sent.v1")
+            .expect("SendNotification must declare the sent event");
+        assert_eq!(sent_emit.partition_key_field, "recipient_ref");
+        assert!(sent_emit.conditional);
+        assert!(
+            send.emits.iter().any(|emit| {
+                emit.topic == "udb.notification.suppressed.v1"
+                    && emit.partition_key_field == "tenant_id"
+                    && emit.conditional
+            }),
+            "SendNotification must declare its conditional suppression event"
+        );
+    }
+
     // Phase 7 conformance (final_task.md §8 "Reconcile proto event contracts with
     // runtime topics" + "conformance tests proving every declared mutation event
     // is emitted or explicitly marked no-event"). Every event contract declared by

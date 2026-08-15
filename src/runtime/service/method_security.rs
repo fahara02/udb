@@ -181,6 +181,51 @@ pub fn method_security(path: &str) -> Option<&'static MethodSecurity> {
 /// Control-plane scopes that authorize any non-public native RPC.
 const ADMIN_SCOPES: [&str; 4] = ["*", "udb:*", "udb:admin", "udb:auth:admin"];
 
+/// Roles/scopes that explicitly carry platform authority even when the verified
+/// identity is tenant/project-bound. Broad control-plane scopes stay sufficient
+/// for action authorization, but they are not an authority to erase a concrete
+/// tenant/project claim.
+const PLATFORM_ADMIN_ROLES: [&str; 4] = [
+    "platform_admin",
+    "udb:platform_admin",
+    "superadmin",
+    "super_admin",
+];
+const PLATFORM_ADMIN_SCOPES: [&str; 1] = ["udb:platform_admin"];
+
+/// Canonical cross-tenant/project authority predicate shared by the method
+/// security layer and native auth handlers.
+///
+/// Explicit platform roles/scopes always authorize the boundary crossing. The
+/// legacy broad control-plane scopes authorize it only for a deliberately
+/// unbound operator identity; once a credential carries a tenant or project,
+/// those scopes remain action privileges inside that claim boundary.
+pub(crate) fn has_cross_tenant_platform_authority(
+    tenant_id: &str,
+    project_id: &str,
+    scopes: &[String],
+    roles: &[String],
+) -> bool {
+    let explicit_role = roles.iter().any(|role| {
+        let role = role.trim();
+        PLATFORM_ADMIN_ROLES
+            .iter()
+            .any(|admin| role.eq_ignore_ascii_case(admin))
+    });
+    let explicit_scope = scopes
+        .iter()
+        .any(|scope| PLATFORM_ADMIN_SCOPES.contains(&scope.trim()));
+    if explicit_role || explicit_scope {
+        return true;
+    }
+
+    tenant_id.trim().is_empty()
+        && project_id.trim().is_empty()
+        && scopes
+            .iter()
+            .any(|scope| ADMIN_SCOPES.contains(&scope.trim()))
+}
+
 fn header_str<'a>(headers: &'a http::HeaderMap, name: &str) -> Option<&'a str> {
     headers.get(name).and_then(|value| value.to_str().ok())
 }
@@ -678,33 +723,18 @@ impl VerifiedClaimContext {
     /// Whether this caller holds a genuine cross-tenant / platform-admin identity,
     /// the only identity permitted to act outside its own claim tenant. Mirrors the
     /// role set used by [`super::apikey`] and the native RLS `app.platform_admin`
-    /// escape hatch so the trait-level and row-level gates recognize the SAME set,
-    /// and also accepts the broad control-plane admin scopes. An unauthenticated
+    /// escape hatch so the trait-level and row-level gates recognize the SAME
+    /// set. Broad control-plane scopes count only on an unbound operator claim;
+    /// they never erase a concrete tenant/project boundary. An unauthenticated
     /// (public-bootstrap) context is never an admin (fail-closed).
     pub fn is_cross_tenant_admin(&self) -> bool {
-        if !self.authenticated {
-            return false;
-        }
-        const CROSS_TENANT_ADMIN_ROLES: &[&str] = &[
-            "platform_admin",
-            "udb:platform_admin",
-            "superadmin",
-            "super_admin",
-        ];
-        let role_admin = self.roles.iter().any(|role| {
-            let role = role.trim();
-            CROSS_TENANT_ADMIN_ROLES
-                .iter()
-                .any(|admin| role.eq_ignore_ascii_case(admin))
-        });
-        // The broad control-plane admin scopes (`*` / `udb:*` / `udb:admin` /
-        // `udb:auth:admin`) are the existing cross-tenant control-plane identity;
-        // preserve that so a legitimate platform operator keeps working.
-        let scope_admin = self
-            .scopes
-            .iter()
-            .any(|scope| ADMIN_SCOPES.contains(&scope.trim()));
-        role_admin || scope_admin
+        self.authenticated
+            && has_cross_tenant_platform_authority(
+                &self.tenant_id,
+                &self.project_id,
+                &self.scopes,
+                &self.roles,
+            )
     }
 
     /// Whether this caller carries one of `required` action scopes (or any broad
@@ -820,6 +850,25 @@ pub fn enforce_body_tenant_matches_claim(
     }
     let body_tenant = body_tenant.trim();
     let claim_tenant = ctx.tenant_id.trim();
+    // A non-platform transport identity must be anchored to a verified tenant.
+    // Supplying the missing tenant in the request body cannot create authority;
+    // this also closes the project-only broad-scope shape (project set, tenant
+    // empty) before a handler can inherit or persist a caller-selected tenant.
+    if claim_tenant.is_empty() {
+        tracing::warn!(
+            target: "udb.audit.authz",
+            subject = %ctx.subject,
+            service_identity = %ctx.service_identity,
+            credential_type = ctx.credential_type,
+            credential_id = %ctx.credential_id,
+            body_tenant = %body_tenant,
+            "DENY: tenant-scoped operation requires a tenant-bound bearer or cross-tenant admin"
+        );
+        return Err(method_security_policy_denied(
+            deny_reason::TENANT_REQUIRED,
+            "operation requires a tenant-scoped bearer token or a cross-tenant admin role",
+        ));
+    }
     if !body_tenant.is_empty() && !claim_tenant.is_empty() && body_tenant != claim_tenant {
         tracing::warn!(
             target: "udb.audit.authz",
@@ -834,24 +883,6 @@ pub fn enforce_body_tenant_matches_claim(
         return Err(method_security_policy_denied(
             deny_reason::TENANT_MISMATCH,
             "request tenant must match the bearer token tenant",
-        ));
-    }
-    // A tenant-scoped caller may not target an unscoped (empty) tenant either:
-    // that would let a tenant token act tenant-wide / globally.
-    if body_tenant.is_empty() && claim_tenant.is_empty() {
-        // Both empty + not a cross-tenant admin: there is no tenant boundary to
-        // anchor on. Fail closed.
-        tracing::warn!(
-            target: "udb.audit.authz",
-            subject = %ctx.subject,
-            service_identity = %ctx.service_identity,
-            credential_type = ctx.credential_type,
-            credential_id = %ctx.credential_id,
-            "DENY: tenant-scoped operation requires a tenant-bound bearer or cross-tenant admin"
-        );
-        return Err(method_security_policy_denied(
-            deny_reason::TENANT_REQUIRED,
-            "operation requires a tenant-scoped bearer token or a cross-tenant admin role",
         ));
     }
     let body_project = body_project.trim();
@@ -2726,10 +2757,31 @@ mod tests {
 
     #[test]
     fn cross_tenant_admin_role_may_target_other_tenant() {
-        let ctx = claim_ctx("ops-1", "tenant-a", "", &[], &["platform_admin"]);
+        let ctx = claim_ctx(
+            "ops-1",
+            "tenant-a",
+            "project-a",
+            &[],
+            &["platform_admin"],
+        );
         with_ctx(&ctx, || {
-            enforce_body_tenant_matches_claim(&ctx, "tenant-b", "")
+            enforce_body_tenant_matches_claim(&ctx, "tenant-b", "project-b")
                 .expect("platform admin may act cross-tenant");
+        });
+    }
+
+    #[test]
+    fn explicit_platform_scope_may_target_other_tenant() {
+        let ctx = claim_ctx(
+            "ops-1",
+            "tenant-a",
+            "project-a",
+            &["udb:platform_admin"],
+            &[],
+        );
+        with_ctx(&ctx, || {
+            enforce_body_tenant_matches_claim(&ctx, "tenant-b", "project-b")
+                .expect("explicit platform scope may act cross-tenant");
         });
     }
 
@@ -2738,8 +2790,42 @@ mod tests {
         let ctx = claim_ctx("ops-1", "", "", &["udb:admin"], &[]);
         with_ctx(&ctx, || {
             enforce_body_tenant_matches_claim(&ctx, "tenant-b", "")
-                .expect("control-plane admin scope may act cross-tenant");
+                .expect("unbound control-plane admin scope may act cross-tenant");
         });
+    }
+
+    #[test]
+    fn bound_broad_admin_scopes_cannot_erase_tenant_or_project_claims() {
+        for scope in ["*", "udb:*", "udb:admin", "udb:auth:admin"] {
+            let ctx = claim_ctx("ops-1", "tenant-a", "project-a", &[scope], &[]);
+            assert!(
+                !ctx.is_cross_tenant_admin(),
+                "bound broad scope {scope} must not become platform authority"
+            );
+            with_ctx(&ctx, || {
+                let tenant_err =
+                    enforce_body_tenant_matches_claim(&ctx, "tenant-b", "project-a")
+                        .expect_err("bound broad admin must not cross tenants");
+                assert_eq!(tenant_err.code(), tonic::Code::PermissionDenied);
+
+                let project_err =
+                    enforce_body_tenant_matches_claim(&ctx, "tenant-a", "project-b")
+                        .expect_err("bound broad admin must not cross projects");
+                assert_eq!(project_err.code(), tonic::Code::PermissionDenied);
+            });
+
+            let project_only = claim_ctx("ops-1", "", "project-a", &[scope], &[]);
+            assert!(
+                !project_only.is_cross_tenant_admin(),
+                "project-only broad scope {scope} must not become platform authority"
+            );
+            with_ctx(&project_only, || {
+                let err =
+                    enforce_body_tenant_matches_claim(&project_only, "tenant-a", "project-a")
+                        .expect_err("request body cannot supply a missing claim tenant");
+                assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            });
+        }
     }
 
     #[test]

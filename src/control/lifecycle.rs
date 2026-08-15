@@ -1992,6 +1992,7 @@ async fn run_startup_lifecycle_core(
                 column: d.column.clone(),
                 sql_type: d.sql_type.clone(),
                 default_value: d.default_value.clone(),
+                not_null: d.not_null,
             })
             .collect();
         // Also fold in proto-manifest lint findings (e.g. declared RLS without a
@@ -2017,6 +2018,7 @@ async fn run_startup_lifecycle_core(
                     column: item.column.clone(),
                     sql_type: String::new(),
                     default_value: String::new(),
+                    not_null: false,
                 });
             }
         }

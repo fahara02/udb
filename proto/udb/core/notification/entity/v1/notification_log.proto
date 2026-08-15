@@ -14,7 +14,9 @@ option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Entity\\V
 option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
 
 // ---------------------------------------------------------------------------
-// NotificationLog — Immutable delivery record for each sent notification.
+// NotificationLog — Immutable tenant+project delivery record for each sent
+// notification. Project ownership is first-class even when projects share one
+// physical PostgreSQL store.
 // ---------------------------------------------------------------------------
 
 message NotificationLog {
@@ -27,18 +29,20 @@ message NotificationLog {
     soft_delete: false
     audit_fields: false
     enable_rls: true
+    force_rls: true
     partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
     partition_column: "created_at"
     retention_days: 90 // 90 days — notification delivery logs; short operational window
     rls_policies: {
-      policy_name: "tenant_isolation"
-      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      policy_name: "tenant_project_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)"
       permissive: true
     }
     indexes: {
-      index_name: "idx_nlog_tenant_channel_status"
+      index_name: "idx_nlog_tenant_project_channel_status"
       index_type: "BTREE"
       columns: "tenant_id"
+      columns: "project_id"
       columns: "channel"
       columns: "status"
     }
@@ -51,8 +55,10 @@ message NotificationLog {
   };
   option (udb.core.common.v1.db_table_security) = {
     tenant_isolation_mode: "tenant"
+    project_isolation_mode: "project"
     tenant_column: "tenant_id"
-    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    project_column: "project_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')"
     soft_delete_mode: "none"
     retention_class: "notification.operational"
     retention_days: 90
@@ -72,8 +78,8 @@ message NotificationLog {
 
   string recipient_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "recipient_id" sql_type: "UUID" foreign_key: { references_table: "users" references_schema: "udb_authn" references_column: "user_id" on_delete: REFERENTIAL_ACTION_SET_NULL constraint_name: "fk_notification_logs_recipient_id" } index: { index_name: "idx_notification_logs_recipient_id" index_type: "BTREE" } }];
   string recipient_address = 6 [(udb.core.common.v1.pg_column) = { column_name: "recipient_address" sql_type: "VARCHAR(320)" comment: "Email, phone, or device token" }];
-  string tenant_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" }];
-  string project_id = 8 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" index: { index_name: "idx_notification_logs_project_id" index_type: "BTREE" } }];
+  string tenant_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true }];
+  string project_id = 8 [(udb.core.common.v1.pg_column) = { column_name: "project_id" project_column: true sql_type: "VARCHAR(120)" not_null: true default_value: "''" index: { index_name: "idx_notification_logs_project_id" index_type: "BTREE" } }];
   string resource_type = 9 [(udb.core.common.v1.pg_column) = { column_name: "resource_type" sql_type: "VARCHAR(80)" comment: "Project-defined resource type that triggered the notification" index: { index_name: "idx_notification_logs_resource_type" index_type: "BTREE" } }];
   string resource_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "resource_id" sql_type: "VARCHAR(160)" comment: "Project-defined resource id that triggered the notification" index: { index_name: "idx_notification_logs_resource_id" index_type: "BTREE" } }];
   string resource_name = 11 [(udb.core.common.v1.pg_column) = { column_name: "resource_name" sql_type: "VARCHAR(255)" comment: "Optional display name for the notification resource" }];
@@ -100,11 +106,11 @@ message NotificationLog {
 // The broker records each notification SEND as a PENDING NotificationLog
 // (intent). A leader-elected delivery worker, or a provider webhook bridge that
 // calls NotificationService.ReportDelivery, then drives the terminal per-channel
-// delivery outcome here: one durable, tenant-scoped row per (notification,
-// channel, provider) carrying the queued/sent/failed/delivered status, the
+// delivery outcome here: one durable, tenant+project-scoped row per
+// (notification, channel, provider) carrying the queued/sent/failed/delivered status, the
 // attempt count, the provider's message id, the last error, and a timestamp.
 // This EXTENDS the existing intent/outbox path — it does not replace it. RLS
-// scopes rows to the current tenant.
+// scopes rows to the current tenant and project.
 // ---------------------------------------------------------------------------
 message NotificationDeliveryAttempt {
   option (udb.core.common.v1.pg_table) = {
@@ -118,30 +124,35 @@ message NotificationDeliveryAttempt {
     enable_rls: true
     force_rls: true
     rls_policies: {
-      policy_name: "tenant_isolation"
-      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text OR current_setting('app.platform_admin', true) = 'true')"
+      policy_name: "tenant_project_isolation"
+      using: "((tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text) OR current_setting('app.platform_admin', true) = 'true')"
       permissive: true
     }
     indexes: {
       index_name: "uq_notif_delivery_attempt_target"
       index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "project_id"
       columns: "notification_id"
       columns: "channel"
       columns: "provider"
       unique: true
     }
     indexes: {
-      index_name: "idx_notif_delivery_attempt_tenant_status"
+      index_name: "idx_notif_delivery_attempt_tenant_project_status"
       index_type: "BTREE"
       columns: "tenant_id"
+      columns: "project_id"
       columns: "status"
     }
     cdc_topic: "udb.notification.delivery.cdc"
   };
   option (udb.core.common.v1.db_table_security) = {
     tenant_isolation_mode: "tenant"
+    project_isolation_mode: "project"
     tenant_column: "tenant_id"
-    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    project_column: "project_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')"
     soft_delete_mode: "none"
     retention_class: "notification.operational"
     retention_days: 90
@@ -179,4 +190,8 @@ message NotificationDeliveryAttempt {
 
   // The "ts" of the latest reported outcome.
   google.protobuf.Timestamp updated_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+
+  // First-class project owner. Blank is reserved for quarantined legacy rows;
+  // serving paths persist only an explicitly active resolved project.
+  string project_id = 12 [(udb.core.common.v1.pg_column) = { column_name: "project_id" project_column: true sql_type: "VARCHAR(120)" not_null: true default_value: "''" index: { index_name: "idx_notif_delivery_attempt_project_id" index_type: "BTREE" } }];
 }

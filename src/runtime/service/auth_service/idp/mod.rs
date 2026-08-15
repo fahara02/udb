@@ -484,6 +484,56 @@ impl IdentityProviderServiceImpl {
             .await?
             .ok_or_else(idp_provider_not_found_status)
     }
+
+    /// Resolve an enabled provider for a direct SCIM gRPC operation. Provider
+    /// administration intentionally uses `load_provider` so disabled rows remain
+    /// manageable; directory CRUD must fail closed once a connector is disabled.
+    async fn load_scim_provider(
+        &self,
+        pool: &PgPool,
+        tenant_id: &str,
+        provider_id: &str,
+    ) -> Result<ProviderRow, Status> {
+        let provider = self.load_provider(pool, tenant_id, provider_id).await?;
+        ensure_provider_active(&provider)?;
+        Ok(provider)
+    }
+
+    /// Resolve and decrypt the write-only bearer for one active SCIM connector.
+    /// Missing/deleted/disabled providers return `None`; decryption/store failures
+    /// remain operational errors so the HTTP adapter can return 503 instead of
+    /// incorrectly treating an outage as an invalid credential.
+    async fn scim_connector_secret(
+        &self,
+        tenant_id: &str,
+        provider_id: &str,
+    ) -> Result<Option<String>, Status> {
+        let pool = self.require_pool()?;
+        let Some(stored) =
+            store::get_active_provider_client_secret(pool, tenant_id, provider_id).await?
+        else {
+            return Ok(None);
+        };
+        let plaintext = self
+            .runtime
+            .decrypt_secret_at_rest(&stored)
+            .map_err(|err| {
+                idp_internal_status(
+                    "scim_connector_secret_decrypt",
+                    format!("SCIM connector secret decryption failed: {err}"),
+                )
+            })?;
+        // `decrypt_secret_at_rest` passes values through when no key is loaded so
+        // legacy plaintext remains usable. Never accept an AEAD envelope itself
+        // as the bearer when its key is unavailable.
+        if stored.starts_with("udb-aead:") && plaintext == stored {
+            return Err(idp_internal_status(
+                "scim_connector_secret_decrypt",
+                "SCIM connector secret is encrypted but no matching decryption key is available",
+            ));
+        }
+        Ok(Some(plaintext))
+    }
 }
 
 impl Default for IdentityProviderServiceImpl {
@@ -1708,7 +1758,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let provider = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         let view = match scim::parse_scim_user(&req.scim_user_json) {
             Ok(view) => view,
@@ -1785,7 +1835,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let _ = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         // scim_user_id is the external_identity_id OR the subject; look up by
         // subject when it is not a UUID.
@@ -1822,7 +1872,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let _ = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         let (limit, offset, _) = bounded_page_window(req.page.as_ref());
         let (rows, total) = store::list_external_identities(
@@ -1870,7 +1920,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let _ = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         let view = scim::parse_scim_user(&req.scim_user_json)
             .map_err(idp_scim_user_json_invalid_status)?;
@@ -1941,7 +1991,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let _ = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         let row = self
             .find_scim_identity(pool, &req.tenant_id, &req.provider_id, &req.scim_user_id)
@@ -2017,7 +2067,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let _ = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         let row = self
             .find_scim_identity(pool, &req.tenant_id, &req.provider_id, &req.scim_user_id)
@@ -2095,7 +2145,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let provider = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         let view = scim::parse_scim_group(&req.scim_group_json)
             .map_err(idp_scim_group_json_invalid_status)?;
@@ -2130,13 +2180,10 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             &req.tenant_id,
             "",
         )?;
-        let _ = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
-            .await?;
         // Groups are not stored; report the configured group→role mapping keys
         // as the canonical group set.
         let provider = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         let groups = group_keys(&provider.group_mapping_json);
         if !groups.contains(&req.scim_group_id) {
@@ -2169,7 +2216,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let provider = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         let groups: Vec<idp_pb::ScimGroup> = group_keys(&provider.group_mapping_json)
             .into_iter()
@@ -2208,7 +2255,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let provider = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         if !group_keys(&provider.group_mapping_json).contains(&req.scim_group_id) {
             return Err(idp_scim_group_not_found_status());
@@ -2254,7 +2301,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             "",
         )?;
         let provider = self
-            .load_provider(pool, &req.tenant_id, &req.provider_id)
+            .load_scim_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         if !group_keys(&provider.group_mapping_json).contains(&req.scim_group_id) {
             return Err(idp_scim_group_not_found_status());

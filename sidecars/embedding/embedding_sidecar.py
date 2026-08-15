@@ -57,6 +57,7 @@ class SidecarError(Exception):
 @dataclass(frozen=True)
 class WorkItem:
     tenant_id: str
+    project_id: str
     source: str
     row_pk: str
     text: str
@@ -84,7 +85,7 @@ class WorkItem:
     late_chunking: bool
 
 
-_vault_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+_vault_cache: dict[tuple[str, str, str], tuple[float, dict[str, Any]]] = {}
 _vault_lock = threading.Lock()
 
 
@@ -138,6 +139,7 @@ def parse_work(raw: bytes) -> WorkItem:
         raise SidecarError("provider_endpoint_ref must use vault://")
     return WorkItem(
         tenant_id=required_str(value, "tenant_id"),
+        project_id=required_str(value, "project_id"),
         source=required_str(value, "source"),
         row_pk=required_str(value, "row_pk"),
         text=required_str(value, "text"),
@@ -203,23 +205,52 @@ def post_json(url: str, body: dict[str, Any], headers: dict[str, str] | None = N
     return decoded
 
 
-def resolve_vault_reference(reference: str) -> dict[str, Any]:
+def vault_cache_key(tenant_id: str, project_id: str, reference: str) -> tuple[str, str, str]:
+    return (tenant_id.strip(), project_id.strip(), reference.strip())
+
+
+def vault_resolver_headers() -> dict[str, str]:
+    token = os.environ.get("UDB_VAULT_RESOLVER_TOKEN", "").strip()
+    if not token:
+        raise SidecarError(
+            "UDB_VAULT_RESOLVER_TOKEN is required to authenticate Vault resolution",
+            500,
+        )
+    return {"Authorization": f"Bearer {token}"}
+
+
+def resolve_vault_reference(
+    reference: str,
+    tenant_id: str,
+    project_id: str,
+) -> dict[str, Any]:
     if not reference:
         raise SidecarError("production embedding providers require provider_endpoint_ref", 500)
+    if not tenant_id.strip() or not project_id.strip():
+        raise SidecarError("Vault resolution requires tenant_id and project_id", 500)
+    cache_key = vault_cache_key(tenant_id, project_id, reference)
     now = time.monotonic()
     with _vault_lock:
-        cached = _vault_cache.get(reference)
+        cached = _vault_cache.get(cache_key)
         if cached and cached[0] > now:
             return cached[1]
     resolver = os.environ.get("UDB_VAULT_RESOLVER_URL", "").strip()
     if not resolver:
         raise SidecarError("UDB_VAULT_RESOLVER_URL is required to resolve vault references", 500)
-    resolved = post_json(resolver, {"reference": reference})
+    resolved = post_json(
+        resolver,
+        {
+            "reference": reference,
+            "tenant_id": tenant_id,
+            "project_id": project_id,
+        },
+        vault_resolver_headers(),
+    )
     secret = resolved.get("data", resolved)
     if not isinstance(secret, dict):
         raise SidecarError("vault resolver returned an invalid secret envelope", 502)
     with _vault_lock:
-        _vault_cache[reference] = (now + VAULT_CACHE_TTL_SECONDS, secret)
+        _vault_cache[cache_key] = (now + VAULT_CACHE_TTL_SECONDS, secret)
     return secret
 
 
@@ -287,7 +318,11 @@ def embed_work(work: WorkItem) -> list[float]:
         )
     if work.provider not in {"openai", "openai-compatible", "azure-openai"}:
         raise SidecarError(f"unsupported embedding provider {work.provider!r}", 422)
-    secret = resolve_vault_reference(work.provider_endpoint_ref)
+    secret = resolve_vault_reference(
+        work.provider_endpoint_ref,
+        work.tenant_id,
+        work.project_id,
+    )
     endpoint = str(secret.get("endpoint", "")).rstrip("/")
     api_key = str(secret.get("api_key", ""))
     if not endpoint or not api_key:
@@ -347,7 +382,11 @@ def rerank(body: dict[str, Any]) -> dict[str, Any]:
         raise SidecarError("candidates must be an array")
     if provider != "deterministic":
         reference = os.environ.get("UDB_RERANK_VAULT_REF", "").strip()
-        secret = resolve_vault_reference(reference)
+        secret = resolve_vault_reference(
+            reference,
+            required_str(body, "tenant_id"),
+            required_str(body, "project_id"),
+        )
         endpoint = str(secret.get("rerank_endpoint") or secret.get("endpoint") or "").strip()
         api_key = str(secret.get("api_key", ""))
         if not endpoint or not api_key:
@@ -387,7 +426,11 @@ def parse_document(body: dict[str, Any]) -> dict[str, Any]:
     text = str(body.get("text", ""))
     parser_reference = os.environ.get("UDB_DOCUMENT_PARSER_VAULT_REF", "").strip()
     if parser_reference:
-        secret = resolve_vault_reference(parser_reference)
+        secret = resolve_vault_reference(
+            parser_reference,
+            required_str(body, "tenant_id"),
+            required_str(body, "project_id"),
+        )
         parser_endpoint = str(secret.get("parser_endpoint") or secret.get("endpoint") or "").strip()
         api_key = str(secret.get("api_key", ""))
         if not parser_endpoint or not api_key:

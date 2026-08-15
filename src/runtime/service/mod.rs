@@ -3377,9 +3377,21 @@ pub async fn serve(
     #[cfg(feature = "http-client")]
     {
         let notification_runtime = service.runtime.load_full();
-        if let Ok(notification_pool) =
-            notification_runtime.native_store_pool_for_service("notification", true, "")
-        {
+        let notification_catalog = service.catalog.clone();
+        let leader_pool = notification_catalog
+            .active_project_ids()
+            .into_iter()
+            .find_map(|project_id| {
+                let context = crate::RequestContext {
+                    project_id,
+                    ..crate::RequestContext::default()
+                };
+                notification_runtime
+                    .native_store_postgres_binding_for_service("notification", true, &context)
+                    .ok()
+                    .map(|(pool, _instance)| pool)
+            });
+        if let Some(leader_pool) = leader_pool {
             let singleton_relation = notification_runtime.config().cdc.lock_log_relation();
             let outbox_relation = notification_runtime.config().cdc.outbox_relation();
             // Bound each provider POST so one hung provider can't stall the whole
@@ -3390,7 +3402,9 @@ pub async fn serve(
                 )
                 .build()
                 .unwrap_or_else(|_| reqwest::Client::new());
-            let lease_pool = notification_pool.clone();
+            let lease_pool = leader_pool.clone();
+            let worker_runtime = notification_runtime.clone();
+            let worker_catalog = notification_catalog.clone();
             let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
             crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
                 crate::runtime::singleton::WORKER_NOTIFICATION_DELIVERY,
@@ -3399,21 +3413,51 @@ pub async fn serve(
                 singleton_relation,
                 crate::runtime::service::notification_service::notification_delivery_interval(),
                 move || {
-                    let runtime = notification_runtime.clone();
-                    let pool = notification_pool.clone();
+                    let runtime = worker_runtime.clone();
+                    let catalog = worker_catalog.clone();
                     let outbox = outbox_relation.clone();
                     let http = http.clone();
                     let metrics = metrics.clone();
                     async move {
-                        crate::runtime::service::notification_service::run_notification_delivery_worker_once(
-                            &http,
-                            runtime,
-                            &pool,
-                            Some(&outbox),
-                            crate::runtime::service::notification_service::notification_delivery_batch(),
-                            Some(&metrics),
-                        )
-                        .await
+                        let mut delivered = 0i64;
+                        let mut failures = Vec::new();
+                        for project_id in catalog.active_project_ids() {
+                            let context = crate::RequestContext {
+                                project_id: project_id.clone(),
+                                ..crate::RequestContext::default()
+                            };
+                            match runtime.native_store_postgres_binding_for_service(
+                                "notification",
+                                true,
+                                &context,
+                            ) {
+                                Ok((pool, _instance)) => {
+                                    match crate::runtime::service::notification_service::run_notification_delivery_worker_once(
+                                        &http,
+                                        runtime.clone(),
+                                        &pool,
+                                        &project_id,
+                                        Some(&outbox),
+                                        crate::runtime::service::notification_service::notification_delivery_batch(),
+                                        Some(&metrics),
+                                    )
+                                    .await
+                                    {
+                                        Ok(count) => delivered += count,
+                                        Err(err) => failures.push(format!("{project_id}: {err}")),
+                                    }
+                                }
+                                Err(err) => failures.push(format!("{project_id}: {err}")),
+                            }
+                        }
+                        if failures.is_empty() {
+                            Ok(delivered)
+                        } else {
+                            Err(format!(
+                                "notification delivery project failures: {}",
+                                failures.join("; ")
+                            ))
+                        }
                     }
                 },
             );

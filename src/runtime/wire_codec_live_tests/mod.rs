@@ -12,11 +12,31 @@
 //! assertion — or the write itself — red.
 //!
 //! They are runtime-skipped when the matching `UDB_*_DSN` env var is unset, so a
-//! default `cargo test` (and CI) stays green with zero external dependencies. Set
-//! the DSN to run each against the corresponding `docker-compose.canonical.yml`
-//! container. Each per-backend file is named `*_tests.rs` so the
+//! default local `cargo test` stays green with zero external dependencies. The
+//! required integration-CI lane sets `UDB_WIRE_CODEC_LIVE_TESTS=1`; under that
+//! opt-in a missing DSN panics instead of silently reporting success. Each
+//! per-backend file is named `*_tests.rs` so the
 //! `connection_manager::runtime_env_reads_are_confined…` guardrail treats its
 //! `std::env::var` reads as test config.
+
+/// Preserve zero-infrastructure local test runs while making the provisioned CI
+/// lane fail closed if a backend DSN is renamed, omitted, or otherwise drifts.
+/// One shared gate prevents four backend-specific skip policies from diverging.
+fn live_dsn(dsn: Option<String>, names: &str) -> Option<String> {
+    if dsn.is_none()
+        && std::env::var("UDB_WIRE_CODEC_LIVE_TESTS")
+            .map(|value| {
+                matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "1" | "true" | "yes" | "on"
+                )
+            })
+            .unwrap_or(false)
+    {
+        panic!("{names} unset while UDB_WIRE_CODEC_LIVE_TESTS requires served wire-codec coverage");
+    }
+    dsn
+}
 
 #[cfg(feature = "postgres")]
 mod postgres_tests;

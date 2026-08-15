@@ -182,8 +182,8 @@ async fn notification_event_outbox_to_cdc_to_kafka_end_to_end() {
 }
 
 /// A RETRIED notification must land in the transactional outbox stamped
-/// `retry=true` — proving the retry path goes through the same served
-/// `emit_sent_event` → outbox chokepoint as a first send (not a silent no-op).
+/// `retry=true` — proving the retry path goes through the strict transactional
+/// sent-event chokepoint rather than a silent/best-effort no-op.
 /// Driven entirely through the real `send_notification` / `retry_notification`
 /// RPC handlers; the only raw SQL forces the log row to `FAILED` so retry is
 /// eligible (delivery itself isn't exercised here).
@@ -308,6 +308,493 @@ async fn live_retry_notification_writes_outbox_event() {
         1,
         "the retried single-channel notification's carrier must have exactly one channel"
     );
+
+    cleanup_native_auth_db(&pool).await;
+    let _ = sqlx::query("DROP TABLE IF EXISTS udb_system.outbox_events CASCADE")
+        .execute(&pool)
+        .await;
+}
+
+/// Project scope supplied by a customer SDK in metadata must survive the entire
+/// native notification path, and `ReportDelivery` must route from that canonical
+/// NotificationLog project rather than a later caller-controlled fallback. This
+/// is a real Postgres + outbox regression for both the SendNotification
+/// metadata-only project loss and the former chained
+/// `native_service_context(..., "").project_id` delivery defect.
+#[tokio::test]
+#[ignore = "requires live Postgres. \
+            UDB_LIVE_AUTH_TESTS=1 \
+            cargo test --lib live_report_delivery_uses_stored_project -- --ignored --nocapture"]
+async fn live_report_delivery_uses_stored_project() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    crate::runtime::system::ensure_system_catalog(&pool)
+        .await
+        .expect("ensure live UDB system catalog");
+    ensure_outbox_table(&pool).await;
+
+    let tenant_id = seed_default_tenant(&pool).await;
+    let authn = authn_service(pool.clone());
+    let user = create_verified_user(&authn, "notify_report_project", "CorrectHorse1!").await;
+    seed_notification_subscriptions(&pool, &user.user_id, &tenant_id).await;
+    let svc = notification_service_with_outbox(pool.clone()).await;
+    svc.upsert_template(Request::new(notif_pb::UpsertTemplateRequest {
+        event_type: "delivery.project.audit".to_string(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        locale: "en".to_string(),
+        subject_template: "Project audit".to_string(),
+        body_template: "Body".to_string(),
+        is_active: true,
+        ..Default::default()
+    }))
+    .await
+    .expect("upsert template");
+
+    let stored_project = "default";
+    let mut send = Request::new(notif_pb::SendNotificationRequest {
+        event_type: "delivery.project.audit".to_string(),
+        recipient_id: user.user_id.clone(),
+        recipient_address: user.email.clone(),
+        tenant_id: tenant_id.clone(),
+        // Match the normal SDK shape: authenticated project metadata is the
+        // source of scope and the duplicate protobuf body field is omitted.
+        project_id: String::new(),
+        channels: vec![notif_entity_pb::NotificationChannel::Email as i32],
+        ..Default::default()
+    });
+    send.metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    send.metadata_mut().insert(
+        "x-udb-project-id",
+        stored_project.parse().expect("project metadata"),
+    );
+    let sent = svc
+        .send_notification(send)
+        .await
+        .expect("send notification")
+        .into_inner();
+    assert_eq!(sent.logs[0].project_id, stored_project);
+    let log_id = sent.logs[0].log_id.clone();
+
+    let mut wrong_channel = Request::new(notif_pb::ReportDeliveryRequest {
+        tenant_id: tenant_id.clone(),
+        log_id: log_id.clone(),
+        channel: notif_entity_pb::NotificationChannel::Sms as i32,
+        provider: "live-fixture".to_string(),
+        status: notif_entity_pb::NotificationStatus::Delivered as i32,
+        ..Default::default()
+    });
+    wrong_channel
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    wrong_channel.metadata_mut().insert(
+        "x-udb-project-id",
+        stored_project.parse().expect("project metadata"),
+    );
+    let mismatch = svc
+        .report_delivery(wrong_channel)
+        .await
+        .expect_err("a delivery report cannot relabel the stored channel");
+    assert_eq!(mismatch.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        mismatch.message(),
+        "channel does not match notification log"
+    );
+
+    let mut wrong_project = Request::new(notif_pb::ReportDeliveryRequest {
+        tenant_id: tenant_id.clone(),
+        log_id: log_id.clone(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        provider: "live-fixture".to_string(),
+        status: notif_entity_pb::NotificationStatus::Delivered as i32,
+        provider_message_id: "provider-1".to_string(),
+        ..Default::default()
+    });
+    wrong_project
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    wrong_project.metadata_mut().insert(
+        "x-udb-project-id",
+        "project-attacker-controlled"
+            .parse()
+            .expect("project metadata"),
+    );
+    let wrong_project_error = svc
+        .report_delivery(wrong_project)
+        .await
+        .expect_err("a callback from another project must not find the log");
+    assert_eq!(wrong_project_error.code(), tonic::Code::FailedPrecondition);
+
+    let mut report = Request::new(notif_pb::ReportDeliveryRequest {
+        tenant_id: tenant_id.clone(),
+        log_id: log_id.clone(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        provider: "live-fixture".to_string(),
+        status: notif_entity_pb::NotificationStatus::Delivered as i32,
+        provider_message_id: "provider-1".to_string(),
+        ..Default::default()
+    });
+    report
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    report.metadata_mut().insert(
+        "x-udb-project-id",
+        stored_project.parse().expect("project metadata"),
+    );
+    svc.report_delivery(report)
+        .await
+        .expect("report delivery through real handler");
+
+    let payload: serde_json::Value = sqlx::query_scalar(
+        "SELECT payload FROM udb_system.outbox_events \
+         WHERE topic = 'udb.notification.delivery.delivered.v1' \
+           AND partition_key = $1 ORDER BY event_seq DESC LIMIT 1",
+    )
+    .bind(&log_id)
+    .fetch_one(&pool)
+    .await
+    .expect("delivery outbox event");
+    assert_eq!(payload["project_id"], stored_project);
+    assert_eq!(payload["payload"]["project_id"], stored_project);
+    let legacy_payload: serde_json::Value = sqlx::query_scalar(
+        "SELECT payload FROM udb_system.outbox_events \
+         WHERE topic = 'udb.notification.delivered.v1' \
+           AND partition_key = $1 ORDER BY event_seq DESC LIMIT 1",
+    )
+    .bind(&tenant_id)
+    .fetch_one(&pool)
+    .await
+    .expect("legacy delivery outbox alias");
+    assert_eq!(legacy_payload["project_id"], stored_project);
+    assert_eq!(legacy_payload["payload"]["project_id"], stored_project);
+    assert_eq!(legacy_payload["payload"]["log_id"], log_id);
+    let attempt = crate::runtime::native_catalog::native_model(
+        "udb.core.notification.entity.v1.NotificationDeliveryAttempt",
+        &["notification_id", "channel"],
+    );
+    let relabeled_attempts: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {rel} WHERE {notification_id} = $1::UUID AND {channel} = 'SMS'",
+        rel = attempt.relation,
+        notification_id = attempt.q("notification_id"),
+        channel = attempt.q("channel"),
+    ))
+    .bind(&log_id)
+    .fetch_one(&pool)
+    .await
+    .expect("count relabeled delivery attempts");
+    assert_eq!(relabeled_attempts, 0);
+
+    cleanup_native_auth_db(&pool).await;
+    let _ = sqlx::query("DROP TABLE IF EXISTS udb_system.outbox_events CASCADE")
+        .execute(&pool)
+        .await;
+}
+
+/// A configured outbox failure must roll back the delivery-attempt row and the
+/// parent log transition. Returning success with only one of those writes was a
+/// false acknowledgement and caused durable state/event divergence.
+#[tokio::test]
+#[ignore = "requires live Postgres. \
+            UDB_LIVE_AUTH_TESTS=1 \
+            cargo test --lib live_report_delivery_rolls_back_on_outbox_failure -- --ignored --nocapture"]
+async fn live_report_delivery_rolls_back_on_outbox_failure() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    crate::runtime::system::ensure_system_catalog(&pool)
+        .await
+        .expect("ensure live UDB system catalog");
+    ensure_outbox_table(&pool).await;
+
+    let tenant_id = seed_default_tenant(&pool).await;
+    let authn = authn_service(pool.clone());
+    let user = create_verified_user(&authn, "notify_report_rollback", "CorrectHorse1!").await;
+    seed_notification_subscriptions(&pool, &user.user_id, &tenant_id).await;
+    let setup_svc = notification_service_with_outbox(pool.clone()).await;
+    setup_svc
+        .upsert_template(Request::new(notif_pb::UpsertTemplateRequest {
+            event_type: "delivery.atomic.audit".to_string(),
+            channel: notif_entity_pb::NotificationChannel::Email as i32,
+            locale: "en".to_string(),
+            subject_template: "Atomic audit".to_string(),
+            body_template: "Body".to_string(),
+            is_active: true,
+            ..Default::default()
+        }))
+        .await
+        .expect("upsert template");
+    let sent = setup_svc
+        .send_notification(Request::new(notif_pb::SendNotificationRequest {
+            event_type: "delivery.atomic.audit".to_string(),
+            recipient_id: user.user_id.clone(),
+            recipient_address: user.email.clone(),
+            tenant_id: tenant_id.clone(),
+            project_id: "default".to_string(),
+            channels: vec![notif_entity_pb::NotificationChannel::Email as i32],
+            ..Default::default()
+        }))
+        .await
+        .expect("send notification")
+        .into_inner();
+    let log_id = sent.logs[0].log_id.clone();
+
+    let broken_svc = notification_service(pool.clone()).await.with_outbox(Some(
+        "\"udb_system\".\"missing_notification_outbox\"".to_string(),
+    ));
+    let mut report = Request::new(notif_pb::ReportDeliveryRequest {
+        tenant_id: tenant_id.clone(),
+        log_id: log_id.clone(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        provider: "live-fixture".to_string(),
+        status: notif_entity_pb::NotificationStatus::Delivered as i32,
+        ..Default::default()
+    });
+    report
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    report.metadata_mut().insert(
+        "x-udb-project-id",
+        "default".parse().expect("project metadata"),
+    );
+    let error = broken_svc
+        .report_delivery(report)
+        .await
+        .expect_err("missing outbox must fail the atomic report");
+    assert_eq!(error.code(), tonic::Code::Internal);
+
+    let log = crate::runtime::native_catalog::native_model(
+        "udb.core.notification.entity.v1.NotificationLog",
+        &["log_id", "status"],
+    );
+    let status: String = sqlx::query_scalar(&format!(
+        "SELECT {status}::TEXT FROM {rel} WHERE {log_id} = $1::UUID",
+        rel = log.relation,
+        status = log.q("status"),
+        log_id = log.q("log_id"),
+    ))
+    .bind(&log_id)
+    .fetch_one(&pool)
+    .await
+    .expect("read notification status");
+    assert_eq!(status, "PENDING", "parent transition must roll back");
+    let attempt = crate::runtime::native_catalog::native_model(
+        "udb.core.notification.entity.v1.NotificationDeliveryAttempt",
+        &["notification_id"],
+    );
+    let attempts: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {rel} WHERE {notification_id} = $1::UUID",
+        rel = attempt.relation,
+        notification_id = attempt.q("notification_id"),
+    ))
+    .bind(&log_id)
+    .fetch_one(&pool)
+    .await
+    .expect("count delivery attempts");
+    assert_eq!(attempts, 0, "attempt upsert must roll back");
+
+    cleanup_native_auth_db(&pool).await;
+    let _ = sqlx::query("DROP TABLE IF EXISTS udb_system.outbox_events CASCADE")
+        .execute(&pool)
+        .await;
+}
+
+/// A multi-channel send is one customer request. Failure while preparing a later
+/// channel must not leave earlier channel logs behind, and a configured outbox
+/// failure must roll the entire typed log batch back.
+#[tokio::test]
+#[ignore = "requires live Postgres. \
+            UDB_LIVE_AUTH_TESTS=1 \
+            cargo test --lib live_send_notification_is_atomic_across_channels_and_outbox -- --ignored --nocapture"]
+async fn live_send_notification_is_atomic_across_channels_and_outbox() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    crate::runtime::system::ensure_system_catalog(&pool)
+        .await
+        .expect("ensure live UDB system catalog");
+    ensure_outbox_table(&pool).await;
+
+    let tenant_id = seed_default_tenant(&pool).await;
+    let authn = authn_service(pool.clone());
+    let user = create_verified_user(&authn, "notify_send_atomic", "CorrectHorse1!").await;
+    seed_notification_subscriptions(&pool, &user.user_id, &tenant_id).await;
+    let setup_svc = notification_service_with_outbox(pool.clone()).await;
+    let event_type = "send.atomic.audit";
+    setup_svc
+        .upsert_template(Request::new(notif_pb::UpsertTemplateRequest {
+            event_type: event_type.to_string(),
+            channel: notif_entity_pb::NotificationChannel::Email as i32,
+            locale: "en".to_string(),
+            subject_template: "Atomic send".to_string(),
+            body_template: "Body".to_string(),
+            is_active: true,
+            ..Default::default()
+        }))
+        .await
+        .expect("upsert email template");
+
+    let partial_error = setup_svc
+        .send_notification(Request::new(notif_pb::SendNotificationRequest {
+            event_type: event_type.to_string(),
+            recipient_id: user.user_id.clone(),
+            recipient_address: user.email.clone(),
+            tenant_id: tenant_id.clone(),
+            channels: vec![
+                notif_entity_pb::NotificationChannel::Email as i32,
+                notif_entity_pb::NotificationChannel::Sms as i32,
+            ],
+            ..Default::default()
+        }))
+        .await
+        .expect_err("missing second-channel template must fail the whole send");
+    assert_eq!(partial_error.code(), tonic::Code::NotFound);
+
+    let log = crate::runtime::native_catalog::native_model(
+        "udb.core.notification.entity.v1.NotificationLog",
+        &["tenant_id", "event_type"],
+    );
+    let count_sql = format!(
+        "SELECT COUNT(*) FROM {rel} WHERE {tenant_id} = $1 AND {event_type} = $2",
+        rel = log.relation,
+        tenant_id = log.q("tenant_id"),
+        event_type = log.q("event_type"),
+    );
+    let partial_count: i64 = sqlx::query_scalar(&count_sql)
+        .bind(&tenant_id)
+        .bind(event_type)
+        .fetch_one(&pool)
+        .await
+        .expect("count logs after later-channel failure");
+    assert_eq!(
+        partial_count, 0,
+        "later-channel failure must not partially persist"
+    );
+
+    let broken_svc = notification_service(pool.clone()).await.with_outbox(Some(
+        "\"udb_system\".\"missing_notification_outbox\"".to_string(),
+    ));
+    let outbox_error = broken_svc
+        .send_notification(Request::new(notif_pb::SendNotificationRequest {
+            event_type: event_type.to_string(),
+            recipient_id: user.user_id.clone(),
+            recipient_address: user.email.clone(),
+            tenant_id: tenant_id.clone(),
+            project_id: "default".to_string(),
+            channels: vec![notif_entity_pb::NotificationChannel::Email as i32],
+            ..Default::default()
+        }))
+        .await
+        .expect_err("missing outbox must fail the atomic send");
+    assert_eq!(outbox_error.code(), tonic::Code::Internal);
+    let outbox_count: i64 = sqlx::query_scalar(&count_sql)
+        .bind(&tenant_id)
+        .bind(event_type)
+        .fetch_one(&pool)
+        .await
+        .expect("count logs after outbox failure");
+    assert_eq!(
+        outbox_count, 0,
+        "outbox failure must roll the log batch back"
+    );
+
+    cleanup_native_auth_db(&pool).await;
+    let _ = sqlx::query("DROP TABLE IF EXISTS udb_system.outbox_events CASCADE")
+        .execute(&pool)
+        .await;
+}
+
+/// The FAILED→PENDING transition, attempt reset, and retry event must either all
+/// commit or all roll back. A missing outbox is a deterministic failure point.
+#[tokio::test]
+#[ignore = "requires live Postgres. \
+            UDB_LIVE_AUTH_TESTS=1 \
+            cargo test --lib live_retry_notification_rolls_back_on_outbox_failure -- --ignored --nocapture"]
+async fn live_retry_notification_rolls_back_on_outbox_failure() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    crate::runtime::system::ensure_system_catalog(&pool)
+        .await
+        .expect("ensure live UDB system catalog");
+    ensure_outbox_table(&pool).await;
+
+    let tenant_id = seed_default_tenant(&pool).await;
+    let authn = authn_service(pool.clone());
+    let user = create_verified_user(&authn, "notify_retry_atomic", "CorrectHorse1!").await;
+    seed_notification_subscriptions(&pool, &user.user_id, &tenant_id).await;
+    let setup_svc = notification_service_with_outbox(pool.clone()).await;
+    let event_type = "retry.atomic.audit";
+    setup_svc
+        .upsert_template(Request::new(notif_pb::UpsertTemplateRequest {
+            event_type: event_type.to_string(),
+            channel: notif_entity_pb::NotificationChannel::Email as i32,
+            locale: "en".to_string(),
+            subject_template: "Atomic retry".to_string(),
+            body_template: "Body".to_string(),
+            is_active: true,
+            ..Default::default()
+        }))
+        .await
+        .expect("upsert retry template");
+    let sent = setup_svc
+        .send_notification(Request::new(notif_pb::SendNotificationRequest {
+            event_type: event_type.to_string(),
+            recipient_id: user.user_id.clone(),
+            recipient_address: user.email.clone(),
+            tenant_id: tenant_id.clone(),
+            channels: vec![notif_entity_pb::NotificationChannel::Email as i32],
+            ..Default::default()
+        }))
+        .await
+        .expect("seed failed retry candidate")
+        .into_inner();
+    let log_id = sent.logs[0].log_id.clone();
+
+    let log = crate::runtime::native_catalog::native_model(
+        "udb.core.notification.entity.v1.NotificationLog",
+        &["log_id", "status", "retry_count"],
+    );
+    sqlx::query(&format!(
+        "UPDATE {rel} SET {status} = 'FAILED' WHERE {log_id} = $1::UUID",
+        rel = log.relation,
+        status = log.q("status"),
+        log_id = log.q("log_id"),
+    ))
+    .bind(&log_id)
+    .execute(&pool)
+    .await
+    .expect("mark notification failed");
+
+    let broken_svc = notification_service(pool.clone()).await.with_outbox(Some(
+        "\"udb_system\".\"missing_notification_outbox\"".to_string(),
+    ));
+    let mut retry = Request::new(notif_pb::RetryNotificationRequest {
+        log_id: log_id.clone(),
+        ..Default::default()
+    });
+    retry
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    let error = broken_svc
+        .retry_notification(retry)
+        .await
+        .expect_err("missing outbox must fail the atomic retry");
+    assert_eq!(error.code(), tonic::Code::Internal);
+
+    let (status, retry_count): (String, i32) = sqlx::query_as(&format!(
+        "SELECT {status}::TEXT, {retry_count} FROM {rel} WHERE {log_id} = $1::UUID",
+        rel = log.relation,
+        status = log.q("status"),
+        retry_count = log.q("retry_count"),
+        log_id = log.q("log_id"),
+    ))
+    .bind(&log_id)
+    .fetch_one(&pool)
+    .await
+    .expect("read rolled-back retry state");
+    assert_eq!(status, "FAILED", "retry state transition must roll back");
+    assert_eq!(retry_count, 0, "manual retry counter must roll back");
 
     cleanup_native_auth_db(&pool).await;
     let _ = sqlx::query("DROP TABLE IF EXISTS udb_system.outbox_events CASCADE")

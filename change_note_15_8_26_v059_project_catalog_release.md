@@ -41,6 +41,12 @@ Release: 0.5.9
 - EnsureProject, project enumeration, catalog reads/mutations, migration RPCs,
   capabilities, and health diagnostics bind body project identity to the
   authenticated claim; cross-project use requires explicit platform authority.
+- Native claim enforcement and API-key record authorization now share one
+  platform-authority predicate. Explicit platform roles and the exact
+  `udb:platform_admin` scope retain cross-boundary authority; `*`, `udb:*`,
+  `udb:admin`, and `udb:auth:admin` remain broad action scopes but cannot erase
+  a non-empty verified tenant/project claim. Deliberately unbound operator
+  identities retain their existing broad-scope compatibility.
 - Empty project selectors on capabilities, health, and schema discovery now
   follow their published context/default contract. The shared resolver also
   enforces body-vs-security project equality for trusted in-process calls and
@@ -153,6 +159,10 @@ Release: 0.5.9
 - The shared auth live fixture can now stage and activate a served manifest for
   an exact project. CDC bearer/API-key lifetime and data-only API-key CRUD use
   it for `billing`, preserving the production no-default-fallback boundary.
+- Unit coverage now denies bound broad-admin/wildcard claims at the common body
+  tenant/project guard and across API-key create preflight, get, filtered list,
+  update, revoke, rotate, and emergency-revoke paths, while retaining explicit
+  platform authority and deliberately unbound operator behavior.
 - Refreshed the generated codebase map after adding that shared helper; GitHub
   run `31903131598` had already compiled all targets and passed the full library
   suite before its freshness gate reported the one-line map drift.

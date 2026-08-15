@@ -14,8 +14,10 @@ option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Entity\\V
 option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
 
 // ---------------------------------------------------------------------------
-// NotificationPreference — Per-user, per-channel, per-event opt-out settings.
-// Queried before delivery to enforce USER_OPT_OUT suppression.
+// NotificationPreference — Per-project user/channel/event opt-out settings.
+// Queried before delivery to enforce USER_OPT_OUT suppression. Tenant and
+// project ownership are both first-class so shared physical stores cannot make
+// one project's preference suppress another project's notification.
 // ---------------------------------------------------------------------------
 
 message NotificationPreference {
@@ -24,14 +26,25 @@ message NotificationPreference {
     schema_name: "udb_notification"
     migration_order: 3
     is_table: true
-    comment: "Per-user per-channel per-event-type notification opt-out settings"
+    comment: "Per-project user/channel/event-type notification opt-out settings"
     soft_delete: false
     audit_fields: true
     enable_rls: true
+    force_rls: true
     rls_policies: {
-      policy_name: "tenant_isolation"
-      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      policy_name: "tenant_project_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)"
       permissive: true
+    }
+    indexes: {
+      index_name: "idx_notif_prefs_tenant_project_user_channel_event"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "project_id"
+      columns: "user_id"
+      columns: "channel"
+      columns: "event_type"
     }
     sql_artifacts: {
       name: "touch_updated_at_function"
@@ -58,8 +71,10 @@ message NotificationPreference {
   };
   option (udb.core.common.v1.db_table_security) = {
     tenant_isolation_mode: "tenant"
+    project_isolation_mode: "project"
     tenant_column: "tenant_id"
-    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    project_column: "project_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')"
     soft_delete_mode: "none"
     retention_class: "notification.operational"
     retention_days: 2555
@@ -72,7 +87,7 @@ message NotificationPreference {
 
   string preference_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "preference_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 
-  string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true index: { index_name: "idx_notif_prefs_user_channel_event" index_type: "BTREE" columns: "channel,event_type" unique: true } }];
+  string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true }];
 
   string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true index: { index_name: "idx_notif_prefs_tenant_id" index_type: "BTREE" } }];
 
@@ -88,4 +103,8 @@ message NotificationPreference {
   google.protobuf.Timestamp updated_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
 
   string created_by = 9 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(120)" comment: "Identity that created this record." }];
+
+  // First-class project owner. Blank is reserved for quarantined legacy rows;
+  // serving paths persist only an explicitly active resolved project.
+  string project_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "project_id" project_column: true sql_type: "VARCHAR(120)" not_null: true default_value: "''" index: { index_name: "idx_notif_prefs_project_id" index_type: "BTREE" } }];
 }

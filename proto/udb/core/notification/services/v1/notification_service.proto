@@ -128,7 +128,8 @@ service NotificationService {
       payload_redaction_profile: "standard"
       delivery_guarantee: "at_least_once"
       replay_compatibility: "stable"
-      emits: { topic: "udb.notification.sent.v1" partition_key_field: "recipient_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
+      emits: { topic: "udb.notification.sent.v1" partition_key_field: "recipient_ref" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+      emits: { topic: "udb.notification.suppressed.v1" partition_key_field: "tenant_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -259,13 +260,12 @@ service NotificationService {
   rpc RetryNotification(RetryNotificationRequest) returns (RetryNotificationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     // Verified: notification_service::retry_notification runs UPDATE ... SET
-    // status = 'PENDING', retry_count = retry_count + 1 WHERE ... AND status IN
-    // ('FAILED','SUPPRESSED'); a row in any other status is rejected. So FAILED
-    // and SUPPRESSED are the only legal source states and PENDING is the target.
+    // status = 'PENDING', retry_count = retry_count + 1 WHERE ... AND status =
+    // 'FAILED'. SUPPRESSED represents an opt-out decision and is deliberately
+    // terminal here; it cannot be resurrected through the retry RPC.
     option (udb.core.common.v1.method_lifecycle_contract) = {
       entity: "NotificationLog"
       legal_source_states: "FAILED"
-      legal_source_states: "SUPPRESSED"
       target_state: "PENDING"
     };
     // Verified: when the row is not in a retryable status the UPDATE matches no

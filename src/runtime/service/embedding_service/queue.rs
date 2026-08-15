@@ -7,9 +7,9 @@ use uuid::Uuid;
 use super::EmbeddingServiceImpl;
 use super::chunking::{Chunk, chunk_content_hash, chunk_point_id, deterministic_work_item_id};
 use super::config::{
-    DEFAULT_WORK_MAX_ATTEMPTS, EMBEDDING_WORK_ITEM_MSG, TOPIC_WORK, WORK_ACKED, WORK_DEAD,
-    WORK_PENDING, embedding_retry_backoff_base, embedding_retry_backoff_cap_secs,
-    embedding_work_visibility_timeout,
+    DEFAULT_WORK_MAX_ATTEMPTS, EMBEDDING_WORK_ITEM_MSG, TOPIC_WORK, TOPIC_WORK_DEAD_LETTER,
+    WORK_ACKED, WORK_DEAD, WORK_PENDING, embedding_retry_backoff_base,
+    embedding_retry_backoff_cap_secs, embedding_work_visibility_timeout,
 };
 use super::errors::{embedding_field_violation, embedding_policy_status_with_code};
 use super::model::{StoredModel, json_i32, json_i64, json_str, native_json_object};
@@ -594,12 +594,26 @@ pub(crate) async fn dead_letter_exhausted_work(
     Ok(dead)
 }
 
+pub(crate) fn fail_work_item_sql(backoff_cap: i64, backoff_base: i64) -> String {
+    format!(
+        "UPDATE udb_embedding.embedding_work_items SET last_error = $4, retryable = $5, \
+         status = CASE WHEN NOT $5 OR attempt_count >= max_attempts THEN 'DEAD' ELSE 'PENDING' END, \
+         next_attempt_at = CURRENT_TIMESTAMP + make_interval(secs => LEAST({backoff_cap}, CAST(power({backoff_base}, LEAST(attempt_count, 10)) AS INTEGER))), \
+         updated_at = CURRENT_TIMESTAMP WHERE work_item_id = $1 AND tenant_id = $2 AND project_id = $3 \
+         RETURNING status, attempt_count, job_id, project_id, source_name"
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn fail_work_item(
     pool: &PgPool,
+    outbox_relation: Option<&str>,
     tenant_id: &str,
+    project_id: &str,
     work_item_id: &str,
     error_message: &str,
     retryable: bool,
+    error_code: &str,
 ) -> Result<FailureResult, Status> {
     if error_message.trim().is_empty() {
         return Err(embedding_field_violation(
@@ -617,16 +631,11 @@ pub(crate) async fn fail_work_item(
     // integers, never request input, so string interpolation is injection-safe.
     let backoff_cap = embedding_retry_backoff_cap_secs();
     let backoff_base = embedding_retry_backoff_base();
-    let nack_sql = format!(
-        "UPDATE udb_embedding.embedding_work_items SET last_error = $3, retryable = $4, \
-         status = CASE WHEN NOT $4 OR attempt_count >= max_attempts THEN 'DEAD' ELSE 'PENDING' END, \
-         next_attempt_at = CURRENT_TIMESTAMP + make_interval(secs => LEAST({backoff_cap}, CAST(power({backoff_base}, LEAST(attempt_count, 10)) AS INTEGER))), \
-         updated_at = CURRENT_TIMESTAMP WHERE work_item_id = $1 AND tenant_id = $2 \
-         RETURNING status, attempt_count, job_id"
-    );
+    let nack_sql = fail_work_item_sql(backoff_cap, backoff_base);
     let row = sqlx::query(&nack_sql)
         .bind(work_item_id)
         .bind(tenant_id)
+        .bind(project_id)
         .bind(error_message)
         .bind(retryable)
         .fetch_optional(&mut *tx)
@@ -642,22 +651,50 @@ pub(crate) async fn fail_work_item(
         })?;
     let status: String = row.try_get("status").unwrap_or_default();
     let attempt_count: i32 = row.try_get("attempt_count").unwrap_or_default();
+    let stored_project_id: String = row.try_get("project_id").unwrap_or_default();
+    let source_name: String = row.try_get("source_name").unwrap_or_default();
     let dead = status == WORK_DEAD;
     if dead {
         let job_id: Option<Uuid> = row.try_get("job_id").ok();
         if let Some(job_id) = job_id {
             sqlx::query(
                 "UPDATE udb_embedding.embedding_jobs SET failed = failed + 1, status = 'FAILED', \
-                 error = $3, finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP \
-                 WHERE job_id = $1 AND tenant_id = $2",
+                 error = $4, finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP \
+                 WHERE job_id = $1 AND tenant_id = $2 AND project_id = $3",
             )
             .bind(job_id)
             .bind(tenant_id)
+            .bind(&stored_project_id)
             .bind(error_message)
             .execute(&mut *tx)
             .await
             .map_err(|error| queue_status("embedding_nack_job", error))?;
         }
+        crate::runtime::service::native_helpers::enqueue_outbox_event_in_tx(
+            &mut *tx,
+            outbox_relation,
+            TOPIC_WORK_DEAD_LETTER,
+            work_item_id,
+            tenant_id,
+            &stored_project_id,
+            serde_json::json!({
+                "tenant_id": tenant_id,
+                "project_id": stored_project_id,
+                "source": source_name,
+                "work_item_id": work_item_id,
+                "error_code": error_code,
+                "error": error_message,
+                "attempt_count": attempt_count,
+            }),
+            crate::runtime::service::native_helpers::NativeEventContext {
+                operation: "embedding.work.dead_letter".to_string(),
+                outcome: "failure".to_string(),
+                target_resource: work_item_id.to_string(),
+                ..Default::default()
+            },
+        )
+        .await
+        .map_err(|error| queue_status("embedding_nack_outbox", error))?;
     }
     tx.commit()
         .await

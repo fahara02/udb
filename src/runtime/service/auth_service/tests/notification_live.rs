@@ -256,5 +256,70 @@ async fn live_postgres_notification_service_crud_roundtrip() {
         .into_inner();
     assert_eq!(stats.total_failed, 0);
 
+    // SUPPRESSED is an opt-out terminal state, not a retry source. Exercise the
+    // public preference + send + retry handlers so the runtime and descriptor
+    // cannot drift back toward an unsafe SUPPRESSED → PENDING transition.
+    svc.set_preference(Request::new(notif_pb::SetPreferenceRequest {
+        user_id: user.user_id.clone(),
+        tenant_id: tenant_id.clone(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        event_type: event_type.to_string(),
+        is_opted_out: true,
+        ..Default::default()
+    }))
+    .await
+    .expect("opt out of invoice email");
+    let suppressed = svc
+        .send_notification(Request::new(notif_pb::SendNotificationRequest {
+            event_type: event_type.to_string(),
+            recipient_id: user.user_id.clone(),
+            recipient_address: user.email.clone(),
+            tenant_id: tenant_id.clone(),
+            channels: vec![notif_entity_pb::NotificationChannel::Email as i32],
+            ..Default::default()
+        }))
+        .await
+        .expect("send suppressed notification")
+        .into_inner()
+        .logs
+        .into_iter()
+        .next()
+        .expect("suppressed log");
+    assert_eq!(
+        suppressed.status,
+        notif_entity_pb::NotificationStatus::Suppressed as i32
+    );
+    let mut suppressed_retry = Request::new(notif_pb::RetryNotificationRequest {
+        log_id: suppressed.log_id.clone(),
+        ..Default::default()
+    });
+    suppressed_retry
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    let error = svc
+        .retry_notification(suppressed_retry)
+        .await
+        .expect_err("suppressed notification must remain terminal");
+    assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+
+    let mut get_suppressed = Request::new(notif_pb::GetNotificationRequest {
+        log_id: suppressed.log_id.clone(),
+    });
+    get_suppressed
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
+    let stored = svc
+        .get_notification(get_suppressed)
+        .await
+        .expect("read suppressed notification")
+        .into_inner()
+        .log
+        .expect("stored suppressed log");
+    assert_eq!(
+        stored.status,
+        notif_entity_pb::NotificationStatus::Suppressed as i32
+    );
+    assert_eq!(stored.retry_count, 0);
+
     cleanup_native_auth_db(&pool).await;
 }

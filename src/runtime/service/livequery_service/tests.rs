@@ -55,6 +55,33 @@ async fn subscribe_rejects_cross_tenant_body() {
 }
 
 #[tokio::test]
+async fn subscribe_rejects_cross_project_body() {
+    let svc = LiveQueryServiceImpl::new();
+    let mut request = Request::new(lq_pb::SubscribeRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "project-b".to_string(),
+        message_type: "udb.core.lock.entity.v1.Lock".to_string(),
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("project-a"));
+    let err = svc
+        .subscribe(request)
+        .await
+        .err()
+        .expect("cross-project body must be rejected before stream allocation");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_eq!(
+        decode_detail(&err).policy_decision_id,
+        "project_metadata_mismatch"
+    );
+}
+
+#[tokio::test]
 async fn subscribe_missing_message_type_carries_field_violation() {
     let svc = LiveQueryServiceImpl::new(); // no runtime/CDC; validation runs first
     let mut request = Request::new(lq_pb::SubscribeRequest {

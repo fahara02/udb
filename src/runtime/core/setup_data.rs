@@ -1362,13 +1362,13 @@ impl DataBrokerRuntime {
             .await
     }
 
-    /// G-2: evaluate an optional compare-and-swap precondition for a DELETE.
-    /// Unset/empty `expected` returns immediately. Otherwise the delete filter
+    /// Evaluate an optional compare-and-swap precondition for UPDATE or DELETE.
+    /// Unset/empty `expected` returns immediately. Otherwise the mutation filter
     /// must pin EVERY primary-key column by equality (so the precondition targets
     /// exactly one row); that row is locked `FOR UPDATE` and each `expected` field
     /// asserted, identically to the upsert CAS. On mismatch or a missing row the
-    /// caller returns before the delete, so nothing is removed.
-    pub(crate) async fn enforce_delete_precondition(
+    /// caller returns before the mutation, so nothing is changed.
+    pub(crate) async fn enforce_conditional_mutation_precondition(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         table: &ManifestTable,
@@ -1379,7 +1379,7 @@ impl DataBrokerRuntime {
         let key_columns = table.primary_key.clone();
         if key_columns.is_empty() {
             return Err(crate::runtime::executor_utils::failed_precondition_fields(
-                "conditional delete requires a manifest primary key to locate the row",
+                "conditional mutation requires a manifest primary key to locate the row",
                 [(
                     "expected".to_string(),
                     "table has no primary key".to_string(),
@@ -1391,7 +1391,7 @@ impl DataBrokerRuntime {
             .await
     }
 
-    /// Shared compare-and-swap core (upsert GO-005 + delete G-2): locate the row
+    /// Shared compare-and-swap core (upsert + conditional update/delete): locate the row
     /// by `key_columns = key_values` with `FOR UPDATE` inside the caller's tx,
     /// decrypt it, and assert each `expected` field equals the current value.
     /// `FAILED_PRECONDITION` on a missing row or any mismatch.
@@ -1884,7 +1884,7 @@ impl DataBrokerRuntime {
             .as_ref()
             .filter(|expected| !expected.fields.is_empty())
         {
-            self.enforce_delete_precondition(
+            self.enforce_conditional_mutation_precondition(
                 &mut tx,
                 table,
                 expected,
@@ -2372,7 +2372,7 @@ impl DataBrokerRuntime {
             .as_ref()
             .filter(|expected| !expected.fields.is_empty())
         {
-            self.enforce_delete_precondition(
+            self.enforce_conditional_mutation_precondition(
                 &mut tx,
                 table,
                 expected,
@@ -4848,18 +4848,18 @@ fn idempotency_dedup_claim_status(err: &sqlx::Error) -> tonic::Status {
 }
 
 /// Extract the equality value for each key column from a normalized filter, for
-/// conditional delete (G-2). Every key column MUST be pinned by equality — bare
+/// conditional update/delete. Every key column MUST be pinned by equality — bare
 /// (`{"col": v}`) or `{"col": {"$eq": v}}` — otherwise the precondition cannot
-/// target a single row deterministically and the delete is refused. This is the
-/// deliberately conservative semantic: CAS-delete is "remove THIS row if it still
-/// looks like this", not "remove whatever this range matches, conditionally".
+/// target a single row deterministically and the mutation is refused. This is the
+/// deliberately conservative semantic: compare-and-swap acts on THIS row, not
+/// whatever a range happens to match.
 fn pk_equality_values_from_filter(
     filter: &JsonValue,
     key_columns: &[String],
 ) -> Result<Vec<JsonValue>, tonic::Status> {
     let reject = |column: &str, why: &str| {
         crate::runtime::executor_utils::failed_precondition_fields(
-            "conditional delete requires an equality filter on every primary-key column",
+            "conditional mutation requires an equality filter on every primary-key column",
             [(column.to_string(), why.to_string())],
         )
     };
@@ -7446,7 +7446,7 @@ mod setup_data_consistency_tests {
         );
     }
 
-    // G-2: conditional delete must refuse to run unless every PK column is pinned
+    // Conditional update/delete must refuse to run unless every PK column is pinned
     // by equality — otherwise the CAS cannot target one row deterministically.
     #[test]
     fn pk_equality_values_from_filter_requires_equality_on_every_pk() {
@@ -7463,11 +7463,12 @@ mod setup_data_consistency_tests {
 
         // A missing PK column is refused.
         let missing = serde_json::json!({"id": "r1"});
-        assert_eq!(
-            pk_equality_values_from_filter(&missing, &pk)
-                .unwrap_err()
-                .code(),
-            tonic::Code::FailedPrecondition
+        let missing_error = pk_equality_values_from_filter(&missing, &pk).unwrap_err();
+        assert_eq!(missing_error.code(), tonic::Code::FailedPrecondition);
+        assert!(
+            missing_error
+                .message()
+                .contains("conditional mutation requires")
         );
 
         // A non-equality operator on a PK column is refused (could match many rows).

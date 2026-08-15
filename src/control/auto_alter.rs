@@ -302,6 +302,9 @@ pub struct LintInput {
     pub sql_type: String,
     /// The default value expression (for SET DEFAULT repairs).
     pub default_value: String,
+    /// Desired nullability from the manifest. Used only by
+    /// `nullability_mismatch` repairs.
+    pub not_null: bool,
 }
 
 fn lint_to_repair(item: &LintInput) -> Option<RepairDecision> {
@@ -360,16 +363,24 @@ fn lint_to_repair(item: &LintInput) -> Option<RepairDecision> {
             },
             "default_mismatch",
         ),
-        "nullability_mismatch" => (
-            RepairKind::SetNotNull,
-            format!(
-                "ALTER TABLE {}.{} ALTER COLUMN {} SET NOT NULL;",
-                qi(&item.schema),
-                qi(&item.table),
-                qi(&item.column)
-            ),
-            "nullability_mismatch",
-        ),
+        "nullability_mismatch" => {
+            let (kind, action) = if item.not_null {
+                (RepairKind::SetNotNull, "SET NOT NULL")
+            } else {
+                (RepairKind::DropNotNull, "DROP NOT NULL")
+            };
+            (
+                kind,
+                format!(
+                    "ALTER TABLE {}.{} ALTER COLUMN {} {};",
+                    qi(&item.schema),
+                    qi(&item.table),
+                    qi(&item.column),
+                    action
+                ),
+                "nullability_mismatch",
+            )
+        }
         // GAP 23: new repair kinds wired to lint outputs
         "missing_index" => (
             RepairKind::CreateIndex,
@@ -495,6 +506,7 @@ mod tests {
             column: String::new(),
             sql_type: String::new(),
             default_value: String::new(),
+            not_null: false,
         }];
         let plan = plan_repairs(&items);
         assert_eq!(plan.auto_safe_count, 1);
@@ -515,6 +527,7 @@ mod tests {
             column: "tenant_id".to_string(),
             sql_type: "TEXT".to_string(),
             default_value: String::new(),
+            not_null: false,
         }];
         let plan = plan_repairs(&items);
         assert_eq!(plan.auto_safe_count, 1);
@@ -532,8 +545,30 @@ mod tests {
             column: "email".to_string(),
             sql_type: String::new(),
             default_value: String::new(),
+            not_null: false,
         }];
         let plan = plan_repairs(&items);
         assert_eq!(plan.decisions.len(), 0);
+    }
+
+    #[test]
+    fn nullability_repairs_follow_manifest_direction() {
+        let input = |not_null| LintInput {
+            lint_kind: "nullability_mismatch".to_string(),
+            schema: "marketplace".to_string(),
+            table: "manual_assessment_requests".to_string(),
+            column: "customer_user_id".to_string(),
+            sql_type: "UUID".to_string(),
+            default_value: String::new(),
+            not_null,
+        };
+
+        let nullable = plan_repairs(&[input(false)]);
+        assert_eq!(nullable.decisions[0].kind, RepairKind::DropNotNull);
+        assert!(nullable.decisions[0].ddl.ends_with("DROP NOT NULL;"));
+
+        let required = plan_repairs(&[input(true)]);
+        assert_eq!(required.decisions[0].kind, RepairKind::SetNotNull);
+        assert!(required.decisions[0].ddl.ends_with("SET NOT NULL;"));
     }
 }

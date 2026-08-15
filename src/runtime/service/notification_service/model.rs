@@ -53,9 +53,10 @@ pub(crate) fn template_model() -> NativeModel {
             "locale",
             "is_active",
             "created_by",
-            // Hybrid tenant model (F4.3): NULL = platform-global default,
+            // Hybrid tenant model (F4.3): NULL = project-global default,
             // non-null = per-tenant override.
             "tenant_id",
+            "project_id",
         ],
     )
 }
@@ -71,6 +72,7 @@ pub(crate) fn preference_model() -> NativeModel {
             "event_type",
             "is_opted_out",
             "created_by",
+            "project_id",
         ],
     )
 }
@@ -147,32 +149,49 @@ pub(crate) fn channel_send_decision(opted_out: bool) -> (&'static str, i32) {
     }
 }
 
-pub(crate) fn notification_delivery_payload(
-    log_id: &str,
-    event_type: &str,
-    recipient_id: &str,
-    tenant_id: &str,
-    project_id: &str,
-    channels: &[i32],
+/// Payload for the public per-channel `NotificationSentEvent`. Keep the former
+/// `recipient_id` and `channels[]` keys as additive compatibility fields for
+/// raw-JSON consumers while also satisfying the descriptor's singular
+/// `recipient_ref`/`channel` schema.
+pub(crate) fn notification_sent_payload(
+    log: &notif_entity_pb::NotificationLog,
     retry: bool,
 ) -> serde_json::Value {
+    let channel = channel_to_db(log.channel);
     serde_json::json!({
-        "log_id": log_id,
-        "event_type": event_type,
-        "recipient_id": recipient_id,
-        "tenant_id": tenant_id,
-        "project_id": project_id,
-        "channels": channels.iter().map(|c| channel_to_db(*c)).collect::<Vec<_>>(),
+        "log_id": log.log_id,
+        "template_id": log.template_id,
+        "event_type": log.event_type,
+        "channel": channel,
+        "channels": [channel],
+        "recipient_ref": log.recipient_id,
+        "recipient_id": log.recipient_id,
+        "tenant_id": log.tenant_id,
+        "project_id": log.project_id,
+        "correlation_id": log.correlation_id,
+        "occurred_at": chrono::Utc::now().to_rfc3339(),
         "retry": retry,
     })
 }
 
-pub(crate) fn deliverable_channels(logs: &[notif_entity_pb::NotificationLog]) -> Vec<i32> {
-    let pending = notif_entity_pb::NotificationStatus::Pending as i32;
-    logs.iter()
-        .filter(|log| log.status == pending)
-        .map(|log| log.channel)
-        .collect()
+/// Payload for the public per-channel `NotificationSuppressedEvent`. Recipient
+/// addresses and rendered content are deliberately excluded.
+pub(crate) fn notification_suppressed_payload(
+    log: &notif_entity_pb::NotificationLog,
+    reason: &str,
+) -> serde_json::Value {
+    serde_json::json!({
+        "log_id": log.log_id,
+        "template_id": log.template_id,
+        "event_type": log.event_type,
+        "channel": channel_to_db(log.channel),
+        "recipient_ref": log.recipient_id,
+        "tenant_id": log.tenant_id,
+        "project_id": log.project_id,
+        "suppression_reason": reason,
+        "correlation_id": log.correlation_id,
+        "occurred_at": chrono::Utc::now().to_rfc3339(),
+    })
 }
 
 pub(crate) fn template_locale_or_default(locale: &str) -> Result<String, Status> {
@@ -278,6 +297,7 @@ pub(crate) fn preference_from_json_row(
         event_type: json_string_field(row, "event_type"),
         is_opted_out: json_bool_field(row, "is_opted_out"),
         created_by: json_string_field(row, "created_by"),
+        project_id: json_string_field(row, "project_id"),
         ..Default::default()
     }
 }
@@ -296,6 +316,7 @@ pub(crate) fn template_from_json_row(
         is_active: json_bool_field(row, "is_active"),
         created_by: json_string_field(row, "created_by"),
         tenant_id: json_string_field(row, "tenant_id"),
+        project_id: json_string_field(row, "project_id"),
         ..Default::default()
     }
 }
@@ -400,12 +421,13 @@ pub(crate) fn template_select_projection(m: &NativeModel) -> String {
         m.select("is_active"),
         m.text_or_empty("created_by"),
         m.text_or_empty("tenant_id"),
+        m.text("project_id"),
     ]
     .join(", ")
 }
 
 /// Build the `GetTemplate` selection query (hybrid tenant model, F4.3):
-/// candidate rows are restricted to the platform-global default
+/// candidate rows are restricted to the project-global default
 /// (`tenant_id IS NULL`) or the CALLER's own tenant override (bound as `$4`) —
 /// a foreign tenant's override can never match — and `NULLS LAST` prefers the
 /// caller's override over the global default. Extracted so the tenant scoping
@@ -415,7 +437,7 @@ pub(crate) fn template_selection_sql(m: &NativeModel) -> String {
     format!(
         "SELECT {projection} FROM {rel} \
          WHERE {event_type} = $1 AND {channel} = $2 AND {locale} = $3 AND {deleted} IS NULL \
-           AND ({tenant_id} IS NULL OR {tenant_id} = $4) \
+           AND ({tenant_id} IS NULL OR {tenant_id} = $4) AND {project_id} = $5 \
          ORDER BY {tenant_id} NULLS LAST LIMIT 1",
         projection = template_select_projection(m),
         rel = m.relation,
@@ -424,6 +446,7 @@ pub(crate) fn template_selection_sql(m: &NativeModel) -> String {
         locale = m.q("locale"),
         deleted = m.q("deleted_at"),
         tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
     )
 }
 
@@ -444,6 +467,7 @@ pub(crate) fn template_from_row(
         created_by: row.try_get("created_by").map_err(map)?,
         // text_or_empty() coalesces a NULL (global default) tenant_id to "".
         tenant_id: row.try_get("tenant_id").map_err(map)?,
+        project_id: row.try_get("project_id").map_err(map)?,
         ..Default::default()
     })
 }
@@ -457,6 +481,7 @@ pub(crate) fn preference_select_projection(m: &NativeModel) -> String {
         m.text_or_empty("event_type"),
         m.select("is_opted_out"),
         m.text_or_empty("created_by"),
+        m.text("project_id"),
     ]
     .join(", ")
 }
@@ -478,6 +503,7 @@ pub(crate) fn preference_from_row(
         event_type: row.try_get("event_type").map_err(map)?,
         is_opted_out: row.try_get("is_opted_out").map_err(map)?,
         created_by: row.try_get("created_by").map_err(map)?,
+        project_id: row.try_get("project_id").map_err(map)?,
         ..Default::default()
     })
 }
@@ -499,6 +525,7 @@ pub(crate) fn delivery_attempt_model() -> NativeModel {
             "provider_message_id",
             "created_at",
             "updated_at",
+            "project_id",
         ],
     )
 }
@@ -508,6 +535,7 @@ pub(crate) fn delivery_attempt_select_projection(m: &NativeModel) -> String {
         m.text("attempt_id"),
         m.text("notification_id"),
         m.text("tenant_id"),
+        m.text("project_id"),
         m.text_or_empty("channel"),
         m.text_or_empty("provider"),
         m.text_or_empty("status"),
@@ -543,6 +571,7 @@ pub(crate) fn delivery_attempt_from_row(
         attempt_id: row.try_get("attempt_id").map_err(map)?,
         notification_id: row.try_get("notification_id").map_err(map)?,
         tenant_id: row.try_get("tenant_id").map_err(map)?,
+        project_id: row.try_get("project_id").map_err(map)?,
         channel: channel_from_db(&row.try_get::<String, _>("channel").map_err(map)?),
         provider: row.try_get("provider").map_err(map)?,
         status: status_from_db(&row.try_get::<String, _>("status").map_err(map)?),

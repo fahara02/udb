@@ -605,7 +605,7 @@ mod accessors;
 pub(crate) use accessors::RoutedReadPool;
 mod catalog_admin;
 mod catalog_sql;
-mod native_store;
+pub(crate) mod native_store;
 pub use catalog_sql::ManifestDrift;
 mod probe_dispatch;
 mod reload;

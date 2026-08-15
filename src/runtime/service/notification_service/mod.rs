@@ -13,8 +13,8 @@
 //! typed statuses + `error-reason` attachment + field validator, [`model`] the
 //! enum<->db converters + models + projections + JSON/`PgRow` decoders + the
 //! `{{placeholder}}` renderer, [`store`] the neutral-IR query/record builders +
-//! opt-out lookup + shared delivery-attempt upsert, [`events`] the best-effort
-//! outbox emit, [`delivery`] the leader-elected delivery worker + generic provider
+//! opt-out lookup + shared delivery-attempt upsert, [`events`] the strict
+//! transactional outbox operations, [`delivery`] the leader-elected delivery worker + generic provider
 //! adapter (http-client-gated), [`handlers`] the twelve RPCs — `mod.rs` keeps only
 //! the struct, the builders/require-guards, and one-line trait delegators.
 //!
@@ -32,6 +32,7 @@ use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::udb::core::notification::services::v1 as notif_pb;
 use crate::proto::udb::core::notification::services::v1::notification_service_server::NotificationService;
 use crate::runtime::DataBrokerRuntime;
+use crate::runtime::catalog::{CatalogManager, DEFAULT_PROJECT_ID};
 use crate::runtime::channels::ChannelManager;
 
 pub use crate::proto::udb::core::notification::services::v1::notification_service_server::NotificationServiceServer;
@@ -44,6 +45,8 @@ mod errors;
 mod events;
 mod handlers;
 mod model;
+#[cfg(test)]
+mod project_store_live;
 mod store;
 #[cfg(test)]
 mod tests;
@@ -63,11 +66,13 @@ pub(crate) use delivery::run_notification_delivery_worker_once;
 use errors::notification_capability_status;
 
 pub struct NotificationServiceImpl {
-    pub(crate) pg_pool: Option<PgPool>,
     /// Runtime handle for P4 native-entity data-plane operations. Straightforward
     /// notification CRUD persists as typed proto entities through the native
     /// catalog, neutral IR compiler, and selected backend executor.
     pub(crate) runtime: Option<Arc<DataBrokerRuntime>>,
+    /// Live project registry used to reject unknown-project fallback before a
+    /// direct/raw notification operation can select a physical authority.
+    pub(crate) catalog: Option<Arc<CatalogManager>>,
     /// Schema-qualified outbox table (`udb_system.outbox_events`) the CDC engine
     /// tails → Apache Kafka → the Spark streaming consumer. `None` = no emit.
     pub(crate) outbox_relation: Option<String>,
@@ -83,22 +88,22 @@ pub struct NotificationServiceImpl {
 impl NotificationServiceImpl {
     pub fn new() -> Self {
         Self {
-            pg_pool: None,
             runtime: None,
+            catalog: None,
             outbox_relation: None,
             channels: None,
             metrics: Arc::new(NoopMetrics),
         }
     }
 
-    pub fn with_postgres(mut self, pool: Option<PgPool>) -> Self {
-        self.pg_pool = pool;
-        self
-    }
-
     /// Wire the runtime used for typed native-entity notification persistence.
     pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
         self.runtime = runtime;
+        self
+    }
+
+    pub(crate) fn with_catalog(mut self, catalog: Option<Arc<CatalogManager>>) -> Self {
+        self.catalog = catalog;
         self
     }
 
@@ -134,14 +139,51 @@ impl NotificationServiceImpl {
         self
     }
 
-    pub(crate) fn require_pool(&self) -> Result<&PgPool, Status> {
-        self.pg_pool.as_ref().ok_or_else(|| {
+    /// Resolve and pin one physical Postgres authority for the request project.
+    /// Empty project metadata names the explicit `default` project; it never means
+    /// "pick any configured instance". Compound typed/raw operations carry the
+    /// selected instance in the returned context so weighted routing cannot split
+    /// a notification mutation from its transactional outbox row.
+    pub(crate) fn resolve_project_store(
+        &self,
+        mut context: crate::RequestContext,
+        write: bool,
+        operation: &str,
+    ) -> Result<(crate::RequestContext, PgPool), Status> {
+        context.project_id = match context.project_id.trim() {
+            "" => DEFAULT_PROJECT_ID.to_string(),
+            project_id => project_id.to_string(),
+        };
+        let runtime = self.require_runtime()?;
+        let catalog = self.catalog.as_deref().ok_or_else(|| {
             notification_capability_status(
-                "postgres_store",
-                "postgres_store",
-                "notification service requires a Postgres-backed store (no PG pool configured)",
+                operation,
+                "active_project_catalog",
+                "notification direct-store operation requires the live project catalog",
             )
-        })
+        })?;
+        if !catalog
+            .active_project_ids()
+            .iter()
+            .any(|active| active == &context.project_id)
+        {
+            return Err(notification_capability_status(
+                operation,
+                "active_project_catalog",
+                format!(
+                    "notification project '{}' has no explicitly active catalog; default-project fallback is refused",
+                    context.project_id
+                ),
+            ));
+        }
+        let (pool, instance) = runtime.native_store_postgres_binding_for_service(
+            "notification",
+            write,
+            &context,
+        )?;
+        context.target_backend = "postgres".to_string();
+        context.target_instance = instance.unwrap_or_default();
+        Ok((context, pool))
     }
 }
 
@@ -239,20 +281,15 @@ impl NotificationService for NotificationServiceImpl {
 }
 
 impl DataBrokerService {
-    /// Build the native `NotificationService`, wired to the broker's Postgres pool.
+    /// Build the native `NotificationService`. No startup/default pool is retained:
+    /// every RPC resolves and pins its request project's physical authority.
     pub(crate) fn build_notification_service(&self) -> NotificationServiceImpl {
         let runtime = self.runtime.load_full();
-        // Native-service persistence resolves through the discovery seam (extend_udb.md):
-        // the backend is read from this service's proto `native_service` binding, then a
-        // health/weight-routed instance is chosen — not the process-global pool.
-        let pg_pool = runtime
-            .native_store_pool_for_service("notification", true, "")
-            .ok();
         let outbox = runtime.config().cdc.outbox_relation();
         let channels = Some(runtime.channels().clone());
         NotificationServiceImpl::new()
-            .with_postgres(pg_pool)
             .with_runtime(Some(runtime))
+            .with_catalog(Some(self.catalog.clone()))
             .with_outbox(Some(outbox))
             .with_channels(channels)
             .with_metrics(self.metrics.clone())

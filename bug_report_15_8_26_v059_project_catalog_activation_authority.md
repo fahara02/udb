@@ -14,6 +14,13 @@ That helper always targets the `default` project. A customer project could
 therefore have a durable `ACTIVE` row while the served catalog map still had no
 entry for it.
 
+The merge audit also found a shared claim-authority drift: broad action scopes
+(`*`, `udb:*`, `udb:admin`, and `udb:auth:admin`) were classified as platform
+authority even when the verified credential carried a concrete tenant/project.
+The common body guard and API-key handlers therefore returned before comparing
+the body or stored record with that claim, allowing a project-bound broad-admin
+credential to act as if it were unbound platform authority.
+
 The NotFound recovery path compounded the defect by consulting `active_for`,
 which intentionally falls back to `default`; an unactivated project could be
 reported as active even though authority-sensitive services correctly refused
@@ -53,6 +60,9 @@ catalog at all.
   drift accepted body project selectors under generic tenant-admin scope. They
   could expose another project's catalog/control metadata, and health treated a
   raw unproven `ACTIVE` row as healthy authority.
+- API-key get/list/create/update/revoke/rotate/usage/emergency paths reused the
+  same broad-scope classification, so their new record-project checks could be
+  bypassed by a project-bound admin or wildcard token.
 
 ## Required correction
 
@@ -70,6 +80,11 @@ catalog at all.
 - Bind catalog, project, migration, capabilities, and health body project IDs
   to the authenticated project; require explicit platform authority for a
   cross-project operation.
+- Centralize cross-tenant/project authority: explicit platform roles or the
+  exact `udb:platform_admin` scope may cross a bound claim; generic admin and
+  wildcard scopes remain action privileges inside any non-empty claim scope.
+  Preserve their legacy platform-operator behavior only for deliberately
+  tenant/project-unbound identities.
 - Make migration planning consume the same proven exact ACTIVE loader used by
   hydration and serving, and fail instead of producing an empty plan when no
   proven authority exists.
@@ -170,6 +185,14 @@ not be restored.
 Focused GitHub runs `31903188510` and `31903230512` passed the corrected CDC
 authorization-lifetime and data-only API-key CRUD fixtures independently.
 
+The subsequent main/fixture merge audit statically traced
+`VerifiedClaimContext::is_cross_tenant_admin` into the common body tenant,
+project, and owner guards and into the API-key service's duplicated predicate.
+It confirmed that the existing project-isolation tests used ordinary data
+scopes, while a project-bound `udb:auth:admin` emergency-revoke test already
+expressed the missing negative contract and would reach the wrong failure path
+until the authority predicate was corrected.
+
 ## Regression coverage
 
 The ignored live Postgres regression
@@ -182,3 +205,9 @@ a project-scoped admin cannot stage another project's catalog. The same fixture
 now asserts that migration plans persist exact catalog/physical-target
 provenance and that superseding the catalog makes an approved stale plan fail
 before any operation ledger row can leave `PENDING`.
+
+Focused unit regressions cover all four broad admin/wildcard scopes on bound and
+unbound verified claims, retain explicit platform-role/scope behavior, and drive
+API-key create preflight, get, list filtering/paging, update, revoke, rotate, and
+emergency revoke through the corrected project boundary. Local Cargo/test
+remains disabled; CI is the required execution proof.

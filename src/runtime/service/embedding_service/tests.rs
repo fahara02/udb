@@ -537,6 +537,18 @@ fn chunk_hash_and_work_identity_are_stable() {
 }
 
 #[test]
+fn embedding_failure_update_is_project_scoped() {
+    let sql = super::queue::fail_work_item_sql(3600, 2);
+    assert!(
+        sql.contains("WHERE work_item_id = $1 AND tenant_id = $2 AND project_id = $3"),
+        "a sidecar NACK must not mutate another project in the same tenant: {sql}"
+    );
+    assert!(sql.contains("last_error = $4"));
+    assert!(sql.contains("retryable = $5"));
+    assert!(sql.contains("RETURNING status, attempt_count, job_id, project_id, source_name"));
+}
+
+#[test]
 fn token_chunks_preserve_parent_boundaries_and_model_limit() {
     use super::chunking::chunk_text_tokens;
     let text = "One sentence ends here. Two sentence continues with detail.\n\n# Heading\nThree block values finish.";
