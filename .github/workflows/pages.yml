@@ -73,9 +73,15 @@ jobs:
       - name: Pull latest benchmark results into the site
         # Prefer the FRESH artifact from the benchmark run that triggered this
         # deploy (on: workflow_run); the benchmark workflow uploads it as
-        # `sdk-benchmark-results` containing docs/site/bench-results.json. Falls
-        # back to the currently-published dashboard JSON so a docs-only / wasm
-        # push (no triggering benchmark) still ships the last good results.
+        # `sdk-benchmark-results` containing docs/site/bench-results.json. A
+        # triggering run that produces no such artifact is a HARD FAILURE — see
+        # the `::error::` below. There is no fallback on that path.
+        #
+        # A docs-only / wasm push has no triggering run, so the COMMITTED
+        # docs/site/bench-results.json ships as-is. It is deliberately never
+        # re-fetched from the live board: republishing whatever is currently
+        # served would re-pin a stale dashboard forever, which is the defect
+        # this step was rewritten to remove.
         env:
           GH_TOKEN: ${{ github.token }}
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
