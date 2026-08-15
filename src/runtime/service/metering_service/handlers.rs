@@ -13,7 +13,7 @@ use crate::runtime::channels::OperationChannel;
 use super::super::native_helpers::{
     NativeEventContext, admit_on as native_admit_on, enqueue_outbox_event_with_context,
     native_next_page_token, native_offset_page_window, native_service_context, non_empty_json,
-    tenant_only_native_service_context, validate_request_tenant,
+    tenant_only_native_service_context, validate_request_scope, validate_request_tenant,
 };
 use super::MeteringServiceImpl;
 use super::calc::{bump_revision, now_unix, quota_decision, window_start_unix};
@@ -164,8 +164,10 @@ pub(crate) async fn record_usage(
     } else {
         now_unix()
     };
-    // Single durable append through the shared ingest seam (swallows errors).
-    super::admission::record_usage(
+    // Explicit ingest is itself the requested durable operation. It must fail
+    // the RPC when PostgreSQL rejects the append; only automatic admission
+    // telemetry uses the separate fail-open wrapper.
+    super::admission::record_usage_strict(
         pool,
         &tenant_id,
         req.principal_id.trim(),
@@ -248,7 +250,7 @@ pub(crate) async fn put_quota(
 ) -> Result<Response<metering_pb::PutQuotaResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
+    validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
     let tenant_id = req.tenant_id.trim().to_string();
     let project_id = req.project_id.trim().to_string();
     let metric = req.metric.trim().to_string();
@@ -345,7 +347,7 @@ pub(crate) async fn get_quota(
 ) -> Result<Response<metering_pb::GetQuotaResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
+    validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
     let tenant_id = req.tenant_id.trim().to_string();
     let project_id = req.project_id.trim().to_string();
     let metric = req.metric.trim().to_string();
@@ -392,7 +394,7 @@ pub(crate) async fn list_quotas(
 ) -> Result<Response<metering_pb::ListQuotasResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
+    validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
     let tenant_id = req.tenant_id.trim().to_string();
     let project_id = req.project_id.trim().to_string();
     let legacy_limit = if req.limit == 0 {
@@ -456,7 +458,7 @@ pub(crate) async fn check_quota(
 ) -> Result<Response<metering_pb::CheckQuotaResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
+    validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
     let tenant_id = req.tenant_id.trim().to_string();
     let project_id = req.project_id.trim().to_string();
     let metric = req.metric.trim().to_string();

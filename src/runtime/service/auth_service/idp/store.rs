@@ -570,6 +570,51 @@ pub async fn get_provider(
     Ok(row.map(|r| provider_row_from(&r)))
 }
 
+/// Fetch the write-only connector credential for one enabled SCIM provider.
+///
+/// This intentionally does not add the secret to [`ProviderRow`]: ordinary
+/// control-plane reads must remain incapable of returning or logging it. The
+/// HTTP adapter uses this narrow resolver only after selecting an exact
+/// `(tenant_id, provider_id)` path. Missing, deleted, or disabled providers are
+/// indistinguishable and return `None` so authentication fails closed.
+pub async fn get_active_provider_client_secret(
+    pool: &PgPool,
+    tenant_id: &str,
+    provider_id: &str,
+) -> Result<Option<String>, Status> {
+    let m = native_model(
+        PROVIDER_MSG,
+        &[
+            "provider_id",
+            "tenant_id",
+            "client_secret",
+            "enabled",
+            "deleted_at",
+        ],
+    );
+    let sql = format!(
+        "SELECT COALESCE({secret}, '')::TEXT AS client_secret \
+         FROM {rel} \
+         WHERE {pid} = $1::UUID AND {tenant} = $2 \
+           AND {enabled} = TRUE AND {deleted} IS NULL \
+         LIMIT 1",
+        secret = m.q("client_secret"),
+        rel = m.relation,
+        pid = m.q("provider_id"),
+        tenant = m.q("tenant_id"),
+        enabled = m.q("enabled"),
+        deleted = m.q("deleted_at"),
+    );
+    let pid = Uuid::parse_str(provider_id.trim()).map_err(|_| uuid_field_status("provider_id"))?;
+    let row = sqlx::query(&sql)
+        .bind(pid)
+        .bind(tenant_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(map_err("SCIM provider credential get failed"))?;
+    Ok(row.map(|r| r.try_get("client_secret").unwrap_or_default()))
+}
+
 /// List providers for a tenant with optional kind/enabled filters and paging.
 pub async fn list_providers(
     pool: &PgPool,

@@ -13,8 +13,8 @@
 //! typed statuses + `error-reason` attachment + field validator, [`model`] the
 //! enum<->db converters + models + projections + JSON/`PgRow` decoders + the
 //! `{{placeholder}}` renderer, [`store`] the neutral-IR query/record builders +
-//! opt-out lookup + shared delivery-attempt upsert, [`events`] the best-effort
-//! outbox emit, [`delivery`] the leader-elected delivery worker + generic provider
+//! opt-out lookup + shared delivery-attempt upsert, [`events`] the strict
+//! transactional outbox operations, [`delivery`] the leader-elected delivery worker + generic provider
 //! adapter (http-client-gated), [`handlers`] the twelve RPCs — `mod.rs` keeps only
 //! the struct, the builders/require-guards, and one-line trait delegators.
 //!

@@ -9,10 +9,11 @@ use sqlx::Row;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use crate::ir::ConflictStrategy;
+use crate::ir::{ConflictStrategy, LogicalWrite};
 use crate::proto::udb::core::notification::entity::v1 as notif_entity_pb;
 use crate::proto::udb::core::notification::services::v1 as notif_pb;
 use crate::runtime::channels::OperationChannel;
+use crate::runtime::core::native_store::NativeEntityTransactionOp;
 
 use super::super::native_helpers::{
     admit_on as native_admit_on, metadata_tenant_id, native_page_response, native_page_window,
@@ -30,13 +31,16 @@ use super::errors::{
     notification_schema_not_found_status, notification_template_not_found_status,
     notification_tenant_metadata_required_status, status_with_reason,
 };
+use super::events::{
+    NotificationDeliveryEvent, enqueue_delivery_event_in_tx, enqueue_sent_event_in_tx,
+    enqueue_suppressed_event_in_tx, sent_event_transaction_op, suppressed_event_transaction_op,
+};
 use super::model::{
-    channel_from_db, channel_send_decision, channel_to_db, deliverable_channels,
-    delivery_attempt_from_row, json_i64_field, json_object, json_string_field, log_from_json,
-    log_from_row, log_model, log_select_projection, preference_from_json_row, preference_from_row,
-    preference_model, preference_select_projection, render_template, status_to_db,
-    template_from_json_row, template_from_row, template_locale_or_default, template_model,
-    template_select_projection,
+    channel_from_db, channel_send_decision, channel_to_db, delivery_attempt_from_row,
+    json_i64_field, json_object, json_string_field, log_from_json, log_from_row, log_model,
+    log_select_projection, preference_from_json_row, preference_from_row, preference_model,
+    preference_select_projection, render_template, status_to_db, template_from_json_row,
+    template_from_row, template_locale_or_default, template_model, template_select_projection,
 };
 use super::store::{
     delivery_stats_aggregate, is_notification_opted_out, log_transition_allowed_prev,
@@ -73,6 +77,11 @@ pub(crate) async fn send_notification(
     .await?;
     let runtime = svc.require_runtime()?;
     let context = native_service_context(&metadata, &req.tenant_id, &req.project_id);
+    // Persist the project the authenticated request context actually resolved.
+    // SDKs commonly carry project scope in x-udb-project-id while leaving the
+    // duplicate body field empty; using req.project_id below silently erased
+    // that scope from the NotificationLog and its Kafka/outbox envelope.
+    let project_id = context.project_id.clone();
     // Default to EMAIL when the caller did not pin channels; one log per channel.
     let channels = if req.channels.is_empty() {
         vec![notif_entity_pb::NotificationChannel::Email as i32]
@@ -150,11 +159,10 @@ pub(crate) async fn send_notification(
             &req.event_type,
         )
         .await?;
-        let (mut status_db, mut status_pb) = channel_send_decision(opted_out);
+        let (_, mut status_pb) = channel_send_decision(opted_out);
         // Test-only forced-FAILED path (TODO 04.4.2.2): gated false in prod.
         let mut error_message = String::new();
         if test_mode_enabled() && req.resource_type == TEST_FORCE_FAILED_SENTINEL {
-            status_db = "FAILED";
             status_pb = notif_entity_pb::NotificationStatus::Failed as i32;
             error_message = "forced FAILED by UDB_NOTIFICATION_TEST_MODE harness".to_string();
         }
@@ -167,7 +175,7 @@ pub(crate) async fn send_notification(
             recipient_id: req.recipient_id.clone(),
             recipient_address: req.recipient_address.clone(),
             tenant_id: req.tenant_id.clone(),
-            project_id: req.project_id.clone(),
+            project_id: project_id.clone(),
             resource_type: req.resource_type.clone(),
             resource_id: req.resource_id.clone(),
             resource_name: req.resource_name.clone(),
@@ -178,38 +186,42 @@ pub(crate) async fn send_notification(
             rendered_body,
             ..Default::default()
         };
-        runtime
-            .native_entity_write_for_service(
-                "notification",
-                &context,
-                LOG_MSG,
-                notification_log_record(&log, status_db),
-                ConflictStrategy::Error,
-            )
-            .await?;
         logs.push(log);
     }
-    let delivery_channels = deliverable_channels(&logs);
-    if !delivery_channels.is_empty() {
-        if let Some(pool) = svc.pg_pool.as_ref() {
-            let primary_log_id = logs
-                .iter()
-                .find(|log| log.status == notif_entity_pb::NotificationStatus::Pending as i32)
-                .map(|log| log.log_id.clone())
-                .unwrap_or_default();
-            svc.emit_sent_event(
-                pool,
-                &primary_log_id,
-                &req.event_type,
-                &req.recipient_id,
-                &req.tenant_id,
-                &req.project_id,
-                &delivery_channels,
-                false,
+    let records = logs
+        .iter()
+        .map(|log| notification_log_record(log, status_to_db(log.status)))
+        .collect();
+    let mut transaction_ops = vec![NativeEntityTransactionOp::Write(LogicalWrite {
+        message_type: LOG_MSG.to_string(),
+        records,
+        conflict: ConflictStrategy::Error,
+        return_fields: Vec::new(),
+    })];
+    for log in &logs {
+        let event_op = if log.status == notif_entity_pb::NotificationStatus::Pending as i32 {
+            sent_event_transaction_op(svc.outbox_relation.as_deref(), log)
+        } else if log.status == notif_entity_pb::NotificationStatus::Suppressed as i32 {
+            suppressed_event_transaction_op(svc.outbox_relation.as_deref(), log)
+        } else {
+            Ok(None)
+        }
+        .map_err(|err| {
+            notification_internal_status(
+                "send_notification_outbox_envelope",
+                format!("send notification failed: {err}"),
             )
-            .await;
+        })?;
+        if let Some(event_op) = event_op {
+            transaction_ops.push(event_op);
         }
     }
+    // All channel logs and the configured sent-event outbox row are one commit
+    // on the project-selected native store. A later channel or outbox failure can
+    // no longer leave a partial customer request durable.
+    runtime
+        .native_entity_transaction_for_service("notification", &context, transaction_ops)
+        .await?;
     Ok(Response::new(notif_pb::SendNotificationResponse { logs }))
 }
 
@@ -431,11 +443,26 @@ pub(crate) async fn retry_notification(
     if opted_out {
         // Mark SUPPRESSED (moving the just-set PENDING row) and do NOT emit a sent
         // event — nothing is handed to a provider for an opted-out recipient.
-        suppress_log_if_pending(&mut *tx, log_id, &scoped_tenant)
+        let suppressed = suppress_log_if_pending(&mut *tx, log_id, &scoped_tenant)
             .await
             .map_err(|err| {
                 notification_internal_status(
                     "retry_notification_suppress",
+                    format!("retry notification failed: {err}"),
+                )
+            })?;
+        if !suppressed {
+            return Err(notification_internal_status(
+                "retry_notification_suppress",
+                "retry notification failed: pending log was not suppressible",
+            ));
+        }
+        log.status = notif_entity_pb::NotificationStatus::Suppressed as i32;
+        enqueue_suppressed_event_in_tx(&mut *tx, svc.outbox_relation.as_deref(), &log)
+            .await
+            .map_err(|err| {
+                notification_internal_status(
+                    "retry_notification_suppressed_outbox",
                     format!("retry notification failed: {err}"),
                 )
             })?;
@@ -445,28 +472,24 @@ pub(crate) async fn retry_notification(
                 format!("retry notification failed: {err}"),
             )
         })?;
-        log.status = notif_entity_pb::NotificationStatus::Suppressed as i32;
         return Ok(Response::new(notif_pb::RetryNotificationResponse {
             log: Some(log),
         }));
     }
+    enqueue_sent_event_in_tx(&mut *tx, svc.outbox_relation.as_deref(), &log)
+        .await
+        .map_err(|err| {
+            notification_internal_status(
+                "retry_notification_outbox",
+                format!("retry notification failed: {err}"),
+            )
+        })?;
     tx.commit().await.map_err(|err| {
         notification_internal_status(
             "retry_notification_commit",
             format!("retry notification failed: {err}"),
         )
     })?;
-    svc.emit_sent_event(
-        pool,
-        &log.log_id,
-        &log.event_type,
-        &log.recipient_id,
-        &log.tenant_id,
-        &log.project_id,
-        &[log.channel],
-        true,
-    )
-    .await;
     Ok(Response::new(notif_pb::RetryNotificationResponse {
         log: Some(log),
     }))
@@ -497,6 +520,22 @@ pub(crate) async fn report_delivery(
             "a terminal delivery status (SENT|DELIVERED|FAILED|PENDING) is required",
         ));
     }
+    let channel_db = channel_to_db(req.channel);
+    if channel_db == "UNSPECIFIED" {
+        return Err(notification_required_field(
+            "channel",
+            "must be a concrete notification channel",
+            "channel is required",
+        ));
+    }
+    let provider = req.provider.trim();
+    if provider.is_empty() {
+        return Err(notification_required_field(
+            "provider",
+            "must be a non-empty delivery provider",
+            "provider is required",
+        ));
+    }
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -507,9 +546,13 @@ pub(crate) async fn report_delivery(
     )
     .await?;
     let log_id = parse_uuid("log_id", &req.log_id)?;
-    let channel_db = channel_to_db(req.channel);
-    let provider = req.provider.trim();
     let pool = svc.require_pool()?;
+    let mut tx = pool.begin().await.map_err(|err| {
+        notification_internal_status(
+            "report_delivery_begin",
+            format!("report delivery failed: {err}"),
+        )
+    })?;
     // Verify the log belongs to the caller's tenant BEFORE recording a delivery
     // attempt for it. Without this, a tenant could stamp a terminal attempt on
     // another tenant's `log_id`; the delivery worker's dedup would then treat
@@ -517,17 +560,25 @@ pub(crate) async fn report_delivery(
     // drop it (cross-tenant denial-of-delivery). The body `tenant_id` is already
     // pinned to the verified claim by `validate_request_tenant` above, so this
     // read is scoped to the caller's own tenant.
-    {
+    let (project_id, stored_channel, template_id, event_type, correlation_id) = {
         let lm = log_model();
-        let owns = sqlx::query(&format!(
-            "SELECT 1 FROM {rel} WHERE {log_id} = $1::UUID AND {tenant_id} = $2 LIMIT 1",
+        let stored_scope = sqlx::query_as::<_, (String, String, String, String, String)>(&format!(
+            "SELECT COALESCE({project_id}::TEXT, ''), {channel}::TEXT, \
+                    COALESCE({template_id}::TEXT, ''), COALESCE({event_type}::TEXT, ''), \
+                    COALESCE({correlation_id}::TEXT, '') FROM {rel} \
+             WHERE {log_id} = $1::UUID AND {tenant_id} = $2 FOR UPDATE",
             rel = lm.relation,
+            project_id = lm.q("project_id"),
+            channel = lm.q("channel"),
+            template_id = lm.q("template_id"),
+            event_type = lm.q("event_type"),
+            correlation_id = lm.q("correlation_id"),
             log_id = lm.q("log_id"),
             tenant_id = lm.q("tenant_id"),
         ))
         .bind(log_id)
         .bind(&req.tenant_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|err| {
             notification_internal_status(
@@ -535,13 +586,18 @@ pub(crate) async fn report_delivery(
                 format!("report delivery ownership check failed: {err}"),
             )
         })?;
-        if owns.is_none() {
-            return Err(notification_log_not_found_status("report_delivery"));
-        }
+        stored_scope.ok_or_else(|| notification_log_not_found_status("report_delivery"))?
+    };
+    if stored_channel != channel_db {
+        return Err(notification_required_field(
+            "channel",
+            "must match the notification log channel",
+            "channel does not match notification log",
+        ));
     }
     // Upsert the durable per-(notification, channel, provider) delivery record.
     let row = write_delivery_attempt(
-        pool,
+        &mut *tx,
         log_id,
         &req.tenant_id,
         channel_db,
@@ -557,35 +613,59 @@ pub(crate) async fn report_delivery(
             format!("report delivery failed: {err}"),
         )
     })?;
+    let attempt_count = row
+        .as_ref()
+        .and_then(|row| row.try_get::<i32, _>("attempt_count").ok())
+        .unwrap_or(0);
     let attempt = row.as_ref().map(delivery_attempt_from_row).transpose()?;
     // A client-reported success moves the log forward (PENDING→SENT→DELIVERED) so
-    // GetNotification/GetDeliveryStats reflect the real outcome. Best-effort: a
-    // transition failure must not fail the delivery report itself.
+    // GetNotification/GetDeliveryStats reflect the real outcome. This transition,
+    // the attempt row, and the outbox event are deliberately one transaction.
     let allowed_prev = log_transition_allowed_prev(status_db);
     if !allowed_prev.is_empty() {
-        if let Err(err) =
-            transition_log_status(pool, log_id, &req.tenant_id, status_db, allowed_prev).await
-        {
-            tracing::warn!(
-                log_id = %req.log_id,
-                error = %err,
-                "notification log status transition failed"
-            );
-        }
+        transition_log_status(&mut *tx, log_id, &req.tenant_id, status_db, allowed_prev)
+            .await
+            .map_err(|err| {
+                notification_internal_status(
+                    "report_delivery_transition",
+                    format!("report delivery failed: {err}"),
+                )
+            })?;
     }
-    // Emit `udb.notification.delivery.<status>.v1` (best-effort; no secrets).
-    let project_id = native_service_context(&metadata, &req.tenant_id, "").project_id;
-    svc.emit_delivery_event(
-        pool,
-        &req.log_id,
-        &req.tenant_id,
-        &project_id,
-        channel_db,
-        provider,
-        status_db,
-        &req.provider_message_id,
+    // Use the canonical project stored with the log. A caller-supplied project
+    // header cannot relabel another project's delivery event.
+    enqueue_delivery_event_in_tx(
+        &mut *tx,
+        svc.outbox_relation.as_deref(),
+        &NotificationDeliveryEvent {
+            log_id: &req.log_id,
+            template_id: &template_id,
+            event_type: &event_type,
+            tenant_id: &req.tenant_id,
+            project_id: &project_id,
+            correlation_id: &correlation_id,
+            channel_db,
+            provider,
+            status_db,
+            provider_message_id: &req.provider_message_id,
+            error_detail: &req.error_message,
+            retry_attempt: attempt_count.saturating_sub(1),
+            will_retry: status_db == "FAILED",
+        },
     )
-    .await;
+    .await
+    .map_err(|err| {
+        notification_internal_status(
+            "report_delivery_outbox",
+            format!("report delivery failed: {err}"),
+        )
+    })?;
+    tx.commit().await.map_err(|err| {
+        notification_internal_status(
+            "report_delivery_commit",
+            format!("report delivery failed: {err}"),
+        )
+    })?;
     Ok(Response::new(notif_pb::ReportDeliveryResponse { attempt }))
 }
 

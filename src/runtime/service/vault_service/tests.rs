@@ -40,7 +40,10 @@ use super::errors::{
     vault_schema_not_found_status, vault_secret_cas_conflict_status,
 };
 use super::model::{StoredSecret, select_readable_secret};
-use super::store::{secret_shred_all_sql, transit_demote_active_sql, transit_insert_rotated_sql};
+use super::store::{
+    secret_path_read, secret_shred_all_sql, transit_demote_active_sql, transit_insert_rotated_sql,
+    transit_key_read,
+};
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -823,6 +826,18 @@ fn vault_env_knobs_default_to_the_consts() {
     assert_eq!(vault_db_lease_reaper_batch(), VAULT_DB_LEASE_REAPER_BATCH);
     assert_eq!(max_batch_encrypt_items(), MAX_BATCH_ENCRYPT_ITEMS);
     assert_eq!(max_batch_decrypt_items(), MAX_BATCH_DECRYPT_ITEMS);
+}
+
+#[test]
+fn bounded_version_reads_are_newest_first() {
+    for read in [
+        secret_path_read("tenant-a", "secret/path"),
+        transit_key_read("tenant-a", "key-a"),
+    ] {
+        assert_eq!(read.sort.len(), 1);
+        assert_eq!(read.sort[0].field, "version");
+        assert_eq!(read.sort[0].direction, crate::ir::SortDirection::Desc);
+    }
 }
 
 fn stored_secret(version: i64, state: &str) -> StoredSecret {

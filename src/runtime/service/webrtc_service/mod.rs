@@ -2738,6 +2738,14 @@ impl PeerService for WebrtcServiceImpl {
         validate_request_tenant(&metadata, &req.tenant_id)?;
         // Per-tenant fair admission (held for the whole RPC), same as join_room.
         let _admit = self.admit(&req.tenant_id).await?;
+        // Capability preflight must happen before the durable join. Previously a
+        // missing TURN secret returned TURN_NOT_CONFIGURED only after the peer,
+        // participant slot, signal, and event had already been committed.
+        let turn_secret = self
+            .turn
+            .secret
+            .clone()
+            .ok_or_else(|| turn_secret_not_configured_status("join_session"))?;
         // Run the SAME atomic join (capacity-CAS + insert + reload + signal +
         // event) as join_room. Over-full/closed/foreign rooms reject here with
         // FailedPrecondition + ROOM_FULL.
@@ -2771,15 +2779,8 @@ impl PeerService for WebrtcServiceImpl {
             peer_id.trim(),
             TURN_RELAY_ACTION
         );
-        // Fail closed when no TURN secret is configured rather than minting
-        // against a well-known dev secret.
-        let secret = self
-            .turn
-            .secret
-            .as_deref()
-            .ok_or_else(|| turn_secret_not_configured_status("join_session"))?;
         let (username, credential) =
-            crate::runtime::security::turn_rest_credential(secret, &principal, expiry);
+            crate::runtime::security::turn_rest_credential(&turn_secret, &principal, expiry);
         let ice = webrtc_pb::IceServer {
             urls: self.turn.urls.clone(),
             username,
@@ -3041,6 +3042,7 @@ impl TrackService for WebrtcServiceImpl {
                 "peer_id": req.peer_id.clone(),
                 "track_id": track_id.clone(),
                 "kind": kind.clone(),
+                "tenant_id": tenant_str.clone(),
             }),
             Some(&self.metrics),
         )
@@ -4407,6 +4409,34 @@ mod tenant_scope_tests {
             assert_eq!(detail.capability_required, "turn_secret");
             assert!(!detail.retryable);
         }
+    }
+
+    #[tokio::test]
+    async fn join_session_checks_turn_before_creating_peer() {
+        let mut svc = WebrtcServiceImpl::new();
+        svc.turn.secret = None;
+        let mut request = Request::new(webrtc_pb::JoinSessionRequest {
+            tenant_id: "tenant-a".to_string(),
+            room_id: "room-a".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+
+        let err = svc
+            .join_session(request)
+            .await
+            .expect_err("missing TURN must fail before Postgres join work");
+
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(err.message(), TURN_NOT_CONFIGURED_MESSAGE);
+        assert_eq!(
+            err.metadata()
+                .get("error-reason")
+                .map(|value| value.to_str().unwrap()),
+            Some(TURN_NOT_CONFIGURED)
+        );
     }
 
     // ── Egress (master-plan 5.5) ─────────────────────────────────────────────

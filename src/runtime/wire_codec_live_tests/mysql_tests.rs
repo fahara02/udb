@@ -19,7 +19,7 @@ use crate::runtime::executors::{MutationExecutor, QueryExecutor};
 
 #[tokio::test]
 async fn mysql_temporal_columns_round_trip_served_live() {
-    let Ok(dsn) = std::env::var("UDB_MYSQL_DSN") else {
+    let Some(dsn) = super::live_dsn(std::env::var("UDB_MYSQL_DSN").ok(), "UDB_MYSQL_DSN") else {
         eprintln!("UDB_MYSQL_DSN unset — skipping MySQL temporal wire-codec round-trip");
         return;
     };

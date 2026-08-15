@@ -55,6 +55,10 @@ pub struct ManifestDrift {
     pub sql_type: String,
     /// Default-value expression from the manifest column. Empty when none.
     pub default_value: String,
+    /// Desired nullability from the manifest. Only meaningful for
+    /// `nullability_mismatch`; carried so the repair planner can choose SET or
+    /// DROP NOT NULL instead of guessing a direction from the finding kind.
+    pub not_null: bool,
     /// Human-readable description (identical to the legacy findings string).
     pub message: String,
 }
@@ -1625,9 +1629,9 @@ impl DataBrokerRuntime {
         // permission-check joins and costs only one Neon/network round-trip.
         // $1 = schema names, $2 = table names (both from the manifest).
         //
-        // Row shape: (kind, schema_name, table_name, extra)
+        // Row shape: (kind, schema_name, table_name, extra, detail)
         //   't' → (schema, table, "")          — regular table exists
-        //   'c' → (schema, table, column_name) — column exists
+        //   'c' → (schema, table, column_name, attnotnull) — column exists
         //   'i' → (schema, table, index_name)  — index exists
         //   'g' → (schema, table, trigger_name)— trigger exists
         //   'r' → (schema, table, "rls")       — RLS enabled on table
@@ -1648,14 +1652,15 @@ impl DataBrokerRuntime {
         {
             tracing::warn!(error = %err, "failed to set statement_timeout for pg_catalog introspection");
         }
-        let introspection_rows: Vec<(String, String, String, String)> =
-            sqlx::query_as::<_, (String, String, String, String)>(
+        let introspection_rows: Vec<(String, String, String, String, String)> =
+            sqlx::query_as::<_, (String, String, String, String, String)>(
                 r#"
-SELECT kind, schema_name, table_name, extra FROM (
+SELECT kind, schema_name, table_name, extra, detail FROM (
     SELECT 't'        AS kind,
            n.nspname  AS schema_name,
            c.relname  AS table_name,
-           ''         AS extra
+           ''         AS extra,
+           ''         AS detail
     FROM   pg_catalog.pg_class     c
     JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
     WHERE  c.relkind IN ('r', 'v', 'm', 'f', 'p')
@@ -1667,7 +1672,8 @@ SELECT kind, schema_name, table_name, extra FROM (
     SELECT 'c',
            n.nspname,
            c.relname,
-           a.attname
+           a.attname,
+           a.attnotnull::text
     FROM   pg_catalog.pg_attribute  a
     JOIN   pg_catalog.pg_class      c ON c.oid = a.attrelid
     JOIN   pg_catalog.pg_namespace  n ON n.oid = c.relnamespace
@@ -1682,7 +1688,8 @@ SELECT kind, schema_name, table_name, extra FROM (
     SELECT 'i',
            schemaname,
            tablename,
-           indexname
+           indexname,
+           ''
     FROM   pg_catalog.pg_indexes
     WHERE  schemaname = ANY($1)
       AND  tablename  = ANY($2)
@@ -1692,7 +1699,8 @@ SELECT kind, schema_name, table_name, extra FROM (
     SELECT 'g',
            n.nspname,
            c.relname,
-           t.tgname
+           t.tgname,
+           ''
     FROM   pg_catalog.pg_trigger    t
     JOIN   pg_catalog.pg_class      c ON c.oid = t.tgrelid
     JOIN   pg_catalog.pg_namespace  n ON n.oid = c.relnamespace
@@ -1705,7 +1713,8 @@ SELECT kind, schema_name, table_name, extra FROM (
     SELECT 'r',
            n.nspname,
            c.relname,
-           'rls'
+           'rls',
+           ''
     FROM   pg_catalog.pg_class     c
     JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
     WHERE  c.relrowsecurity = true
@@ -1733,8 +1742,8 @@ SELECT kind, schema_name, table_name, extra FROM (
 
         let mut existing_tables: std::collections::HashSet<(String, String)> =
             std::collections::HashSet::new();
-        let mut existing_columns: std::collections::HashSet<(String, String, String)> =
-            std::collections::HashSet::new();
+        let mut existing_columns: std::collections::HashMap<(String, String, String), bool> =
+            std::collections::HashMap::new();
         let mut existing_indexes: std::collections::HashSet<String> =
             std::collections::HashSet::new();
         let mut existing_triggers: std::collections::HashSet<(String, String, String)> =
@@ -1742,13 +1751,13 @@ SELECT kind, schema_name, table_name, extra FROM (
         let mut rls_enabled_tables: std::collections::HashSet<(String, String)> =
             std::collections::HashSet::new();
 
-        for (kind, s, t, x) in introspection_rows {
+        for (kind, s, t, x, detail) in introspection_rows {
             match kind.as_str() {
                 "t" => {
                     existing_tables.insert((s, t));
                 }
                 "c" => {
-                    existing_columns.insert((s, t, x));
+                    existing_columns.insert((s, t, x), detail == "true");
                 }
                 "i" => {
                     existing_indexes.insert(x);
@@ -1773,16 +1782,18 @@ SELECT kind, schema_name, table_name, extra FROM (
                     column: String::new(),
                     sql_type: String::new(),
                     default_value: String::new(),
+                    not_null: false,
                     message: format!("missing PostgreSQL table {}.{}", table.schema, table.table),
                 });
                 continue;
             }
             for column in &table.columns {
-                if !existing_columns.contains(&(
+                let column_key = (
                     table.schema.clone(),
                     table.table.clone(),
                     column.column_name.clone(),
-                )) {
+                );
+                if !existing_columns.contains_key(&column_key) {
                     drift.push(ManifestDrift {
                         kind: "missing_column".to_string(),
                         schema: table.schema.clone(),
@@ -1790,11 +1801,20 @@ SELECT kind, schema_name, table_name, extra FROM (
                         column: column.column_name.clone(),
                         sql_type: column.sql_type.clone(),
                         default_value: column.default_value.clone(),
+                        not_null: column.not_null,
                         message: format!(
                             "missing PostgreSQL column {}.{}.{}",
                             table.schema, table.table, column.column_name
                         ),
                     });
+                } else if let Some(finding) = nullability_drift(
+                    &table.schema,
+                    &table.table,
+                    &column.column_name,
+                    column.not_null || column.is_primary,
+                    existing_columns[&column_key],
+                ) {
+                    drift.push(finding);
                 }
             }
 
@@ -1818,6 +1838,7 @@ SELECT kind, schema_name, table_name, extra FROM (
                         column: index.columns.join(","),
                         sql_type: String::new(),
                         default_value: String::new(),
+                        not_null: false,
                         message: format!(
                             "missing index {} on {}.{}",
                             index_name, table.schema, table.table
@@ -1840,6 +1861,7 @@ SELECT kind, schema_name, table_name, extra FROM (
                         column: String::new(),
                         sql_type: String::new(),
                         default_value: String::new(),
+                        not_null: false,
                         message: format!(
                             "missing trigger {} on {}.{}",
                             trigger.name, table.schema, table.table
@@ -1859,6 +1881,7 @@ SELECT kind, schema_name, table_name, extra FROM (
                     column: String::new(),
                     sql_type: String::new(),
                     default_value: String::new(),
+                    not_null: false,
                     message: format!(
                         "RLS not enabled on {}.{} but {} polic(ies) declared",
                         table.schema,
@@ -2000,6 +2023,30 @@ SELECT kind, schema_name, table_name, extra FROM (
             "UDB startup {category}: {headline}"
         );
     }
+}
+
+fn nullability_drift(
+    schema: &str,
+    table: &str,
+    column: &str,
+    expected_not_null: bool,
+    actual_not_null: bool,
+) -> Option<ManifestDrift> {
+    if expected_not_null == actual_not_null {
+        return None;
+    }
+    Some(ManifestDrift {
+        kind: "nullability_mismatch".to_string(),
+        schema: schema.to_string(),
+        table: table.to_string(),
+        column: column.to_string(),
+        sql_type: String::new(),
+        default_value: String::new(),
+        not_null: expected_not_null,
+        message: format!(
+            "PostgreSQL column {schema}.{table}.{column} nullability mismatch: manifest not_null={expected_not_null}, live not_null={actual_not_null}"
+        ),
+    })
 }
 
 /// Classify a startup-failure `reason` into a coarse, operator-meaningful
@@ -2153,6 +2200,20 @@ mod tests {
         assert!(!is_concurrent_ddl_race(
             "duplicate key value violates unique constraint"
         ));
+    }
+
+    #[test]
+    fn nullability_drift_preserves_manifest_direction() {
+        let drop = nullability_drift("marketplace", "requests", "user_id", false, true)
+            .expect("live NOT NULL must drift from a nullable manifest");
+        assert_eq!(drop.kind, "nullability_mismatch");
+        assert!(!drop.not_null);
+
+        let set = nullability_drift("marketplace", "requests", "tenant_id", true, false)
+            .expect("live nullable must drift from a NOT NULL manifest");
+        assert!(set.not_null);
+
+        assert!(nullability_drift("marketplace", "requests", "id", true, true).is_none());
     }
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {

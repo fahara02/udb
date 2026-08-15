@@ -20,7 +20,8 @@ use crate::runtime::executors::{MutationExecutor, QueryExecutor};
 
 #[tokio::test]
 async fn cassandra_typed_columns_round_trip_served_live() {
-    let Ok(dsn) = std::env::var("UDB_CASSANDRA_DSN") else {
+    let Some(dsn) = super::live_dsn(std::env::var("UDB_CASSANDRA_DSN").ok(), "UDB_CASSANDRA_DSN")
+    else {
         eprintln!(
             "UDB_CASSANDRA_DSN unset — skipping Cassandra typed-column wire-codec round-trip"
         );

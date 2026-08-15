@@ -16,7 +16,7 @@ use crate::runtime::DataBrokerRuntime;
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
 use super::MeteringServiceImpl;
-use super::admission::{admission_metering_method, record_usage};
+use super::admission::{admission_metering_method, record_usage, record_usage_strict};
 use super::calc::{
     closed_rollup_upper_bound, event_in_window, now_unix, quota_decision, window_start_unix,
 };
@@ -216,6 +216,45 @@ async fn record_usage_swallows_store_error() {
     );
 }
 
+#[tokio::test]
+async fn explicit_record_usage_rejects_store_error_instead_of_acknowledging_it() {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_millis(250))
+        .connect_lazy("postgres://127.0.0.1:1/udb_metering_test")
+        .expect("lazy pool builds without connecting");
+    let svc = MeteringServiceImpl::new().with_postgres(Some(pool));
+    let mut request = Request::new(metering_pb::RecordUsageRequest {
+        tenant_id: "tenant-a".to_string(),
+        principal_id: "principal-1".to_string(),
+        method: "data.Select".to_string(),
+        unit: "request".to_string(),
+        quantity: 1,
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    let err = svc
+        .record_usage(request)
+        .await
+        .expect_err("explicit durable ingest must surface a store outage");
+    assert_eq!(err.code(), tonic::Code::Internal);
+    assert_eq!(decode_detail(&err).operation, "record_usage_insert");
+
+    let strict = record_usage_strict(
+        svc.pg_pool.as_ref().expect("test pool"),
+        "tenant-a",
+        "principal-1",
+        "data.Select",
+        "request",
+        1,
+        0,
+    )
+    .await
+    .expect_err("strict seam must propagate the same outage");
+    assert_eq!(decode_detail(&strict).operation, "record_usage_insert");
+}
+
 /// Live rollup/export oracle for master-plan 9.9: served RecordUsage writes
 /// durable rows, QueryUsage sums the same rows, and the leader rollup worker
 /// exports exactly one closed-window outbox event with deterministic dedupe.
@@ -322,6 +361,35 @@ async fn put_quota_rejects_cross_tenant_body() {
         .await
         .expect_err("cross-tenant body must be rejected");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+#[tokio::test]
+async fn put_quota_rejects_cross_project_body() {
+    let svc = MeteringServiceImpl::new();
+    let mut request = Request::new(metering_pb::PutQuotaRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "project-b".to_string(),
+        metric: "data.Select".to_string(),
+        limit_value: 100,
+        window_seconds: 3_600,
+        enabled: true,
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("project-a"));
+    let err = svc
+        .put_quota(request)
+        .await
+        .expect_err("cross-project body must be rejected before runtime access");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_eq!(
+        decode_detail(&err).policy_decision_id,
+        "project_metadata_mismatch"
+    );
 }
 
 #[tokio::test]

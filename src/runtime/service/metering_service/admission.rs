@@ -9,6 +9,7 @@ use tonic::Status;
 
 use super::calc::wall_now_unix;
 use super::config::DEFAULT_UNIT;
+use super::errors::metering_internal_status;
 
 static ADMISSION_METERING_POOL: OnceLock<RwLock<Option<PgPool>>> = OnceLock::new();
 
@@ -54,7 +55,7 @@ pub(crate) fn admission_metering_method(service_label: &str, op_label: &str) -> 
 /// `WITH CHECK` passes even on a raw pooled connection (correct whether or not the
 /// table is `FORCE ROW LEVEL SECURITY`); `usage_id`/audit columns fall to their
 /// DB defaults.
-pub(crate) async fn record_usage(
+async fn write_usage(
     pool: &PgPool,
     tenant_id: &str,
     principal_id: &str,
@@ -62,7 +63,7 @@ pub(crate) async fn record_usage(
     unit: &str,
     quantity: i64,
     now_unix: i64,
-) -> Result<(), Status> {
+) -> Result<(), sqlx::Error> {
     let tenant_id = tenant_id.trim();
     let method = method.trim();
     if tenant_id.is_empty() || method.is_empty() {
@@ -83,7 +84,7 @@ pub(crate) async fn record_usage(
     // Single statement: the WHERE both sets the tenant GUC (so RLS WITH CHECK
     // passes) and is always true for a non-empty tenant, then the SELECT row is
     // inserted. No separate read; no timestamptz/uuid text bind.
-    let res = sqlx::query(
+    sqlx::query(
         "INSERT INTO udb_metering.usage_events \
          (tenant_id, principal_id, method, unit, quantity, occurred_at, occurred_at_unix) \
          SELECT $1, $2, $3, $4, $5, to_timestamp($6), $7 \
@@ -97,6 +98,30 @@ pub(crate) async fn record_usage(
     .bind(occurred as f64)
     .bind(occurred)
     .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Fail-open usage append for automatic admission metering. The operation being
+/// measured must never fail because its telemetry sink is unavailable.
+pub(crate) async fn record_usage(
+    pool: &PgPool,
+    tenant_id: &str,
+    principal_id: &str,
+    method: &str,
+    unit: &str,
+    quantity: i64,
+    now_unix: i64,
+) -> Result<(), Status> {
+    let res = write_usage(
+        pool,
+        tenant_id,
+        principal_id,
+        method,
+        unit,
+        quantity,
+        now_unix,
+    )
     .await;
 
     if let Err(err) = res {
@@ -109,4 +134,34 @@ pub(crate) async fn record_usage(
         );
     }
     Ok(())
+}
+
+/// Strict usage append for the explicit MeteringService.RecordUsage contract.
+/// Unlike the automatic admission hook, this RPC is itself the requested write:
+/// acknowledging it without a durable row would undercount billing/quota usage.
+pub(crate) async fn record_usage_strict(
+    pool: &PgPool,
+    tenant_id: &str,
+    principal_id: &str,
+    method: &str,
+    unit: &str,
+    quantity: i64,
+    now_unix: i64,
+) -> Result<(), Status> {
+    write_usage(
+        pool,
+        tenant_id,
+        principal_id,
+        method,
+        unit,
+        quantity,
+        now_unix,
+    )
+    .await
+    .map_err(|err| {
+        metering_internal_status(
+            "record_usage_insert",
+            format!("record usage durable append failed: {err}"),
+        )
+    })
 }

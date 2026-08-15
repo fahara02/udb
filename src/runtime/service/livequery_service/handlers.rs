@@ -10,7 +10,7 @@ use crate::proto::udb::core::livequery::services::v1 as lq_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_service_context, validate_request_tenant,
+    admit_on as native_admit_on, native_service_context, validate_request_scope,
 };
 use super::LiveQueryServiceImpl;
 use super::budget::try_acquire_stream_slot;
@@ -37,7 +37,7 @@ pub(crate) async fn subscribe(
     let req = request.into_inner();
     // Cross-tenant guard FIRST: the body tenant_id must match the verified
     // claim/header. After this passes, the body value IS the verified tenant.
-    validate_request_tenant(&metadata, &req.tenant_id)?;
+    validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
     let tenant_id = req.tenant_id.trim().to_string();
     let message_type = req.message_type.trim().to_string();
     let project_id = req.project_id.trim().to_string();

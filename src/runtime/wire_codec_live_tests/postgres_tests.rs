@@ -29,9 +29,12 @@ use crate::runtime::executors::postgres::PostgresExecutor;
 use crate::runtime::postgres_helpers::bind_one;
 
 fn pg_dsn() -> Option<String> {
-    std::env::var("UDB_PG_DSN")
-        .or_else(|_| std::env::var("DATABASE_URL"))
-        .ok()
+    super::live_dsn(
+        std::env::var("UDB_PG_DSN")
+            .or_else(|_| std::env::var("DATABASE_URL"))
+            .ok(),
+        "UDB_PG_DSN / DATABASE_URL",
+    )
 }
 
 fn col(name: &str, sql_type: &str) -> ManifestColumn {

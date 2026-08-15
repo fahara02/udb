@@ -76,6 +76,8 @@ pub(crate) const TEST_FORCE_FAILED_SENTINEL: &str = "__perf_force_failed__";
 
 /// Kafka topic for the "notification sent" domain event.
 pub(crate) const NOTIFICATION_SENT_TOPIC: &str = "udb.notification.sent.v1";
+/// Kafka topic for a notification intentionally withheld from delivery.
+pub(crate) const NOTIFICATION_SUPPRESSED_TOPIC: &str = "udb.notification.suppressed.v1";
 
 /// Dead-letter (DLQ) topic: emitted ONCE when a notification log crosses into the
 /// terminal FAILED state after exhausting its bounded-retry budget (or on a
@@ -254,6 +256,19 @@ pub(crate) fn delivery_event_topic(status_db: &str) -> String {
         "udb.notification.delivery.{}.v1",
         status_db.to_ascii_lowercase()
     )
+}
+
+/// Compatibility topic declared by the older public notification event
+/// messages. The delivery worker later introduced the more precise
+/// `udb.notification.delivery.<status>.v1` family without migrating those two
+/// consumer contracts. Publish both while the v1 messages remain supported so
+/// an existing customer group cannot silently miss a delivery outcome.
+pub(crate) fn legacy_delivery_event_topic(status_db: &str) -> Option<&'static str> {
+    match status_db {
+        "FAILED" => Some("udb.notification.failed.v1"),
+        "DELIVERED" => Some("udb.notification.delivered.v1"),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

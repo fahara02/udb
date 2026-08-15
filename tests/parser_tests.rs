@@ -2455,6 +2455,7 @@ fn live_backend_drift_repair_smoke() {
         column: "status".to_string(),
         sql_type: "TEXT".to_string(),
         default_value: String::new(),
+        not_null: false,
     }]);
     let ddl = repair.auto_safe_decisions().next().unwrap().ddl.clone();
     let repair_status = std::process::Command::new("docker")

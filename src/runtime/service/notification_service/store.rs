@@ -5,7 +5,6 @@
 //! `(notification_id, channel, provider)` conflict-keyed upsert are byte-for-byte
 //! identical to the former god file.
 
-use sqlx::PgPool;
 use tonic::Status;
 use uuid::Uuid;
 
@@ -410,8 +409,8 @@ pub(crate) async fn is_notification_opted_out(
 /// worker so the durable delivery record has ONE writer shape. Returns the stored
 /// row (the handler maps it to the response; the worker ignores it).
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn write_delivery_attempt(
-    pool: &PgPool,
+pub(crate) async fn write_delivery_attempt<'e, E>(
+    executor: E,
     notification_id: Uuid,
     tenant_id: &str,
     channel_db: &str,
@@ -419,7 +418,10 @@ pub(crate) async fn write_delivery_attempt(
     status_db: &str,
     last_error: &str,
     provider_message_id: &str,
-) -> Result<Option<sqlx::postgres::PgRow>, sqlx::Error> {
+) -> Result<Option<sqlx::postgres::PgRow>, sqlx::Error>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
     let m = delivery_attempt_model();
     let rel = m.relation.clone();
     let projection = delivery_attempt_select_projection(&m);
@@ -453,7 +455,7 @@ pub(crate) async fn write_delivery_attempt(
     .bind(status_db)
     .bind(last_error)
     .bind(provider_message_id)
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await
 }
 
@@ -599,13 +601,16 @@ where
 /// FAILED transition is deliberately NOT handled here — it belongs with the
 /// bounded-retry model (max-attempts + backoff) rather than marking a log failed
 /// on the first transient error.
-pub(crate) async fn transition_log_status(
-    pool: &PgPool,
+pub(crate) async fn transition_log_status<'e, E>(
+    executor: E,
     log_id: Uuid,
     tenant_id: &str,
     new_status: &str,
     allowed_prev: &[&str],
-) -> Result<bool, sqlx::Error> {
+) -> Result<bool, sqlx::Error>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
     if allowed_prev.is_empty() {
         return Ok(false);
     }
@@ -623,7 +628,7 @@ pub(crate) async fn transition_log_status(
     .bind(log_id)
     .bind(tenant_id)
     .bind(&prev)
-    .execute(pool)
+    .execute(executor)
     .await?;
     Ok(result.rows_affected() > 0)
 }

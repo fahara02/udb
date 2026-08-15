@@ -29,13 +29,13 @@
 //! dependency). It is OFF by default and only binds when `UDB_SCIM_HTTP_ADDR` is
 //! set, exactly like the optional ws-signalling / metrics listeners.
 //!
-//! Auth: a static shared bearer token (`UDB_SCIM_BEARER_TOKEN`) — the standard
-//! SCIM provisioning model (Okta/Entra store one long-lived token per
-//! connector). The listener fails CLOSED: if the token env is unset it refuses
-//! to start (no token => no auth => never expose mutation endpoints). Tenant and
-//! provider are resolved from the URL path prefix (`/scim/v2/t/{tenant}/p/{provider}/...`)
-//! or, when omitted, from `UDB_SCIM_DEFAULT_TENANT` / `UDB_SCIM_DEFAULT_PROVIDER`
-//! so a single-tenant connector can use the bare `/scim/v2/Users` paths.
+//! Auth: each resource request resolves an enabled tenant/provider and compares
+//! its bearer with that provider's encrypted, write-only `client_secret`.
+//! `UDB_SCIM_BEARER_TOKEN` remains a compatibility credential only for the exact
+//! `UDB_SCIM_DEFAULT_TENANT` / `UDB_SCIM_DEFAULT_PROVIDER`; it can never authorize
+//! an arbitrary explicit path. Tenant and provider are resolved from the URL path
+//! prefix (`/scim/v2/t/{tenant}/p/{provider}/...`) or, when omitted, from those
+//! defaults so a single-tenant connector can use bare `/scim/v2/Users` paths.
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -52,18 +52,17 @@ use super::IdentityProviderServiceImpl;
 
 /// Runtime config for the SCIM HTTP listener, resolved from the environment.
 ///
-/// Does NOT derive `Debug`: `bearer_token` is the static shared SCIM credential
-/// (Okta/Entra connector secret). A manual `Debug` impl (below) redacts it so a
-/// future `tracing`/`{:?}` of this config can never spill the token into logs;
-/// the addr/tenant/provider remain visible for debuggability.
+/// Does NOT derive `Debug`: `legacy_default_bearer_token` may contain the legacy
+/// environment credential. A manual `Debug` impl redacts it so a future
+/// `tracing`/`{:?}` cannot spill the token into logs.
 struct ScimHttpConfig {
     addr: SocketAddr,
-    bearer_token: String,
+    legacy_default_bearer_token: Option<String>,
     default_tenant: String,
     default_provider: String,
 }
 
-// 4.6 secrets posture: `bearer_token` is a long-lived provisioning credential;
+// 4.6 secrets posture: the legacy bearer is a long-lived provisioning credential;
 // redact it in Debug while keeping the non-secret routing fields visible. A
 // derived Debug would print the token verbatim — the canary test below locks
 // this in (it fails if the manual impl is ever replaced by a derive).
@@ -71,7 +70,7 @@ impl std::fmt::Debug for ScimHttpConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ScimHttpConfig")
             .field("addr", &self.addr)
-            .field("bearer_token", &"[redacted]")
+            .field("legacy_default_bearer_token", &"[redacted]")
             .field("default_tenant", &self.default_tenant)
             .field("default_provider", &self.default_provider)
             .finish()
@@ -81,7 +80,9 @@ impl std::fmt::Debug for ScimHttpConfig {
 impl ScimHttpConfig {
     /// Resolve from env. Returns `None` when `UDB_SCIM_HTTP_ADDR` is unset (the
     /// surface is OFF by default). Returns `None` with a warning when the addr is
-    /// set but the bearer token is missing — we never expose SCIM unauthenticated.
+    /// set. Resource requests still fail closed unless their selected active
+    /// provider has a stored connector secret or the exact default scope matches
+    /// the optional legacy compatibility credential.
     fn from_env() -> Option<Self> {
         let raw_addr = std::env::var("UDB_SCIM_HTTP_ADDR").ok()?;
         let addr: SocketAddr = match raw_addr.trim().parse() {
@@ -91,28 +92,30 @@ impl ScimHttpConfig {
                 return None;
             }
         };
-        let bearer_token = std::env::var("UDB_SCIM_BEARER_TOKEN")
+        let legacy_default_bearer_token = std::env::var("UDB_SCIM_BEARER_TOKEN")
             .ok()
             .map(|t| t.trim().to_string())
-            .filter(|t| !t.is_empty())
-            .or_else(|| {
-                tracing::warn!(
-                    "UDB_SCIM_HTTP_ADDR is set but UDB_SCIM_BEARER_TOKEN is empty; \
-                     SCIM HTTP refuses to start unauthenticated (fail closed)"
-                );
-                None
-            })?;
+            .filter(|t| !t.is_empty());
+        let default_tenant = std::env::var("UDB_SCIM_DEFAULT_TENANT")
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+        let default_provider = std::env::var("UDB_SCIM_DEFAULT_PROVIDER")
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+        if legacy_default_bearer_token.is_some()
+            && (default_tenant.is_empty() || default_provider.is_empty())
+        {
+            tracing::warn!(
+                "UDB_SCIM_BEARER_TOKEN is set without both SCIM defaults; the legacy token is disabled"
+            );
+        }
         Some(Self {
             addr,
-            bearer_token,
-            default_tenant: std::env::var("UDB_SCIM_DEFAULT_TENANT")
-                .unwrap_or_default()
-                .trim()
-                .to_string(),
-            default_provider: std::env::var("UDB_SCIM_DEFAULT_PROVIDER")
-                .unwrap_or_default()
-                .trim()
-                .to_string(),
+            legacy_default_bearer_token,
+            default_tenant,
+            default_provider,
         })
     }
 }
@@ -290,10 +293,6 @@ async fn dispatch(
         _ => {}
     }
 
-    // Constant-time-ish bearer check (fail closed) for all resource operations.
-    if req.bearer.is_empty() || !bearer_matches(&req.bearer, &cfg.bearer_token) {
-        return http_response(401, &scim_error(401, "invalid or missing bearer token"));
-    }
     if tenant.is_empty() || provider.is_empty() {
         return http_response(
             400,
@@ -303,6 +302,38 @@ async fn dispatch(
                  or set UDB_SCIM_DEFAULT_TENANT/UDB_SCIM_DEFAULT_PROVIDER",
             ),
         );
+    }
+
+    // Resolve the exact active provider before authenticating. Operational store
+    // or decryption failures are service-unavailable, while a missing/disabled
+    // provider is deliberately indistinguishable from a bad credential.
+    let provider_secret = match service.scim_connector_secret(&tenant, &provider).await {
+        Ok(Some(secret)) => secret,
+        Ok(None) => {
+            return http_response(401, &scim_error(401, "invalid or missing bearer token"));
+        }
+        Err(status) if status.code() == tonic::Code::InvalidArgument => {
+            return http_response(401, &scim_error(401, "invalid or missing bearer token"));
+        }
+        Err(status) => {
+            tracing::warn!(
+                tenant = %tenant,
+                provider = %provider,
+                code = ?status.code(),
+                "SCIM connector credential resolution failed"
+            );
+            return http_response(
+                503,
+                &scim_error(
+                    503,
+                    "SCIM connector authentication is temporarily unavailable",
+                ),
+            );
+        }
+    };
+    let legacy = legacy_bearer_for_scope(cfg, &tenant, &provider);
+    if !bearer_matches_any(&req.bearer, &provider_secret, legacy) {
+        return http_response(401, &scim_error(401, "invalid or missing bearer token"));
     }
 
     // Split the resource path into collection + optional id.
@@ -503,6 +534,28 @@ fn bearer_matches(presented: &str, expected: &str) -> bool {
         diff |= x ^ y;
     }
     diff == 0
+}
+
+fn legacy_bearer_for_scope<'a>(
+    cfg: &'a ScimHttpConfig,
+    tenant: &str,
+    provider: &str,
+) -> Option<&'a str> {
+    if !cfg.default_tenant.is_empty()
+        && !cfg.default_provider.is_empty()
+        && tenant == cfg.default_tenant
+        && provider == cfg.default_provider
+    {
+        cfg.legacy_default_bearer_token.as_deref()
+    } else {
+        None
+    }
+}
+
+fn bearer_matches_any(presented: &str, provider_secret: &str, legacy: Option<&str>) -> bool {
+    !presented.is_empty()
+        && ((!provider_secret.is_empty() && bearer_matches(presented, provider_secret))
+            || legacy.is_some_and(|expected| bearer_matches(presented, expected)))
 }
 
 /// Translate the SCIM gRPC `ScimPatchUserRequest`/`ScimPatchGroupRequest` op list
@@ -768,7 +821,7 @@ mod scim_http_redaction_tests {
     fn scim_http_config_debug_never_leaks_bearer_token() {
         let cfg = ScimHttpConfig {
             addr: "127.0.0.1:9999".parse().expect("valid addr"),
-            bearer_token: "udb-canary-SCIM-SECRET".to_string(),
+            legacy_default_bearer_token: Some("udb-canary-SCIM-SECRET".to_string()),
             default_tenant: "acme".to_string(),
             default_provider: "okta".to_string(),
         };
@@ -790,5 +843,29 @@ mod scim_http_redaction_tests {
             dbg.contains("okta"),
             "default_provider should remain visible: {dbg}"
         );
+    }
+
+    #[test]
+    fn legacy_bearer_is_bound_to_exact_default_connector() {
+        let cfg = ScimHttpConfig {
+            addr: "127.0.0.1:9999".parse().expect("valid addr"),
+            legacy_default_bearer_token: Some("connector-a-token".to_string()),
+            default_tenant: "tenant-a".to_string(),
+            default_provider: "provider-a".to_string(),
+        };
+
+        let default_legacy = legacy_bearer_for_scope(&cfg, "tenant-a", "provider-a");
+        assert!(bearer_matches_any(
+            "connector-a-token",
+            "provider-a-secret",
+            default_legacy
+        ));
+        assert!(legacy_bearer_for_scope(&cfg, "tenant-a", "provider-b").is_none());
+        assert!(legacy_bearer_for_scope(&cfg, "tenant-b", "provider-a").is_none());
+        assert!(!bearer_matches_any(
+            "connector-a-token",
+            "provider-b-secret",
+            legacy_bearer_for_scope(&cfg, "tenant-a", "provider-b")
+        ));
     }
 }

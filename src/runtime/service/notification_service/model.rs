@@ -147,32 +147,49 @@ pub(crate) fn channel_send_decision(opted_out: bool) -> (&'static str, i32) {
     }
 }
 
-pub(crate) fn notification_delivery_payload(
-    log_id: &str,
-    event_type: &str,
-    recipient_id: &str,
-    tenant_id: &str,
-    project_id: &str,
-    channels: &[i32],
+/// Payload for the public per-channel `NotificationSentEvent`. Keep the former
+/// `recipient_id` and `channels[]` keys as additive compatibility fields for
+/// raw-JSON consumers while also satisfying the descriptor's singular
+/// `recipient_ref`/`channel` schema.
+pub(crate) fn notification_sent_payload(
+    log: &notif_entity_pb::NotificationLog,
     retry: bool,
 ) -> serde_json::Value {
+    let channel = channel_to_db(log.channel);
     serde_json::json!({
-        "log_id": log_id,
-        "event_type": event_type,
-        "recipient_id": recipient_id,
-        "tenant_id": tenant_id,
-        "project_id": project_id,
-        "channels": channels.iter().map(|c| channel_to_db(*c)).collect::<Vec<_>>(),
+        "log_id": log.log_id,
+        "template_id": log.template_id,
+        "event_type": log.event_type,
+        "channel": channel,
+        "channels": [channel],
+        "recipient_ref": log.recipient_id,
+        "recipient_id": log.recipient_id,
+        "tenant_id": log.tenant_id,
+        "project_id": log.project_id,
+        "correlation_id": log.correlation_id,
+        "occurred_at": chrono::Utc::now().to_rfc3339(),
         "retry": retry,
     })
 }
 
-pub(crate) fn deliverable_channels(logs: &[notif_entity_pb::NotificationLog]) -> Vec<i32> {
-    let pending = notif_entity_pb::NotificationStatus::Pending as i32;
-    logs.iter()
-        .filter(|log| log.status == pending)
-        .map(|log| log.channel)
-        .collect()
+/// Payload for the public per-channel `NotificationSuppressedEvent`. Recipient
+/// addresses and rendered content are deliberately excluded.
+pub(crate) fn notification_suppressed_payload(
+    log: &notif_entity_pb::NotificationLog,
+    reason: &str,
+) -> serde_json::Value {
+    serde_json::json!({
+        "log_id": log.log_id,
+        "template_id": log.template_id,
+        "event_type": log.event_type,
+        "channel": channel_to_db(log.channel),
+        "recipient_ref": log.recipient_id,
+        "tenant_id": log.tenant_id,
+        "project_id": log.project_id,
+        "suppression_reason": reason,
+        "correlation_id": log.correlation_id,
+        "occurred_at": chrono::Utc::now().to_rfc3339(),
+    })
 }
 
 pub(crate) fn template_locale_or_default(locale: &str) -> Result<String, Status> {

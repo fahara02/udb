@@ -50,6 +50,7 @@ use super::errors::{
     vault_required_secret_path, vault_schema_already_exists_status, vault_schema_not_found_status,
     vault_secret_cas_conflict_status,
 };
+use super::events::enqueue_vault_event_in_tx;
 use super::model::{active_transit, select_readable_secret, transit_version};
 use super::quota::admit_transit_op;
 use super::store::{
@@ -570,12 +571,10 @@ pub(crate) async fn destroy_secret(
         .execute(&mut *tx)
         .await
         .map_err(|err| vault_internal_status("destroy_shred_versions", err.to_string()))?;
-    tx.commit()
-        .await
-        .map_err(|err| vault_internal_status("destroy_commit_tx", err.to_string()))?;
     let destroyed = shred.rows_affected() as u32;
-
-    svc.emit(
+    enqueue_vault_event_in_tx(
+        &mut *tx,
+        svc.outbox_relation.as_deref(),
         TOPIC_SECRET_DESTROYED,
         &secret_path,
         &tenant_id,
@@ -588,7 +587,11 @@ pub(crate) async fn destroy_secret(
             "destroyed_versions": destroyed,
         }),
     )
-    .await;
+    .await
+    .map_err(|err| vault_internal_status("destroy_outbox", err))?;
+    tx.commit()
+        .await
+        .map_err(|err| vault_internal_status("destroy_commit_tx", err.to_string()))?;
 
     Ok(Response::new(vault_pb::DestroySecretResponse {
         destroyed_versions: destroyed,

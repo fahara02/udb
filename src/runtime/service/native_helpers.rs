@@ -874,6 +874,40 @@ where
     .map_err(|err| format!("outbox insert failed: {err}"))
 }
 
+/// Build an outbox step for
+/// `DataBrokerRuntime::native_entity_transaction_for_service`.
+/// Envelope construction stays in this shared chokepoint; the typed native-store
+/// transaction owns only execution/commit. `None` preserves the established
+/// no-outbox deployment posture without introducing a fake event operation.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn native_transaction_outbox_op(
+    relation: Option<&str>,
+    topic: &str,
+    partition_key: &str,
+    tenant_id: &str,
+    project_id: &str,
+    payload: serde_json::Value,
+    ctx: NativeEventContext,
+) -> Result<Option<crate::runtime::core::native_store::NativeEntityTransactionOp>, String> {
+    let Some(relation) = relation else {
+        return Ok(None);
+    };
+    let (event_id, envelope) =
+        build_enriched_outbox_envelope(topic, partition_key, tenant_id, project_id, ctx, payload)
+            .map_err(|reject| reject.to_string())?;
+    Ok(Some(
+        crate::runtime::core::native_store::NativeEntityTransactionOp::Outbox(
+            crate::runtime::core::native_store::NativeOutboxTransactionWrite {
+                relation: relation.to_string(),
+                event_id,
+                topic: topic.to_string(),
+                partition_key: partition_key.to_string(),
+                envelope,
+            },
+        ),
+    ))
+}
+
 /// Shared envelope enrichment for the native outbox lanes: ambient
 /// trace/actor/decision autofill, dotted-topic operation/resource derivation,
 /// and enterprise-audit compliance validation. Both the best-effort pool path

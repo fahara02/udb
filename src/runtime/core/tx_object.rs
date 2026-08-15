@@ -344,7 +344,8 @@ impl DataBrokerRuntime {
             // bug #8.1: transactional compare-and-swap. When the mutation carries a
             // non-empty `expected`, assert it against the current row under this
             // tx's row lock + RLS fencing BEFORE the write, reusing the SAME unary
-            // CAS helpers (enforce_cas_precondition / enforce_delete_precondition).
+            // CAS helpers (enforce_cas_precondition /
+            // enforce_conditional_mutation_precondition).
             // A mismatch surfaces as this mutation's `result` error, which the
             // failure arm below turns into a full-transaction rollback + compensation
             // exactly like any other mutation failure — so a stale precondition
@@ -1162,7 +1163,7 @@ impl DataBrokerRuntime {
     /// drift: `enforce_cas_precondition` (upsert, keyed by the primary key — the
     /// transactional upsert carries no conflict_fields, so its conflict target is
     /// always the PK, matching `enforce_upsert_precondition`'s empty-conflict_fields
-    /// branch) and `enforce_delete_precondition` (update/delete, keyed by PK
+    /// branch) and `enforce_conditional_mutation_precondition` (update/delete, keyed by PK
     /// equality from the encryption-rewritten, normalized filter — identical to the
     /// unary update/delete CAS). The SELECT ... FOR UPDATE is tenant/RLS-fenced by
     /// installing the request-local GUCs on `tx` first: the tx apply loop otherwise
@@ -1227,8 +1228,14 @@ impl DataBrokerRuntime {
                 &crate::planning::broker::column_resolver(table),
                 &filter,
             );
-            self.enforce_delete_precondition(tx, table, expected, &normalized_filter, context)
-                .await
+            self.enforce_conditional_mutation_precondition(
+                tx,
+                table,
+                expected,
+                &normalized_filter,
+                context,
+            )
+            .await
         }
     }
 

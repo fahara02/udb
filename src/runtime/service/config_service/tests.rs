@@ -245,6 +245,35 @@ async fn put_flag_rejects_cross_tenant_body() {
 }
 
 #[tokio::test]
+async fn put_flag_rejects_cross_project_body() {
+    let svc = ConfigServiceImpl::new();
+    let mut request = Request::new(config_pb::PutFlagRequest {
+        tenant_id: "tenant-a".to_string(),
+        project_id: "project-b".to_string(),
+        flag_key: "feature.x".to_string(),
+        value: Some(flag_val_to_proto(&FlagVal::Bool(true))),
+        enabled: true,
+        rollout_percentage: 100,
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    request
+        .metadata_mut()
+        .insert("x-udb-project-id", MetadataValue::from_static("project-a"));
+    let err = svc
+        .put_flag(request)
+        .await
+        .expect_err("cross-project body must be rejected before runtime access");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_eq!(
+        decode_detail(&err).policy_decision_id,
+        "project_metadata_mismatch"
+    );
+}
+
+#[tokio::test]
 async fn put_flag_missing_value_carries_field_violation() {
     let svc = ConfigServiceImpl::new(); // no runtime, no channels (admit no-op)
     let mut request = Request::new(config_pb::PutFlagRequest {
