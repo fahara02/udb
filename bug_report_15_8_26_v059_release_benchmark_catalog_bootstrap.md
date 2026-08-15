@@ -135,3 +135,8 @@ breaking against the 5.0.0 baseline. That result is correct: first-class
 project ownership tightens persisted table security. The native contract must
 therefore advance independently to 6.0.0, and CI recovery must emit the binary
 descriptor baseline as well as the generated JSON and Markdown.
+
+GitHub run `31898607698` compiled and passed the full library suite, confirmed
+the generated 6.0.0 JSON and Markdown were current, and emitted a repair patch
+containing only the new binary descriptor baseline. That runner-authored
+baseline is the reviewed compatibility acknowledgement for the four changes.

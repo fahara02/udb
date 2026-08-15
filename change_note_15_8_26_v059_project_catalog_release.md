@@ -162,6 +162,9 @@ Release: 0.5.9
   tenant+project persistence is an intentional database/security contract
   break. CI repair now includes the binary descriptor baseline so the bump and
   exact runner-generated baseline are reviewed together.
+- Applied the baseline-only `ci-native-docs-repair-1` artifact from GitHub run
+  `31898607698`; its Linux build and full library suite passed before the
+  intentional old-baseline comparison produced the artifact.
 - Native manifest, lint, docs, and contract-diff gates likewise execute the
   preceding all-target build directly instead of redundantly re-entering Cargo.
 - Workflow and docs-freshness posture fixtures now enforce that build-once
