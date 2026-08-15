@@ -34,6 +34,9 @@ the native tool consumed by release builds.
 - Fail closed on a missing Perl, download exhaustion, checksum mismatch, or
   malformed archive.
 - Pin this bootstrap contract in the workflow-posture guard.
+- Force the PR Windows suite through the verified fallback while main/release
+  jobs retain official-first automatic selection, so both paths have CI
+  evidence.
 
 ## Evidence
 
@@ -49,3 +52,6 @@ the native tool consumed by release builds.
   `9A72BA9D6F6F0DC2A5598EC160366B2BDD925A23E229DFB5D854F63C0F2A2160`;
   its embedded x64 installer hashes to
   `0DDB40310861EB29F4D649FEB9466779982A2D251C0DB2B9CF0D21CF591171F3`.
+- PR Windows CI uses an explicit proof input to skip nasm.us and execute that
+  package verification/install branch end to end. The release tag remains
+  blocked until this proof run is green.

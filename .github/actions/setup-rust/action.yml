@@ -24,6 +24,10 @@ inputs:
     description: Whether to install the platform native build deps. Set "false" to skip.
     required: false
     default: "true"
+  force-nasm-package-fallback:
+    description: CI proof hook that skips nasm.us and exercises the verified package fallback.
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -90,19 +94,24 @@ runs:
         $nasmRoot = Join-Path $env:RUNNER_TOOL_CACHE "nasm\$nasmVersion\x64"
         $nasmBin = Join-Path $nasmRoot "nasm-$nasmVersion"
 
+        $forcePackageFallback = "${{ inputs.force-nasm-package-fallback }}" -eq "true"
         $downloadedOfficialArchive = $false
-        for ($attempt = 1; $attempt -le 3; $attempt++) {
-          try {
-            Invoke-WebRequest -UseBasicParsing -Uri $nasmUri -OutFile $nasmArchive -TimeoutSec 60
-            $downloadedOfficialArchive = $true
-            break
-          } catch {
-            if ($attempt -eq 3) {
-              Write-Warning "Official NASM download failed after 3 attempts; using the pinned package fallback"
+        if ($forcePackageFallback) {
+          Write-Host "CI proof hook selected the checksum-pinned NASM package fallback"
+        } else {
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              Invoke-WebRequest -UseBasicParsing -Uri $nasmUri -OutFile $nasmArchive -TimeoutSec 60
+              $downloadedOfficialArchive = $true
               break
+            } catch {
+              if ($attempt -eq 3) {
+                Write-Warning "Official NASM download failed after 3 attempts; using the pinned package fallback"
+                break
+              }
+              Write-Warning "NASM download attempt $attempt/3 failed; retrying in 5 seconds"
+              Start-Sleep -Seconds 5
             }
-            Write-Warning "NASM download attempt $attempt/3 failed; retrying in 5 seconds"
-            Start-Sleep -Seconds 5
           }
         }
         if ($downloadedOfficialArchive) {

@@ -25,6 +25,8 @@ Release: 0.5.8
   both its package SHA-256 and embedded official-installer SHA-256, and installs
   it silently. No mutable latest-package lookup remains, and both paths fail
   closed on unexpected bytes.
+- PR Windows CI explicitly selects the package fallback as an end-to-end proof;
+  main and release jobs keep the production official-first automatic selection.
 - The workflow-posture positive and ordering-negative self-test fixtures now
   include the successful-real-run and fresh-artifact requirements enforced for
   Pages, so the ordering mutation continues to exercise the intended failure.
@@ -72,3 +74,5 @@ Release: 0.5.8
 - PR #30 CI run `31877820722` passed the new skill drift gate but found the
   official NASM host unreachable for all three bounded attempts. A second
   checksum-pinned distribution path is added and must pass Windows CI.
+- PR #30 CI run `31878132347` passed all 20 executed jobs with the dual-source
+  implementation. A final PR run must now prove the fallback branch explicitly.

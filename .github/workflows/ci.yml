@@ -219,6 +219,9 @@ jobs:
         with:
           components: clippy, rustfmt
           cache-key: rust-${{ matrix.os }}
+          # Exercise the verified secondary source on PR Windows. Main/release
+          # jobs retain the production official-first automatic behavior.
+          force-nasm-package-fallback: ${{ github.event_name == 'pull_request' && matrix.os == 'windows-latest' && 'true' || 'false' }}
       - name: Build all targets
         run: cargo build --locked --all-targets
       - name: Compile tests and benches

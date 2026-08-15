@@ -823,6 +823,8 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ('$nasmInstallerSha256 = "0DDB40310861EB29F4D649FEB9466779982A2D251C0DB2B9CF0D21CF591171F3"', "Windows NASM embedded installer checksum"),
         ("NASM package SHA-256 mismatch", "Windows NASM fallback package fail-closed gate"),
         ("NASM installer SHA-256 mismatch", "Windows NASM embedded installer fail-closed gate"),
+        ("force-nasm-package-fallback:", "Windows NASM fallback proof input"),
+        ("CI proof hook selected the checksum-pinned NASM package fallback", "Windows NASM fallback proof branch"),
         ("ilammy/msvc-dev-cmd@v1", "MSVC dev command setup"),
     ),
     ".github/actions/setup-sdk-toolchains/action.yml": (
@@ -1129,6 +1131,7 @@ CI_TOPOLOGY_REQUIREMENTS = (
     ("python3 udb-skill/sync_skills.py --check", "using-udb wrapper drift command"),
     ("python3 udb-skill/sync_udb_coding.py --check", "udb-coding wrapper drift command"),
     ("python3 udb-skill/sync_references.py --check", "skill reference drift command"),
+    ("force-nasm-package-fallback: ${{ github.event_name == 'pull_request' && matrix.os == 'windows-latest' && 'true' || 'false' }}", "PR Windows NASM fallback proof"),
 )
 
 CI_TOPOLOGY_DEPENDENCY_FREE_JOBS = (
@@ -6673,6 +6676,9 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup-rust
+        with:
+          force-nasm-package-fallback: ${{ github.event_name == 'pull_request' && matrix.os == 'windows-latest' && 'true' || 'false' }}
       - name: Native contract manifest drift + lint (F13 hard gate)
         if: runner.os == 'Linux'
         run: |
