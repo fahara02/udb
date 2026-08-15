@@ -1577,7 +1577,9 @@ PAGES_SITE_README_REQUIREMENTS = (
     ("before deploy", "README deploy validation boundary"),
     ("`benchmarks.js`", "README benchmark script inventory"),
     ("`sdk-benchmark-results` artifact", "README benchmark artifact name"),
-    ("falls back to the already-published dashboard JSON", "README benchmark fallback contract"),
+    ("fails closed if a real benchmark has no fresh artifact", "README fresh benchmark hard-failure contract"),
+    ("Validation-only benchmark runs do not deploy Pages", "README benchmark validation exclusion"),
+    ("direct non-benchmark Pages publishes retain the committed last-known dashboard JSON", "README committed benchmark fallback contract"),
     ("current-editor WASM smoke", "README playground smoke contract"),
     ("verifies every first-class page/script/data artifact", "README full artifact contract"),
     ("HTML `href`/`src`", "README local-ref crawl contract"),
@@ -7361,7 +7363,7 @@ The authoring surface is static HTML/CSS plus vanilla JS. The GitHub Pages workf
 
 Shared: `styles.css`, `app.js`, `playground.js`, `benchmarks.js`, `udb.wasm`.
 
-`bench-results.json` is uploaded as the `sdk-benchmark-results` artifact and pages.yml falls back to the already-published dashboard JSON for non-benchmark publishes.
+`bench-results.json` is uploaded as the `sdk-benchmark-results` artifact. pages.yml fails closed if a real benchmark has no fresh artifact. Validation-only benchmark runs do not deploy Pages; direct non-benchmark Pages publishes retain the committed last-known dashboard JSON.
 
 The workflow runs the current-editor WASM smoke, verifies every first-class page/script/data artifact, and crawls local HTML `href`/`src` references before upload.
 """

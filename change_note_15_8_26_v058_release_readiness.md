@@ -46,3 +46,7 @@ Release: 0.5.8
 - PR #29 workflow-lint run `31876409470` exposed the remaining stale
   ordering-negative Pages fixture; the fixture is synchronized before the next
   CI run.
+- Follow-up workflow-lint run `31876479588` passed that self-test and then found
+  the repository scan still required the removed live-dashboard fallback
+  wording. The guard and its README fixture now require the fail-closed fresh
+  artifact, validation-run exclusion, and committed-JSON-only direct-push rules.
