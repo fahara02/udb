@@ -22,8 +22,9 @@ Release: 0.5.8
   Strawberry Perl and install NASM 3.02 from the official project archive. The
   archive has a pinned SHA-256, bounded retries, and a hard checksum failure;
   the Chocolatey community feed is no longer a release-build dependency.
-- The workflow-posture self-test fixture now includes the successful-real-run
-  and fresh-artifact requirements it enforces for Pages.
+- The workflow-posture positive and ordering-negative self-test fixtures now
+  include the successful-real-run and fresh-artifact requirements enforced for
+  Pages, so the ordering mutation continues to exercise the intended failure.
 - The changelog records the restore self-journal fix and benchmark/auth harness
   corrections included in this patch release.
 
@@ -42,3 +43,6 @@ Release: 0.5.8
   when Chocolatey's NASM feed first timed out and then returned HTTP 499. The
   exact Windows build must pass with the checksum-pinned bootstrap before tag
   creation.
+- PR #29 workflow-lint run `31876409470` exposed the remaining stale
+  ordering-negative Pages fixture; the fixture is synchronized before the next
+  CI run.

@@ -10224,6 +10224,10 @@ jobs:
           gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
           cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
           got_fresh=1
+          if [ -n "${TRIGGER_RUN_ID:-}" ] && [ "$got_fresh" != 1 ]; then
+            echo "completed without a fresh sdk-benchmark-results artifact"
+            exit 1
+          fi
           if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
 """
         (wf / "pages.yml").write_text(
