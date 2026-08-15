@@ -4149,7 +4149,13 @@ test("live per-RPC perf", {
       let anyOk = false;
       let firstErr = "OK";
       let firstDetail: string | undefined;
-      for (let i = 0; i < itersFor(kind); i++) {
+      // v0.5.7 treats refresh-token replay as credential theft and revokes the
+      // principal's sessions. Measure the single-use rotation once; repeating the
+      // same fixture token would invalidate the bearer used by every later RPC.
+      const iterations = serviceName === "AuthnService" && methodName === "refresh_token"
+        ? 1
+        : itersFor(kind);
+      for (let i = 0; i < iterations; i++) {
         const r = await timeMethod(fn, mkBody());
         allDurs.push(r.ms);
         if (r.err === "OK") { anyOk = true; okDurs.push(r.ms); }

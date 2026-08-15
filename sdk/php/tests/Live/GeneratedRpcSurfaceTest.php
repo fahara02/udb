@@ -4504,7 +4504,12 @@ it('measures per-RPC latency', function () {
                 $probeRequest = $mkBody();
                 $kind = operationKindPhp($name, $svc);
             }
-            $iters = $itersFor($kind);
+            // Refresh-token rotation is single-use. A second call with the same
+            // fixture token is a replay signal in v0.5.7 and correctly revokes the
+            // principal's sessions, including the bearer for every later RPC.
+            $iters = $svc === 'AuthnService' && $rpcName === 'refresh_token'
+                ? 1
+                : $itersFor($kind);
             if ($rpcName === 'approve_migration_plan') {
                 $iters = 1;
             }

@@ -49,6 +49,10 @@ on:
         description: "Linux release asset to run"
         default: "udb-linux-amd64-full"
         required: true
+      checkout_ref:
+        description: "Harness ref override; leave empty to pin the released tag"
+        default: ""
+        required: false
   workflow_run:
     workflows: ["Release"]
     types: [completed]
@@ -137,9 +141,9 @@ jobs:
       # On workflow_run (post-release), benchmark the tag that just released
       # (head_branch = the v* tag). On dispatch, use the provided tag (or latest).
       release-tag: ${{ github.event.workflow_run.head_branch || inputs.release_tag || 'latest' }}
-      # Pin the harness tree to the SAME tag as the binary under test (see
-      # _live-sdk-suite checkout-ref): bench manifest + stubs must match the
-      # released surface, not main's.
-      checkout-ref: ${{ github.event.workflow_run.head_branch || (inputs.release_tag != 'latest' && inputs.release_tag) || '' }}
+      # Normal post-release runs pin the harness tree to the SAME tag as the
+      # binary. A manual, explicit checkout_ref may select a reviewed harness-only
+      # correction while release-tag continues to select the immutable binary.
+      checkout-ref: ${{ inputs.checkout_ref || github.event.workflow_run.head_branch || (inputs.release_tag != 'latest' && inputs.release_tag) || '' }}
       release-asset: ${{ inputs.release_asset || 'udb-linux-amd64-full' }}
     secrets: inherit
