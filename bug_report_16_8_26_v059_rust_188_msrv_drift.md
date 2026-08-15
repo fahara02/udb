@@ -12,6 +12,11 @@ schema, XA, security, native helpers, and service code. Existing CI Rust build
 jobs selected the current stable toolchain; the only 1.85 toolchain references
 were supply-chain commands and did not compile UDB source.
 
+The first exact-MSRV run (`31907668110`, job `95068216763`) then exposed a
+separate all-features compile defect in the optional init prompt path:
+`Select` and `MultiSelect` were imported inside `run_init_prompts` but used by
+sibling helper functions, so the helpers could not resolve those types.
+
 ## Impact
 
 A published crate could pass every stable CI build while failing for consumers
@@ -25,8 +30,12 @@ control-plane source was therefore outside the advertised compatibility gate.
 - Add a required GitHub CI job that runs
   `cargo check --locked --all-features --all-targets` with Rust 1.88.0 after
   the quick gate.
+- Keep the feature-gated `inquire` prompt imports at module scope so the
+  interactive runner and its selection helpers share the same lexical scope.
 
 ## Verification
 
 No local Cargo/build/test/rustfmt command was run. GitHub CI must compile the
 complete target set on both the normal stable jobs and the exact declared MSRV.
+The failed exact-MSRV run above is retained as regression evidence; a new CI
+run at the corrected commit must pass the same all-features/all-targets gate.

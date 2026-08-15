@@ -5,6 +5,9 @@
 
 #![allow(unexpected_cfgs)]
 
+#[cfg(feature = "init-prompts")]
+use inquire::{Confirm, MultiSelect, Select};
+
 /// Result type used by init prompt scaffolding.
 pub type InitPromptResult<T> = Result<T, InitPromptError>;
 
@@ -84,8 +87,6 @@ pub struct InitPromptSelection {
 /// Run the `inquire` prompt fallback when compiled with `init-prompts`.
 #[cfg(feature = "init-prompts")]
 pub fn run_init_prompts(catalog: InitPromptCatalog) -> InitPromptResult<InitPromptSelection> {
-    use inquire::{Confirm, MultiSelect, Select};
-
     let profile = select_one(
         "Profile",
         catalog.profiles,
