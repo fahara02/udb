@@ -89,6 +89,10 @@ by the v0.5.8 post-release benchmark and restoring trustworthy release evidence.
   Metering quota, and LiveQuery handlers validate tenant and project together
   before constructing their runtime context; a same-tenant request can no
   longer substitute another project's body identifier.
+- **Unknown API-key usage remains zero and non-enumerating.** Usage statistics
+  for an identifier with no key row return the empty/zero response instead of
+  `NotFound`, preserving the endpoint contract without creating a key-existence
+  oracle. Existing keys still pass the exact tenant/project authority guard.
 - **Project-routing typos fail closed.** Startup rejects unknown routing-mode
   tokens and a blank `strict_with_default:` project; direct runtime parsing
   falls back to strict isolation instead of silently authorizing permissive

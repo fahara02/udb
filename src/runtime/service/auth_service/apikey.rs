@@ -1779,8 +1779,18 @@ impl ApiKeyService for ApiKeyServiceImpl {
                     "usage_stats_key_scope",
                     format!("usage stats key scope lookup failed: {err}"),
                 )
-            })?
-            .ok_or_else(|| Self::api_key_not_found_status("get_api_key_usage_stats"))?;
+            })?;
+        // An unknown key id reports ZERO usage instead of NotFound. Two reasons:
+        // the endpoint's contract is "stats for this key", and no rows means no
+        // usage; and answering NotFound turns it into an existence oracle, where
+        // a caller probing ids learns which are real from the status code alone.
+        // There is also no scope to authorize on a key that does not exist, so
+        // the project check below would have nothing to compare.
+        let Some(target) = target else {
+            return Ok(Response::new(
+                apikey_pb::GetApiKeyUsageStatsResponse::default(),
+            ));
+        };
         let target_tenant: String = target.try_get("tenant_id").map_err(|err| {
             Self::internal_status(
                 "usage_stats_key_scope",
