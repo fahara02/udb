@@ -22,8 +22,9 @@ control-plane source was therefore outside the advertised compatibility gate.
 
 - Set the manifest's minimum supported Rust version to the honest repository
   floor, Rust 1.88.
-- Add a required GitHub CI job that runs `cargo check --locked --all-targets`
-  with Rust 1.88.0 after the quick gate.
+- Add a required GitHub CI job that runs
+  `cargo check --locked --all-features --all-targets` with Rust 1.88.0 after
+  the quick gate.
 
 ## Verification
 

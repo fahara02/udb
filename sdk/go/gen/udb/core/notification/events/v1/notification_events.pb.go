@@ -36,6 +36,7 @@ type NotificationSentEvent struct {
 	TenantId      string                 `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	CorrelationId string                 `protobuf:"bytes,8,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
 	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"` // Exact project whose store committed the notification.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -133,6 +134,13 @@ func (x *NotificationSentEvent) GetOccurredAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *NotificationSentEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 // Emitted when a notification delivery attempt fails (may be retried).
 // Kafka topic: udb.notification.failed.v1
 type NotificationFailedEvent struct {
@@ -149,6 +157,7 @@ type NotificationFailedEvent struct {
 	WillRetry     bool                   `protobuf:"varint,10,opt,name=will_retry,json=willRetry,proto3" json:"will_retry,omitempty"`
 	CorrelationId string                 `protobuf:"bytes,11,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
 	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,13,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"` // Exact project whose store committed the outcome.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -267,6 +276,13 @@ func (x *NotificationFailedEvent) GetOccurredAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *NotificationFailedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 // Emitted when a notification is suppressed due to rate limiting or user opt-out.
 // Kafka topic: udb.notification.suppressed.v1
 type NotificationSuppressedEvent struct {
@@ -280,6 +296,7 @@ type NotificationSuppressedEvent struct {
 	SuppressionReason string                 `protobuf:"bytes,7,opt,name=suppression_reason,json=suppressionReason,proto3" json:"suppression_reason,omitempty"` // RATE_LIMITED | USER_OPT_OUT | DUPLICATE
 	CorrelationId     string                 `protobuf:"bytes,8,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
 	OccurredAt        *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	ProjectId         string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"` // Exact project whose store committed the suppression.
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -377,6 +394,13 @@ func (x *NotificationSuppressedEvent) GetOccurredAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *NotificationSuppressedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 // Emitted when delivery is confirmed (e.g. email open, webhook 2xx).
 // Kafka topic: udb.notification.delivered.v1
 type NotificationDeliveredEvent struct {
@@ -387,6 +411,7 @@ type NotificationDeliveredEvent struct {
 	TenantId      string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	CorrelationId string                 `protobuf:"bytes,5,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
 	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,7,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"` // Exact project whose store committed the outcome.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -461,6 +486,13 @@ func (x *NotificationDeliveredEvent) GetOccurredAt() *timestamppb.Timestamp {
 		return x.OccurredAt
 	}
 	return nil
+}
+
+func (x *NotificationDeliveredEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
 }
 
 // Emitted when a notification template is created or updated.
@@ -737,7 +769,7 @@ var File_udb_core_notification_events_v1_notification_events_proto protoreflect.
 
 const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "" +
 	"\n" +
-	"9udb/core/notification/events/v1/notification_events.proto\x12\x1fudb.core.notification.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!udb/core/common/v1/security.proto\"\xd2\x03\n" +
+	"9udb/core/notification/events/v1/notification_events.proto\x12\x1fudb.core.notification.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!udb/core/common/v1/security.proto\"\xf1\x03\n" +
 	"\x15NotificationSentEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06log_id\x18\x02 \x01(\tR\x05logId\x12\x1f\n" +
@@ -750,8 +782,11 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\ttenant_id\x18\a \x01(\tR\btenantId\x12%\n" +
 	"\x0ecorrelation_id\x18\b \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt:\x86\x01\x92\xb2\x19\x81\x01\n" +
-	"5udb.core.notification.events.v1.NotificationSentEvent\x12\x18udb.notification.sent.v1\x1a\rrecipient_ref\"\bstandard*\rat_least_once2\x06stable\"\xb5\x04\n" +
+	"occurredAt\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\n" +
+	" \x01(\tR\tprojectId:\x86\x01\x92\xb2\x19\x81\x01\n" +
+	"5udb.core.notification.events.v1.NotificationSentEvent\x12\x18udb.notification.sent.v1\x1a\rrecipient_ref\"\bstandard*\rat_least_once2\x06stable\"\xd4\x04\n" +
 	"\x17NotificationFailedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06log_id\x18\x02 \x01(\tR\x05logId\x12\x1f\n" +
@@ -770,8 +805,10 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	" \x01(\bR\twillRetry\x12%\n" +
 	"\x0ecorrelation_id\x18\v \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt:\x86\x01\x92\xb2\x19\x81\x01\n" +
-	"7udb.core.notification.events.v1.NotificationFailedEvent\x12\x1audb.notification.failed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xf8\x03\n" +
+	"occurredAt\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\r \x01(\tR\tprojectId:\x86\x01\x92\xb2\x19\x81\x01\n" +
+	"7udb.core.notification.events.v1.NotificationFailedEvent\x12\x1audb.notification.failed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x97\x04\n" +
 	"\x1bNotificationSuppressedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -784,8 +821,11 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\x12suppression_reason\x18\a \x01(\tR\x11suppressionReason\x12%\n" +
 	"\x0ecorrelation_id\x18\b \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt:\x8e\x01\x92\xb2\x19\x89\x01\n" +
-	";udb.core.notification.events.v1.NotificationSuppressedEvent\x12\x1eudb.notification.suppressed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xf8\x02\n" +
+	"occurredAt\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\n" +
+	" \x01(\tR\tprojectId:\x8e\x01\x92\xb2\x19\x89\x01\n" +
+	";udb.core.notification.events.v1.NotificationSuppressedEvent\x12\x1eudb.notification.suppressed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x97\x03\n" +
 	"\x1aNotificationDeliveredEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06log_id\x18\x02 \x01(\tR\x05logId\x12\x18\n" +
@@ -793,7 +833,9 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x12%\n" +
 	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt:\x8c\x01\x92\xb2\x19\x87\x01\n" +
+	"occurredAt\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\a \x01(\tR\tprojectId:\x8c\x01\x92\xb2\x19\x87\x01\n" +
 	":udb.core.notification.events.v1.NotificationDeliveredEvent\x12\x1dudb.notification.delivered.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xf4\x03\n" +
 	" NotificationTemplateChangedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1f\n" +

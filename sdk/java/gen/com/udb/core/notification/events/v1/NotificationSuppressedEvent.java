@@ -41,6 +41,7 @@ private static final long serialVersionUID = 0L;
     tenantId_ = "";
     suppressionReason_ = "";
     correlationId_ = "";
+    projectId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -403,6 +404,53 @@ private static final long serialVersionUID = 0L;
     return occurredAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : occurredAt_;
   }
 
+  public static final int PROJECT_ID_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object projectId_ = "";
+  /**
+   * <pre>
+   * Exact project whose store committed the suppression.
+   * </pre>
+   *
+   * <code>string project_id = 10 [json_name = "projectId"];</code>
+   * @return The projectId.
+   */
+  @java.lang.Override
+  public java.lang.String getProjectId() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      projectId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Exact project whose store committed the suppression.
+   * </pre>
+   *
+   * <code>string project_id = 10 [json_name = "projectId"];</code>
+   * @return The bytes for projectId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getProjectIdBytes() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      projectId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -444,6 +492,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(9, getOccurredAt());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, projectId_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -481,6 +532,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(9, getOccurredAt());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, projectId_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -517,6 +571,8 @@ private static final long serialVersionUID = 0L;
       if (!getOccurredAt()
           .equals(other.getOccurredAt())) return false;
     }
+    if (!getProjectId()
+        .equals(other.getProjectId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -548,6 +604,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + OCCURRED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getOccurredAt().hashCode();
     }
+    hash = (37 * hash) + PROJECT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getProjectId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -703,6 +761,7 @@ private static final long serialVersionUID = 0L;
         occurredAtBuilder_.dispose();
         occurredAtBuilder_ = null;
       }
+      projectId_ = "";
       return this;
     }
 
@@ -767,6 +826,9 @@ private static final long serialVersionUID = 0L;
             : occurredAtBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.projectId_ = projectId_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -824,6 +886,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasOccurredAt()) {
         mergeOccurredAt(other.getOccurredAt());
+      }
+      if (!other.getProjectId().isEmpty()) {
+        projectId_ = other.projectId_;
+        bitField0_ |= 0x00000200;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -898,6 +965,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000100;
               break;
             } // case 74
+            case 82: {
+              projectId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1630,6 +1702,98 @@ private static final long serialVersionUID = 0L;
         occurredAt_ = null;
       }
       return occurredAtBuilder_;
+    }
+
+    private java.lang.Object projectId_ = "";
+    /**
+     * <pre>
+     * Exact project whose store committed the suppression.
+     * </pre>
+     *
+     * <code>string project_id = 10 [json_name = "projectId"];</code>
+     * @return The projectId.
+     */
+    public java.lang.String getProjectId() {
+      java.lang.Object ref = projectId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        projectId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Exact project whose store committed the suppression.
+     * </pre>
+     *
+     * <code>string project_id = 10 [json_name = "projectId"];</code>
+     * @return The bytes for projectId.
+     */
+    public com.google.protobuf.ByteString
+        getProjectIdBytes() {
+      java.lang.Object ref = projectId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        projectId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Exact project whose store committed the suppression.
+     * </pre>
+     *
+     * <code>string project_id = 10 [json_name = "projectId"];</code>
+     * @param value The projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      projectId_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Exact project whose store committed the suppression.
+     * </pre>
+     *
+     * <code>string project_id = 10 [json_name = "projectId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProjectId() {
+      projectId_ = getDefaultInstance().getProjectId();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Exact project whose store committed the suppression.
+     * </pre>
+     *
+     * <code>string project_id = 10 [json_name = "projectId"];</code>
+     * @param value The bytes for projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      projectId_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.notification.events.v1.NotificationSuppressedEvent)

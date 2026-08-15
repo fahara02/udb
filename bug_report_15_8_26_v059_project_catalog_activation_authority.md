@@ -218,3 +218,17 @@ including callers that the centralized predicate had verified through an
 explicit platform role or `udb:platform_admin` scope. The project guard now
 reuses that exact predicate. Bound broad action scopes remain project-local,
 while genuine platform authority consistently crosses tenant and project.
+
+The same final audit found that empty-tenant/global API-key records returned
+before this predicate ran. Global records now require the centralized platform
+predicate as well: explicit platform roles/scopes and deliberately unbound
+operators remain valid, while tenant/project-bound broad admin claims are
+denied even when they know a global key identifier. Async service regressions
+exercise global-key get, update, revoke, and rotate denial plus an explicit
+platform-scope positive read.
+
+CI run `31906893924` compiled all targets and tests, then reported only two
+stale tenant-service assertions: they still expected a tenant-bound
+`udb:admin` scope to list or parent across tenants. The corrected regressions
+keep that broad scope tenant-local and use explicit `udb:platform_admin` for
+the cross-tenant positive path.

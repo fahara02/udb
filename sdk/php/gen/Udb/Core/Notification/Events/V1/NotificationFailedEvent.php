@@ -67,6 +67,12 @@ class NotificationFailedEvent extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Timestamp occurred_at = 12 [json_name = "occurredAt"];</code>
      */
     protected $occurred_at = null;
+    /**
+     * Exact project whose store committed the outcome.
+     *
+     * Generated from protobuf field <code>string project_id = 13 [json_name = "projectId"];</code>
+     */
+    protected $project_id = '';
 
     /**
      * Constructor.
@@ -87,6 +93,8 @@ class NotificationFailedEvent extends \Google\Protobuf\Internal\Message
      *     @type bool $will_retry
      *     @type string $correlation_id
      *     @type \Google\Protobuf\Timestamp $occurred_at
+     *     @type string $project_id
+     *           Exact project whose store committed the outcome.
      * }
      */
     public function __construct($data = NULL) {
@@ -368,6 +376,32 @@ class NotificationFailedEvent extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->occurred_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * Exact project whose store committed the outcome.
+     *
+     * Generated from protobuf field <code>string project_id = 13 [json_name = "projectId"];</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * Exact project whose store committed the outcome.
+     *
+     * Generated from protobuf field <code>string project_id = 13 [json_name = "projectId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->project_id = $var;
 
         return $this;
     }

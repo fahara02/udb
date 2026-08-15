@@ -221,7 +221,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev
       - name: Check all targets on declared MSRV
-        run: cargo check --locked --all-targets
+        run: cargo check --locked --all-features --all-targets
 
   # ── Clippy advisory: visible but not on the required quick-gate lane ─────
   clippy-advisory:
@@ -670,14 +670,14 @@ jobs:
         continue-on-error: true
         uses: EmbarkStudios/cargo-deny-action@v2
         env:
-          RUSTUP_TOOLCHAIN: 1.85.0-x86_64-unknown-linux-musl
+          RUSTUP_TOOLCHAIN: 1.88.0-x86_64-unknown-linux-musl
         with:
           manifest-path: Cargo.toml
           command: check advisories
       - name: cargo-deny policy gates
         uses: EmbarkStudios/cargo-deny-action@v2
         env:
-          RUSTUP_TOOLCHAIN: 1.85.0-x86_64-unknown-linux-musl
+          RUSTUP_TOOLCHAIN: 1.88.0-x86_64-unknown-linux-musl
         with:
           manifest-path: Cargo.toml
           command: check bans licenses sources

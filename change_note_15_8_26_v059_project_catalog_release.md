@@ -166,6 +166,13 @@ Release: 0.5.9
 - The API-key record guard uses the same centralized predicate for its project
   escape hatch, so explicit platform roles/scopes retain cross-project access
   without reopening that access to project-bound broad admin scopes.
+- Global API-key records also require the centralized platform predicate;
+  tenant/project-bound broad admin claims can no longer read or mutate a known
+  global key outside their verified lineage; direct get/update/revoke/rotate
+  regressions cover the boundary.
+- Tenant listing and tenant-parenting regressions now distinguish bound broad
+  admin authority from the explicit platform scope; run `31906893924` reached
+  2,738 library passes before identifying those two stale expectations.
 - Refreshed the generated codebase map after adding that shared helper; GitHub
   run `31903131598` had already compiled all targets and passed the full library
   suite before its freshness gate reported the one-line map drift.

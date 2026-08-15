@@ -27,90 +27,93 @@ namespace udb.core.Notification.Events.V1 {
             "Cjl1ZGIvY29yZS9ub3RpZmljYXRpb24vZXZlbnRzL3YxL25vdGlmaWNhdGlv",
             "bl9ldmVudHMucHJvdG8SH3VkYi5jb3JlLm5vdGlmaWNhdGlvbi5ldmVudHMu",
             "djEaH2dvb2dsZS9wcm90b2J1Zi90aW1lc3RhbXAucHJvdG8aIXVkYi9jb3Jl",
-            "L2NvbW1vbi92MS9zZWN1cml0eS5wcm90byLSAwoVTm90aWZpY2F0aW9uU2Vu",
+            "L2NvbW1vbi92MS9zZWN1cml0eS5wcm90byLxAwoVTm90aWZpY2F0aW9uU2Vu",
             "dEV2ZW50EhkKCGV2ZW50X2lkGAEgASgJUgdldmVudElkEhUKBmxvZ19pZBgC",
             "IAEoCVIFbG9nSWQSHwoLdGVtcGxhdGVfaWQYAyABKAlSCnRlbXBsYXRlSWQS",
             "HQoKZXZlbnRfdHlwZRgEIAEoCVIJZXZlbnRUeXBlEhgKB2NoYW5uZWwYBSAB",
             "KAlSB2NoYW5uZWwSIwoNcmVjaXBpZW50X3JlZhgGIAEoCVIMcmVjaXBpZW50",
             "UmVmEhsKCXRlbmFudF9pZBgHIAEoCVIIdGVuYW50SWQSJQoOY29ycmVsYXRp",
             "b25faWQYCCABKAlSDWNvcnJlbGF0aW9uSWQSOwoLb2NjdXJyZWRfYXQYCSAB",
-            "KAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgpvY2N1cnJlZEF0OoYB",
-            "krIZgQEKNXVkYi5jb3JlLm5vdGlmaWNhdGlvbi5ldmVudHMudjEuTm90aWZp",
-            "Y2F0aW9uU2VudEV2ZW50Ehh1ZGIubm90aWZpY2F0aW9uLnNlbnQudjEaDXJl",
-            "Y2lwaWVudF9yZWYiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUi",
-            "tQQKF05vdGlmaWNhdGlvbkZhaWxlZEV2ZW50EhkKCGV2ZW50X2lkGAEgASgJ",
-            "UgdldmVudElkEhUKBmxvZ19pZBgCIAEoCVIFbG9nSWQSHwoLdGVtcGxhdGVf",
-            "aWQYAyABKAlSCnRlbXBsYXRlSWQSHQoKZXZlbnRfdHlwZRgEIAEoCVIJZXZl",
-            "bnRUeXBlEhgKB2NoYW5uZWwYBSABKAlSB2NoYW5uZWwSGwoJdGVuYW50X2lk",
-            "GAYgASgJUgh0ZW5hbnRJZBIdCgplcnJvcl9jb2RlGAcgASgJUgllcnJvckNv",
-            "ZGUSIQoMZXJyb3JfZGV0YWlsGAggASgJUgtlcnJvckRldGFpbBIjCg1yZXRy",
-            "eV9hdHRlbXB0GAkgASgFUgxyZXRyeUF0dGVtcHQSHQoKd2lsbF9yZXRyeRgK",
-            "IAEoCFIJd2lsbFJldHJ5EiUKDmNvcnJlbGF0aW9uX2lkGAsgASgJUg1jb3Jy",
-            "ZWxhdGlvbklkEjsKC29jY3VycmVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3Rv",
-            "YnVmLlRpbWVzdGFtcFIKb2NjdXJyZWRBdDqGAZKyGYEBCjd1ZGIuY29yZS5u",
-            "b3RpZmljYXRpb24uZXZlbnRzLnYxLk5vdGlmaWNhdGlvbkZhaWxlZEV2ZW50",
-            "Ehp1ZGIubm90aWZpY2F0aW9uLmZhaWxlZC52MRoJdGVuYW50X2lkIghzdGFu",
-            "ZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIvgDChtOb3RpZmljYXRpb25T",
-            "dXBwcmVzc2VkRXZlbnQSGQoIZXZlbnRfaWQYASABKAlSB2V2ZW50SWQSHwoL",
-            "dGVtcGxhdGVfaWQYAiABKAlSCnRlbXBsYXRlSWQSHQoKZXZlbnRfdHlwZRgD",
-            "IAEoCVIJZXZlbnRUeXBlEhgKB2NoYW5uZWwYBCABKAlSB2NoYW5uZWwSIwoN",
-            "cmVjaXBpZW50X3JlZhgFIAEoCVIMcmVjaXBpZW50UmVmEhsKCXRlbmFudF9p",
-            "ZBgGIAEoCVIIdGVuYW50SWQSLQoSc3VwcHJlc3Npb25fcmVhc29uGAcgASgJ",
-            "UhFzdXBwcmVzc2lvblJlYXNvbhIlCg5jb3JyZWxhdGlvbl9pZBgIIAEoCVIN",
-            "Y29ycmVsYXRpb25JZBI7CgtvY2N1cnJlZF9hdBgJIAEoCzIaLmdvb2dsZS5w",
-            "cm90b2J1Zi5UaW1lc3RhbXBSCm9jY3VycmVkQXQ6jgGSshmJAQo7dWRiLmNv",
-            "cmUubm90aWZpY2F0aW9uLmV2ZW50cy52MS5Ob3RpZmljYXRpb25TdXBwcmVz",
-            "c2VkRXZlbnQSHnVkYi5ub3RpZmljYXRpb24uc3VwcHJlc3NlZC52MRoJdGVu",
-            "YW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIvgCChpO",
-            "b3RpZmljYXRpb25EZWxpdmVyZWRFdmVudBIZCghldmVudF9pZBgBIAEoCVIH",
-            "ZXZlbnRJZBIVCgZsb2dfaWQYAiABKAlSBWxvZ0lkEhgKB2NoYW5uZWwYAyAB",
-            "KAlSB2NoYW5uZWwSGwoJdGVuYW50X2lkGAQgASgJUgh0ZW5hbnRJZBIlCg5j",
-            "b3JyZWxhdGlvbl9pZBgFIAEoCVINY29ycmVsYXRpb25JZBI7CgtvY2N1cnJl",
-            "ZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCm9jY3Vy",
-            "cmVkQXQ6jAGSshmHAQo6dWRiLmNvcmUubm90aWZpY2F0aW9uLmV2ZW50cy52",
-            "MS5Ob3RpZmljYXRpb25EZWxpdmVyZWRFdmVudBIddWRiLm5vdGlmaWNhdGlv",
-            "bi5kZWxpdmVyZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0",
-            "X29uY2UyBnN0YWJsZSL0AwogTm90aWZpY2F0aW9uVGVtcGxhdGVDaGFuZ2Vk",
-            "RXZlbnQSGQoIZXZlbnRfaWQYASABKAlSB2V2ZW50SWQSHwoLdGVtcGxhdGVf",
-            "aWQYAiABKAlSCnRlbXBsYXRlSWQSHQoKZXZlbnRfdHlwZRgDIAEoCVIJZXZl",
-            "bnRUeXBlEhgKB2NoYW5uZWwYBCABKAlSB2NoYW5uZWwSHwoLY2hhbmdlX3R5",
-            "cGUYBSABKAlSCmNoYW5nZVR5cGUSHQoKY2hhbmdlZF9ieRgGIAEoCVIJY2hh",
-            "bmdlZEJ5EiUKDmNvcnJlbGF0aW9uX2lkGAcgASgJUg1jb3JyZWxhdGlvbklk",
-            "EjsKC29jY3VycmVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVz",
-            "dGFtcFIKb2NjdXJyZWRBdBIbCgl0ZW5hbnRfaWQYCSABKAlSCHRlbmFudElk",
-            "OpkBkrIZlAEKQHVkYi5jb3JlLm5vdGlmaWNhdGlvbi5ldmVudHMudjEuTm90",
-            "aWZpY2F0aW9uVGVtcGxhdGVDaGFuZ2VkRXZlbnQSJHVkYi5ub3RpZmljYXRp",
-            "b24udGVtcGxhdGUuY2hhbmdlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoN",
-            "YXRfbGVhc3Rfb25jZTIGc3RhYmxlIq0FChlSZXNvdXJjZUluZ2VzdFN0YXR1",
-            "c0V2ZW50EhkKCGV2ZW50X2lkGAEgASgJUgdldmVudElkEh8KC3Jlc291cmNl",
-            "X2lkGAIgASgJUgpyZXNvdXJjZUlkEhsKCXRlbmFudF9pZBgDIAEoCVIIdGVu",
-            "YW50SWQSHQoKcHJvamVjdF9pZBgEIAEoCVIJcHJvamVjdElkEhYKBnN0YXR1",
-            "cxgFIAEoCVIGc3RhdHVzEhoKCGZpbGVuYW1lGAYgASgJUghmaWxlbmFtZRIb",
-            "CgltaW1lX3R5cGUYByABKAlSCG1pbWVUeXBlEh0KCnNpemVfYnl0ZXMYCCAB",
-            "KANSCXNpemVCeXRlcxIWCgZzaGEyNTYYCSABKAlSBnNoYTI1NhIjCg1lcnJv",
-            "cl9tZXNzYWdlGAogASgJUgxlcnJvck1lc3NhZ2USIgoNaW5nZXN0X2pvYl9p",
-            "ZBgLIAEoCVILaW5nZXN0Sm9iSWQSJQoOY29ycmVsYXRpb25faWQYDCABKAlS",
-            "DWNvcnJlbGF0aW9uSWQSOwoLb2NjdXJyZWRfYXQYDSABKAsyGi5nb29nbGUu",
-            "cHJvdG9idWYuVGltZXN0YW1wUgpvY2N1cnJlZEF0EiMKDXJlc291cmNlX3R5",
-            "cGUYDiABKAlSDHJlc291cmNlVHlwZRIjCg1yZXNvdXJjZV9uYW1lGA8gASgJ",
-            "UgxyZXNvdXJjZU5hbWU6mAGSshmTAQo5dWRiLmNvcmUubm90aWZpY2F0aW9u",
-            "LmV2ZW50cy52MS5SZXNvdXJjZUluZ2VzdFN0YXR1c0V2ZW50Eip1ZGIubm90",
-            "aWZpY2F0aW9uLnJlc291cmNlLmluZ2VzdC5zdGF0dXMudjEaCXRlbmFudF9p",
-            "ZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZUKsAgojY29tLnVk",
-            "Yi5jb3JlLm5vdGlmaWNhdGlvbi5ldmVudHMudjFCF05vdGlmaWNhdGlvbkV2",
-            "ZW50c1Byb3RvUAFaS2dpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9n",
-            "ZW4vdWRiL2NvcmUvbm90aWZpY2F0aW9uL2V2ZW50cy92MTtldmVudHN2MaIC",
-            "BFVDTkWqAh91ZGIuY29yZS5Ob3RpZmljYXRpb24uRXZlbnRzLlYxygIfVWRi",
-            "XENvcmVcTm90aWZpY2F0aW9uXEV2ZW50c1xWMeICK1VkYlxHUEJNZXRhZGF0",
-            "YVxDb3JlXE5vdGlmaWNhdGlvblxFdmVudHNcVjHqAiNVZGI6OkNvcmU6Ok5v",
-            "dGlmaWNhdGlvbjo6RXZlbnRzOjpWMWIGcHJvdG8z"));
+            "KAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgpvY2N1cnJlZEF0Eh0K",
+            "CnByb2plY3RfaWQYCiABKAlSCXByb2plY3RJZDqGAZKyGYEBCjV1ZGIuY29y",
+            "ZS5ub3RpZmljYXRpb24uZXZlbnRzLnYxLk5vdGlmaWNhdGlvblNlbnRFdmVu",
+            "dBIYdWRiLm5vdGlmaWNhdGlvbi5zZW50LnYxGg1yZWNpcGllbnRfcmVmIghz",
+            "dGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlItQEChdOb3RpZmljYXRp",
+            "b25GYWlsZWRFdmVudBIZCghldmVudF9pZBgBIAEoCVIHZXZlbnRJZBIVCgZs",
+            "b2dfaWQYAiABKAlSBWxvZ0lkEh8KC3RlbXBsYXRlX2lkGAMgASgJUgp0ZW1w",
+            "bGF0ZUlkEh0KCmV2ZW50X3R5cGUYBCABKAlSCWV2ZW50VHlwZRIYCgdjaGFu",
+            "bmVsGAUgASgJUgdjaGFubmVsEhsKCXRlbmFudF9pZBgGIAEoCVIIdGVuYW50",
+            "SWQSHQoKZXJyb3JfY29kZRgHIAEoCVIJZXJyb3JDb2RlEiEKDGVycm9yX2Rl",
+            "dGFpbBgIIAEoCVILZXJyb3JEZXRhaWwSIwoNcmV0cnlfYXR0ZW1wdBgJIAEo",
+            "BVIMcmV0cnlBdHRlbXB0Eh0KCndpbGxfcmV0cnkYCiABKAhSCXdpbGxSZXRy",
+            "eRIlCg5jb3JyZWxhdGlvbl9pZBgLIAEoCVINY29ycmVsYXRpb25JZBI7Cgtv",
+            "Y2N1cnJlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBS",
+            "Cm9jY3VycmVkQXQSHQoKcHJvamVjdF9pZBgNIAEoCVIJcHJvamVjdElkOoYB",
+            "krIZgQEKN3VkYi5jb3JlLm5vdGlmaWNhdGlvbi5ldmVudHMudjEuTm90aWZp",
+            "Y2F0aW9uRmFpbGVkRXZlbnQSGnVkYi5ub3RpZmljYXRpb24uZmFpbGVkLnYx",
+            "Ggl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUi",
+            "lwQKG05vdGlmaWNhdGlvblN1cHByZXNzZWRFdmVudBIZCghldmVudF9pZBgB",
+            "IAEoCVIHZXZlbnRJZBIfCgt0ZW1wbGF0ZV9pZBgCIAEoCVIKdGVtcGxhdGVJ",
+            "ZBIdCgpldmVudF90eXBlGAMgASgJUglldmVudFR5cGUSGAoHY2hhbm5lbBgE",
+            "IAEoCVIHY2hhbm5lbBIjCg1yZWNpcGllbnRfcmVmGAUgASgJUgxyZWNpcGll",
+            "bnRSZWYSGwoJdGVuYW50X2lkGAYgASgJUgh0ZW5hbnRJZBItChJzdXBwcmVz",
+            "c2lvbl9yZWFzb24YByABKAlSEXN1cHByZXNzaW9uUmVhc29uEiUKDmNvcnJl",
+            "bGF0aW9uX2lkGAggASgJUg1jb3JyZWxhdGlvbklkEjsKC29jY3VycmVkX2F0",
+            "GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIKb2NjdXJyZWRB",
+            "dBIdCgpwcm9qZWN0X2lkGAogASgJUglwcm9qZWN0SWQ6jgGSshmJAQo7dWRi",
+            "LmNvcmUubm90aWZpY2F0aW9uLmV2ZW50cy52MS5Ob3RpZmljYXRpb25TdXBw",
+            "cmVzc2VkRXZlbnQSHnVkYi5ub3RpZmljYXRpb24uc3VwcHJlc3NlZC52MRoJ",
+            "dGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIpcD",
+            "ChpOb3RpZmljYXRpb25EZWxpdmVyZWRFdmVudBIZCghldmVudF9pZBgBIAEo",
+            "CVIHZXZlbnRJZBIVCgZsb2dfaWQYAiABKAlSBWxvZ0lkEhgKB2NoYW5uZWwY",
+            "AyABKAlSB2NoYW5uZWwSGwoJdGVuYW50X2lkGAQgASgJUgh0ZW5hbnRJZBIl",
+            "Cg5jb3JyZWxhdGlvbl9pZBgFIAEoCVINY29ycmVsYXRpb25JZBI7CgtvY2N1",
+            "cnJlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCm9j",
+            "Y3VycmVkQXQSHQoKcHJvamVjdF9pZBgHIAEoCVIJcHJvamVjdElkOowBkrIZ",
+            "hwEKOnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5ldmVudHMudjEuTm90aWZpY2F0",
+            "aW9uRGVsaXZlcmVkRXZlbnQSHXVkYi5ub3RpZmljYXRpb24uZGVsaXZlcmVk",
+            "LnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFi",
+            "bGUi9AMKIE5vdGlmaWNhdGlvblRlbXBsYXRlQ2hhbmdlZEV2ZW50EhkKCGV2",
+            "ZW50X2lkGAEgASgJUgdldmVudElkEh8KC3RlbXBsYXRlX2lkGAIgASgJUgp0",
+            "ZW1wbGF0ZUlkEh0KCmV2ZW50X3R5cGUYAyABKAlSCWV2ZW50VHlwZRIYCgdj",
+            "aGFubmVsGAQgASgJUgdjaGFubmVsEh8KC2NoYW5nZV90eXBlGAUgASgJUgpj",
+            "aGFuZ2VUeXBlEh0KCmNoYW5nZWRfYnkYBiABKAlSCWNoYW5nZWRCeRIlCg5j",
+            "b3JyZWxhdGlvbl9pZBgHIAEoCVINY29ycmVsYXRpb25JZBI7CgtvY2N1cnJl",
+            "ZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCm9jY3Vy",
+            "cmVkQXQSGwoJdGVuYW50X2lkGAkgASgJUgh0ZW5hbnRJZDqZAZKyGZQBCkB1",
+            "ZGIuY29yZS5ub3RpZmljYXRpb24uZXZlbnRzLnYxLk5vdGlmaWNhdGlvblRl",
+            "bXBsYXRlQ2hhbmdlZEV2ZW50EiR1ZGIubm90aWZpY2F0aW9uLnRlbXBsYXRl",
+            "LmNoYW5nZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29u",
+            "Y2UyBnN0YWJsZSKtBQoZUmVzb3VyY2VJbmdlc3RTdGF0dXNFdmVudBIZCghl",
+            "dmVudF9pZBgBIAEoCVIHZXZlbnRJZBIfCgtyZXNvdXJjZV9pZBgCIAEoCVIK",
+            "cmVzb3VyY2VJZBIbCgl0ZW5hbnRfaWQYAyABKAlSCHRlbmFudElkEh0KCnBy",
+            "b2plY3RfaWQYBCABKAlSCXByb2plY3RJZBIWCgZzdGF0dXMYBSABKAlSBnN0",
+            "YXR1cxIaCghmaWxlbmFtZRgGIAEoCVIIZmlsZW5hbWUSGwoJbWltZV90eXBl",
+            "GAcgASgJUghtaW1lVHlwZRIdCgpzaXplX2J5dGVzGAggASgDUglzaXplQnl0",
+            "ZXMSFgoGc2hhMjU2GAkgASgJUgZzaGEyNTYSIwoNZXJyb3JfbWVzc2FnZRgK",
+            "IAEoCVIMZXJyb3JNZXNzYWdlEiIKDWluZ2VzdF9qb2JfaWQYCyABKAlSC2lu",
+            "Z2VzdEpvYklkEiUKDmNvcnJlbGF0aW9uX2lkGAwgASgJUg1jb3JyZWxhdGlv",
+            "bklkEjsKC29jY3VycmVkX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRp",
+            "bWVzdGFtcFIKb2NjdXJyZWRBdBIjCg1yZXNvdXJjZV90eXBlGA4gASgJUgxy",
+            "ZXNvdXJjZVR5cGUSIwoNcmVzb3VyY2VfbmFtZRgPIAEoCVIMcmVzb3VyY2VO",
+            "YW1lOpgBkrIZkwEKOXVkYi5jb3JlLm5vdGlmaWNhdGlvbi5ldmVudHMudjEu",
+            "UmVzb3VyY2VJbmdlc3RTdGF0dXNFdmVudBIqdWRiLm5vdGlmaWNhdGlvbi5y",
+            "ZXNvdXJjZS5pbmdlc3Quc3RhdHVzLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJk",
+            "Kg1hdF9sZWFzdF9vbmNlMgZzdGFibGVCrAIKI2NvbS51ZGIuY29yZS5ub3Rp",
+            "ZmljYXRpb24uZXZlbnRzLnYxQhdOb3RpZmljYXRpb25FdmVudHNQcm90b1AB",
+            "WktnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3Jl",
+            "L25vdGlmaWNhdGlvbi9ldmVudHMvdjE7ZXZlbnRzdjGiAgRVQ05FqgIfdWRi",
+            "LmNvcmUuTm90aWZpY2F0aW9uLkV2ZW50cy5WMcoCH1VkYlxDb3JlXE5vdGlm",
+            "aWNhdGlvblxFdmVudHNcVjHiAitVZGJcR1BCTWV0YWRhdGFcQ29yZVxOb3Rp",
+            "ZmljYXRpb25cRXZlbnRzXFYx6gIjVWRiOjpDb3JlOjpOb3RpZmljYXRpb246",
+            "OkV2ZW50czo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.NotificationSentEvent), global::udb.core.Notification.Events.V1.NotificationSentEvent.Parser, new[]{ "EventId", "LogId", "TemplateId", "EventType", "Channel", "RecipientRef", "TenantId", "CorrelationId", "OccurredAt" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.NotificationFailedEvent), global::udb.core.Notification.Events.V1.NotificationFailedEvent.Parser, new[]{ "EventId", "LogId", "TemplateId", "EventType", "Channel", "TenantId", "ErrorCode", "ErrorDetail", "RetryAttempt", "WillRetry", "CorrelationId", "OccurredAt" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.NotificationSuppressedEvent), global::udb.core.Notification.Events.V1.NotificationSuppressedEvent.Parser, new[]{ "EventId", "TemplateId", "EventType", "Channel", "RecipientRef", "TenantId", "SuppressionReason", "CorrelationId", "OccurredAt" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.NotificationDeliveredEvent), global::udb.core.Notification.Events.V1.NotificationDeliveredEvent.Parser, new[]{ "EventId", "LogId", "Channel", "TenantId", "CorrelationId", "OccurredAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.NotificationSentEvent), global::udb.core.Notification.Events.V1.NotificationSentEvent.Parser, new[]{ "EventId", "LogId", "TemplateId", "EventType", "Channel", "RecipientRef", "TenantId", "CorrelationId", "OccurredAt", "ProjectId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.NotificationFailedEvent), global::udb.core.Notification.Events.V1.NotificationFailedEvent.Parser, new[]{ "EventId", "LogId", "TemplateId", "EventType", "Channel", "TenantId", "ErrorCode", "ErrorDetail", "RetryAttempt", "WillRetry", "CorrelationId", "OccurredAt", "ProjectId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.NotificationSuppressedEvent), global::udb.core.Notification.Events.V1.NotificationSuppressedEvent.Parser, new[]{ "EventId", "TemplateId", "EventType", "Channel", "RecipientRef", "TenantId", "SuppressionReason", "CorrelationId", "OccurredAt", "ProjectId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.NotificationDeliveredEvent), global::udb.core.Notification.Events.V1.NotificationDeliveredEvent.Parser, new[]{ "EventId", "LogId", "Channel", "TenantId", "CorrelationId", "OccurredAt", "ProjectId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.NotificationTemplateChangedEvent), global::udb.core.Notification.Events.V1.NotificationTemplateChangedEvent.Parser, new[]{ "EventId", "TemplateId", "EventType", "Channel", "ChangeType", "ChangedBy", "CorrelationId", "OccurredAt", "TenantId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Events.V1.ResourceIngestStatusEvent), global::udb.core.Notification.Events.V1.ResourceIngestStatusEvent.Parser, new[]{ "EventId", "ResourceId", "TenantId", "ProjectId", "Status", "Filename", "MimeType", "SizeBytes", "Sha256", "ErrorMessage", "IngestJobId", "CorrelationId", "OccurredAt", "ResourceType", "ResourceName" }, null, null, null, null)
           }));
@@ -167,6 +170,7 @@ namespace udb.core.Notification.Events.V1 {
       tenantId_ = other.tenantId_;
       correlationId_ = other.correlationId_;
       occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      projectId_ = other.projectId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -296,6 +300,21 @@ namespace udb.core.Notification.Events.V1 {
       }
     }
 
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 10;
+    private string projectId_ = "";
+    /// <summary>
+    /// Exact project whose store committed the notification.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -320,6 +339,7 @@ namespace udb.core.Notification.Events.V1 {
       if (TenantId != other.TenantId) return false;
       if (CorrelationId != other.CorrelationId) return false;
       if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      if (ProjectId != other.ProjectId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -336,6 +356,7 @@ namespace udb.core.Notification.Events.V1 {
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
       if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
       if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -390,6 +411,10 @@ namespace udb.core.Notification.Events.V1 {
         output.WriteRawTag(74);
         output.WriteMessage(OccurredAt);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -436,6 +461,10 @@ namespace udb.core.Notification.Events.V1 {
         output.WriteRawTag(74);
         output.WriteMessage(OccurredAt);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -472,6 +501,9 @@ namespace udb.core.Notification.Events.V1 {
       }
       if (occurredAt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -514,6 +546,9 @@ namespace udb.core.Notification.Events.V1 {
           OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -571,6 +606,10 @@ namespace udb.core.Notification.Events.V1 {
               OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(OccurredAt);
+            break;
+          }
+          case 82: {
+            ProjectId = input.ReadString();
             break;
           }
         }
@@ -631,6 +670,10 @@ namespace udb.core.Notification.Events.V1 {
             input.ReadMessage(OccurredAt);
             break;
           }
+          case 82: {
+            ProjectId = input.ReadString();
+            break;
+          }
         }
       }
     }
@@ -689,6 +732,7 @@ namespace udb.core.Notification.Events.V1 {
       willRetry_ = other.willRetry_;
       correlationId_ = other.correlationId_;
       occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      projectId_ = other.projectId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -845,6 +889,21 @@ namespace udb.core.Notification.Events.V1 {
       }
     }
 
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 13;
+    private string projectId_ = "";
+    /// <summary>
+    /// Exact project whose store committed the outcome.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -872,6 +931,7 @@ namespace udb.core.Notification.Events.V1 {
       if (WillRetry != other.WillRetry) return false;
       if (CorrelationId != other.CorrelationId) return false;
       if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      if (ProjectId != other.ProjectId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -891,6 +951,7 @@ namespace udb.core.Notification.Events.V1 {
       if (WillRetry != false) hash ^= WillRetry.GetHashCode();
       if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
       if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -957,6 +1018,10 @@ namespace udb.core.Notification.Events.V1 {
         output.WriteRawTag(98);
         output.WriteMessage(OccurredAt);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1015,6 +1080,10 @@ namespace udb.core.Notification.Events.V1 {
         output.WriteRawTag(98);
         output.WriteMessage(OccurredAt);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1060,6 +1129,9 @@ namespace udb.core.Notification.Events.V1 {
       }
       if (occurredAt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1111,6 +1183,9 @@ namespace udb.core.Notification.Events.V1 {
           OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1180,6 +1255,10 @@ namespace udb.core.Notification.Events.V1 {
               OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(OccurredAt);
+            break;
+          }
+          case 106: {
+            ProjectId = input.ReadString();
             break;
           }
         }
@@ -1252,6 +1331,10 @@ namespace udb.core.Notification.Events.V1 {
             input.ReadMessage(OccurredAt);
             break;
           }
+          case 106: {
+            ProjectId = input.ReadString();
+            break;
+          }
         }
       }
     }
@@ -1307,6 +1390,7 @@ namespace udb.core.Notification.Events.V1 {
       suppressionReason_ = other.suppressionReason_;
       correlationId_ = other.correlationId_;
       occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      projectId_ = other.projectId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1427,6 +1511,21 @@ namespace udb.core.Notification.Events.V1 {
       }
     }
 
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 10;
+    private string projectId_ = "";
+    /// <summary>
+    /// Exact project whose store committed the suppression.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1451,6 +1550,7 @@ namespace udb.core.Notification.Events.V1 {
       if (SuppressionReason != other.SuppressionReason) return false;
       if (CorrelationId != other.CorrelationId) return false;
       if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      if (ProjectId != other.ProjectId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1467,6 +1567,7 @@ namespace udb.core.Notification.Events.V1 {
       if (SuppressionReason.Length != 0) hash ^= SuppressionReason.GetHashCode();
       if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
       if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1521,6 +1622,10 @@ namespace udb.core.Notification.Events.V1 {
         output.WriteRawTag(74);
         output.WriteMessage(OccurredAt);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1567,6 +1672,10 @@ namespace udb.core.Notification.Events.V1 {
         output.WriteRawTag(74);
         output.WriteMessage(OccurredAt);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1603,6 +1712,9 @@ namespace udb.core.Notification.Events.V1 {
       }
       if (occurredAt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1645,6 +1757,9 @@ namespace udb.core.Notification.Events.V1 {
           OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1702,6 +1817,10 @@ namespace udb.core.Notification.Events.V1 {
               OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(OccurredAt);
+            break;
+          }
+          case 82: {
+            ProjectId = input.ReadString();
             break;
           }
         }
@@ -1762,6 +1881,10 @@ namespace udb.core.Notification.Events.V1 {
             input.ReadMessage(OccurredAt);
             break;
           }
+          case 82: {
+            ProjectId = input.ReadString();
+            break;
+          }
         }
       }
     }
@@ -1814,6 +1937,7 @@ namespace udb.core.Notification.Events.V1 {
       tenantId_ = other.tenantId_;
       correlationId_ = other.correlationId_;
       occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      projectId_ = other.projectId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1895,6 +2019,21 @@ namespace udb.core.Notification.Events.V1 {
       }
     }
 
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 7;
+    private string projectId_ = "";
+    /// <summary>
+    /// Exact project whose store committed the outcome.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1916,6 +2055,7 @@ namespace udb.core.Notification.Events.V1 {
       if (TenantId != other.TenantId) return false;
       if (CorrelationId != other.CorrelationId) return false;
       if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      if (ProjectId != other.ProjectId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1929,6 +2069,7 @@ namespace udb.core.Notification.Events.V1 {
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
       if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
       if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1971,6 +2112,10 @@ namespace udb.core.Notification.Events.V1 {
         output.WriteRawTag(50);
         output.WriteMessage(OccurredAt);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -2005,6 +2150,10 @@ namespace udb.core.Notification.Events.V1 {
         output.WriteRawTag(50);
         output.WriteMessage(OccurredAt);
       }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(ProjectId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -2032,6 +2181,9 @@ namespace udb.core.Notification.Events.V1 {
       }
       if (occurredAt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2065,6 +2217,9 @@ namespace udb.core.Notification.Events.V1 {
           OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2112,6 +2267,10 @@ namespace udb.core.Notification.Events.V1 {
             input.ReadMessage(OccurredAt);
             break;
           }
+          case 58: {
+            ProjectId = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -2156,6 +2315,10 @@ namespace udb.core.Notification.Events.V1 {
               OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(OccurredAt);
+            break;
+          }
+          case 58: {
+            ProjectId = input.ReadString();
             break;
           }
         }

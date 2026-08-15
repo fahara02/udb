@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "5ac4f9b3db8a63bcadce075c883b8090267aa636bf4fd79a998893bf44be8288",
-  "contract_version": "6.0.0",
+  "descriptor_sha256": "e3d060d7e6fffefe5b06ab898a54525fe68f5c26775d56809cd7222921717838",
+  "contract_version": "7.0.0",
   "udb_version": "0.5.9",
   "protocol_version": "1.0.0",
   "service_count": 28,
@@ -20308,8 +20308,7 @@
           "lifecycle_contract": {
             "entity": "NotificationLog",
             "legal_source_states": [
-              "FAILED",
-              "SUPPRESSED"
+              "FAILED"
             ],
             "target_state": "PENDING",
             "terminal_states": [],
@@ -20389,10 +20388,17 @@
           "emits": [
             {
               "topic": "udb.notification.sent.v1",
-              "partition_key_field": "recipient_id",
+              "partition_key_field": "recipient_ref",
               "delivery_guarantee": "at_least_once",
               "payload_redaction_profile": "standard",
-              "conditional": false
+              "conditional": true
+            },
+            {
+              "topic": "udb.notification.suppressed.v1",
+              "partition_key_field": "tenant_id",
+              "delivery_guarantee": "at_least_once",
+              "payload_redaction_profile": "standard",
+              "conditional": true
             }
           ],
           "sdk_surface": {
@@ -113752,10 +113758,10 @@
       "dependency_contract": null,
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "notification.operational",
         "retention_days": 90,
@@ -113766,7 +113772,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 11,
+      "field_count": 12,
       "fields": [
         {
           "name": "attempt_id",
@@ -113976,6 +113982,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 12,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -113987,10 +114012,10 @@
       "dependency_contract": null,
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "notification.operational",
         "retention_days": 90,
@@ -114412,10 +114437,10 @@
       "dependency_contract": null,
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "notification.operational",
         "retention_days": 2555,
@@ -114426,7 +114451,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 9,
+      "field_count": 10,
       "fields": [
         {
           "name": "preference_id",
@@ -114598,6 +114623,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 10,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -114609,10 +114653,10 @@
       "dependency_contract": null,
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id IS NULL OR tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "(tenant_id IS NULL OR tenant_id = current_setting('app.current_tenant_id')) AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "soft_delete",
         "retention_class": "notification.operational",
         "retention_days": 2555,
@@ -114623,7 +114667,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 13,
+      "field_count": 14,
       "fields": [
         {
           "name": "template_id",
@@ -114871,6 +114915,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 14,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -114888,7 +114951,7 @@
       },
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 6,
+      "field_count": 7,
       "fields": [
         {
           "name": "event_id",
@@ -115003,6 +115066,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 7,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -115020,7 +115102,7 @@
       },
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 12,
+      "field_count": 13,
       "fields": [
         {
           "name": "event_id",
@@ -115249,6 +115331,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 13,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -115259,14 +115360,14 @@
       "event_contract": {
         "event_type": "udb.core.notification.events.v1.NotificationSentEvent",
         "outbox_topic": "udb.notification.sent.v1",
-        "partition_key_field": "tenant_id",
+        "partition_key_field": "recipient_ref",
         "payload_redaction_profile": "standard",
         "delivery_guarantee": "at_least_once",
         "replay_compatibility": "stable"
       },
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 9,
+      "field_count": 10,
       "fields": [
         {
           "name": "event_id",
@@ -115438,6 +115539,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 10,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -115455,7 +115575,7 @@
       },
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 9,
+      "field_count": 10,
       "fields": [
         {
           "name": "event_id",
@@ -115613,6 +115733,25 @@
           "name": "occurred_at",
           "number": 9,
           "type": ".google.protobuf.Timestamp",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 10,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -174846,10 +174985,10 @@
       "file": "udb/core/notification/entity/v1/notification_log.proto",
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "notification.operational",
         "retention_days": 90,
@@ -174860,7 +174999,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 11,
+      "field_count": 12,
       "fields": [
         {
           "name": "attempt_id",
@@ -175070,6 +175209,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 12,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -175078,10 +175236,10 @@
       "file": "udb/core/notification/entity/v1/notification_log.proto",
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "notification.operational",
         "retention_days": 90,
@@ -175500,10 +175658,10 @@
       "file": "udb/core/notification/entity/v1/notification_preference.proto",
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "none",
         "retention_class": "notification.operational",
         "retention_days": 2555,
@@ -175514,7 +175672,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 9,
+      "field_count": 10,
       "fields": [
         {
           "name": "preference_id",
@@ -175686,6 +175844,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "project_id",
+          "number": 10,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -175694,10 +175871,10 @@
       "file": "udb/core/notification/entity/v1/notification_template.proto",
       "table_security": {
         "tenant_isolation_mode": "tenant",
-        "project_isolation_mode": "",
+        "project_isolation_mode": "project",
         "tenant_column": "tenant_id",
-        "project_column": "",
-        "rls_policy_template": "tenant_id IS NULL OR tenant_id = current_setting('app.current_tenant_id')",
+        "project_column": "project_id",
+        "rls_policy_template": "(tenant_id IS NULL OR tenant_id = current_setting('app.current_tenant_id')) AND project_id = current_setting('app.current_project_id')",
         "soft_delete_mode": "soft_delete",
         "retention_class": "notification.operational",
         "retention_days": 2555,
@@ -175708,7 +175885,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 13,
+      "field_count": 14,
       "fields": [
         {
           "name": "template_id",
@@ -175941,6 +176118,25 @@
         {
           "name": "tenant_id",
           "number": 13,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 14,
           "type": "9",
           "column_security": null,
           "scalar_security": {
@@ -182081,7 +182277,7 @@
     {
       "event_type": "udb.core.notification.events.v1.NotificationSentEvent",
       "outbox_topic": "udb.notification.sent.v1",
-      "partition_key_field": "tenant_id",
+      "partition_key_field": "recipient_ref",
       "payload_redaction_profile": "standard",
       "delivery_guarantee": "at_least_once",
       "replay_compatibility": "stable",

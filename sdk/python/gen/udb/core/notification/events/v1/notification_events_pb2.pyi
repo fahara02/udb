@@ -10,7 +10,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class NotificationSentEvent(_message.Message):
-    __slots__ = ("event_id", "log_id", "template_id", "event_type", "channel", "recipient_ref", "tenant_id", "correlation_id", "occurred_at")
+    __slots__ = ("event_id", "log_id", "template_id", "event_type", "channel", "recipient_ref", "tenant_id", "correlation_id", "occurred_at", "project_id")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     LOG_ID_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -20,6 +20,7 @@ class NotificationSentEvent(_message.Message):
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     log_id: str
     template_id: str
@@ -29,10 +30,11 @@ class NotificationSentEvent(_message.Message):
     tenant_id: str
     correlation_id: str
     occurred_at: _timestamp_pb2.Timestamp
-    def __init__(self, event_id: _Optional[str] = ..., log_id: _Optional[str] = ..., template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[str] = ..., recipient_ref: _Optional[str] = ..., tenant_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    project_id: str
+    def __init__(self, event_id: _Optional[str] = ..., log_id: _Optional[str] = ..., template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[str] = ..., recipient_ref: _Optional[str] = ..., tenant_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class NotificationFailedEvent(_message.Message):
-    __slots__ = ("event_id", "log_id", "template_id", "event_type", "channel", "tenant_id", "error_code", "error_detail", "retry_attempt", "will_retry", "correlation_id", "occurred_at")
+    __slots__ = ("event_id", "log_id", "template_id", "event_type", "channel", "tenant_id", "error_code", "error_detail", "retry_attempt", "will_retry", "correlation_id", "occurred_at", "project_id")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     LOG_ID_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -45,6 +47,7 @@ class NotificationFailedEvent(_message.Message):
     WILL_RETRY_FIELD_NUMBER: _ClassVar[int]
     CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     log_id: str
     template_id: str
@@ -57,10 +60,11 @@ class NotificationFailedEvent(_message.Message):
     will_retry: bool
     correlation_id: str
     occurred_at: _timestamp_pb2.Timestamp
-    def __init__(self, event_id: _Optional[str] = ..., log_id: _Optional[str] = ..., template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[str] = ..., tenant_id: _Optional[str] = ..., error_code: _Optional[str] = ..., error_detail: _Optional[str] = ..., retry_attempt: _Optional[int] = ..., will_retry: bool = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    project_id: str
+    def __init__(self, event_id: _Optional[str] = ..., log_id: _Optional[str] = ..., template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[str] = ..., tenant_id: _Optional[str] = ..., error_code: _Optional[str] = ..., error_detail: _Optional[str] = ..., retry_attempt: _Optional[int] = ..., will_retry: bool = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class NotificationSuppressedEvent(_message.Message):
-    __slots__ = ("event_id", "template_id", "event_type", "channel", "recipient_ref", "tenant_id", "suppression_reason", "correlation_id", "occurred_at")
+    __slots__ = ("event_id", "template_id", "event_type", "channel", "recipient_ref", "tenant_id", "suppression_reason", "correlation_id", "occurred_at", "project_id")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -70,6 +74,7 @@ class NotificationSuppressedEvent(_message.Message):
     SUPPRESSION_REASON_FIELD_NUMBER: _ClassVar[int]
     CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     template_id: str
     event_type: str
@@ -79,23 +84,26 @@ class NotificationSuppressedEvent(_message.Message):
     suppression_reason: str
     correlation_id: str
     occurred_at: _timestamp_pb2.Timestamp
-    def __init__(self, event_id: _Optional[str] = ..., template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[str] = ..., recipient_ref: _Optional[str] = ..., tenant_id: _Optional[str] = ..., suppression_reason: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    project_id: str
+    def __init__(self, event_id: _Optional[str] = ..., template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[str] = ..., recipient_ref: _Optional[str] = ..., tenant_id: _Optional[str] = ..., suppression_reason: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class NotificationDeliveredEvent(_message.Message):
-    __slots__ = ("event_id", "log_id", "channel", "tenant_id", "correlation_id", "occurred_at")
+    __slots__ = ("event_id", "log_id", "channel", "tenant_id", "correlation_id", "occurred_at", "project_id")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     LOG_ID_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     log_id: str
     channel: str
     tenant_id: str
     correlation_id: str
     occurred_at: _timestamp_pb2.Timestamp
-    def __init__(self, event_id: _Optional[str] = ..., log_id: _Optional[str] = ..., channel: _Optional[str] = ..., tenant_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    project_id: str
+    def __init__(self, event_id: _Optional[str] = ..., log_id: _Optional[str] = ..., channel: _Optional[str] = ..., tenant_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class NotificationTemplateChangedEvent(_message.Message):
     __slots__ = ("event_id", "template_id", "event_type", "channel", "change_type", "changed_by", "correlation_id", "occurred_at", "tenant_id")

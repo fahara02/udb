@@ -48,3 +48,15 @@ lane remains separate and is not changed by this governance patch.
 - Source inspection confirms the CI repair step runs after the Linux all-targets
   build and includes the binary baseline in its patch.
 - No local Cargo/build/test/rustfmt command was run.
+
+GitHub CI run `31906893924` produced `ci-sdk-codegen-repair-1`; its applied
+patch has SHA-256
+`2A4B9AB4D16BD801B01A9BCFCEE9B9DD91619D66904F13CB8C02A265285BE055`
+and refreshes all maintained SDK event bindings for the additive project
+provenance fields. No local Buf or SDK generator was run.
+
+The same run's successful all-target build and test compilation produced
+`ci-native-docs-repair-1`; the applied binary patch has SHA-256
+`7C31C3A72FF74F9DB14B82E236DC91302FC9916FF99140727D70023BBB0B9496`
+and refreshes the 7.0.0 native manifest, native-services Markdown, and binary
+descriptor baseline from that exact runner-built broker.

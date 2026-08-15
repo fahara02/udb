@@ -152,4 +152,24 @@ public interface NotificationSentEventOrBuilder extends
    * <code>.google.protobuf.Timestamp occurred_at = 9 [json_name = "occurredAt"];</code>
    */
   com.google.protobuf.TimestampOrBuilder getOccurredAtOrBuilder();
+
+  /**
+   * <pre>
+   * Exact project whose store committed the notification.
+   * </pre>
+   *
+   * <code>string project_id = 10 [json_name = "projectId"];</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <pre>
+   * Exact project whose store committed the notification.
+   * </pre>
+   *
+   * <code>string project_id = 10 [json_name = "projectId"];</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
 }

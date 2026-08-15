@@ -370,8 +370,8 @@ fn list_tenants_scope_restricts_non_admin_to_own_subtree() {
 }
 
 #[test]
-fn list_tenants_scope_keeps_cross_tenant_admin_unscoped() {
-    // Broad admin scope.
+fn list_tenants_scope_requires_explicit_platform_authority_for_unscoped_access() {
+    // A tenant-bound broad action scope remains anchored to its verified tenant.
     let ctx = crate::runtime::service::method_security::test_claim_context(
         "op-1",
         "tenant-root",
@@ -379,12 +379,24 @@ fn list_tenants_scope_keeps_cross_tenant_admin_unscoped() {
         &["udb:admin"],
         &[],
     );
-    let scope = list_tenants_scope(true, &ctx).expect("admin may list");
+    let scope = list_tenants_scope(true, &ctx).expect("tenant admin may list its subtree");
     assert_eq!(scope.admit_tenant, "tenant-root");
-    assert!(scope.subtree_of.is_none(), "admin list stays unscoped");
-    // Platform-admin role, tenant-less claim.
+    assert_eq!(scope.subtree_of.as_deref(), Some("tenant-root"));
+    // An explicit platform scope may enumerate across tenant boundaries even
+    // when its operator claim carries a home tenant.
     let ctx = crate::runtime::service::method_security::test_claim_context(
         "op-2",
+        "tenant-root",
+        "",
+        &["udb:platform_admin"],
+        &[],
+    );
+    let scope = list_tenants_scope(true, &ctx).expect("platform scope may list globally");
+    assert_eq!(scope.admit_tenant, "tenant-root");
+    assert!(scope.subtree_of.is_none(), "platform list stays unscoped");
+    // Platform-admin role, tenant-less claim.
+    let ctx = crate::runtime::service::method_security::test_claim_context(
+        "op-3",
         "",
         "",
         &[],
@@ -526,7 +538,13 @@ async fn create_tenant_rejects_malformed_parent() {
 #[tokio::test]
 async fn create_tenant_allows_cross_tenant_admin_to_parent_anywhere() {
     let svc = TenantServiceImpl::new(); // no pool: the post-authz require_pool fires
-    let ctx = test_claim_context("op-1", CLAIM_TENANT_A, "", &["udb:admin"], &[]);
+    let ctx = test_claim_context(
+        "op-1",
+        CLAIM_TENANT_A,
+        "",
+        &["udb:platform_admin"],
+        &[],
+    );
     let err =
         scope_claim_context_for_test(ctx, svc.create_tenant(create_under_parent(PARENT_TENANT_B)))
             .await
@@ -534,6 +552,23 @@ async fn create_tenant_allows_cross_tenant_admin_to_parent_anywhere() {
     // FailedPrecondition/capability, NOT PermissionDenied → parenting authz passed.
     assert_eq!(err.code(), tonic::Code::FailedPrecondition);
     assert_eq!(decode_detail(&err).capability_required, "postgres_store");
+}
+
+/// A broad tenant-admin action scope does not become platform authority merely
+/// because it is privileged inside its own tenant.
+#[tokio::test]
+async fn create_tenant_denies_bound_broad_admin_parenting_elsewhere() {
+    let svc = TenantServiceImpl::new();
+    let ctx = test_claim_context("op-1", CLAIM_TENANT_A, "", &["udb:admin"], &[]);
+    let err =
+        scope_claim_context_for_test(ctx, svc.create_tenant(create_under_parent(PARENT_TENANT_B)))
+            .await
+            .expect_err("bound broad admin must not parent under another tenant");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_eq!(
+        decode_detail(&err).policy_decision_id,
+        "parent_tenant_forbidden"
+    );
 }
 
 /// A non-admin caller may parent under its OWN claim tenant: authz passes and the

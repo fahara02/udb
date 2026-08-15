@@ -253,6 +253,15 @@ impl ApiKeyServiceImpl {
         )
     }
 
+    fn global_key_platform_authority_required_status() -> Status {
+        Self::policy_status_with_code(
+            Code::PermissionDenied,
+            "api_key_platform_scope",
+            "platform_authority_required",
+            "global API keys require explicit platform authority",
+        )
+    }
+
     fn project_mismatch_status() -> Status {
         Self::policy_status_with_code(
             Code::PermissionDenied,
@@ -383,8 +392,8 @@ impl ApiKeyServiceImpl {
     /// Enforce the caller's tenant against a resolved key record's tenant
     /// (resolve-before-mutate, I2.5). A caller carrying tenant `T` may only
     /// mutate keys whose tenant is `T`. Keys with an empty (global) tenant are
-    /// admin-only and accepted from any authenticated caller (the broker authz
-    /// layer already gates the admin scope).
+    /// restricted to the centralized platform-authority predicate; a broad
+    /// action scope on a tenant/project-bound claim is not platform authority.
     ///
     /// **Fail-closed (I2.5 hardening).** For a tenant-scoped target key, an
     /// absent/empty caller tenant is NO LONGER treated as an unrestricted admin
@@ -392,18 +401,23 @@ impl ApiKeyServiceImpl {
     /// `context.tenant`. An empty caller tenant against a tenant-scoped key is
     /// DENIED unless the caller carries a genuine cross-tenant admin role
     /// ([`caller_is_cross_tenant_admin`]). Same-tenant and the legitimate
-    /// cross-tenant-admin paths keep working; the global-key path (empty record
-    /// tenant) is unchanged.
+    /// cross-tenant-admin paths keep working. Global keys require that same
+    /// explicit platform authority (or a deliberately unbound operator claim).
     fn enforce_caller_tenant(
         &self,
         context: Option<&common_pb::RequestContext>,
         record_tenant: &str,
     ) -> Result<(), Status> {
         let record_tenant = record_tenant.trim();
-        // Global/admin-scoped key (no tenant boundary): the broker authz layer
-        // already gates the admin scope, so accept from any authenticated caller.
+        // A global key is outside every tenant boundary. Only the centralized
+        // platform predicate may cross into that authority; accepting any broad
+        // tenant admin here would erase the verified claim boundary.
         if record_tenant.is_empty() {
-            return Ok(());
+            return if Self::caller_is_cross_tenant_admin(context) {
+                Ok(())
+            } else {
+                Err(Self::global_key_platform_authority_required_status())
+            };
         }
         let caller_tenant = context
             .and_then(|c| c.tenant.as_ref())
@@ -2725,6 +2739,108 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn global_api_key_get_and_mutations_require_platform_authority() {
+        let record = api_key_rec("key-global", "owner-1", "");
+        let bound_claim = || {
+            crate::runtime::service::method_security::test_claim_context(
+                "user-1",
+                "acme",
+                "project-a",
+                &["udb:auth:admin"],
+                &[],
+            )
+        };
+        let assert_platform_denied = |err: &Status| {
+            assert_policy_detail(
+                err,
+                "api_key_platform_scope",
+                "platform_authority_required",
+                "global API keys require explicit platform authority",
+            );
+        };
+
+        let svc = svc_with_records(vec![record.clone()]);
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            bound_claim(),
+            async {
+                svc.get_api_key(Request::new(apikey_pb::GetApiKeyRequest {
+                    key_id: "key-global".to_string(),
+                }))
+                .await
+            },
+        )
+        .await
+        .expect_err("bound admin must not read a global key");
+        assert_platform_denied(&err);
+
+        let svc = svc_with_records(vec![record.clone()]);
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            bound_claim(),
+            async {
+                svc.update_api_key(Request::new(apikey_pb::UpdateApiKeyRequest {
+                    key_id: "key-global".to_string(),
+                    ..Default::default()
+                }))
+                .await
+            },
+        )
+        .await
+        .expect_err("bound admin must not update a global key");
+        assert_platform_denied(&err);
+
+        let svc = svc_with_records(vec![record.clone()]);
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            bound_claim(),
+            async {
+                svc.revoke_api_key(Request::new(apikey_pb::RevokeApiKeyRequest {
+                    key_id: "key-global".to_string(),
+                    ..Default::default()
+                }))
+                .await
+            },
+        )
+        .await
+        .expect_err("bound admin must not revoke a global key");
+        assert_platform_denied(&err);
+
+        let svc = svc_with_config_records(config_with_api_key_hash_secret(), vec![record.clone()]);
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            bound_claim(),
+            async {
+                svc.rotate_api_key(Request::new(apikey_pb::RotateApiKeyRequest {
+                    key_id: "key-global".to_string(),
+                    ..Default::default()
+                }))
+                .await
+            },
+        )
+        .await
+        .expect_err("bound admin must not rotate a global key");
+        assert_platform_denied(&err);
+
+        let svc = svc_with_records(vec![record]);
+        let platform_claim =
+            crate::runtime::service::method_security::test_claim_context(
+                "platform-1",
+                "acme",
+                "project-a",
+                &["udb:platform_admin"],
+                &[],
+            );
+        crate::runtime::service::method_security::scope_claim_context_for_test(
+            platform_claim,
+            async {
+                svc.get_api_key(Request::new(apikey_pb::GetApiKeyRequest {
+                    key_id: "key-global".to_string(),
+                }))
+                .await
+            },
+        )
+        .await
+        .expect("explicit platform authority must read a global key");
+    }
+
+    #[tokio::test]
     async fn emergency_revoke_denies_cross_project_before_postgres_access() {
         let svc = svc();
         let claim = crate::runtime::service::method_security::test_claim_context(
@@ -2855,20 +2971,49 @@ mod tests {
         }
     }
 
-    // Same-tenant caller is allowed; a global (empty-tenant) key is accepted from
-    // any caller (broker authz already gates the admin scope).
+    // Same-tenant callers remain local. Global (empty-tenant) keys require the
+    // centralized platform predicate rather than any tenant admin scope.
     #[test]
-    fn enforce_caller_tenant_allows_same_tenant_and_global_key() {
+    fn enforce_caller_tenant_keeps_global_keys_platform_only() {
         let svc = svc();
         assert!(
             svc.enforce_caller_tenant(Some(&ctx("acme", &[])), "acme")
                 .is_ok()
         );
-        // Global/admin key: empty record tenant → allowed regardless of caller.
-        assert!(svc.enforce_caller_tenant(None, "").is_ok());
+        assert!(svc.enforce_caller_tenant(None, "").is_err());
         assert!(
-            svc.enforce_caller_tenant(Some(&ctx("acme", &[])), "")
-                .is_ok()
+            svc.enforce_caller_tenant(
+                Some(&ctx_project_with_scopes(
+                    "acme",
+                    "project-a",
+                    &["udb:auth:admin"],
+                    &[],
+                )),
+                "",
+            )
+            .is_err(),
+            "a bound broad admin scope must not reach global keys"
+        );
+        assert!(
+            svc.enforce_caller_tenant(
+                Some(&ctx_project_with_scopes(
+                    "acme",
+                    "project-a",
+                    &["udb:platform_admin"],
+                    &[],
+                )),
+                "",
+            )
+            .is_ok(),
+            "explicit platform scope may reach global keys"
+        );
+        assert!(
+            svc.enforce_caller_tenant(
+                Some(&ctx_project_with_scopes("", "", &["udb:auth:admin"], &[],)),
+                "",
+            )
+            .is_ok(),
+            "deliberately unbound broad operator retains compatibility"
         );
     }
 
