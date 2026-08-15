@@ -311,9 +311,19 @@ fn a_file_consuming_the_project_does_not_build_a_tenant_only_context() {
         }
         // Only count a REAL consumer: `context.project_id` read somewhere in the
         // file, not merely the identifier appearing in a comment.
-        let consumes = source.contains("context.project_id") || source.contains("ctx.project_id");
-        let tenant_only = source.contains("tenant_only_native_service_context(");
-        if consumes && tenant_only {
+        // Per-FUNCTION, not per-file. A service file legitimately holds one
+        // handler that builds a real project context and reads its project,
+        // beside other handlers that are correctly tenant-only. Judging the
+        // whole file flagged notification_service/handlers.rs, where one
+        // handler builds `native_service_context(.., &req.project_id)` and
+        // reads it back, while every tenant-only call sits in a DIFFERENT
+        // handler. Split on top-level item boundaries so `pub(crate) async fn`
+        // and friends need no special casing.
+        let offends = source.split("\n}\n").any(|item| {
+            item.contains("tenant_only_native_service_context(")
+                && (item.contains("context.project_id") || item.contains("ctx.project_id"))
+        });
+        if offends {
             problems.push(format!(
                 "  {rel}: reads context.project_id AND builds a tenant-only context — \
                  the project it consumes will be empty"

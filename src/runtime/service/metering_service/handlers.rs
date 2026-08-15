@@ -164,8 +164,13 @@ pub(crate) async fn record_usage(
     } else {
         now_unix()
     };
-    // Single durable append through the shared ingest seam (swallows errors).
-    super::admission::record_usage(
+    // Durable append through the STRICT seam. The shared `record_usage` ingest
+    // deliberately swallows store errors because it runs inline on the admission
+    // path, where metering must never fail a data-plane RPC. This is the explicit
+    // RecordUsage call: a caller that asked to record usage and got
+    // `recorded: true` while the write failed has been told a lie, and the usage
+    // is gone. Surface the outage instead.
+    super::admission::record_usage_strict(
         pool,
         &tenant_id,
         req.principal_id.trim(),

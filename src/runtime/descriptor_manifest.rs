@@ -1715,7 +1715,14 @@ mod tests {
             // notification (src/runtime/service/notification_service/mod.rs)
             (
                 "/udb.core.notification.services.v1.NotificationService/SendNotification",
-                &["udb.notification.sent.v1"],
+                // Conditional second emit: when the recipient has opted out, the
+                // handler marks the just-created PENDING row SUPPRESSED and
+                // publishes the suppressed topic INSTEAD of sent
+                // (suppress_log_if_pending + suppressed_event_transaction_op).
+                // The proto declares it `conditional: true`; the curated map had
+                // only the happy path, so the contract promised an event this
+                // fixture claimed never fired.
+                &["udb.notification.sent.v1", "udb.notification.suppressed.v1"],
             ),
             // ReportDelivery publishes `udb.notification.delivery.<status>.v1`
             // (emit_delivery_event/delivery_event_topic). The contract declares the
