@@ -4239,6 +4239,10 @@ test("live per-RPC perf", {
     const okRank: Record<string, number> = { read_only: 0, mutation: 1, destructive: 2 };
     const rankOf = (u: Unit) => okRank[operationKindOf((u.api as any).serviceFull, u.methodName) ?? "read_only"] ?? 0;
     phase2 = phase2.map((u, i) => [u, i] as [Unit, number]).sort((a, b) => (rankOf(a[0]) - rankOf(b[0])) || (a[1] - b[1])).map(([u]) => u);
+    // Tenant-wide revocation intentionally invalidates the benchmark session.
+    // Run it after every disposable-principal teardown, then log in once more
+    // before the final self-PurgeTenant.
+    phase3.sort((a, b) => Number(a.methodName === "admin_revoke_all_tenant_sessions") - Number(b.methodName === "admin_revoke_all_tenant_sessions"));
 
     // Phase 1: establish/validate the session FIRST (the seed phase already ran above
     // and captured the session/token fixtures these RPCs consume).
@@ -4249,11 +4253,17 @@ test("live per-RPC perf", {
     // targets. Some rows intentionally deactivate/revoke the current tenant's
     // authn state, so no later measurement may depend on that principal.
     for (const u of phase3) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
-    // Terminal destructive RPCs can invalidate broad tenant state. Keep them
-    // after Authn teardown, using the same verified tenant-scoped credential as
-    // the other SDK harnesses instead of performing another login after
-    // tenant-wide session revocation has run.
+    // Terminal destructive RPCs can invalidate broad tenant state. The preceding
+    // tenant-wide session revoke invalidated the old bearer by design, so acquire
+    // a new verified session before measuring the final self-purge.
     if (terminalDestructive.length > 0) {
+      await project.login({
+        username,
+        password,
+        tenant_hint: tenantId,
+        project_hint: projectId,
+        device_name: "ts-sdk-perf-final-purge",
+      });
       tenantId = fixtures.lookup("purge_tenant_id") || tenantId;
       project.setTenant(tenantId);
     }
@@ -4281,8 +4291,8 @@ test("live per-RPC perf", {
       + "validate_token → introspect_token → get_jwks), then the seed phase; Phase 2 measures everything "
       + "else; Phase 3 LAST runs the session/credential-teardown AuthnService RPCs (logout, revoke_*, "
       + "change/reset password, admin_reset_mfa, disable_mfa_factor, …) against the seeded DISPOSABLE "
-      + "user/session so the admin's own session is never killed mid-run. The final terminal destructive "
-      + "tenant purge uses the verified tenant-scoped benchmark credential, matching the other SDK harnesses.", "",
+      + "user/session. Tenant-wide revocation runs last in that phase; the harness then logs in again so "
+      + "the final terminal tenant purge measures the handler rather than a stale-bearer rejection.", "",
       "## Seeded fixtures", "",
       `Captured semantic field → seeded value keys used to resolve request fields: ${fkeys.join(", ")}`, "",
       "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];

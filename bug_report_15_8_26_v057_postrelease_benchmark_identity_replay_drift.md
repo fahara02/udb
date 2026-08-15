@@ -19,6 +19,9 @@ The failures had two deterministic signatures:
   handling, which revoked the benchmark principal's sessions. Nearly every later
   RPC then returned `UNAUTHENTICATED`. PHP additionally could not create its
   project-owned seed records and stopped on a missing dependent fixture.
+- All four SDK harnesses deliberately measured tenant-wide session revocation in
+  their terminal authentication phase, but then attempted the final self
+  `PurgeTenant` with the bearer that operation had just invalidated.
 
 ## Impact
 
@@ -31,9 +34,11 @@ misrepresent both SDK health and v0.5.7 project isolation.
 1. Bind the release benchmark to one deterministic canonical project UUID and
    use that same value in reset fixtures.
 2. Measure refresh-token rotation exactly once per fixture token.
-3. Keep the v0.5.7 tag immutable while allowing an explicitly reviewed `main`
+3. Order tenant-wide revocation last in the authentication teardown phase and
+   log in through the public credential path before final self-purge.
+4. Keep the v0.5.7 tag immutable while allowing an explicitly reviewed `main`
    harness ref to benchmark the already-published v0.5.7 binary.
-4. Require the existing zero-failed-RPC aggregate gate before Pages deployment.
+5. Require the existing zero-failed-RPC aggregate gate before Pages deployment.
 
 ## Evidence
 

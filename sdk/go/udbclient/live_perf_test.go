@@ -105,10 +105,9 @@ func TestLivePerf(t *testing.T) {
 	// Re-mint FRESH credentials right before measurement, into THREE INDEPENDENT
 	// admin sessions — one per consumer — so the session-mutating Phase-1 RPCs don't
 	// invalidate each other:
-	//   - RefreshToken rotates its refresh-token family and, on the 2nd iteration,
-	//     revokes that whole session family. If `token`/`session_id` shared that
-	//     session, Authenticate ("token subject no longer active") and RefreshSession
-	//     ("session is not active") then failed. Giving each its own login isolates them.
+	//   - RefreshToken rotates its single-use refresh token. If `token`/`session_id`
+	//     shared that session, later session-specific measurements would depend on a
+	//     credential family another row already mutated. Separate logins isolate them.
 	// The seed phase also takes long enough that a token captured at its start ages
 	// toward the access-token TTL, so re-minting here keeps them fresh either way.
 	freshLogin := func(device string) (*authnv1.LoginResponse, error) {
@@ -218,6 +217,19 @@ func TestLivePerf(t *testing.T) {
 	// kill the session mid-run. See BENCH_RPC_BODIES.md "Execution order".
 	samples := make([]sample, 0, len(AllRPCs))
 	for _, rpc := range orderRPCsByAuthPhase(AllRPCs) {
+		if finalEphemeralCleanupRPCs[rpc.FullMethod] {
+			// AdminRevokeAllTenantSessions is a successful Phase-3 measurement only
+			// when it actually invalidates this tenant's sessions. Login again through
+			// the public credential path before the final self-purge; otherwise that
+			// last row measures a stale-bearer rejection instead of PurgeTenant.
+			if relogin, err := freshLogin("go-sdk-perf-final-purge"); err == nil {
+				authz = "Bearer " + relogin.GetAccessToken()
+				brokerGen = NewGenerated(brokerConn, liveGeneratedOptions(meta, authz))
+				authGen = NewGenerated(authConn, liveGeneratedOptions(meta, authz))
+			} else {
+				t.Logf("perf re-login before terminal tenant purge failed: %v", err)
+			}
+		}
 		gen := authGen
 		if rpc.Service == "DataBroker" {
 			gen = brokerGen

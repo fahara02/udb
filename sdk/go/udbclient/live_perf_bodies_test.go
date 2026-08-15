@@ -167,12 +167,41 @@ func orderRPCsByAuthPhase(all []RPCInfo) []RPCInfo {
 	// delete/revoke of that same entity later in the run.
 	okRank := map[string]int{"read_only": 0, "mutation": 1, "destructive": 2}
 	sort.SliceStable(p2, func(i, j int) bool { return okRank[p2[i].OperationKind] < okRank[p2[j].OperationKind] })
+	// The tenant-wide revoke intentionally kills the benchmark administrator's
+	// current session. Keep it after every disposable-principal teardown; the
+	// harness re-authenticates once before the final self-PurgeTenant.
+	sort.SliceStable(p3, func(i, j int) bool {
+		return p3[i].Name != "AdminRevokeAllTenantSessions" && p3[j].Name == "AdminRevokeAllTenantSessions"
+	})
 	out := make([]RPCInfo, 0, len(all))
 	out = append(out, p1...)
 	out = append(out, p2...)
 	out = append(out, p3...)
 	out = append(out, final...)
 	return out
+}
+
+func TestOrderRPCsReauthBoundaryFollowsTenantWideRevoke(t *testing.T) {
+	ordered := orderRPCsByAuthPhase([]RPCInfo{
+		{
+			Service:    "TenantService",
+			FullMethod: "/udb.core.tenant.services.v1.TenantService/PurgeTenant",
+			Name:       "PurgeTenant",
+		},
+		{Service: "AuthnService", Name: "AdminRevokeAllTenantSessions"},
+		{Service: "AuthnService", Name: "Logout"},
+		{Service: "DataBroker", Name: "Select", OperationKind: "read_only"},
+	})
+
+	want := []string{"Select", "Logout", "AdminRevokeAllTenantSessions", "PurgeTenant"}
+	if len(ordered) != len(want) {
+		t.Fatalf("ordered RPC count = %d, want %d", len(ordered), len(want))
+	}
+	for i, name := range want {
+		if ordered[i].Name != name {
+			t.Fatalf("ordered RPC %d = %s, want %s", i, ordered[i].Name, name)
+		}
+	}
 }
 
 // Dev test-mode sentinel: the broker (UDB_WEBAUTHN_TEST_MODE) mints and verifies

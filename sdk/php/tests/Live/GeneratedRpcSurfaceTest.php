@@ -4337,15 +4337,17 @@ it('measures per-RPC latency', function () {
 
     $itersFor = fn (string $kind) => $kind === 'destructive' ? 1 : ($kind === 'mutation' ? 5 : 25);
 
-    $invoke = fn ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) => $hasRequest
-        ? $method->invoke($stub, $probeRequest, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000])
-        : $method->invoke($stub, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000]);
+    $invoke = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use (&$authedMeta) {
+        return $hasRequest
+            ? $method->invoke($stub, $probeRequest, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000])
+            : $method->invoke($stub, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000]);
+    };
 
     // Unary-only timer: invoke + wait() is a single request->response round-trip.
     // Returns [elapsed_ms, err] where err is the gRPC status code NAME on a non-OK
     // status, else "OK" — so a failing RPC is recorded as a FAILURE, never a silent
     // latency sample (BENCH_RPC_BODIES.md #1/#3).
-    $timeUnary = function (GeneratedClient $sdkClient, string $sdkMethodName, $stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke, $authedMeta): array {
+    $timeUnary = function (GeneratedClient $sdkClient, string $sdkMethodName, $stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke, &$authedMeta): array {
         $start = microtime(true);
         $err = 'OK';
         $detail = '';
@@ -4422,13 +4424,40 @@ it('measures per-RPC latency', function () {
         if ($pa !== $pb) { return $pa <=> $pb; }
         if ($pa === 1) { return array_search(rpcSnake($a['name']), $PHASE1_AUTHN, true) <=> array_search(rpcSnake($b['name']), $PHASE1_AUTHN, true); }
         if ($pa === 2) { return ($okRank[$kindOf($a)] ?? 0) <=> ($okRank[$kindOf($b)] ?? 0); }
+        if ($pa === 3) { return (int) (rpcSnake($a['name']) === 'admin_revoke_all_tenant_sessions') <=> (int) (rpcSnake($b['name']) === 'admin_revoke_all_tenant_sessions'); }
         return 0;
     });
+    $reauthenticatedForPurge = false;
     foreach ($units as $u) {
         {
             $stub = $u['stub']; $sdkClient = $u['client']; $svc = $u['svc']; $method = $u['method'];
             $name = $method->getName();
             $rpcName = rpcSnake($name);
+            if (! $reauthenticatedForPurge && $svc === 'TenantService' && $rpcName === 'purge_tenant') {
+                // The successful tenant-wide revoke at the end of Phase 3 made
+                // the prior bearer stale. Login without that bearer, then rebind
+                // both generated clients before measuring the final self-purge.
+                $openAuth = new GeneratedClient([
+                    'endpoint' => liveEnv('UDB_AUTH_GRPC_TARGET', liveEnv('UDB_GRPC_TARGET')),
+                    'deadline_ms' => 10_000,
+                    'retry' => ['max_attempts' => 1],
+                ]);
+                $openMeta = liveMeta();
+                $openAuth->bindContext($openMeta);
+                $finalLogin = $openAuth->login(
+                    (new LoginRequest())
+                        ->setUsername(liveEnv('UDB_LIVE_USERNAME'))
+                        ->setPassword(liveEnv('UDB_LIVE_PASSWORD'))
+                        ->setTenantHint($authedMeta->tenantId)
+                        ->setProjectHint($authedMeta->projectId)
+                        ->setDeviceName('php-sdk-perf-final-purge'),
+                    $openMeta,
+                );
+                $authedMeta = liveMeta($finalLogin->getAccessToken(), $authedMeta->tenantId);
+                $s['data']->bindContext($authedMeta);
+                $s['authGenerated']->bindContext($authedMeta);
+                $reauthenticatedForPurge = true;
+            }
             $apiAlias = $aliasOf($svc, $name);
             $sdkMethodName = sdkBenchMethodPhp($svc, $name, $apiAlias);
             if ($svc === 'IdentityProviderService' && in_array($name, ['ScimCreateGroup', 'ScimGetGroup', 'ScimPatchGroup', 'ScimDeleteGroup'], true)) {

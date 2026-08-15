@@ -11,6 +11,9 @@ Release: 0.5.7
 - Go, TypeScript, and PHP now measure the single-use `RefreshToken` rotation once
   per fixture token, preserving replay-theft enforcement without invalidating the
   bearer used by unrelated benchmark RPCs.
+- All four benchmark harnesses now place tenant-wide session revocation last in
+  their authentication teardown phase, then re-authenticate exactly once before
+  the final self `PurgeTenant` measurement.
 - Manual benchmark dispatch accepts an optional harness checkout ref. The normal
   post-release path remains tag-pinned; the override permits the corrected `main`
   harness to test the immutable v0.5.7 release binary without moving its tag.

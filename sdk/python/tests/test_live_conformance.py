@@ -4031,7 +4031,10 @@ def perf_rpc_order_key(item):
     if client_cls is AuthnServiceClient and method.name in AUTH_FIRST_PERF_INDEX:
         return (0, AUTH_FIRST_PERF_INDEX[method.name])
     if client_cls is AuthnServiceClient and method.name in AUTH_LAST_PERF:
-        return (3, original_idx)
+        # Tenant-wide revocation intentionally kills the benchmark bearer. Keep
+        # it after disposable-principal teardown; the perf loop logs in again
+        # before the final self-PurgeTenant.
+        return (3, 1 if method.name == "AdminRevokeAllTenantSessions" else 0, original_idx)
     terminal = 1 if method.name in TERMINAL_PERF_METHODS else 0
     kind = RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
     kind_rank = {"read_only": 0, "mutation": 1, "destructive": 2}.get(kind, 1)
@@ -4183,6 +4186,27 @@ def test_live_perf():
                 auto_refresh_token = refreshed_token.refresh_token
             next_token_refresh_at = time.monotonic() + max(60.0, min(float(refreshed_token.access_token_expires_in or 240) * 0.6, 240.0))
 
+        def reauthenticate_for_terminal_purge() -> None:
+            nonlocal authed_meta, auto_refresh_token, auto_session_id, next_token_refresh_at
+            final_login = auth.login(
+                required_env("UDB_LIVE_USERNAME"),
+                required_env("UDB_LIVE_PASSWORD"),
+                device_name="python-sdk-perf-final-purge",
+            )
+            authed_meta = replace(
+                authed_meta,
+                bearer_token=final_login.access_token,
+                client_catalog_version="",
+            )
+            fixtures.set("token", final_login.access_token)
+            fixtures.set("access_token", final_login.access_token)
+            fixtures.set("csrf_token", final_login.csrf_token)
+            auto_refresh_token = final_login.refresh_token
+            auto_session_id = final_login.session_id
+            next_token_refresh_at = time.monotonic() + 180.0
+            for bound_client in clients.values():
+                bound_client.bind_metadata(authed_meta)
+
         def is_cdc_subscription(client_cls, method) -> bool:
             return client_cls is DataBrokerClient and method.name == "PublishCDC"
 
@@ -4250,6 +4274,8 @@ def test_live_perf():
         # non-CDC streaming = time-to-first-response (seeded inputs); CDC subscription
         # (PublishCDC) = time-to-first-event (subscribe, fire a real Upsert, time delivery).
         for client_cls, method in sorted(ALL_RPCS, key=perf_rpc_order_key):
+            if client_cls is TenantServiceClient and method.name == "PurgeTenant":
+                reauthenticate_for_terminal_purge()
             client = clients[client_cls]
             streaming = method.client_streaming or method.server_streaming
             if is_cdc_subscription(client_cls, method):
