@@ -21,6 +21,7 @@ use super::errors::{
     backup_capability_status, backup_internal_status, backup_not_found_status,
     backup_run_missing_object_prefix_status, ensure_target_is_fresh,
 };
+use super::import::is_restore_journal_relation;
 use super::model::run_location_from_json;
 
 fn decode_detail(status: &Status) -> ErrorDetail {
@@ -133,6 +134,21 @@ fn restore_over_existing_tenant_is_rejected() {
     );
     assert_policy_detail(&err, "restore_tenant", "restore_target_not_fresh");
     ensure_target_is_fresh(0).expect("a fresh target must be allowed");
+}
+
+#[test]
+fn restore_freshness_identifies_only_the_descriptor_backed_run_journal() {
+    let run = crate::runtime::native_catalog::native_model(
+        super::config::BACKUP_RUN_MSG,
+        &["backup_id"],
+    );
+    let unquoted = run.relation.replace('"', "");
+    let (schema, table) = unquoted
+        .split_once('.')
+        .expect("BackupRun relation must be schema-qualified");
+    assert!(is_restore_journal_relation(schema, table));
+    assert!(!is_restore_journal_relation(schema, "backup_policies"));
+    assert!(!is_restore_journal_relation("customer", table));
 }
 
 #[test]

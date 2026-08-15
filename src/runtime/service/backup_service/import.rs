@@ -17,6 +17,7 @@ use crate::proto::udb::core::backup::services::v1 as backup_pb;
 use crate::runtime::channels::OperationChannel;
 use crate::runtime::core::tenant_purge::plan_tenant_purge;
 use crate::runtime::executor_utils::qi_runtime;
+use crate::runtime::native_catalog::native_model;
 use crate::runtime::tenant_movement::{
     TenantMovementOperation, TenantMovementRequest, tenant_movement_policy_status,
     validate_tenant_movement_scope,
@@ -27,7 +28,7 @@ use super::super::native_helpers::{
     validate_request_tenant,
 };
 use super::BackupServiceImpl;
-use super::config::{KIND_RESTORE, TOPIC_BACKUP_RESTORED};
+use super::config::{BACKUP_RUN_MSG, KIND_RESTORE, TOPIC_BACKUP_RESTORED};
 use super::errors::{
     backup_internal_status, backup_not_found_status, backup_run_location_missing_status,
     backup_run_missing_object_prefix_status, backup_topology_mismatch_status,
@@ -46,6 +47,11 @@ struct RestoreColumnKey {
 }
 
 type RestoreValueRemaps = HashMap<RestoreColumnKey, HashMap<String, String>>;
+
+pub(crate) fn is_restore_journal_relation(schema: &str, table: &str) -> bool {
+    let run_model = native_model(BACKUP_RUN_MSG, &["backup_id"]);
+    qualified_relation(schema, table) == run_model.relation
+}
 
 fn manifest_table_by_relation<'a>(
     manifest: &'a CatalogManifest,
@@ -557,23 +563,46 @@ pub(crate) async fn restore_tenant(
             continue;
         }
         let rel = qualified_relation(&target.schema, &target.table);
-        let probe_sql = format!(
-            "SELECT 1 FROM {rel} WHERE {col}::text = $1 LIMIT 1",
-            col = qi_runtime(&target.tenant_column),
-        );
-        let present: Option<i32> = sqlx::query_scalar(&probe_sql)
-            .bind(&target_tenant_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|err| {
-                backup_internal_status(
-                    "restore_freshness_probe",
-                    format!(
-                        "restore freshness probe failed on {}.{}: {err}",
-                        target.schema, target.table
-                    ),
-                )
-            })?;
+        // `journal_run_started` deliberately precedes the transaction so a failed
+        // restore remains observable. Its target-scoped BackupRun is therefore the
+        // one legitimate row an otherwise fresh target owns at this point. Exclude
+        // only THIS restore id; an older backup/restore journal still proves the
+        // target is not pristine and remains a refusal.
+        let current_restore_journal = is_restore_journal_relation(&target.schema, &target.table);
+        let probe_sql = if current_restore_journal {
+            let run_model = native_model(BACKUP_RUN_MSG, &["backup_id"]);
+            format!(
+                "SELECT 1 FROM {rel} WHERE {col}::text = $1 AND {backup_id}::text <> $2 LIMIT 1",
+                col = qi_runtime(&target.tenant_column),
+                backup_id = run_model.q("backup_id"),
+            )
+        } else {
+            format!(
+                "SELECT 1 FROM {rel} WHERE {col}::text = $1 LIMIT 1",
+                col = qi_runtime(&target.tenant_column),
+            )
+        };
+        let present: Option<i32> = if current_restore_journal {
+            sqlx::query_scalar(&probe_sql)
+                .bind(&target_tenant_id)
+                .bind(&restore_id)
+                .fetch_optional(&mut *tx)
+                .await
+        } else {
+            sqlx::query_scalar(&probe_sql)
+                .bind(&target_tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+        }
+        .map_err(|err| {
+            backup_internal_status(
+                "restore_freshness_probe",
+                format!(
+                    "restore freshness probe failed on {}.{}: {err}",
+                    target.schema, target.table
+                ),
+            )
+        })?;
         if present.is_some() {
             existing_rows += 1;
             occupied_relations.push(rel.clone());
