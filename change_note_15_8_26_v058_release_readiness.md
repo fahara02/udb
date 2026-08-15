@@ -18,6 +18,12 @@ Release: 0.5.8
   only direct docs/wasm pushes may retain the committed benchmark JSON.
 - Workflow posture and the site-maintainer guide pin those two Pages evidence
   rules so a later CI refactor cannot silently restore the fallback.
+- Windows native and release builds now reuse the hosted runner's installed
+  Strawberry Perl and install NASM 3.02 from the official project archive. The
+  archive has a pinned SHA-256, bounded retries, and a hard checksum failure;
+  the Chocolatey community feed is no longer a release-build dependency.
+- The workflow-posture self-test fixture now includes the successful-real-run
+  and fresh-artifact requirements it enforces for Pages.
 - The changelog records the restore self-journal fix and benchmark/auth harness
   corrections included in this patch release.
 
@@ -31,3 +37,8 @@ Release: 0.5.8
 - Completion requires the v0.5.8 release graph to succeed, followed by four SDK
   benchmark results with zero failed RPCs and a Pages deployment consuming that
   exact artifact.
+- Main CI attempts 1 and 2 at commit `c381a9f3` passed all substantive product
+  jobs except `Auth binary (windows-amd64)`, which stopped before compilation
+  when Chocolatey's NASM feed first timed out and then returned HTTP 499. The
+  exact Windows build must pass with the checksum-pinned bootstrap before tag
+  creation.

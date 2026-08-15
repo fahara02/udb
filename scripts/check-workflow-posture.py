@@ -811,7 +811,12 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ("CARGO_HTTP_TIMEOUT=120", "Cargo timeout env"),
         ("sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev", "Linux native build deps"),
         ("brew install cmake nasm ninja", "macOS native build deps"),
-        ("choco install strawberryperl nasm --no-progress -y", "Windows native build deps"),
+        ('$strawberryPerl = "C:\\Strawberry\\perl\\bin"', "Windows runner Perl discovery"),
+        ('$nasmVersion = "3.02"', "Windows NASM version pin"),
+        ("https://www.nasm.us/pub/nasm/releasebuilds/", "official NASM download source"),
+        ('$nasmSha256 = "161D0BFAFF53C2F9E9F3E69FD0672323EBABAFD1268976A5CEC11BE92A19AEE7"', "Windows NASM checksum pin"),
+        ("Get-FileHash -Algorithm SHA256", "Windows NASM checksum verification"),
+        ("NASM archive SHA-256 mismatch", "Windows NASM checksum fail-closed gate"),
         ("ilammy/msvc-dev-cmd@v1", "MSVC dev command setup"),
     ),
     ".github/actions/setup-sdk-toolchains/action.yml": (
@@ -7194,6 +7199,10 @@ permissions:
   actions: read
 jobs:
   build:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event != 'push')
     runs-on: ubuntu-latest
     steps:
       - name: Sync brand assets into the site
@@ -7213,6 +7222,10 @@ jobs:
           gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
           cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
           got_fresh=1
+          if [ -n "${TRIGGER_RUN_ID:-}" ] && [ "$got_fresh" != 1 ]; then
+            echo "completed without a fresh sdk-benchmark-results artifact"
+            exit 1
+          fi
           if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
       - name: Build UDB's parser to WebAssembly
         run: |

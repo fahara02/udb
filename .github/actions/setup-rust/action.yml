@@ -64,9 +64,51 @@ runs:
       if: runner.os == 'Windows' && inputs.install-build-deps == 'true'
       shell: pwsh
       run: |
-        choco install strawberryperl nasm --no-progress -y
-        "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = "Stop"
+
+        # windows-latest provides Strawberry Perl. Prefer that runner-owned copy
+        # and refuse to start a native build without a real Perl executable.
+        $strawberryPerl = "C:\Strawberry\perl\bin"
+        if (Test-Path -LiteralPath (Join-Path $strawberryPerl "perl.exe")) {
+          $strawberryPerl | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & (Join-Path $strawberryPerl "perl.exe") --version
+        } elseif ($null -ne (Get-Command perl -ErrorAction SilentlyContinue)) {
+          perl --version
+        } else {
+          throw "The Windows runner does not provide the required Perl executable"
+        }
+
+        # Do not make release binaries depend on Chocolatey's community feed.
+        # Fetch the pinned official executable archive and verify it before use.
+        $nasmVersion = "3.02"
+        $nasmSha256 = "161D0BFAFF53C2F9E9F3E69FD0672323EBABAFD1268976A5CEC11BE92A19AEE7"
+        $nasmUri = "https://www.nasm.us/pub/nasm/releasebuilds/$nasmVersion/win64/nasm-$nasmVersion-win64.zip"
+        $nasmArchive = Join-Path $env:RUNNER_TEMP "nasm-$nasmVersion-win64.zip"
+        $nasmRoot = Join-Path $env:RUNNER_TOOL_CACHE "nasm\$nasmVersion\x64"
+        $nasmBin = Join-Path $nasmRoot "nasm-$nasmVersion"
+
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+          try {
+            Invoke-WebRequest -UseBasicParsing -Uri $nasmUri -OutFile $nasmArchive -TimeoutSec 60
+            break
+          } catch {
+            if ($attempt -eq 3) { throw }
+            Write-Warning "NASM download attempt $attempt/3 failed; retrying in 5 seconds"
+            Start-Sleep -Seconds 5
+          }
+        }
+        $actualSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $nasmArchive).Hash
+        if ($actualSha256 -ne $nasmSha256) {
+          throw "NASM archive SHA-256 mismatch: expected $nasmSha256, got $actualSha256"
+        }
+        New-Item -ItemType Directory -Force -Path $nasmRoot | Out-Null
+        Expand-Archive -LiteralPath $nasmArchive -DestinationPath $nasmRoot -Force
+        if (-not (Test-Path -LiteralPath (Join-Path $nasmBin "nasm.exe"))) {
+          throw "Verified NASM archive did not contain nasm.exe at $nasmBin"
+        }
+        $nasmBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        & (Join-Path $nasmBin "nasm.exe") -v
 
     - name: Configure MSVC build tools (Windows)
       if: runner.os == 'Windows' && inputs.install-build-deps == 'true'

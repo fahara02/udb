@@ -30,6 +30,10 @@ protocol change.
   A genuine manual or post-release benchmark must succeed and supply its fresh
   `sdk-benchmark-results` artifact; a missing artifact fails the Pages build
   instead of falling back to the committed historical dashboard JSON.
+- **Windows release builds no longer depend on the Chocolatey community feed
+  for NASM.** CI uses the runner-provided Perl and a checksum-pinned NASM 3.02
+  archive from the official project distribution, with bounded download retries
+  and fail-closed archive verification.
 
 ### Changed
 
