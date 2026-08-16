@@ -58,3 +58,9 @@ skill-wrapper drift gate found that the plugin reference, OpenAI instructions,
 and Ollama model still embedded `0.5.10`. The repository's canonical
 `udb-skill/shared/using-udb.md` was propagated through `sync_skills.py`, updating
 only those three maintained text mirrors to `0.5.11`.
+
+Run `31944321004` then confirmed that the using-udb mirrors were clean and
+identified the parallel udb-coding mirror family. The canonical
+`udb-skill/shared/udb-coding.md` was propagated through
+`sync_udb_coding.py`, updating its plugin, OpenAI, and Ollama references from
+`0.5.10` to `0.5.11` without altering coding doctrine.
