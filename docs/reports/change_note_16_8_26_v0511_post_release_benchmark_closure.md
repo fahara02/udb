@@ -52,3 +52,9 @@ behind when the canonical Asset, Scheduler, and Workflow bodies began carrying
 the live project. The Go Asset assertion and the three TypeScript assertions now
 expect the canonical `project-1` fixture, matching the generated manifest rather
 than preserving the obsolete empty-project expectation.
+
+Successor run `31944181018` passed rustfmt and version consistency, then the
+skill-wrapper drift gate found that the plugin reference, OpenAI instructions,
+and Ollama model still embedded `0.5.10`. The repository's canonical
+`udb-skill/shared/using-udb.md` was propagated through `sync_skills.py`, updating
+only those three maintained text mirrors to `0.5.11`.

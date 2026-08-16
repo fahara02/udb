@@ -281,7 +281,7 @@ there but I'm still denied." Migrate those to `policy_rules` (Surface 1).
 
 Pick the developer's language. Default data target `localhost:50051` (plaintext
 in dev). **Set `authTarget` too whenever the app uses auth/native services.**
-Current published baseline is **UDB 0.5.10** with wire protocol **1.0.0**; keep
+Current published baseline is **UDB 0.5.11** with wire protocol **1.0.0**; keep
 the broker and SDK package on the same product version unless deliberately
 testing compatibility. The platform-service wave (Vault, Metering, Scheduler,
 Search, Webhook, Workflow, Lock, LiveQuery, Config, Backup, Embedding) and the
@@ -305,7 +305,7 @@ Inserting a new row*).
 
 ### TypeScript / Node — `@udb_plus/sdk`
 ```bash
-npm i @udb_plus/sdk@0.5.10
+npm i @udb_plus/sdk@0.5.11
 ```
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -327,7 +327,7 @@ Adapters for Express / Fastify / Next.js under `adapters/`.
 
 ### Python — `udb-client`
 ```bash
-pip install udb-client==0.5.10        # or: pip install "udb-client[pydantic]==0.5.10"
+pip install udb-client==0.5.11        # or: pip install "udb-client[pydantic]==0.5.11"
 ```
 ```python
 from udb_client import Metadata, UdbClient, decode_records
@@ -348,7 +348,7 @@ has `set_credentials()` hot-swap, and `login_and_adopt_tenant(user, pass)`.
 
 ### Go — `github.com/fahara02/udb/sdk/go`
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.5.10
+go get github.com/fahara02/udb/sdk/go@v0.5.11
 ```
 ```go
 cfg := udbclient.Config{Target: "localhost:50051", AuthTarget: "localhost:50061",
@@ -378,7 +378,7 @@ hot-swap.
 
 ### C# — `Udb.Client`
 ```bash
-dotnet add package Udb.Client --version 0.5.10
+dotnet add package Udb.Client --version 0.5.11
 ```
 ```csharp
 var meta = new UdbMetadata(TenantId:"acme", Purpose:"web.request",
@@ -390,7 +390,7 @@ var rows = await udb.SelectAsync(new SelectRequest { MessageType="shop.v1.Custom
 
 ### PHP / Laravel — `fahara02/udb-laravel`
 ```bash
-composer require fahara02/udb-laravel:^0.5.10   # needs PHP 8.1+, grpc PECL ext
+composer require fahara02/udb-laravel:^0.5.11   # needs PHP 8.1+, grpc PECL ext
 ```
 ```php
 $client = new UdbClient(['endpoint' => '127.0.0.1:50051', 'tls' => ['enabled' => false]]);
