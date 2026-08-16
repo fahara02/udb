@@ -51604,7 +51604,7 @@
         },
         "projectId": {
           "type": "string",
-          "title": "@inject_tag: gorm:\"column:project_id\""
+          "description": "Optional owning project. An OPAQUE identifier, the same value the control\nplane, AuthN, policy and the DataBroker use; empty means tenant-wide.\n\nStored as bounded text rather than UUID so a registered project such as\n`ambulife` is accepted. A UUID's text form remains a valid opaque id, so\nexisting rows migrate losslessly via the USING cast.\n\n@inject_tag: gorm:\"column:project_id\""
         },
         "filename": {
           "type": "string",

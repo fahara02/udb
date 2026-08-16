@@ -25,9 +25,15 @@ const (
 
 // File (object-storage metadata)
 type File struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FileId        string                 `protobuf:"bytes,1,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`                                                  // @inject_tag: gorm:"primaryKey;column:file_id;not null"
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`                                            // @inject_tag: gorm:"column:tenant_id;not null"
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	FileId   string                 `protobuf:"bytes,1,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`       // @inject_tag: gorm:"primaryKey;column:file_id;not null"
+	TenantId string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"` // @inject_tag: gorm:"column:tenant_id;not null"
+	// Optional owning project. An OPAQUE identifier, the same value the control
+	// plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
+	//
+	// Stored as bounded text rather than UUID so a registered project such as
+	// `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+	// existing rows migrate losslessly via the USING cast.
 	ProjectId     string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`                                         // @inject_tag: gorm:"column:project_id"
 	Filename      string                 `protobuf:"bytes,4,opt,name=filename,proto3" json:"filename,omitempty"`                                                            // @inject_tag: gorm:"column:filename;not null"
 	ContentType   string                 `protobuf:"bytes,5,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`                                   // @inject_tag: gorm:"column:content_type"
@@ -240,16 +246,16 @@ var File_udb_core_storage_entity_v1_file_proto protoreflect.FileDescriptor
 
 const file_udb_core_storage_entity_v1_file_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/storage/entity/v1/file.proto\x12\x1audb.core.storage.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a&udb/core/storage/entity/v1/enums.proto\"\xda\x11\n" +
+	"%udb/core/storage/entity/v1/file.proto\x12\x1audb.core.storage.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a&udb/core/storage/entity/v1/enums.proto\"\xf5\x11\n" +
 	"\x04File\x12C\n" +
 	"\afile_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\afile_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06fileId\x127\n" +
 	"\ttenant_id\x18\x02 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x125\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x12P\n" +
 	"\n" +
-	"project_id\x18\x03 \x01(\tB\x16\x82\xb7\x18\x12\n" +
+	"project_id\x18\x03 \x01(\tB1\x82\xb7\x18-\n" +
 	"\n" +
-	"project_id\x12\x04UUIDR\tprojectId\x12:\n" +
+	"project_id\x12\fVARCHAR(120)\xd2\x01\x10project_id::textR\tprojectId\x12:\n" +
 	"\bfilename\x18\x04 \x01(\tB\x1e\x82\xb7\x18\x1a\n" +
 	"\bfilename\x12\fVARCHAR(512)\x18\x01R\bfilename\x12C\n" +
 	"\fcontent_type\x18\x05 \x01(\tB \x82\xb7\x18\x1c\n" +

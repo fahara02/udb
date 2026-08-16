@@ -164,7 +164,12 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object projectId_ = "";
   /**
    * <pre>
-   * &#64;inject_tag: gorm:"column:project_id"
+   * Optional owning project. An OPAQUE identifier, the same value the control
+   * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
+   *
+   * Stored as bounded text rather than UUID so a registered project such as
+   * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+   * existing rows migrate losslessly via the USING cast.
    * </pre>
    *
    * <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -185,7 +190,12 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * &#64;inject_tag: gorm:"column:project_id"
+   * Optional owning project. An OPAQUE identifier, the same value the control
+   * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
+   *
+   * Stored as bounded text rather than UUID so a registered project such as
+   * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+   * existing rows migrate losslessly via the USING cast.
    * </pre>
    *
    * <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1980,7 +1990,12 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object projectId_ = "";
     /**
      * <pre>
-     * &#64;inject_tag: gorm:"column:project_id"
+     * Optional owning project. An OPAQUE identifier, the same value the control
+     * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
+     *
+     * Stored as bounded text rather than UUID so a registered project such as
+     * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+     * existing rows migrate losslessly via the USING cast.
      * </pre>
      *
      * <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2000,7 +2015,12 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * &#64;inject_tag: gorm:"column:project_id"
+     * Optional owning project. An OPAQUE identifier, the same value the control
+     * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
+     *
+     * Stored as bounded text rather than UUID so a registered project such as
+     * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+     * existing rows migrate losslessly via the USING cast.
      * </pre>
      *
      * <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2021,7 +2041,12 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * &#64;inject_tag: gorm:"column:project_id"
+     * Optional owning project. An OPAQUE identifier, the same value the control
+     * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
+     *
+     * Stored as bounded text rather than UUID so a registered project such as
+     * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+     * existing rows migrate losslessly via the USING cast.
      * </pre>
      *
      * <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2038,7 +2063,12 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * &#64;inject_tag: gorm:"column:project_id"
+     * Optional owning project. An OPAQUE identifier, the same value the control
+     * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
+     *
+     * Stored as bounded text rather than UUID so a registered project such as
+     * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+     * existing rows migrate losslessly via the USING cast.
      * </pre>
      *
      * <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2052,7 +2082,12 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * &#64;inject_tag: gorm:"column:project_id"
+     * Optional owning project. An OPAQUE identifier, the same value the control
+     * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
+     *
+     * Stored as bounded text rather than UUID so a registered project such as
+     * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+     * existing rows migrate losslessly via the USING cast.
      * </pre>
      *
      * <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
