@@ -47,6 +47,40 @@ defects exposed by the strict v0.5.9 post-release benchmark.
 - **Native contract governance advances to 7.1.0.** Operation-kind drift is a
   behavioral contract change, and the regenerated Authn contract records
   `VerifyMfaChallenge` as a mutation.
+- **Native services accept opaque project ids end to end.** v0.5.9 widened
+  `project_id` to `VARCHAR(120)` on Storage, Asset, Scheduler and Workflow (in
+  place, through a `using_expression`, so no deployment loses rows) but left four
+  call sites casting the bind to `::UUID`: the scheduler and workflow scope
+  predicates and the `CreateJob`/`StartWorkflow` inserts. Against the widened
+  column that is a type error, and against a human project code the cast itself
+  fails — so callers using the documented project-code shape got `INTERNAL`
+  instead of the previous `InvalidArgument`. All four now compare and bind the
+  project as the opaque string it is; the tenant arm keeps its UUID cast because
+  tenants really are UUIDs. An over-length project is refused rather than
+  truncated, and a non-empty project authority is never downgraded to
+  tenant-wide.
+- **`ListAssets` and `GetAsset` no longer return other projects' assets.** Both
+  read through a tenant-only native context, and the project predicate had been
+  dropped as a workaround for the UUID-typed column — but the asset read carried
+  no project filter of its own, leaving the two RPCs with no project confinement
+  at all, so a project-scoped caller could list and fetch every project's assets
+  inside its tenant. The read now applies the owning project explicitly, and the
+  list total carries the same clause so the count cannot disagree with the page.
+- **A revoked certificate binding cannot fall through to a weaker selector.** An
+  unused request-time lookup filtered inactive rows out in SQL, so an expired or
+  revoked binding on a strong selector (SPIFFE URI, fingerprint) would have
+  fallen through to a DNS/CN selector on the same certificate had it been wired.
+  Removed in favour of the candidate lookup the live path already uses, which
+  returns the row together with whether it is usable.
+- **Stale cache entries cannot be written back.** An unstamped cache setter
+  remained callable beside the LSN-stamped, project-scoped setters; an entry it
+  wrote could not be invalidated by the freshness check every reader uses.
+- **Vault no longer carries a false capability refusal.** A dead error
+  constructor still announced that dynamic database credential issuance is
+  disabled. Issuance is bounded instead — every alias is checked against the
+  verified tenant, project and instance, and PUBLIC table and SECURITY DEFINER
+  grants are audited before a login is minted.
+- **SAML signed-element digests compare in constant time.**
 
 ## [0.5.9] - 2026-08-15
 
