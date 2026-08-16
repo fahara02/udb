@@ -70,3 +70,10 @@ Go source test: Scheduler still expected an empty project. Scheduler and the
 adjacent Workflow assertion now both expect the canonical `project-1` fixture;
 all TypeScript, Python, C#, Java, PHP, metadata, and error-detail conformance
 sections had already passed in that run.
+
+The four product-focused ignored live regressions passed together at code head
+`0617552c55af0de03facf6102cb0351199acfad5`: Asset `31944653811`, Authz admin
+`31944653364`, Authz role-policy `31944653361`, and Backup numeric restore
+`31944653410`. Each ran one exact filtered test with zero failures. The remaining
+release proof boundary is exact-head full CI followed by the immutable
+v0.5.11 Release → 1,524-row Benchmark → Pages chain.

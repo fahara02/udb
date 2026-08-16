@@ -31,3 +31,9 @@ CI must run the focused context unit tests, the Asset/Authz ignored live tests,
 generated-document freshness checks, and the reusable Go/Python SDK benchmark
 for the four affected RPC rows. No local Cargo/build/test/rustfmt/codegen was
 run.
+
+Focused CI at code head `0617552c55af0de03facf6102cb0351199acfad5` is green:
+Asset read-after-write run `31944653811`, Authz admin/audit run `31944653364`,
+and Authz role-policy run `31944653361` each executed their exact ignored live
+regression with one pass and zero failures. Full PR CI and successor
+post-release benchmark evidence remain required.
