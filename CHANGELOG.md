@@ -5,6 +5,37 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.12] - 2026-08-16
+
+Patch release making the opaque-project-id guarantee true for the last path
+that still contradicted it.
+
+### Fixed
+
+- **`DeleteFile` with `DELETE_MODE_HARD` accepts an opaque project id.** The
+  hard-delete path inserts a durable GC intent, and that insert still bound the
+  verified project as `NULLIF($3,'')::uuid`. Both the Storage entity and the
+  `udb_storage.gc_intents` ledger are `VARCHAR(120)`, so a real project code
+  turned a valid hard delete into `INTERNAL`:
+
+  ```text
+  storage GC-intent insert failed: invalid input syntax for type uuid: "ambulife"
+  ```
+
+  The bind is `varchar(120)` now. Tenant, file and intent identities stay
+  UUID-typed, the empty-project-to-NULL behaviour and the handler's 120-byte
+  validation are unchanged, and the tombstone half of the transaction is scoped
+  by tenant and file so it was never affected. The served two-project live
+  Storage test now performs a HARD delete under a real opaque project and reads
+  the exact project back from the durable intent, so reverting the bind fails at
+  the reported statement.
+
+### Notes
+
+- 0.5.10 and 0.5.11 both stated that native services accept opaque project ids
+  end to end. That was true of every path except this one; deployments that use
+  project codes and rely on hard delete should move to 0.5.12.
+
 ## [0.5.11] - 2026-08-16
 
 Patch release closing the remaining product and benchmark-fixture defects exposed
