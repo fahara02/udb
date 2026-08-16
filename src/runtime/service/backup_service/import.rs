@@ -344,12 +344,48 @@ async fn apply_cross_tenant_restore_remaps(
     Ok(())
 }
 
+fn uncovered_unique_restore_columns(
+    unique_indexes: Vec<Vec<String>>,
+    tenant_column: &str,
+    fk_columns: &HashSet<&str>,
+    protected_columns: &HashSet<String>,
+) -> Vec<String> {
+    let mut columns = Vec::new();
+    let mut seen = HashSet::new();
+    for index_columns in unique_indexes {
+        if index_columns.iter().any(|column| column == tenant_column) {
+            continue;
+        }
+        // A composite unique key cannot collide with the source once any one of
+        // its members receives a trusted remap. PostgreSQL appends every
+        // partition key to primary/unique keys, so flattening the remaining
+        // members would incorrectly demand an independent remap for values such
+        // as TIMESTAMPTZ partition bounds.
+        if index_columns
+            .iter()
+            .any(|column| protected_columns.contains(column))
+        {
+            continue;
+        }
+        for column in index_columns {
+            if column != tenant_column
+                && !fk_columns.contains(column.as_str())
+                && seen.insert(column.clone())
+            {
+                columns.push(column);
+            }
+        }
+    }
+    columns
+}
+
 async fn postgres_unique_restore_columns(
     conn: &mut PgConnection,
     schema: &str,
     table: &str,
     tenant_column: &str,
     table_meta: &ManifestTable,
+    protected_columns: &HashSet<String>,
 ) -> Result<Vec<String>, Status> {
     let fk_columns: HashSet<&str> = table_meta
         .foreign_keys
@@ -388,8 +424,7 @@ async fn postgres_unique_restore_columns(
                 format!("restore unique-index probe failed for {schema}.{table}: {err}"),
             )
         })?;
-    let mut columns = Vec::new();
-    let mut seen = HashSet::new();
+    let mut unique_indexes = Vec::with_capacity(rows.len());
     for row in rows {
         let cols: Vec<String> = row.try_get("cols").map_err(|err| {
             backup_internal_status(
@@ -397,16 +432,14 @@ async fn postgres_unique_restore_columns(
                 format!("restore unique-index row decode failed for {schema}.{table}: {err}"),
             )
         })?;
-        for column in cols {
-            if column != tenant_column
-                && !fk_columns.contains(column.as_str())
-                && seen.insert(column.clone())
-            {
-                columns.push(column);
-            }
-        }
+        unique_indexes.push(cols);
     }
-    Ok(columns)
+    Ok(uncovered_unique_restore_columns(
+        unique_indexes,
+        tenant_column,
+        &fk_columns,
+        protected_columns,
+    ))
 }
 
 async fn postgres_restore_remap_plans(
@@ -418,8 +451,15 @@ async fn postgres_restore_remap_plans(
 ) -> Result<Vec<RestoreColumnRemapPlan>, Status> {
     let mut columns = unique_restore_columns(table_meta, tenant_column);
     let mut seen: HashSet<String> = columns.iter().cloned().collect();
-    for column in
-        postgres_unique_restore_columns(conn, schema, table, tenant_column, table_meta).await?
+    for column in postgres_unique_restore_columns(
+        conn,
+        schema,
+        table,
+        tenant_column,
+        table_meta,
+        &seen,
+    )
+    .await?
     {
         if seen.insert(column.clone()) {
             columns.push(column);
@@ -1157,5 +1197,45 @@ mod restore_remap_tests {
             .expect("owned sequence is trusted"),
             RestoreRemapAuthority::OwnedSequence("app.parents_parent_id_seq".to_string())
         );
+    }
+
+    #[test]
+    fn partition_expanded_unique_key_is_covered_by_its_trusted_identity_remap() {
+        let protected_columns = HashSet::from(["log_id".to_string()]);
+        let fk_columns = HashSet::new();
+
+        let uncovered = uncovered_unique_restore_columns(
+            vec![vec!["log_id".to_string(), "created_at".to_string()]],
+            "tenant_id",
+            &fk_columns,
+            &protected_columns,
+        );
+
+        assert!(
+            uncovered.is_empty(),
+            "the remapped log_id makes the complete (log_id, created_at) key collision-free"
+        );
+    }
+
+    #[test]
+    fn unsupported_standalone_unique_partition_value_still_fails_closed() {
+        let uncovered = uncovered_unique_restore_columns(
+            vec![vec!["created_at".to_string()]],
+            "tenant_id",
+            &HashSet::new(),
+            &HashSet::new(),
+        );
+        assert_eq!(uncovered, vec!["created_at"]);
+
+        let denied = restore_remap_authority(
+            "udb_notification",
+            "notification_logs",
+            "created_at",
+            "timestamp with time zone",
+            None,
+        )
+        .expect_err("an independently unique timestamp must remain unsupported");
+        assert_eq!(denied.code(), tonic::Code::FailedPrecondition);
+        assert!(denied.message().contains("unsupported restore type"));
     }
 }

@@ -257,6 +257,44 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
         .await
         .expect("seed source BIGSERIAL policy tuple");
 
+    let notification_log = native_model(
+        "udb.core.notification.entity.v1.NotificationLog",
+        &[
+            "log_id",
+            "event_type",
+            "channel",
+            "tenant_id",
+            "project_id",
+            "status",
+            "retry_count",
+            "created_at",
+        ],
+    );
+    let source_log_id = Uuid::new_v4().to_string();
+    let event_type = format!("backup.restore.partition-key.{source_log_id}");
+    let log_seed_sql = format!(
+        "INSERT INTO {} ({}, {}, {}, {}, {}, {}, {}) \
+         VALUES ($1::uuid, $2, 'EMAIL', $3, $4, 'PENDING', 0) \
+         RETURNING {}::text",
+        notification_log.relation,
+        notification_log.q("log_id"),
+        notification_log.q("event_type"),
+        notification_log.q("channel"),
+        notification_log.q("tenant_id"),
+        notification_log.q("project_id"),
+        notification_log.q("status"),
+        notification_log.q("retry_count"),
+        notification_log.q("created_at"),
+    );
+    let source_created_at: String = sqlx::query_scalar(&log_seed_sql)
+        .bind(&source_log_id)
+        .bind(&event_type)
+        .bind(&source_tenant)
+        .bind(&project_id)
+        .fetch_one(&pool)
+        .await
+        .expect("seed source partitioned notification log");
+
     let svc = backup_service_for_projects(&[&project_id]).await;
     let backup = svc
         .start_tenant_backup(backup_request(
@@ -330,5 +368,29 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
     assert_ne!(
         target_ids[0], source_tuple_id,
         "RestoreTenant must allocate a fresh sequence-owned identity without overwriting the source"
+    );
+
+    let restored_log_sql = format!(
+        "SELECT {}::text, {}::text FROM {} WHERE {}::text = $1 AND {} = $2",
+        notification_log.q("log_id"),
+        notification_log.q("created_at"),
+        notification_log.relation,
+        notification_log.q("tenant_id"),
+        notification_log.q("event_type"),
+    );
+    let (target_log_id, target_created_at): (String, String) =
+        sqlx::query_as(&restored_log_sql)
+            .bind(&target_tenant)
+            .bind(&event_type)
+            .fetch_one(&pool)
+            .await
+            .expect("read restored partitioned notification log");
+    assert_ne!(
+        target_log_id, source_log_id,
+        "the UUID identity member of the partition-aware key must be remapped"
+    );
+    assert_eq!(
+        target_created_at, source_created_at,
+        "the timestamp partition-key member must be preserved once log_id protects the composite key"
     );
 }
