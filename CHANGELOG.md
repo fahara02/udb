@@ -29,12 +29,31 @@ that still contradicted it.
   Storage test now performs a HARD delete under a real opaque project and reads
   the exact project back from the durable intent, so reverting the bind fails at
   the reported statement.
+- **Cross-tenant Backup restore preserves unique-key authority.** Manifest and
+  live PostgreSQL unique keys stay grouped, partition auxiliaries are preserved
+  once another member is safely remapped, expression and partial keys are
+  evaluated fail closed, numeric identities still require their owned sequence,
+  and bounded text remaps retain an alphabetic 128-bit value. Parent maps are
+  preallocated; nullable self-references are rebound after insertion so neither
+  artifact row order nor a mutual cycle can retain source-tenant identities.
+- **Shared Redis connections recover after transport loss without replaying a
+  mutation.** Long-lived executor, canonical-store, rate-limit, and CDC handles
+  use the reconnecting connection manager. The failed command is returned as an
+  uncertain outcome and only a later request uses the replacement connection;
+  rate-limit Lua is never replayed in-call. An open circuit is reported as
+  retryable `UNAVAILABLE`, not as a false missing-executor configuration error.
 
 ### Notes
 
 - 0.5.10 and 0.5.11 both stated that native services accept opaque project ids
   end to end. That was true of every path except this one; deployments that use
   project codes and rely on hard delete should move to 0.5.12.
+- The v0.5.11 post-release benchmark proved all 381 canonical RPC identities for
+  each measured SDK but correctly withheld Pages publication after four Backup
+  restore failures and one Redis transport failure plus its circuit follow-on.
+  v0.5.12 must pass the focused Backup/Redis live regressions and the automatic
+  1,524-attempt Release → Benchmark → Pages evidence chain before it is called
+  complete.
 
 ## [0.5.11] - 2026-08-16
 
