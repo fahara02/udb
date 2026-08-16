@@ -5,6 +5,66 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.16] - 2026-08-17
+
+Usability release for changing a schema that already holds data, from operator
+notes taken during a real upgrade. Adds the commands that were missing, and
+fixes one silent failure that made a no-op change look like a hundred.
+
+### Added
+
+- **`udb verify --live --dsn <dsn>`** — compares your protos against the LIVE
+  database using the same check startup runs, read-only and before any DDL.
+  `udb drift --prior` compares protos against a prior *manifest*; the divergence
+  that actually stops a startup is protos against the real database (a column
+  someone made `NOT NULL` by hand, an index added during an incident), and that
+  was invisible to every offline tool. Exits 1 when findings exist, so it can
+  gate a deploy.
+- **`udb catalog bootstrap --project <id>`** — gives a project an ACTIVE
+  catalog. Since 0.5.9 the data plane refuses a principal whose project has no
+  catalog rather than serving another project's schema; a deployment created
+  before that model has no catalog rows, so after upgrading every service under
+  a named project failed its first call and the only remedy was writing a gRPC
+  client. Idempotent, so it is safe to re-run and safe on a healthy deployment.
+- **`udb env [--profile dev|enterprise]`** — writes a `.env` that boots, with
+  the variables that decide whether a broker starts, one line of reasoning each,
+  and secrets generated per file from the OS CSPRNG. `.env.example` documents
+  ~270 variables: the right reference, the wrong starting point.
+- **`data_destructive` on every planned operation.** Gate deploy pipelines on
+  this rather than the operation name. A rule like "reject anything starting
+  with Drop" also rejects `DropIndex`/`DropPolicy`, which UDB reissues on
+  ordinary upgrades each paired with a `Create`, and `DropNotNull`, a widening —
+  such a rule makes every UDB upgrade impossible.
+
+### Fixed
+
+- **An unusable `--prior` manifest is now an error instead of a warning.**
+  Passing the output of `udb catalog` (a proto catalog) where a
+  `CatalogManifest` is required made the tool warn on stderr and continue
+  "without diff". With no prior every table diffs as new, so a tree with NO
+  changes reported **100 auto-safe operations and `has_drift: true`** while the
+  only hint went to stderr — a pipeline reading the exit code or the JSON saw a
+  hundred phantom changes. Both `udb plan` and `udb drift` now exit 1 and name
+  the cause and the command that produces a correct prior
+  (`udb manifest-export`).
+- Startup applies open and close a `udb_migration_runs` record. A run that
+  applied hundreds of artifacts and then failed verification previously left the
+  ledger empty — no durable record of what an upgrade did to the database.
+- Failed startup verification logs each finding with its schema, table and
+  column instead of burying them in a JSON blob, and names the repair path.
+- The catalog refusal names the project and the command that fixes it.
+- `migration.emergency_auto_alter` is settable by env
+  (`UDB_MIGRATION_EMERGENCY_AUTO_ALTER`); an operator hitting the fail-closed
+  startup is crash-looping, often with config baked into an image.
+
+### Documentation
+
+- `docs/upgrading.md` — upgrading UDB against a database with data in it.
+- `examples/schema_change` — changing your own model once it holds rows, worked
+  end to end. Every example before this one started from an empty database.
+- The README quick start gained the day-2 loop; `udb plan`/`udb drift` are no
+  longer filed under "inspect".
+
 ## [0.5.15] - 2026-08-17
 
 Patch release fixing an upgrade that applied its whole migration and then
