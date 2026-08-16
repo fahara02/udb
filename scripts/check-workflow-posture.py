@@ -5206,7 +5206,7 @@ def check_ci_public_docs_guards(root: Path = ROOT) -> list[str]:
             continue
         next_step_at = text.find("\n      - name:", step_at + len(step_name))
         step_block = text[step_at:next_step_at] if next_step_at > step_at else text[step_at:]
-        if "if: runner.os == 'Linux'" not in step_block:
+        if "runner.os == 'Linux'" not in step_block:
             scoped.append(f"missing Linux-only gate for {label} step")
         for command, command_label in (
             (f"python3 {script} --selftest", "selftest"),

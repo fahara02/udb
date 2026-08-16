@@ -696,7 +696,7 @@ namespace udb.core.Authn.Services.V1 {
             "c3BvbnNlIsUByvMYRQgCGh51ZGI6YXV0aG46dmVyaWZ5LW1mYS1jaGFsbGVu",
             "Z2UgAUoCAQJqGGF1dGhuLlZlcmlmeU1mYUNoYWxsZW5nZZABAdLzGAYIARAB",
             "IAHa8xhBCAESFHZlcmlmeV9tZmFfY2hhbGxlbmdlGgN1ZGIosOoBMANAAUoE",
-            "YXV0aFABWhJ2ZXJpZnlNZmFDaGFsbGVuZ2X48xgBgtPkkwIjIh4vdjEvYXV0",
+            "YXV0aFABWhJ2ZXJpZnlNZmFDaGFsbGVuZ2X48xgCgtPkkwIjIh4vdjEvYXV0",
             "aC9tZmEvY2hhbGxlbmdlczp2ZXJpZnk6ASoSsgIKDkxpc3RNZmFGYWN0b3Jz",
             "EjEudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuTGlzdE1mYUZhY3RvcnNS",
             "ZXF1ZXN0GjIudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuTGlzdE1mYUZh",

@@ -496,8 +496,7 @@ pub async fn bootstrap_admin_user(
 /// Fixed identity of the global system-owned platform role. Unlike
 /// `organization_owner`, this role is an explicit cross-tenant authority and is
 /// therefore provisioned only by the Postgres-direct offline CLI path below.
-pub(crate) const SYSTEM_PLATFORM_ADMIN_ROLE_ID: &str =
-    "00000000-0000-0000-0000-0000000a0010";
+pub(crate) const SYSTEM_PLATFORM_ADMIN_ROLE_ID: &str = "00000000-0000-0000-0000-0000000a0010";
 pub(crate) const PLATFORM_ADMIN_ROLE_CODE: &str = "platform_admin";
 
 /// Offline-only platform bootstrap. The ordinary served bootstrap deliberately
@@ -606,8 +605,7 @@ pub async fn bootstrap_platform_admin_user(
         ))
     {
         return Err(
-            "platform_admin role exists without exact active system/global provenance"
-                .to_string(),
+            "platform_admin role exists without exact active system/global provenance".to_string(),
         );
     }
 

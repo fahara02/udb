@@ -637,6 +637,7 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	fix.set("otp_id", "otp-1")
 	fix.set("otp_code", "654321")
 	fix.set("challenge_id", "challenge-1")
+	fix.set("recovery_code", "recovery-code-1")
 	fix.set("username", "bench-user")
 	fix.set("refresh_token", "refresh-1")
 	fix.set("refresh_session_id", "refresh-session-1")

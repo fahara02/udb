@@ -10,3 +10,13 @@ so the measured call is the single state-consuming operation rather than a
 post-warm-up replay. CI must regenerate and verify the descriptor baseline,
 native docs/manifest, SDK artifacts, and benchmark manifest. No local build,
 test, formatter, or generator was run.
+
+The first PR CI run, `31922841419`, produced and supplied the exact repair
+artifacts used for the checked-in outputs: `ci-sdk-codegen-repair-1`
+(`9256894085`) and `ci-rustfmt-repair-1` (`9256891010`). A subsequent CI
+run must prove that both freshness gates are clean.
+
+Its SDK conformance job also proved that the changed challenge/WebAuthn bodies
+need explicit project and recovery-code values in their unit fixtures. The Go
+and TypeScript tests now hydrate those same canonical seeds and continue to
+fail closed when a required seed is absent.

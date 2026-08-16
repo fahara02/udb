@@ -258,12 +258,8 @@ fn diff_rpc(
             path.to_string(),
             format!(
                 "operation_kind changed: {} -> {}",
-                crate::runtime::descriptor_manifest::operation_kind_name(
-                    old_rpc.operation_kind,
-                ),
-                crate::runtime::descriptor_manifest::operation_kind_name(
-                    new_rpc.operation_kind,
-                )
+                crate::runtime::descriptor_manifest::operation_kind_name(old_rpc.operation_kind,),
+                crate::runtime::descriptor_manifest::operation_kind_name(new_rpc.operation_kind,)
             ),
         ));
     }

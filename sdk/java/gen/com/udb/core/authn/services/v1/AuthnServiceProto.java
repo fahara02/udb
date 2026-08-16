@@ -891,7 +891,7 @@ public final class AuthnServiceProto {
       "\032\036udb:authn:verify-mfa-challenge \001J\002\001\002j\030" +
       "authn.VerifyMfaChallenge\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030" +
       "A\010\001\022\024verify_mfa_challenge\032\003udb(\260\352\0010\003@\001J\004" +
-      "authP\001Z\022verifyMfaChallenge\370\363\030\001\202\323\344\223\002#\"\036/v" +
+      "authP\001Z\022verifyMfaChallenge\370\363\030\002\202\323\344\223\002#\"\036/v" +
       "1/auth/mfa/challenges:verify:\001*\022\262\002\n\016List" +
       "MfaFactors\0221.udb.core.authn.services.v1." +
       "ListMfaFactorsRequest\0322.udb.core.authn.s" +

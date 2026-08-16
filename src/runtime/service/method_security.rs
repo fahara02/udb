@@ -224,9 +224,7 @@ pub(crate) fn has_cross_tenant_platform_authority(
     scopes: &[String],
     roles: &[String],
 ) -> bool {
-    let explicit_role = roles
-        .iter()
-        .any(|role| is_platform_authority_role(role));
+    let explicit_role = roles.iter().any(|role| is_platform_authority_role(role));
     let explicit_scope = scopes
         .iter()
         .any(|scope| is_platform_authority_scope(scope));

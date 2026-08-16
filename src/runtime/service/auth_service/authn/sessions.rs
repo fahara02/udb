@@ -94,7 +94,9 @@ fn logout_family_scope(
     request_context: Option<&crate::proto::udb::core::common::v1::RequestContext>,
 ) -> Result<(String, String), Status> {
     let tenant = request_context.and_then(|context| context.tenant.as_ref());
-    let body_tenant = tenant.map(|scope| scope.tenant_id.as_str()).unwrap_or_default();
+    let body_tenant = tenant
+        .map(|scope| scope.tenant_id.as_str())
+        .unwrap_or_default();
     let body_project = tenant
         .map(|scope| scope.project_id.as_str())
         .unwrap_or_default();
@@ -414,13 +416,12 @@ mod tests {
             &["udb:authn:logout"],
             &[],
         );
-        let inherited =
-            crate::runtime::service::method_security::scope_claim_context_for_test(
-                claim.clone(),
-                async { logout_family_scope(None) },
-            )
-            .await
-            .expect("an omitted Logout body scope inherits the validated claim");
+        let inherited = crate::runtime::service::method_security::scope_claim_context_for_test(
+            claim.clone(),
+            async { logout_family_scope(None) },
+        )
+        .await
+        .expect("an omitted Logout body scope inherits the validated claim");
         assert_eq!(inherited, ("tenant-a".to_string(), "project-a".to_string()));
 
         let foreign = crate::proto::udb::core::common::v1::RequestContext {
@@ -431,12 +432,12 @@ mod tests {
             }),
             ..Default::default()
         };
-        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
-            claim,
-            async { logout_family_scope(Some(&foreign)) },
-        )
-        .await
-        .expect_err("Logout family cleanup must not accept a foreign body scope");
+        let err =
+            crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+                logout_family_scope(Some(&foreign))
+            })
+            .await
+            .expect_err("Logout family cleanup must not accept a foreign body scope");
         assert_eq!(err.code(), tonic::Code::PermissionDenied);
     }
 

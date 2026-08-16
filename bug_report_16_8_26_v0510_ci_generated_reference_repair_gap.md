@@ -30,3 +30,10 @@ runtime and the already-built broker.
 No local generator, build, or test is used. The PR CI Linux job must emit the
 repair artifact when either reference is stale; the repaired commit must then
 pass the same freshness gates in a new run.
+
+Workflow-lint run `31922841467` also exposed a selftest-only parser defect:
+the posture guard recognized only a bare `if: runner.os == 'Linux'` line, not
+the stricter failure-repair condition
+`if: failure() && runner.os == 'Linux'`. The guard now recognizes the Linux
+predicate within a compound condition while still requiring it in every
+generated-contract step.

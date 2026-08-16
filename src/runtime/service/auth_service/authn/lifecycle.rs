@@ -183,7 +183,9 @@ impl AuthnServiceImpl {
         request_context: Option<&crate::proto::udb::core::common::v1::RequestContext>,
     ) -> Result<crate::RequestContext, Status> {
         let tenant = request_context.and_then(|context| context.tenant.as_ref());
-        let body_tenant = tenant.map(|scope| scope.tenant_id.as_str()).unwrap_or_default();
+        let body_tenant = tenant
+            .map(|scope| scope.tenant_id.as_str())
+            .unwrap_or_default();
         let body_project = tenant
             .map(|scope| scope.project_id.as_str())
             .unwrap_or_default();
@@ -2432,12 +2434,12 @@ mod tests {
             &["udb:authn:write"],
             &[],
         );
-        let context = crate::runtime::service::method_security::scope_claim_context_for_test(
-            claim,
-            async { service.request_authn_context(None) },
-        )
-        .await
-        .expect("an omitted body scope inherits the validated claim");
+        let context =
+            crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+                service.request_authn_context(None)
+            })
+            .await
+            .expect("an omitted body scope inherits the validated claim");
 
         assert_eq!(context.tenant_id, "tenant-a");
         assert_eq!(context.project_id, "project-a");
@@ -2454,12 +2456,12 @@ mod tests {
             &[],
         );
         let request_context = body_scope("tenant-b", "project-b");
-        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
-            claim,
-            async { service.request_authn_context(Some(&request_context)) },
-        )
-        .await
-        .expect_err("request body scope must not override the validated bearer claim");
+        let err =
+            crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+                service.request_authn_context(Some(&request_context))
+            })
+            .await
+            .expect_err("request body scope must not override the validated bearer claim");
 
         assert_eq!(err.code(), tonic::Code::PermissionDenied);
     }
@@ -2769,21 +2771,13 @@ mod tests {
         let resume_at = first_unrevoked_tenant_issue_second(cutoff);
         assert_eq!(resume_at, cutoff + 1);
         assert!(
-            tenant_denylist_check_outcome(
-                TenantDenylistDecision::Cutoff(cutoff),
-                cutoff,
-                true,
-            )
-            .is_some(),
+            tenant_denylist_check_outcome(TenantDenylistDecision::Cutoff(cutoff), cutoff, true,)
+                .is_some(),
             "same-second tokens remain denied"
         );
         assert!(
-            tenant_denylist_check_outcome(
-                TenantDenylistDecision::Cutoff(cutoff),
-                resume_at,
-                true,
-            )
-            .is_none(),
+            tenant_denylist_check_outcome(TenantDenylistDecision::Cutoff(cutoff), resume_at, true,)
+                .is_none(),
             "issuance after the completed-revoke barrier is fresh"
         );
     }

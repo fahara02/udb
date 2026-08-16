@@ -1049,6 +1049,7 @@ test("manifest JSON body hydrates ApiKeyService rows with seed refs", () => {
 test("manifest JSON body hydrates AuthnService read-only rows with seed refs", () => {
   const fixtures = new PerfFixtures();
   fixtures.set("tenant_id", "tenant-1");
+  fixtures.set("project", "project-1");
   fixtures.set("user_id", "user-1");
   fixtures.set("admin_reset_mfa_user_id", "admin-reset-mfa-user-1");
   fixtures.set("admin_reset_password_user_id", "admin-reset-password-user-1");
@@ -1137,6 +1138,7 @@ test("manifest JSON body hydrates AuthnService session and MFA setup rows", () =
 test("manifest JSON body hydrates AuthnService terminal and WebAuthn rows", () => {
   const fixtures = new PerfFixtures();
   fixtures.set("tenant_id", "tenant-1");
+  fixtures.set("project", "project-1");
   fixtures.set("user_id", "user-1");
   fixtures.set("admin_reset_mfa_user_id", "admin-reset-mfa-user-1");
   fixtures.set("admin_reset_password_user_id", "admin-reset-password-user-1");

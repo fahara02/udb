@@ -777,14 +777,8 @@ mod tests {
                     "session_id",
                     LogicalValue::String("session-hash".to_string()),
                 ),
-                authn_eq(
-                    "tenant_id",
-                    LogicalValue::String("tenant-a".to_string()),
-                ),
-                authn_eq(
-                    "project_id",
-                    LogicalValue::String("project-a".to_string()),
-                ),
+                authn_eq("tenant_id", LogicalValue::String("tenant-a".to_string()),),
+                authn_eq("project_id", LogicalValue::String("project-a".to_string()),),
                 LogicalFilter::IsNull("revoked_at".to_string()),
             ])
         );

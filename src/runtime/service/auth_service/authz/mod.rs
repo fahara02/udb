@@ -4468,7 +4468,11 @@ mod version_tests {
     #[test]
     fn reserved_platform_roles_require_system_global_provenance() {
         assert!(platform_role_has_system_provenance(
-            "reader", false, "tenant-a", "project-a", "TENANT"
+            "reader",
+            false,
+            "tenant-a",
+            "project-a",
+            "TENANT"
         ));
         assert!(platform_role_has_system_provenance(
             "platform_admin",

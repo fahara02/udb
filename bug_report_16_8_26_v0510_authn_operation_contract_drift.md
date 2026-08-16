@@ -29,4 +29,13 @@ when the served handler itself validates the challenge correctly.
 ## Evidence
 
 The v0.5.9 post-release benchmark exposed the destructive read classification.
-Verification is CI-only; no local build, test, formatter, or generator was run.
+PR CI run `31922841419` confirmed that the proto itself builds, then emitted
+the deterministic `ci-sdk-codegen-repair-1` artifact (`9256894085`) for the
+six language SDK descriptor files and `ci-rustfmt-repair-1`
+(`9256891010`) for the Rust source formatting drift. Those CI-generated
+patches are the only formatter/code-generator output applied. The same run's
+SDK conformance job then identified stale test-only hydration fixtures: the
+TypeScript Authn tests lacked the new project context seed, and the Go shared
+manifest test lacked the recovery-code seed. The fixtures now supply those
+canonical values rather than weakening body hydration. Verification remains
+CI-only; no local build, test, formatter, or generator was run.

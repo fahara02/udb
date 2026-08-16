@@ -92,10 +92,9 @@ pub use auth_service::auth_readiness_triples;
 /// `service` module, so this `pub(crate)` re-export is the reachable handle.)
 pub(crate) use auth_service::events::topics::AUTH_TOPIC_PATTERNS;
 pub use auth_service::{
-    BootstrapAdmin, DATA_PLANE_ACTION_TOKENS, bootstrap_admin_user,
-    bootstrap_platform_admin_user, cli_api_key_list,
-    cli_api_key_revoke, migrate_service_account_grants, seed_project_authz_policies_offline,
-    served_bootstrap_admin,
+    BootstrapAdmin, DATA_PLANE_ACTION_TOKENS, bootstrap_admin_user, bootstrap_platform_admin_user,
+    cli_api_key_list, cli_api_key_revoke, migrate_service_account_grants,
+    seed_project_authz_policies_offline, served_bootstrap_admin,
 };
 // W17: native LiveQueryService (master-plan 9.7). Server-streaming tenant-scoped
 // live queries: an initial mediated Snapshot then a fail-closed-filtered stream
