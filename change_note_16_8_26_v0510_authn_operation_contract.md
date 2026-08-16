@@ -20,3 +20,8 @@ Its SDK conformance job also proved that the changed challenge/WebAuthn bodies
 need explicit project and recovery-code values in their unit fixtures. The Go
 and TypeScript tests now hydrate those same canonical seeds and continue to
 fail closed when a required seed is absent.
+
+CI run `31923101583` then passed the Linux build and 2,757 library tests with
+zero failures. The expected contract freshness failure produced
+`ci-native-docs-repair-1` (`9257086678`), whose 7.1.0 manifest, docs, binary
+baseline, and synchronized maps are now checked in for a clean follow-up run.

@@ -39,3 +39,11 @@ TypeScript Authn tests lacked the new project context seed, and the Go shared
 manifest test lacked the recovery-code seed. The fixtures now supply those
 canonical values rather than weakening body hydration. Verification remains
 CI-only; no local build, test, formatter, or generator was run.
+
+Successor CI run `31923101583` passed the Linux build and all 2,757 library
+tests (153 ignored, zero failures), including
+`changed_operation_kind_is_behavioral`. Its only Linux failure was the
+intentional 7.0.0-to-7.1.0 native-contract freshness gate, which emitted
+`ci-native-docs-repair-1` artifact `9257086678`. That binary-safe artifact is
+the sole source of the regenerated native manifest, native docs, descriptor
+baseline, canonical codebase map, and bundled map.

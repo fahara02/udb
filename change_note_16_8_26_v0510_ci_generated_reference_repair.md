@@ -16,3 +16,15 @@ The workflow-posture selftest now accepts the production repair step's compound
 requiring that predicate to occupy the entire YAML condition. This corrects the
 false negative reported by workflow-lint run `31922841467`; the production
 workflow and its failure-only behavior are unchanged.
+
+Successor run `31923101545` localized the duplicated-condition mistake, so the
+compound-condition recognition now lives only in the generated-contract checker.
+CI run `31923101583` then identified stale using-UDB provider wrappers; the
+plugin reference, OpenAI instructions, and Ollama Modelfile now carry the same
+v0.5.10 baseline and install commands as the canonical shared document. No local
+sync generator or test was run.
+
+CI run `31923101583` emitted the first complete repair artifact under this
+contract: `ci-native-docs-repair-1` (`9257086678`). It supplied the canonical
+and bundled codebase maps together with the 7.1.0 native manifest, generated
+service docs, and binary descriptor baseline.

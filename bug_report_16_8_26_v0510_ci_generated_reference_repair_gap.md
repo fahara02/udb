@@ -37,3 +37,18 @@ the stricter failure-repair condition
 `if: failure() && runner.os == 'Linux'`. The guard now recognizes the Linux
 predicate within a compound condition while still requiring it in every
 generated-contract step.
+
+The first correction was applied to a different checker with an identical
+condition. Successor workflow-lint run `31923101545` proved that the generated
+contract checker itself was still stale; the correction is now scoped to
+`check_ci_rust_generated_contract_doc_gates`, and the unrelated public-doc
+checker is restored unchanged. CI run `31923101583` also reached the skill
+wrapper gate and identified the three provider mirrors that still advertised
+0.5.9 after the canonical v0.5.10 version propagation. Those mirrors now match
+the canonical using-UDB body exactly for the six release references.
+
+The repaired workflow proved its purpose in that same CI run: after the Linux
+build and complete library suite passed, the expected native-contract
+freshness failure emitted `ci-native-docs-repair-1` artifact `9257086678`.
+The artifact contains all five governed outputs, including both codebase maps,
+so no generated reference was hand-authored.
