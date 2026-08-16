@@ -87,7 +87,7 @@ async fn get_job_rejects_cross_tenant_body() {
 }
 
 #[tokio::test]
-async fn get_job_rejects_non_uuid_project_authority_before_pool_access() {
+async fn get_job_accepts_opaque_project_authority_before_pool_access() {
     let tenant_id = "11111111-1111-4111-8111-111111111111";
     let svc = SchedulerServiceImpl::new();
     let mut request = Request::new(scheduler_pb::GetJobRequest {
@@ -101,19 +101,36 @@ async fn get_job_rejects_non_uuid_project_authority_before_pool_access() {
         .metadata_mut()
         .insert("x-udb-project-id", MetadataValue::from_static("not-a-uuid"));
 
+    // An opaque project code is a VALID authority now, so scope resolution must
+    // let it through: the call still fails (this service has no pool), but NOT
+    // with an InvalidArgument about project_id. Asserting the negative keeps the
+    // test independent of whichever capability error the pool-less path returns.
     let err = svc
         .get_job(request)
         .await
-        .expect_err("invalid project authority must fail before pool access");
-    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        .expect_err("no pool is configured, so the call cannot succeed");
+    assert_ne!(
+        err.code(),
+        tonic::Code::InvalidArgument,
+        "an opaque project code must pass scope resolution, got: {err:?}"
+    );
 }
 
 #[test]
 fn scheduler_project_scope_predicate_is_optional_but_exact() {
     let predicate = project_scope_predicate(&scheduled_job_model(), "$3");
-    assert!(predicate.contains("NULLIF($3, '')::UUID IS NULL"));
+    assert!(
+        predicate.contains("$3 = ''"),
+        "empty bind stays tenant-wide"
+    );
     assert!(predicate.contains("project_id"));
-    assert!(predicate.contains("= NULLIF($3, '')::UUID"));
+    assert!(predicate.contains("= $3"), "a project bind is exact");
+    // A project id is opaque, never a UUID: casting the bind would both fail to
+    // type-check against the VARCHAR(120) column and reject every human code.
+    assert!(
+        !predicate.contains("::UUID"),
+        "the project bind must not be cast to UUID: {predicate}"
+    );
 }
 
 #[tokio::test]

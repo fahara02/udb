@@ -46,15 +46,12 @@ pub(crate) fn vault_db_credentials_config_status(message: impl Into<String>) -> 
     )
 }
 
-pub(crate) fn vault_db_credentials_authority_status() -> Status {
-    vault_capability_status(
-        "generate_database_credentials",
-        "tenant_bound_database_credential_authority",
-        "dynamic database credential issuance is disabled: direct Postgres roles cannot enforce \
-         immutable tenant/project scope; configure a trusted tenant-bound credential broker \
-         before enabling this capability",
-    )
-}
+// A blanket "dynamic database credential issuance is disabled" refusal used to
+// live here, on the grounds that a direct Postgres role could not carry an
+// immutable tenant/project scope. Issuance now binds every alias through
+// `validate_db_credential_binding` (role config must match the verified
+// tenant/project/instance) and audits PUBLIC table + SECURITY DEFINER grants
+// before minting a login, so the capability is bounded rather than refused.
 
 pub(crate) fn vault_db_native_store_required_status() -> Status {
     vault_capability_status(
@@ -64,17 +61,13 @@ pub(crate) fn vault_db_native_store_required_status() -> Status {
     )
 }
 
-/// The transactional multi-write handlers (`rotate_transit_key`,
-/// `destroy_secret`, `list_secrets`) run a raw `sqlx` transaction directly on the
-/// configured Postgres native store; without a wired pool they fail closed with a
-/// typed capability refusal (rather than degrading to a non-atomic path).
-pub(crate) fn vault_native_store_required_status(operation: &'static str) -> Status {
-    vault_capability_status(
-        operation,
-        "postgres_native_store",
-        "vault requires a Postgres native store for this operation",
-    )
-}
+// The transactional multi-write handlers (`rotate_transit_key`,
+// `destroy_secret`, `list_secrets`) run a raw `sqlx` transaction directly on the
+// configured Postgres native store and must fail closed without a wired pool
+// rather than degrade to a non-atomic path. They now reach that pool through
+// `resolve_project_store(.., true, <operation>)`, which already returns a typed
+// per-operation refusal, so the standalone helper this comment replaces had no
+// remaining caller.
 
 /// A PutSecret lost the compare-and-swap: a concurrent writer already committed
 /// the next version of this `(tenant_id, secret_path)`, so the unique

@@ -14,9 +14,10 @@ use crate::proto::udb::core::asset::entity::v1 as asset_entity_pb;
 use crate::proto::udb::core::asset::services::v1 as asset_pb;
 use crate::runtime::channels::OperationChannel;
 use crate::runtime::service::native_helpers::{
-    admit_on as native_admit_on, emit_payload_event, native_next_page_token_for_total,
-    native_offset_page_window, native_service_context, non_empty_json, parse_uuid,
-    tenant_only_native_service_context, validate_request_scope, validate_request_tenant,
+    admit_on as native_admit_on, emit_payload_event, metadata_project_id,
+    native_next_page_token_for_total, native_offset_page_window, native_service_context,
+    non_empty_json, parse_uuid, tenant_only_native_service_context, validate_request_scope,
+    validate_request_tenant,
 };
 
 use super::AssetServiceImpl;
@@ -41,6 +42,36 @@ use super::steps::{StepContext, StepOutcome, is_byte_step, parse_byte_step_param
 use super::store::{
     asset_read, asset_record, pipeline_definition_read, pipeline_definition_record,
 };
+
+/// Widest project id an Asset row can hold (`asset.proto` declares
+/// `VARCHAR(120)`), so an over-long authority is refused instead of truncated.
+const MAX_ASSET_PROJECT_ID_LEN: usize = 120;
+
+/// The project authority an asset read must be confined to.
+///
+/// A project id is an OPAQUE identifier, never a UUID, so it is carried through
+/// verbatim. An empty result is an intentionally tenant-wide caller and widens
+/// nothing on its own — the caller still gets its tenant clause. Mirrors
+/// `storage_service::handlers::resolved_storage_project_scope`.
+fn resolved_asset_project_scope(metadata: &tonic::metadata::MetadataMap) -> Result<String, Status> {
+    let Some(project_id) = metadata_project_id(metadata) else {
+        return Ok(String::new());
+    };
+    let project_id = project_id.trim();
+    if project_id.is_empty() {
+        return Ok(String::new());
+    }
+    if project_id.chars().count() > MAX_ASSET_PROJECT_ID_LEN {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "project_id is too long",
+            [(
+                "project_id",
+                format!("must be at most {MAX_ASSET_PROJECT_ID_LEN} characters"),
+            )],
+        ));
+    }
+    Ok(project_id.to_string())
+}
 
 pub(crate) async fn create_pipeline_definition(
     svc: &AssetServiceImpl,
@@ -863,34 +894,41 @@ pub(crate) async fn list_assets(
     // Per-tenant fair admission (lighter Read budget) so list scans can't starve the pool.
     let _admit = svc.admit_read(&req.tenant_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
+    let project_id = resolved_asset_project_scope(&metadata)?;
     let m = asset_model();
     let rel = m.relation.clone();
     let media_filter = req.media_type.trim().to_string();
     let status_filter = asset_status_to_db(&req.status, "")?;
     let page_window = native_offset_page_window(req.page, req.page_size, &req.page_token, 50);
     let pool = svc.require_pool()?;
+    // The count must carry the same project clause as the read below, or a
+    // project-scoped caller gets its own page of rows alongside a total that
+    // counts every project's assets.
     let where_clause = format!(
         "WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL \
-         AND ($2 = '' OR {media_type} = $2) AND ($3 = '' OR {status} = $3)",
+         AND ($2 = '' OR {media_type} = $2) AND ($3 = '' OR {status} = $3) \
+         AND ($4 = '' OR {project_id} = $4)",
         tenant_id = m.q("tenant_id"),
         deleted = m.q("deleted_at"),
         media_type = m.q("media_type"),
         status = m.q("status"),
+        project_id = m.q("project_id"),
     );
     let total: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {rel} {where_clause}"))
         .bind(tenant_id)
         .bind(&media_filter)
         .bind(&status_filter)
+        .bind(&project_id)
         .fetch_one(pool)
         .await
         .map_err(|err| {
             asset_internal_status("list_assets", format!("count assets failed: {err}"))
         })?;
-    // Assets carry a UUID-typed nullable project_id, and this READ injects the
-    // context project as a predicate. native_service_context falls back to the
-    // x-udb-project-id header, so a human project code ("default") reached a UUID
-    // bind and every read failed INVALID_ARGUMENT "uuid params must be UUID
-    // strings". Scope the read by tenant only, as storage_service already does.
+    // The context stays tenant-only and the owning project is applied as an
+    // explicit read clause instead, the same split `storage_service` uses. A
+    // compiler-injected context predicate would also have to survive the
+    // `x-udb-project-id` fallback in `native_service_context`, and keeping the
+    // clause in the read makes the scope visible at the call site.
     let context = tenant_only_native_service_context(&metadata, &req.tenant_id);
     let rows = svc
         .require_runtime()?
@@ -899,6 +937,7 @@ pub(crate) async fn list_assets(
             &context,
             asset_read(
                 &tenant_id.to_string(),
+                &project_id,
                 None,
                 Some(&media_filter),
                 Some(&status_filter),
@@ -936,11 +975,10 @@ pub(crate) async fn get_asset(
     let _admit = svc.admit_read(&req.tenant_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
     let asset_id = parse_uuid("asset_id", &req.asset_id)?;
-    // Assets carry a UUID-typed nullable project_id, and this READ injects the
-    // context project as a predicate. native_service_context falls back to the
-    // x-udb-project-id header, so a human project code ("default") reached a UUID
-    // bind and every read failed INVALID_ARGUMENT "uuid params must be UUID
-    // strings". Scope the read by tenant only, as storage_service already does.
+    let project_id = resolved_asset_project_scope(&metadata)?;
+    // The context stays tenant-only and the owning project is applied as an
+    // explicit read clause instead, the same split `storage_service` uses, so a
+    // project-scoped caller cannot fetch another project's asset by id.
     let context = tenant_only_native_service_context(&metadata, &req.tenant_id);
     let rows = svc
         .require_runtime()?
@@ -949,6 +987,7 @@ pub(crate) async fn get_asset(
             &context,
             asset_read(
                 &tenant_id.to_string(),
+                &project_id,
                 Some(&asset_id.to_string()),
                 None,
                 None,

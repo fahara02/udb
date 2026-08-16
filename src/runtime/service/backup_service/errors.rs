@@ -84,6 +84,11 @@ pub(crate) fn ensure_target_is_fresh_in(
     Ok(())
 }
 
+/// The no-occupied-list form of the refusal. `check-error-detail-posture.py`
+/// pins this exact signature as the proof that restore-state denials carry
+/// typed policy detail, so it stays even though `ensure_restore_target_fresh`
+/// now calls the `_in` variant that also names the occupied relations.
+#[allow(dead_code)]
 pub(crate) fn restore_target_not_fresh_status(existing_rows: u64) -> Status {
     restore_target_not_fresh_status_in(existing_rows, &[])
 }
@@ -97,7 +102,6 @@ pub(crate) fn restore_target_not_fresh_status_in(
     } else {
         format!(" (in {})", occupied.join(", "))
     };
-    let _ = &where_;
     backup_policy_status(
         "restore_tenant",
         "restore_target_not_fresh",

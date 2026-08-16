@@ -3,7 +3,6 @@
 //! column identifiers stay single-sourced.
 
 use crate::runtime::native_catalog::NativeModel;
-use crate::runtime::service::native_helpers::parse_uuid;
 use tonic::Status;
 
 /// Normalize project authority before binding it to the UUID-backed Workflow
@@ -31,8 +30,12 @@ pub(crate) fn workflow_project_bind(project_id: &str) -> Result<String, Status> 
 /// while a non-empty project (resolved from request metadata / the verified
 /// claim; the request protos carry no project field) restricts to rows in that
 /// exact project, so a project-scoped caller can never read or mutate another
-/// project's (or a project-less) instance. `NULLIF(..)::UUID` keeps the empty
-/// bind castable against the UUID column.
+/// project's (or a project-less) instance. The project comparison is textual on
+/// purpose: a project id is an OPAQUE identifier, not a UUID, so the column is
+/// `VARCHAR(120)` and casting the bind would both fail to type-check against it
+/// and reject every human project code. The tenant bind keeps its `::UUID` cast
+/// — tenants really are UUIDs. A NULL `project_id` (a project-less instance)
+/// never equals a non-empty bind, so a project-scoped caller cannot reach it.
 pub(crate) fn workflow_scope_predicate(
     m: &NativeModel,
     tenant_bind: &str,
@@ -40,7 +43,7 @@ pub(crate) fn workflow_scope_predicate(
 ) -> String {
     format!(
         "{tenant_id} = {tenant_bind}::UUID AND \
-         ({project_bind} = '' OR {project_id} = NULLIF({project_bind}, '')::UUID)",
+         ({project_bind} = '' OR {project_id} = {project_bind})",
         tenant_id = m.q("tenant_id"),
         project_id = m.q("project_id"),
     )

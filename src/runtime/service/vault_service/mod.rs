@@ -87,14 +87,13 @@ use store::{secret_path_read, transit_key_read};
 
 // Re-exported at the module root for `serve()`, which spawns the leader-elected
 // Vault DB-credential lease reaper and reads the env-resolved cadence/batch knobs.
-// `VAULT_DB_LEASE_REAPER_BATCH` is retained as the byte-stable default; new code
-// should read the env-governed `vault_db_lease_reaper_batch()`. The `serve()`
+// The byte-stable `VAULT_DB_LEASE_REAPER_BATCH` default stays in `config` (its
+// only readers are that module and the unit tests); callers outside the module
+// take the env-governed `vault_db_lease_reaper_batch()`. The `serve()`
 // spawn in `service/mod.rs` already passes `vault_db_lease_reaper_batch()` (env
 // `UDB_VAULT_DB_LEASE_REAPER_BATCH`), and the reaper body in `workers.rs` clamps
 // against the same knob — so the batch size is fully wired through, not inert.
-pub use config::{
-    VAULT_DB_LEASE_REAPER_BATCH, vault_db_lease_reaper_batch, vault_db_lease_reaper_interval,
-};
+pub use config::{vault_db_lease_reaper_batch, vault_db_lease_reaper_interval};
 pub use workers::run_vault_db_lease_reaper_once;
 
 /// Postgres-backed `VaultService` handler.

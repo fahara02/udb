@@ -723,3 +723,77 @@ mod storage_finalized_consumer_tests {
         );
     }
 }
+
+/// `ListAssets`/`GetAsset` read through a TENANT-ONLY native context, so the
+/// owning project has to be an explicit clause in the read itself. It was
+/// missing entirely — the two RPCs returned every project's assets to a
+/// project-scoped caller — because the project predicate had been dropped as a
+/// workaround for a `UUID`-typed `project_id` column that could not hold a human
+/// project code. The column is `VARCHAR(120)` now, so the clause is back.
+#[cfg(test)]
+mod asset_project_scope_tests {
+    use super::super::store::asset_read;
+    use crate::ir::LogicalFilter;
+
+    fn filter_mentions_project(read: &crate::ir::LogicalRead) -> bool {
+        fn walk(filter: &LogicalFilter) -> bool {
+            match filter {
+                LogicalFilter::And(inner) | LogicalFilter::Or(inner) => inner.iter().any(walk),
+                LogicalFilter::Not(inner) => walk(inner),
+                LogicalFilter::Comparison { field, .. } => field == "project_id",
+                LogicalFilter::IsNull(field) => field == "project_id",
+                LogicalFilter::InList { field, .. } => field == "project_id",
+            }
+        }
+        read.filter.as_ref().is_some_and(walk)
+    }
+
+    #[test]
+    fn a_project_scoped_caller_gets_a_project_clause() {
+        let read = asset_read(
+            "11111111-1111-4111-8111-111111111111",
+            "acme",
+            None,
+            None,
+            None,
+            0,
+            50,
+        );
+        assert!(
+            filter_mentions_project(&read),
+            "a non-empty project must confine the read: {:?}",
+            read.filter
+        );
+    }
+
+    #[test]
+    fn a_tenantwide_caller_adds_no_project_clause() {
+        let read = asset_read(
+            "11111111-1111-4111-8111-111111111111",
+            "",
+            None,
+            None,
+            None,
+            0,
+            50,
+        );
+        assert!(
+            !filter_mentions_project(&read),
+            "an empty project is an intentionally tenant-wide caller: {:?}",
+            read.filter
+        );
+        let blank = asset_read(
+            "11111111-1111-4111-8111-111111111111",
+            "   ",
+            None,
+            None,
+            None,
+            0,
+            50,
+        );
+        assert!(
+            !filter_mentions_project(&blank),
+            "a whitespace-only project must not become a literal predicate"
+        );
+    }
+}

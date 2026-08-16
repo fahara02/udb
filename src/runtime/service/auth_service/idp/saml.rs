@@ -490,9 +490,12 @@ fn verify_signature(xml: &str, signing_certs_b64: &[String]) -> Result<bool, Sam
         use sha1::{Digest, Sha1};
         Sha1::digest(&canon_ref).to_vec()
     };
-    if actual_digest != expected_digest {
+    if !crate::runtime::executor_utils::constant_time_eq_bytes(&actual_digest, &expected_digest) {
         // The signed content's canonical digest does not match the signature's
         // DigestValue → the document was transformed/mutated. Fail closed.
+        // Compared in constant time so the shared primitive is used wherever a
+        // verification result is decided byte-by-byte, rather than each site
+        // choosing for itself whether its operands are secret enough.
         return Ok(false);
     }
 

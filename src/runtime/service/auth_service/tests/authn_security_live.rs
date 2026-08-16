@@ -7,7 +7,6 @@ use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnSer
 use crate::proto::udb::core::common::v1 as common_pb;
 use crate::runtime::service::method_security::{scope_claim_context_for_test, test_claim_context};
 use tonic::Request;
-use uuid::Uuid;
 
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_login_lockout_after_failures -- --ignored --nocapture"]

@@ -44,8 +44,7 @@ use super::super::native_helpers::{admit_on as native_admit_on, parse_uuid};
 use super::TenantServiceImpl;
 use super::config::{
     ACTION_TENANT_ADMIN_PURGE, ADMIN_PURGE_LEDGER_SCHEMA, ADMIN_PURGE_LEDGER_TABLE,
-    EVENT_TYPE_TENANT_ADMIN_PURGE, SCOPE_TENANT_ADMIN_PURGE, TENANT_STATUS_INACTIVE_DB,
-    TOPIC_TENANT_ADMIN_PURGED,
+    SCOPE_TENANT_ADMIN_PURGE, TENANT_STATUS_INACTIVE_DB,
 };
 use super::errors::{
     tenant_field_violation, tenant_internal_status, tenant_not_found_status, tenant_required_field,

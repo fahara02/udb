@@ -146,7 +146,7 @@ pub(crate) async fn start_workflow(
            ({workflow_id}, {tenant_id}, {project_id}, {workflow_type}, {status}, \
             {current_step}, {total_steps}, {payload}, {compensations}, {correlation_id}, \
             {saga_id}, {next_run_at}, {last_transition_at}) \
-         VALUES ($1::UUID, $2::UUID, NULLIF($3, '')::UUID, $4, 'RUNNING', \
+         VALUES ($1::UUID, $2::UUID, NULLIF($3, ''), $4, 'RUNNING', \
             0, $5, $6::JSONB, $7::JSONB, NULLIF($8, ''), \
             NULLIF($9, '')::UUID, NOW(), NOW())",
         workflow_id = m.q("workflow_id"),

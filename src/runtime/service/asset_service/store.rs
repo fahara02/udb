@@ -69,8 +69,15 @@ pub(crate) fn pipeline_definition_projection() -> LogicalProjection {
     ])
 }
 
+/// Asset reads are scoped by tenant and, when the verified caller carries one,
+/// by the owning project. An empty `project_id` is an intentionally tenant-wide
+/// caller and adds no clause — exactly the shape `file_tenant_active_clauses`
+/// uses in `storage_service`. The clause lives here rather than relying on a
+/// compiler-injected context predicate because these two RPCs read through a
+/// tenant-only context.
 pub(crate) fn asset_read(
     tenant_id: &str,
+    project_id: &str,
     asset_id: Option<&str>,
     media_type: Option<&str>,
     status: Option<&str>,
@@ -81,6 +88,9 @@ pub(crate) fn asset_read(
         eq_filter("tenant_id", tenant_id),
         LogicalFilter::IsNull("deleted_at".to_string()),
     ];
+    if !project_id.trim().is_empty() {
+        filters.push(eq_filter("project_id", project_id.trim()));
+    }
     if let Some(asset_id) = asset_id.filter(|value| !value.trim().is_empty()) {
         filters.push(eq_filter("asset_id", asset_id));
     }

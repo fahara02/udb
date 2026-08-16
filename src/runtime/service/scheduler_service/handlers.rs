@@ -63,9 +63,15 @@ fn resolved_scheduler_project_scope(
 /// Optional project-ownership predicate shared by every post-create Scheduler
 /// query. `$n = ''` means an intentionally tenant-wide caller; a project-scoped
 /// caller must match the durable ScheduledJob owner exactly.
+///
+/// The comparison is textual on purpose: a project id is an OPAQUE identifier,
+/// not a UUID, so the column is `VARCHAR(120)` and casting the bind would both
+/// fail to type-check against it and reject every human project code. A NULL
+/// `project_id` (a project-less job) never equals a non-empty bind, so a
+/// project-scoped caller still cannot reach it.
 pub(crate) fn project_scope_predicate(m: &NativeModel, bind: &str) -> String {
     let project_id = m.q("project_id");
-    format!("(NULLIF({bind}, '')::UUID IS NULL OR {project_id} = NULLIF({bind}, '')::UUID)")
+    format!("({bind} = '' OR {project_id} = {bind})")
 }
 
 /// Create a scheduled job. FIRE-ONLY SEMANTICS: when the job is due, the
@@ -258,7 +264,7 @@ pub(crate) fn guarded_insert_job_sql(m: &NativeModel) -> String {
         "INSERT INTO {rel} \
            ({job_id}, {tenant_id}, {project_id}, {name}, {schedule_type}, {cron}, {payload}, \
             {target_topic}, {status}, {next_fire_at}, {max_attempts}, {attempt_count}, {backoff}) \
-         SELECT $1::UUID, $2::UUID, NULLIF($3, '')::UUID, $4, $5, NULLIF($6, ''), $7::JSONB, \
+         SELECT $1::UUID, $2::UUID, NULLIF($3, ''), $4, $5, NULLIF($6, ''), $7::JSONB, \
             NULLIF($8, ''), 'ACTIVE', \
             CASE WHEN $9 = '' THEN (CASE WHEN $5 = 'CRON' THEN NOW() ELSE NULL END) \
                  ELSE $9::TIMESTAMPTZ END, \

@@ -1697,54 +1697,13 @@ where
     Ok(affected > 0)
 }
 
-/// Resolve one ACTIVE binding by its selector, enforcing the validity window in
-/// SQL against the SERVER clock (`NOW()`), so a skewed client can't stretch a
-/// window. Deliberately no tenant filter — this is the request-time
-/// authentication path where the tenant is DERIVED from the binding, never
-/// supplied by the caller.
-pub(crate) async fn find_active_binding(
-    pool: &PgPool,
-    selector_kind: &str,
-    selector_value: &str,
-) -> Result<Option<BindingRecord>, Status> {
-    let kind = canonical_selector_kind(selector_kind)?;
-    let selector_value = match canonical_selector_value(kind, selector_value) {
-        Ok(value) => value,
-        Err(_) => return Ok(None),
-    };
-    let m = native_model(
-        BINDING_MSG,
-        &[
-            "selector_kind",
-            "selector_value",
-            "status",
-            "not_before",
-            "not_after",
-        ],
-    );
-    let sql = format!(
-        "SELECT {cols} FROM {rel} \
-         WHERE {skind} = $1 AND {svalue} = $2 AND {status} = $3 \
-           AND ({nbf} IS NULL OR {nbf} <= NOW()) \
-           AND ({naf} IS NULL OR {naf} > NOW()) \
-         LIMIT 1",
-        cols = binding_select_clause(),
-        rel = m.relation,
-        skind = m.q("selector_kind"),
-        svalue = m.q("selector_value"),
-        status = m.q("status"),
-        nbf = m.q("not_before"),
-        naf = m.q("not_after"),
-    );
-    let row = sqlx::query(&sql)
-        .bind(kind)
-        .bind(&selector_value)
-        .bind(STATUS_ACTIVE)
-        .fetch_optional(pool)
-        .await
-        .map_err(map_err("certificate binding lookup failed"))?;
-    Ok(row.map(|r| binding_row_from(&r)))
-}
+// A `find_active_binding` helper used to live here: it filtered inactive rows
+// out in SQL. Request-time resolution must NOT do that — once a strong selector
+// (SPIFFE URI, fingerprint) matches a known binding, an expired or revoked row
+// has to deny authentication instead of falling through to a weaker DNS/CN
+// selector on the same certificate. `find_binding_candidate` below returns the
+// row plus its usability, which is why it replaced this one; the fail-open
+// shape is deleted rather than left available to call.
 
 /// Resolve a selector regardless of lifecycle state and report whether the row
 /// is usable at the database server's current time. Request-time certificate

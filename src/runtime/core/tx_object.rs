@@ -1678,25 +1678,11 @@ impl DataBrokerRuntime {
         None
     }
 
-    #[cfg(feature = "redis")]
-    pub(crate) async fn cache_set(
-        &self,
-        key: &str,
-        records: &[Vec<u8>],
-        ttl: u64,
-    ) -> Result<(), String> {
-        let Some(client) = &self.redis else {
-            return Ok(());
-        };
-        let mut conn = client
-            .get_multiplexed_async_connection()
-            .await
-            .map_err(|e| e.to_string())?;
-        let data = serde_json::to_vec(records).unwrap_or_default();
-        conn.set_ex::<_, _, ()>(key, data, ttl)
-            .await
-            .map_err(|e| e.to_string())
-    }
+    // An unstamped `cache_set` used to live here. Every writer now goes through
+    // the LSN-stamped, project-scoped variants below, which is what makes
+    // `cache_get_fresh` able to reject a stale entry — an unstamped write could
+    // not be invalidated that way, so the plain setter is gone rather than left
+    // available to re-wire.
 
     #[cfg(feature = "redis")]
     pub(crate) async fn projection_cache_set_for_project(
@@ -1784,16 +1770,6 @@ impl DataBrokerRuntime {
         conn.set_ex::<_, _, ()>(key, data, ttl)
             .await
             .map_err(|e| e.to_string())
-    }
-
-    #[cfg(not(feature = "redis"))]
-    pub(crate) async fn cache_set(
-        &self,
-        _key: &str,
-        _records: &[Vec<u8>],
-        _ttl: u64,
-    ) -> Result<(), String> {
-        Ok(())
     }
 
     #[cfg(not(feature = "redis"))]
