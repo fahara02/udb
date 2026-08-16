@@ -32,8 +32,8 @@ identity allocator.
 
 ## Correction
 
-The live unique-index planner now retains key boundaries. If any member of a
-composite live key is already protected by a trusted restore remap, the whole
+The manifest and live unique-index planners now retain key boundaries. If any
+member of a composite key is protected by a trusted restore remap, the whole
 key is collision-protected and auxiliary members are preserved. Thus a fresh
 UUID `log_id` makes `(log_id, created_at)` distinct without fabricating or
 changing the timestamp.
@@ -45,16 +45,37 @@ Collision safety remains fail closed:
   trusted text/UUID or owned-sequence remap authority;
 - an independently unique `TIMESTAMPTZ` column is still rejected with
   `FAILED_PRECONDITION`;
+- PostgreSQL expression keys (`attnum=0`) remain visible and are rejected before
+  restore inserts unless
+  another ordinary member of that exact key already has a trusted remap;
+- a foreign-key member protects a unique child key only when the exact parent
+  value map exists; unconditional maps are preallocated for every table row so
+  nullable self-references do not depend on row order and are rebound after all
+  rows exist, while missing, non-null-deferred, or later/cyclic parent authority
+  fails before insert;
+- partial-index predicates are batch-evaluated on a stable reconstructed target
+  row until a bounded fixed point, so a value outside the predicate is preserved
+  rather than needlessly rewritten and unstable predicates fail closed;
+- bounded text identities must retain an alphabetic prefix plus a complete
+  128-bit encoding (at least 33 characters); shorter columns fail instead of
+  truncating every nonce into the same prefix;
 - inserts remain ordinary transactional inserts, so no conflict-ignore or
   overwrite behavior was introduced.
 
 ## Coverage and required evidence
 
-Focused unit coverage proves that `(log_id, created_at)` is covered by the
-trusted `log_id` remap while a standalone unique `created_at` remains rejected.
-The served live Backup regression now seeds a real partitioned NotificationLog,
-backs up its tenant through PostgreSQL and MinIO, restores to a fresh tenant,
-and asserts that `log_id` changes while `created_at` is preserved.
+Focused unit coverage preserves manifest composite and partial-index groups,
+keeps conditional plans from authorizing unconditional keys, proves later
+unconditional remaps participate in predicate evaluation, requires exact
+preallocated self/parent mappings, and rejects bounded text widths that cannot
+retain full entropy. A standalone unique `created_at` remains rejected.
+The served live Backup regression now seeds a real partitioned NotificationLog
+plus two mutually self-referencing Users with empty partial-index email values.
+It adds a live expression/ordinary composite probe index, backs up through
+PostgreSQL and MinIO, restores to a fresh tenant, and asserts that `log_id`
+changes while `created_at` is preserved, empty emails remain empty, bounded
+usernames satisfy their lexical check, and both `created_by` references point to
+the restored—not source—user identities.
 
 GitHub CI must run:
 

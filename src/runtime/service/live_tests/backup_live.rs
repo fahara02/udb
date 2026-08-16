@@ -295,6 +295,83 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
         .await
         .expect("seed source partitioned notification log");
 
+    let user = native_model(
+        "udb.core.authn.entity.v1.User",
+        &[
+            "user_id",
+            "username",
+            "email",
+            "password_hash",
+            "account_kind",
+            "status",
+            "tenant_id",
+            "full_name",
+            "created_by",
+            "project_id",
+        ],
+    );
+    let expression_index = "udb_users_restore_expression_probe";
+    sqlx::query(&format!(
+        "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} ((lower({})), {})",
+        crate::runtime::executor_utils::qi_runtime(expression_index),
+        user.relation,
+        user.q("username"),
+        user.q("user_id"),
+    ))
+    .execute(&pool)
+    .await
+    .expect("create live expression-key restore probe");
+    let source_user_a = Uuid::new_v4().to_string();
+    let source_user_b = Uuid::new_v4().to_string();
+    let username_a = format!("u{}", Uuid::new_v4().simple());
+    let username_b = format!("u{}", Uuid::new_v4().simple());
+    let user_seed_sql = format!(
+        "INSERT INTO {} ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
+         VALUES ($1::uuid, $2, '', 'test-only-not-a-real-hash', 'PERSON', 'ACTIVE', $3, $4, $5::uuid, $6)",
+        user.relation,
+        user.q("user_id"),
+        user.q("username"),
+        user.q("email"),
+        user.q("password_hash"),
+        user.q("account_kind"),
+        user.q("status"),
+        user.q("tenant_id"),
+        user.q("full_name"),
+        user.q("created_by"),
+        user.q("project_id"),
+    );
+    sqlx::query(&user_seed_sql)
+        .bind(&source_user_b)
+        .bind(&username_b)
+        .bind(&source_tenant)
+        .bind("restore-self-user-b")
+        .bind(Option::<String>::None)
+        .bind(&project_id)
+        .execute(&pool)
+        .await
+        .expect("seed first self-reference user");
+    sqlx::query(&user_seed_sql)
+        .bind(&source_user_a)
+        .bind(&username_a)
+        .bind(&source_tenant)
+        .bind("restore-self-user-a")
+        .bind(&source_user_b)
+        .bind(&project_id)
+        .execute(&pool)
+        .await
+        .expect("seed second self-reference user");
+    sqlx::query(&format!(
+        "UPDATE {} SET {} = $1::uuid WHERE {} = $2::uuid",
+        user.relation,
+        user.q("created_by"),
+        user.q("user_id"),
+    ))
+    .bind(&source_user_a)
+    .bind(&source_user_b)
+    .execute(&pool)
+    .await
+    .expect("make the first exported user reference the later self row");
+
     let svc = backup_service_for_projects(&[&project_id]).await;
     let backup = svc
         .start_tenant_backup(backup_request(
@@ -393,4 +470,49 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
         target_created_at, source_created_at,
         "the timestamp partition-key member must be preserved once log_id protects the composite key"
     );
+
+    let restored_users_sql = format!(
+        "SELECT {}::text, {}, {}, {}::text, {} FROM {} WHERE {}::text = $1 ORDER BY {}",
+        user.q("user_id"),
+        user.q("username"),
+        user.q("email"),
+        user.q("created_by"),
+        user.q("full_name"),
+        user.relation,
+        user.q("tenant_id"),
+        user.q("full_name"),
+    );
+    let restored_users: Vec<(String, String, String, Option<String>, String)> =
+        sqlx::query_as(&restored_users_sql)
+            .bind(&target_tenant)
+            .fetch_all(&pool)
+            .await
+            .expect("read restored self-referencing users");
+    assert_eq!(restored_users.len(), 2);
+    let restored_a = restored_users
+        .iter()
+        .find(|row| row.4 == "restore-self-user-a")
+        .expect("restored user A");
+    let restored_b = restored_users
+        .iter()
+        .find(|row| row.4 == "restore-self-user-b")
+        .expect("restored user B");
+    assert_ne!(restored_a.0, source_user_a);
+    assert_ne!(restored_b.0, source_user_b);
+    assert_eq!(restored_a.3.as_deref(), Some(restored_b.0.as_str()));
+    assert_eq!(restored_b.3.as_deref(), Some(restored_a.0.as_str()));
+    for restored_user in [&restored_a, &restored_b] {
+        assert_eq!(restored_user.2, "", "partial-index-excluded email stays empty");
+        assert_eq!(restored_user.1.len(), 33);
+        assert!(restored_user.1.starts_with('r'));
+    }
+
+    sqlx::query(&format!(
+        "DROP INDEX IF EXISTS {}.{}",
+        crate::runtime::executor_utils::qi_runtime("udb_authn"),
+        crate::runtime::executor_utils::qi_runtime(expression_index),
+    ))
+    .execute(&pool)
+    .await
+    .expect("drop live expression-key restore probe");
 }
