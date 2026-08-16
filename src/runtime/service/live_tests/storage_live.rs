@@ -419,7 +419,7 @@ async fn live_postgres_storage_project_ownership_isolation() {
     assert_eq!(tenant_wide_b.project_id, project_b);
     let tenant_wide_list = svc
         .list_files(Request::new(storage_pb::ListFilesRequest {
-            tenant_id,
+            tenant_id: tenant_id.clone(),
             ..Default::default()
         }))
         .await
