@@ -287,7 +287,7 @@ pub struct DataBrokerService {
     catalog_reconcile_lock: Arc<tokio::sync::Mutex<()>>,
     catalog_generation: Arc<AtomicI64>,
     #[cfg(feature = "redis")]
-    rate_limit_redis: Arc<tokio::sync::Mutex<Option<redis::aio::MultiplexedConnection>>>,
+    rate_limit_redis: Arc<tokio::sync::Mutex<Option<redis::aio::ConnectionManager>>>,
     /// W4: set while the limiter is running on its declared failure-mode
     /// fallback (Redis unreachable, mode `local`/`open`); surfaced as a
     /// health-report warning + the rate_limit_degraded metric.
@@ -891,19 +891,27 @@ impl DataBrokerService {
         let mut conn = {
             let mut guard = self.rate_limit_redis.lock().await;
             if guard.is_none() {
-                *guard = Some(
-                    redis
-                        .get_multiplexed_async_connection()
-                        .await
-                        .map_err(|e| {
-                            crate::runtime::executor_utils::retryable_status(
-                                "redis",
-                                "rate_limit_connection",
-                                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                                format!("rate limit redis error: {e}"),
+                match redis::aio::ConnectionManager::new(redis.clone()).await {
+                    Ok(conn) => *guard = Some(conn),
+                    Err(err) => {
+                        drop(guard);
+                        let status = crate::runtime::executor_utils::retryable_status(
+                            "redis",
+                            "rate_limit_connection",
+                            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                            format!("rate limit redis error: {err}"),
+                        );
+                        return self
+                            .rate_limit_failure_fallback(
+                                &key,
+                                window_secs,
+                                max_rps,
+                                unix_epoch,
+                                status,
                             )
-                        })?,
-                );
+                            .await;
+                    }
+                }
             }
             guard
                 .as_ref()
@@ -934,69 +942,26 @@ impl DataBrokerService {
                     .store(false, std::sync::atomic::Ordering::Relaxed);
                 count
             }
-            Err(_) => {
-                // The cached multiplexed connection is likely dead (a Redis
-                // restart leaves it broken-pipe FOREVER — it never reconnects
-                // on its own, so keeping it turns one blip into a full outage
-                // until broker restart). Drop the corpse and re-dial ONCE
-                // in-call. A persistent failure takes the DECLARED failure
-                // mode (W4): closed = typed retryable status (today's stance,
-                // now explicit), local = per-process fixed window, open =
-                // allow — the latter two with the degraded flag set.
-                {
-                    let mut guard = self.rate_limit_redis.lock().await;
-                    *guard = None;
-                }
-                let retry: Result<u64, Status> = async {
-                    let mut fresh =
-                        redis
-                            .get_multiplexed_async_connection()
-                            .await
-                            .map_err(|e| {
-                                crate::runtime::executor_utils::retryable_status(
-                                    "redis",
-                                    "rate_limit_connection",
-                                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                                    format!("rate limit redis error: {e}"),
-                                )
-                            })?;
-                    let count: u64 = script
-                        .key(&key)
-                        .arg(window_secs)
-                        .invoke_async(&mut fresh)
-                        .await
-                        .map_err(|e| {
-                            crate::runtime::executor_utils::retryable_status(
-                                "redis",
-                                "rate_limit_eval",
-                                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                                format!("rate limit redis error: {e}"),
-                            )
-                        })?;
-                    // The fresh dial worked — cache it for subsequent requests.
-                    let mut guard = self.rate_limit_redis.lock().await;
-                    *guard = Some(fresh);
-                    Ok(count)
-                }
-                .await;
-                match retry {
-                    Ok(count) => {
-                        self.rate_limit_degraded
-                            .store(false, std::sync::atomic::Ordering::Relaxed);
-                        count
-                    }
-                    Err(status) => {
-                        return self
-                            .rate_limit_failure_fallback(
-                                &key,
-                                window_secs,
-                                max_rps,
-                                unix_epoch,
-                                status,
-                            )
-                            .await;
-                    }
-                }
+            Err(err) => {
+                // The Lua body mutates state before the response arrives, so an I/O
+                // error is an uncertain outcome and MUST NOT be replayed in-call.
+                // ConnectionManager returns this failure while reconnecting in the
+                // background; the next request uses the replacement connection.
+                let status = crate::runtime::executor_utils::retryable_status(
+                    "redis",
+                    "rate_limit_eval",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    format!("rate limit redis error: {err}"),
+                );
+                return self
+                    .rate_limit_failure_fallback(
+                        &key,
+                        window_secs,
+                        max_rps,
+                        unix_epoch,
+                        status,
+                    )
+                    .await;
             }
         };
 
@@ -1023,8 +988,8 @@ impl DataBrokerService {
     }
 
     /// Per-process fixed-window limiter used when the distributed (Redis) limiter
-    /// is unavailable — either after an in-call re-dial fails (`local` failure mode)
-    /// or when no Redis is configured at all (C5). Sets the degraded flag so the
+    /// is unavailable — either after a connection/command failure (`local` failure
+    /// mode) or when no Redis is configured at all (C5). Sets the degraded flag so the
     /// health report surfaces the degraded state. `N×limit` across N replicas —
     /// degraded but NOT absent (never a silent fail-open).
     #[cfg(feature = "redis")]
@@ -1067,8 +1032,8 @@ impl DataBrokerService {
         Ok(())
     }
 
-    /// W4: the limiter's DECLARED behavior when Redis stays unreachable after
-    /// the in-call re-dial (`service.rate_limit_failure_mode`):
+    /// W4: the limiter's DECLARED behavior when Redis is unreachable
+    /// (`service.rate_limit_failure_mode`):
     /// `closed` returns the typed retryable status; `local` enforces a
     /// per-process fixed window (N×limit across N replicas — degraded but not
     /// absent); `open` allows. `local`/`open` set the degraded flag, which the

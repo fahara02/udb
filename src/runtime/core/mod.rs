@@ -2195,6 +2195,13 @@ mod outbox_envelope_tests {
         let targets = runtime.resolve_backend_targets("qdrant:*", "{}").unwrap();
         assert_eq!(targets.len(), 1);
         assert_eq!(targets[0].instance.as_deref(), Some("vector_b"));
+
+        runtime.record_backend_result("qdrant", Some("vector_b"), false);
+        let all_open_err = runtime
+            .backend_executor("qdrant", None)
+            .expect_err("all registered executors with open circuits must be retryable");
+        assert_eq!(all_open_err.code(), tonic::Code::Unavailable);
+        assert!(all_open_err.message().contains("circuit breaker is open"));
     }
 
     #[test]

@@ -355,20 +355,63 @@ impl DataBrokerRuntime {
                             registration.instance.as_deref(),
                         )
                 })
-            })
-            .ok_or_else(|| {
-                backend_executor_not_registered_status(
-                    resolved.backend.clone(),
+            });
+        let Some(registration) = registration else {
+            // A registration filtered out solely by an open circuit is still a
+            // registered executor. Preserve the retryable transport classification
+            // instead of collapsing it into a setup FAILED_PRECONDITION.
+            let unavailable = self
+                .executor_registry
+                .get(&resolved.backend, resolved.instance.as_deref())
+                .or_else(|| {
+                    if resolved.instance.is_some() {
+                        None
+                    } else {
+                        self.executor_registry
+                            .all()
+                            .find(|candidate| candidate.backend == resolved.backend)
+                    }
+                });
+            if let Some(unavailable) = unavailable {
+                if !unavailable.connected {
+                    return Err(backend_executor_not_connected_status(
+                        unavailable.backend.clone(),
+                        format!(
+                            "backend executor '{}:{}' is registered but not connected",
+                            unavailable.backend,
+                            unavailable
+                                .instance
+                                .as_deref()
+                                .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID)
+                        ),
+                    ));
+                }
+                return Err(crate::runtime::executor_utils::retryable_status(
+                    unavailable.backend.clone(),
+                    "circuit_breaker_open",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
                     format!(
-                        "backend executor '{}:{}' is not registered",
-                        resolved.backend,
-                        resolved
+                        "backend executor '{}:{}' circuit breaker is open",
+                        unavailable.backend,
+                        unavailable
                             .instance
                             .as_deref()
                             .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID)
                     ),
-                )
-            })?;
+                ));
+            }
+            return Err(backend_executor_not_registered_status(
+                resolved.backend.clone(),
+                format!(
+                    "backend executor '{}:{}' is not registered",
+                    resolved.backend,
+                    resolved
+                        .instance
+                        .as_deref()
+                        .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID)
+                ),
+            ));
+        };
         if !registration.connected {
             return Err(backend_executor_not_connected_status(
                 registration.backend.clone(),

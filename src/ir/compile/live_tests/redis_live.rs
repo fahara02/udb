@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::time::Duration;
 
 use serde_json::{Value as Json, json};
 
@@ -13,7 +14,7 @@ use crate::ir::operations::{
 };
 use crate::ir::value::LogicalValue;
 use crate::runtime::executors::redis::RedisExecutor;
-use crate::runtime::executors::{MutationExecutor, QueryExecutor};
+use crate::runtime::executors::{BackendHealth, MutationExecutor, QueryExecutor};
 
 use super::support::{customer_manifest, live_ir_enabled};
 
@@ -21,7 +22,7 @@ const MESSAGE: &str = "acme.billing.v1.Customer";
 const PROJECT: &str = "redis-live";
 
 #[tokio::test]
-#[ignore = "requires UDB_IR_LIVE_GOLDEN_TESTS=1, UDB_REDIS_DSN/REDIS_URL, and feature=redis"]
+#[ignore = "requires UDB_IR_LIVE_GOLDEN_TESTS=1, a Redis DSN, and feature=redis"]
 async fn redis_compiled_kv_read_write_delete_match_live_keys() {
     if !live_ir_enabled() {
         eprintln!("skipping: set UDB_IR_LIVE_GOLDEN_TESTS=1 to run live IR golden tests");
@@ -30,9 +31,10 @@ async fn redis_compiled_kv_read_write_delete_match_live_keys() {
     let Ok(dsn) = std::env::var("UDB_REDIS_DSN")
         .or_else(|_| std::env::var("UDB_CACHE_DSN"))
         .or_else(|_| std::env::var("REDIS_URL"))
+        .or_else(|_| std::env::var("UDB_INTEGRATION_REDIS_URL"))
     else {
         eprintln!(
-            "UDB_REDIS_DSN / UDB_CACHE_DSN / REDIS_URL unset - skipping live Redis IR golden"
+            "Redis DSN unset - skipping live Redis IR golden"
         );
         return;
     };
@@ -92,6 +94,63 @@ async fn redis_compiled_kv_read_write_delete_match_live_keys() {
     );
 
     let _ = execute_mutation(&executor, compile_delete(&manifest, "tenant-b", &pk)).await;
+}
+
+#[tokio::test]
+#[ignore = "requires UDB_IR_LIVE_GOLDEN_TESTS=1, a Redis DSN, and feature=redis"]
+async fn redis_executor_recovers_after_exact_cached_connection_is_killed() {
+    if !live_ir_enabled() {
+        eprintln!("skipping: set UDB_IR_LIVE_GOLDEN_TESTS=1 to run live Redis recovery test");
+        return;
+    }
+    let dsn = std::env::var("UDB_REDIS_DSN")
+        .or_else(|_| std::env::var("UDB_CACHE_DSN"))
+        .or_else(|_| std::env::var("REDIS_URL"))
+        .or_else(|_| std::env::var("UDB_INTEGRATION_REDIS_URL"))
+        .expect("a Redis DSN is required");
+
+    let client = redis::Client::open(dsn.as_str()).expect("create Redis client");
+    let executor = RedisExecutor::new(client.clone());
+    BackendHealth::ping(&executor)
+        .await
+        .expect("establish executor connection");
+    let killed_connection_id = executor
+        .live_connection_id()
+        .await
+        .expect("read executor Redis client id");
+
+    let mut admin = client
+        .get_multiplexed_async_connection()
+        .await
+        .expect("connect Redis test administrator");
+    let killed: i64 = redis::cmd("CLIENT")
+        .arg("KILL")
+        .arg("ID")
+        .arg(killed_connection_id)
+        .query_async(&mut admin)
+        .await
+        .expect("kill the exact executor Redis connection");
+    assert_eq!(killed, 1);
+
+    BackendHealth::ping(&executor)
+        .await
+        .expect_err("the first uncertain command must be returned, not replayed");
+
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if BackendHealth::ping(&executor).await.is_ok() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await
+    .expect("connection manager must reconnect for a later request");
+    let replacement_connection_id = executor
+        .live_connection_id()
+        .await
+        .expect("read replacement Redis client id");
+    assert_ne!(replacement_connection_id, killed_connection_id);
 }
 
 #[derive(Debug)]

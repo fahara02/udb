@@ -14,10 +14,10 @@ use crate::runtime::executors::{
 #[derive(Clone)]
 pub(crate) struct RedisExecutor {
     client: redis::Client,
-    // Lazily-established multiplexed connection, shared across requests and clones.
-    // Cloning a `MultiplexedConnection` is cheap (one shared actor/socket), so each
-    // call clones the cached handle instead of opening a fresh connection (#76).
-    conn: std::sync::Arc<tokio::sync::OnceCell<redis::aio::MultiplexedConnection>>,
+    // Lazily-established reconnecting connection, shared across requests and clones.
+    // The manager returns the first failed command without replaying it, then replaces
+    // the dead transport in the background so a later request can retry safely.
+    conn: std::sync::Arc<tokio::sync::OnceCell<redis::aio::ConnectionManager>>,
     // Tenant/project key namespace `udb:{project}:{tenant}:` derived from the
     // request context by the dispatch factory. When present, every raw key and
     // SCAN pattern is forced under it so a raw-dispatch caller cannot read, scan,
@@ -122,13 +122,23 @@ impl RedisExecutor {
         self.namespace.as_deref()
     }
 
-    async fn connection(&self) -> Result<redis::aio::MultiplexedConnection, tonic::Status> {
+    async fn connection(&self) -> Result<redis::aio::ConnectionManager, tonic::Status> {
         let conn = self
             .conn
-            .get_or_try_init(|| self.client.get_multiplexed_async_connection())
+            .get_or_try_init(|| redis::aio::ConnectionManager::new(self.client.clone()))
             .await
             .map_err(|err| backend_transport_status("redis", "connection", err))?;
         Ok(conn.clone())
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn live_connection_id(&self) -> Result<i64, tonic::Status> {
+        let mut conn = self.connection().await?;
+        redis::cmd("CLIENT")
+            .arg("ID")
+            .query_async(&mut conn)
+            .await
+            .map_err(|err| backend_transport_status("redis", "client_id", err))
     }
 }
 

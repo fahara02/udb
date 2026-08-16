@@ -180,7 +180,7 @@ prost = "0.13"
 prost-types = "0.13"
 rcgen = "0.13"
 rdkafka = { version = "0.36", default-features = false, features = ["cmake-build", "tokio", "curl-static"], optional = true }
-redis = { version = "0.27", features = ["tokio-comp"], optional = true }
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"], optional = true }
 mongodb-driver = { package = "mongodb", version = "3.7", optional = true }
 # Memcached binary-protocol client. The sync API is wrapped in
 # `tokio::task::spawn_blocking` by the executor so the async runtime does not
@@ -316,7 +316,7 @@ heck = "0.5"
 criterion = { version = "0.5", features = ["html_reports"] }
 # D.2 heap-allocation profiling for the hot paths (run the dhat_hotpath example).
 dhat = "0.3"
-redis = { version = "0.27", features = ["tokio-comp"] }
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 rdkafka = { version = "0.36", default-features = false, features = ["cmake-build", "tokio", "curl-static"] }
 aws-config = "1"
 aws-sdk-s3 = "1"

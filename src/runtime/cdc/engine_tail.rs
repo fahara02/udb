@@ -1997,11 +1997,10 @@ impl CdcEngine {
         );
         let mut tick = interval(Duration::from_millis(self.config.poll_interval_ms));
         let poll_timeout = Duration::from_secs(self.config.kafka_tx_timeout_secs.max(30));
-        // #215: hold one multiplexed redis connection across polls instead of
-        // re-acquiring it every `poll_interval_ms`. Reconnect lazily, skipping
-        // an exponentially-growing number of polls after each failure so a
-        // down redis doesn't trigger a connect attempt (and a warn) every tick.
-        let mut redis_conn: Option<redis::aio::MultiplexedConnection> = None;
+        // #215: hold one reconnecting Redis manager across polls instead of
+        // re-acquiring a raw connection every `poll_interval_ms`. A failed guard
+        // command is not replayed; the manager reconnects for later polls.
+        let mut redis_conn: Option<redis::aio::ConnectionManager> = None;
         let mut redis_reconnect_skip: u32 = 0;
         let mut redis_fail_streak: u32 = 0;
         if self.redis.is_none() {
@@ -2032,7 +2031,7 @@ impl CdcEngine {
                 if redis_reconnect_skip > 0 {
                     redis_reconnect_skip -= 1;
                 } else {
-                    match redis.get_multiplexed_async_connection().await {
+                    match redis::aio::ConnectionManager::new(redis.clone()).await {
                         Ok(conn) => {
                             redis_conn = Some(conn);
                             redis_fail_streak = 0;
@@ -2278,7 +2277,7 @@ impl CdcEngine {
     /// handled here). Pulled out so `tail_outbox` can run this in `event_seq`
     /// order and then pipeline the produces (#81).
     #[cfg(feature = "kafka")]
-    async fn prepare_outbox_event(
+    async fn prepare_outbox_event<C>(
         &self,
         event_id: Uuid,
         topic: String,
@@ -2286,8 +2285,11 @@ impl CdcEngine {
         payload_json: serde_json::Value,
         created_at: DateTime<Utc>,
         lsn: i64,
-        mut redis_conn: Option<&mut redis::aio::MultiplexedConnection>,
-    ) -> Option<PreparedOutbox> {
+        mut redis_conn: Option<&mut C>,
+    ) -> Option<PreparedOutbox>
+    where
+        C: redis::aio::ConnectionLike + Send,
+    {
         let topic_policy_snapshot = self.topic_policies.load_full();
         if !topic_policy_snapshot.available {
             warn!(
@@ -2525,11 +2527,14 @@ impl CdcEngine {
     /// pipelined `tail_outbox` loop instead uses `enqueue_outbox_produce` +
     /// `await_and_ack_delivery` so a batch of produces overlaps in flight (#81).
     #[cfg(feature = "kafka")]
-    async fn produce_and_ack(
+    async fn produce_and_ack<C>(
         &self,
         prepared: PreparedOutbox,
-        mut redis_conn: Option<&mut redis::aio::MultiplexedConnection>,
-    ) {
+        mut redis_conn: Option<&mut C>,
+    )
+    where
+        C: redis::aio::ConnectionLike + Send,
+    {
         if self.config.exactly_once_mode == CdcExactlyOnceMode::KafkaTransactional {
             let timeout = Duration::from_secs(self.config.kafka_tx_timeout_secs.max(1));
             match super::kafka_tx::run_in_transaction(
@@ -2643,11 +2648,14 @@ impl CdcEngine {
     /// `DeliveryFuture` resolves to `Result<delivery, Canceled>`; a cancel is
     /// treated as a transient failure (#81).
     #[cfg(feature = "kafka")]
-    async fn await_and_ack_delivery(
+    async fn await_and_ack_delivery<C>(
         &self,
         pending: PendingDelivery,
-        redis_conn: Option<&mut redis::aio::MultiplexedConnection>,
-    ) {
+        redis_conn: Option<&mut C>,
+    )
+    where
+        C: redis::aio::ConnectionLike + Send,
+    {
         let PendingDelivery { prepared, future } = pending;
         let decision = outbox_delivery_decision(match future.await {
             Ok(Ok((partition, offset))) => Ok((partition, offset)),
@@ -2678,12 +2686,15 @@ impl CdcEngine {
     /// its redis idempotency key. Shared by the at-least-once enqueue-failure and
     /// delivery-failure paths (#81).
     #[cfg(feature = "kafka")]
-    async fn fail_pending(
+    async fn fail_pending<C>(
         &self,
         prepared: &PreparedOutbox,
         reason: &str,
-        mut redis_conn: Option<&mut redis::aio::MultiplexedConnection>,
-    ) {
+        mut redis_conn: Option<&mut C>,
+    )
+    where
+        C: redis::aio::ConnectionLike + Send,
+    {
         // Rate-limit the log (NOT the metric or the per-event pending mark): an
         // unreachable broker would otherwise emit this for every event of every
         // 250ms poll. Collapse to one line per cooldown with the suppressed count

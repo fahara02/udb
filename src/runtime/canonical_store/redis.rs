@@ -35,7 +35,7 @@ pub struct RedisCanonicalStore {
     client: redis::Client,
     instance_name: String,
     prefix: String,
-    conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
+    conn: tokio::sync::OnceCell<redis::aio::ConnectionManager>,
 }
 
 impl RedisCanonicalStore {
@@ -50,10 +50,12 @@ impl RedisCanonicalStore {
         }
     }
 
-    async fn connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+    async fn connection(&self) -> Result<redis::aio::ConnectionManager, String> {
+        // Do not replay an uncertain canonical-store command. The manager returns
+        // that failure and reconnects in the background for a subsequent request.
         let conn = self
             .conn
-            .get_or_try_init(|| self.client.get_multiplexed_async_connection())
+            .get_or_try_init(|| redis::aio::ConnectionManager::new(self.client.clone()))
             .await
             .map_err(|err| format!("redis canonical connection failed: {err}"))?;
         Ok(conn.clone())
