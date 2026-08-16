@@ -227,6 +227,10 @@ Thumbs.db
 .continue/*
 .serena
 bug_reports
+# Working bug reports and change notes live in bug_reports/ (or private/),
+# never naked at the repo root. Root keeps only CHANGELOG/README/TESTING/VERSIONING.
+/bug_report_*.md
+/change_note_*.md
 # Local build outputs (e.g. udb sdk generate / local Docker binary builds)
 /release/
 /.codex-worktrees/
