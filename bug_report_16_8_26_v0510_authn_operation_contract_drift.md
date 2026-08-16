@@ -52,3 +52,9 @@ CI run `31923594749` then reached the OpenAPI freshness gate and emitted
 `ci-sdk-codegen-repair-1` artifact `9257136304`. Its sole change marks
 `VerifyMfaChallenge` non-retry-safe and `mutation` in Swagger, matching the
 descriptor contract.
+
+CI run `31924007614` passed the Linux build and all 2,757 library tests before
+the new SDK drift gate emitted `ci-native-docs-repair-1` artifact
+`9257364918`. The artifact contains exactly the six descriptor-driven
+robustness clients and the two SDK benchmark documents, all regenerated from
+the built v0.5.10 broker.

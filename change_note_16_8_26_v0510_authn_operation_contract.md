@@ -29,3 +29,8 @@ baseline, and synchronized maps are now checked in for a clean follow-up run.
 The following run, `31923594749`, supplied the final OpenAPI repair artifact
 `9257136304`; Swagger now exposes the same mutation and retry-safety semantics
 as the proto and native contract.
+
+CI run `31924007614` supplied the final high-level SDK repair artifact
+`9257364918` after its Linux build and 2,757-test library suite passed. All six
+robustness clients and both generated benchmark documents now classify
+`VerifyMfaChallenge` consistently as a non-read mutation.

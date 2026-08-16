@@ -51,7 +51,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 60 | 18 | 31 | 11 | 0 |
+| AuthnService | 60 | 17 | 32 | 11 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 7 | 3 | 3 | 1 | 0 |
@@ -167,7 +167,7 @@ identity surface available to benchmark reports.
 | `AuthnService/UpdateUser` | `update_user` | `updateUser` | MUTATION |
 | `AuthnService/ValidateCSRF` | `validate_csrf` | `validateCsrf` | READ_ONLY |
 | `AuthnService/ValidateToken` | `validate_token` | `validateToken` | READ_ONLY |
-| `AuthnService/VerifyMfaChallenge` | `verify_mfa_challenge` | `verifyMfaChallenge` | READ_ONLY |
+| `AuthnService/VerifyMfaChallenge` | `verify_mfa_challenge` | `verifyMfaChallenge` | MUTATION |
 | `AuthnService/VerifyOTP` | `verify_otp` | `verifyOtp` | READ_ONLY |
 | `AuthzService/ActivateCanary` | `activate_canary` | `activateCanary` | DESTRUCTIVE |
 | `AuthzService/ActivatePolicyVersion` | `activate_policy_version` | `activatePolicyVersion` | DESTRUCTIVE |

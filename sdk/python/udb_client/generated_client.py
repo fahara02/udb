@@ -503,7 +503,7 @@ RPC_OPERATION_KIND: dict[str, str] = {
     "/udb.core.authn.services.v1.AuthnService/UpdateUser": "mutation",
     "/udb.core.authn.services.v1.AuthnService/ValidateCSRF": "read_only",
     "/udb.core.authn.services.v1.AuthnService/ValidateToken": "read_only",
-    "/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge": "read_only",
+    "/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge": "mutation",
     "/udb.core.authn.services.v1.AuthnService/VerifyOTP": "read_only",
     "/udb.core.authz.services.v1.AuthzService/ActivateCanary": "destructive",
     "/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion": "destructive",
@@ -5046,7 +5046,7 @@ class AuthnServiceClient(_ServiceClientBase):
             metadata=metadata,
             timeout=timeout,
             retryable=retry,
-            read_only=("read_only" == "read_only"),
+            read_only=("mutation" == "read_only"),
         )
 
     def verify_otp(
@@ -12877,7 +12877,7 @@ class GeneratedClient:
 #: resolves the concrete instance per project.
 _DEFAULT_IR_BACKEND = "postgres"
 ORM_TIERS: dict[str, str] = {"postgres":"relational","mysql":"relational","sqlite":"relational","sqlserver":"relational","clickhouse":"relational","redis":"kv","memcached":"kv","qdrant":"vector","weaviate":"vector","pinecone":"vector","minio":"blob","s3":"blob","azureblob":"blob","gcs":"blob","mongodb":"document","elasticsearch":"vector","neo4j":"graph","cassandra":"relational"}
-BACKEND_ROLES: dict[str, str] = {"postgres":"canonical","mysql":"canonical","sqlite":"canonical","sqlserver":"canonical","clickhouse":"projection","redis":"canonical","memcached":"projection","qdrant":"projection","weaviate":"projection","pinecone":"projection","minio":"projection","s3":"projection","azureblob":"projection","gcs":"projection","mongodb":"canonical","elasticsearch":"projection","neo4j":"projection","cassandra":"projection"}
+BACKEND_ROLES: dict[str, str] = {"postgres":"canonical","mysql":"canonical","sqlite":"canonical","sqlserver":"canonical","clickhouse":"canonical","redis":"canonical","memcached":"projection","qdrant":"projection","weaviate":"projection","pinecone":"projection","minio":"projection","s3":"projection","azureblob":"projection","gcs":"projection","mongodb":"canonical","elasticsearch":"projection","neo4j":"canonical","cassandra":"canonical"}
 
 
 class EagerIncludeUnsupportedBackendError(UdbError):
@@ -13686,23 +13686,23 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         message_type="udb.core.backup.entity.v1.BackupPolicy",
         table="backup_policies",
         primary_keys=("policy_id",),
-        fields=("policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at", "updated_at", "metadata_json", "created_by",),
+        fields=("policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at", "updated_at", "metadata_json", "project_id", "created_by",),
         relations=tuple([]),
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.backup.entity.v1.BackupRun": EntityBinding(
         message_type="udb.core.backup.entity.v1.BackupRun",
         table="backup_runs",
         primary_keys=("backup_id",),
-        fields=("backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "error_message", "created_at", "completed_at", "metadata_json", "updated_at", "created_by",),
+        fields=("backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "error_message", "created_at", "completed_at", "metadata_json", "project_id", "updated_at", "created_by",),
         relations=tuple([]),
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.config.entity.v1.Flag": EntityBinding(
         message_type="udb.core.config.entity.v1.Flag",
@@ -13884,12 +13884,12 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         message_type="udb.core.notification.entity.v1.NotificationDeliveryAttempt",
         table="notification_delivery_attempts",
         primary_keys=("attempt_id",),
-        fields=("attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at", "created_by",),
+        fields=("attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at", "project_id", "created_by",),
         relations=tuple([]),
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.notification.entity.v1.NotificationLog": EntityBinding(
         message_type="udb.core.notification.entity.v1.NotificationLog",
@@ -13900,29 +13900,29 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.notification.entity.v1.NotificationPreference": EntityBinding(
         message_type="udb.core.notification.entity.v1.NotificationPreference",
         table="notification_preferences",
         primary_keys=("preference_id",),
-        fields=("preference_id", "user_id", "tenant_id", "channel", "event_type", "is_opted_out", "created_at", "updated_at", "created_by",),
+        fields=("preference_id", "user_id", "tenant_id", "channel", "event_type", "is_opted_out", "created_at", "updated_at", "created_by", "project_id",),
         relations=tuple([]),
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.notification.entity.v1.NotificationTemplate": EntityBinding(
         message_type="udb.core.notification.entity.v1.NotificationTemplate",
         table="notification_templates",
         primary_keys=("template_id",),
-        fields=("template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id",),
+        fields=("template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id", "project_id",),
         relations=tuple([{"name":"notification_logs","kind":"has_many","local_fields":["template_id"],"target_message_type":"udb.core.notification.entity.v1.NotificationLog","target_table":"udb_notification.notification_logs","target_fields":["template_id"],"on_delete":"SET NULL","on_update":"NO ACTION"}]),
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.scheduler.entity.v1.ScheduledJob": EntityBinding(
         message_type="udb.core.scheduler.entity.v1.ScheduledJob",

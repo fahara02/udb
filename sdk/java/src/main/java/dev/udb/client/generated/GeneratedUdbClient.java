@@ -178,7 +178,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
     map.put("/udb.core.authn.services.v1.AuthnService/UpdateUser", new RpcIdentity("/udb.core.authn.services.v1.AuthnService/UpdateUser", "AuthnService", "UpdateUser", "update_user", "updateUser", "mutation", "patch", "/v1/auth/users/{user_id}"));
     map.put("/udb.core.authn.services.v1.AuthnService/ValidateCSRF", new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ValidateCSRF", "AuthnService", "ValidateCSRF", "validate_csrf", "validateCsrf", "read_only", "post", "/v1/auth/csrf-tokens:validate"));
     map.put("/udb.core.authn.services.v1.AuthnService/ValidateToken", new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ValidateToken", "AuthnService", "ValidateToken", "validate_token", "validateToken", "read_only", "post", "/v1/auth/tokens:validate"));
-    map.put("/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge", new RpcIdentity("/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge", "AuthnService", "VerifyMfaChallenge", "verify_mfa_challenge", "verifyMfaChallenge", "read_only", "post", "/v1/auth/mfa/challenges:verify"));
+    map.put("/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge", new RpcIdentity("/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge", "AuthnService", "VerifyMfaChallenge", "verify_mfa_challenge", "verifyMfaChallenge", "mutation", "post", "/v1/auth/mfa/challenges:verify"));
     map.put("/udb.core.authn.services.v1.AuthnService/VerifyOTP", new RpcIdentity("/udb.core.authn.services.v1.AuthnService/VerifyOTP", "AuthnService", "VerifyOTP", "verify_otp", "verifyOtp", "read_only", "post", "/v1/auth/otps:verify"));
     map.put("/udb.core.authz.services.v1.AuthzService/ActivateCanary", new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ActivateCanary", "AuthzService", "ActivateCanary", "activate_canary", "activateCanary", "destructive", "post", "/v1/authz/governance/canaries:activate"));
     map.put("/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion", new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion", "AuthzService", "ActivatePolicyVersion", "activate_policy_version", "activatePolicyVersion", "destructive", "post", "/v1/authz/governance/versions:activate"));
@@ -2179,7 +2179,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         tuning,
         deadline,
         headers,
-        "read_only".equals("read_only"),
+        "mutation".equals("read_only"),
         "false".equals("true"));
   }
 
@@ -8131,7 +8131,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
 
   public static final Map<String, String> ORM_TIERS = Map.ofEntries(Map.entry("postgres", "relational"), Map.entry("mysql", "relational"), Map.entry("sqlite", "relational"), Map.entry("sqlserver", "relational"), Map.entry("clickhouse", "relational"), Map.entry("redis", "kv"), Map.entry("memcached", "kv"), Map.entry("qdrant", "vector"), Map.entry("weaviate", "vector"), Map.entry("pinecone", "vector"), Map.entry("minio", "blob"), Map.entry("s3", "blob"), Map.entry("azureblob", "blob"), Map.entry("gcs", "blob"), Map.entry("mongodb", "document"), Map.entry("elasticsearch", "vector"), Map.entry("neo4j", "graph"), Map.entry("cassandra", "relational"));
 
-  public static final Map<String, String> BACKEND_ROLES = Map.ofEntries(Map.entry("postgres", "canonical"), Map.entry("mysql", "canonical"), Map.entry("sqlite", "canonical"), Map.entry("sqlserver", "canonical"), Map.entry("clickhouse", "projection"), Map.entry("redis", "canonical"), Map.entry("memcached", "projection"), Map.entry("qdrant", "projection"), Map.entry("weaviate", "projection"), Map.entry("pinecone", "projection"), Map.entry("minio", "projection"), Map.entry("s3", "projection"), Map.entry("azureblob", "projection"), Map.entry("gcs", "projection"), Map.entry("mongodb", "canonical"), Map.entry("elasticsearch", "projection"), Map.entry("neo4j", "projection"), Map.entry("cassandra", "projection"));
+  public static final Map<String, String> BACKEND_ROLES = Map.ofEntries(Map.entry("postgres", "canonical"), Map.entry("mysql", "canonical"), Map.entry("sqlite", "canonical"), Map.entry("sqlserver", "canonical"), Map.entry("clickhouse", "canonical"), Map.entry("redis", "canonical"), Map.entry("memcached", "projection"), Map.entry("qdrant", "projection"), Map.entry("weaviate", "projection"), Map.entry("pinecone", "projection"), Map.entry("minio", "projection"), Map.entry("s3", "projection"), Map.entry("azureblob", "projection"), Map.entry("gcs", "projection"), Map.entry("mongodb", "canonical"), Map.entry("elasticsearch", "projection"), Map.entry("neo4j", "canonical"), Map.entry("cassandra", "canonical"));
 
   private static final Map<String, EntityBinding> ENTITY_REGISTRY = buildEntityRegistry();
 
@@ -8611,12 +8611,12 @@ public final class GeneratedUdbClient implements AutoCloseable {
             "udb.core.backup.entity.v1.BackupPolicy",
             "backup_policies",
             List.of("policy_id"),
-            List.of("policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at", "updated_at", "metadata_json", "created_by"),
+            List.of("policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at", "updated_at", "metadata_json", "project_id", "created_by"),
             List.of(),
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "com.udb.core.backup.entity.v1.BackupPolicy"));
     entities.put(
         "udb.core.backup.entity.v1.BackupRun",
@@ -8624,12 +8624,12 @@ public final class GeneratedUdbClient implements AutoCloseable {
             "udb.core.backup.entity.v1.BackupRun",
             "backup_runs",
             List.of("backup_id"),
-            List.of("backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "error_message", "created_at", "completed_at", "metadata_json", "updated_at", "created_by"),
+            List.of("backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "error_message", "created_at", "completed_at", "metadata_json", "project_id", "updated_at", "created_by"),
             List.of(),
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "com.udb.core.backup.entity.v1.BackupRun"));
     entities.put(
         "udb.core.config.entity.v1.Flag",
@@ -8845,12 +8845,12 @@ public final class GeneratedUdbClient implements AutoCloseable {
             "udb.core.notification.entity.v1.NotificationDeliveryAttempt",
             "notification_delivery_attempts",
             List.of("attempt_id"),
-            List.of("attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at", "created_by"),
+            List.of("attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at", "project_id", "created_by"),
             List.of(),
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "com.udb.core.notification.entity.v1.NotificationDeliveryAttempt"));
     entities.put(
         "udb.core.notification.entity.v1.NotificationLog",
@@ -8863,7 +8863,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
             "[{\"name\":\"recipient\",\"kind\":\"belongs_to\",\"local_fields\":[\"recipient_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"template\",\"kind\":\"belongs_to\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationTemplate\",\"target_table\":\"udb_notification.notification_templates\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "com.udb.core.notification.entity.v1.NotificationLog"));
     entities.put(
         "udb.core.notification.entity.v1.NotificationPreference",
@@ -8871,12 +8871,12 @@ public final class GeneratedUdbClient implements AutoCloseable {
             "udb.core.notification.entity.v1.NotificationPreference",
             "notification_preferences",
             List.of("preference_id"),
-            List.of("preference_id", "user_id", "tenant_id", "channel", "event_type", "is_opted_out", "created_at", "updated_at", "created_by"),
+            List.of("preference_id", "user_id", "tenant_id", "channel", "event_type", "is_opted_out", "created_at", "updated_at", "created_by", "project_id"),
             List.of(),
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "com.udb.core.notification.entity.v1.NotificationPreference"));
     entities.put(
         "udb.core.notification.entity.v1.NotificationTemplate",
@@ -8884,12 +8884,12 @@ public final class GeneratedUdbClient implements AutoCloseable {
             "udb.core.notification.entity.v1.NotificationTemplate",
             "notification_templates",
             List.of("template_id"),
-            List.of("template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id"),
+            List.of("template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id", "project_id"),
             List.of(new EntityRelationBinding("notification_logs", "has_many", List.of("template_id"), "udb.core.notification.entity.v1.NotificationLog", "udb_notification.notification_logs", List.of("template_id"), "SET NULL", "NO ACTION")),
             "[{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "com.udb.core.notification.entity.v1.NotificationTemplate"));
     entities.put(
         "udb.core.scheduler.entity.v1.ScheduledJob",

@@ -145,7 +145,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.authn.services.v1.AuthnService/UpdateUser"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/UpdateUser", "AuthnService", "UpdateUser", "update_user", "updateUser", "mutation", "patch", "/v1/auth/users/{user_id}");
         map["/udb.core.authn.services.v1.AuthnService/ValidateCSRF"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ValidateCSRF", "AuthnService", "ValidateCSRF", "validate_csrf", "validateCsrf", "read_only", "post", "/v1/auth/csrf-tokens:validate");
         map["/udb.core.authn.services.v1.AuthnService/ValidateToken"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ValidateToken", "AuthnService", "ValidateToken", "validate_token", "validateToken", "read_only", "post", "/v1/auth/tokens:validate");
-        map["/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge", "AuthnService", "VerifyMfaChallenge", "verify_mfa_challenge", "verifyMfaChallenge", "read_only", "post", "/v1/auth/mfa/challenges:verify");
+        map["/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge", "AuthnService", "VerifyMfaChallenge", "verify_mfa_challenge", "verifyMfaChallenge", "mutation", "post", "/v1/auth/mfa/challenges:verify");
         map["/udb.core.authn.services.v1.AuthnService/VerifyOTP"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/VerifyOTP", "AuthnService", "VerifyOTP", "verify_otp", "verifyOtp", "read_only", "post", "/v1/auth/otps:verify");
         map["/udb.core.authz.services.v1.AuthzService/ActivateCanary"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ActivateCanary", "AuthzService", "ActivateCanary", "activate_canary", "activateCanary", "destructive", "post", "/v1/authz/governance/canaries:activate");
         map["/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion", "AuthzService", "ActivatePolicyVersion", "activate_policy_version", "activatePolicyVersion", "destructive", "post", "/v1/authz/governance/versions:activate");
@@ -3116,7 +3116,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.VerifyMfaChallengeAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only",
+            "mutation" == "read_only",
             "false" == "true",
             (object)request);
     }
@@ -9692,7 +9692,7 @@ public static class UdbIr
     public const string DefaultBackend = "postgres";
 
     public static IReadOnlyDictionary<string, string> BackendRoles { get; } =
-        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"projection\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"projection\",\"cassandra\":\"projection\"}")
+        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"canonical\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"canonical\",\"cassandra\":\"canonical\"}")
         ?? new Dictionary<string, string>();
 
     public static IReadOnlyDictionary<string, string> OrmTiers { get; } =
@@ -10068,21 +10068,21 @@ public static class UdbIr
             "udb.core.backup.entity.v1.BackupPolicy",
             "backup_policies",
             new List<string> { "policy_id" },
-            new List<string> { "policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at", "updated_at", "metadata_json", "created_by" },
+            new List<string> { "policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at", "updated_at", "metadata_json", "project_id", "created_by" },
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "udb.core.Backup.Entity.V1.BackupPolicy");
         entities["udb.core.backup.entity.v1.BackupRun"] = new EntityBinding(
             "udb.core.backup.entity.v1.BackupRun",
             "backup_runs",
             new List<string> { "backup_id" },
-            new List<string> { "backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "error_message", "created_at", "completed_at", "metadata_json", "updated_at", "created_by" },
+            new List<string> { "backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "error_message", "created_at", "completed_at", "metadata_json", "project_id", "updated_at", "created_by" },
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "udb.core.Backup.Entity.V1.BackupRun");
         entities["udb.core.config.entity.v1.Flag"] = new EntityBinding(
             "udb.core.config.entity.v1.Flag",
@@ -10248,11 +10248,11 @@ public static class UdbIr
             "udb.core.notification.entity.v1.NotificationDeliveryAttempt",
             "notification_delivery_attempts",
             new List<string> { "attempt_id" },
-            new List<string> { "attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at", "created_by" },
+            new List<string> { "attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at", "project_id", "created_by" },
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "udb.core.Notification.Entity.V1.NotificationDeliveryAttempt");
         entities["udb.core.notification.entity.v1.NotificationLog"] = new EntityBinding(
             "udb.core.notification.entity.v1.NotificationLog",
@@ -10262,27 +10262,27 @@ public static class UdbIr
             "[{\"name\":\"recipient\",\"kind\":\"belongs_to\",\"local_fields\":[\"recipient_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"template\",\"kind\":\"belongs_to\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationTemplate\",\"target_table\":\"udb_notification.notification_templates\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "udb.core.Notification.Entity.V1.NotificationLog");
         entities["udb.core.notification.entity.v1.NotificationPreference"] = new EntityBinding(
             "udb.core.notification.entity.v1.NotificationPreference",
             "notification_preferences",
             new List<string> { "preference_id" },
-            new List<string> { "preference_id", "user_id", "tenant_id", "channel", "event_type", "is_opted_out", "created_at", "updated_at", "created_by" },
+            new List<string> { "preference_id", "user_id", "tenant_id", "channel", "event_type", "is_opted_out", "created_at", "updated_at", "created_by", "project_id" },
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "udb.core.Notification.Entity.V1.NotificationPreference");
         entities["udb.core.notification.entity.v1.NotificationTemplate"] = new EntityBinding(
             "udb.core.notification.entity.v1.NotificationTemplate",
             "notification_templates",
             new List<string> { "template_id" },
-            new List<string> { "template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id" },
+            new List<string> { "template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id", "project_id" },
             "[{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "udb.core.Notification.Entity.V1.NotificationTemplate");
         entities["udb.core.scheduler.entity.v1.ScheduledJob"] = new EntityBinding(
             "udb.core.scheduler.entity.v1.ScheduledJob",

@@ -35,7 +35,7 @@ do not yet publish per-RPC live benchmark results.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 60 | 18 | 31 | 11 | 0 |
+| AuthnService | 60 | 17 | 32 | 11 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 7 | 3 | 3 | 1 | 0 |
@@ -150,7 +150,7 @@ benchmark harnesses.
 | AuthnService | `AuthnService/UpdateUser` | `update_user` | `updateUser` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ValidateCSRF` | `validate_csrf` | `validateCsrf` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ValidateToken` | `validate_token` | `validateToken` | READ_ONLY | authn.md |
-| AuthnService | `AuthnService/VerifyMfaChallenge` | `verify_mfa_challenge` | `verifyMfaChallenge` | READ_ONLY | authn.md |
+| AuthnService | `AuthnService/VerifyMfaChallenge` | `verify_mfa_challenge` | `verifyMfaChallenge` | MUTATION | authn.md |
 | AuthnService | `AuthnService/VerifyOTP` | `verify_otp` | `verifyOtp` | READ_ONLY | authn.md |
 | AuthzService | `AuthzService/ActivateCanary` | `activate_canary` | `activateCanary` | DESTRUCTIVE | authz.md |
 | AuthzService | `AuthzService/ActivatePolicyVersion` | `activate_policy_version` | `activatePolicyVersion` | DESTRUCTIVE | authz.md |

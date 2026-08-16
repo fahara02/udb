@@ -65,3 +65,8 @@ the generated SDK benchmark listing could not be refreshed. The Linux Rust job
 now regenerates all six clients and both SDK benchmark documents, fails on any
 `sdk/` drift, and includes that entire deterministic diff in the existing
 binary-safe repair artifact.
+
+Run `31924007614` proved that repair path: its build and library suite passed,
+the SDK drift gate failed closed, and `ci-native-docs-repair-1` artifact
+`9257364918` returned exactly six generated clients plus the live-coverage and
+performance-listing documents.
