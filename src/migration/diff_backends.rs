@@ -26,7 +26,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::generation::manifest::{CatalogManifest, ManifestStore, ManifestStoreOption};
-use crate::migration::diff::{ChangeKind, ChangeOperation, ChangeSafety};
+use crate::migration::diff::{ChangeKind, ChangeOperation, ChangeSafety, is_data_destructive};
 
 // ── MigrationPhase ────────────────────────────────────────────────────────────
 
@@ -209,6 +209,7 @@ pub fn diff_qdrant_targets(
         "qdrant",
         |store| ChangeOperation {
             kind: ChangeKind::CreateCollection,
+            data_destructive: is_data_destructive(&ChangeKind::CreateCollection),
             safety: ChangeSafety::SafeAuto,
             priority: 100,
             schema: store.namespace.clone(),
@@ -235,6 +236,7 @@ pub fn diff_qdrant_targets(
                     && old_distance != new_distance);
             Some(ChangeOperation {
                 kind: ChangeKind::UpdateCollection,
+                data_destructive: is_data_destructive(&ChangeKind::UpdateCollection),
                 safety: if breaking {
                     ChangeSafety::RequiresReview
                 } else {
@@ -262,6 +264,7 @@ pub fn diff_qdrant_targets(
         },
         |store| ChangeOperation {
             kind: ChangeKind::DropCollection,
+            data_destructive: is_data_destructive(&ChangeKind::DropCollection),
             safety: ChangeSafety::RequiresReview,
             priority: 200,
             schema: store.namespace.clone(),
@@ -295,6 +298,7 @@ pub fn diff_mongodb_targets(
         "mongodb",
         |store| ChangeOperation {
             kind: ChangeKind::CreateCollection,
+            data_destructive: is_data_destructive(&ChangeKind::CreateCollection),
             safety: ChangeSafety::SafeAuto,
             priority: 100,
             schema: store.database_name.clone(),
@@ -315,6 +319,7 @@ pub fn diff_mongodb_targets(
                 != option_value(&new_store.options, "validator");
             Some(ChangeOperation {
                 kind: ChangeKind::UpdateValidator,
+                data_destructive: is_data_destructive(&ChangeKind::UpdateValidator),
                 safety: if validator_changed {
                     ChangeSafety::RequiresReview
                 } else {
@@ -341,6 +346,7 @@ pub fn diff_mongodb_targets(
         },
         |store| ChangeOperation {
             kind: ChangeKind::DropCollection,
+            data_destructive: is_data_destructive(&ChangeKind::DropCollection),
             safety: ChangeSafety::RequiresReview,
             priority: 200,
             schema: store.database_name.clone(),
@@ -373,6 +379,7 @@ pub fn diff_neo4j_targets(
         "neo4j",
         |store| ChangeOperation {
             kind: ChangeKind::CreateConstraint,
+            data_destructive: is_data_destructive(&ChangeKind::CreateConstraint),
             safety: ChangeSafety::SafeAuto,
             priority: 100,
             schema: String::new(),
@@ -391,6 +398,7 @@ pub fn diff_neo4j_targets(
         |_old, new_store| {
             Some(ChangeOperation {
                 kind: ChangeKind::UpdateConstraint,
+                data_destructive: is_data_destructive(&ChangeKind::UpdateConstraint),
                 safety: ChangeSafety::RequiresReview,
                 priority: 110,
                 schema: String::new(),
@@ -409,6 +417,7 @@ pub fn diff_neo4j_targets(
         },
         |store| ChangeOperation {
             kind: ChangeKind::DropConstraint,
+            data_destructive: is_data_destructive(&ChangeKind::DropConstraint),
             safety: ChangeSafety::RequiresReview,
             priority: 200,
             schema: String::new(),
@@ -441,6 +450,7 @@ pub fn diff_clickhouse_targets(
         "clickhouse",
         |store| ChangeOperation {
             kind: ChangeKind::CreateTable,
+            data_destructive: is_data_destructive(&ChangeKind::CreateTable),
             safety: ChangeSafety::SafeAuto,
             priority: 100,
             schema: store.database_name.clone(),
@@ -468,6 +478,7 @@ pub fn diff_clickhouse_targets(
                     != option_value(&new_store.options, "partition_by");
             Some(ChangeOperation {
                 kind: ChangeKind::ChangeTableEngine,
+                data_destructive: is_data_destructive(&ChangeKind::ChangeTableEngine),
                 safety: if breaking {
                     ChangeSafety::Blocked
                 } else {
@@ -501,6 +512,7 @@ pub fn diff_clickhouse_targets(
         },
         |store| ChangeOperation {
             kind: ChangeKind::DropTable,
+            data_destructive: is_data_destructive(&ChangeKind::DropTable),
             safety: ChangeSafety::RequiresReview,
             priority: 200,
             schema: store.database_name.clone(),
@@ -535,6 +547,7 @@ pub fn diff_s3_targets(
         "s3",
         |store| ChangeOperation {
             kind: ChangeKind::CreateBucket,
+            data_destructive: is_data_destructive(&ChangeKind::CreateBucket),
             safety: ChangeSafety::SafeAuto,
             priority: 100,
             schema: String::new(),
@@ -548,6 +561,7 @@ pub fn diff_s3_targets(
         |_old, new_store| {
             Some(ChangeOperation {
                 kind: ChangeKind::UpdateLifecyclePolicy,
+                data_destructive: is_data_destructive(&ChangeKind::UpdateLifecyclePolicy),
                 safety: ChangeSafety::RequiresReview,
                 priority: 110,
                 schema: String::new(),
@@ -566,6 +580,7 @@ pub fn diff_s3_targets(
         },
         |store| ChangeOperation {
             kind: ChangeKind::DropBucket,
+            data_destructive: is_data_destructive(&ChangeKind::DropBucket),
             safety: ChangeSafety::Blocked,
             priority: 200,
             schema: String::new(),
@@ -587,6 +602,7 @@ pub fn diff_s3_targets(
         "minio",
         |store| ChangeOperation {
             kind: ChangeKind::CreateBucket,
+            data_destructive: is_data_destructive(&ChangeKind::CreateBucket),
             safety: ChangeSafety::SafeAuto,
             priority: 100,
             schema: String::new(),
@@ -605,6 +621,7 @@ pub fn diff_s3_targets(
         |_old, new_store| {
             Some(ChangeOperation {
                 kind: ChangeKind::UpdateLifecyclePolicy,
+                data_destructive: is_data_destructive(&ChangeKind::UpdateLifecyclePolicy),
                 safety: ChangeSafety::RequiresReview,
                 priority: 110,
                 schema: String::new(),
@@ -623,6 +640,7 @@ pub fn diff_s3_targets(
         },
         |store| ChangeOperation {
             kind: ChangeKind::DropBucket,
+            data_destructive: is_data_destructive(&ChangeKind::DropBucket),
             safety: ChangeSafety::Blocked,
             priority: 200,
             schema: String::new(),

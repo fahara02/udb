@@ -1387,7 +1387,10 @@ async fn run_startup_lifecycle_core(
                     Ok(()) => ("COMPLETED", String::new()),
                     Err(err) => ("ERROR", err.to_string()),
                 };
-                if let Err(err) = sink.finish_run(run_id, state, &detail).await {
+                if let Err(err) =
+                    crate::migration::MigrationAuditSink::finish_run(sink, run_id, state, &detail)
+                        .await
+                {
                     tracing::warn!(error = %err, "migration audit: could not close the run record");
                 }
             }
