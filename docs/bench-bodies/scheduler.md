@@ -3,7 +3,7 @@ _proto: core/scheduler/services/v1/scheduler_service.proto_
 
 | done | RPC | op_kind | request msg | valid body | seed refs / notes |
 | --- | --- | --- | --- | --- | --- |
-| [ ] | CreateJob | MUTATION | CreateJobRequest | `{ "tenant_id": "<seed:tenant_id>", "project_id": "", "name": "sdk-perf-job", "schedule_type": "CRON", "cron_expression": "*/5 * * * *", "payload": "{}", "target_topic": "sdk.perf.scheduler", "max_attempts": 3, "backoff_seconds": 30 }` | creates a one-topic scheduler job. `project_id` is empty because the scheduler schema treats non-empty project ids as UUIDs; the default live project code is not a UUID. |
+| [ ] | CreateJob | MUTATION | CreateJobRequest | `{ "tenant_id": "<seed:tenant_id>", "project_id": "<seed:project>", "name": "sdk-perf-job", "schedule_type": "CRON", "cron_expression": "*/5 * * * *", "payload": "{}", "target_topic": "sdk.perf.scheduler", "max_attempts": 3, "backoff_seconds": 30 }` | creates a one-topic scheduler job. `project_id` carries the live project (an opaque code, not a UUID) so the project-scoped write and the project-scoped reads that follow agree. |
 | [ ] | DeleteJob | DESTRUCTIVE | DeleteJobRequest | `{ "tenant_id": "<seed:tenant_id>", "job_id": "<seed:job_id>" }` | deletes the seeded scheduler job. |
 | [ ] | GetJob | READ_ONLY | GetJobRequest | `{ "tenant_id": "<seed:tenant_id>", "job_id": "<seed:job_id>" }` | reads the seeded scheduler job. |
 | [ ] | ListJobs | READ_ONLY | ListJobsRequest | `{ "tenant_id": "<seed:tenant_id>", "page": 1, "page_size": 20 }` | lists scheduler jobs for the tenant. |

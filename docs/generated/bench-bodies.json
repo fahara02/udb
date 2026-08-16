@@ -272,8 +272,8 @@
     "operation_id": "registerAsset",
     "op_kind": "MUTATION",
     "request_msg": "RegisterAssetRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"\", \"file_id\": \"<seed:file_id>\", \"name\": \"logo.png\", \"media_type\": \"image/png\", \"metadata\": \"{\\\"source\\\":\\\"upload\\\"}\" }`",
-    "notes": "`file_id` references an existing StorageService file (`<seed:file_id>`). `project_id` is empty because the native asset schema treats non-empty project ids as UUIDs; the default live project code is not a UUID. Returns `asset_id` — capture as `<seed:asset_id>`."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"file_id\": \"<seed:file_id>\", \"name\": \"logo.png\", \"media_type\": \"image/png\", \"metadata\": \"{\\\"source\\\":\\\"upload\\\"}\" }`",
+    "notes": "`file_id` references an existing StorageService file (`<seed:file_id>`). `project_id` carries the live project (an opaque code, not a UUID) so the project-scoped write and the project-scoped reads that follow agree. Returns `asset_id` — capture as `<seed:asset_id>`."
   },
   {
     "file": "asset.md",
@@ -993,7 +993,7 @@
     "op_kind": "MUTATION",
     "request_msg": "VerifyMfaChallengeRequest",
     "body": "`{ \"challenge_id\": \"<seed:challenge_id>\", \"code\": \"<seed:recovery_code>\", \"context\": { \"tenant\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" } } }`",
-    "notes": "`challenge_id` is seeded for the RECOVERY_CODE factor and the proof is one of the same user's generated recovery codes. The explicit context pins neutral dispatch to the claim-bound store."
+    "notes": "`challenge_id` is seeded for the RECOVERY_CODE factor and the proof is one of the same user's generated recovery codes. Verification increments attempts and consumes a successful proof, so it is not retry-safe. The explicit context pins neutral dispatch to the claim-bound store."
   },
   {
     "file": "authn.md",
@@ -3608,8 +3608,8 @@
     "operation_id": "createJob",
     "op_kind": "MUTATION",
     "request_msg": "CreateJobRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"\", \"name\": \"sdk-perf-job\", \"schedule_type\": \"CRON\", \"cron_expression\": \"*/5 * * * *\", \"payload\": \"{}\", \"target_topic\": \"sdk.perf.scheduler\", \"max_attempts\": 3, \"backoff_seconds\": 30 }`",
-    "notes": "creates a one-topic scheduler job. `project_id` is empty because the scheduler schema treats non-empty project ids as UUIDs; the default live project code is not a UUID."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"name\": \"sdk-perf-job\", \"schedule_type\": \"CRON\", \"cron_expression\": \"*/5 * * * *\", \"payload\": \"{}\", \"target_topic\": \"sdk.perf.scheduler\", \"max_attempts\": 3, \"backoff_seconds\": 30 }`",
+    "notes": "creates a one-topic scheduler job. `project_id` carries the live project (an opaque code, not a UUID) so the project-scoped write and the project-scoped reads that follow agree."
   },
   {
     "file": "scheduler.md",
@@ -3812,8 +3812,8 @@
     "operation_id": "registerUpload",
     "op_kind": "MUTATION",
     "request_msg": "RegisterUploadRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"\", \"filename\": \"report.pdf\", \"content_type\": \"application/pdf\", \"file_type\": \"DOCUMENT\", \"reference_id\": \"<seed:file_id>\", \"reference_type\": \"document\", \"is_public\": false, \"expires_in_minutes\": 15, \"size_bytes\": 1024 }`",
-    "notes": "fields: tenant_id(str), project_id(str), filename(str), content_type(str), file_type(str), reference_id(str), reference_type(str), is_public(optional bool), expires_in_minutes(int32), size_bytes(int64). `project_id` is empty because the native storage schema treats non-empty project ids as UUIDs; the default live project code is not a UUID."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"filename\": \"report.pdf\", \"content_type\": \"application/pdf\", \"file_type\": \"DOCUMENT\", \"reference_id\": \"<seed:file_id>\", \"reference_type\": \"document\", \"is_public\": false, \"expires_in_minutes\": 15, \"size_bytes\": 1024 }`",
+    "notes": "fields: tenant_id(str), project_id(str), filename(str), content_type(str), file_type(str), reference_id(str), reference_type(str), is_public(optional bool), expires_in_minutes(int32), size_bytes(int64). `project_id` carries the live project (an opaque code, not a UUID) so the project-scoped write and the project-scoped reads that follow agree."
   },
   {
     "file": "storage.md",
@@ -4568,7 +4568,7 @@
     "operation_id": "startWorkflow",
     "op_kind": "MUTATION",
     "request_msg": "StartWorkflowRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"\", \"workflow_type\": \"sdk.perf.workflow\", \"total_steps\": 20, \"payload\": \"{}\", \"compensations\": \"[]\", \"correlation_id\": \"<seed:record_id>\" }`",
-    "notes": "starts a bounded multi-step workflow tied to the seeded record. `project_id` is empty because the workflow schema treats non-empty project ids as UUIDs; the default live project code is not a UUID."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"workflow_type\": \"sdk.perf.workflow\", \"total_steps\": 20, \"payload\": \"{}\", \"compensations\": \"[]\", \"correlation_id\": \"<seed:record_id>\" }`",
+    "notes": "starts a bounded multi-step workflow tied to the seeded record. `project_id` carries the live project (an opaque code, not a UUID) so the project-scoped write and the project-scoped reads that follow agree."
   }
 ]

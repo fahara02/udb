@@ -277,7 +277,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             '| [ ] | GetPipeline | READ_ONLY | GetPipelineRequest | `{ "tenant_id": "<seed:tenant_id>", "instance_id": "<seed:instance_id>" }` |',
             '| [ ] | GetPipelineDefinition | READ_ONLY | GetPipelineDefinitionRequest | `{ "tenant_id": "<seed:tenant_id>", "definition_id": "<seed:definition_id>" }` |',
             '| [ ] | ListAssets | READ_ONLY | ListAssetsRequest | `{ "tenant_id": "<seed:tenant_id>", "media_type": "image/png", "status": "", "page": 1, "page_size": 20 }` |',
-            '| [ ] | RegisterAsset | MUTATION | RegisterAssetRequest | `{ "tenant_id": "<seed:tenant_id>", "project_id": "", "file_id": "<seed:file_id>", "name": "logo.png", "media_type": "image/png", "metadata": "{\\"source\\":\\"upload\\"}" }` |',
+            '| [ ] | RegisterAsset | MUTATION | RegisterAssetRequest | `{ "tenant_id": "<seed:tenant_id>", "project_id": "<seed:project>", "file_id": "<seed:file_id>", "name": "logo.png", "media_type": "image/png", "metadata": "{\\"source\\":\\"upload\\"}" }` |',
             '| [ ] | StartPipeline | MUTATION | StartPipelineRequest | `{ "tenant_id": "<seed:tenant_id>", "definition_id": "<seed:definition_id>", "asset_id": "<seed:asset_id>", "context": "{}", "correlation_id": "run-001" }` |',
         ),
     ),
@@ -349,7 +349,7 @@ CHECKS: tuple[SourceCheck, ...] = (
         "bench-body scheduler machine-json rows",
         "docs/bench-bodies/scheduler.md",
         (
-            '| [ ] | CreateJob | MUTATION | CreateJobRequest | `{ "tenant_id": "<seed:tenant_id>", "project_id": "", "name": "sdk-perf-job", "schedule_type": "CRON", "cron_expression": "*/5 * * * *", "payload": "{}", "target_topic": "sdk.perf.scheduler", "max_attempts": 3, "backoff_seconds": 30 }` |',
+            '| [ ] | CreateJob | MUTATION | CreateJobRequest | `{ "tenant_id": "<seed:tenant_id>", "project_id": "<seed:project>", "name": "sdk-perf-job", "schedule_type": "CRON", "cron_expression": "*/5 * * * *", "payload": "{}", "target_topic": "sdk.perf.scheduler", "max_attempts": 3, "backoff_seconds": 30 }` |',
             '| [ ] | DeleteJob | DESTRUCTIVE | DeleteJobRequest | `{ "tenant_id": "<seed:tenant_id>", "job_id": "<seed:job_id>" }` |',
             '| [ ] | GetJob | READ_ONLY | GetJobRequest | `{ "tenant_id": "<seed:tenant_id>", "job_id": "<seed:job_id>" }` |',
             '| [ ] | ListJobs | READ_ONLY | ListJobsRequest | `{ "tenant_id": "<seed:tenant_id>", "page": 1, "page_size": 20 }` |',
@@ -418,7 +418,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             '| [ ] | GetWorkflow | READ_ONLY | GetWorkflowRequest | `{ "tenant_id": "<seed:tenant_id>", "workflow_id": "<seed:workflow_id>" }` |',
             '| [ ] | ListWorkflows | READ_ONLY | ListWorkflowsRequest | `{ "tenant_id": "<seed:tenant_id>", "status": "RUNNING", "page": 1, "page_size": 20 }` |',
             '| [ ] | SignalWorkflow | MUTATION | SignalWorkflowRequest | `{ "tenant_id": "<seed:tenant_id>", "workflow_id": "<seed:workflow_id>", "signal_name": "continue", "signal_payload": "{\\"ok\\":true}" }` |',
-            '| [ ] | StartWorkflow | MUTATION | StartWorkflowRequest | `{ "tenant_id": "<seed:tenant_id>", "project_id": "", "workflow_type": "sdk.perf.workflow", "total_steps": 20, "payload": "{}", "compensations": "[]", "correlation_id": "<seed:record_id>" }` |',
+            '| [ ] | StartWorkflow | MUTATION | StartWorkflowRequest | `{ "tenant_id": "<seed:tenant_id>", "project_id": "<seed:project>", "workflow_type": "sdk.perf.workflow", "total_steps": 20, "payload": "{}", "compensations": "[]", "correlation_id": "<seed:record_id>" }` |',
         ),
     ),
     SourceCheck(
