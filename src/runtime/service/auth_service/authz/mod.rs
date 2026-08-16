@@ -35,7 +35,8 @@ use crate::runtime::authz::{
 use crate::runtime::channels::{ChannelManager, ChannelPermit, OperationChannel};
 use crate::runtime::native_catalog::{NativeModel, native_model};
 use crate::runtime::service::native_helpers::{
-    native_next_page_token_for_total, native_offset_page_window,
+    metadata_tenant_id, native_next_page_token_for_total, native_offset_page_window,
+    tenant_only_native_service_context,
 };
 
 use super::events::{self, AuthEvent, AuthEventSink, topics};
@@ -122,6 +123,24 @@ fn authz_attribution_policy_status(
         policy_decision_id,
         message,
     )
+}
+
+/// Recover the tenant authority already verified by method security for Authz
+/// identifier-only mutations. These request messages do not repeat tenant_id,
+/// but their neutral IR targets are tenant-scoped and must never compile under
+/// an empty RequestContext.
+fn authz_tenant_mutation_context(
+    metadata: &tonic::metadata::MetadataMap,
+    operation: &'static str,
+) -> Result<crate::RequestContext, Status> {
+    let tenant_id = metadata_tenant_id(metadata).ok_or_else(|| {
+        authz_attribution_policy_status(
+            operation,
+            "tenant_metadata_required",
+            "tenant-scoped metadata is required",
+        )
+    })?;
+    Ok(tenant_only_native_service_context(metadata, &tenant_id))
 }
 
 fn created_by_caller_mismatch_status(operation: &'static str) -> Status {
@@ -3186,6 +3205,7 @@ impl AuthzService for AuthzServiceImpl {
         request: Request<authz_pb::RevokeRoleRequest>,
     ) -> Result<Response<authz_pb::RevokeRoleResponse>, Status> {
         governance::guard_governed_role_mutation("RevokeRole")?;
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
         if req.user_role_id.trim().is_empty() {
             return Err(authz_required_field(
@@ -3213,7 +3233,7 @@ impl AuthzService for AuthzServiceImpl {
             },
             return_fields: vec!["tenant_id".to_string()],
         };
-        let context = crate::RequestContext::default();
+        let context = authz_tenant_mutation_context(&metadata, "revoke_role")?;
         let deleted_rows = runtime
             .native_entity_delete_rows_for_service("authz", &context, op)
             .await
@@ -3613,6 +3633,7 @@ impl AuthzService for AuthzServiceImpl {
         request: Request<authz_pb::DeleteRoleRequest>,
     ) -> Result<Response<authz_pb::DeleteRoleResponse>, Status> {
         governance::guard_governed_role_mutation("DeleteRole")?;
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
         if req.role_id.trim().is_empty() {
             return Err(authz_required_field(
@@ -3630,6 +3651,7 @@ impl AuthzService for AuthzServiceImpl {
         }
         let role_id = parse_uuid_field("role_id", &req.role_id)?;
         let deleted_by = parse_uuid_field("deleted_by", &req.deleted_by)?;
+        let context = authz_tenant_mutation_context(&metadata, "delete_role")?;
         self.enforce_role_authority_mutation(role_id, "delete_role")
             .await?;
         let pool = self.require_pool()?;
@@ -3687,7 +3709,7 @@ impl AuthzService for AuthzServiceImpl {
         let (affected, _) = runtime
             .native_entity_update_for_service(
                 "authz",
-                &crate::RequestContext::default(),
+                &context,
                 LogicalUpdate {
                     message_type: "udb.core.authz.entity.v1.Role".to_string(),
                     filter: LogicalFilter::And(vec![
@@ -3711,7 +3733,7 @@ impl AuthzService for AuthzServiceImpl {
             runtime
                 .native_entity_delete_for_service(
                     "authz",
-                    &crate::RequestContext::default(),
+                    &context,
                     LogicalDelete {
                         message_type: "udb.core.authz.entity.v1.UserRole".to_string(),
                         filter: LogicalFilter::Comparison {
@@ -3873,6 +3895,7 @@ impl AuthzService for AuthzServiceImpl {
         &self,
         request: Request<authz_pb::DeletePolicyRuleRequest>,
     ) -> Result<Response<authz_pb::DeletePolicyRuleResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
         if req.policy_id.trim().is_empty() {
             return Err(authz_required_field(
@@ -3930,7 +3953,7 @@ impl AuthzService for AuthzServiceImpl {
                 return_fields: Vec::new(),
                 require_affected: false,
             };
-            let context = crate::RequestContext::default();
+            let context = authz_tenant_mutation_context(&metadata, "delete_policy_rule")?;
             let (affected, _) = runtime
                 .native_entity_update_for_service("authz", &context, op)
                 .await
@@ -4417,6 +4440,35 @@ fn tuple_content_version(tuples: &[RelationshipTuple]) -> String {
         entry.hash(&mut hasher);
     }
     format!("pg-{}-{:016x}", tuples.len(), hasher.finish())
+}
+
+#[cfg(test)]
+mod mutation_context_tests {
+    use super::authz_tenant_mutation_context;
+    use tonic::metadata::MetadataMap;
+
+    #[test]
+    fn identifier_mutation_context_requires_verified_tenant_metadata() {
+        let error = authz_tenant_mutation_context(&MetadataMap::new(), "delete_role")
+            .expect_err("identifier-only mutation must fail closed without tenant authority");
+        assert_eq!(error.code(), tonic::Code::PermissionDenied);
+        assert_eq!(error.message(), "tenant-scoped metadata is required");
+    }
+
+    #[test]
+    fn identifier_mutation_context_is_tenant_scoped_and_project_neutral() {
+        let mut metadata = MetadataMap::new();
+        metadata.insert("x-tenant-id", "tenant-a".parse().unwrap());
+        metadata.insert("x-udb-project-id", "project-a".parse().unwrap());
+
+        let context = authz_tenant_mutation_context(&metadata, "revoke_role")
+            .expect("verified tenant metadata must produce a compiler context");
+        assert_eq!(context.tenant_id, "tenant-a");
+        assert!(
+            context.project_id.is_empty(),
+            "Authz Role/PolicyRule/UserRole declare tenant, not project, isolation"
+        );
+    }
 }
 
 #[cfg(test)]

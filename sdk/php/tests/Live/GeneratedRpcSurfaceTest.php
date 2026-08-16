@@ -1326,6 +1326,10 @@ function phpLiveSession(): array
     if ($platformCallerSubject === '') {
         throw new RuntimeException('AuthenticateBearer returned no verified platform principal subject for the PHP benchmark');
     }
+    $platformActorUserId = trim((string) ($platformPrincipal?->getUserId() ?? ''));
+    if ($platformActorUserId === '') {
+        throw new RuntimeException('AuthenticateBearer returned no verified platform principal user_id for the PHP benchmark');
+    }
     $platformCallerAttributionId = phpStableAttributionId($platformCallerSubject);
     $platformTenant = $platformPrincipal?->getTenantId() ?: $canonicalTenant;
     $platformMeta = liveMeta($platformLogin->getAccessToken(), $platformTenant);
@@ -1342,6 +1346,7 @@ function phpLiveSession(): array
         'platformAuthGenerated',
         'platformMeta',
         'platformCallerSubject',
+        'platformActorUserId',
         'platformCallerAttributionId',
     );
 }
@@ -3281,9 +3286,13 @@ it('manifest JSON body hydrates AuthzService create-policy-draft request', funct
     $fix->set('subject', 'subject-php');
     $fix->set('caller_subject', 'verified-caller-php');
     $fix->set('platform_caller_subject', 'verified-platform-caller-php');
+    $fix->set('platform_actor_user_id', '74f9dc0f-5344-41b0-9839-7811cc3f94c5');
     $fix->set('platform_caller_attribution_id', 'fb5c78e7-5832-410e-85f6-ac51a063a87c');
+    $fix->set('approve_draft_id', '4cdf8661-9f80-44b8-bd68-b330a965bd31');
+    $fix->set('user_id', 'f34dddef-f197-4749-9608-1de9658a1cc2');
     $fix->set('gov_exp', '1893456000');
     $draft = phpManifestJsonBody('create_policy_draft', $fix, 'tenant-php', 'project-php');
+    $approval = phpManifestJsonBody('approve_policy_draft', $fix, 'tenant-php', 'project-php');
     expect($draft)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest::class)
         ->and($draft->getTenantId())->toBe('tenant-php')
         ->and($draft->getProjectId())->toBe('project-php')
@@ -3296,8 +3305,11 @@ it('manifest JSON body hydrates AuthzService create-policy-draft request', funct
         ->and($draft->getDocument())->toBeInstanceOf(\Udb\Core\Authz\Services\V1\PolicyDocument::class);
 
     phpUniquifyPerfBody($draft, 'create_policy_draft', 'AuthzService', $fix);
+    phpUniquifyPerfBody($approval, 'approve_policy_draft', 'AuthzService', $fix);
     expect($fix->lookup('subject'))->toBe('subject-php')
-        ->and($draft->getActor()->getSubject())->toBe('verified-platform-caller-php');
+        ->and($draft->getActor()->getSubject())->toBe('74f9dc0f-5344-41b0-9839-7811cc3f94c5')
+        ->and($approval->getActor()->getSubject())->toBe('74f9dc0f-5344-41b0-9839-7811cc3f94c5')
+        ->and($approval->getReviewer())->toBe('74f9dc0f-5344-41b0-9839-7811cc3f94c5');
 });
 
 it('routes only global benchmark RPCs to the platform identity', function () {
@@ -3544,16 +3556,16 @@ function phpUniquifyPerfBody(object $request, string $name, ?string $serviceName
     if (str_starts_with($rpc, 'authzservice.') && method_exists($request, 'getActor')) {
         $actor = $request->getActor();
         $callerSubject = phpRequiresPlatformPerfIdentity((string) $serviceName, $name)
-            ? $fix->lookup('platform_caller_subject')
+            ? $fix->lookup('platform_actor_user_id')
             : $fix->lookup('caller_subject');
         if (is_object($actor) && method_exists($actor, 'setSubject') && $callerSubject !== null && $callerSubject !== '') {
             $actor->setSubject($callerSubject);
         }
     }
     if (str_starts_with($rpc, 'authzservice.') && phpRequiresPlatformPerfIdentity((string) $serviceName, $name)) {
-        $platformAttributionId = $fix->lookup('platform_caller_attribution_id');
-        if ($platformAttributionId !== null && $platformAttributionId !== '' && method_exists($request, 'setReviewer')) {
-            $request->setReviewer($platformAttributionId);
+        $platformActorUserId = $fix->lookup('platform_actor_user_id');
+        if ($platformActorUserId !== null && $platformActorUserId !== '' && method_exists($request, 'setReviewer')) {
+            $request->setReviewer($platformActorUserId);
         }
     }
     if (str_starts_with($rpc, 'authzservice.')) {
@@ -3636,6 +3648,7 @@ function perfSeedPhp(array $s): array
     $platformAuthGen = $s['platformAuthGenerated'];
     $platformMeta = $s['platformMeta'];
     $platformCallerSubject = $s['platformCallerSubject'];
+    $platformActorUserId = $s['platformActorUserId'];
     $platformCallerAttributionId = $s['platformCallerAttributionId'];
     $tenant = $meta->tenantId;
     $project = $meta->projectId;
@@ -3647,6 +3660,7 @@ function perfSeedPhp(array $s): array
         'tenant_id' => $tenant, 'tenant' => $tenant, 'project_id' => $project, 'project' => $project,
         'caller_subject' => $callerSubject, 'caller_attribution_id' => $callerAttributionId,
         'platform_caller_subject' => $platformCallerSubject,
+        'platform_actor_user_id' => $platformActorUserId,
         'platform_caller_attribution_id' => $platformCallerAttributionId,
         'assigned_by' => $callerAttributionId, 'created_by' => $callerAttributionId,
         'updated_by' => $callerAttributionId, 'revoked_by' => $callerAttributionId,
@@ -4091,94 +4105,122 @@ function perfSeedPhp(array $s): array
         }
     }
 
-    // AuthzService governance: a real policy draft -> policy_draft_id.
-    $draft = $try('CreatePolicyDraft', fn () => $platformAuthGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())
-        ->setActor((new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($platformCallerSubject)->setTenantId($tenant)->setProjectId($project))
-        ->setTenantId($tenant)->setProjectId($project)->setPolicySetName('default')->setTitle("sdk-perf draft $suffix")->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $platformMeta),
-        $blockSeedsOnFailure('AuthzService/CreatePolicyDraft', ['policy_draft_id']));
-    if ($draft) {
-        $did2 = method_exists($draft, 'getDraft') && $draft->getDraft() ? $draft->getDraft()->getDraftId() : '';
-        if ($did2 !== '') {
-            $fix->set('policy_draft_id', $did2);
-        }
-    }
     // Governance lifecycle: drafts in each state, approved versions, a canary, a rollback set.
     // Governance is system-global control authority. The benchmark uses the
-    // separately offline-provisioned platform principal, never body break-glass
-    // claims on the ordinary tenant session.
-    $gA = fn () => (new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($platformCallerSubject)->setTenantId($tenant)->setProjectId($project);
-    $mkDraft = function (string $title, string $setName) use ($platformAuthGen, $tenant, $project, $platformMeta, $gA, $suffix): string {
-        try {
-            $d = $platformAuthGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())->setActor($gA())->setTenantId($tenant)->setProjectId($project)->setPolicySetName($setName)->setTitle($title.$suffix)->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $platformMeta);
-            return ($d->getDraft()) ? $d->getDraft()->getDraftId() : '';
-        } catch (\Throwable $e) {
+    // separately offline-provisioned, VERIFIED platform principal and the server's
+    // explicit audited break-glass contract. The short expiry/reason are mandatory;
+    // ordinary tenant credentials never receive this actor or metadata.
+    $governanceSeedExpiresAt = time() + 900;
+    $gA = fn () => (new \Udb\Core\Authz\Services\V1\GovernanceActor())
+        ->setSubject($platformActorUserId)
+        ->setTenantId($tenant)
+        ->setProjectId($project)
+        ->setBreakGlass(true)
+        ->setBreakGlassReason('sdk perf governance seed')
+        ->setBreakGlassExpiresAtUnix($governanceSeedExpiresAt);
+    $blockMissingSeeds = function (string $source, array $keys, string $details) use ($fix): void {
+        foreach ($keys as $key) {
+            $fix->blockSeed((string) $key, $source, 2, $details);
+        }
+        fwrite(STDERR, "perf seed: $source failed: $details\n");
+    };
+    $mkDraft = function (string $source, string $title, string $setName, array $blockedKeys) use ($platformAuthGen, $tenant, $project, $platformMeta, $gA, $suffix, $try, $blockSeedsOnFailure, $blockMissingSeeds): string {
+        $d = $try($source, fn () => $platformAuthGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())
+            ->setActor($gA())->setTenantId($tenant)->setProjectId($project)->setPolicySetName($setName)
+            ->setTitle($title.$suffix)->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $platformMeta),
+            $blockSeedsOnFailure($source, $blockedKeys));
+        if (! $d) {
             return '';
         }
-    };
-    $submit = function (string $did) use ($platformAuthGen, $gA, $platformMeta): void {
-        try {
-            $platformAuthGen->submit_policy_draft((new \Udb\Core\Authz\Services\V1\SubmitPolicyDraftRequest())->setActor($gA())->setDraftId($did), $platformMeta);
-        } catch (\Throwable $e) {
+        $draftId = $d->getDraft() ? $d->getDraft()->getDraftId() : '';
+        if ($draftId === '') {
+            $blockMissingSeeds($source, $blockedKeys, 'successful CreatePolicyDraft seed omitted draft_id');
         }
+
+        return $draftId;
     };
-    $u = $mkDraft('sdk-perf-update-', 'default');
+    $submit = function (string $did, array $blockedKeys) use ($platformAuthGen, $gA, $platformMeta, $try, $blockSeedsOnFailure): bool {
+        $submitted = $try('AuthzService/SubmitPolicyDraft:seed', function () use ($platformAuthGen, $gA, $did, $platformMeta): bool {
+            $platformAuthGen->submit_policy_draft((new \Udb\Core\Authz\Services\V1\SubmitPolicyDraftRequest())->setActor($gA())->setDraftId($did), $platformMeta);
+            return true;
+        }, $blockSeedsOnFailure('AuthzService/SubmitPolicyDraft:seed', $blockedKeys));
+
+        return $submitted === true;
+    };
+    // AuthzService governance: a real policy draft -> policy_draft_id.
+    $did = $mkDraft('AuthzService/CreatePolicyDraft', 'sdk-perf draft ', 'default', ['policy_draft_id']);
+    if ($did !== '') {
+        $fix->set('policy_draft_id', $did);
+    }
+    $u = $mkDraft('AuthzService/CreatePolicyDraft:update', 'sdk-perf-update-', 'default', ['update_draft_id']);
     if ($u !== '') {
         $fix->set('update_draft_id', $u);
     }
-    $ad = $mkDraft('sdk-perf-approve-', 'default');
-    if ($ad !== '') {
-        $submit($ad);
+    $ad = $mkDraft('AuthzService/CreatePolicyDraft:approve', 'sdk-perf-approve-', 'default', ['approve_draft_id']);
+    if ($ad !== '' && $submit($ad, ['approve_draft_id'])) {
         $fix->set('approve_draft_id', $ad);
     }
-    $rd = $mkDraft('sdk-perf-reject-', 'default');
-    if ($rd !== '') {
-        $submit($rd);
+    $rd = $mkDraft('AuthzService/CreatePolicyDraft:reject', 'sdk-perf-reject-', 'default', ['reject_draft_id']);
+    if ($rd !== '' && $submit($rd, ['reject_draft_id'])) {
         $fix->set('reject_draft_id', $rd);
     }
-    $mkVersion = function (string $setName, string $title) use ($platformAuthGen, $platformMeta, $gA, $mkDraft, $submit, $platformCallerAttributionId): ?object {
-        $did = $mkDraft($title, $setName);
-        if ($did === '') {
+    $mkVersion = function (string $setName, string $title, array $blockedKeys) use ($platformAuthGen, $platformMeta, $gA, $mkDraft, $submit, $platformActorUserId, $try, $blockSeedsOnFailure, $blockMissingSeeds): ?object {
+        $did = $mkDraft('AuthzService/CreatePolicyDraft:version', $title, $setName, $blockedKeys);
+        if ($did === '' || ! $submit($did, $blockedKeys)) {
             return null;
         }
-        $submit($did);
-        try {
-            $ap = $platformAuthGen->approve_policy_draft((new \Udb\Core\Authz\Services\V1\ApprovePolicyDraftRequest())->setActor($gA())->setDraftId($did)->setReviewer($platformCallerAttributionId)->setReason('seed approve'), $platformMeta);
-            return $ap->getVersion();
-        } catch (\Throwable $e) {
+        $ap = $try('AuthzService/ApprovePolicyDraft:seed', fn () => $platformAuthGen->approve_policy_draft((new \Udb\Core\Authz\Services\V1\ApprovePolicyDraftRequest())
+            ->setActor($gA())->setDraftId($did)->setReviewer($platformActorUserId)->setReason('seed approve'), $platformMeta),
+            $blockSeedsOnFailure('AuthzService/ApprovePolicyDraft:seed', $blockedKeys));
+        if (! $ap) {
             return null;
         }
+        $version = $ap->getVersion();
+        if (! $version || $version->getPolicyVersionId() === '') {
+            $blockMissingSeeds('AuthzService/ApprovePolicyDraft:seed', $blockedKeys, 'successful ApprovePolicyDraft seed omitted policy_version_id');
+            return null;
+        }
+
+        return $version;
     };
-    $av = $mkVersion("sdk-perf-activate-set-$suffix", 'activate-');
+    $av = $mkVersion("sdk-perf-activate-set-$suffix", 'activate-', ['policy_version_id']);
     if ($av) {
         $fix->set('policy_version_id', $av->getPolicyVersionId());
     }
-    $cv = $mkVersion("sdk-perf-canary-set-$suffix", 'canary-');
+    $cv = $mkVersion("sdk-perf-canary-set-$suffix", 'canary-', ['canary_version_id', 'canary_id']);
     if ($cv) {
         $fix->set('canary_version_id', $cv->getPolicyVersionId());
-        try {
+        $c = $try('AuthzService/ActivateCanary:seed', fn () => $platformAuthGen->activate_canary((new \Udb\Core\Authz\Services\V1\ActivateCanaryRequest())
+            ->setActor($gA())->setPolicyVersionId($cv->getPolicyVersionId())->setScopeKind(3)->setScopeValues(['10'])
+            ->setSuccessWindowSecs(1)->setMetricThreshold(0.99)->setMinSamples(0), $platformMeta),
+            $blockSeedsOnFailure('AuthzService/ActivateCanary:seed', ['canary_id']));
+        if ($c && $c->getCanary() && $c->getCanary()->getCanaryId() !== '') {
             // success_window_secs MUST be > 0 (1s): 0 makes the broker substitute a default that
             // never elapses, so PromoteCanary stays "not promote-eligible".
-            $c = $platformAuthGen->activate_canary((new \Udb\Core\Authz\Services\V1\ActivateCanaryRequest())->setActor($gA())->setPolicyVersionId($cv->getPolicyVersionId())->setScopeKind(3)->setScopeValues(['10'])->setSuccessWindowSecs(1)->setMetricThreshold(0.99)->setMinSamples(0), $platformMeta);
-            if ($c->getCanary()) {
-                $fix->set('canary_id', $c->getCanary()->getCanaryId());
-            }
-        } catch (\Throwable $e) {
+            $fix->set('canary_id', $c->getCanary()->getCanaryId());
+        } elseif ($c) {
+            $blockMissingSeeds('AuthzService/ActivateCanary:seed', ['canary_id'], 'successful ActivateCanary seed omitted canary_id');
         }
     }
-    $v1 = $mkVersion("sdk-perf-rollback-set-$suffix", 'rb1-');
+    $rollbackKeys = ['rollback_policy_set_id', 'rollback_target_version_id'];
+    $v1 = $mkVersion("sdk-perf-rollback-set-$suffix", 'rb1-', $rollbackKeys);
     if ($v1) {
-        try {
+        $activatedV1 = $try('AuthzService/ActivatePolicyVersion:rollback-base', function () use ($platformAuthGen, $gA, $v1, $platformMeta): bool {
             $platformAuthGen->activate_policy_version((new \Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest())->setActor($gA())->setPolicyVersionId($v1->getPolicyVersionId()), $platformMeta);
-        } catch (\Throwable $e) {
-        }
-        $v2 = $mkVersion("sdk-perf-rollback-set-$suffix", 'rb2-');
-        if ($v2) {
-            try {
+            return true;
+        }, $blockSeedsOnFailure('AuthzService/ActivatePolicyVersion:rollback-base', $rollbackKeys));
+        $v2 = $activatedV1 ? $mkVersion("sdk-perf-rollback-set-$suffix", 'rb2-', $rollbackKeys) : null;
+        if ($v2 && $v2->getPolicySetId() !== '') {
+            $activatedV2 = $try('AuthzService/ActivatePolicyVersion:rollback-current', function () use ($platformAuthGen, $gA, $v2, $platformMeta): bool {
                 $platformAuthGen->activate_policy_version((new \Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest())->setActor($gA())->setPolicyVersionId($v2->getPolicyVersionId()), $platformMeta);
-            } catch (\Throwable $e) {
+                return true;
+            }, $blockSeedsOnFailure('AuthzService/ActivatePolicyVersion:rollback-current', $rollbackKeys));
+            if ($activatedV2) {
+                $fix->set('rollback_policy_set_id', $v2->getPolicySetId());
+                $fix->set('rollback_target_version_id', $v1->getPolicyVersionId());
             }
-            $fix->set('rollback_policy_set_id', $v2->getPolicySetId());
-            $fix->set('rollback_target_version_id', $v1->getPolicyVersionId());
+        } elseif ($v2) {
+            $blockMissingSeeds('AuthzService/ActivatePolicyVersion:rollback-current', $rollbackKeys, 'successful rollback seed omitted policy_set_id');
         }
     }
     // Governance break-glass expiry: the D1/D2 governance gate reads scopes from the
@@ -4820,6 +4862,10 @@ it('measures per-RPC latency', function () {
     }
     if (! in_array('platform_admin', $freshPlatformRoles, true)) {
         throw new RuntimeException('fresh PHP platform benchmark principal lacks platform_admin');
+    }
+    $freshPlatformActorUserId = trim((string) ($freshPlatformAuth?->getPrincipal()?->getUserId() ?? ''));
+    if ($freshPlatformActorUserId === '' || $freshPlatformActorUserId !== $s['platformActorUserId']) {
+        throw new RuntimeException('fresh PHP platform benchmark principal changed actor user_id');
     }
     $s['platformMeta'] = liveMeta(
         $freshPlatformLogin->getAccessToken(),

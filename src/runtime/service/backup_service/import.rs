@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use sqlx::{PgPool, Row};
+use sqlx::{PgConnection, Row};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
@@ -46,7 +46,19 @@ struct RestoreColumnKey {
     column: String,
 }
 
-type RestoreValueRemaps = HashMap<RestoreColumnKey, HashMap<String, String>>;
+type RestoreValueRemaps = HashMap<RestoreColumnKey, HashMap<String, serde_json::Value>>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum RestoreRemapAuthority {
+    GeneratedText,
+    OwnedSequence(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RestoreColumnRemapPlan {
+    column: String,
+    authority: RestoreRemapAuthority,
+}
 
 pub(crate) fn is_restore_journal_relation(schema: &str, table: &str) -> bool {
     let run_model = native_model(BACKUP_RUN_MSG, &["backup_id"]);
@@ -170,21 +182,52 @@ fn restored_unique_value(
     value
 }
 
-fn can_remap_unique_value(column: Option<&ManifestColumn>) -> bool {
-    let sql_type = column
-        .map(|column| column.sql_type.as_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-    sql_type.contains("uuid")
-        || sql_type.contains("char")
-        || sql_type.contains("text")
-        || sql_type.is_empty()
-}
-
 fn varchar_limit(sql_type: &str) -> Option<usize> {
     let open = sql_type.find('(')?;
     let close = sql_type[open + 1..].find(')')? + open + 1;
     sql_type[open + 1..close].trim().parse().ok()
+}
+
+fn restore_value_key(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::String(value) => Some(format!("s:{value}")),
+        serde_json::Value::Number(value) => Some(format!("n:{value}")),
+        _ => None,
+    }
+}
+
+fn restore_remap_authority(
+    schema: &str,
+    table: &str,
+    column: &str,
+    data_type: &str,
+    sequence_name: Option<String>,
+) -> Result<RestoreRemapAuthority, Status> {
+    let normalized_type = data_type.trim().to_ascii_lowercase();
+    if normalized_type == "uuid"
+        || normalized_type.contains("text")
+        || normalized_type.contains("char")
+    {
+        return Ok(RestoreRemapAuthority::GeneratedText);
+    }
+    if matches!(normalized_type.as_str(), "smallint" | "integer" | "bigint") {
+        return sequence_name
+            .map(RestoreRemapAuthority::OwnedSequence)
+            .ok_or_else(|| {
+                backup_topology_mismatch_status(
+                    "restore_tenant",
+                    format!(
+                        "numeric unique column {schema}.{table}.{column} has no trusted owned serial/identity sequence"
+                    ),
+                )
+            });
+    }
+    Err(backup_topology_mismatch_status(
+        "restore_tenant",
+        format!(
+            "unique column {schema}.{table}.{column} uses unsupported restore type '{data_type}'"
+        ),
+    ))
 }
 
 fn apply_parent_restore_remaps(
@@ -194,7 +237,10 @@ fn apply_parent_restore_remaps(
 ) {
     for fk in &table.foreign_keys {
         for (column, ref_column) in fk.columns.iter().zip(fk.ref_columns.iter()) {
-            let Some(serde_json::Value::String(old_value)) = row.get(column) else {
+            let Some(old_value) = row.get(column) else {
+                continue;
+            };
+            let Some(old_value_key) = restore_value_key(old_value) else {
                 continue;
             };
             let key = RestoreColumnKey {
@@ -202,56 +248,104 @@ fn apply_parent_restore_remaps(
                 table: fk.ref_table.clone(),
                 column: ref_column.clone(),
             };
-            let Some(new_value) = remaps.get(&key).and_then(|values| values.get(old_value)) else {
+            let Some(new_value) = remaps
+                .get(&key)
+                .and_then(|values| values.get(&old_value_key))
+            else {
                 continue;
             };
-            row.insert(column.clone(), serde_json::Value::String(new_value.clone()));
+            row.insert(column.clone(), new_value.clone());
         }
     }
 }
 
-fn apply_cross_tenant_restore_remaps(
+async fn apply_cross_tenant_restore_remaps(
+    conn: &mut PgConnection,
     row: &mut serde_json::Map<String, serde_json::Value>,
     table: &ManifestTable,
-    tenant_column: &str,
     target_tenant_id: &str,
     remaps: &mut RestoreValueRemaps,
-    extra_unique_columns: &[String],
-) {
-    let mut columns = unique_restore_columns(table, tenant_column);
-    let mut seen: HashSet<String> = columns.iter().cloned().collect();
-    for column in extra_unique_columns {
-        if seen.insert(column.clone()) {
-            columns.push(column.clone());
-        }
-    }
-    for column in columns {
-        let Some(serde_json::Value::String(old_value)) = row.get(&column) else {
+    plans: &[RestoreColumnRemapPlan],
+) -> Result<(), Status> {
+    for plan in plans {
+        let Some(old_value) = row.get(&plan.column) else {
             continue;
         };
-        if old_value.is_empty() {
+        if old_value.is_null() {
             continue;
         }
-        let column_meta = manifest_column(table, &column);
-        if !can_remap_unique_value(column_meta) {
-            continue;
-        }
+        let old_value_key = restore_value_key(old_value).ok_or_else(|| {
+            backup_topology_mismatch_status(
+                "restore_tenant",
+                format!(
+                    "unique restore value for {}.{}.{} is not a supported scalar",
+                    table.schema, table.table, plan.column
+                ),
+            )
+        })?;
         let key = RestoreColumnKey {
             schema: table.schema.clone(),
             table: table.table.clone(),
-            column: column.clone(),
+            column: plan.column.clone(),
         };
         let values = remaps.entry(key).or_default();
-        let new_value = values
-            .entry(old_value.clone())
-            .or_insert_with(|| restored_unique_value(column_meta, target_tenant_id, old_value))
-            .clone();
-        row.insert(column, serde_json::Value::String(new_value));
+        let new_value = if let Some(value) = values.get(&old_value_key) {
+            value.clone()
+        } else {
+            let value = match &plan.authority {
+                RestoreRemapAuthority::GeneratedText => {
+                    let old_text = old_value.as_str().ok_or_else(|| {
+                        backup_topology_mismatch_status(
+                            "restore_tenant",
+                            format!(
+                                "text restore authority for {}.{}.{} received a non-text value",
+                                table.schema, table.table, plan.column
+                            ),
+                        )
+                    })?;
+                    serde_json::Value::String(restored_unique_value(
+                        manifest_column(table, &plan.column),
+                        target_tenant_id,
+                        old_text,
+                    ))
+                }
+                RestoreRemapAuthority::OwnedSequence(sequence) => {
+                    if !old_value.is_number() {
+                        return Err(backup_topology_mismatch_status(
+                            "restore_tenant",
+                            format!(
+                                "numeric restore authority for {}.{}.{} received a non-numeric value",
+                                table.schema, table.table, plan.column
+                            ),
+                        ));
+                    }
+                    let next_value: i64 =
+                        sqlx::query_scalar("SELECT nextval($1::text::regclass)::bigint")
+                            .bind(sequence)
+                            .fetch_one(&mut *conn)
+                            .await
+                            .map_err(|err| {
+                                backup_internal_status(
+                                    "restore_identity_allocate",
+                                    format!(
+                                        "failed to allocate restore identity for {}.{}.{}: {err}",
+                                        table.schema, table.table, plan.column
+                                    ),
+                                )
+                            })?;
+                    serde_json::Value::Number(next_value.into())
+                }
+            };
+            values.insert(old_value_key, value.clone());
+            value
+        };
+        row.insert(plan.column.clone(), new_value);
     }
+    Ok(())
 }
 
 async fn postgres_unique_restore_columns(
-    pool: &PgPool,
+    conn: &mut PgConnection,
     schema: &str,
     table: &str,
     tenant_column: &str,
@@ -272,9 +366,12 @@ async fn postgres_unique_restore_columns(
           JOIN unnest(i.indkey) WITH ORDINALITY AS k(attnum, ordinality) ON true
           JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.attnum
           WHERE i.indisunique
+            AND i.indisvalid
+            AND i.indisready
             AND n.nspname = $1
             AND c.relname = $2
             AND k.attnum > 0
+            AND k.ordinality <= i.indnkeyatts
           GROUP BY i.indexrelid
         ) unique_indexes
         WHERE NOT ($3 = ANY(cols))
@@ -283,7 +380,7 @@ async fn postgres_unique_restore_columns(
         .bind(schema)
         .bind(table)
         .bind(tenant_column)
-        .fetch_all(pool)
+        .fetch_all(&mut *conn)
         .await
         .map_err(|err| {
             backup_internal_status(
@@ -310,6 +407,105 @@ async fn postgres_unique_restore_columns(
         }
     }
     Ok(columns)
+}
+
+async fn postgres_restore_remap_plans(
+    conn: &mut PgConnection,
+    schema: &str,
+    table: &str,
+    tenant_column: &str,
+    table_meta: &ManifestTable,
+) -> Result<Vec<RestoreColumnRemapPlan>, Status> {
+    let mut columns = unique_restore_columns(table_meta, tenant_column);
+    let mut seen: HashSet<String> = columns.iter().cloned().collect();
+    for column in
+        postgres_unique_restore_columns(conn, schema, table, tenant_column, table_meta).await?
+    {
+        if seen.insert(column.clone()) {
+            columns.push(column);
+        }
+    }
+
+    let authority_sql = r#"
+        SELECT format_type(a.atttypid, a.atttypmod) AS data_type,
+               owned.sequence_name
+        FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+        LEFT JOIN LATERAL (
+          SELECT format('%I.%I', seq_ns.nspname, seq.relname) AS sequence_name
+          FROM pg_catalog.pg_depend d
+          JOIN pg_catalog.pg_class seq ON seq.oid = d.objid AND seq.relkind = 'S'
+          JOIN pg_catalog.pg_namespace seq_ns ON seq_ns.oid = seq.relnamespace
+          WHERE d.classid = 'pg_class'::regclass
+            AND d.refclassid = 'pg_class'::regclass
+            AND d.refobjid = c.oid
+            AND d.refobjsubid = a.attnum
+            AND d.deptype IN ('a', 'i')
+          ORDER BY CASE d.deptype WHEN 'i' THEN 0 ELSE 1 END
+          LIMIT 1
+        ) owned ON true
+        WHERE n.nspname = $1
+          AND c.relname = $2
+          AND c.relkind IN ('r', 'p')
+          AND a.attname = $3
+          AND a.attnum > 0
+          AND NOT a.attisdropped
+    "#;
+    let mut plans = Vec::with_capacity(columns.len());
+    for column in columns {
+        if manifest_column(table_meta, &column).is_none() {
+            return Err(backup_topology_mismatch_status(
+                "restore_tenant",
+                format!(
+                    "live unique column {schema}.{table}.{column} is absent from the active catalog"
+                ),
+            ));
+        }
+        let authority = sqlx::query(authority_sql)
+            .bind(schema)
+            .bind(table)
+            .bind(&column)
+            .fetch_optional(&mut *conn)
+            .await
+            .map_err(|err| {
+                backup_internal_status(
+                    "restore_identity_authority_probe",
+                    format!(
+                        "restore identity-authority probe failed for {schema}.{table}.{column}: {err}"
+                    ),
+                )
+            })?
+            .ok_or_else(|| {
+                backup_topology_mismatch_status(
+                    "restore_tenant",
+                    format!(
+                        "live unique column {schema}.{table}.{column} could not be resolved"
+                    ),
+                )
+            })?;
+        let data_type: String = authority.try_get("data_type").map_err(|err| {
+            backup_internal_status(
+                "restore_identity_authority_probe",
+                format!(
+                    "restore identity-authority type decode failed for {schema}.{table}.{column}: {err}"
+                ),
+            )
+        })?;
+        let sequence_name: Option<String> =
+            authority.try_get("sequence_name").map_err(|err| {
+                backup_internal_status(
+                    "restore_identity_authority_probe",
+                    format!(
+                        "restore identity-authority sequence decode failed for {schema}.{table}.{column}: {err}"
+                    ),
+                )
+            })?;
+        let authority =
+            restore_remap_authority(schema, table, &column, &data_type, sequence_name)?;
+        plans.push(RestoreColumnRemapPlan { column, authority });
+    }
+    Ok(plans)
 }
 
 pub(crate) async fn restore_tenant(
@@ -706,10 +902,16 @@ pub(crate) async fn restore_tenant(
         if schema.is_empty() || table.is_empty() || object_key.is_empty() {
             continue;
         }
-        let manifest_table = manifest_table_by_relation(manifest, schema, table);
-        let project_column = manifest_table
-            .and_then(crate::generation::sql::resolve_project_column)
-            .unwrap_or_default();
+        let manifest_table = manifest_table_by_relation(manifest, schema, table).ok_or_else(|| {
+            backup_topology_mismatch_status(
+                "restore_tenant",
+                format!(
+                    "backup manifest relation {schema}.{table} is absent from the active catalog"
+                ),
+            )
+        })?;
+        let project_column =
+            crate::generation::sql::resolve_project_column(manifest_table).unwrap_or_default();
         if declared_project_column != project_column {
             return Err(backup_topology_mismatch_status(
                 "restore_tenant",
@@ -719,17 +921,6 @@ pub(crate) async fn restore_tenant(
                 ),
             ));
         }
-        let db_unique_restore_columns = if cross_tenant_restore {
-            match manifest_table {
-                Some(table_meta) => {
-                    postgres_unique_restore_columns(pool, schema, table, tenant_column, table_meta)
-                        .await?
-                }
-                None => Vec::new(),
-            }
-        } else {
-            Vec::new()
-        };
         let get_req = crate::runtime::core::setup_data::object_request_json(
             "get",
             &object_bucket,
@@ -764,6 +955,19 @@ pub(crate) async fn restore_tenant(
                 format!("restore decryption failed: {err}"),
             )
         })?;
+        let table_has_rows = jsonl.lines().any(|line| !line.trim().is_empty());
+        let restore_remap_plans = if cross_tenant_restore && table_has_rows {
+            postgres_restore_remap_plans(
+                &mut *tx,
+                schema,
+                table,
+                tenant_column,
+                manifest_table,
+            )
+            .await?
+        } else {
+            Vec::new()
+        };
         let rel = qualified_relation(schema, table);
         // `jsonb_populate_record` casts the row JSON into the table's row type,
         // so every column type is handled by Postgres without hand-mapping.
@@ -785,22 +989,23 @@ pub(crate) async fn restore_tenant(
                 && !tenant_column.is_empty()
             {
                 scope_restore_row_project(obj, project_column, &binding.project_id, schema, table)?;
-                if cross_tenant_restore && let Some(table_meta) = manifest_table {
-                    apply_parent_restore_remaps(obj, table_meta, &restore_remaps);
+                if cross_tenant_restore {
+                    apply_parent_restore_remaps(obj, manifest_table, &restore_remaps);
                 }
                 obj.insert(
                     tenant_column.to_string(),
                     serde_json::Value::String(target_tenant_id.clone()),
                 );
-                if cross_tenant_restore && let Some(table_meta) = manifest_table {
+                if cross_tenant_restore {
                     apply_cross_tenant_restore_remaps(
+                        &mut *tx,
                         obj,
-                        table_meta,
-                        tenant_column,
+                        manifest_table,
                         &target_tenant_id,
                         &mut restore_remaps,
-                        &db_unique_restore_columns,
-                    );
+                        &restore_remap_plans,
+                    )
+                    .await?;
                 }
             }
             // Bind the row as text and cast to jsonb in SQL ($1::jsonb), so the
@@ -890,4 +1095,70 @@ fn is_platform_bookkeeping_relation(schema: &str, table: &str) -> bool {
         (schema.trim(), table.trim()),
         ("udb_metering", "usage_events")
     )
+}
+
+#[cfg(test)]
+mod restore_remap_tests {
+    use super::*;
+    use crate::generation::ManifestForeignKey;
+
+    #[test]
+    fn numeric_parent_identity_remap_preserves_child_fk_type() {
+        let key = RestoreColumnKey {
+            schema: "app".to_string(),
+            table: "parents".to_string(),
+            column: "parent_id".to_string(),
+        };
+        let mut remaps = RestoreValueRemaps::new();
+        remaps.entry(key).or_default().insert(
+            restore_value_key(&serde_json::json!(7)).expect("numeric restore key"),
+            serde_json::json!(41),
+        );
+        let child = ManifestTable {
+            schema: "app".to_string(),
+            table: "children".to_string(),
+            foreign_keys: vec![ManifestForeignKey {
+                columns: vec!["parent_id".to_string()],
+                ref_schema: "app".to_string(),
+                ref_table: "parents".to_string(),
+                ref_columns: vec!["parent_id".to_string()],
+                ..ManifestForeignKey::default()
+            }],
+            ..ManifestTable::default()
+        };
+        let mut row = serde_json::json!({"parent_id": 7})
+            .as_object()
+            .expect("child row")
+            .clone();
+
+        apply_parent_restore_remaps(&mut row, &child, &remaps);
+
+        assert_eq!(row["parent_id"], serde_json::json!(41));
+        assert!(row["parent_id"].is_number());
+        assert_ne!(
+            restore_value_key(&serde_json::json!(7)),
+            restore_value_key(&serde_json::json!("7")),
+            "numeric and text identities must never share a remap namespace"
+        );
+    }
+
+    #[test]
+    fn numeric_restore_authority_requires_an_owned_sequence() {
+        let denied = restore_remap_authority("app", "parents", "parent_id", "bigint", None)
+            .expect_err("an unowned numeric identity must fail closed");
+        assert_eq!(denied.code(), tonic::Code::FailedPrecondition);
+        assert!(denied.message().contains("no trusted owned serial/identity sequence"));
+
+        assert_eq!(
+            restore_remap_authority(
+                "app",
+                "parents",
+                "parent_id",
+                "bigint",
+                Some("app.parents_parent_id_seq".to_string()),
+            )
+            .expect("owned sequence is trusted"),
+            RestoreRemapAuthority::OwnedSequence("app.parents_parent_id_seq".to_string())
+        );
+    }
 }

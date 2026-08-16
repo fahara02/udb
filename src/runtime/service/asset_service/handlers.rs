@@ -208,6 +208,11 @@ pub(crate) async fn register_asset(
     let asset_id = Uuid::new_v4().to_string();
     let asset_metadata = svc.encrypt_native_json_state(&non_empty_json(&req.metadata))?;
     let context = native_service_context(&metadata, &req.tenant_id, req.project_id.trim());
+    // `project_id` may be omitted from the body when the validated bearer/header
+    // already names the project. Persist the EFFECTIVE authority resolved by the
+    // context builder so the id returned here remains visible to GetAsset and
+    // ListAssets on the same project-scoped request path.
+    let project_id = context.project_id.clone();
     svc.require_runtime()?
         .native_entity_write_for_service(
             "asset",
@@ -216,7 +221,7 @@ pub(crate) async fn register_asset(
             asset_record(
                 &asset_id,
                 &tenant_id.to_string(),
-                req.project_id.trim(),
+                &project_id,
                 &req,
                 &asset_metadata,
             )?,
@@ -234,7 +239,7 @@ pub(crate) async fn register_asset(
         serde_json::json!({
             "asset_id": asset_id,
             "tenant_id": req.tenant_id,
-            "project_id": req.project_id,
+            "project_id": project_id,
             "file_id": req.file_id.trim(),
             "name": req.name,
             "media_type": req.media_type,

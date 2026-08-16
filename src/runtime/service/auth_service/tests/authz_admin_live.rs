@@ -7,6 +7,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::Request;
 use uuid::Uuid;
 
+fn authz_tenant_request<T>(message: T, tenant_id: &str) -> Request<T> {
+    let mut request = Request::new(message);
+    request.metadata_mut().insert(
+        "x-tenant-id",
+        tenant_id.parse().expect("valid tenant metadata"),
+    );
+    request
+}
+
 fn live_governance_actor(subject: &str) -> authz_pb::GovernanceActor {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -244,11 +253,30 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
         .into_inner();
     assert!(audits.audits.iter().any(|audit| audit.object == "secret"));
 
+    let foreign_policy_delete = authz
+        .delete_policy_rule(authz_tenant_request(
+            authz_pb::DeletePolicyRuleRequest {
+                policy_id: direct_policy.policy_id.clone(),
+                deleted_by: user.user_id.clone(),
+            },
+            "other-tenant",
+        ))
+        .await
+        .expect("foreign tenant delete remains an idempotent no-op")
+        .into_inner();
+    assert!(
+        !foreign_policy_delete.deleted,
+        "a foreign tenant must not delete a policy by identifier"
+    );
+
     let deleted_policy = authz
-        .delete_policy_rule(Request::new(authz_pb::DeletePolicyRuleRequest {
-            policy_id: direct_policy.policy_id.clone(),
-            deleted_by: user.user_id.clone(),
-        }))
+        .delete_policy_rule(authz_tenant_request(
+            authz_pb::DeletePolicyRuleRequest {
+                policy_id: direct_policy.policy_id.clone(),
+                deleted_by: user.user_id.clone(),
+            },
+            "acme",
+        ))
         .await
         .expect("delete policy rule")
         .into_inner();
@@ -261,11 +289,30 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
         .expect_err("deleted policy should not be returned");
     assert_eq!(missing_policy.code(), tonic::Code::NotFound);
 
+    let foreign_role_delete = authz
+        .delete_role(authz_tenant_request(
+            authz_pb::DeleteRoleRequest {
+                role_id: role.role_id.clone(),
+                deleted_by: user.user_id.clone(),
+            },
+            "other-tenant",
+        ))
+        .await
+        .expect("foreign tenant role delete remains an idempotent no-op")
+        .into_inner();
+    assert!(
+        !foreign_role_delete.deleted,
+        "a foreign tenant must not delete a role by identifier"
+    );
+
     let deleted_role = authz
-        .delete_role(Request::new(authz_pb::DeleteRoleRequest {
-            role_id: role.role_id.clone(),
-            deleted_by: user.user_id,
-        }))
+        .delete_role(authz_tenant_request(
+            authz_pb::DeleteRoleRequest {
+                role_id: role.role_id.clone(),
+                deleted_by: user.user_id,
+            },
+            "acme",
+        ))
         .await
         .expect("delete role")
         .into_inner();

@@ -1,0 +1,43 @@
+# UDB v0.5.11 post-release benchmark closure
+
+## Scope
+
+The v0.5.10 post-release benchmark produced the complete canonical surface—381
+RPCs for each of Go, Python, TypeScript, and PHP—but correctly refused publication
+because 39 rows remained fatal. This change wave closes every one of those rows:
+
+- four Asset read-after-write failures caused by dropping the effective project
+  during RegisterAsset persistence;
+- twelve Authz deletion/revocation failures caused by compiling tenant-scoped
+  neutral IR under an empty request context;
+- one Backup cross-tenant restore failure caused by reusing a BIGSERIAL primary
+  key; and
+- twenty-two TypeScript/PHP governance failures caused by unaudited seed actors
+  and missing dependency provenance.
+
+The sixteen WebRTC egress rows remain explicit `CAPABILITY_SKIPPED` outcomes when
+that optional capability is disabled; they are neither hidden nor counted as
+successful measurements.
+
+The canonical Asset, Scheduler, Storage, and Workflow benchmark bodies now send
+the live opaque project explicitly instead of relying on the obsolete claim that
+their project columns require UUIDs. Asset metadata fallback remains covered by
+the served live regression. Generated benchmark JSON is refreshed from those
+canonical Markdown sources by CI.
+
+## Release discipline
+
+Product code changes require the immutable successor release `v0.5.11`; the
+published `v0.5.10` tag is not moved. `versions.json` remains the single version
+authority and is propagated across crate, SDK, documentation, examples, and site
+metadata before CI.
+
+All commits and tags for this wave must use sole author and committer
+`fahara02 <idea3d.faruk@gmail.com>` with no co-author trailers.
+
+## Verification boundary
+
+No local Cargo build, test, rustfmt, SDK generation, or protocol generation is
+permitted for this wave. Static diff review is local; GitHub CI owns compilation,
+formatting, generated-artifact repair, focused live regressions, the complete
+matrix, and the post-release Release → Benchmark → Pages evidence chain.

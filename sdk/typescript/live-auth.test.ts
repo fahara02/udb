@@ -129,6 +129,22 @@ function requiresPlatformBenchmarkIdentity(serviceName: string, methodName: stri
   return PLATFORM_BENCHMARK_RPCS.has(`${serviceName}/${methodName}`);
 }
 
+function governanceSeedActor(
+  platformActorUserId: string,
+  tenantId: string,
+  projectId: string,
+  expiresAtUnix: number,
+) {
+  return {
+    subject: platformActorUserId,
+    tenant_id: tenantId,
+    project_id: projectId,
+    break_glass: true,
+    break_glass_reason: "sdk perf governance seed",
+    break_glass_expires_at_unix: expiresAtUnix,
+  };
+}
+
 const UNSUPPORTED_OPERATION_CODE = "UDB_UNSUPPORTED_OPERATION";
 // Canonical generic-dispatch op vocabulary the broker gates per backend
 // (src/runtime/service/mod.rs check_generic_dispatch_operation), safe-first.
@@ -586,6 +602,34 @@ function resolveManifestSeeds(body: string, fixtures?: PerfFixtures): string | u
   });
 }
 
+type PerfSeedFailure = {
+  key: string;
+  source: string;
+  grpcCode: number;
+  grpcStatus: string;
+  details: string;
+};
+
+function blockedManifestSeed(
+  serviceName: string,
+  methodName: string,
+  fixtures?: PerfFixtures,
+): PerfSeedFailure | undefined {
+  const cell = manifestBodyFor(serviceName, methodName);
+  if (!cell || !fixtures) return undefined;
+  const jsonCell = strictManifestJSONCell(cell);
+  if (!jsonCell) return undefined;
+  const keys = [...jsonCell.matchAll(/<seed:([^>]+)>/g)]
+    .map((match) => String(match[1]).trim().toLowerCase())
+    .filter((key, index, all) => key.length > 0 && all.indexOf(key) === index)
+    .sort();
+  for (const key of keys) {
+    const failure = fixtures.blockedSeed(key);
+    if (failure) return failure;
+  }
+  return undefined;
+}
+
 function manifestJSONBody(serviceName: string, methodName: string, fixtures?: PerfFixtures): any | undefined {
   const cell = manifestBodyFor(serviceName, methodName);
   if (!cell) return undefined;
@@ -710,6 +754,50 @@ test("manifest-only perf body covers every generated RPC", () => {
     }
   }
   assert.equal(missing.length, 0, `manifest-only perf body gaps: ${missing.join(", ")}`);
+});
+
+test("blocked governance seeds retain the original gRPC failure provenance", () => {
+  const fixtures = fullSurfaceManifestFixtures();
+  const denied = Object.assign(new Error("governance scope denied"), {
+    code: grpc.status.PERMISSION_DENIED,
+    details: "verified platform principal requires audited break-glass",
+  });
+  fixtures.blockSeed("policy_draft_id", "AuthzService/CreatePolicyDraft", denied);
+
+  const blocked = blockedManifestSeed("AuthzService", "diff_policy_draft", fixtures);
+  assert.deepEqual(blocked, {
+    key: "policy_draft_id",
+    source: "AuthzService/CreatePolicyDraft",
+    grpcCode: grpc.status.PERMISSION_DENIED,
+    grpcStatus: "PERMISSION_DENIED",
+    details: "verified platform principal requires audited break-glass",
+  });
+  assert.throws(
+    () => manifestJSONBody("AuthzService", "diff_policy_draft", fixtures),
+    /missing bench manifest seed policy_draft_id/,
+  );
+
+  fixtures.set("policy_draft_id", "11111111-1111-4111-8111-111111111111");
+  assert.equal(blockedManifestSeed("AuthzService", "diff_policy_draft", fixtures), undefined);
+});
+
+test("governance seed actor is verified-platform attributed and audited", () => {
+  assert.deepEqual(
+    governanceSeedActor(
+      "74f9dc0f-5344-41b0-9839-7811cc3f94c5",
+      "tenant-1",
+      "project-1",
+      1_893_456_000,
+    ),
+    {
+      subject: "74f9dc0f-5344-41b0-9839-7811cc3f94c5",
+      tenant_id: "tenant-1",
+      project_id: "project-1",
+      break_glass: true,
+      break_glass_reason: "sdk perf governance seed",
+      break_glass_expires_at_unix: 1_893_456_000,
+    },
+  );
 });
 
 test("manifest JSON body hydrates AnalyticsService rows with seed refs", () => {
@@ -1939,9 +2027,34 @@ function perfRealBody(
 // deliberately seeded resolve, everything else falls through to the generic scalar.
 class PerfFixtures {
   readonly m = new Map<string, string>();
+  readonly blocked = new Map<string, PerfSeedFailure>();
   recordId = "";
   set(key: string, val: string | undefined | null): void {
-    if (val) this.m.set(key.toLowerCase(), val);
+    if (val) {
+      const normalized = key.toLowerCase();
+      this.m.set(normalized, val);
+      this.blocked.delete(normalized);
+    }
+  }
+  clear(key: string): void {
+    const normalized = key.trim().toLowerCase();
+    this.m.delete(normalized);
+    this.blocked.delete(normalized);
+  }
+  blockSeed(key: string, source: string, err: unknown): void {
+    const normalized = key.trim().toLowerCase();
+    if (!normalized) throw new Error("blocked TypeScript bench seed key cannot be empty");
+    const code = grpcCode(err) ?? grpc.status.UNKNOWN;
+    const status = (grpc.status as any)[code] ?? String(code);
+    const details = errText(err);
+    this.m.delete(normalized);
+    this.blocked.set(normalized, {
+      key: normalized,
+      source,
+      grpcCode: code,
+      grpcStatus: status,
+      details,
+    });
   }
   lookup(field: string): string | undefined {
     const f = field.toLowerCase();
@@ -1951,7 +2064,27 @@ class PerfFixtures {
     }
     return undefined;
   }
+  blockedSeed(field: string): PerfSeedFailure | undefined {
+    const normalized = field.toLowerCase();
+    if (this.blocked.has(normalized)) return this.blocked.get(normalized);
+    for (const [key, failure] of this.blocked) {
+      if (normalized === key || normalized.endsWith("_" + key)) return failure;
+    }
+    return undefined;
+  }
 }
+
+const GOVERNANCE_SEED_KEYS = [
+  "policy_draft_id",
+  "update_draft_id",
+  "approve_draft_id",
+  "reject_draft_id",
+  "policy_version_id",
+  "canary_version_id",
+  "canary_id",
+  "rollback_policy_set_id",
+  "rollback_target_version_id",
+] as const;
 
 interface SeedResult {
   fixtures: PerfFixtures;
@@ -1974,6 +2107,11 @@ async function seedPerfFixtures(
   platformActorUserId: string,
 ): Promise<SeedResult> {
   const fix = fullSurfaceManifestFixtures();
+  // The manifest-only unit fixture uses typed placeholder IDs to prove every body
+  // hydrates. A live run must never let those placeholders become authority: every
+  // governance dependency is either replaced by a served seed or marked with the
+  // original seed failure below.
+  for (const key of GOVERNANCE_SEED_KEYS) fix.clear(key);
   const suffix = `${process.pid}${Date.now()}`;
   const opts = { deadlineMs: 8_000, noRetry: true };
   const ctx = requestContext(tenantId, projectId, "ts.live.perf.seed");
@@ -1981,11 +2119,16 @@ async function seedPerfFixtures(
   fix.set("egress_id", `eg-${tenantId}-${liveUuid()}`);
   const cleanups: Array<() => Promise<void>> = [];
   const addCleanup = (fn: () => Promise<void>) => cleanups.push(fn);
-  const tryRun = async (label: string, fn: () => Promise<void>) => {
+  const tryRun = async (
+    label: string,
+    fn: () => Promise<void>,
+    blockedSeeds: readonly string[] = [],
+  ) => {
     try {
       await fn();
     } catch (err) {
-      console.log(`perf seed: ${label} failed (dependent RPCs fall back): ${errText(err)}`);
+      for (const key of blockedSeeds) fix.blockSeed(key, label, err);
+      console.log(`perf seed: ${label} failed (dependent RPCs are seed-blocked): ${errText(err)}`);
     }
   };
 
@@ -2530,59 +2673,67 @@ async function seedPerfFixtures(
   // canary RPCs run their real success path. ──────────────────────────────────────
   {
     // Governance is system-global control authority. The benchmark uses the
-    // separately offline-provisioned platform principal, never request-body
-    // break-glass claims on the ordinary tenant principal.
-    const gActor = () => ({ subject: platformActorUserId, tenant_id: tenantId, project_id: projectId });
+    // separately offline-provisioned, VERIFIED platform principal and the server's
+    // explicit audited break-glass contract. The short expiry/reason are mandatory;
+    // ordinary tenant credentials never receive this actor or metadata.
+    const governanceSeedExpiry = Math.floor(Date.now() / 1000) + 900;
+    const gActor = () => governanceSeedActor(
+      platformActorUserId,
+      tenantId,
+      projectId,
+      governanceSeedExpiry,
+    );
     const mkDraft = async (title: string, setName = "default"): Promise<string> => {
-      try {
-        const d = await platformGen.AuthzService.create_policy_draft({ actor: gActor(), tenant_id: tenantId, project_id: projectId, policy_set_name: setName, title: title + suffix, change_reason: "seed", document: {} }, opts);
-        return d.draft?.draft_id ?? d.draft_id ?? "";
-      } catch { return ""; }
+      const d = await platformGen.AuthzService.create_policy_draft({ actor: gActor(), tenant_id: tenantId, project_id: projectId, policy_set_name: setName, title: title + suffix, change_reason: "seed", document: {} }, opts);
+      const draftId = d.draft?.draft_id ?? d.draft_id ?? "";
+      if (!draftId) throw new Error("successful CreatePolicyDraft seed omitted draft_id");
+      return draftId;
     };
     // Drafts: one OPEN (diff/update/submit), two submitted→IN_REVIEW (approve/reject).
-    await tryRun("CreatePolicyDraft", async () => { const id = await mkDraft("sdk-perf-draft-"); if (id) fix.set("policy_draft_id", id); });
-    await tryRun("UpdateDraft", async () => { const id = await mkDraft("sdk-perf-update-"); if (id) fix.set("update_draft_id", id); });
+    await tryRun("AuthzService/CreatePolicyDraft", async () => { fix.set("policy_draft_id", await mkDraft("sdk-perf-draft-")); }, ["policy_draft_id"]);
+    await tryRun("AuthzService/CreatePolicyDraft:update", async () => { fix.set("update_draft_id", await mkDraft("sdk-perf-update-")); }, ["update_draft_id"]);
     await tryRun("ApproveDraft", async () => {
       const id = await mkDraft("sdk-perf-approve-");
-      if (id) { await platformGen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: id }, opts); fix.set("approve_draft_id", id); }
-    });
+      await platformGen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: id }, opts);
+      fix.set("approve_draft_id", id);
+    }, ["approve_draft_id"]);
     await tryRun("RejectDraft", async () => {
       const id = await mkDraft("sdk-perf-reject-");
-      if (id) { await platformGen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: id }, opts); fix.set("reject_draft_id", id); }
-    });
+      await platformGen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: id }, opts);
+      fix.set("reject_draft_id", id);
+    }, ["reject_draft_id"]);
     // Versions: CreateDraft→Submit→Approve promotes a PolicyVersion (APPROVED).
     const mkVersion = async (setName: string, title: string): Promise<any> => {
       const did = await mkDraft(title, setName);
-      if (!did) return null;
-      try {
-        await platformGen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: did }, opts);
-        const ap = await platformGen.AuthzService.approve_policy_draft({ actor: gActor(), draft_id: did, reviewer: platformActorUserId, reason: "seed approve" }, opts);
-        return ap.version ?? null;
-      } catch { return null; }
+      await platformGen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: did }, opts);
+      const ap = await platformGen.AuthzService.approve_policy_draft({ actor: gActor(), draft_id: did, reviewer: platformActorUserId, reason: "seed approve" }, opts);
+      if (!ap.version?.policy_version_id) throw new Error("successful ApprovePolicyDraft seed omitted policy_version_id");
+      return ap.version;
     };
-    await tryRun("SeedActivateVersion", async () => { const v = await mkVersion(`sdk-perf-activate-set-${suffix}`, "activate-"); if (v?.policy_version_id) fix.set("policy_version_id", v.policy_version_id); });
-    await tryRun("SeedCanary", async () => {
+    await tryRun("SeedActivateVersion", async () => { const v = await mkVersion(`sdk-perf-activate-set-${suffix}`, "activate-"); fix.set("policy_version_id", v.policy_version_id); }, ["policy_version_id"]);
+    await tryRun("SeedCanaryVersion", async () => {
       const v = await mkVersion(`sdk-perf-canary-set-${suffix}`, "canary-");
-      if (v?.policy_version_id) {
-        fix.set("canary_version_id", v.policy_version_id);
+      fix.set("canary_version_id", v.policy_version_id);
+    }, ["canary_version_id", "canary_id"]);
+    const canaryVersionId = fix.lookup("canary_version_id");
+    if (canaryVersionId) {
+      await tryRun("SeedCanary", async () => {
         // success_window_secs MUST be > 0 (1s): 0 makes the broker substitute a default that
         // never elapses during the run, so PromoteCanary stays "not promote-eligible".
-        const c = await platformGen.AuthzService.activate_canary({ actor: gActor(), policy_version_id: v.policy_version_id, scope_kind: "CANARY_SCOPE_KIND_PERCENT", scope_values: ["10"], success_window_secs: 1, metric_threshold: 0.99, min_samples: 0 }, opts);
-        if (c.canary?.canary_id) fix.set("canary_id", c.canary.canary_id);
-      }
-    });
+        const c = await platformGen.AuthzService.activate_canary({ actor: gActor(), policy_version_id: canaryVersionId, scope_kind: "CANARY_SCOPE_KIND_PERCENT", scope_values: ["10"], success_window_secs: 1, metric_threshold: 0.99, min_samples: 0 }, opts);
+        if (!c.canary?.canary_id) throw new Error("successful ActivateCanary seed omitted canary_id");
+        fix.set("canary_id", c.canary.canary_id);
+      }, ["canary_id"]);
+    }
     await tryRun("SeedRollbackSet", async () => {
       const v1 = await mkVersion(`sdk-perf-rollback-set-${suffix}`, "rb1-");
-      if (v1?.policy_version_id) {
-        await platformGen.AuthzService.activate_policy_version({ actor: gActor(), policy_version_id: v1.policy_version_id }, opts);
-        const v2 = await mkVersion(`sdk-perf-rollback-set-${suffix}`, "rb2-");
-        if (v2?.policy_version_id) {
-          await platformGen.AuthzService.activate_policy_version({ actor: gActor(), policy_version_id: v2.policy_version_id }, opts);
-          fix.set("rollback_policy_set_id", v2.policy_set_id);
-          fix.set("rollback_target_version_id", v1.policy_version_id);
-        }
-      }
-    });
+      await platformGen.AuthzService.activate_policy_version({ actor: gActor(), policy_version_id: v1.policy_version_id }, opts);
+      const v2 = await mkVersion(`sdk-perf-rollback-set-${suffix}`, "rb2-");
+      await platformGen.AuthzService.activate_policy_version({ actor: gActor(), policy_version_id: v2.policy_version_id }, opts);
+      if (!v2.policy_set_id) throw new Error("successful rollback seed omitted policy_set_id");
+      fix.set("rollback_policy_set_id", v2.policy_set_id);
+      fix.set("rollback_target_version_id", v1.policy_version_id);
+    }, ["rollback_policy_set_id", "rollback_target_version_id"]);
   }
 
   // ── DataBroker migration: a real plan run → migration_id (run_id) ──────────────
@@ -4121,8 +4272,8 @@ test("live per-RPC perf", {
       (platformPrincipal.roles ?? []).some((role: string) => role.toLowerCase() === "platform_admin"),
       "platform benchmark bearer must carry the trusted platform_admin role",
     );
-    const platformActorUserId = platformPrincipal.user_id || platformPrincipal.subject;
-    assert.ok(platformActorUserId, "platform benchmark bearer must expose an actor user id");
+    const platformActorUserId = platformPrincipal.user_id;
+    assert.ok(platformActorUserId, "platform benchmark bearer must expose a verified user_id for governance attribution");
     platformProject.setTenant(platformPrincipal.tenant_id || tenantId);
     let platformAuthGenerated = (platformProject as any).authGenerated ?? platformProject.generated;
 
@@ -4156,6 +4307,11 @@ test("live per-RPC perf", {
     assert.ok(
       (platformWho?.principal?.roles ?? []).some((role: string) => role.toLowerCase() === "platform_admin"),
       "refreshed platform benchmark bearer must retain platform_admin",
+    );
+    assert.equal(
+      platformWho?.principal?.user_id,
+      platformActorUserId,
+      "refreshed platform benchmark bearer must retain the seeded governance actor user id",
     );
     platformProject.setTenant(platformWho?.principal?.tenant_id || tenantId);
     platformAuthGenerated = (platformProject as any).authGenerated ?? platformProject.generated;
@@ -4366,6 +4522,27 @@ test("live per-RPC perf", {
         return;
       }
       const kind = operationKindOf(api.serviceFull, methodName) || "read_only";
+      const bodyStarted = performance.now();
+      const blockedSeed = blockedManifestSeed(serviceName, methodName, fixtures);
+      if (blockedSeed) {
+        const elapsed = Math.max(performance.now() - bodyStarted, 0.001);
+        const detail = `seed '${blockedSeed.key}' blocked by ${blockedSeed.source}: original gRPC ${blockedSeed.grpcStatus} (${blockedSeed.grpcCode}): ${blockedSeed.details}`;
+        console.error(`FAILDETAIL ${serviceName}/${methodName} [SEED_BLOCKED] ${detail.slice(0, 200)}`);
+        samples.push({
+          service: identity.service,
+          rpc: identity.rpc,
+          apiAlias: apiAliasOf(api.serviceFull, methodName),
+          operationId: operationIdOf(api.serviceFull, methodName),
+          kind,
+          err: "SEED_BLOCKED",
+          p50: elapsed,
+          p99: elapsed,
+          mean: elapsed,
+          iters: 1,
+          note: detail,
+        });
+        return;
+      }
       // Every RPC gets its shared manifest body from perfRealBody — NO generic
       // fallback. A missing body is a loud failure (gap/bypass not allowed), never a
       // silently-populated placeholder. Destructive RPCs run for real against the

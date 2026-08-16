@@ -4,6 +4,19 @@ use crate::proto::udb::core::asset::services::v1::asset_service_server::AssetSer
 use tonic::Request;
 use uuid::Uuid;
 
+fn asset_project_request<T>(message: T, tenant_id: &str, project_id: &str) -> Request<T> {
+    let mut request = Request::new(message);
+    request.metadata_mut().insert(
+        "x-tenant-id",
+        tenant_id.parse().expect("valid tenant metadata"),
+    );
+    request.metadata_mut().insert(
+        "x-udb-project-id",
+        project_id.parse().expect("valid project metadata"),
+    );
+    request
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_asset_native_schema_from_proto -- --ignored --nocapture"]
 async fn live_postgres_asset_native_schema_from_proto() {
@@ -148,6 +161,7 @@ async fn live_postgres_asset_read_after_write() {
     migrate_native_service_db(&pool).await;
     let svc = asset_service(pool.clone()).await;
     let tenant_id = Uuid::new_v4().to_string();
+    let project_id = "billing";
 
     let def = svc
         .create_pipeline_definition(Request::new(asset_pb::CreatePipelineDefinitionRequest {
@@ -164,13 +178,20 @@ async fn live_postgres_asset_read_after_write() {
 
     let file_id = seed_storage_file(&pool, &tenant_id).await;
     let asset = svc
-        .register_asset(Request::new(asset_pb::RegisterAssetRequest {
-            tenant_id: tenant_id.clone(),
-            file_id,
-            name: "ryw.txt".to_string(),
-            media_type: "text".to_string(),
-            ..Default::default()
-        }))
+        .register_asset(asset_project_request(
+            asset_pb::RegisterAssetRequest {
+                tenant_id: tenant_id.clone(),
+                // Intentionally blank: the verified request project is the
+                // canonical fallback that RegisterAsset must persist.
+                project_id: String::new(),
+                file_id,
+                name: "ryw.txt".to_string(),
+                media_type: "text".to_string(),
+                ..Default::default()
+            },
+            &tenant_id,
+            project_id,
+        ))
         .await
         .expect("register_asset")
         .into_inner();
@@ -179,12 +200,17 @@ async fn live_postgres_asset_read_after_write() {
     assert_create_then_get("RegisterAsset→GetAsset", &asset.asset_id, |id| {
         let svc = &svc;
         let tenant_id = tenant_id.clone();
+        let project_id = project_id.to_string();
         async move {
             let got = svc
-                .get_asset(Request::new(asset_pb::GetAssetRequest {
-                    tenant_id,
-                    asset_id: id.clone(),
-                }))
+                .get_asset(asset_project_request(
+                    asset_pb::GetAssetRequest {
+                        tenant_id: tenant_id.clone(),
+                        asset_id: id.clone(),
+                    },
+                    &tenant_id,
+                    &project_id,
+                ))
                 .await?
                 .into_inner()
                 .asset;
@@ -192,6 +218,61 @@ async fn live_postgres_asset_read_after_write() {
         }
     })
     .await;
+
+    let listed = svc
+        .list_assets(asset_project_request(
+            asset_pb::ListAssetsRequest {
+                tenant_id: tenant_id.clone(),
+                page_size: 20,
+                ..Default::default()
+            },
+            &tenant_id,
+            project_id,
+        ))
+        .await
+        .expect("ListAssets must see the metadata-scoped RegisterAsset row")
+        .into_inner();
+    assert!(
+        listed
+            .assets
+            .iter()
+            .any(|listed| listed.asset_id == asset.asset_id),
+        "ListAssets must use the same effective project persisted by RegisterAsset"
+    );
+
+    let foreign_get = svc
+        .get_asset(asset_project_request(
+            asset_pb::GetAssetRequest {
+                tenant_id: tenant_id.clone(),
+                asset_id: asset.asset_id.clone(),
+            },
+            &tenant_id,
+            "foreign-project",
+        ))
+        .await
+        .expect_err("another project must not read the registered asset");
+    assert_eq!(foreign_get.code(), tonic::Code::NotFound);
+
+    let foreign_list = svc
+        .list_assets(asset_project_request(
+            asset_pb::ListAssetsRequest {
+                tenant_id: tenant_id.clone(),
+                page_size: 20,
+                ..Default::default()
+            },
+            &tenant_id,
+            "foreign-project",
+        ))
+        .await
+        .expect("foreign project list remains a valid empty read")
+        .into_inner();
+    assert!(
+        foreign_list
+            .assets
+            .iter()
+            .all(|listed| listed.asset_id != asset.asset_id),
+        "ListAssets must not expose the asset to another project"
+    );
 
     let start = svc
         .start_pipeline(Request::new(asset_pb::StartPipelineRequest {

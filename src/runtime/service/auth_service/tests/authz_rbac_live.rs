@@ -6,6 +6,15 @@ use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzSer
 use tonic::Request;
 use uuid::Uuid;
 
+fn authz_tenant_request<T>(message: T, tenant_id: &str) -> Request<T> {
+    let mut request = Request::new(message);
+    request.metadata_mut().insert(
+        "x-tenant-id",
+        tenant_id.parse().expect("valid tenant metadata"),
+    );
+    request
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authz_role_policy_roundtrip -- --ignored --nocapture"]
 async fn live_postgres_authz_role_policy_roundtrip() {
@@ -121,15 +130,38 @@ async fn live_postgres_authz_role_policy_roundtrip() {
     assert_eq!(listed_roles.user_roles.len(), 1);
     assert!(listed_roles.user_roles[0].expires_at.is_some());
 
-    authz
-        .revoke_role(Request::new(authz_pb::RevokeRoleRequest {
-            user_role_id: user_role.user_role_id,
-            user_id: user.user_id.clone(),
-            reason: "live_test".to_string(),
-            revoked_by: user.user_id.clone(),
-        }))
+    let foreign_revoke = authz
+        .revoke_role(authz_tenant_request(
+            authz_pb::RevokeRoleRequest {
+                user_role_id: user_role.user_role_id.clone(),
+                user_id: user.user_id.clone(),
+                reason: "foreign_live_test".to_string(),
+                revoked_by: user.user_id.clone(),
+            },
+            "other-tenant",
+        ))
         .await
-        .expect("revoke Postgres role");
+        .expect("foreign tenant revoke remains an idempotent no-op")
+        .into_inner();
+    assert!(
+        !foreign_revoke.revoked,
+        "a foreign tenant must not revoke a role assignment by identifier"
+    );
+
+    let revoked = authz
+        .revoke_role(authz_tenant_request(
+            authz_pb::RevokeRoleRequest {
+                user_role_id: user_role.user_role_id,
+                user_id: user.user_id.clone(),
+                reason: "live_test".to_string(),
+                revoked_by: user.user_id.clone(),
+            },
+            "acme",
+        ))
+        .await
+        .expect("revoke Postgres role")
+        .into_inner();
+    assert!(revoked.revoked);
 
     let denied = authz
         .check_access(Request::new(authz_pb::CheckAccessRequest {

@@ -5,6 +5,38 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.11] - 2026-08-16
+
+Patch release closing the remaining product and benchmark-fixture defects exposed
+by the strict v0.5.10 post-release 1,524-RPC evidence gate.
+
+### Fixed
+
+- **Asset registration preserves its effective project authority.** A blank
+  request-body project now inherits and persists the verified bearer/header
+  project, so the returned asset id is immediately visible to project-scoped
+  GetAsset/ListAssets while remaining invisible to other projects.
+- **Identifier-only Authz mutations retain tenant scope.** RevokeRole,
+  DeleteRole, and DeletePolicyRule compile their typed mutations under the
+  verified claim-first tenant context instead of a default context, preserving
+  same-tenant success and making foreign-tenant identifiers no-ops.
+- **Cross-tenant Backup restore remaps numeric identities safely.** Integral
+  serial/identity unique keys receive fresh values from their trusted PostgreSQL
+  sequence inside the restore transaction, and typed old-to-new mappings are
+  propagated to child foreign keys without overwriting source rows.
+- **TypeScript and PHP governance benchmarks use audited authority.** Their
+  platform seed actors and reviewers bind to the verified platform user, carry
+  explicit short-lived break-glass reason/expiry, and preserve original seed
+  failures as complete SEED_BLOCKED evidence rather than sending placeholder ids.
+
+### Verification
+
+- No local Cargo build, test, formatter, SDK generation, or protocol generation
+  was run. CI must compile the complete matrix, execute the focused live Asset,
+  Authz, and Backup regressions, then prove 381 canonical RPCs across each of Go,
+  Python, TypeScript, and PHP (1,524 attempts, zero fatal rows) before Pages can
+  publish fresh benchmark evidence.
+
 ## [0.5.10] - 2026-08-16
 
 Patch release closing the product, authority, SDK-fixture, and release-evidence

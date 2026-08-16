@@ -2,6 +2,7 @@ use super::support::*;
 use crate::proto::udb::core::backup::services::v1 as backup_pb;
 use crate::proto::udb::core::backup::services::v1::backup_service_server::BackupService;
 use crate::runtime::native_catalog::native_model;
+use crate::runtime::service::method_security::{scope_claim_context_for_test, test_claim_context};
 use tonic::{Code, Request};
 use uuid::Uuid;
 
@@ -205,4 +206,123 @@ async fn live_postgres_backup_same_tenant_project_isolation() {
         .await
         .expect_err("blank-project legacy row must remain quarantined");
     assert_eq!(legacy.code(), Code::NotFound);
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres+MinIO; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_backup_restore_remaps_owned_bigserial_identity -- --ignored --nocapture"]
+async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    reset_native_outbox(&pool).await;
+
+    let source_tenant = Uuid::new_v4().to_string();
+    let target_tenant = Uuid::new_v4().to_string();
+    let project_id = Uuid::new_v4().to_string();
+    let tuple = native_model(
+        "udb.core.authz.entity.v1.PolicyTuple",
+        &[
+            "policy_tuple_id",
+            "tuple_kind",
+            "subject",
+            "domain",
+            "object",
+            "action",
+            "effect",
+            "tenant_id",
+            "project_id",
+        ],
+    );
+    let seed_sql = format!(
+        "INSERT INTO {} ({}, {}, {}, {}, {}, {}, {}, {}) \
+         VALUES ('relationship', $1, $2, 'document:seed', 'read', 'allow', $3, $4) \
+         RETURNING {}",
+        tuple.relation,
+        tuple.q("tuple_kind"),
+        tuple.q("subject"),
+        tuple.q("domain"),
+        tuple.q("object"),
+        tuple.q("action"),
+        tuple.q("effect"),
+        tuple.q("tenant_id"),
+        tuple.q("project_id"),
+        tuple.q("policy_tuple_id"),
+    );
+    let source_tuple_id: i64 = sqlx::query_scalar(&seed_sql)
+        .bind(format!("user:{source_tenant}"))
+        .bind(format!("tenant:{source_tenant}"))
+        .bind(&source_tenant)
+        .bind(&project_id)
+        .fetch_one(&pool)
+        .await
+        .expect("seed source BIGSERIAL policy tuple");
+
+    let svc = backup_service_for_projects(&[&project_id]).await;
+    let backup = svc
+        .start_tenant_backup(backup_request(
+            backup_pb::StartTenantBackupRequest {
+                tenant_id: source_tenant.clone(),
+                object_backend: "minio".to_string(),
+                object_bucket: "udb-storage".to_string(),
+                ..Default::default()
+            },
+            &source_tenant,
+            &project_id,
+        ))
+        .await
+        .expect("back up source tenant with BIGSERIAL row")
+        .into_inner();
+    assert!(backup.total_rows > 0, "backup must contain the source tuple");
+
+    let restore = backup_request(
+        backup_pb::RestoreTenantRequest {
+            source_tenant_id: source_tenant.clone(),
+            target_tenant_id: target_tenant.clone(),
+            backup_id: backup.backup_id,
+            confirmation_token: "confirm-cross-tenant-restore".to_string(),
+            allow_cross_tenant: true,
+            metadata_json: "{}".to_string(),
+        },
+        &target_tenant,
+        &project_id,
+    );
+    let restored = scope_claim_context_for_test(
+        test_claim_context(
+            "backup-platform-admin",
+            "",
+            "",
+            &["udb:platform_admin"],
+            &["platform_admin"],
+        ),
+        svc.restore_tenant(restore),
+    )
+    .await
+    .expect("restore allocates a fresh BIGSERIAL identity")
+    .into_inner();
+    assert!(restored.restored_rows > 0, "restore must insert tenant rows");
+
+    let identity_sql = format!(
+        "SELECT {} FROM {} WHERE {}::text = $1 ORDER BY {}",
+        tuple.q("policy_tuple_id"),
+        tuple.relation,
+        tuple.q("tenant_id"),
+        tuple.q("policy_tuple_id"),
+    );
+    let source_ids: Vec<i64> = sqlx::query_scalar(&identity_sql)
+        .bind(&source_tenant)
+        .fetch_all(&pool)
+        .await
+        .expect("read preserved source tuple identity");
+    let target_ids: Vec<i64> = sqlx::query_scalar(&identity_sql)
+        .bind(&target_tenant)
+        .fetch_all(&pool)
+        .await
+        .expect("read restored target tuple identity");
+
+    assert!(source_ids.contains(&source_tuple_id));
+    assert_eq!(target_ids.len(), 1, "one source tuple must restore once");
+    assert_ne!(
+        target_ids[0], source_tuple_id,
+        "RestoreTenant must allocate a fresh sequence-owned identity without overwriting the source"
+    );
 }
