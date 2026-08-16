@@ -5,6 +5,49 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.14] - 2026-08-16
+
+Patch release restoring the in-place upgrade path, recovering poisoned Redis
+connections, and closing two backup restore-key authority gaps. (0.5.13 was
+skipped.)
+
+### Fixed
+
+- **In-place upgrade is possible again.** The auto-appended audit block
+  (`created_at`, `updated_at`, `created_by`) was numbered `max(explicit) + 1`, so
+  appending an explicit field to any message with `audit_fields: true` slid the
+  block upward and handed the new fields the numbers a deployed manifest had
+  recorded for the audit trio. The drift gate then reported field-number reuse —
+  against fields the schema author never numbered — and blocked startup
+  unconditionally, so the broker crash-looped and every dependent service lost
+  its database, for a table that could be empty. A database created by 0.5.6
+  could not start any broker from 0.5.8 onward.
+
+  The block is now allocated from a reserved base (9000), far above hand-written
+  fields and below protobuf's reserved range, so appending explicit fields never
+  moves it. Existing deployments are unblocked as well: relocating a generated
+  audit column is no longer treated as field-number reuse, because audit columns
+  are synthesized into the manifest and appear in no `.proto` — their number was
+  never a real protobuf field number. The exemption is narrow, so a hand-written
+  column that was genuinely renumbered is still blocked, and when a conflict does
+  involve an audit column the message now says so instead of telling the operator
+  to reserve a number they never wrote. 45 entities declared `audit_fields` and
+  each was a latent instance of this.
+
+- **Poisoned shared Redis connections recover.** A broken shared connection was
+  reused indefinitely; the client now uses a connection manager that reconnects
+  in the background, and rate-limit infra failures keep their typed retryable
+  detail so callers still fall back rather than fail hard.
+
+- **Backup restore preserves partition-aware unique keys** and closes the
+  restore-key authority gaps found in the post-release audit.
+
+### Notes
+
+- `udb drift` diffs a proto catalog against a prior manifest offline, with no
+  database, and surfaces the upgrade block before any broker touches a
+  deployment. It is the recommended pre-upgrade gate.
+
 ## [0.5.12] - 2026-08-16
 
 Patch release making the opaque-project-id guarantee true for the last path
