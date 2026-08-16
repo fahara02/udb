@@ -2,7 +2,7 @@
 
 Date: 2026-08-16
 Release: 0.5.11
-Status: implemented; focused live CI passed; full CI verification pending
+Status: implemented; focused live and full PR CI passed
 
 `BackupService.RestoreTenant` now allocates fresh PostgreSQL serial/identity
 values when a cross-tenant restore keeps the source rows in the same physical
@@ -32,9 +32,9 @@ artifact patch was applied verbatim; no local formatter was run. Compilation,
 unit coverage, and the focused live regression remain CI-gated on the resulting
 commit.
 
-Focused run `31944653410` at code head
-`0617552c55af0de03facf6102cb0351199acfad5` compiled the integration target,
+Focused run `31945288497` after the final main rebase, at code head
+`ff6b011ce9edaf66eeda99dd8b3f595ae4d5d0eb`, compiled the integration target,
 provisioned PostgreSQL and MinIO, and passed
 `live_postgres_backup_restore_remaps_owned_bigserial_identity` (one passed,
-zero failed). Full PR CI and successor post-release benchmark evidence remain
-required.
+zero failed). PR CI `31945278827` and workflow lint `31945278705` also completed
+successfully. Successor post-release benchmark evidence remains required.
