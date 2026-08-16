@@ -1131,7 +1131,15 @@ CI_SDK_SERVICE_COVERAGE_REQUIREMENTS = (
 )
 
 CI_TOPOLOGY_REQUIREMENTS = (
-    ("on:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]", "main-only push/PR triggers"),
+    # Work branches must run CI too. Pinning main-only triggers is what let two
+    # agent branches merge into main carrying compile errors no gate had run:
+    # `push` fired only on main and `pull_request` only for PRs TARGETING main,
+    # so a directly-merged branch got zero checks. Assert the work-branch
+    # triggers are present AND that pull_request still targets main.
+    ("      - 'fix/**'", "work-branch push trigger (fix/**)"),
+    ("      - 'feat/**'", "work-branch push trigger (feat/**)"),
+    ("      - 'release/**'", "work-branch push trigger (release/**)"),
+    ("  pull_request:" + chr(10) + "    branches: [main]", "pull requests target main"),
     ("concurrency:\n  group: ci-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true", "CI concurrency cancellation"),
     ("permissions:\n  contents: read", "read-only CI permissions"),
     ("LIVE_BROKER_FEATURES:", "single live broker feature tier"),
@@ -6709,7 +6717,15 @@ ENTRYPOINT ["/usr/local/bin/udb"]
         ci_good = """name: CI
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'fix/**'
+      - 'feat/**'
+      - 'docs/**'
+      - 'refactor/**'
+      - 'release/**'
+      - 'livefix/**'
+      - 'chore/**'
   pull_request:
     branches: [main]
 concurrency:

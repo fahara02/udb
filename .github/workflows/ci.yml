@@ -20,9 +20,24 @@ name: CI
 #     `push: main`.
 # Shared primitives live in .github/actions/* and .github/workflows/_live-sdk-suite.yml.
 
+# Work branches run CI too, not just main. Two agent branches were merged
+# straight into main carrying compile errors that no gate had ever exercised —
+# `push` fired only on main and `pull_request` only for PRs TARGETING main, so a
+# branch that is merged directly (the normal flow here) got zero checks. One
+# broke the lib test target, the other broke every build with the `redis`
+# feature; both were found only after landing. `cancel-in-progress` below keeps
+# repeated pushes to the same branch from piling up.
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'fix/**'
+      - 'feat/**'
+      - 'docs/**'
+      - 'refactor/**'
+      - 'release/**'
+      - 'livefix/**'
+      - 'chore/**'
   pull_request:
     branches: [main]
 
