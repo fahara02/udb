@@ -1360,6 +1360,78 @@ impl DataBrokerRuntime {
         })
     }
 
+    /// Stage the given manifest for `project_id` and activate it, returning the
+    /// activated catalog id.
+    ///
+    /// This exists because a deployment created before projects had catalogs has
+    /// ZERO rows in the catalog-version and project-binding tables. From 0.5.9
+    /// the data plane refuses any principal whose project has no ACTIVE catalog,
+    /// so after an upgrade every service authenticating under a named project
+    /// fails its first call — and the only remedy was to write a gRPC client
+    /// against StageCatalog + ActivateCatalog.
+    ///
+    /// Idempotent: if the project already has an ACTIVE catalog this returns its
+    /// id and changes nothing, so it is safe to run repeatedly and safe to call
+    /// on a healthy deployment.
+    ///
+    /// Deliberately a single public entry point rather than exposing the staging
+    /// and activation types: the CLI lives in a separate crate and only needs the
+    /// resulting id.
+    pub async fn bootstrap_project_catalog(
+        &self,
+        project_id: &str,
+        manifest_json: &[u8],
+        reason: &str,
+        actor: &str,
+    ) -> Result<String, tonic::Status> {
+        // Idempotence is checked against the DURABLE row, not an in-memory
+        // snapshot: this runs on a freshly built runtime (CLI or first startup)
+        // where nothing has been loaded yet.
+        if let Some(active) = self.load_active_catalog_for_project(project_id).await? {
+            return Ok(active.catalog_id);
+        }
+        let manifest: crate::CatalogManifest =
+            serde_json::from_slice(manifest_json).map_err(|err| {
+                catalog_admin_invalid_field(
+                    "manifest_json",
+                    "must be a serialized CatalogManifest",
+                    format!("catalog manifest payload is not valid JSON: {err}"),
+                )
+            })?;
+        // Same derivation the served StageCatalog path uses, so a catalog
+        // bootstrapped here is indistinguishable from one staged over gRPC.
+        let version = if !manifest.generator_version.trim().is_empty() {
+            format!("generator-{}", manifest.generator_version.trim())
+        } else if !manifest.checksum_sha256.trim().is_empty() {
+            manifest.checksum_sha256.chars().take(12).collect()
+        } else {
+            "v1".to_string()
+        };
+        let compatibility_level = self.config().service.catalog_compatibility_level.clone();
+        let idempotency_key = format!("bootstrap:{project_id}:{version}");
+        let staged = self
+            .stage_catalog(
+                project_id,
+                &version,
+                manifest_json,
+                reason,
+                actor,
+                &compatibility_level,
+                &idempotency_key,
+            )
+            .await?;
+        let catalog_id = staged.catalog.catalog_id.clone();
+        self.activate_catalog(
+            project_id,
+            &catalog_id,
+            reason,
+            actor,
+            &format!("bootstrap-activate:{project_id}:{version}"),
+        )
+        .await?;
+        Ok(catalog_id)
+    }
+
     /// Activate a catalog version (marks it ACTIVE, records activation log).
     pub async fn activate_catalog(
         &self,

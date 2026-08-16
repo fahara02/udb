@@ -1374,10 +1374,24 @@ async fn run_startup_lifecycle_core(
             {
                 reject_review_required_sql_artifacts(runtime, &mut report, &sql_artifacts)?;
             }
-            runtime
+            // Open a durable run record BEFORE applying, and close it either way.
+            // A run that applied hundreds of artifacts and then failed used to
+            // leave `udb_migration_runs` empty — no record of what an upgrade did
+            // to the database, which is exactly when forensics matter.
+            let audit_run = open_migration_run(runtime, &manifest.checksum_sha256).await;
+            let applied = runtime
                 .execute_sql_artifacts(&sql_artifacts, mode_label)
-                .await
-                .map_err(|err| fail(runtime, &mut report, "apply_sql", err.to_string()))?;
+                .await;
+            if let Some((sink, run_id)) = audit_run.as_ref() {
+                let (state, detail) = match &applied {
+                    Ok(()) => ("COMPLETED", String::new()),
+                    Err(err) => ("ERROR", err.to_string()),
+                };
+                if let Err(err) = sink.finish_run(run_id, state, &detail).await {
+                    tracing::warn!(error = %err, "migration audit: could not close the run record");
+                }
+            }
+            applied.map_err(|err| fail(runtime, &mut report, "apply_sql", err.to_string()))?;
         }
         report.applied_sql_artifacts = sql_artifacts.len();
     }
@@ -2439,6 +2453,30 @@ fn transition(
     engine.transition(state.clone())?;
     report.step(state, message);
     Ok(())
+}
+
+/// Open a `udb_migration_runs` record for this startup apply.
+///
+/// Returns `None` when Postgres is not configured or the ledger cannot be
+/// opened; auditing must never be the reason a migration does not run, so every
+/// failure here is a warning rather than an error.
+async fn open_migration_run(
+    runtime: &DataBrokerRuntime,
+    catalog_version: &str,
+) -> Option<(
+    crate::runtime::migration_audit::PostgresMigrationAuditSink,
+    String,
+)> {
+    let pool = runtime.pg_pool_clone()?;
+    let config = crate::runtime::system::SystemCatalogConfig::default();
+    let sink = crate::runtime::migration_audit::PostgresMigrationAuditSink::new(pool, &config);
+    match crate::migration::MigrationAuditSink::start_run(&sink, catalog_version, "").await {
+        Ok(run_id) => Some((sink, run_id)),
+        Err(err) => {
+            tracing::warn!(error = %err, "migration audit: could not open a run record");
+            None
+        }
+    }
 }
 
 fn fail(

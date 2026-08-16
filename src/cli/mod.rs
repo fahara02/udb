@@ -750,6 +750,61 @@ pub fn run() {
     eprintln!("checksum_sha256: {checksum}");
 
     match command {
+        Command::CatalogBootstrap { project, dsn } => {
+            if project.trim().is_empty() {
+                eprintln!("catalog bootstrap: --project <id> is required");
+                process::exit(2);
+            }
+            let manifest = CatalogManifest::from_schemas(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
+            // Same merge `serve` performs, so the bootstrapped catalog describes
+            // the `udb_*` native tables too — a catalog missing them would be
+            // activated and then disagree with the running broker.
+            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
+            let manifest_json = serde_json::to_vec(&manifest)
+                .unwrap_or_else(|err| fatal_json("failed to serialize catalog manifest", err));
+            if let Some(dsn) = dsn.as_deref().filter(|value| !value.trim().is_empty()) {
+                #[allow(unused_unsafe)]
+                unsafe {
+                    env::set_var("UDB_PG_DSN", dsn);
+                }
+            }
+            let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
+                eprintln!("failed to create tokio runtime: {err}");
+                process::exit(1);
+            });
+            let exit_code = runtime.block_on(async {
+                let rt = DataBrokerRuntime::from_env().await;
+                if rt.pg_pool_clone().is_none() {
+                    eprintln!(
+                        "catalog bootstrap: PostgreSQL is not configured. Pass --dsn <dsn> or set UDB_PG_DSN."
+                    );
+                    return 1i32;
+                }
+                match rt
+                    .bootstrap_project_catalog(
+                        &project,
+                        &manifest_json,
+                        "bootstrap catalog for an upgraded deployment",
+                        "udb-cli",
+                    )
+                    .await
+                {
+                    Ok(catalog_id) => {
+                        eprintln!(
+                            "catalog bootstrap: project '{project}' now has an ACTIVE catalog ({catalog_id}).
+                             Services authenticating under this project can serve. Safe to re-run."
+                        );
+                        0
+                    }
+                    Err(err) => {
+                        eprintln!("catalog bootstrap: {err}");
+                        1
+                    }
+                }
+            });
+            process::exit(exit_code);
+        }
         Command::Catalog => output_json(&ProtoCatalog { schemas }, "catalog"),
         Command::Dsn => {
             let catalog = generate_unified_dsn_catalog(&schemas, &DsnGenerationConfig::default())

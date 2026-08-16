@@ -43,6 +43,22 @@ const COMMANDS: &[CmdHelp] = &[
   Example: udb serve proto \"\" 0.0.0.0:50051",
     },
     CmdHelp {
+        name: "catalog bootstrap",
+        group: "Core",
+        summary: "Give a project an ACTIVE catalog so an upgraded deployment can serve.",
+        usage: "udb catalog bootstrap --project <id> [--dsn <dsn>]",
+        details: "  From 0.5.9 the data plane refuses any principal whose project has no ACTIVE
+  catalog. A deployment created before projects had catalogs has no catalog rows
+  at all, so after upgrading, every service authenticating under a named project
+  fails its first call. This stages the current manifest for that project and
+  activates it in one step.
+
+  Idempotent: if the project already has an ACTIVE catalog it reports that id and
+  changes nothing, so it is safe to re-run and safe on a healthy deployment.
+
+  Run once per project that services authenticate under.",
+    },
+    CmdHelp {
         name: "verify",
         group: "Core",
         summary: "Compare the proto manifest against a LIVE database, read-only, before applying anything.",

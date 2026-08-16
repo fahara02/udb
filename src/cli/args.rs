@@ -49,6 +49,12 @@ pub(crate) enum Command {
         force: bool,
         dsn: String,
     },
+    /// Stage + activate a catalog for a project that has none, so an upgraded
+    /// deployment can serve without writing a gRPC client.
+    CatalogBootstrap {
+        project: String,
+        dsn: Option<String>,
+    },
     /// Compare the proto manifest against a LIVE database, read-only, using the
     /// same comparison startup runs — so drift is found before any DDL is
     /// applied rather than after.
@@ -992,6 +998,13 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
     let _ = prior_manifest_path; // used by Drift/Plan handlers via env fallback below
 
     let command = match args.first().map(|value| value.as_str()) {
+        Some("catalog") if matches!(args.get(1).map(String::as_str), Some("bootstrap")) => {
+            offset = 2;
+            Command::CatalogBootstrap {
+                project: flag_value("--project").unwrap_or_default(),
+                dsn: flag_value("--dsn"),
+            }
+        }
         Some("catalog") => {
             offset = 1;
             Command::Catalog

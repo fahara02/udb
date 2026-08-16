@@ -127,6 +127,32 @@ udb verify --live --dsn "postgresql://localhost/upgrade_rehearsal"
 
 ---
 
+## Projects need a catalog before they can serve
+
+From 0.5.9 the data plane refuses any authenticated principal whose project has
+no ACTIVE catalog, rather than quietly falling back to the default project's
+schema. A deployment created before projects had catalogs has no catalog rows at
+all, so after upgrading, every service authenticating under a named project
+fails its first call:
+
+```
+project 'acme' has no ACTIVE catalog, and falling back to the default project is refused
+```
+
+Give each project a catalog once:
+
+```bash
+udb catalog bootstrap --project acme --dsn "$UDB_PG_DSN"
+```
+
+It stages the current manifest for that project and activates it. Re-running is
+safe — if the project already has an ACTIVE catalog it reports that and changes
+nothing.
+
+Run it for every project your services authenticate under, not just the default.
+
+---
+
 ## When startup fails after the migration applied
 
 The DDL is applied before verification runs, so it is possible to end up with a
