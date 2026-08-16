@@ -41,3 +41,8 @@ No local Cargo build, test, rustfmt, SDK generation, or protocol generation is
 permitted for this wave. Static diff review is local; GitHub CI owns compilation,
 formatting, generated-artifact repair, focused live regressions, the complete
 matrix, and the post-release Release → Benchmark → Pages evidence chain.
+
+The first PR run, `31943894065`, identified only Backup rustfmt drift at its
+quick gate and emitted `ci-rustfmt-repair-1` (`9262760140`). That CI-produced
+patch was applied without running a local formatter; the successor exact-head
+CI run remains the release authority.

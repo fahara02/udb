@@ -272,7 +272,10 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
         .await
         .expect("back up source tenant with BIGSERIAL row")
         .into_inner();
-    assert!(backup.total_rows > 0, "backup must contain the source tuple");
+    assert!(
+        backup.total_rows > 0,
+        "backup must contain the source tuple"
+    );
 
     let restore = backup_request(
         backup_pb::RestoreTenantRequest {
@@ -299,7 +302,10 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
     .await
     .expect("restore allocates a fresh BIGSERIAL identity")
     .into_inner();
-    assert!(restored.restored_rows > 0, "restore must insert tenant rows");
+    assert!(
+        restored.restored_rows > 0,
+        "restore must insert tenant rows"
+    );
 
     let identity_sql = format!(
         "SELECT {} FROM {} WHERE {}::text = $1 ORDER BY {}",

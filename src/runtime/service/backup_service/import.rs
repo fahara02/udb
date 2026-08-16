@@ -501,8 +501,7 @@ async fn postgres_restore_remap_plans(
                     ),
                 )
             })?;
-        let authority =
-            restore_remap_authority(schema, table, &column, &data_type, sequence_name)?;
+        let authority = restore_remap_authority(schema, table, &column, &data_type, sequence_name)?;
         plans.push(RestoreColumnRemapPlan { column, authority });
     }
     Ok(plans)
@@ -957,14 +956,8 @@ pub(crate) async fn restore_tenant(
         })?;
         let table_has_rows = jsonl.lines().any(|line| !line.trim().is_empty());
         let restore_remap_plans = if cross_tenant_restore && table_has_rows {
-            postgres_restore_remap_plans(
-                &mut *tx,
-                schema,
-                table,
-                tenant_column,
-                manifest_table,
-            )
-            .await?
+            postgres_restore_remap_plans(&mut *tx, schema, table, tenant_column, manifest_table)
+                .await?
         } else {
             Vec::new()
         };
@@ -1147,7 +1140,11 @@ mod restore_remap_tests {
         let denied = restore_remap_authority("app", "parents", "parent_id", "bigint", None)
             .expect_err("an unowned numeric identity must fail closed");
         assert_eq!(denied.code(), tonic::Code::FailedPrecondition);
-        assert!(denied.message().contains("no trusted owned serial/identity sequence"));
+        assert!(
+            denied
+                .message()
+                .contains("no trusted owned serial/identity sequence")
+        );
 
         assert_eq!(
             restore_remap_authority(

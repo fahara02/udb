@@ -25,3 +25,9 @@ Coverage includes pure authority/FK mapping guards and the ignored live
 the real Backup handlers, PostgreSQL, encryption, and MinIO. No proto/codegen or
 database migration is required. Local Cargo/build/test/rustfmt/codegen was not
 run; GitHub CI is authoritative.
+
+PR CI run `31943894065` found formatting-only drift in the two Backup files and
+published repair artifact `ci-rustfmt-repair-1` (artifact `9262760140`). The
+artifact patch was applied verbatim; no local formatter was run. Compilation,
+unit coverage, and the focused live regression remain CI-gated on the resulting
+commit.
