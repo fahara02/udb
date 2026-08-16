@@ -187,8 +187,13 @@ with UdbClient("127.0.0.1:50051", meta) as udb:
 
 The whole idea: **you describe your data model in protobuf, and UDB turns it into
 a running, multi-tenant, RLS-protected API over your database — no ORM, no
-hand-written SQL, no schema migrations to babysit.** Here's the path from an empty
-folder to querying your own tables.
+hand-written SQL, and no migration files to write by hand.** Here's the path from
+an empty folder to querying your own tables.
+
+Steps 1–7 are the first run against an empty database. **Step 8 is the one you
+will repeat for the rest of the project** — changing a model that already holds
+data is a different job, and UDB gives you commands for it rather than leaving
+you to guess.
 
 **1. Get the `udb` CLI** — from a release binary, an SDK launcher, or source:
 
@@ -240,6 +245,24 @@ canonical-UUID handling that trips up most first integrations — is in
 [`examples/ts_enterprise`](examples/ts_enterprise). Start there rather than
 wiring the raw gRPC clients yourself.
 
+**8. Change your model — the day-2 loop.** Editing a proto once the table holds
+rows is where care is needed, so it has its own commands. Never point a broker at
+a changed model and hope:
+
+```bash
+udb verify --live --dsn "$UDB_PG_DSN"   # does the database still match the protos?
+udb drift --prior prior-manifest.json   # what will this change do?
+udb plan  --prior prior-manifest.json           --emit-approval-plan plan.json  # the file `serve` will accept
+```
+
+`drift` classifies every operation `SafeAuto`, `RequiresReview` or `Blocked`, and
+each carries a `data_destructive` flag — gate your pipeline on that flag, never on
+whether the operation's name starts with `Drop`. Rehearse against a `pg_dump`
+clone before production.
+
+Worked end-to-end walkthrough: [`examples/schema_change`](examples/schema_change).
+Full guide: [docs/upgrading.md](docs/upgrading.md).
+
 ## CLI
 
 All public commands use the short binary name `udb`.
@@ -249,7 +272,11 @@ All public commands use the short binary name `udb`.
 | `udb init` | Build or preview a project-aware UDB setup plan |
 | `udb proto export --fmt` | Export UDB annotation and broker protos into an app |
 | `udb proto fmt --check` | Check annotation formatting |
-| `udb catalog`, `udb sql`, `udb plan`, `udb drift` | Inspect schemas, SQL, migrations, and drift |
+| `udb catalog`, `udb sql` | Inspect the schema and DDL UDB derives from your protos |
+| `udb drift`, `udb plan` | **Changing a live model:** what a change does, and the approval plan `serve` accepts |
+| `udb verify --live` | Compare protos against a LIVE database, read-only, before applying anything |
+| `udb catalog bootstrap` | Give a project an ACTIVE catalog (needed once per project after upgrading) |
+| `udb env` | Generate a working `.env` for dev or enterprise, with real secrets |
 | `udb sdk generate` | Generate descriptor-aware SDK surfaces from templates |
 | `udb native list`, `udb native manifest`, `udb native docs` | Inspect native-service contracts |
 | `udb app init` | Add a language/framework integration scaffold |

@@ -1,13 +1,21 @@
 # Upgrading a live UDB deployment
 
-This page is about upgrading a database that **already has data in it**. A fresh
-deployment needs none of this — start the broker and it builds the schema.
+This page is about upgrading **UDB itself** against a database that already has
+data in it. A fresh deployment needs none of this — start the broker and it
+builds the schema.
+
+Changing **your own protos** on a live database is a related but different job,
+and it has its own worked walkthrough:
+[examples/schema_change](../examples/schema_change). The commands overlap; the
+reasons you run them differ.
 
 The short version:
 
 ```bash
 udb verify --live --dsn "$UDB_PG_DSN"          # 1. does the live schema match the protos?
 udb drift --prior prior-manifest.json          # 2. what will the migration change?
+#    (produce that file with: UDB_MANIFEST_EXPORT_PATH=prior-manifest.json udb manifest-export proto
+#     — NOT `udb catalog`, which is a different file and diffs as phantom DropTable ops)
 udb plan --prior prior-manifest.json \
          --emit-approval-plan plan.json        # 3. produce the file `serve` will accept
 # 4. rehearse the whole thing against a pg_dump clone before touching production

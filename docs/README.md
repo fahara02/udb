@@ -43,6 +43,7 @@ Each row is a task. Read across to the guide that covers it.
 | Native auth, authz, IdP, storage, assets, WebRTC, and SDK facades | [native-services.md](native-services.md) |
 | Production readiness, config, runbooks, SLOs, and validation | [operations.md](operations.md) |
 | Upgrading a database that already has data: pre-flight checks, approval plans, rehearsing on a clone, and what to do when startup fails after a migration applied | [upgrading.md](upgrading.md) |
+| Changing YOUR OWN model once it holds rows: the day-2 loop, worked end to end | [examples/schema_change](../examples/schema_change) |
 | From-scratch hardened/enterprise bring-up: minimal env set, TLS/mTLS, auth-plane exposure, ABAC vs policy_rules, pooler-safe DSN, SDK mTLS | [enterprise-deployment.md](enterprise-deployment.md) |
 | Request context, identity, authorization, sensitive data, and compliance profiles | [security.md](security.md) |
 | Testing | [testing.md](testing.md) |
