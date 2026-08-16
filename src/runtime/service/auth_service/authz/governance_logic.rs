@@ -40,7 +40,15 @@ impl PolicyDocument {
             role_bindings: snap
                 .role_bindings
                 .iter()
-                .filter(|b| scope(&b.tenant, &b.project))
+                // Platform authority is an out-of-band, system-provenanced
+                // binding. A governed document materializes bindings as literal
+                // tuples, so carrying it into a draft would erase that provenance.
+                .filter(|b| {
+                    scope(&b.tenant, &b.project)
+                        && !crate::runtime::service::method_security::is_platform_authority_role(
+                            &b.role,
+                        )
+                })
                 .cloned()
                 .collect(),
             tuples: snap

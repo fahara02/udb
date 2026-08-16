@@ -83,21 +83,32 @@ fn token_family_internal_status(
     crate::runtime::executor_utils::internal_status("authn", operation, message)
 }
 
+fn scoped_token_family_filter(
+    identity_filter: LogicalFilter,
+    tenant_id: &str,
+    project_id: &str,
+) -> LogicalFilter {
+    authn_and(vec![
+        identity_filter,
+        authn_eq("tenant_id", LogicalValue::String(tenant_id.to_string())),
+        authn_eq("project_id", LogicalValue::String(project_id.to_string())),
+        LogicalFilter::IsNull("revoked_at".to_string()),
+    ])
+}
+
 impl AuthnServiceImpl {
     /// Shared handle to the raw auth Postgres pool for the token-family lineage
     /// operations.
     ///
     /// RLS contract: `token_families` enables row-level security with a
     /// `tenant_id = current_setting('app.current_tenant_id')` policy. Several of
-    /// these operations are inherently CROSS-TENANT — `rotate_refresh_family` and
-    /// the session/principal revokes locate a row by `family_id`/`session_id`/
-    /// `principal_id`, not by tenant, and do not know the tenant until the row is
-    /// read. They therefore rely on the auth-plane role operating across tenants
-    /// (table owner, or a role granted `BYPASSRLS`); a deployment that `FORCE`s
-    /// row-level security MUST grant that, or refresh-token rotation cannot see its
-    /// own rows. The tenant-AWARE writes (`mint_refresh_family`,
-    /// `revoke_family_on_reuse`) additionally install `app.current_tenant_id` so
-    /// they remain correct even under FORCE row-level security.
+    /// `rotate_refresh_family` begins from an opaque family id and does not know
+    /// the tenant until the row is read, so it requires auth-plane cross-tenant
+    /// authority. Session/principal logout revocation is different: the served
+    /// Logout handler resolves exact claim/body tenant+project authority first,
+    /// and both its native and raw-store paths constrain updates to that scope.
+    /// Tenant-aware raw writes install `app.current_tenant_id` so they remain
+    /// correct even under FORCE row-level security.
     fn require_family_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
             authn_capability_status(
@@ -242,6 +253,8 @@ impl AuthnServiceImpl {
     pub(super) async fn revoke_families_for_session(
         &self,
         session_handle: &str,
+        tenant_id: &str,
+        project_id: &str,
     ) -> Result<u64, Status> {
         let Some(pool) = self.pg_pool.as_ref() else {
             return Ok(0);
@@ -251,7 +264,7 @@ impl AuthnServiceImpl {
         }
         let session_hash = authn::hash_secret(session_handle, &self.hash_key());
         if let Ok(runtime) = self.authn_runtime() {
-            let context = self.authn_context("", "");
+            let context = self.authn_context(tenant_id, project_id);
             let mut assignments = std::collections::BTreeMap::new();
             assignments.insert("revoked_at".to_string(), LogicalAssignment::ServerNow);
             assignments.insert(
@@ -261,10 +274,11 @@ impl AuthnServiceImpl {
             assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
             let op = LogicalUpdate {
                 message_type: "udb.core.authn.entity.v1.TokenFamily".to_string(),
-                filter: authn_and(vec![
+                filter: scoped_token_family_filter(
                     authn_eq("session_id", LogicalValue::String(session_hash.clone())),
-                    LogicalFilter::IsNull("revoked_at".to_string()),
-                ]),
+                    tenant_id,
+                    project_id,
+                ),
                 assignments,
                 return_fields: Vec::new(),
                 require_affected: false,
@@ -284,16 +298,39 @@ impl AuthnServiceImpl {
         let sql = format!(
             "UPDATE {rel} SET {revoked} = COALESCE({revoked}, NOW()), \
                     {reason} = COALESCE(NULLIF({reason}, ''), 'logout'), {updated} = NOW() \
-             WHERE {session} = $1 AND {revoked} IS NULL",
+             WHERE {session} = $1 AND {tenant} = $2 AND COALESCE({project}, '') = $3 \
+               AND {revoked} IS NULL",
             rel = m.relation,
             revoked = m.q("revoked_at"),
             reason = m.q("revocation_reason"),
             updated = m.q("updated_at"),
             session = m.q("session_id"),
+            tenant = m.q("tenant_id"),
+            project = m.q("project_id"),
         );
-        Ok(sqlx::query(&sql)
+        let mut tx = pool.begin().await.map_err(|err| {
+            token_family_internal_status(
+                "revoke_families_for_session",
+                format!("begin scoped family revoke failed: {err}"),
+            )
+        })?;
+        if !tenant_id.trim().is_empty() {
+            sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| {
+                    token_family_internal_status(
+                        "revoke_families_for_session",
+                        format!("set tenant context failed: {err}"),
+                    )
+                })?;
+        }
+        let affected = sqlx::query(&sql)
             .bind(&session_hash)
-            .execute(pool)
+            .bind(tenant_id)
+            .bind(project_id)
+            .execute(&mut *tx)
             .await
             .map_err(|err| {
                 token_family_internal_status(
@@ -301,7 +338,14 @@ impl AuthnServiceImpl {
                     format!("revoke families for session failed: {err}"),
                 )
             })?
-            .rows_affected())
+            .rows_affected();
+        tx.commit().await.map_err(|err| {
+            token_family_internal_status(
+                "revoke_families_for_session",
+                format!("commit scoped family revoke failed: {err}"),
+            )
+        })?;
+        Ok(affected)
     }
 
     /// Revoke every live refresh-token family for a principal (all-sessions
@@ -310,6 +354,8 @@ impl AuthnServiceImpl {
     pub(super) async fn revoke_families_for_principal(
         &self,
         principal_id: &str,
+        tenant_id: &str,
+        project_id: &str,
     ) -> Result<u64, Status> {
         let Some(pool) = self.pg_pool.as_ref() else {
             return Ok(0);
@@ -318,7 +364,7 @@ impl AuthnServiceImpl {
             return Ok(0);
         }
         if let Ok(runtime) = self.authn_runtime() {
-            let context = self.authn_context("", "");
+            let context = self.authn_context(tenant_id, project_id);
             let mut total = 0u64;
             for field in ["user_id", "principal_id"] {
                 let mut assignments = std::collections::BTreeMap::new();
@@ -330,10 +376,11 @@ impl AuthnServiceImpl {
                 assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
                 let op = LogicalUpdate {
                     message_type: "udb.core.authn.entity.v1.TokenFamily".to_string(),
-                    filter: authn_and(vec![
+                    filter: scoped_token_family_filter(
                         authn_eq(field, LogicalValue::String(principal_id.to_string())),
-                        LogicalFilter::IsNull("revoked_at".to_string()),
-                    ]),
+                        tenant_id,
+                        project_id,
+                    ),
                     assignments,
                     return_fields: Vec::new(),
                     require_affected: false,
@@ -355,17 +402,41 @@ impl AuthnServiceImpl {
         let sql = format!(
             "UPDATE {rel} SET {revoked} = COALESCE({revoked}, NOW()), \
                     {reason} = COALESCE(NULLIF({reason}, ''), 'logout_all'), {updated} = NOW() \
-             WHERE ({user} = $1 OR {principal} = $1) AND {revoked} IS NULL",
+             WHERE ({user} = $1 OR {principal} = $1) \
+               AND {tenant} = $2 AND COALESCE({project}, '') = $3 \
+               AND {revoked} IS NULL",
             rel = m.relation,
             revoked = m.q("revoked_at"),
             reason = m.q("revocation_reason"),
             updated = m.q("updated_at"),
             user = m.q("user_id"),
             principal = m.q("principal_id"),
+            tenant = m.q("tenant_id"),
+            project = m.q("project_id"),
         );
-        Ok(sqlx::query(&sql)
+        let mut tx = pool.begin().await.map_err(|err| {
+            token_family_internal_status(
+                "revoke_families_for_principal",
+                format!("begin scoped family revoke failed: {err}"),
+            )
+        })?;
+        if !tenant_id.trim().is_empty() {
+            sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| {
+                    token_family_internal_status(
+                        "revoke_families_for_principal",
+                        format!("set tenant context failed: {err}"),
+                    )
+                })?;
+        }
+        let affected = sqlx::query(&sql)
             .bind(principal_id)
-            .execute(pool)
+            .bind(tenant_id)
+            .bind(project_id)
+            .execute(&mut *tx)
             .await
             .map_err(|err| {
                 token_family_internal_status(
@@ -373,7 +444,14 @@ impl AuthnServiceImpl {
                     format!("revoke families for principal failed: {err}"),
                 )
             })?
-            .rows_affected())
+            .rows_affected();
+        tx.commit().await.map_err(|err| {
+            token_family_internal_status(
+                "revoke_families_for_principal",
+                format!("commit scoped family revoke failed: {err}"),
+            )
+        })?;
+        Ok(affected)
     }
 
     /// Atomically rotate a presented refresh token. See module docs for the
@@ -674,5 +752,41 @@ mod tests {
         assert_eq!(detail.capability_required, "native_postgres_auth_store");
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn scoped_token_family_filter_pins_identity_tenant_project_and_live_state() {
+        let filter = scoped_token_family_filter(
+            authn_eq(
+                "session_id",
+                LogicalValue::String("session-hash".to_string()),
+            ),
+            "tenant-a",
+            "project-a",
+        );
+        let mut fields = Vec::new();
+        filter.referenced_fields(&mut fields);
+        assert_eq!(
+            fields,
+            vec!["session_id", "tenant_id", "project_id", "revoked_at"]
+        );
+        assert_eq!(
+            filter,
+            authn_and(vec![
+                authn_eq(
+                    "session_id",
+                    LogicalValue::String("session-hash".to_string()),
+                ),
+                authn_eq(
+                    "tenant_id",
+                    LogicalValue::String("tenant-a".to_string()),
+                ),
+                authn_eq(
+                    "project_id",
+                    LogicalValue::String("project-a".to_string()),
+                ),
+                LogicalFilter::IsNull("revoked_at".to_string()),
+            ])
+        );
     }
 }

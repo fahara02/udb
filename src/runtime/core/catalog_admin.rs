@@ -27,6 +27,14 @@ fn migration_approval_tokens_match(provided: &str, stored: &str) -> bool {
         && crate::runtime::authn::constant_time_eq(provided.trim(), stored.trim())
 }
 
+/// Migration resource operations are executed through the backend's native
+/// `ResourceAdminExecutor`. Keep planning and apply validation on the same V2
+/// capability truth so logical-only stores (notably Redis key namespaces) never
+/// produce an operation that their executor deliberately rejects.
+fn migration_has_native_resource_lifecycle(kind: &crate::backend::BackendKind) -> bool {
+    kind.capabilities_v2().lifecycle.is_native_executor()
+}
+
 fn catalog_admin_invalid_field(
     field: impl Into<String>,
     description: impl Into<String>,
@@ -918,9 +926,14 @@ impl DataBrokerRuntime {
             }
             ("postgres", "verify_table") => Ok(()),
             (_, "ensure_resource" | "verify_resource" | "drop_resource") => {
-                if crate::backend::plugin_for(backend).is_none() {
-                    return Err(format!(
+                let plugin = crate::backend::plugin_for(backend).ok_or_else(|| {
+                    format!(
                         "operation {op_id} targets backend '{backend}' which is not available in this binary"
+                    )
+                })?;
+                if !migration_has_native_resource_lifecycle(&plugin.kind()) {
+                    return Err(format!(
+                        "operation {op_id} targets backend '{backend}' which does not expose native resource lifecycle operations"
                     ));
                 }
                 let resource_name = payload
@@ -2813,6 +2826,32 @@ impl DataBrokerRuntime {
                 "clickhouse" => ("clickhouse", "clickhouse"),
                 _ => continue,
             };
+            let kind = crate::backend::BackendKind::from_token(backend).ok_or_else(|| {
+                catalog_admin_schema_status(
+                    "plan_migration",
+                    "migration_resource_backend_unknown",
+                    format!("migration store backend '{backend}' is not registered"),
+                )
+            })?;
+            match kind.capabilities_v2().lifecycle {
+                crate::backend::LifecycleSupport::None => {
+                    // Redis/cache entries describe logical key namespaces, not
+                    // independently enumerable resources. There is no physical
+                    // ResourceAdmin proof to request.
+                    continue;
+                }
+                crate::backend::LifecycleSupport::Native => {}
+                lifecycle => {
+                    return Err(catalog_admin_schema_status(
+                        "plan_migration",
+                        "migration_resource_lifecycle_mismatch",
+                        format!(
+                            "migration store backend '{backend}' uses '{}' lifecycle, not native ResourceAdmin lifecycle",
+                            lifecycle.as_str()
+                        ),
+                    ));
+                }
+            }
             operations.push((
                 backend.to_string(),
                 format!("{uri_scheme}://{}", store.resource_name),
@@ -4535,6 +4574,34 @@ mod migration_approval_tests {
             "stored-token",
             "stored-token"
         ));
+    }
+
+    #[test]
+    fn migration_resource_ops_follow_native_lifecycle_capability() {
+        assert!(migration_has_native_resource_lifecycle(
+            &crate::backend::BackendKind::Qdrant
+        ));
+        assert!(migration_has_native_resource_lifecycle(
+            &crate::backend::BackendKind::Minio
+        ));
+        assert!(!migration_has_native_resource_lifecycle(
+            &crate::backend::BackendKind::Redis
+        ));
+        assert!(!migration_has_native_resource_lifecycle(
+            &crate::backend::BackendKind::Postgres
+        ));
+        #[cfg(feature = "qdrant")]
+        {
+            let plugin = crate::backend::plugin_for("qdrant")
+                .expect("the enabled native backend is present in the compiled plugin registry");
+            assert!(migration_has_native_resource_lifecycle(&plugin.kind()));
+        }
+        #[cfg(feature = "redis")]
+        {
+            let plugin = crate::backend::plugin_for("redis")
+                .expect("the enabled logical-only backend is present in the plugin registry");
+            assert!(!migration_has_native_resource_lifecycle(&plugin.kind()));
+        }
     }
 
     #[test]

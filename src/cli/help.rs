@@ -131,11 +131,14 @@ const COMMANDS: &[CmdHelp] = &[
         name: "auth bootstrap user",
         group: "Auth & policy",
         summary: "Mint the FIRST admin OFFLINE (no running broker needed); prints the canonical tenant UUID.",
-        usage: "udb auth bootstrap user --username <u> --email <e> --password <p> --tenant <code> --project <p>",
+        usage: "udb auth bootstrap user --username <u> --email <e> --password <p> --tenant <code> --project <p> [--platform-admin]",
         details: "\
   Needs UDB_PG_DSN + UDB_PASSWORD_HASH_SECRET. Defaults: --username admin,
   --tenant acme, --project default. CAPTURE the printed tenant_id (UUID) —
   it, not the human code, goes in the login JWT and tenant-scoped filters.
+  --platform-admin is a direct-Postgres, offline-only operator action that binds
+  the principal to the reserved active system/global platform role. It is
+  rejected for served bootstrap and is intended for separate control identities.
   After this you MUST seed ABAC (default-deny) before any data CRUD works.",
     },
     CmdHelp {

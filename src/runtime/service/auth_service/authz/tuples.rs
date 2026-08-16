@@ -117,6 +117,12 @@ impl AuthzServiceImpl {
                 ],
             ));
         }
+        if is_reserved_platform_role(&binding.role) {
+            return Err(reserved_platform_role_status(
+                "put_role_binding",
+                "reserved platform roles require a trusted system-role assignment and cannot be granted by a literal tuple",
+            ));
+        }
         let scope_tenant = tuple_scope_tenant(&binding.tenant, &binding.project);
         if scope_tenant.trim().is_empty() {
             return Err(authz_tuple_invalid_fields(
@@ -442,6 +448,34 @@ mod tests {
                     "must include tenant or project scope for the binding",
                 ),
             ],
+        );
+    }
+
+    #[tokio::test]
+    async fn put_role_binding_rejects_reserved_platform_authority() {
+        let err = svc()
+            .put_role_binding(Request::new(authz_pb::PutRoleBindingRequest {
+                binding: Some(authz_pb::RoleBinding {
+                    subject: "user-1".to_string(),
+                    role: "platform_admin".to_string(),
+                    tenant: "tenant-1".to_string(),
+                    ..Default::default()
+                }),
+            }))
+            .await
+            .expect_err("a literal tuple must not mint platform authority");
+
+        assert_eq!(err.code(), Code::PermissionDenied);
+        assert_eq!(
+            err.message(),
+            "reserved platform roles require a trusted system-role assignment and cannot be granted by a literal tuple"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "put_role_binding");
+        assert_eq!(
+            detail.policy_decision_id,
+            "reserved_platform_role_authority_required"
         );
     }
 

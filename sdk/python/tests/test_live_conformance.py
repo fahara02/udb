@@ -1453,6 +1453,38 @@ def perf_real_body(client_cls, method, meta: Metadata, fix: "PerfFixtures"):
     return request
 
 
+PLATFORM_AUTHZ_PERF_METHODS = {
+    "CreatePolicyDraft", "UpdatePolicyDraft", "DiffPolicyDraft",
+    "SubmitPolicyDraft", "ApprovePolicyDraft", "RejectPolicyDraft",
+    "ActivatePolicyVersion", "RollbackPolicyVersion", "ActivateCanary",
+    "PromoteCanary", "GetCanaryStatus", "ListPolicyVersions",
+    "SimulatePolicy", "ExplainPolicy", "InvalidatePolicyBundles",
+    "SeedBuiltinRoles", "MigrateLegacyPolicies",
+}
+
+
+def requires_platform_perf_identity(client_cls, method_name: str) -> bool:
+    if client_cls is AuthzServiceClient:
+        return method_name in PLATFORM_AUTHZ_PERF_METHODS
+    return (
+        (client_cls is AnalyticsServiceClient and method_name in {
+            "GetExecutorPerformance", "GetReconciliationAnalytics",
+        })
+        or (client_cls is BackupServiceClient and method_name == "RestoreTenant")
+        or (client_cls is TenantServiceClient and method_name == "AdminPurgeTenant")
+    )
+
+
+def test_platform_perf_identity_routing_is_narrow():
+    assert requires_platform_perf_identity(AnalyticsServiceClient, "GetExecutorPerformance")
+    assert requires_platform_perf_identity(BackupServiceClient, "RestoreTenant")
+    assert requires_platform_perf_identity(AuthzServiceClient, "CreatePolicyDraft")
+    assert requires_platform_perf_identity(TenantServiceClient, "AdminPurgeTenant")
+    assert not requires_platform_perf_identity(AuthzServiceClient, "CreateRole")
+    assert not requires_platform_perf_identity(AuthzServiceClient, "AssignRole")
+    assert not requires_platform_perf_identity(TenantServiceClient, "PurgeTenant")
+
+
 def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "PerfFixtures") -> None:
     """Adjust doc-grounded bodies where the valid body is intentionally per-call.
 
@@ -1482,7 +1514,13 @@ def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "Per
         request.original_otp_id = _fixture(fix, "otp_id", request.original_otp_id)
     elif client_cls is AuthnServiceClient and method.name == "VerifyMfaChallenge":
         request.challenge_id = _fixture(fix, "challenge_id", request.challenge_id)
-        request.code = _fixture(fix, "otp_code", request.code)
+        request.code = _fixture(fix, "recovery_code", request.code)
+    elif client_cls is AuthnServiceClient and method.name == "DeleteWebAuthnCredential":
+        request.user_id = _fixture(fix, "webauthn_delete_user_id", request.user_id)
+        request.credential_id = _fixture(fix, "webauthn_delete_credential_id", request.credential_id)
+    elif client_cls is AuthnServiceClient and method.name == "RenamePasskey":
+        request.user_id = _fixture(fix, "webauthn_rename_user_id", request.user_id)
+        request.credential_id = _fixture(fix, "webauthn_rename_credential_id", request.credential_id)
     elif client_cls is AuthnServiceClient and method.name == "ChangePassword":
         request.current_password = _fixture(fix, "password", request.current_password)
         request.new_password = "N3w!Passw0rd9"
@@ -1635,6 +1673,29 @@ def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "Per
             catalog_manifest = fix.lookup("catalog_manifest")
             if catalog_manifest:
                 request.manifest_json = catalog_manifest.encode("utf-8")
+
+    # Attribution and governance identity follow the credential selected for the
+    # call. Manifest seed subjects remain the target of authorization decisions;
+    # they never become the audit actor by coincidence.
+    if client_cls is AuthzServiceClient:
+        if requires_platform_perf_identity(client_cls, method.name):
+            platform_actor = _fixture(fix, "platform_actor_user_id")
+            if platform_actor and hasattr(request, "actor"):
+                request.actor.subject = platform_actor
+            if platform_actor and hasattr(request, "reviewer"):
+                request.reviewer = platform_actor
+        else:
+            actor = _fixture(fix, "actor_user_id")
+            if actor:
+                for field in (
+                    "created_by", "assigned_by", "updated_by", "deleted_by", "revoked_by",
+                ):
+                    if hasattr(request, field):
+                        setattr(request, field, actor)
+    if client_cls is TenantServiceClient and method.name == "AdminPurgeTenant":
+        platform_actor = _fixture(fix, "platform_actor_user_id")
+        if platform_actor and hasattr(request, "delegated_actor"):
+            request.delegated_actor = platform_actor
 
 
 def _fixture(fix, key: str, default: str = "") -> str:
@@ -2210,7 +2271,14 @@ class PerfFixtures:
                 return v
         return None
 
-def perf_seed(clients: dict, meta: Metadata):
+def perf_seed(
+    clients: dict,
+    platform_clients: dict,
+    meta: Metadata,
+    platform_meta: Metadata,
+    actor_user_id: str,
+    platform_actor_id: str,
+):
     """Create real, disposable entities across the services the perf run touches and
     record their identifiers. Mirrors the Go ``perfSeed``: seeds in DEPENDENCY ORDER
     (a user before a role assignment before a notification; a file before an asset;
@@ -2222,6 +2290,7 @@ def perf_seed(clients: dict, meta: Metadata):
     suffix = uuid.uuid4().hex
     tenant, project = meta.tenant_id, meta.project_id
     md = meta.to_grpc_metadata()
+    platform_md = platform_meta.to_grpc_metadata()
     cleanups: list = []
 
     broker = clients[DataBrokerClient].stub
@@ -2233,6 +2302,8 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("project_id", project)
     fix.set("project", project)
     fix.set("domain", tenant)
+    fix.set("actor_user_id", actor_user_id)
+    fix.set("platform_actor_user_id", platform_actor_id)
     fix.set("message_type", LIVE_MESSAGE_TYPE)
     fix.set("locale", "en")
     fix.set("name", f"sdk-perf-{suffix}")
@@ -2430,7 +2501,7 @@ def perf_seed(clients: dict, meta: Metadata):
             challenge = authn.IssueMfaChallenge(
                 authn_pb2.IssueMfaChallengeRequest(
                     user_id=uid,
-                    factor_kind=2,
+                    factor_kind=6,
                     purpose=1,
                     device_fingerprint=f"python-sdk-perf-{suffix}",
                     ip_address="127.0.0.1",
@@ -2451,12 +2522,58 @@ def perf_seed(clients: dict, meta: Metadata):
                 authn_pb2.StartWebAuthnRegistrationRequest(user_id=uid, label="perf-passkey", tenant_id=tenant, project_id=project),
                 metadata=md, timeout=8.0,
             )
-            authn.FinishWebAuthnRegistration(
+            finished = authn.FinishWebAuthnRegistration(
                 authn_pb2.FinishWebAuthnRegistrationRequest(challenge_id=sr.challenge_id, public_key_credential_json=WEBAUTHN_TEST_CREDENTIAL, label="perf-passkey"),
                 metadata=md, timeout=8.0,
             )
+            fix.set("webauthn_credential_id", finished.credential_id)
         except (grpc.RpcError, AttributeError):
             pass
+
+        def seed_disposable_passkey(fixture_prefix: str, label: str) -> None:
+            try:
+                seeded_user = authn.CreateUser(
+                    authn_pb2.CreateUserRequest(
+                        username=f"sdk-perf-webauthn-{fixture_prefix}-{suffix}",
+                        email=f"sdk-perf-webauthn-{fixture_prefix}-{suffix}@example.com",
+                        password=pw,
+                        tenant_id=tenant,
+                        project_id=project,
+                        full_name=f"SDK Perf WebAuthn {fixture_prefix} User",
+                    ),
+                    metadata=md,
+                    timeout=8.0,
+                )
+                user_id = seeded_user.user.user_id
+                started = authn.StartWebAuthnRegistration(
+                    authn_pb2.StartWebAuthnRegistrationRequest(
+                        user_id=user_id,
+                        label=label,
+                        tenant_id=tenant,
+                        project_id=project,
+                    ),
+                    metadata=md,
+                    timeout=8.0,
+                )
+                registered = authn.FinishWebAuthnRegistration(
+                    authn_pb2.FinishWebAuthnRegistrationRequest(
+                        challenge_id=started.challenge_id,
+                        public_key_credential_json=WEBAUTHN_TEST_CREDENTIAL,
+                        label=label,
+                    ),
+                    metadata=md,
+                    timeout=8.0,
+                )
+                fix.set(f"webauthn_{fixture_prefix}_user_id", user_id)
+                fix.set(f"webauthn_{fixture_prefix}_credential_id", registered.credential_id)
+            except (grpc.RpcError, AttributeError):
+                pass
+
+        # Delete and rename target independent credentials so RPC ordering cannot
+        # turn one successful mutation into the other row's NotFound path.
+        seed_disposable_passkey("delete", "perf-delete-passkey")
+        seed_disposable_passkey("rename", "perf-rename-passkey")
+
         reg_user_id = ""
         try:
             reg_user = authn.CreateUser(
@@ -2603,7 +2720,7 @@ def perf_seed(clients: dict, meta: Metadata):
     role_code = f"sdk_perf_reader_{suffix}"
     try:
         role = authz.CreateRole(
-            authz_pb.CreateRoleRequest(name=f"SDK Perf Reader {suffix}", description="perf seed role", created_by=uid or str(uuid.uuid4()), role_code=role_code, domain=tenant, tenant_id=tenant, project_id=project),
+            authz_pb.CreateRoleRequest(name=f"SDK Perf Reader {suffix}", description="perf seed role", created_by=actor_user_id, role_code=role_code, domain=tenant, tenant_id=tenant, project_id=project),
             metadata=md, timeout=8.0,
         ).role
         rid = role.role_id
@@ -2612,11 +2729,11 @@ def perf_seed(clients: dict, meta: Metadata):
         fix.set("role_code", role_code)
         if uid:
             try:
-                assigned = authz.AssignRole(authz_pb.AssignRoleRequest(user_id=uid, role_id=rid, domain=tenant, assigned_by=uid, tenant_id=tenant, project_id=project), metadata=md, timeout=8.0).user_role
+                assigned = authz.AssignRole(authz_pb.AssignRoleRequest(user_id=uid, role_id=rid, domain=tenant, assigned_by=actor_user_id, tenant_id=tenant, project_id=project), metadata=md, timeout=8.0).user_role
                 fix.set("user_role_id", assigned.user_role_id)
             except grpc.RpcError:
                 pass
-        cleanups.append(lambda: authz.DeleteRole(authz_pb.DeleteRoleRequest(role_id=rid, deleted_by=uid), metadata=md, timeout=8.0))
+        cleanups.append(lambda: authz.DeleteRole(authz_pb.DeleteRoleRequest(role_id=rid, deleted_by=actor_user_id), metadata=md, timeout=8.0))
     except grpc.RpcError:
         pass
     if uid:
@@ -2626,7 +2743,7 @@ def perf_seed(clients: dict, meta: Metadata):
                 authz_pb.CreateRoleRequest(
                     name=f"SDK Perf Target {suffix}",
                     description="perf seed target role",
-                    created_by=uid,
+                    created_by=actor_user_id,
                     role_code=extra_role_code,
                     domain=tenant,
                     tenant_id=tenant,
@@ -2637,7 +2754,7 @@ def perf_seed(clients: dict, meta: Metadata):
             fix.set("role_id", extra.role_id)
             fix.set("role", extra_role_code)
             fix.set("role_code", extra_role_code)
-            cleanups.append(lambda: authz.DeleteRole(authz_pb.DeleteRoleRequest(role_id=extra.role_id, deleted_by=uid), metadata=md, timeout=8.0))
+            cleanups.append(lambda: authz.DeleteRole(authz_pb.DeleteRoleRequest(role_id=extra.role_id, deleted_by=actor_user_id), metadata=md, timeout=8.0))
         except grpc.RpcError:
             pass
     # ABAC policy + an RBAC policy rule. Capture policy_id only after the exact
@@ -2661,7 +2778,7 @@ def perf_seed(clients: dict, meta: Metadata):
         get_pol_project = f"{project}-getpolrule"
         try:
             created_rule = authz.CreatePolicyRule(
-                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger", action="data.update", effect=1, description="perf seed rule (version-isolated)", created_by=uid, tenant_id=tenant, project_id=get_pol_project),
+                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger", action="data.update", effect=1, description="perf seed rule (version-isolated)", created_by=actor_user_id, tenant_id=tenant, project_id=get_pol_project),
                 metadata=md, timeout=8.0,
             )
             pid = getattr(getattr(created_rule, "policy", None), "policy_id", "")
@@ -2673,7 +2790,7 @@ def perf_seed(clients: dict, meta: Metadata):
         # so deleting it never touches the GetPolicyRule target.
         try:
             del_rule = authz.CreatePolicyRule(
-                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger-disposable", action="data.delete", effect=1, description="perf seed disposable rule", created_by=uid, tenant_id=tenant, project_id=get_pol_project),
+                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger-disposable", action="data.delete", effect=1, description="perf seed disposable rule", created_by=actor_user_id, tenant_id=tenant, project_id=get_pol_project),
                 metadata=md, timeout=8.0,
             )
             del_pid = getattr(getattr(del_rule, "policy", None), "policy_id", "")
@@ -2693,10 +2810,11 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("object", f"group:sdk-perf-{suffix}")
     fix.set("resource", "invoice")
     fix.set("action", "data.select")
+    governance_authz = platform_clients[AuthzServiceClient].stub
     try:
-        draft = authz.CreatePolicyDraft(
+        draft = governance_authz.CreatePolicyDraft(
             authz_gov_pb.CreatePolicyDraftRequest(
-                actor=authz_gov_pb.GovernanceActor(subject=_fixture(fix, "subject"), tenant_id=tenant, project_id=project, break_glass=True, break_glass_reason="sdk perf seed", break_glass_expires_at_unix=int(time.time()) + 900),
+                actor=authz_gov_pb.GovernanceActor(subject=platform_actor_id, tenant_id=tenant, project_id=project, break_glass=True, break_glass_reason="sdk perf seed", break_glass_expires_at_unix=int(time.time()) + 900),
                 tenant_id=tenant,
                 project_id=project,
                 policy_set_name="default",
@@ -2704,18 +2822,16 @@ def perf_seed(clients: dict, meta: Metadata):
                 change_reason="seed",
                 document=authz_gov_pb.PolicyDocument(),
             ),
-            metadata=md, timeout=8.0,
+            metadata=platform_md, timeout=8.0,
         )
         fix.set("policy_draft_id", draft.draft.draft_id)
     except grpc.RpcError:
         pass
     def governance_actor() -> authz_gov_pb.GovernanceActor:
-        # Body actor.scopes are ignored by the live D1/D2 gate (it reads claim scopes,
-        # and no role projects to authz:*), so the seed's own governance writes must use
-        # the body-authoritative break-glass bypass — otherwise the drafts/versions/canary
-        # are never created and the governance RPCs that read them fail "<id> is required".
+        # The actor is claim-bound to the separately offline-provisioned platform
+        # identity. The break-glass fields are audited intent, not authority.
         return authz_gov_pb.GovernanceActor(
-            subject=_fixture(fix, "subject", f"user:{uid}"),
+            subject=platform_actor_id,
             tenant_id=tenant,
             project_id=project,
             break_glass=True,
@@ -2725,7 +2841,7 @@ def perf_seed(clients: dict, meta: Metadata):
 
     def make_policy_draft(title: str) -> str:
         try:
-            response = authz.CreatePolicyDraft(
+            response = governance_authz.CreatePolicyDraft(
                 authz_gov_pb.CreatePolicyDraftRequest(
                     actor=governance_actor(),
                     tenant_id=tenant,
@@ -2735,7 +2851,7 @@ def perf_seed(clients: dict, meta: Metadata):
                     change_reason="seed",
                     document=authz_gov_pb.PolicyDocument(),
                 ),
-                metadata=md, timeout=8.0,
+                metadata=platform_md, timeout=8.0,
             )
             if title == "sdk-perf-update-":
                 fix.set("update_draft_updated_at_unix", str(response.draft.updated_at.seconds))
@@ -2748,9 +2864,9 @@ def perf_seed(clients: dict, meta: Metadata):
     approve_draft_id = make_policy_draft("sdk-perf-approve-")
     if approve_draft_id:
         try:
-            authz.SubmitPolicyDraft(
+            governance_authz.SubmitPolicyDraft(
                 authz_gov_pb.SubmitPolicyDraftRequest(actor=governance_actor(), draft_id=approve_draft_id),
-                metadata=md, timeout=8.0,
+                metadata=platform_md, timeout=8.0,
             )
             fix.set("approve_draft_id", approve_draft_id)
         except grpc.RpcError:
@@ -2758,9 +2874,9 @@ def perf_seed(clients: dict, meta: Metadata):
     reject_draft_id = make_policy_draft("sdk-perf-reject-")
     if reject_draft_id:
         try:
-            authz.SubmitPolicyDraft(
+            governance_authz.SubmitPolicyDraft(
                 authz_gov_pb.SubmitPolicyDraftRequest(actor=governance_actor(), draft_id=reject_draft_id),
-                metadata=md, timeout=8.0,
+                metadata=platform_md, timeout=8.0,
             )
             fix.set("reject_draft_id", reject_draft_id)
         except grpc.RpcError:
@@ -2768,7 +2884,7 @@ def perf_seed(clients: dict, meta: Metadata):
 
     def make_policy_version(set_name: str, title: str):
         try:
-            response = authz.CreatePolicyDraft(
+            response = governance_authz.CreatePolicyDraft(
                 authz_gov_pb.CreatePolicyDraftRequest(
                     actor=governance_actor(),
                     tenant_id=tenant,
@@ -2778,16 +2894,16 @@ def perf_seed(clients: dict, meta: Metadata):
                     change_reason="seed",
                     document=authz_gov_pb.PolicyDocument(),
                 ),
-                metadata=md, timeout=8.0,
+                metadata=platform_md, timeout=8.0,
             )
             draft_id = response.draft.draft_id
-            authz.SubmitPolicyDraft(
+            governance_authz.SubmitPolicyDraft(
                 authz_gov_pb.SubmitPolicyDraftRequest(actor=governance_actor(), draft_id=draft_id),
-                metadata=md, timeout=8.0,
+                metadata=platform_md, timeout=8.0,
             )
-            approved = authz.ApprovePolicyDraft(
-                authz_gov_pb.ApprovePolicyDraftRequest(actor=governance_actor(), draft_id=draft_id, reviewer=uid, reason="seed approve"),
-                metadata=md, timeout=8.0,
+            approved = governance_authz.ApprovePolicyDraft(
+                authz_gov_pb.ApprovePolicyDraftRequest(actor=governance_actor(), draft_id=draft_id, reviewer=platform_actor_id, reason="seed approve"),
+                metadata=platform_md, timeout=8.0,
             )
             return approved.version
         except (grpc.RpcError, AttributeError):
@@ -2800,7 +2916,7 @@ def perf_seed(clients: dict, meta: Metadata):
     if canary_version is not None:
         fix.set("canary_version_id", canary_version.policy_version_id)
         try:
-            canary = authz.ActivateCanary(
+            canary = governance_authz.ActivateCanary(
                 authz_gov_pb.ActivateCanaryRequest(
                     actor=governance_actor(),
                     policy_version_id=canary_version.policy_version_id,
@@ -2814,7 +2930,7 @@ def perf_seed(clients: dict, meta: Metadata):
                     metric_threshold=0.99,
                     min_samples=0,
                 ),
-                metadata=md, timeout=8.0,
+                metadata=platform_md, timeout=8.0,
             )
             fix.set("canary_id", canary.canary.canary_id)
         except (grpc.RpcError, AttributeError):
@@ -2822,18 +2938,18 @@ def perf_seed(clients: dict, meta: Metadata):
     rollback_v1 = make_policy_version(f"sdk-perf-rollback-set-{suffix}", "rb1-")
     if rollback_v1 is not None:
         try:
-            authz.ActivatePolicyVersion(
+            governance_authz.ActivatePolicyVersion(
                 authz_gov_pb.ActivatePolicyVersionRequest(actor=governance_actor(), policy_version_id=rollback_v1.policy_version_id),
-                metadata=md, timeout=8.0,
+                metadata=platform_md, timeout=8.0,
             )
         except grpc.RpcError:
             pass
         rollback_v2 = make_policy_version(f"sdk-perf-rollback-set-{suffix}", "rb2-")
         if rollback_v2 is not None:
             try:
-                authz.ActivatePolicyVersion(
+                governance_authz.ActivatePolicyVersion(
                     authz_gov_pb.ActivatePolicyVersionRequest(actor=governance_actor(), policy_version_id=rollback_v2.policy_version_id),
-                    metadata=md, timeout=8.0,
+                    metadata=platform_md, timeout=8.0,
                 )
                 fix.set("rollback_policy_set_id", rollback_v2.policy_set_id)
                 fix.set("rollback_target_version_id", rollback_v1.policy_version_id)
@@ -3403,6 +3519,7 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("vault_key_name", vault_key)
     fix.set("vault_create_key_name", f"sdk-perf-create-key-{suffix}")
     fix.set("vault_db_role", "readonly")
+    fix.set("vault_db_idempotency_key", f"sdk-perf-vault-db-generate-{suffix}")
     fix.set("vault_secret_path", f"app/config-{suffix}")
     fix.set("vault_put_secret_path", f"app/put-{suffix}")
     fix.set("vault_delete_secret_path", f"app/delete-{suffix}")
@@ -3444,6 +3561,39 @@ def perf_seed(clients: dict, meta: Metadata):
             vault.PutSecret(vault_pb.PutSecretRequest(tenant_id=tenant, secret_path=fix.m[_path_key], secret_value="perf-secret", expected_version=0, metadata_json="{}"), metadata=md, timeout=8.0)
         except grpc.RpcError:
             pass
+
+    # Use a separate live lease for the destructive revoke row. The measured
+    # Generate body has its own stable idempotency key and therefore exercises
+    # replay-safe recovery across benchmark iterations.
+    try:
+        issued = vault.GenerateDatabaseCredentials(
+            vault_pb.GenerateDatabaseCredentialsRequest(
+                tenant_id=tenant,
+                project_id=project,
+                role_name=fix.m["vault_db_role"],
+                ttl_seconds=900,
+                idempotency_key=f"sdk-perf-vault-db-revoke-{suffix}",
+            ),
+            metadata=md,
+            timeout=8.0,
+        )
+        if issued.lease_id:
+            lease_id = issued.lease_id
+            fix.set("vault_db_lease_id", lease_id)
+            cleanups.append(
+                lambda _lease_id=lease_id: vault.RevokeDatabaseCredentials(
+                    vault_pb.RevokeDatabaseCredentialsRequest(
+                        tenant_id=tenant,
+                        project_id=project,
+                        lease_id=_lease_id,
+                        reason="benchmark cleanup",
+                    ),
+                    metadata=md,
+                    timeout=8.0,
+                )
+            )
+    except grpc.RpcError:
+        pass
 
     # LockService: two independent locks → renew/release fencing-token refs.
     locks = clients[LockServiceClient].stub
@@ -4106,6 +4256,7 @@ def test_live_perf():
     fixtures = PerfFixtures()
     authed_meta = metadata()
     clients = {}
+    platform_clients = {}
     seed_cleanup = lambda: None
     try:
         target = required_env("UDB_GRPC_TARGET")
@@ -4114,17 +4265,55 @@ def test_live_perf():
         login = auth.login(required_env("UDB_LIVE_USERNAME"), required_env("UDB_LIVE_PASSWORD"), device_name="python-sdk-perf")
         refreshed = auth.refresh_token(login.refresh_token, session_id=login.session_id)
         login_access_token = refreshed.access_token or login.access_token
-        canonical_tenant = auth.authenticate_bearer(login_access_token).principal.tenant_id
+        ordinary_principal = auth.authenticate_bearer(login_access_token).principal
+        canonical_tenant = ordinary_principal.tenant_id
+        actor_user_id = ordinary_principal.subject
         authed_meta = replace(metadata(bearer_token=login_access_token), tenant_id=canonical_tenant, client_catalog_version="")
+        platform_login = auth.login(
+            required_env("UDB_LIVE_PLATFORM_USERNAME"),
+            required_env("UDB_LIVE_PLATFORM_PASSWORD"),
+            device_name="python-sdk-perf-platform",
+        )
+        platform_principal = auth.authenticate_bearer(platform_login.access_token).principal
+        if not any(role.strip().lower() == "platform_admin" for role in platform_principal.roles):
+            raise AssertionError("offline platform fixture did not issue platform_admin role")
+        platform_meta = replace(
+            metadata(bearer_token=platform_login.access_token),
+            tenant_id=canonical_tenant,
+            client_catalog_version="",
+        )
         for client_cls in SERVICE_CLIENTS:
             endpoint = target if client_cls is DataBrokerClient else auth_target
             clients[client_cls] = client_cls(endpoint, authed_meta, timeout=20.0)
+        for client_cls in (AuthzServiceClient, AnalyticsServiceClient, BackupServiceClient, TenantServiceClient):
+            platform_clients[client_cls] = client_cls(auth_target, platform_meta, timeout=20.0)
 
         # SEED PHASE (runs before any measurement): create real, disposable entities and
         # capture their identifiers so every RPC can be driven down its SUCCESS path with
         # valid inputs. ``authed_meta.tenant_id`` is the canonical tenant UUID, so the one
         # bearer serves the UUID-strict native services (storage/asset/webrtc) too.
-        fixtures, seed_record_id, seed_cleanup = perf_seed(clients, authed_meta)
+        fixtures, seed_record_id, seed_cleanup = perf_seed(
+            clients,
+            platform_clients,
+            authed_meta,
+            platform_meta,
+            actor_user_id,
+            platform_principal.subject,
+        )
+        # Seed creation can be lengthy; mint a distinct fresh platform session
+        # for measurement rather than aging the governance-seed credential.
+        platform_measure_login = auth.login(
+            required_env("UDB_LIVE_PLATFORM_USERNAME"),
+            required_env("UDB_LIVE_PLATFORM_PASSWORD"),
+            device_name="python-sdk-perf-platform-measure",
+        )
+        platform_meta = replace(
+            platform_meta,
+            bearer_token=platform_measure_login.access_token,
+            client_catalog_version="",
+        )
+        for platform_client in platform_clients.values():
+            platform_client.bind_metadata(platform_meta)
         fixtures.set("token", login_access_token)
         fixtures.set("access_token", login_access_token)
         fixtures.set("refresh_token", login.refresh_token)
@@ -4188,11 +4377,28 @@ def test_live_perf():
 
         def reauthenticate_for_terminal_purge() -> None:
             nonlocal authed_meta, auto_refresh_token, auto_session_id, next_token_refresh_at
-            final_login = auth.login(
-                required_env("UDB_LIVE_USERNAME"),
-                required_env("UDB_LIVE_PASSWORD"),
-                device_name="python-sdk-perf-final-purge",
-            )
+            # v0.5.10 waits until JWT seconds precision is strictly beyond the
+            # inclusive tenant cutoff before returning revoke-all. Keep a short
+            # probe/retry here so the harness also diagnoses older binaries
+            # instead of silently measuring PurgeTenant with a rejected bearer.
+            deadline = time.monotonic() + 2.0
+            final_login = None
+            last_error = None
+            while time.monotonic() < deadline:
+                try:
+                    candidate = auth.login(
+                        required_env("UDB_LIVE_USERNAME"),
+                        required_env("UDB_LIVE_PASSWORD"),
+                        device_name="python-sdk-perf-final-purge",
+                    )
+                    auth.authenticate_bearer(candidate.access_token)
+                    final_login = candidate
+                    break
+                except Exception as exc:  # noqa: BLE001 - bounded compatibility probe
+                    last_error = exc
+                    time.sleep(0.05)
+            if final_login is None:
+                raise RuntimeError(f"fresh login remained revoked after tenant cutoff: {last_error}")
             authed_meta = replace(
                 authed_meta,
                 bearer_token=final_login.access_token,
@@ -4213,7 +4419,7 @@ def test_live_perf():
         def iters_for(kind):
             return 1 if kind == "destructive" else (3 if kind == "mutation" else 10)
 
-        def time_one(client, client_cls, method):
+        def time_one(client, client_cls, method, call_meta):
             # Returns (elapsed_ms, err_code, err_detail) where err_code is the gRPC
             # status code NAME on a non-OK status, else "OK".
             # A failing RPC must never be reported as a silent latency sample.
@@ -4221,6 +4427,8 @@ def test_live_perf():
             # Every measured RPC must have an explicit doc-backed body. No reflective
             # fallback is allowed here; missing coverage is a harness error.
             ensure_fresh_perf_token()
+            if not requires_platform_perf_identity(client_cls, method.name):
+                call_meta = authed_meta
             rpc_callable = getattr(client.stub, method.name)
             start = time.perf_counter()
             err_code = "OK"
@@ -4242,13 +4450,13 @@ def test_live_perf():
                 # Other streaming RPCs: open with seeded inputs and measure time to the
                 # FIRST server response (a real round-trip), not just stream-open.
                 err_code = time_first_recv(
-                    rpc_callable, request, authed_meta, method.client_streaming, method.server_streaming
+                    rpc_callable, request, call_meta, method.client_streaming, method.server_streaming
                 )
                 if is_capability_skip(client_cls, method, err_code):
                     err_code = "CAPABILITY_SKIPPED"
                 return (time.perf_counter() - start) * 1000.0, err_code, err_detail
             try:
-                rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
+                rpc_callable(request, metadata=call_meta.to_grpc_metadata(), timeout=20.0)
             except grpc.RpcError as exc:
                 try:
                     err_code = exc.code().name
@@ -4276,7 +4484,9 @@ def test_live_perf():
         for client_cls, method in sorted(ALL_RPCS, key=perf_rpc_order_key):
             if client_cls is TenantServiceClient and method.name == "PurgeTenant":
                 reauthenticate_for_terminal_purge()
-            client = clients[client_cls]
+            use_platform = requires_platform_perf_identity(client_cls, method.name)
+            client = platform_clients[client_cls] if use_platform else clients[client_cls]
+            call_meta = platform_meta if use_platform else authed_meta
             streaming = method.client_streaming or method.server_streaming
             if is_cdc_subscription(client_cls, method):
                 kind, n = "cdc_first_event", 1
@@ -4290,11 +4500,11 @@ def test_live_perf():
             print(f"[PERF-RPC] {client_cls._SERVICE_FULL}/{method.name} kind={kind} iters={n}", flush=True)
             runs = []
             if kind == "read_only" and not streaming and method.name not in SINGLE_CALL_PERF_METHODS:
-                warm = time_one(client, client_cls, method)  # warm-up
+                warm = time_one(client, client_cls, method, call_meta)  # warm-up
                 if warm[1] != "OK":
                     runs = [warm]
             while len(runs) < n:
-                run = time_one(client, client_cls, method)
+                run = time_one(client, client_cls, method, call_meta)
                 runs.append(run)
                 if run[1] != "OK":
                     break
@@ -4329,6 +4539,8 @@ def test_live_perf():
         except Exception:
             pass
         for c in clients.values():
+            c.close()
+        for c in platform_clients.values():
             c.close()
 
     write_python_perf_report(samples, fixtures, authed_meta)

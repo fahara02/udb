@@ -40,6 +40,7 @@ use crate::ir::{ComparisonOp, LogicalAssignment, LogicalFilter, LogicalUpdate, L
 use crate::proto::udb::core::authn::entity::v1 as authn_entity_pb;
 use crate::proto::udb::core::authn::services::v1 as authn_pb;
 use crate::runtime::native_catalog::native_model;
+use crate::runtime::service::method_security::is_platform_authority_scope;
 
 use super::authn::AuthnServiceImpl;
 use super::events::{AuthEvent, ComplianceEnvelope};
@@ -181,6 +182,9 @@ pub(crate) fn normalized_scope_list(raw: &[String]) -> Vec<String> {
 /// broker-admin / owner-role scopes would let a workload credential administer
 /// the deployment.
 fn is_forbidden_service_scope(scope: &str) -> bool {
+    if is_platform_authority_scope(scope) {
+        return true;
+    }
     let lower = scope.to_ascii_lowercase();
     let normalized_alias = lower.replace(['-', '.'], "_");
     lower.split(':').any(|segment| {
@@ -2850,6 +2854,8 @@ mod tests {
             "tenant:administrator",
             "billing:superuser",
             "data:*",
+            "udb:platform_admin",
+            " UDB:PLATFORM_ADMIN ",
             "role:owner:acme",
             "org-owner",
             "Organization_Owner",
@@ -2866,6 +2872,26 @@ mod tests {
                 .expect_err("forbidden requested scope must be rejected");
             assert_eq!(err.code(), Code::PermissionDenied);
         }
+    }
+
+    #[test]
+    fn platform_scope_cannot_enter_a_service_grant_or_api_key_attenuation() {
+        let platform = strings(&["udb:platform_admin"]);
+        let create_or_replace = validate_service_scopes(&[], &platform)
+            .expect_err("grant create/replace must reject platform authority");
+        assert_eq!(create_or_replace.code(), Code::PermissionDenied);
+        assert_eq!(
+            decode_detail(&create_or_replace).policy_decision_id,
+            "forbidden_service_scope"
+        );
+
+        let api_key_attenuation = validate_service_scopes(&platform, &platform)
+            .expect_err("API-key scopes must not recover platform authority from a grant");
+        assert_eq!(api_key_attenuation.code(), Code::PermissionDenied);
+        assert_eq!(
+            decode_detail(&api_key_attenuation).policy_decision_id,
+            "forbidden_service_scope"
+        );
     }
 
     #[test]

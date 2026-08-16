@@ -343,6 +343,10 @@ pub(crate) enum AuthCommand {
         password: String,
         tenant: String,
         project: String,
+        /// Direct-Postgres operator trust only: add the system/global reserved
+        /// platform role. The dispatcher rejects this when served bootstrap is
+        /// enabled, so no listener-reachable bootstrap can mint it.
+        platform_admin: bool,
     },
     /// fix_plan §2.3: migrate legacy profile-attribute service grants into the
     /// typed durable `service_account_grants` table (offline, deterministic).
@@ -760,6 +764,7 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
             password: flag_value("--password").unwrap_or_default(),
             tenant: flag_value("--tenant").unwrap_or_else(|| "acme".to_string()),
             project: flag_value("--project").unwrap_or_else(|| "default".to_string()),
+            platform_admin: has_flag("--platform-admin"),
         },
         (Some("role"), Some("bind")) => AuthCommand::RoleBind {
             user_id: flag_value("--user").unwrap_or_default(),

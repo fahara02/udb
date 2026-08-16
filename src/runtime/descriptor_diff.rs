@@ -29,7 +29,7 @@ use crate::runtime::descriptor_manifest::{
 /// wire `protocol_version()` ([`crate::runtime::native_catalog::protocol_version`]):
 /// the wire version tracks on-the-wire framing, whereas this tracks the semantic
 /// contract that native-service consumers and SDKs depend on.
-pub const NATIVE_CONTRACT_VERSION: &str = "7.0.0";
+pub const NATIVE_CONTRACT_VERSION: &str = "7.1.0";
 
 /// Classification of a single contract difference.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -249,6 +249,21 @@ fn diff_rpc(
                 "streaming kind changed: {} -> {}",
                 old_rpc.kind(),
                 new_rpc.kind()
+            ),
+        ));
+    }
+    if old_rpc.operation_kind != new_rpc.operation_kind {
+        changes.push(ContractChange::new(
+            ChangeKind::BehavioralChange,
+            path.to_string(),
+            format!(
+                "operation_kind changed: {} -> {}",
+                crate::runtime::descriptor_manifest::operation_kind_name(
+                    old_rpc.operation_kind,
+                ),
+                crate::runtime::descriptor_manifest::operation_kind_name(
+                    new_rpc.operation_kind,
+                )
             ),
         ));
     }
@@ -753,6 +768,30 @@ mod tests {
             && c.detail.contains("auth mode")));
         let summary = summarize(&changes);
         assert_eq!(summary["auth_breaking"], 1);
+    }
+
+    #[test]
+    fn changed_operation_kind_is_behavioral() {
+        let pkg = "udb.test.v1";
+        let old_rpc = rpc(pkg, "Svc", "Verify", 2);
+        let mut new_rpc = old_rpc.clone();
+        new_rpc.operation_kind = 2;
+        let old = manifest(vec![service(pkg, "Svc", vec![old_rpc])]);
+        let new = manifest(vec![service(pkg, "Svc", vec![new_rpc])]);
+
+        let changes = diff_manifests(&old, &new);
+        assert!(
+            changes.iter().any(|change| {
+                change.kind == ChangeKind::BehavioralChange
+                    && change.path == "/udb.test.v1.Svc/Verify"
+                    && change.detail == "operation_kind changed: read_only -> mutation"
+            }),
+            "operation-kind drift must be visible to contract governance: {changes:?}"
+        );
+        let summary = summarize(&changes);
+        assert_eq!(summary["behavioral"], 1);
+        assert_eq!(summary["sdk_breaking"], 0);
+        assert_eq!(summary["auth_breaking"], 0);
     }
 
     #[test]

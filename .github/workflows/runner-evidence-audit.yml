@@ -34,14 +34,12 @@ on:
         default: ""
         type: string
       benchmark_run_id:
-        description: "Optional exact post-release Benchmark · SDKs run id"
-        required: false
-        default: ""
+        description: "Required exact post-release Benchmark · SDKs run id whose artifact is audited"
+        required: true
         type: string
       pages_run_id:
-        description: "Optional exact post-benchmark Pages deploy run id"
-        required: false
-        default: ""
+        description: "Required exact post-benchmark Pages deploy run id whose artifact is audited"
+        required: true
         type: string
       lint_run_id:
         description: "Optional exact Lint · Workflows run id"

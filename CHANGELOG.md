@@ -5,6 +5,49 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.10] - 2026-08-16
+
+Patch release closing the product, authority, SDK-fixture, and release-evidence
+defects exposed by the strict v0.5.9 post-release benchmark.
+
+### Fixed
+
+- **Platform authority can no longer be minted by a tenant.** Reserved platform
+  roles require active system/global provenance, tenant role and governance APIs
+  cannot create or bind them, and service/API-key grants reject the explicit
+  platform scope. A separate direct-Postgres, offline-only bootstrap provisions
+  the verified platform principal used by cross-tenant control-plane tests.
+- **Tenant revocation has a safe issuance boundary.** After Redis acknowledges
+  an inclusive tenant cutoff, the revoke RPC does not complete until a fresh JWT
+  can only receive a later `iat`. Logout refresh-family cleanup also carries the
+  validated tenant/project authority instead of compiling tenant-scoped IR with
+  an empty context.
+- **Authn mutation and migration contracts match execution.** MFA challenge
+  verification is classified as a mutation, WebAuthn credential lifecycle uses
+  exact tenant/project routing, and migration planning no longer emits native
+  resource operations for logical-only Redis namespaces.
+- **All four live SDK benchmarks use real, authority-correct fixtures.** Actor
+  attribution is derived from the authenticated caller, global governance,
+  Analytics, cross-tenant restore, and admin purge use a distinct verified
+  platform session, Vault credential revocation uses a real disposable lease,
+  and WebAuthn mutation fixtures own separate real credentials. PHP reports a
+  complete surface even when a prerequisite fails, while TypeScript reports the
+  canonical generated wire identity rather than an SDK alias.
+- **Failed benchmark artifacts cannot claim complete evidence.** The collector
+  stamps `canonical_complete` only after the central gate succeeds; an uploaded
+  diagnostic artifact from a failed run remains explicitly incomplete.
+- **Release, Benchmark, and Pages evidence is bound end to end.** Pages resolves
+  the immutable release tag instead of confusing it with mutable
+  `workflow_run.head_sha`. The runner audit requires exact downstream run IDs,
+  downloads both artifacts, verifies byte-identical benchmark evidence, and
+  binds it to the audited release tag, commit, asset, checksum, and run attempt.
+- **CI repair artifacts cover every generated authority.** Native-contract repair
+  now regenerates the canonical codebase map and synchronized bundled skill
+  reference alongside the manifest, docs, and binary baseline.
+- **Native contract governance advances to 7.1.0.** Operation-kind drift is a
+  behavioral contract change, and the regenerated Authn contract records
+  `VerifyMfaChallenge` as a mutation.
+
 ## [0.5.9] - 2026-08-15
 
 Patch release correcting the exact-project catalog publication defect exposed

@@ -592,6 +592,29 @@ function liveUuidV4(): string
     return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
 
+// Mirror authz::stable_uuid_from_subject exactly. Served authz mutations bind
+// attribution UUIDs to the verified claim subject; target/user fixture IDs must
+// never be reused as the caller merely because they are convenient UUIDs.
+function phpStableAttributionId(string $subject): string
+{
+    $subject = trim($subject);
+    if ($subject === '') {
+        throw new InvalidArgumentException('authenticated PHP benchmark subject cannot be empty');
+    }
+    if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $subject)) {
+        return strtolower($subject);
+    }
+    $hex = substr(hash('sha256', $subject), 0, 32);
+    return sprintf(
+        '%s-%s-%s-%s-%s',
+        substr($hex, 0, 8),
+        substr($hex, 8, 4),
+        substr($hex, 12, 4),
+        substr($hex, 16, 4),
+        substr($hex, 20, 12),
+    );
+}
+
 // Whether to field-populate an RPC's probe request: every RPC except those
 // classified DESTRUCTIVE by the proto-derived GeneratedClient::OPERATION_KIND map
 // (keyed by Service/Method) — never a hardcoded name list. A populated
@@ -1265,14 +1288,91 @@ function phpLiveSession(): array
     $auth = new UdbAuthClient(['endpoint' => $authTarget, 'deadline_ms' => 10_000]);
     $auth->bindContext($meta);
     $authResp = $auth->authenticateBearer($login->getAccessToken(), $meta);
-    $canonicalTenant = $authResp?->getPrincipal()?->getTenantId() ?: $meta->tenantId;
+    $principal = $authResp?->getPrincipal();
+    $canonicalTenant = $principal?->getTenantId() ?: $meta->tenantId;
+    $callerSubject = trim((string) ($principal?->getSubject() ?? ''));
+    if ($callerSubject === '') {
+        throw new RuntimeException('AuthenticateBearer returned no verified principal subject for the PHP benchmark');
+    }
+    $callerAttributionId = phpStableAttributionId($callerSubject);
     $authedMeta = liveMeta($login->getAccessToken(), $canonicalTenant);
     $data = new GeneratedClient(['endpoint' => $target, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
     $authGenerated = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
     $data->bindContext($authedMeta);
     $authGenerated->bindContext($authedMeta);
 
-    return $session = compact('data', 'authGenerated', 'authedMeta', 'meta');
+    // Global/cross-tenant benchmark RPCs use a distinct principal provisioned by
+    // the offline-only `auth bootstrap user --platform-admin` seam. Ordinary
+    // tenant CRUD continues to use the session above.
+    $platformLogin = $openAuth->login(
+        (new LoginRequest())
+            ->setUsername(liveEnv('UDB_LIVE_PLATFORM_USERNAME'))
+            ->setPassword(liveEnv('UDB_LIVE_PLATFORM_PASSWORD'))
+            ->setTenantHint($canonicalTenant)
+            ->setProjectHint($meta->projectId)
+            ->setDeviceName('php-sdk-per-rpc-platform'),
+        $meta,
+    );
+    $platformAuthResp = $auth->authenticateBearer($platformLogin->getAccessToken(), $meta);
+    $platformPrincipal = $platformAuthResp?->getPrincipal();
+    $platformRoles = [];
+    foreach (($platformPrincipal?->getRoles() ?? []) as $role) {
+        $platformRoles[] = strtolower((string) $role);
+    }
+    if (! in_array('platform_admin', $platformRoles, true)) {
+        throw new RuntimeException('verified PHP platform benchmark principal lacks platform_admin');
+    }
+    $platformCallerSubject = trim((string) ($platformPrincipal?->getSubject() ?? ''));
+    if ($platformCallerSubject === '') {
+        throw new RuntimeException('AuthenticateBearer returned no verified platform principal subject for the PHP benchmark');
+    }
+    $platformCallerAttributionId = phpStableAttributionId($platformCallerSubject);
+    $platformTenant = $platformPrincipal?->getTenantId() ?: $canonicalTenant;
+    $platformMeta = liveMeta($platformLogin->getAccessToken(), $platformTenant);
+    $platformAuthGenerated = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
+    $platformAuthGenerated->bindContext($platformMeta);
+
+    return $session = compact(
+        'data',
+        'authGenerated',
+        'authedMeta',
+        'meta',
+        'callerSubject',
+        'callerAttributionId',
+        'platformAuthGenerated',
+        'platformMeta',
+        'platformCallerSubject',
+        'platformCallerAttributionId',
+    );
+}
+
+function phpRequiresPlatformPerfIdentity(string $serviceName, string $methodName): bool
+{
+    static $rpcs = [
+        'analyticsservice/get_executor_performance' => true,
+        'analyticsservice/get_reconciliation_analytics' => true,
+        'backupservice/restore_tenant' => true,
+        'tenantservice/admin_purge_tenant' => true,
+        'authzservice/create_policy_draft' => true,
+        'authzservice/update_policy_draft' => true,
+        'authzservice/diff_policy_draft' => true,
+        'authzservice/submit_policy_draft' => true,
+        'authzservice/approve_policy_draft' => true,
+        'authzservice/reject_policy_draft' => true,
+        'authzservice/activate_policy_version' => true,
+        'authzservice/rollback_policy_version' => true,
+        'authzservice/activate_canary' => true,
+        'authzservice/promote_canary' => true,
+        'authzservice/get_canary_status' => true,
+        'authzservice/list_policy_versions' => true,
+        'authzservice/simulate_policy' => true,
+        'authzservice/explain_policy' => true,
+        'authzservice/invalidate_policy_bundles' => true,
+        'authzservice/seed_builtin_roles' => true,
+        'authzservice/migrate_legacy_policies' => true,
+    ];
+
+    return isset($rpcs[strtolower($serviceName).'/'.rpcSnake($methodName)]);
 }
 
 // Enumerate every (stub, method) by REFLECTION ONLY (no live call), so the
@@ -2146,6 +2246,7 @@ it('manifest JSON body hydrates AuthnService read-only requests', function () {
     $fix->set('otp_id', 'otp-php');
     $fix->set('otp_code', '654321');
     $fix->set('challenge_id', 'challenge-php');
+    $fix->set('recovery_code', 'recovery-code-php');
     $get = phpManifestJsonBody('get_user', $fix, 'tenant-php', 'project-php');
     $sessions = phpManifestJsonBody('list_sessions', $fix, 'tenant-php', 'project-php');
     $validate = phpManifestJsonBody('validate_token', $fix, 'tenant-php', 'project-php');
@@ -2169,7 +2270,8 @@ it('manifest JSON body hydrates AuthnService read-only requests', function () {
         ->and($otp->getOtpId())->toBe('otp-php')
         ->and($otp->getCode())->toBe('654321')
         ->and($mfa)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\VerifyMfaChallengeRequest::class)
-        ->and($mfa->getChallengeId())->toBe('challenge-php');
+        ->and($mfa->getChallengeId())->toBe('challenge-php')
+        ->and($mfa->getCode())->toBe('recovery-code-php');
 });
 
 it('manifest JSON body hydrates AuthnService session and MFA setup requests', function () {
@@ -2243,7 +2345,10 @@ it('manifest JSON body hydrates AuthnService terminal and WebAuthn requests', fu
     $fix->set('reset_otp_id', 'reset-otp-php');
     $fix->set('reset_otp_code', '135790');
     $fix->set('device_id', 'device-php');
-    $fix->set('record_id', 'credential-php');
+    $fix->set('webauthn_delete_user_id', 'webauthn-delete-user-php');
+    $fix->set('webauthn_delete_credential_id', 'webauthn-delete-credential-php');
+    $fix->set('webauthn_rename_user_id', 'webauthn-rename-user-php');
+    $fix->set('webauthn_rename_credential_id', 'webauthn-rename-credential-php');
     $fix->set('reg_challenge_id', 'reg-challenge-php');
     $fix->set('auth_challenge_id', 'auth-challenge-php');
     $logout = phpManifestJsonBody('logout', $fix, 'tenant-php', 'project-php', 'AuthnService');
@@ -2293,6 +2398,8 @@ it('manifest JSON body hydrates AuthnService terminal and WebAuthn requests', fu
         ->and($disabledMfa)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\DisableMfaFactorRequest::class)
         ->and($disabledMfa->getFactorKind())->not->toBe(0)
         ->and($renamed)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\RenamePasskeyRequest::class)
+        ->and($renamed->getUserId())->toBe('webauthn-rename-user-php')
+        ->and($renamed->getCredentialId())->toBe('webauthn-rename-credential-php')
         ->and($renamed->getNewLabel())->toBe('perf-key2')
         ->and($revokedRecovery)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\RevokeRecoveryCodesRequest::class)
         ->and($revokedRecovery->getUserId())->toBe('user-php')
@@ -2301,7 +2408,8 @@ it('manifest JSON body hydrates AuthnService terminal and WebAuthn requests', fu
         ->and($revokedDevice)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\RevokeDeviceRequest::class)
         ->and($revokedDevice->getDeviceId())->toBe('device-php')
         ->and($deletedWebAuthn)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\DeleteWebAuthnCredentialRequest::class)
-        ->and($deletedWebAuthn->getCredentialId())->toBe('credential-php')
+        ->and($deletedWebAuthn->getUserId())->toBe('webauthn-delete-user-php')
+        ->and($deletedWebAuthn->getCredentialId())->toBe('webauthn-delete-credential-php')
         ->and($startedReg)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationRequest::class)
         ->and($startedReg->getLabel())->toBe('perf-key')
         ->and($finishedReg)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\FinishWebAuthnRegistrationRequest::class)
@@ -2795,6 +2903,24 @@ it('clears a PHP seed block when a later seed attempt succeeds', function () {
         ->and(phpBlockedManifestSeed('get_backup', $fix, 'BackupService'))->toBeNull();
 });
 
+it('retains failed authz prerequisites and emits positive body-failure evidence', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->blockSeed('role_id', 'AuthzService/CreateRole', 7, 'created_by must match the authenticated caller');
+    $startedNs = hrtime(true);
+    $blocked = phpBlockedManifestSeed('get_role', $fix, 'AuthzService');
+    $evidence = phpBodyFailureEvidence($startedNs);
+
+    expect($blocked)->not->toBeNull()
+        ->and($blocked['key'])->toBe('role_id')
+        ->and($blocked['source'])->toBe('AuthzService/CreateRole')
+        ->and($blocked['grpc_status'])->toBe('PERMISSION_DENIED')
+        ->and($evidence['p50'])->toBeGreaterThan(0.0)
+        ->and($evidence['p99'])->toBe($evidence['p50'])
+        ->and($evidence['mean'])->toBe($evidence['p50'])
+        ->and($evidence['iters'])->toBe(1);
+});
+
 it('keeps an unknown missing PHP manifest seed fail closed', function () {
     $fix = new PerfFixturesPhp();
     $fix->set('tenant_id', 'tenant-php');
@@ -2986,12 +3112,15 @@ it('manifest JSON body hydrates VaultService requests', function () {
     $fix->set('vault_delete_secret_path', 'app/delete');
     $fix->set('vault_destroy_secret_path', 'app/destroy');
     $fix->set('vault_db_role', 'sdk-readonly');
+    $fix->set('vault_db_idempotency_key', 'vault-db-idempotency-php');
+    $fix->set('vault_db_lease_id', 'vault-db-lease-php');
     $created = phpManifestJsonBody('create_transit_key', $fix, 'tenant-php', 'project-php', 'VaultService');
     $decrypt = phpManifestJsonBody('decrypt', $fix, 'tenant-php', 'project-php', 'VaultService');
     $deleted = phpManifestJsonBody('delete_secret', $fix, 'tenant-php', 'project-php', 'VaultService');
     $destroyed = phpManifestJsonBody('destroy_secret', $fix, 'tenant-php', 'project-php', 'VaultService');
     $encrypted = phpManifestJsonBody('encrypt', $fix, 'tenant-php', 'project-php', 'VaultService');
     $dbCreds = phpManifestJsonBody('generate_database_credentials', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $revokedDbCreds = phpManifestJsonBody('revoke_database_credentials', $fix, 'tenant-php', 'project-php', 'VaultService');
     $secret = phpManifestJsonBody('get_secret', $fix, 'tenant-php', 'project-php', 'VaultService');
     $hmac = phpManifestJsonBody('hmac', $fix, 'tenant-php', 'project-php', 'VaultService');
     $secrets = phpManifestJsonBody('list_secrets', $fix, 'tenant-php', 'project-php', 'VaultService');
@@ -3013,6 +3142,11 @@ it('manifest JSON body hydrates VaultService requests', function () {
         ->and($dbCreds)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\GenerateDatabaseCredentialsRequest::class)
         ->and($dbCreds->getRoleName())->toBe('sdk-readonly')
         ->and($dbCreds->getTtlSeconds())->toBe(900)
+        ->and($dbCreds->getProjectId())->toBe('project-php')
+        ->and($dbCreds->getIdempotencyKey())->toBe('vault-db-idempotency-php')
+        ->and($revokedDbCreds)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\RevokeDatabaseCredentialsRequest::class)
+        ->and($revokedDbCreds->getProjectId())->toBe('project-php')
+        ->and($revokedDbCreds->getLeaseId())->toBe('vault-db-lease-php')
         ->and($secret)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\GetSecretRequest::class)
         ->and($secret->getSecretPath())->toBe('app/config')
         ->and($hmac)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\HmacRequest::class)
@@ -3145,6 +3279,9 @@ it('manifest JSON body hydrates AuthzService create-policy-draft request', funct
     $fix->set('tenant_id', 'tenant-php');
     $fix->set('project', 'project-php');
     $fix->set('subject', 'subject-php');
+    $fix->set('caller_subject', 'verified-caller-php');
+    $fix->set('platform_caller_subject', 'verified-platform-caller-php');
+    $fix->set('platform_caller_attribution_id', 'fb5c78e7-5832-410e-85f6-ac51a063a87c');
     $fix->set('gov_exp', '1893456000');
     $draft = phpManifestJsonBody('create_policy_draft', $fix, 'tenant-php', 'project-php');
     expect($draft)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest::class)
@@ -3157,6 +3294,39 @@ it('manifest JSON body hydrates AuthzService create-policy-draft request', funct
         ->and(iterator_to_array($draft->getActor()->getScopes()))->toBe(['authz:policy:write'])
         ->and($draft->getActor()->getBreakGlass())->toBeTrue()
         ->and($draft->getDocument())->toBeInstanceOf(\Udb\Core\Authz\Services\V1\PolicyDocument::class);
+
+    phpUniquifyPerfBody($draft, 'create_policy_draft', 'AuthzService', $fix);
+    expect($fix->lookup('subject'))->toBe('subject-php')
+        ->and($draft->getActor()->getSubject())->toBe('verified-platform-caller-php');
+});
+
+it('routes only global benchmark RPCs to the platform identity', function () {
+    expect(phpRequiresPlatformPerfIdentity('AnalyticsService', 'GetExecutorPerformance'))->toBeTrue()
+        ->and(phpRequiresPlatformPerfIdentity('BackupService', 'restore_tenant'))->toBeTrue()
+        ->and(phpRequiresPlatformPerfIdentity('TenantService', 'AdminPurgeTenant'))->toBeTrue()
+        ->and(phpRequiresPlatformPerfIdentity('AuthzService', 'CreatePolicyDraft'))->toBeTrue()
+        ->and(phpRequiresPlatformPerfIdentity('AuthzService', 'CreateRole'))->toBeFalse()
+        ->and(phpRequiresPlatformPerfIdentity('TenantService', 'PurgeTenant'))->toBeFalse();
+});
+
+it('derives PHP authz attribution from the verified caller without changing target IDs', function () {
+    $caller = 'caller@example.test';
+    $target = '039c134f-e3ad-4b01-bd0e-aea4849df619';
+    $attribution = phpStableAttributionId($caller);
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('user_id', $target);
+    $fix->set('role_code', 'reader-php');
+    $fix->set('caller_attribution_id', $attribution);
+    $role = perfBodyPhp('create_role', $fix, 'tenant-php', 'project-php', 'AuthzService');
+
+    expect($attribution)->toMatch('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/')
+        ->and($attribution)->not->toBe($target)
+        ->and($fix->lookup('user_id'))->toBe($target)
+        ->and($role)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\CreateRoleRequest::class)
+        ->and($role->getCreatedBy())->toBe($attribution)
+        ->and(phpStableAttributionId('C65E8CBD-2F62-4C44-89B7-502B77418D14'))
+        ->toBe('c65e8cbd-2f62-4c44-89b7-502b77418d14');
 });
 
 // gRPC status code -> NAME (BENCH_RPC_BODIES.md #1/#3: a failing RPC must be recorded
@@ -3325,6 +3495,13 @@ function phpBlockedManifestSeed(string $name, PerfFixturesPhp $fix, ?string $ser
     return null;
 }
 
+/** @return array{p50:float,p99:float,mean:float,iters:int} */
+function phpBodyFailureEvidence(int $startedNs): array
+{
+    $elapsedMs = max(1, hrtime(true) - $startedNs) / 1_000_000.0;
+    return ['p50' => $elapsedMs, 'p99' => $elapsedMs, 'mean' => $elapsedMs, 'iters' => 1];
+}
+
 class PerfSeedRpcExceptionPhp extends RuntimeException
 {
     public int $grpcCode;
@@ -3350,7 +3527,7 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
 {
     $manifestBody = phpManifestJsonBody($name, $fix, $tenant, $project, $serviceName);
     if ($manifestBody !== null) {
-        phpUniquifyPerfBody($manifestBody, $name, $serviceName);
+        phpUniquifyPerfBody($manifestBody, $name, $serviceName, $fix);
         return $manifestBody;
     }
 
@@ -3358,9 +3535,43 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
     throw new RuntimeException("PHP bench manifest body missing or non-hydratable for {$label}");
 }
 
-function phpUniquifyPerfBody(object $request, string $name, ?string $serviceName): void
+function phpUniquifyPerfBody(object $request, string $name, ?string $serviceName, PerfFixturesPhp $fix): void
 {
     $rpc = strtolower(($serviceName !== null && $serviceName !== '' ? $serviceName.'.' : '').rpcSnake($name));
+    // GovernanceActor.subject is attribution, not the policy/principal target.
+    // Global governance uses the verified platform caller; tenant Authz mutations
+    // retain ordinary-caller attribution.
+    if (str_starts_with($rpc, 'authzservice.') && method_exists($request, 'getActor')) {
+        $actor = $request->getActor();
+        $callerSubject = phpRequiresPlatformPerfIdentity((string) $serviceName, $name)
+            ? $fix->lookup('platform_caller_subject')
+            : $fix->lookup('caller_subject');
+        if (is_object($actor) && method_exists($actor, 'setSubject') && $callerSubject !== null && $callerSubject !== '') {
+            $actor->setSubject($callerSubject);
+        }
+    }
+    if (str_starts_with($rpc, 'authzservice.') && phpRequiresPlatformPerfIdentity((string) $serviceName, $name)) {
+        $platformAttributionId = $fix->lookup('platform_caller_attribution_id');
+        if ($platformAttributionId !== null && $platformAttributionId !== '' && method_exists($request, 'setReviewer')) {
+            $request->setReviewer($platformAttributionId);
+        }
+    }
+    if (str_starts_with($rpc, 'authzservice.')) {
+        $callerAttributionId = $fix->lookup('caller_attribution_id');
+        if ($callerAttributionId !== null && $callerAttributionId !== '') {
+            foreach (['setCreatedBy', 'setAssignedBy', 'setUpdatedBy', 'setRevokedBy', 'setDeletedBy', 'setApprovedBy', 'setRejectedBy'] as $setter) {
+                if (method_exists($request, $setter)) {
+                    $request->{$setter}($callerAttributionId);
+                }
+            }
+        }
+    }
+    if ($rpc === 'tenantservice.admin_purge_tenant' && method_exists($request, 'setDelegatedActor')) {
+        $platformAttributionId = $fix->lookup('platform_caller_attribution_id');
+        if ($platformAttributionId !== null && $platformAttributionId !== '') {
+            $request->setDelegatedActor($platformAttributionId);
+        }
+    }
     $suffix = bin2hex(random_bytes(6));
     if ($rpc === 'authnservice.create_user') {
         if (method_exists($request, 'setUsername')) {
@@ -3420,6 +3631,12 @@ function perfSeedPhp(array $s): array
     $data = $s['data'];
     $authGen = $s['authGenerated'];
     $meta = $s['authedMeta'];
+    $callerSubject = $s['callerSubject'];
+    $callerAttributionId = $s['callerAttributionId'];
+    $platformAuthGen = $s['platformAuthGenerated'];
+    $platformMeta = $s['platformMeta'];
+    $platformCallerSubject = $s['platformCallerSubject'];
+    $platformCallerAttributionId = $s['platformCallerAttributionId'];
     $tenant = $meta->tenantId;
     $project = $meta->projectId;
     $suffix = bin2hex(random_bytes(8));
@@ -3428,6 +3645,13 @@ function perfSeedPhp(array $s): array
 
     foreach ([
         'tenant_id' => $tenant, 'tenant' => $tenant, 'project_id' => $project, 'project' => $project,
+        'caller_subject' => $callerSubject, 'caller_attribution_id' => $callerAttributionId,
+        'platform_caller_subject' => $platformCallerSubject,
+        'platform_caller_attribution_id' => $platformCallerAttributionId,
+        'assigned_by' => $callerAttributionId, 'created_by' => $callerAttributionId,
+        'updated_by' => $callerAttributionId, 'revoked_by' => $callerAttributionId,
+        'deleted_by' => $callerAttributionId, 'approved_by' => $callerAttributionId,
+        'rejected_by' => $callerAttributionId,
         'domain' => $tenant, 'message_type' => 'udb.sdk.live.v1.SdkLiveRecord', 'locale' => 'en',
         'tenant_code' => "sdk-perf-tenant-$suffix",
         'name' => "sdk-perf-$suffix", 'filename' => "sdk-perf-$suffix.txt", 'content_type' => 'text/plain',
@@ -3454,6 +3678,17 @@ function perfSeedPhp(array $s): array
             return null;
         }
     };
+    $blockSeedsOnFailure = function (string $source, array $keys) use ($fix): callable {
+        return function (\Throwable $e) use ($fix, $source, $keys): void {
+            $grpcCode = $e instanceof PerfSeedRpcExceptionPhp
+                ? $e->grpcCode
+                : ($e instanceof \Fahara02\UdbLaravel\Exceptions\UdbRpcException ? (int) $e->status : 2);
+            $details = $e instanceof PerfSeedRpcExceptionPhp ? $e->grpcDetails : $e->getMessage();
+            foreach ($keys as $key) {
+                $fix->blockSeed((string) $key, $source, $grpcCode, $details);
+            }
+        };
+    };
 
     // AdminPurgeTenant is a PRIVILEGED cross-tenant purge; the tenant-status gate
     // (live since 0.4.32) suspends the PURGED tenant, so pointing it at the caller's
@@ -3463,10 +3698,10 @@ function perfSeedPhp(array $s): array
     // the fixture suffix-match resolves admin_purge_tenant_id back to tenant_id (the
     // caller). Fall back to a non-existent UUID (isolated NotFound, never a cascade).
     $fix->set('admin_purge_tenant_id', liveUuidV4());
-    $dispTenant = $try('disposable admin-purge tenant', fn () => $authGen->create_tenant(
+    $dispTenant = $try('disposable admin-purge tenant', fn () => $platformAuthGen->create_tenant(
         (new \Udb\Core\Tenant\Services\V1\CreateTenantRequest())
             ->setCode("sdkperfadminpurge$suffix")->setName('SDK Perf Admin-Purge Disposable')
-            ->setType('organization')->setConfig('{}')->setBranding('{}'), $meta));
+            ->setType('organization')->setConfig('{}')->setBranding('{}'), $platformMeta));
     if ($dispTenant !== null && $dispTenant->getTenantId() !== '') {
         $fix->set('admin_purge_tenant_id', $dispTenant->getTenantId());
     }
@@ -3490,7 +3725,7 @@ function perfSeedPhp(array $s): array
         ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Perf User'), $meta));
     $uid = $created ? $created->getUser()->getUserId() : '';
     if ($uid !== '') {
-        foreach (['user_id', 'recipient_id', 'assigned_by', 'created_by', 'updated_by', 'revoked_by', 'deleted_by', 'approved_by', 'rejected_by'] as $k) {
+        foreach (['user_id', 'recipient_id'] as $k) {
             $fix->set($k, $uid);
         }
         $fix->set('username', $uname);
@@ -3525,10 +3760,11 @@ function perfSeedPhp(array $s): array
                 }
             }
         }
-        // A real MFA challenge -> challenge_id (valid UUID) for VerifyMfaChallenge.
-        // AUTH_FACTOR_KIND_EMAIL_OTP=2, MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP=1.
+        // A real recovery-code MFA challenge -> challenge_id plus the matching
+        // single-use recovery code for VerifyMfaChallenge.
+        // AUTH_FACTOR_KIND_RECOVERY_CODE=6, MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP=1.
         $mc = $try('SeedMfaChallenge', fn () => $authGen->issue_mfa_challenge((new \Udb\Core\Authn\Services\V1\IssueMfaChallengeRequest())
-            ->setUserId($uid)->setFactorKind(2)->setPurpose(1), $meta));
+            ->setUserId($uid)->setFactorKind(6)->setPurpose(1), $meta));
         if ($mc) {
             $fix->set('challenge_id', $mc->getChallengeId());
         }
@@ -3549,6 +3785,32 @@ function perfSeedPhp(array $s): array
             $try('SeedWebAuthnFinish', fn () => $authGen->finish_web_authn_registration((new \Udb\Core\Authn\Services\V1\FinishWebAuthnRegistrationRequest())
                 ->setChallengeId($sr->getChallengeId())->setPublicKeyCredentialJson('__UDB_WEBAUTHN_TEST__')->setLabel('perf-passkey'), $meta));
         }
+        $seedDisposablePasskey = function (string $fixturePrefix, string $label) use ($authGen, $fix, $meta, $suffix, $tenant, $project, $try): void {
+            $username = "sdk-perf-webauthn-$fixturePrefix-$suffix";
+            $created = $try("SeedWebAuthn{$fixturePrefix}User", fn () => $authGen->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+                ->setUsername($username)->setEmail("$username@example.com")->setPassword('CorrectHorse1!')
+                ->setTenantId($tenant)->setProjectId($project)->setFullName("SDK Perf WebAuthn $fixturePrefix User"), $meta));
+            if (! $created || ! method_exists($created, 'getUser') || ! $created->getUser()) {
+                return;
+            }
+            $userId = $created->getUser()->getUserId();
+            $started = $try("SeedWebAuthn{$fixturePrefix}Registration", fn () => $authGen->start_web_authn_registration((new \Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationRequest())
+                ->setUserId($userId)->setLabel($label)->setTenantId($tenant)->setProjectId($project), $meta));
+            if (! $started || $started->getChallengeId() === '') {
+                return;
+            }
+            $finished = $try("SeedWebAuthn{$fixturePrefix}Finish", fn () => $authGen->finish_web_authn_registration((new \Udb\Core\Authn\Services\V1\FinishWebAuthnRegistrationRequest())
+                ->setChallengeId($started->getChallengeId())->setPublicKeyCredentialJson('__UDB_WEBAUTHN_TEST__')->setLabel($label), $meta));
+            if (! $finished || $finished->getCredentialId() === '') {
+                return;
+            }
+            $fix->set("webauthn_{$fixturePrefix}_user_id", $userId);
+            $fix->set("webauthn_{$fixturePrefix}_credential_id", $finished->getCredentialId());
+        };
+        // Keep Delete and Rename independent of benchmark ordering and of the
+        // passkey used by the authentication rows.
+        $seedDisposablePasskey('delete', 'perf-delete-passkey');
+        $seedDisposablePasskey('rename', 'perf-rename-passkey');
         // The dev soft-authenticator is deterministic (one credential id per user), so the
         // measured FinishWebAuthnRegistration must use a SEPARATE user with NO existing passkey —
         // else it's a duplicate/exclude-credential case, not the first-registration success path
@@ -3596,25 +3858,27 @@ function perfSeedPhp(array $s): array
 
     // AuthzService: role + assignment + policy rule + relationship.
     $roleCode = "sdk_perf_reader_$suffix";
+    $fix->set('role', $roleCode);
+    $fix->set('role_code', $roleCode);
     $role = $try('CreateRole', fn () => $authGen->create_role((new \Udb\Core\Authz\Services\V1\CreateRoleRequest())
-        ->setName("SDK Perf Reader $suffix")->setDescription('perf seed role')->setCreatedBy(liveUuidV4())
-        ->setRoleCode($roleCode)->setDomain($tenant)->setTenantId($tenant)->setProjectId($project), $meta));
+        ->setName("SDK Perf Reader $suffix")->setDescription('perf seed role')->setCreatedBy($callerAttributionId)
+        ->setRoleCode($roleCode)->setDomain($tenant)->setTenantId($tenant)->setProjectId($project), $meta),
+        $blockSeedsOnFailure('AuthzService/CreateRole', ['role_id']));
     if ($role) {
         $rid = $role->getRole()->getRoleId();
         $fix->set('role_id', $rid);
-        $fix->set('role', $roleCode);
-        $fix->set('role_code', $roleCode);
         if ($uid !== '' && $rid !== '') {
             $try('AssignRole', fn () => $authGen->assign_role((new \Udb\Core\Authz\Services\V1\AssignRoleRequest())
-                ->setUserId($uid)->setRoleId($rid)->setDomain($tenant)->setAssignedBy($uid)->setTenantId($tenant)->setProjectId($project), $meta));
+                ->setUserId($uid)->setRoleId($rid)->setDomain($tenant)->setAssignedBy($callerAttributionId)->setTenantId($tenant)->setProjectId($project), $meta));
             $cleanups[] = fn () => $try('DeleteRole', fn () => $authGen->delete_role((new \Udb\Core\Authz\Services\V1\DeleteRoleRequest())
-                ->setRoleId($rid)->setDeletedBy($uid), $meta));
+                ->setRoleId($rid)->setDeletedBy($callerAttributionId), $meta));
         }
     }
     // A SEPARATE disposable role for the destructive DeleteRole -> real 200.
     $delRole = $try('CreateDeleteRole', fn () => $authGen->create_role((new \Udb\Core\Authz\Services\V1\CreateRoleRequest())
-        ->setName("SDK Perf Del $suffix")->setDescription('disposable')->setCreatedBy($uid !== '' ? $uid : liveUuidV4())
-        ->setRoleCode("sdk_perf_del_$suffix")->setDomain($tenant)->setTenantId($tenant)->setProjectId($project), $meta));
+        ->setName("SDK Perf Del $suffix")->setDescription('disposable')->setCreatedBy($callerAttributionId)
+        ->setRoleCode("sdk_perf_del_$suffix")->setDomain($tenant)->setTenantId($tenant)->setProjectId($project), $meta),
+        $blockSeedsOnFailure('AuthzService/CreateDeleteRole', ['delete_role_id']));
     if ($delRole) {
         $fix->set('delete_role_id', $delRole->getRole()->getRoleId());
     }
@@ -3626,14 +3890,16 @@ function perfSeedPhp(array $s): array
         $getPolProject = "$project-getpolrule";
         $created = $try('CreatePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
             ->setSubject($roleCode)->setDomain($tenant)->setObject('ledger')->setAction('data.update')
-            ->setEffect(1)->setDescription('perf seed rule (version-isolated)')->setCreatedBy($uid)->setTenantId($tenant)->setProjectId($getPolProject), $meta));
+            ->setEffect(1)->setDescription('perf seed rule (version-isolated)')->setCreatedBy($callerAttributionId)->setTenantId($tenant)->setProjectId($getPolProject), $meta),
+            $blockSeedsOnFailure('AuthzService/CreatePolicyRule', ['policy_id']));
         if ($created && method_exists($created, 'getPolicy') && $created->getPolicy()) {
             $fix->set('policy_id', $created->getPolicy()->getPolicyId());
         }
         // A SEPARATE disposable rule (same isolated project) for the destructive DeletePolicyRule.
         $delRule = $try('CreateDeletePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
             ->setSubject($roleCode)->setDomain($tenant)->setObject('ledger-disposable')->setAction('data.delete')
-            ->setEffect(1)->setDescription('disposable')->setCreatedBy($uid)->setTenantId($tenant)->setProjectId($getPolProject), $meta));
+            ->setEffect(1)->setDescription('disposable')->setCreatedBy($callerAttributionId)->setTenantId($tenant)->setProjectId($getPolProject), $meta),
+            $blockSeedsOnFailure('AuthzService/CreateDeletePolicyRule', ['delete_policy_id']));
         if ($delRule && method_exists($delRule, 'getPolicy') && $delRule->getPolicy()) {
             $fix->set('delete_policy_id', $delRule->getPolicy()->getPolicyId());
         }
@@ -3826,10 +4092,10 @@ function perfSeedPhp(array $s): array
     }
 
     // AuthzService governance: a real policy draft -> policy_draft_id.
-    $draft = $try('CreatePolicyDraft', fn () => $authGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())
-        ->setActor((new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($fix->lookup('subject') ?? ('user:'.$uid))->setTenantId($tenant)->setProjectId($project)
-            ->setBreakGlass(true)->setBreakGlassReason('sdk perf seed')->setBreakGlassExpiresAtUnix(time() + 900))
-        ->setTenantId($tenant)->setProjectId($project)->setPolicySetName('default')->setTitle("sdk-perf draft $suffix")->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $meta));
+    $draft = $try('CreatePolicyDraft', fn () => $platformAuthGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())
+        ->setActor((new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($platformCallerSubject)->setTenantId($tenant)->setProjectId($project))
+        ->setTenantId($tenant)->setProjectId($project)->setPolicySetName('default')->setTitle("sdk-perf draft $suffix")->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $platformMeta),
+        $blockSeedsOnFailure('AuthzService/CreatePolicyDraft', ['policy_draft_id']));
     if ($draft) {
         $did2 = method_exists($draft, 'getDraft') && $draft->getDraft() ? $draft->getDraft()->getDraftId() : '';
         if ($did2 !== '') {
@@ -3837,23 +4103,21 @@ function perfSeedPhp(array $s): array
         }
     }
     // Governance lifecycle: drafts in each state, approved versions, a canary, a rollback set.
-    // Body actor.scopes are ignored by the live D1/D2 gate (it reads claim scopes,
-    // and no role projects to authz:*), so the seed's own governance writes must use
-    // the body-authoritative break-glass bypass — otherwise the drafts/versions/
-    // canary are never created and the governance RPCs that read them fail
-    // "<id> is required".
-    $gA = fn () => (new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($fix->lookup('subject') ?? ('user:'.$uid))->setTenantId($tenant)->setProjectId($project)->setBreakGlass(true)->setBreakGlassReason('sdk perf seed')->setBreakGlassExpiresAtUnix(time() + 900);
-    $mkDraft = function (string $title, string $setName) use ($authGen, $tenant, $project, $meta, $gA, $suffix): string {
+    // Governance is system-global control authority. The benchmark uses the
+    // separately offline-provisioned platform principal, never body break-glass
+    // claims on the ordinary tenant session.
+    $gA = fn () => (new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($platformCallerSubject)->setTenantId($tenant)->setProjectId($project);
+    $mkDraft = function (string $title, string $setName) use ($platformAuthGen, $tenant, $project, $platformMeta, $gA, $suffix): string {
         try {
-            $d = $authGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())->setActor($gA())->setTenantId($tenant)->setProjectId($project)->setPolicySetName($setName)->setTitle($title.$suffix)->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $meta);
+            $d = $platformAuthGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())->setActor($gA())->setTenantId($tenant)->setProjectId($project)->setPolicySetName($setName)->setTitle($title.$suffix)->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $platformMeta);
             return ($d->getDraft()) ? $d->getDraft()->getDraftId() : '';
         } catch (\Throwable $e) {
             return '';
         }
     };
-    $submit = function (string $did) use ($authGen, $gA, $meta): void {
+    $submit = function (string $did) use ($platformAuthGen, $gA, $platformMeta): void {
         try {
-            $authGen->submit_policy_draft((new \Udb\Core\Authz\Services\V1\SubmitPolicyDraftRequest())->setActor($gA())->setDraftId($did), $meta);
+            $platformAuthGen->submit_policy_draft((new \Udb\Core\Authz\Services\V1\SubmitPolicyDraftRequest())->setActor($gA())->setDraftId($did), $platformMeta);
         } catch (\Throwable $e) {
         }
     };
@@ -3871,14 +4135,14 @@ function perfSeedPhp(array $s): array
         $submit($rd);
         $fix->set('reject_draft_id', $rd);
     }
-    $mkVersion = function (string $setName, string $title) use ($authGen, $meta, $gA, $mkDraft, $submit, $uid): ?object {
+    $mkVersion = function (string $setName, string $title) use ($platformAuthGen, $platformMeta, $gA, $mkDraft, $submit, $platformCallerAttributionId): ?object {
         $did = $mkDraft($title, $setName);
         if ($did === '') {
             return null;
         }
         $submit($did);
         try {
-            $ap = $authGen->approve_policy_draft((new \Udb\Core\Authz\Services\V1\ApprovePolicyDraftRequest())->setActor($gA())->setDraftId($did)->setReviewer($uid)->setReason('seed approve'), $meta);
+            $ap = $platformAuthGen->approve_policy_draft((new \Udb\Core\Authz\Services\V1\ApprovePolicyDraftRequest())->setActor($gA())->setDraftId($did)->setReviewer($platformCallerAttributionId)->setReason('seed approve'), $platformMeta);
             return $ap->getVersion();
         } catch (\Throwable $e) {
             return null;
@@ -3894,7 +4158,7 @@ function perfSeedPhp(array $s): array
         try {
             // success_window_secs MUST be > 0 (1s): 0 makes the broker substitute a default that
             // never elapses, so PromoteCanary stays "not promote-eligible".
-            $c = $authGen->activate_canary((new \Udb\Core\Authz\Services\V1\ActivateCanaryRequest())->setActor($gA())->setPolicyVersionId($cv->getPolicyVersionId())->setScopeKind(3)->setScopeValues(['10'])->setSuccessWindowSecs(1)->setMetricThreshold(0.99)->setMinSamples(0), $meta);
+            $c = $platformAuthGen->activate_canary((new \Udb\Core\Authz\Services\V1\ActivateCanaryRequest())->setActor($gA())->setPolicyVersionId($cv->getPolicyVersionId())->setScopeKind(3)->setScopeValues(['10'])->setSuccessWindowSecs(1)->setMetricThreshold(0.99)->setMinSamples(0), $platformMeta);
             if ($c->getCanary()) {
                 $fix->set('canary_id', $c->getCanary()->getCanaryId());
             }
@@ -3904,13 +4168,13 @@ function perfSeedPhp(array $s): array
     $v1 = $mkVersion("sdk-perf-rollback-set-$suffix", 'rb1-');
     if ($v1) {
         try {
-            $authGen->activate_policy_version((new \Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest())->setActor($gA())->setPolicyVersionId($v1->getPolicyVersionId()), $meta);
+            $platformAuthGen->activate_policy_version((new \Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest())->setActor($gA())->setPolicyVersionId($v1->getPolicyVersionId()), $platformMeta);
         } catch (\Throwable $e) {
         }
         $v2 = $mkVersion("sdk-perf-rollback-set-$suffix", 'rb2-');
         if ($v2) {
             try {
-                $authGen->activate_policy_version((new \Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest())->setActor($gA())->setPolicyVersionId($v2->getPolicyVersionId()), $meta);
+                $platformAuthGen->activate_policy_version((new \Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest())->setActor($gA())->setPolicyVersionId($v2->getPolicyVersionId()), $platformMeta);
             } catch (\Throwable $e) {
             }
             $fix->set('rollback_policy_set_id', $v2->getPolicySetId());
@@ -4338,6 +4602,20 @@ function perfSeedPhp(array $s): array
     $fix->set('vault_delete_secret_path', "app/delete-$suffix");
     $fix->set('vault_destroy_secret_path', "app/destroy-$suffix");
     $fix->set('vault_db_role', 'readonly');
+    // Generate uses its own stable retry key. Revoke targets a separately issued
+    // disposable lease so benchmark ordering cannot destroy Generate's replay row.
+    $fix->set('vault_db_idempotency_key', "sdk-perf-vault-db-generate-$suffix");
+    $issuedDbCredential = $seedStub('GenerateDatabaseCredentials:revoke', $vault, 'GenerateDatabaseCredentials', \Udb\Core\Vault\Services\V1\GenerateDatabaseCredentialsRequest::class,
+        ['tenant_id' => $tenant, 'project_id' => $project, 'role_name' => 'readonly', 'ttl_seconds' => 900, 'idempotency_key' => "sdk-perf-vault-db-revoke-$suffix"],
+        ['vault_db_lease_id']);
+    if ($issuedDbCredential && $issuedDbCredential->getLeaseId() !== '') {
+        $vaultDbLeaseId = $issuedDbCredential->getLeaseId();
+        $fix->set('vault_db_lease_id', $vaultDbLeaseId);
+        $cleanups[] = fn () => $seedStub('RevokeDatabaseCredentials:cleanup', $vault, 'RevokeDatabaseCredentials', \Udb\Core\Vault\Services\V1\RevokeDatabaseCredentialsRequest::class,
+            ['tenant_id' => $tenant, 'project_id' => $project, 'lease_id' => $vaultDbLeaseId, 'reason' => 'benchmark cleanup']);
+    } elseif ($issuedDbCredential) {
+        $fix->blockSeed('vault_db_lease_id', 'GenerateDatabaseCredentials:revoke', 2, 'successful response omitted lease_id');
+    }
     // Fallbacks so the Decrypt/Verify bodies always resolve even if Encrypt/Sign fail.
     $fix->set('vault_ciphertext', base64_encode('perf'));
     $fix->set('vault_signature', base64_encode('perf'));
@@ -4518,19 +4796,50 @@ it('measures per-RPC latency', function () {
     // webrtc) too. $fix maps every reference/ID field -> a real seeded entity.
     [$fix, $seedRecordId, $seedCleanup] = perfSeedPhp($s);
 
+    // Refresh and re-verify the distinct platform session after the long seed
+    // lifecycle so token age cannot masquerade as a global-RPC contract failure.
+    $authTarget = liveEnv('UDB_AUTH_GRPC_TARGET', liveEnv('UDB_GRPC_TARGET'));
+    $platformOpenMeta = liveMeta();
+    $platformOpen = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 10_000, 'retry' => ['max_attempts' => 1]]);
+    $platformOpen->bindContext($platformOpenMeta);
+    $freshPlatformLogin = $platformOpen->login(
+        (new LoginRequest())
+            ->setUsername(liveEnv('UDB_LIVE_PLATFORM_USERNAME'))
+            ->setPassword(liveEnv('UDB_LIVE_PLATFORM_PASSWORD'))
+            ->setTenantHint($authedMeta->tenantId)
+            ->setProjectHint($authedMeta->projectId)
+            ->setDeviceName('php-sdk-perf-platform-measure'),
+        $platformOpenMeta,
+    );
+    $platformVerifier = new UdbAuthClient(['endpoint' => $authTarget, 'deadline_ms' => 10_000]);
+    $platformVerifier->bindContext($platformOpenMeta);
+    $freshPlatformAuth = $platformVerifier->authenticateBearer($freshPlatformLogin->getAccessToken(), $platformOpenMeta);
+    $freshPlatformRoles = [];
+    foreach (($freshPlatformAuth?->getPrincipal()?->getRoles() ?? []) as $role) {
+        $freshPlatformRoles[] = strtolower((string) $role);
+    }
+    if (! in_array('platform_admin', $freshPlatformRoles, true)) {
+        throw new RuntimeException('fresh PHP platform benchmark principal lacks platform_admin');
+    }
+    $s['platformMeta'] = liveMeta(
+        $freshPlatformLogin->getAccessToken(),
+        $freshPlatformAuth?->getPrincipal()?->getTenantId() ?: $authedMeta->tenantId,
+    );
+    $s['platformAuthGenerated']->bindContext($s['platformMeta']);
+
     $itersFor = fn (string $kind) => $kind === 'destructive' ? 1 : ($kind === 'mutation' ? 5 : 25);
 
-    $invoke = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use (&$authedMeta) {
+    $invoke = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest, $callMeta) {
         return $hasRequest
-            ? $method->invoke($stub, $probeRequest, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000])
-            : $method->invoke($stub, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000]);
+            ? $method->invoke($stub, $probeRequest, $callMeta->toGrpcMetadata(), ['timeout' => 20_000_000])
+            : $method->invoke($stub, $callMeta->toGrpcMetadata(), ['timeout' => 20_000_000]);
     };
 
     // Unary-only timer: invoke + wait() is a single request->response round-trip.
     // Returns [elapsed_ms, err] where err is the gRPC status code NAME on a non-OK
     // status, else "OK" — so a failing RPC is recorded as a FAILURE, never a silent
     // latency sample (BENCH_RPC_BODIES.md #1/#3).
-    $timeUnary = function (GeneratedClient $sdkClient, string $sdkMethodName, $stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke, &$authedMeta): array {
+    $timeUnary = function (GeneratedClient $sdkClient, string $sdkMethodName, $stub, ReflectionMethod $method, $hasRequest, $probeRequest, $callMeta) use ($invoke): array {
         $start = microtime(true);
         $err = 'OK';
         $detail = '';
@@ -4540,9 +4849,9 @@ it('measures per-RPC latency', function () {
             // error mapping live. Raw stubs are retained only as a fallback for unusual
             // signatures and for the streaming probe below.
             if ($hasRequest && method_exists($sdkClient, $sdkMethodName)) {
-                $sdkClient->{$sdkMethodName}($probeRequest, $authedMeta);
+                $sdkClient->{$sdkMethodName}($probeRequest, $callMeta);
             } else {
-                $call = $invoke($stub, $method, $hasRequest, $probeRequest);
+                $call = $invoke($stub, $method, $hasRequest, $probeRequest, $callMeta);
                 if (method_exists($call, 'wait')) {
                     // Raw \Grpc\UnaryCall::wait() returns [response, status] and does NOT
                     // throw on a non-OK status — inspect the status code or every failing
@@ -4586,16 +4895,25 @@ it('measures per-RPC latency', function () {
     $operationIdOf = fn (string $svc, string $name) => \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_ID[$apiKeyOf($svc, $name)] ?? lcfirst($name);
     // Collect every (stub, method) unit, then sort into phases before measuring.
     $units = [];
+    $platformStubs = stubAccessors($s['data'], $s['platformAuthGenerated']);
     foreach (stubAccessors($s['data'], $s['authGenerated']) as $stubName => $stub) {
         $svc = preg_replace('/Stub$/', '', $stubName);
-        $sdkClient = $stubName === 'DataBrokerStub' ? $s['data'] : $s['authGenerated'];
         foreach (generatedStubMethods($stub) as $method) {
+            $usePlatform = phpRequiresPlatformPerfIdentity($svc, $method->getName());
+            $selectedStub = $usePlatform ? ($platformStubs[$stubName] ?? null) : $stub;
+            if ($selectedStub === null) {
+                throw new RuntimeException("platform benchmark surface is missing $stubName");
+            }
+            $sdkClient = $stubName === 'DataBrokerStub'
+                ? $s['data']
+                : ($usePlatform ? $s['platformAuthGenerated'] : $s['authGenerated']);
             $units[] = [
-                'stub' => $stub,
+                'stub' => $selectedStub,
                 'client' => $sdkClient,
                 'svc' => $svc,
                 'method' => $method,
                 'name' => $method->getName(),
+                'platform' => $usePlatform,
                 'ordinal' => count($units),
             ];
         }
@@ -4663,6 +4981,7 @@ it('measures per-RPC latency', function () {
                 $s['authGenerated']->bindContext($authedMeta);
                 $reauthenticatedForPurge = true;
             }
+            $callMeta = $u['platform'] ? $s['platformMeta'] : $authedMeta;
             $apiAlias = $aliasOf($svc, $name);
             $sdkMethodName = sdkBenchMethodPhp($svc, $name, $apiAlias);
             if ($svc === 'IdentityProviderService' && in_array($name, ['ScimCreateGroup', 'ScimGetGroup', 'ScimPatchGroup', 'ScimDeleteGroup'], true)) {
@@ -4727,7 +5046,9 @@ it('measures per-RPC latency', function () {
             $probeRequest = null;
             $kind = operationKindPhp($name, $svc);
             $mkBody = null;
+            $buildBody = null;
             if ($hasRequest) {
+                $bodyStartNs = hrtime(true);
                 $blockedSeed = phpBlockedManifestSeed($name, $fix, $svc);
                 if ($blockedSeed !== null) {
                     $detail = sprintf(
@@ -4738,11 +5059,12 @@ it('measures per-RPC latency', function () {
                         $blockedSeed['grpc_code'],
                         $blockedSeed['details'],
                     );
+                    $bodyEvidence = phpBodyFailureEvidence($bodyStartNs);
                     fwrite(STDERR, "FAILDETAIL $svc/$name [SEED_BLOCKED] ".substr($detail, 0, 200)."\n");
                     $samples[] = [
                         'service' => $svc, 'rpc' => $name, 'api_alias' => $aliasOf($svc, $name),
                         'operation_id' => $operationIdOf($svc, $name), 'kind' => $kind, 'err' => 'SEED_BLOCKED',
-                        'p50' => 0.0, 'p99' => 0.0, 'mean' => 0.0, 'iters' => 0,
+                        ...$bodyEvidence,
                         'seed_key' => $blockedSeed['key'], 'seed_source' => $blockedSeed['source'],
                         'seed_grpc_code' => $blockedSeed['grpc_code'], 'seed_grpc_status' => $blockedSeed['grpc_status'],
                         'seed_details' => $blockedSeed['details'],
@@ -4756,8 +5078,29 @@ it('measures per-RPC latency', function () {
                 // a factory and rebuilt PER ITERATION so create-style RPCs (random unique
                 // username/role_code/name) don't collide on a reused body (iters 2+ would
                 // hit the unique constraint and the broker leaks it as INTERNAL).
-                $mkBody = fn () => perfBodyPhp($name, $fix, $authedMeta->tenantId, $authedMeta->projectId, $svc);
-                $probeRequest = $mkBody();
+                $mkBody = fn () => perfBodyPhp($name, $fix, $callMeta->tenantId, $callMeta->projectId, $svc);
+                $buildBody = function () use ($mkBody): array {
+                    $startedNs = hrtime(true);
+                    try {
+                        $body = $mkBody();
+                        return [$body, null, max(1, hrtime(true) - $startedNs) / 1_000_000.0];
+                    } catch (\Throwable $e) {
+                        return [null, $e->getMessage(), max(1, hrtime(true) - $startedNs) / 1_000_000.0];
+                    }
+                };
+                [$probeRequest, $bodyError, $bodyMs] = $buildBody();
+                if ($bodyError !== null) {
+                    $bodyEvidence = ['p50' => $bodyMs, 'p99' => $bodyMs, 'mean' => $bodyMs, 'iters' => 1];
+                    fwrite(STDERR, "FAILDETAIL $svc/$name [SKIP_NO_BODY] ".substr($bodyError, 0, 200)."\n");
+                    $samples[] = [
+                        'service' => $svc, 'rpc' => $name, 'api_alias' => $aliasOf($svc, $name),
+                        'operation_id' => $operationIdOf($svc, $name), 'kind' => $kind, 'err' => 'SKIP_NO_BODY',
+                        ...$bodyEvidence,
+                        'body_error' => $bodyError,
+                    ];
+
+                    continue;
+                }
             }
             // Refresh-token rotation is single-use. A second call with the same
             // fixture token is a replay signal in v0.5.7 and correctly revokes the
@@ -4779,7 +5122,7 @@ it('measures per-RPC latency', function () {
                 || str_contains($doc, 'BidiStreamingCall');
             if ($isStreaming) {
                 try {
-                    $probe = $invoke($stub, $method, $hasRequest, $probeRequest);
+                    $probe = $invoke($stub, $method, $hasRequest, $probeRequest, $callMeta);
                     if (method_exists($probe, 'cancel')) {
                         try {
                             $probe->cancel();
@@ -4804,7 +5147,14 @@ it('measures per-RPC latency', function () {
             // Warm-up ONLY for idempotent reads — a warm-up on a non-idempotent mutation
             // CONSUMES the op (submit/approve a draft, rotate a token, revoke a key).
             if ($kind === 'read_only') {
-                $timeUnary($sdkClient, $sdkMethodName, $stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
+                $warmBody = $probeRequest;
+                $warmBodyError = null;
+                if ($buildBody !== null) {
+                    [$warmBody, $warmBodyError] = $buildBody();
+                }
+                if ($warmBodyError === null) {
+                    $timeUnary($sdkClient, $sdkMethodName, $stub, $method, $hasRequest, $warmBody, $callMeta);
+                }
             }
             $allDurs = [];
             $okDurs = [];
@@ -4812,7 +5162,19 @@ it('measures per-RPC latency', function () {
             $firstErr = 'OK';
             $errDetail = '';
             for ($i = 0; $i < $iters; $i++) {
-                [$ms, $err, $detail] = $timeUnary($sdkClient, $sdkMethodName, $stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
+                $requestBody = $probeRequest;
+                $bodyError = null;
+                $bodyMs = 0.0;
+                if ($buildBody !== null) {
+                    [$requestBody, $bodyError, $bodyMs] = $buildBody();
+                }
+                if ($bodyError !== null) {
+                    $ms = $bodyMs;
+                    $err = 'SKIP_NO_BODY';
+                    $detail = $bodyError;
+                } else {
+                    [$ms, $err, $detail] = $timeUnary($sdkClient, $sdkMethodName, $stub, $method, $hasRequest, $requestBody, $callMeta);
+                }
                 $allDurs[] = $ms;
                 if ($err === 'OK') {
                     $anyOk = true;
@@ -4870,7 +5232,7 @@ it('measures per-RPC latency', function () {
         'Unary = full request/response round-trip. Streaming rows (kind=stream_open) report '
             .'stream-open latency (initiate + cancel, no response drain), NOT first-message latency.', '',
         'A failed prerequisite seed does not abort the sweep. Every dependent RPC is emitted with err=SEED_BLOCKED, '
-            .'zero iterations, and the original seed RPC status below; unrelated RPCs continue to run.', '',
+            .'one timed body-resolution attempt, and the original seed RPC status below; unrelated RPCs continue to run.', '',
         '## Seeded fixtures', '',
         'Captured semantic field -> seeded value keys used to resolve request fields: '
             .(count($fixtureKeys) > 0 ? implode(', ', $fixtureKeys) : '(none)'), '',

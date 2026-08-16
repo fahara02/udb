@@ -338,14 +338,18 @@ jobs:
         continue-on-error: true
         run: |
           test -x target/debug/udb
+          python3 scripts/generate-codebase-map.py
+          python3 udb-skill/sync_references.py
           target/debug/udb native manifest > docs/generated/udb-native-contract.json
           target/debug/udb native docs > docs/generated/native-services.md
           target/debug/udb native contract-baseline \
             --baseline docs/generated/contract-baseline.bin
           git diff --binary -- \
+            docs/generated/codebase-map.md \
             docs/generated/udb-native-contract.json \
             docs/generated/native-services.md \
             docs/generated/contract-baseline.bin \
+            udb-skill/plugins/udb/skills/udb-coding/references/codebase-map.md \
             > ci-native-docs.patch
       - name: Upload CI-generated native documentation repair patch
         if: failure() && runner.os == 'Linux'

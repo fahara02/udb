@@ -456,6 +456,14 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
         ("release_dry_run_id:", "release dry-run run id workflow input"),
         ("benchmark_run_id:", "benchmark run id workflow input"),
         ("pages_run_id:", "Pages run id workflow input"),
+        (
+            'benchmark_run_id:\n        description: "Required exact post-release Benchmark · SDKs run id whose artifact is audited"\n        required: true',
+            "required benchmark artifact selector",
+        ),
+        (
+            'pages_run_id:\n        description: "Required exact post-benchmark Pages deploy run id whose artifact is audited"\n        required: true',
+            "required Pages artifact selector",
+        ),
         ("branch_protection_run_id:", "branch-protection run id workflow input"),
         ("lint_run_id:", "lint run id workflow input"),
         ("idempotency_served_run_id:", "idempotency served run id workflow input"),
@@ -1272,6 +1280,21 @@ CI_RUST_GENERATED_CONTRACT_DOC_GATES = (
             "--baseline docs/generated/contract-baseline.bin",
         ),
     ),
+    (
+        "Prepare CI-generated native documentation repair patch",
+        "generated native/reference repair",
+        (
+            "if: failure() && runner.os == 'Linux'",
+            "python3 scripts/generate-codebase-map.py",
+            "python3 udb-skill/sync_references.py",
+            "docs/generated/codebase-map.md",
+            "docs/generated/udb-native-contract.json",
+            "docs/generated/native-services.md",
+            "docs/generated/contract-baseline.bin",
+            "udb-skill/plugins/udb/skills/udb-coding/references/codebase-map.md",
+            "> ci-native-docs.patch",
+        ),
+    ),
 )
 
 CI_BUF_GENERATED_ARTIFACT_REQUIREMENTS = (
@@ -1513,7 +1536,6 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ("Pull latest benchmark results into the site", "benchmark result handoff step"),
     ("GH_TOKEN: ${{ github.token }}", "benchmark artifact download token"),
     ("TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}", "benchmark workflow_run id handoff"),
-    ("TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}", "benchmark workflow_run commit handoff"),
     ("TRIGGER_EVENT: ${{ github.event.workflow_run.event }}", "benchmark trigger provenance handoff"),
     ("Exact SHA-256 of the committed v0.4.28 historical artifact", "pinned historical benchmark provenance comment"),
     ("PINNED_LEGACY_BENCH_SHA256: 52461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6", "exact v0.4.28 benchmark digest pin"),
@@ -1527,9 +1549,9 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ("got_fresh=1", "benchmark fresh artifact state"),
     ("completed without a fresh sdk-benchmark-results artifact", "missing benchmark artifact hard failure"),
     ("benchmark artifact run_id does not match triggering run", "benchmark artifact run identity validation"),
-    ("benchmark artifact commit does not match triggering workflow head SHA", "benchmark artifact commit validation"),
     ("benchmark history digest disagrees with release provenance", "benchmark history digest validation"),
     ('gh api "repos/${GITHUB_REPOSITORY}/commits/${release_tag}" --jq .sha', "published tag commit resolution"),
+    ('[ "${published_commit}" != "${artifact_commit}" ]', "published tag-to-artifact commit equality"),
     ('--pattern "${release_asset}.sha256"', "published benchmark asset checksum resolution"),
     ("benchmark binary digest does not match", "published benchmark digest validation"),
     (
@@ -2180,6 +2202,7 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("const GITHUB_API_REQUEST_TIMEOUT_MS = 30 * 1000", "GitHub API request timeout ceiling"),
     ("const MAX_GITHUB_API_RESPONSE_BYTES = 4 * 1024 * 1024", "GitHub API response byte ceiling"),
     ("const MAX_FIXTURE_BYTES = 1 * 1024 * 1024", "runner evidence fixture byte ceiling"),
+    ("const MAX_RELEASE_CHAIN_ARTIFACT_BYTES = 8 * 1024 * 1024", "release-chain artifact byte ceiling"),
     ("const MAX_GITHUB_RUN_JOBS = 500", "GitHub jobs pagination total_count ceiling"),
     ("const MAX_GITHUB_JOBS_PAGE_SIZE = 100", "GitHub jobs pagination page-size ceiling"),
     ("const MAX_GITHUB_WORKFLOW_RUN_CANDIDATES = 100", "GitHub workflow-run discovery candidate ceiling"),
@@ -2204,6 +2227,8 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("const POSITIVE_DECIMAL_PATTERN", "positive decimal numeric CLI pattern"),
     ("const ACTIONS_TIMESTAMP_PATTERN", "GitHub Actions timestamp pattern"),
     ("const GITHUB_ACTIONS_RUN_URL_PATTERN", "GitHub Actions run inspection URL pattern"),
+    ('const BENCHMARK_ARTIFACT_NAME = "sdk-benchmark-results"', "benchmark artifact authority name"),
+    ('const PAGES_ARTIFACT_NAME = "github-pages"', "Pages artifact authority name"),
     ("const PR_REQUIRED_JOBS", "PR required check inventory"),
     ("const PR_ADVISORY_JOBS", "PR advisory/no-check-lost job inventory"),
     ("const PR_EVIDENCE_JOBS = [...PR_REQUIRED_JOBS, ...PR_ADVISORY_JOBS]", "complete PR runner evidence inventory"),
@@ -2383,7 +2408,8 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("used branch ${actualBranch || \"(missing)\"}, want ${DEFAULT_INTEGRATION_BRANCH}", "release-chain workflow_run branch mismatch failure"),
     ("used release tag ${actualBranch || \"(missing)\"}, want ${releaseTag}", "release-chain non-workflow_run tag mismatch failure"),
     ("release chain has missing release head_sha", "release-chain missing release SHA failure"),
-    ("used head_sha ${actualSha}, want ${releaseSha}", "release-chain SHA mismatch failure"),
+    ("post-release benchmark: --benchmark-run-id is required because workflow_run metadata does not identify the immutable release tag", "explicit benchmark run-id discovery authority"),
+    ("post-benchmark Pages: --pages-run-id is required because workflow_run metadata does not identify the immutable release tag", "explicit Pages run-id discovery authority"),
     ("function assertReleaseDryRunCommit({ release, releaseDryRun })", "release dry-run commit binding assertion"),
     ("const releaseTag = assertReleaseTag(release?.head_branch, \"release\")", "release dry-run release-tag binding source"),
     ("const dryRunTag = assertReleaseTag(releaseDryRun?.head_branch", "release dry-run tag extraction"),
@@ -2421,6 +2447,19 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("function assertReleaseChainOrder({ release, benchmark, pages })", "release-chain ordering assertion"),
     ("started before release run", "early benchmark ordering failure"),
     ("started before benchmark run", "early Pages ordering failure"),
+    ("function assertReleaseChainArtifactEvidence({ release, benchmark, pages, repo, evidence })", "release-chain artifact binding assertion"),
+    ("async function fetchReleaseChainArtifactEvidence({ repo, token, release, benchmark, pages })", "release-chain artifact fetcher"),
+    ("gh\",\n      [\"run\", \"download\"", "exact-run artifact download"),
+    ("function extractPagesBenchmarkArtifact(artifactTar)", "Pages artifact benchmark extractor"),
+    ("selected Pages artifact does not contain the exact selected benchmark artifact evidence", "cross-run Pages artifact splice rejection"),
+    ("benchmark artifact came from run ${evidenceBenchmarkRunId}, want selected run ${benchmarkRunId}", "benchmark artifact run-id binding"),
+    ("benchmark artifact commit is ${gitPayload.commit || \"(missing)\"}, want ${releaseSha}", "benchmark artifact release commit binding"),
+    ("published release tag resolves to ${publishedCommit}, want audited release commit ${releaseSha}", "published tag commit binding"),
+    ("function assertPublishedChecksum(value, expectedAsset, expectedDigest)", "published checksum binding assertion"),
+    ("wrong-benchmark-artifact-run", "wrong benchmark artifact run negative selftest"),
+    ("pages-artifact-splice", "Pages artifact splice negative selftest"),
+    ("wrong-artifact-release-commit", "wrong artifact commit negative selftest"),
+    ("wrong-published-release-digest", "wrong published checksum negative selftest"),
     ("function appendGitHubApiChunk(body, chunk, label)", "GitHub API response chunk limiter"),
     ("Buffer.byteLength(next, \"utf8\") > MAX_GITHUB_API_RESPONSE_BYTES", "GitHub API response byte-count check"),
     ("GitHub API response exceeded", "GitHub API oversized response rejection"),
@@ -2640,19 +2679,11 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("missing benchmark job regression was not caught", "missing benchmark job negative selftest"),
     ("wrong Pages release branch regression was not caught", "wrong Pages branch negative selftest"),
     ("missing Pages deploy regression was not caught", "missing Pages deploy negative selftest"),
-    ("wrong benchmark head_sha regression was not caught", "wrong benchmark SHA negative selftest"),
-    ("post-release benchmark run 12 used head_sha ${benchmarkSha}, want ${releaseSha}", "wrong benchmark SHA negative assertion"),
-    ("wrong Pages head_sha regression was not caught", "wrong Pages SHA negative selftest"),
-    ("post-benchmark Pages run 13 used head_sha ${pagesSha}, want ${releaseSha}", "wrong Pages SHA negative assertion"),
     ("missing release head_sha regression was not caught", "missing release SHA negative selftest"),
     ("padded release head_sha regression was not caught", "padded release SHA negative selftest"),
     ("uppercase release head_sha regression was not caught", "uppercase release SHA negative selftest"),
     ("release run 4 has invalid head_sha  ${releaseSha}; want 40 hex characters", "padded release SHA negative assertion"),
     ("release run 4 has invalid head_sha ${releaseSha.toUpperCase()}; want 40 hex characters", "uppercase release SHA negative assertion"),
-    ("wrong benchmark head_sha regression was not caught", "wrong benchmark SHA negative selftest"),
-    ("post-release benchmark run 12 used head_sha ${benchmarkSha}, want ${releaseSha}", "wrong benchmark SHA negative assertion"),
-    ("wrong Pages head_sha regression was not caught", "wrong Pages SHA negative selftest"),
-    ("post-benchmark Pages run 13 used head_sha ${pagesSha}, want ${releaseSha}", "wrong Pages SHA negative assertion"),
     ("malformed benchmark head_sha regression was not caught", "malformed benchmark SHA negative selftest"),
     (
         "post-release benchmark run 12 has invalid head_sha not-a-sha; want 40 hex characters",
@@ -5656,6 +5687,14 @@ def check_pages_playground_wasm_gate(root: Path = ROOT) -> list[str]:
         _require(readme, needle, label, scoped)
     if "DIRECT_PUSH_BEFORE" in workflow or 'git diff --quiet "${DIRECT_PUSH_BEFORE}"' in workflow:
         scoped.append("Pages no-fresh authority must not rely on predecessor-relative benchmark diffs")
+    if (
+        "TRIGGER_HEAD_SHA" in workflow
+        or "github.event.workflow_run.head_sha" in workflow
+        or "benchmark artifact commit does not match triggering workflow head SHA" in workflow
+    ):
+        scoped.append(
+            "Pages must bind benchmark evidence to the immutable release tag, not the mutable workflow-run head SHA"
+        )
     if "--canonical-manifest docs/generated/bench-bodies.json" in workflow:
         scoped.append("manual Pages must not accept committed canonical benchmark payloads")
     if 'Path("docs/site/bench-results.json").write_text' in workflow:
@@ -6830,6 +6869,16 @@ jobs:
         run: |
           target/debug/udb native contract-diff \
             --baseline docs/generated/contract-baseline.bin
+      - name: Prepare CI-generated native documentation repair patch
+        if: failure() && runner.os == 'Linux'
+        continue-on-error: true
+        run: |
+          python3 scripts/generate-codebase-map.py
+          python3 udb-skill/sync_references.py
+          target/debug/udb native manifest > docs/generated/udb-native-contract.json
+          target/debug/udb native docs > docs/generated/native-services.md
+          target/debug/udb native contract-baseline --baseline docs/generated/contract-baseline.bin
+          git diff --binary -- docs/generated/codebase-map.md docs/generated/udb-native-contract.json docs/generated/native-services.md docs/generated/contract-baseline.bin udb-skill/plugins/udb/skills/udb-coding/references/codebase-map.md > ci-native-docs.patch
   build-broker:
     needs: quick-gate
     runs-on: ubuntu-latest
@@ -7372,7 +7421,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
-          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
           # Exact SHA-256 of the committed v0.4.28 historical artifact.
           PINNED_LEGACY_BENCH_SHA256: 52461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6
@@ -7387,9 +7435,12 @@ jobs:
           fi
           if [ "$got_fresh" = 1 ]; then
             echo "benchmark artifact run_id does not match triggering run"
-            echo "benchmark artifact commit does not match triggering workflow head SHA"
             echo "benchmark history digest disagrees with release provenance"
             published_commit="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${release_tag}" --jq .sha)"
+            if [ "${published_commit}" != "${artifact_commit}" ]; then
+              echo "release tag does not resolve to benchmark artifact commit"
+              exit 1
+            fi
             gh release download "${release_tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${release_asset}.sha256" --dir release-proof
             echo "benchmark binary digest does not match"
             gh api -H "Accept: application/vnd.github.raw+json" \\
@@ -7747,6 +7798,7 @@ const MAX_EVIDENCE_AGE_DAYS = DEFAULT_MAX_EVIDENCE_AGE_DAYS;
 const MAX_GITHUB_API_RESPONSE_BYTES = 4 * 1024 * 1024;
 const GITHUB_API_REQUEST_TIMEOUT_MS = 30 * 1000;
 const MAX_FIXTURE_BYTES = 1 * 1024 * 1024;
+const MAX_RELEASE_CHAIN_ARTIFACT_BYTES = 8 * 1024 * 1024;
 const MAX_GITHUB_RUN_JOBS = 500;
 const MAX_GITHUB_JOBS_PAGE_SIZE = 100;
 const MAX_GITHUB_WORKFLOW_RUN_CANDIDATES = 100;
@@ -7756,6 +7808,8 @@ const LINT_EVIDENCE_EVENTS = ["workflow_dispatch", "pull_request", "push"];
 const DEFAULT_INTEGRATION_BRANCH = "main";
 const RELEASE_TAG_PATTERN = /^v\\d+\\.\\d+\\.\\d+/;
 const GIT_SHA_PATTERN = /^[0-9a-f]{40}$/;
+const BENCHMARK_ARTIFACT_NAME = "sdk-benchmark-results";
+const PAGES_ARTIFACT_NAME = "github-pages";
 const RUN_ID_PATTERN = /^[1-9]\\d*$/;
 const POSITIVE_DECIMAL_PATTERN = /^(?:[1-9]\\d*(?:\\.\\d+)?|0\\.\\d*[1-9]\\d*)$/;
 const GITHUB_ACTIONS_RUN_URL_PATTERN = /^https:\\/\\/github\\.com\\/([A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+)\\/actions\\/runs\\/([1-9]\\d*)$/;
@@ -8028,7 +8082,6 @@ function assertReleaseChainTags({ release, benchmark, pages }) {
   throw new Error("used branch ${actualBranch || \"(missing)\"}, want ${DEFAULT_INTEGRATION_BRANCH}");
   throw new Error("used release tag ${actualBranch || \"(missing)\"}, want ${releaseTag}");
   throw new Error("release chain has missing release head_sha");
-  throw new Error("used head_sha ${actualSha}, want ${releaseSha}");
 }
 function assertReleaseDryRunCommit({ release, releaseDryRun }) {
   const releaseTag = assertReleaseTag(release?.head_branch, "release");
@@ -8039,6 +8092,8 @@ function assertReleaseDryRunCommit({ release, releaseDryRun }) {
 const releaseDryRunLookup = { branch: expectedReleaseTag };
 const discoveryFailures = [];
 throw new Error("runner evidence discovery failed:");
+throw new Error("post-release benchmark: --benchmark-run-id is required because workflow_run metadata does not identify the immutable release tag");
+throw new Error("post-benchmark Pages: --pages-run-id is required because workflow_run metadata does not identify the immutable release tag");
 throw new Error("aggregate live discovery regression was not caught");
 throw new Error("PR CI: no successful completed ci.yml run found");
 throw new Error("integration CI: no successful completed ci.yml run found");
@@ -8124,6 +8179,24 @@ function assertReleaseChainOrder({ release, benchmark, pages }) {
   throw new Error("post-release benchmark run 12 started before release run 4 completed");
   throw new Error("post-benchmark Pages run 13 started before benchmark run 12 completed");
 }
+function assertReleaseChainArtifactEvidence({ release, benchmark, pages, repo, evidence }) {
+  throw new Error("selected Pages artifact does not contain the exact selected benchmark artifact evidence");
+  throw new Error("benchmark artifact came from run ${evidenceBenchmarkRunId}, want selected run ${benchmarkRunId}");
+  throw new Error("benchmark artifact commit is ${gitPayload.commit || \"(missing)\"}, want ${releaseSha}");
+  throw new Error("published release tag resolves to ${publishedCommit}, want audited release commit ${releaseSha}");
+}
+function assertPublishedChecksum(value, expectedAsset, expectedDigest) {}
+function extractPagesBenchmarkArtifact(artifactTar) {}
+async function fetchReleaseChainArtifactEvidence({ repo, token, release, benchmark, pages }) {
+  releaseChainCommand(
+      "gh",
+      ["run", "download"],
+  );
+}
+throw new Error("wrong-benchmark-artifact-run");
+throw new Error("pages-artifact-splice");
+throw new Error("wrong-artifact-release-commit");
+throw new Error("wrong-published-release-digest");
 function appendGitHubApiChunk(body, chunk, label) {
   const next = body + chunk;
   if (Buffer.byteLength(next, "utf8") > MAX_GITHUB_API_RESPONSE_BYTES) {
@@ -8325,19 +8398,11 @@ function runSelftest() {
   throw new Error("missing Pages deploy regression was not caught");
   throw new Error("post-benchmark Pages run is missing required jobs: deploy");
   throw new Error("malformed release tag regression was not caught");
-  throw new Error("wrong benchmark head_sha regression was not caught");
-  throw new Error("post-release benchmark run 12 used head_sha ${benchmarkSha}, want ${releaseSha}");
-  throw new Error("wrong Pages head_sha regression was not caught");
-  throw new Error("post-benchmark Pages run 13 used head_sha ${pagesSha}, want ${releaseSha}");
   throw new Error("missing release head_sha regression was not caught");
   throw new Error("padded release head_sha regression was not caught");
   throw new Error("release run 4 has invalid head_sha  ${releaseSha}; want 40 hex characters");
   throw new Error("uppercase release head_sha regression was not caught");
   throw new Error("release run 4 has invalid head_sha ${releaseSha.toUpperCase()}; want 40 hex characters");
-  throw new Error("wrong benchmark head_sha regression was not caught");
-  throw new Error("post-release benchmark run 12 used head_sha ${benchmarkSha}, want ${releaseSha}");
-  throw new Error("wrong Pages head_sha regression was not caught");
-  throw new Error("post-benchmark Pages run 13 used head_sha ${pagesSha}, want ${releaseSha}");
   throw new Error("malformed benchmark head_sha regression was not caught");
   throw new Error("early benchmark ordering regression was not caught");
   throw new Error("early Pages ordering regression was not caught");
@@ -8841,9 +8906,11 @@ on:
       release_dry_run_id:
         default: ""
       benchmark_run_id:
-        default: ""
+        description: "Required exact post-release Benchmark · SDKs run id whose artifact is audited"
+        required: true
       pages_run_id:
-        default: ""
+        description: "Required exact post-benchmark Pages deploy run id whose artifact is audited"
+        required: true
       branch_protection_run_id:
         default: ""
       lint_run_id:
@@ -9253,6 +9320,28 @@ jobs:
         )
         failures = check_targeted_proof_workflows(root)
         assert any("runner evidence max-age handoff" in failure for failure in failures), failures
+        (wf / "runner-evidence-audit.yml").write_text(runner_evidence_workflow_good, encoding="utf-8")
+
+        (wf / "runner-evidence-audit.yml").write_text(
+            runner_evidence_workflow_good.replace(
+                'benchmark_run_id:\n        description: "Required exact post-release Benchmark · SDKs run id whose artifact is audited"\n        required: true',
+                'benchmark_run_id:\n        description: "Optional benchmark run"\n        required: false',
+            ),
+            encoding="utf-8",
+        )
+        failures = check_targeted_proof_workflows(root)
+        assert any("required benchmark artifact selector" in failure for failure in failures), failures
+        (wf / "runner-evidence-audit.yml").write_text(runner_evidence_workflow_good, encoding="utf-8")
+
+        (wf / "runner-evidence-audit.yml").write_text(
+            runner_evidence_workflow_good.replace(
+                'pages_run_id:\n        description: "Required exact post-benchmark Pages deploy run id whose artifact is audited"\n        required: true',
+                'pages_run_id:\n        description: "Optional Pages run"\n        required: false',
+            ),
+            encoding="utf-8",
+        )
+        failures = check_targeted_proof_workflows(root)
+        assert any("required Pages artifact selector" in failure for failure in failures), failures
         (wf / "runner-evidence-audit.yml").write_text(runner_evidence_workflow_good, encoding="utf-8")
 
         (wf / "runner-evidence-audit.yml").write_text(
@@ -10197,6 +10286,13 @@ jobs:
         assert any("codebase map freshness" in failure for failure in failures), failures
 
         (wf / "ci.yml").write_text(
+            ci_good.replace("          python3 udb-skill/sync_references.py\n", ""),
+            encoding="utf-8",
+        )
+        failures = check_ci_rust_generated_contract_doc_gates(root)
+        assert any("generated native/reference repair" in failure for failure in failures), failures
+
+        (wf / "ci.yml").write_text(
             ci_good.replace(
                 "      - name: Native contract breaking-change gate (Phase 3)\n        if: runner.os == 'Linux'",
                 "      - name: Native contract breaking-change gate (Phase 3)",
@@ -10417,6 +10513,17 @@ jobs:
         )
         failures = check_pages_playground_wasm_gate(root)
         assert any("exact v0.4.28 benchmark digest pin" in failure for failure in failures), failures
+
+        (wf / "pages.yml").write_text(
+            pages_good.replace(
+                "          TRIGGER_EVENT: ${{ github.event.workflow_run.event }}",
+                "          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}\n"
+                "          TRIGGER_EVENT: ${{ github.event.workflow_run.event }}",
+            ),
+            encoding="utf-8",
+        )
+        failures = check_pages_playground_wasm_gate(root)
+        assert any("immutable release tag" in failure for failure in failures), failures
 
         (wf / "pages.yml").write_text(
             pages_good.replace(

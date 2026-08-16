@@ -63,6 +63,11 @@ jobs:
       RELEASE_ASSET: ${{ inputs.release-asset }}
       # Live tests are always opted-in here; perf adds the perf opt-in below.
       UDB_LIVE_SDK_TESTS: "1"
+      # A separate offline-provisioned platform principal is used only for RPCs
+      # whose contract is genuinely system-global/cross-tenant. Tenant Authz
+      # CRUD continues to run as the ordinary benchmark principal.
+      UDB_LIVE_PLATFORM_USERNAME: sdk-live-platform
+      UDB_LIVE_PLATFORM_PASSWORD: "SdkLivePlatform#2026"
     services:
       postgres:
         image: postgres:16-alpine
@@ -283,6 +288,7 @@ jobs:
           psql -h localhost -p 5432 -U udb -d postgres -c "DROP DATABASE IF EXISTS udb_ci WITH (FORCE);"
           psql -h localhost -p 5432 -U udb -d postgres -c "CREATE DATABASE udb_ci;"
           "${UDB_BENCH_BIN}" auth bootstrap user --username "${UDB_LIVE_USERNAME}" --password "${UDB_LIVE_PASSWORD}" --tenant "${UDB_LIVE_TENANT}" --project "${UDB_LIVE_PROJECT}"
+          "${UDB_BENCH_BIN}" auth bootstrap user --username "${UDB_LIVE_PLATFORM_USERNAME}" --email "sdk-live-platform@example.invalid" --password "${UDB_LIVE_PLATFORM_PASSWORD}" --tenant "${UDB_LIVE_TENANT}" --project "${UDB_LIVE_PROJECT}" --platform-admin
           tid="$(psql -h localhost -p 5432 -U udb -d udb_ci -tAq -c "SELECT tenant_id::text FROM udb_tenant.tenants WHERE code='sdk-live' OR name='sdk-live' LIMIT 1;")"
           [ -n "$tid" ] || { echo "no tenant_id for sdk-live"; exit 1; }
           psql -h localhost -p 5432 -U udb -d udb_ci -v ON_ERROR_STOP=1 <<SQL

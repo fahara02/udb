@@ -49,6 +49,23 @@ fn governance_draft_internal_status(
     crate::runtime::executor_utils::internal_status("authz", operation, message)
 }
 
+fn reject_reserved_platform_bindings(
+    document: &PolicyDocument,
+    operation: &'static str,
+) -> Result<(), Status> {
+    if document
+        .role_bindings
+        .iter()
+        .any(|binding| is_reserved_platform_role(&binding.role))
+    {
+        return Err(reserved_platform_role_status(
+            operation,
+            "reserved platform roles cannot be granted by a governance document; use a trusted system-role assignment",
+        ));
+    }
+    Ok(())
+}
+
 fn draft_not_editable_status(status: &str) -> Status {
     governance_policy_status(
         "policy_draft_update",
@@ -219,6 +236,7 @@ impl AuthzServiceImpl {
             let snap = self.current_snapshot().await?;
             document = PolicyDocument::from_snapshot(&snap, &tenant, &project);
         }
+        reject_reserved_platform_bindings(&document, "create_policy_draft")?;
 
         let policy_set_id = self
             .ensure_policy_set(&tenant, &project, &req.policy_set_name, &actor)
@@ -347,6 +365,7 @@ impl AuthzServiceImpl {
             .as_ref()
             .map(PolicyDocument::from_proto)
             .unwrap_or_default();
+        reject_reserved_platform_bindings(&document, "update_policy_draft")?;
         let pool = self.require_pool()?;
         let m = self.policy_drafts_model();
         let rel = m.relation.clone();

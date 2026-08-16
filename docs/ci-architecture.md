@@ -219,11 +219,15 @@ Current source evidence:
   as the audited Release run with `Release binary + SDK live benchmarks`; Pages
   evidence must be a `pages.yml` `workflow_run` on that exact tag with `build`
   and `deploy`, proving the benchmark artifact was produced and the site
-  publish lane completed after it. The Release, benchmark, and Pages runs must
-  also expose the same canonical unpadded 40-hex `head_sha`; missing,
-  malformed, padded, or mismatched SHAs fail the audit so moved/reused tags
-  cannot splice evidence from different commits. Release `head_branch` tag
-  tokens must be canonical unpadded `vMAJOR.MINOR.PATCH` values too. The
+  publish lane completed after it. Every run must expose a canonical unpadded
+  40-hex `head_sha`, but downstream `workflow_run` SHAs identify the current
+  default-branch workflow revision and are not the immutable release commit.
+  Release identity instead comes from the benchmark artifact's tag/commit,
+  the published tag dereference, and the exact release-asset checksum. Live
+  runner-evidence discovery therefore requires explicit benchmark and Pages
+  run ids rather than guessing a release chain from mutable downstream SHAs.
+  Release `head_branch` tag tokens must be canonical unpadded
+  `vMAJOR.MINOR.PATCH` values too. The
   release-binary dry-run evidence must expose that same release tag and
   `head_sha`, so the manual dry-run proves the same tag/commit as the audited
   Release. The same audit requires chronological order as well: benchmark may

@@ -493,6 +493,150 @@ pub async fn bootstrap_admin_user(
     })
 }
 
+/// Fixed identity of the global system-owned platform role. Unlike
+/// `organization_owner`, this role is an explicit cross-tenant authority and is
+/// therefore provisioned only by the Postgres-direct offline CLI path below.
+pub(crate) const SYSTEM_PLATFORM_ADMIN_ROLE_ID: &str =
+    "00000000-0000-0000-0000-0000000a0010";
+pub(crate) const PLATFORM_ADMIN_ROLE_CODE: &str = "platform_admin";
+
+/// Offline-only platform bootstrap. The ordinary served bootstrap deliberately
+/// cannot call this function: callers must already have direct access to the
+/// configured Postgres DSN and invoke `udb auth bootstrap user --platform-admin`
+/// outside the broker listener. The system/global role provenance is what makes
+/// the reserved role label authoritative; tenant RPCs and literal authz tuples
+/// are prohibited from manufacturing the same authority.
+pub async fn bootstrap_platform_admin_user(
+    dsn: &str,
+    username: &str,
+    email: &str,
+    password: &str,
+    tenant: &str,
+    project: &str,
+) -> Result<BootstrapAdmin, String> {
+    let admin = bootstrap_admin_user(dsn, username, email, password, tenant, project).await?;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .acquire_timeout(std::time::Duration::from_secs(10))
+        .connect(dsn)
+        .await
+        .map_err(|err| format!("connect postgres '{dsn}': {err}"))?;
+    let role = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.Role",
+        &[
+            "role_id",
+            "name",
+            "description",
+            "is_system",
+            "is_active",
+            "tenant_id",
+            "project_id",
+            "role_code",
+            "scope_type",
+            "deleted_at",
+        ],
+    );
+    let user_role = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.UserRole",
+        &[
+            "user_role_id",
+            "user_id",
+            "role_id",
+            "domain",
+            "assigned_by",
+            "tenant_id",
+            "created_by",
+        ],
+    );
+
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|err| format!("platform bootstrap tx begin failed: {err}"))?;
+    sqlx::query(&format!(
+        "INSERT INTO {rel} \
+           ({role_id}, {name}, {description}, {is_system}, {is_active}, {tenant_id}, {project_id}, {role_code}, {scope_type}) \
+         VALUES ($1::UUID, 'Platform Administrator', 'Offline-provisioned global platform authority', TRUE, TRUE, '', '', $2, 'GLOBAL') \
+         ON CONFLICT DO NOTHING",
+        rel = role.relation,
+        role_id = role.q("role_id"),
+        name = role.q("name"),
+        description = role.q("description"),
+        is_system = role.q("is_system"),
+        is_active = role.q("is_active"),
+        tenant_id = role.q("tenant_id"),
+        project_id = role.q("project_id"),
+        role_code = role.q("role_code"),
+        scope_type = role.q("scope_type"),
+    ))
+    .bind(SYSTEM_PLATFORM_ADMIN_ROLE_ID)
+    .bind(PLATFORM_ADMIN_ROLE_CODE)
+    .execute(&mut *tx)
+    .await
+    .map_err(|err| format!("seed platform_admin role failed: {err}"))?;
+
+    // `ON CONFLICT DO NOTHING` is idempotent, but it must not turn a poisoned
+    // pre-existing fixed-id row into authority. Verify the exact provenance
+    // before creating the global binding.
+    let provenance: Option<(String, bool, bool, String, String, String)> = sqlx::query_as(&format!(
+        "SELECT {role_code}, {is_system}, {is_active}, {tenant_id}, COALESCE({project_id}, ''), {scope_type} \
+         FROM {rel} WHERE {role_id} = $1::UUID AND {deleted_at} IS NULL",
+        rel = role.relation,
+        role_code = role.q("role_code"),
+        is_system = role.q("is_system"),
+        is_active = role.q("is_active"),
+        tenant_id = role.q("tenant_id"),
+        project_id = role.q("project_id"),
+        scope_type = role.q("scope_type"),
+        role_id = role.q("role_id"),
+        deleted_at = role.q("deleted_at"),
+    ))
+    .bind(SYSTEM_PLATFORM_ADMIN_ROLE_ID)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|err| format!("verify platform_admin role provenance failed: {err}"))?;
+    if provenance
+        != Some((
+            PLATFORM_ADMIN_ROLE_CODE.to_string(),
+            true,
+            true,
+            String::new(),
+            String::new(),
+            "GLOBAL".to_string(),
+        ))
+    {
+        return Err(
+            "platform_admin role exists without exact active system/global provenance"
+                .to_string(),
+        );
+    }
+
+    sqlx::query(&format!(
+        "INSERT INTO {rel} \
+           ({user_role_id}, {user_id}, {role_id}, {domain}, {assigned_by}, {tenant_id}, {created_by}) \
+         VALUES (gen_random_uuid(), $1::UUID, $2::UUID, '', $1::UUID, '', $1::UUID) \
+         ON CONFLICT ({user_id}, {role_id}, {domain}) DO UPDATE SET \
+           {assigned_by} = EXCLUDED.{assigned_by}, {tenant_id} = EXCLUDED.{tenant_id}, {created_by} = EXCLUDED.{created_by}",
+        rel = user_role.relation,
+        user_role_id = user_role.q("user_role_id"),
+        user_id = user_role.q("user_id"),
+        role_id = user_role.q("role_id"),
+        domain = user_role.q("domain"),
+        assigned_by = user_role.q("assigned_by"),
+        tenant_id = user_role.q("tenant_id"),
+        created_by = user_role.q("created_by"),
+    ))
+    .bind(&admin.user_id)
+    .bind(SYSTEM_PLATFORM_ADMIN_ROLE_ID)
+    .execute(&mut *tx)
+    .await
+    .map_err(|err| format!("assign platform_admin role failed: {err}"))?;
+    tx.commit()
+        .await
+        .map_err(|err| format!("platform bootstrap commit failed: {err}"))?;
+    Ok(admin)
+}
+
 /// Fixed schema/table/key for the durable single-use bootstrap marker (06.4.2.1).
 /// A singleton row (one FIXED uuid) records that a *served* privilege-creating
 /// bootstrap has already been consumed, so [`served_bootstrap_admin`] is one-shot

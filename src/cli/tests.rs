@@ -561,6 +561,27 @@ fn parse_args_recognizes_auth_commands() {
 }
 
 #[test]
+fn parse_args_recognizes_offline_platform_admin_bootstrap() {
+    let args = vec![
+        "auth".to_string(),
+        "bootstrap".to_string(),
+        "user".to_string(),
+        "--username".to_string(),
+        "platform-ci".to_string(),
+        "--platform-admin".to_string(),
+    ];
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::Bootstrap {
+            username,
+            platform_admin: true,
+            ..
+        }) if username == "platform-ci"
+    ));
+}
+
+#[test]
 fn parse_args_recognizes_auth_policy_lint() {
     let args = vec!["auth".to_string(), "policy".to_string(), "lint".to_string()];
     let (command, _, _, _) = parse_args(&args);

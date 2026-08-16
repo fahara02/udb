@@ -160,8 +160,8 @@ type perfSeedResult struct {
 // uuidTenant is the canonical tenant UUID used by the UUID-strict services
 // (storage/asset/webrtc); base/native are the matching outgoing contexts.
 func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerClient, brokerCtx context.Context,
-	authConn grpc.ClientConnInterface, base context.Context, nativeCtxFn func() context.Context,
-	tenant, project, uuidTenant string) perfSeedResult {
+	authConn grpc.ClientConnInterface, base, platformBase context.Context, nativeCtxFn func() context.Context,
+	actorUserID, platformActorID, tenant, project, uuidTenant string) perfSeedResult {
 	t.Helper()
 	fix := newPerfFixtures()
 	suffix := strings.NewReplacer(".", "", ":", "", "+", "").Replace(time.Now().UTC().Format("20060102150405.000000000"))
@@ -174,6 +174,8 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	fix.set("project_id", project)
 	fix.set("project", project)
 	fix.set("domain", tenant)
+	fix.set("actor_user_id", actorUserID)
+	fix.set("platform_actor_user_id", platformActorID)
 	fix.set("message_type", liveMessageType)
 	fix.set("tenant_code", "sdk-perf-tenant-"+suffix)
 	// PurgeTenant is measured last against the ephemeral benchmark tenant. It
@@ -196,6 +198,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	}
 	fix.set("resource_name", "postgres:default")
 	fix.set("vault_db_role", "readonly")
+	fix.set("vault_db_idempotency_key", "sdk-perf-vault-db-generate-"+suffix)
 	fix.set("egress_id", "eg-"+tenant+"-"+uuid4())
 
 	rc := liveRequestContext(tenant, project, "go.live.perf.seed")
@@ -343,14 +346,49 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		// against a separate throwaway user with no existing passkey; otherwise the measured
 		// FinishWebAuthnRegistration is a duplicate/exclude case, not the success path.
 		if sr, err := authn.StartWebAuthnRegistration(base, &authnpb.StartWebAuthnRegistrationRequest{UserId: uid, Label: "perf-passkey", TenantId: tenant, ProjectId: project}); err == nil {
-			if _, err := authn.FinishWebAuthnRegistration(base, &authnpb.FinishWebAuthnRegistrationRequest{
+			if finished, err := authn.FinishWebAuthnRegistration(base, &authnpb.FinishWebAuthnRegistrationRequest{
 				ChallengeId: sr.GetChallengeId(), PublicKeyCredentialJson: webauthnTestCredential, Label: "perf-passkey",
 			}); err != nil {
 				t.Logf("perf seed: bootstrap FinishWebAuthnRegistration failed: %v", err)
+			} else {
+				fix.set("webauthn_credential_id", finished.GetCredentialId())
 			}
 		} else {
 			t.Logf("perf seed: bootstrap StartWebAuthnRegistration failed: %v", err)
 		}
+		seedDisposablePasskey := func(fixturePrefix, label string) {
+			seededUser, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
+				Username: "sdk-perf-webauthn-" + fixturePrefix + "-" + suffix,
+				Email: "sdk-perf-webauthn-" + fixturePrefix + "-" + suffix + "@example.com",
+				Password: pw, TenantId: tenant, ProjectId: project,
+				FullName: "SDK Perf WebAuthn " + fixturePrefix + " User",
+			})
+			if err != nil || seededUser.GetUser() == nil {
+				t.Logf("perf seed: WebAuthn %s user CreateUser failed: %v", fixturePrefix, err)
+				return
+			}
+			userID := seededUser.GetUser().GetUserId()
+			started, err := authn.StartWebAuthnRegistration(base, &authnpb.StartWebAuthnRegistrationRequest{
+				UserId: userID, Label: label, TenantId: tenant, ProjectId: project,
+			})
+			if err != nil {
+				t.Logf("perf seed: WebAuthn %s StartWebAuthnRegistration failed: %v", fixturePrefix, err)
+				return
+			}
+			finished, err := authn.FinishWebAuthnRegistration(base, &authnpb.FinishWebAuthnRegistrationRequest{
+				ChallengeId: started.GetChallengeId(), PublicKeyCredentialJson: webauthnTestCredential, Label: label,
+			})
+			if err != nil {
+				t.Logf("perf seed: WebAuthn %s FinishWebAuthnRegistration failed: %v", fixturePrefix, err)
+				return
+			}
+			fix.set("webauthn_"+fixturePrefix+"_user_id", userID)
+			fix.set("webauthn_"+fixturePrefix+"_credential_id", finished.GetCredentialId())
+		}
+		// Keep delete and rename independent of benchmark ordering and of the main
+		// passkey used by Start/FinishWebAuthnAuthentication.
+		seedDisposablePasskey("delete", "perf-delete-passkey")
+		seedDisposablePasskey("rename", "perf-rename-passkey")
 		regUserID := ""
 		if regUser, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
 			Username: "sdk-perf-webauthn-reg-" + suffix, Email: "sdk-perf-webauthn-reg-" + suffix + "@example.com",
@@ -373,12 +411,13 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		} else {
 			t.Logf("perf seed: StartWebAuthnAuthentication failed: %v", err)
 		}
-		// A real MFA challenge → challenge_id for VerifyMfaChallenge (the answer code
-		// still needs a dev echo — see bug_report.md §G MFA note; this at least makes
-		// challenge_id a valid UUID instead of the "must be UUID" reject).
+		// Bind VerifyMfaChallenge to the real recovery code generated above. Unlike
+		// email/SMS OTP, this proof is available to the harness without a separate
+		// out-of-band delivery handle.
 		if mc, err := authn.IssueMfaChallenge(base, &authnpb.IssueMfaChallengeRequest{
-			UserId: uid, FactorKind: authnentpb.AuthFactorKind_AUTH_FACTOR_KIND_EMAIL_OTP,
+			UserId: uid, FactorKind: authnentpb.AuthFactorKind_AUTH_FACTOR_KIND_RECOVERY_CODE,
 			Purpose: authnentpb.MfaChallengePurpose_MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP,
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
 		}); err == nil {
 			fix.set("challenge_id", mc.GetChallengeId())
 		}
@@ -469,7 +508,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	authz := authzpb.NewAuthzServiceClient(authConn)
 	roleCode := "sdk_perf_reader_" + suffix
 	if role, err := authz.CreateRole(base, &authzpb.CreateRoleRequest{
-		Name: "SDK Perf Reader " + suffix, Description: "perf seed role", CreatedBy: uuid4(),
+		Name: "SDK Perf Reader " + suffix, Description: "perf seed role", CreatedBy: actorUserID,
 		RoleCode: roleCode, Domain: tenant, TenantId: tenant, ProjectId: project,
 	}); err != nil {
 		t.Logf("perf seed: CreateRole failed: %v", err)
@@ -480,19 +519,19 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		fix.set("role_code", roleCode)
 		if uid := fix.m["user_id"]; uid != "" {
 			if assigned, err := authz.AssignRole(base, &authzpb.AssignRoleRequest{
-				UserId: uid, RoleId: rid, Domain: tenant, AssignedBy: uid, TenantId: tenant, ProjectId: project,
+				UserId: uid, RoleId: rid, Domain: tenant, AssignedBy: actorUserID, TenantId: tenant, ProjectId: project,
 			}); err == nil {
 				fix.set("user_role_id", assigned.GetUserRole().GetUserRoleId())
 			}
 		}
 		addCleanup(func() {
-			_, _ = authz.DeleteRole(base, &authzpb.DeleteRoleRequest{RoleId: rid, DeletedBy: fix.m["user_id"]})
+			_, _ = authz.DeleteRole(base, &authzpb.DeleteRoleRequest{RoleId: rid, DeletedBy: actorUserID})
 		})
 	}
 	// A SEPARATE disposable role for the destructive DeleteRole, so deleting it does
 	// not invalidate the primary role_id that GetRole/UpdateRole/ListUserRoles read.
 	if delRole, err := authz.CreateRole(base, &authzpb.CreateRoleRequest{
-		Name: "SDK Perf Disposable " + suffix, Description: "perf seed disposable role", CreatedBy: uuid4(),
+		Name: "SDK Perf Disposable " + suffix, Description: "perf seed disposable role", CreatedBy: actorUserID,
 		RoleCode: "sdk_perf_disposable_" + suffix, Domain: tenant, TenantId: tenant, ProjectId: project,
 	}); err == nil {
 		fix.set("delete_role_id", delRole.GetRole().GetRoleId())
@@ -517,7 +556,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		getPolProject := project + "-getpolrule"
 		if created, err := authz.CreatePolicyRule(base, &authzpb.CreatePolicyRuleRequest{
 			Subject: roleCode, Domain: tenant, Object: "ledger", Action: "data.update",
-			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed rule (version-isolated)", CreatedBy: uid, TenantId: tenant, ProjectId: getPolProject,
+			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed rule (version-isolated)", CreatedBy: actorUserID, TenantId: tenant, ProjectId: getPolProject,
 		}); err != nil {
 			t.Logf("perf seed: CreatePolicyRule (getpolrule) failed: %v", err)
 		} else {
@@ -527,7 +566,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		// DeletePolicyRule, so deleting it never touches the GetPolicyRule target.
 		if delRule, err := authz.CreatePolicyRule(base, &authzpb.CreatePolicyRuleRequest{
 			Subject: roleCode, Domain: tenant, Object: "ledger-disposable", Action: "data.delete",
-			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed disposable rule", CreatedBy: uid, TenantId: tenant, ProjectId: getPolProject,
+			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed disposable rule", CreatedBy: actorUserID, TenantId: tenant, ProjectId: getPolProject,
 		}); err == nil {
 			fix.set("delete_policy_id", delRule.GetPolicy().GetPolicyId())
 		}
@@ -540,8 +579,8 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	fix.set("action", "data.select")
 	// A governed policy draft → policy_draft_id for the draft lifecycle RPCs
 	// (Update/Diff/Submit/Approve/Reject/Simulate).
-	if draft, err := authz.CreatePolicyDraft(base, &authzpb.CreatePolicyDraftRequest{
-		Actor:    &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, BreakGlass: true, BreakGlassReason: "sdk perf seed", BreakGlassExpiresAtUnix: time.Now().Unix() + 900},
+	if draft, err := authz.CreatePolicyDraft(platformBase, &authzpb.CreatePolicyDraftRequest{
+		Actor:    &authzpb.GovernanceActor{Subject: platformActorID, TenantId: tenant, ProjectId: project, BreakGlass: true, BreakGlassReason: "sdk perf seed", BreakGlassExpiresAtUnix: time.Now().Unix() + 900},
 		TenantId: tenant, ProjectId: project, PolicySetName: "default", Title: "sdk perf draft " + suffix, ChangeReason: "seed", Document: &authzpb.PolicyDocument{},
 	}); err == nil {
 		fix.set("policy_draft_id", draft.GetDraft().GetDraftId())
@@ -550,15 +589,13 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	// need IN_REVIEW (draft_reviewable, governance_drafts.rs). Seed one OPEN draft and
 	// two submitted-to-IN_REVIEW drafts (one each for Approve/Reject, which consume them).
 	gActor := func() *authzpb.GovernanceActor {
-		// Body actor.scopes are ignored by the live D1/D2 gate (it reads claim
-		// scopes, and no role projects to authz:*), so the seed's own governance
-		// writes must use the body-authoritative break-glass bypass — otherwise the
-		// drafts/versions/canary are never created and the governance RPCs that read
-		// them fail "<id> is required".
-		return &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, BreakGlass: true, BreakGlassReason: "sdk perf seed", BreakGlassExpiresAtUnix: time.Now().Unix() + 900}
+		// The actor is bound to the separately bootstrapped platform claim. The
+		// request flag remains audited break-glass intent; platform authority comes
+		// only from the verified system/global role, never actor.scopes.
+		return &authzpb.GovernanceActor{Subject: platformActorID, TenantId: tenant, ProjectId: project, BreakGlass: true, BreakGlassReason: "sdk perf seed", BreakGlassExpiresAtUnix: time.Now().Unix() + 900}
 	}
 	mkDraft := func(title string) string {
-		d, err := authz.CreatePolicyDraft(base, &authzpb.CreatePolicyDraftRequest{
+		d, err := authz.CreatePolicyDraft(platformBase, &authzpb.CreatePolicyDraftRequest{
 			Actor: gActor(), TenantId: tenant, ProjectId: project, PolicySetName: "default",
 			Title: title + suffix, ChangeReason: "seed", Document: &authzpb.PolicyDocument{},
 		})
@@ -569,12 +606,12 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	}
 	fix.set("update_draft_id", mkDraft("sdk-perf-update-")) // left OPEN
 	if id := mkDraft("sdk-perf-approve-"); id != "" {
-		if _, err := authz.SubmitPolicyDraft(base, &authzpb.SubmitPolicyDraftRequest{Actor: gActor(), DraftId: id}); err == nil {
+		if _, err := authz.SubmitPolicyDraft(platformBase, &authzpb.SubmitPolicyDraftRequest{Actor: gActor(), DraftId: id}); err == nil {
 			fix.set("approve_draft_id", id) // now IN_REVIEW
 		}
 	}
 	if id := mkDraft("sdk-perf-reject-"); id != "" {
-		if _, err := authz.SubmitPolicyDraft(base, &authzpb.SubmitPolicyDraftRequest{Actor: gActor(), DraftId: id}); err == nil {
+		if _, err := authz.SubmitPolicyDraft(platformBase, &authzpb.SubmitPolicyDraftRequest{Actor: gActor(), DraftId: id}); err == nil {
 			fix.set("reject_draft_id", id) // now IN_REVIEW
 		}
 	}
@@ -583,7 +620,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	// ActivateCanary need a version in Approved/Superseded/RolledBack; GetCanaryStatus/
 	// PromoteCanary need a real canary_id; RollbackPolicyVersion needs a set with a prior version.
 	mkVersion := func(setName, title string) *authzentpb.PolicyVersion {
-		d, err := authz.CreatePolicyDraft(base, &authzpb.CreatePolicyDraftRequest{
+		d, err := authz.CreatePolicyDraft(platformBase, &authzpb.CreatePolicyDraftRequest{
 			Actor: gActor(), TenantId: tenant, ProjectId: project, PolicySetName: setName,
 			Title: title + suffix, ChangeReason: "seed", Document: &authzpb.PolicyDocument{},
 		})
@@ -591,10 +628,10 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			return nil
 		}
 		did := d.GetDraft().GetDraftId()
-		if _, err := authz.SubmitPolicyDraft(base, &authzpb.SubmitPolicyDraftRequest{Actor: gActor(), DraftId: did}); err != nil {
+		if _, err := authz.SubmitPolicyDraft(platformBase, &authzpb.SubmitPolicyDraftRequest{Actor: gActor(), DraftId: did}); err != nil {
 			return nil
 		}
-		ap, err := authz.ApprovePolicyDraft(base, &authzpb.ApprovePolicyDraftRequest{Actor: gActor(), DraftId: did, Reviewer: fix.m["user_id"], Reason: "seed approve"})
+		ap, err := authz.ApprovePolicyDraft(platformBase, &authzpb.ApprovePolicyDraftRequest{Actor: gActor(), DraftId: did, Reviewer: platformActorID, Reason: "seed approve"})
 		if err != nil {
 			t.Logf("perf seed: ApprovePolicyDraft(version) failed: %v", err)
 			return nil
@@ -610,7 +647,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		// (promote_eligible: now-started >= success_window_secs; canary.rs:248). NOTE: passing
 		// 0 makes ActivateCanary substitute DEFAULT_CANARY_WINDOW_SECS (governance_activate.rs:631),
 		// which never elapses during the run; the measured PromoteCanary runs well after 1s.
-		if c, err := authz.ActivateCanary(base, &authzpb.ActivateCanaryRequest{
+		if c, err := authz.ActivateCanary(platformBase, &authzpb.ActivateCanaryRequest{
 			Actor: gActor(), PolicyVersionId: v.GetPolicyVersionId(),
 			ScopeKind: authzentpb.CanaryScopeKind_CANARY_SCOPE_KIND_PERCENT, ScopeValues: []string{"10"},
 			SuccessWindowSecs: 1, MetricThreshold: 0.99, MinSamples: 0,
@@ -622,9 +659,9 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	}
 	// Rollback set: activate TWO versions in one set so RollbackPolicyVersion has a prior target.
 	if v1 := mkVersion("sdk-perf-rollback-set-"+suffix, "rb1-"); v1 != nil {
-		_, _ = authz.ActivatePolicyVersion(base, &authzpb.ActivatePolicyVersionRequest{Actor: gActor(), PolicyVersionId: v1.GetPolicyVersionId()})
+		_, _ = authz.ActivatePolicyVersion(platformBase, &authzpb.ActivatePolicyVersionRequest{Actor: gActor(), PolicyVersionId: v1.GetPolicyVersionId()})
 		if v2 := mkVersion("sdk-perf-rollback-set-"+suffix, "rb2-"); v2 != nil {
-			_, _ = authz.ActivatePolicyVersion(base, &authzpb.ActivatePolicyVersionRequest{Actor: gActor(), PolicyVersionId: v2.GetPolicyVersionId()})
+			_, _ = authz.ActivatePolicyVersion(platformBase, &authzpb.ActivatePolicyVersionRequest{Actor: gActor(), PolicyVersionId: v2.GetPolicyVersionId()})
 			fix.set("rollback_policy_set_id", v2.GetPolicySetId())
 			fix.set("rollback_target_version_id", v1.GetPolicyVersionId())
 		}
@@ -996,6 +1033,25 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	_, _ = vault.PutSecret(nctx, &vaultpb.PutSecretRequest{TenantId: tenant, SecretPath: fix.m["vault_secret_path"], SecretValue: "perf-secret", ExpectedVersion: 0, MetadataJson: "{}"})
 	_, _ = vault.PutSecret(nctx, &vaultpb.PutSecretRequest{TenantId: tenant, SecretPath: fix.m["vault_delete_secret_path"], SecretValue: "delete-secret", ExpectedVersion: 0, MetadataJson: "{}"})
 	_, _ = vault.PutSecret(nctx, &vaultpb.PutSecretRequest{TenantId: tenant, SecretPath: fix.m["vault_destroy_secret_path"], SecretValue: "destroy-secret", ExpectedVersion: 0, MetadataJson: "{}"})
+	// Seed a separate dynamic credential for the destructive revoke row. The
+	// measured Generate row uses its own stable idempotency key so retries recover
+	// the same protected response instead of creating additional logins.
+	if issued, err := vault.GenerateDatabaseCredentials(nctx, &vaultpb.GenerateDatabaseCredentialsRequest{
+		TenantId: tenant, ProjectId: project, RoleName: fix.m["vault_db_role"],
+		TtlSeconds: 900, IdempotencyKey: "sdk-perf-vault-db-revoke-" + suffix,
+	}); err == nil {
+		leaseID := issued.GetLeaseId()
+		fix.set("vault_db_lease_id", leaseID)
+		if leaseID != "" {
+			addCleanup(func() {
+				_, _ = vault.RevokeDatabaseCredentials(nctx, &vaultpb.RevokeDatabaseCredentialsRequest{
+					TenantId: tenant, ProjectId: project, LeaseId: leaseID, Reason: "benchmark cleanup",
+				})
+			})
+		}
+	} else {
+		t.Logf("perf seed: GenerateDatabaseCredentials(revoke fixture) failed: %v", err)
+	}
 
 	// ── WorkflowService: primary + disposable workflow fixtures ─────────────────
 	workflow := workflowpb.NewWorkflowServiceClient(authConn)

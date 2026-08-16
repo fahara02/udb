@@ -13,7 +13,17 @@ const ROLE_SCOPE_PROJECTIONS: &[(&str, &[&str])] =
     // `has_scope` expands to satisfy every data-plane scope gate (udb:write,
     // udb:read, udb:stream, udb:dispatch, udb:vector:*, udb:object:*, …). Without
     // `udb:*` the admin passes the admin gates but fails the per-op data scopes.
-    &[("organization_owner", &["udb:admin", "udb:*"])];
+    &[
+        ("organization_owner", &["udb:admin", "udb:*"]),
+        // This role can enter the snapshot only from an active, system-owned,
+        // global role row; Authz hydration rejects tenant-created lookalikes.
+        // Project the control-plane scope required by the transport gate and
+        // the explicit platform marker consumed by cross-tenant handlers.
+        (
+            "platform_admin",
+            &["udb:admin", "udb:*", "udb:platform_admin"],
+        ),
+    ];
 
 /// Tenant/project domain match mirroring the authz snapshot's private
 /// `domain_match` (empty or `*` is a wildcard, else exact) without reaching into
@@ -331,7 +341,7 @@ pub(super) fn rsa_jwk_value_from_pem(pem: &str, kid: &str, alg: &str) -> Option<
 
 #[cfg(test)]
 mod jwk_tests {
-    use super::rsa_jwk_from_pem;
+    use super::{ROLE_SCOPE_PROJECTIONS, rsa_jwk_from_pem};
 
     const RS256_PUBLIC_PEM: &str = include_str!("../../../testdata/jwt_rs256_public.pem");
 
@@ -356,5 +366,15 @@ mod jwk_tests {
     #[test]
     fn rsa_jwk_from_pem_rejects_garbage() {
         assert!(rsa_jwk_from_pem("not a pem").is_none());
+    }
+
+    #[test]
+    fn trusted_platform_role_projects_explicit_platform_authority() {
+        let scopes = ROLE_SCOPE_PROJECTIONS
+            .iter()
+            .find_map(|(role, scopes)| (*role == "platform_admin").then_some(*scopes))
+            .expect("platform role projection exists");
+        assert!(scopes.contains(&"udb:admin"));
+        assert!(scopes.contains(&"udb:platform_admin"));
     }
 }

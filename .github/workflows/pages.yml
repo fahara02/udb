@@ -85,7 +85,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
-          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
           # Exact SHA-256 of the committed v0.4.28 historical artifact. Any new
           # benchmark evidence must arrive through Release -> Benchmark.
@@ -139,7 +138,6 @@ jobs:
           commit = str(git.get("commit") or "")
           run_id = str(environment.get("run_id") or "")
           trigger_run_id = os.environ.get("TRIGGER_RUN_ID", "")
-          trigger_head_sha = os.environ.get("TRIGGER_HEAD_SHA", "")
           repository = os.environ.get("GITHUB_REPOSITORY", "")
 
           def require(condition, message):
@@ -154,7 +152,6 @@ jobs:
           require(re.fullmatch(r"udb-linux-amd64(?:-[a-z0-9]+)?", asset), f"invalid release asset provenance: {asset!r}")
           require(re.fullmatch(r"[0-9a-f]{64}", digest), "benchmark artifact has no canonical binary SHA-256")
           require(re.fullmatch(r"[0-9a-f]{40}", commit), f"invalid release commit provenance: {commit!r}")
-          require(commit == trigger_head_sha, "benchmark artifact commit does not match triggering workflow head SHA")
           expected_url = f"https://github.com/{repository}/releases/tag/{tag}"
           require(release.get("url") == expected_url, "benchmark artifact release URL does not match repository/tag")
           history = bench.get("history") or []

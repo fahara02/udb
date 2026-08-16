@@ -88,6 +88,30 @@ func TestLivePerf(t *testing.T) {
 	authz := "Bearer " + login.GetAccessToken()
 	brokerGen := NewGenerated(brokerConn, liveGeneratedOptions(meta, authz))
 	authGen := NewGenerated(authConn, liveGeneratedOptions(meta, authz))
+	platformLogin, err := authnv1.NewAuthnServiceClient(authConn).Login(ctx, &authnv1.LoginRequest{
+		Username:   requiredLiveEnv(t, "UDB_LIVE_PLATFORM_USERNAME"),
+		Password:   requiredLiveEnv(t, "UDB_LIVE_PLATFORM_PASSWORD"),
+		TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-perf-platform",
+	})
+	if err != nil {
+		t.Fatalf("platform Login failed: %v", err)
+	}
+	platformWho, err := auth.AuthenticateBearer(ctx, platformLogin.GetAccessToken())
+	if err != nil {
+		t.Fatalf("platform bearer validation failed: %v", err)
+	}
+	platformRole := false
+	for _, role := range platformWho.GetPrincipal().GetRoles() {
+		if strings.EqualFold(strings.TrimSpace(role), "platform_admin") {
+			platformRole = true
+			break
+		}
+	}
+	if !platformRole {
+		t.Fatal("offline platform fixture did not issue the reserved platform_admin role")
+	}
+	platformAuthz := "Bearer " + platformLogin.GetAccessToken()
+	platformGen := NewGenerated(authConn, liveGeneratedOptions(meta, platformAuthz))
 
 	// SEED PHASE (runs before any measurement): create real, disposable entities
 	// and capture their identifiers so every RPC can be driven down its SUCCESS
@@ -97,10 +121,41 @@ func TestLivePerf(t *testing.T) {
 	uuidTenant := tenant
 	broker := servicesv1.NewDataBrokerClient(brokerConn)
 	base := authGen.outgoingContext(ctx)
+	platformBase := platformGen.outgoingContext(ctx)
 	nativeCtxFn := func() context.Context { return nativeCtx(ctx, authGen, authz, uuidTenant) }
-	seed := perfSeed(t, ctx, broker, brokerGen.outgoingContext(ctx), authConn, base, nativeCtxFn, tenant, project, uuidTenant)
+	seed := perfSeed(
+		t, ctx, broker, brokerGen.outgoingContext(ctx), authConn, base, platformBase,
+		nativeCtxFn, login.GetUserId(), platformLogin.GetUserId(), tenant, project, uuidTenant,
+	)
 	defer seed.cleanup()
 	fix := seed.fix
+	// The seed lifecycle is intentionally broad and may approach the access-token
+	// TTL. Re-mint and re-verify the distinct platform bearer before measuring its
+	// exact global RPC set.
+	platformLogin, err = authnv1.NewAuthnServiceClient(authConn).Login(ctx, &authnv1.LoginRequest{
+		Username:   requiredLiveEnv(t, "UDB_LIVE_PLATFORM_USERNAME"),
+		Password:   requiredLiveEnv(t, "UDB_LIVE_PLATFORM_PASSWORD"),
+		TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-perf-platform-measure",
+	})
+	if err != nil {
+		t.Fatalf("fresh platform Login failed: %v", err)
+	}
+	platformWho, err = auth.AuthenticateBearer(ctx, platformLogin.GetAccessToken())
+	if err != nil {
+		t.Fatalf("fresh platform bearer validation failed: %v", err)
+	}
+	platformRole = false
+	for _, role := range platformWho.GetPrincipal().GetRoles() {
+		if strings.EqualFold(strings.TrimSpace(role), "platform_admin") {
+			platformRole = true
+			break
+		}
+	}
+	if !platformRole {
+		t.Fatal("fresh platform fixture lost the reserved platform_admin role")
+	}
+	platformAuthz = "Bearer " + platformLogin.GetAccessToken()
+	platformGen = NewGenerated(authConn, liveGeneratedOptions(meta, platformAuthz))
 
 	// Re-mint FRESH credentials right before measurement, into THREE INDEPENDENT
 	// admin sessions — one per consumer — so the session-mutating Phase-1 RPCs don't
@@ -222,17 +277,34 @@ func TestLivePerf(t *testing.T) {
 			// when it actually invalidates this tenant's sessions. Login again through
 			// the public credential path before the final self-purge; otherwise that
 			// last row measures a stale-bearer rejection instead of PurgeTenant.
-			if relogin, err := freshLogin("go-sdk-perf-final-purge"); err == nil {
+			var relogin *authnv1.LoginResponse
+			var reloginErr error
+			deadline := time.Now().Add(2 * time.Second)
+			for time.Now().Before(deadline) {
+				candidate, err := freshLogin("go-sdk-perf-final-purge")
+				if err == nil {
+					_, err = auth.AuthenticateBearer(ctx, candidate.GetAccessToken())
+				}
+				if err == nil {
+					relogin = candidate
+					break
+				}
+				reloginErr = err
+				time.Sleep(50 * time.Millisecond)
+			}
+			if relogin != nil {
 				authz = "Bearer " + relogin.GetAccessToken()
 				brokerGen = NewGenerated(brokerConn, liveGeneratedOptions(meta, authz))
 				authGen = NewGenerated(authConn, liveGeneratedOptions(meta, authz))
 			} else {
-				t.Logf("perf re-login before terminal tenant purge failed: %v", err)
+				t.Logf("perf re-login before terminal tenant purge remained revoked: %v", reloginErr)
 			}
 		}
 		gen := authGen
 		if rpc.Service == "DataBroker" {
 			gen = brokerGen
+		} else if requiresPlatformBenchmarkIdentity(rpc) {
+			gen = platformGen
 		}
 		iters, note := iterFor(rpc.OperationKind)
 		if isCdcSubscriptionRPC(rpc) {
@@ -438,6 +510,56 @@ func TestLivePerf(t *testing.T) {
 	t.Logf("\n%s", report)
 	t.Logf("Go perf: %d RPCs measured (streaming rows = first-response/first-event latency), %d FAILED (non-OK gRPC status), grand mean per-RPC = %s; report → sdk/go/perf_report_go.md",
 		len(samples), len(failed), (grand / time.Duration(len(samples))).Round(time.Microsecond))
+}
+
+// Platform credentials are intentionally narrow in the benchmark. Ordinary
+// tenant Authz CRUD remains claim-attributed to the tenant bootstrap user; only
+// governance, system-global analytics, and explicit cross-tenant movement use
+// the separately offline-provisioned platform principal.
+func requiresPlatformBenchmarkIdentity(rpc RPCInfo) bool {
+	switch rpc.FullMethod {
+	case "/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance",
+		"/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics",
+		"/udb.core.backup.services.v1.BackupService/RestoreTenant",
+		"/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant":
+		return true
+	}
+	if rpc.Service != "AuthzService" {
+		return false
+	}
+	switch rpc.Name {
+	case "CreatePolicyDraft", "UpdatePolicyDraft", "DiffPolicyDraft",
+		"SubmitPolicyDraft", "ApprovePolicyDraft", "RejectPolicyDraft",
+		"ActivatePolicyVersion", "RollbackPolicyVersion", "ActivateCanary",
+		"PromoteCanary", "GetCanaryStatus", "ListPolicyVersions",
+		"SimulatePolicy", "ExplainPolicy", "InvalidatePolicyBundles",
+		"SeedBuiltinRoles", "MigrateLegacyPolicies":
+		return true
+	default:
+		return false
+	}
+}
+
+func TestPlatformBenchmarkIdentityRoutingIsNarrow(t *testing.T) {
+	for _, rpc := range []RPCInfo{
+		{Service: "AnalyticsService", Name: "GetExecutorPerformance", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance"},
+		{Service: "BackupService", Name: "RestoreTenant", FullMethod: "/udb.core.backup.services.v1.BackupService/RestoreTenant"},
+		{Service: "AuthzService", Name: "CreatePolicyDraft"},
+		{Service: "TenantService", Name: "AdminPurgeTenant", FullMethod: "/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant"},
+	} {
+		if !requiresPlatformBenchmarkIdentity(rpc) {
+			t.Fatalf("%s/%s must use the platform fixture", rpc.Service, rpc.Name)
+		}
+	}
+	for _, rpc := range []RPCInfo{
+		{Service: "AuthzService", Name: "CreateRole"},
+		{Service: "AuthzService", Name: "AssignRole"},
+		{Service: "TenantService", Name: "PurgeTenant"},
+	} {
+		if requiresPlatformBenchmarkIdentity(rpc) {
+			t.Fatalf("%s/%s must retain ordinary tenant authority", rpc.Service, rpc.Name)
+		}
+	}
 }
 
 func rpcAPIAlias(rpc RPCInfo) string {

@@ -12,6 +12,23 @@ use crate::runtime::service::native_helpers::{
 };
 use sqlx::Row;
 
+#[cfg(any(feature = "redis", test))]
+fn first_unrevoked_tenant_issue_second(cutoff_unix: u64) -> u64 {
+    cutoff_unix.saturating_add(1)
+}
+
+/// JWT `iat` is encoded in whole seconds and the tenant kill boundary is
+/// intentionally inclusive (`iat <= cutoff`). After a successful Redis cutoff
+/// publication, do not report the revoke complete until a subsequently-started
+/// login can only mint in a strictly later second.
+#[cfg(feature = "redis")]
+async fn wait_until_after_tenant_revoke_cutoff(cutoff_unix: u64) {
+    let resume_at = first_unrevoked_tenant_issue_second(cutoff_unix);
+    while now_unix() < resume_at {
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+}
+
 fn lifecycle_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
 where
     I: IntoIterator<Item = (F, D)>,
@@ -154,6 +171,30 @@ impl AuthnServiceImpl {
 
     fn device_fingerprint_hash(&self, fingerprint: &str) -> String {
         authn::hash_secret(&format!("device:{fingerprint}"), &self.hash_key())
+    }
+
+    /// Resolve the neutral-runtime routing scope from the decoded request body
+    /// and the validated bearer claim. Transport requests always install a claim
+    /// context, so an omitted body scope inherits the claim while a conflicting
+    /// tenant/project is rejected. Direct in-process callers retain the explicit
+    /// body scope, matching the shared method-security contract.
+    fn request_authn_context(
+        &self,
+        request_context: Option<&crate::proto::udb::core::common::v1::RequestContext>,
+    ) -> Result<crate::RequestContext, Status> {
+        let tenant = request_context.and_then(|context| context.tenant.as_ref());
+        let body_tenant = tenant.map(|scope| scope.tenant_id.as_str()).unwrap_or_default();
+        let body_project = tenant
+            .map(|scope| scope.project_id.as_str())
+            .unwrap_or_default();
+        let claim = crate::runtime::service::method_security::current_claim_context();
+        let (tenant_id, project_id) =
+            crate::runtime::service::method_security::resolve_body_tenant_scope(
+                &claim,
+                body_tenant,
+                body_project,
+            )?;
+        Ok(self.authn_context(&tenant_id, &project_id))
     }
 
     /// D3 — authorize a per-user device/credential operation against the VALIDATED
@@ -1041,13 +1082,26 @@ impl AuthnServiceImpl {
         // must NEVER fail the revoke that already durably committed.
         #[cfg(feature = "redis")]
         if let Some(denylist) = self.jti_denylist.as_ref() {
-            if let Err(err) = denylist.deny_tenant_after(&req.tenant_id, now_unix()).await {
-                tracing::warn!(
-                    tenant_id = %req.tenant_id,
-                    error = %err,
-                    "tenant denylist cutoff publish failed after durable tenant revoke \
-                     (availability-first; durable revoke already committed)"
-                );
+            let cutoff_unix = now_unix();
+            match denylist
+                .deny_tenant_after(&req.tenant_id, cutoff_unix)
+                .await
+            {
+                Ok(()) => {
+                    // The cutoff is inclusive and JWT `iat` has seconds
+                    // precision. Begin the completion barrier only after Redis
+                    // acknowledged the cutoff, so a login begun after this RPC
+                    // returns is provably issued with `iat > cutoff_unix`.
+                    wait_until_after_tenant_revoke_cutoff(cutoff_unix).await;
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        tenant_id = %req.tenant_id,
+                        error = %err,
+                        "tenant denylist cutoff publish failed after durable tenant revoke \
+                         (availability-first; durable revoke already committed)"
+                    );
+                }
             }
         }
         self.metrics
@@ -1584,6 +1638,7 @@ impl AuthnServiceImpl {
         // `WHERE {id} = $1::UUID` query (whose inner InvalidArgument was being
         // re-wrapped as Internal).
         Self::require_uuid_arg(&req.challenge_id, "challenge_id")?;
+        let context = self.request_authn_context(req.context.as_ref())?;
         if let Ok(runtime) = self.authn_runtime() {
             let now = unix_to_utc(now_unix()).ok_or_else(|| {
                 lifecycle_internal_status(
@@ -1591,7 +1646,6 @@ impl AuthnServiceImpl {
                     "invalid MFA verification time",
                 )
             })?;
-            let context = self.authn_context("", "");
             let mut assignments = std::collections::BTreeMap::new();
             assignments.insert("consumed_at".to_string(), LogicalAssignment::ServerNow);
             assignments.insert(
@@ -2105,8 +2159,6 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::DeleteWebAuthnCredentialRequest>,
     ) -> Result<Response<authn_pb::DeleteWebAuthnCredentialResponse>, Status> {
         let req = request.into_inner();
-        // A7: bind the target user_id to the validated claim (no-op in-process).
-        self.authorize_target_user(&req.user_id).await?;
         if req.user_id.trim().is_empty() || req.credential_id.trim().is_empty() {
             return Err(lifecycle_invalid_fields(
                 "user_id and credential_id are required",
@@ -2119,8 +2171,21 @@ impl AuthnServiceImpl {
                 ],
             ));
         }
+        // A7: bind the target user_id to the validated claim (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         if let Ok(runtime) = self.authn_runtime() {
-            let context = self.authn_context("", "");
+            let target = self
+                .users
+                .get_user_by_id(&req.user_id)
+                .await
+                .map_err(|err| {
+                    lifecycle_internal_status(
+                        "delete_webauthn_credential_user_load",
+                        err.to_string(),
+                    )
+                })?
+                .ok_or_else(super::authn_user_not_found_status)?;
+            let context = self.authn_context(&target.tenant_id, &target.project_id);
             let op = LogicalDelete {
                 message_type: "udb.core.authn.entity.v1.WebAuthnCredential".to_string(),
                 filter: authn_and(vec![
@@ -2176,8 +2241,6 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::RenamePasskeyRequest>,
     ) -> Result<Response<authn_pb::RenamePasskeyResponse>, Status> {
         let req = request.into_inner();
-        // A7: bind the target user_id to the validated claim (no-op in-process).
-        self.authorize_target_user(&req.user_id).await?;
         if req.user_id.trim().is_empty() || req.credential_id.trim().is_empty() {
             return Err(lifecycle_invalid_fields(
                 "user_id and credential_id are required",
@@ -2190,8 +2253,18 @@ impl AuthnServiceImpl {
                 ],
             ));
         }
+        // A7: bind the target user_id to the validated claim (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         if let Ok(runtime) = self.authn_runtime() {
-            let context = self.authn_context("", "");
+            let target = self
+                .users
+                .get_user_by_id(&req.user_id)
+                .await
+                .map_err(|err| {
+                    lifecycle_internal_status("rename_passkey_user_load", err.to_string())
+                })?
+                .ok_or_else(super::authn_user_not_found_status)?;
+            let context = self.authn_context(&target.tenant_id, &target.project_id);
             let mut assignments = std::collections::BTreeMap::new();
             assignments.insert(
                 "label".to_string(),
@@ -2333,6 +2406,62 @@ mod tests {
             ..crate::runtime::authn::AuthnConfig::default()
         };
         AuthnServiceImpl::new(config, crate::runtime::security::SecurityConfig::default())
+    }
+
+    fn body_scope(
+        tenant_id: &str,
+        project_id: &str,
+    ) -> crate::proto::udb::core::common::v1::RequestContext {
+        crate::proto::udb::core::common::v1::RequestContext {
+            tenant: Some(crate::proto::udb::core::common::v1::TenantContext {
+                tenant_id: tenant_id.to_string(),
+                project_id: project_id.to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn request_authn_context_inherits_validated_claim_scope() {
+        let service = deny_test_service();
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-a",
+            "tenant-a",
+            "project-a",
+            &["udb:authn:write"],
+            &[],
+        );
+        let context = crate::runtime::service::method_security::scope_claim_context_for_test(
+            claim,
+            async { service.request_authn_context(None) },
+        )
+        .await
+        .expect("an omitted body scope inherits the validated claim");
+
+        assert_eq!(context.tenant_id, "tenant-a");
+        assert_eq!(context.project_id, "project-a");
+    }
+
+    #[tokio::test]
+    async fn request_authn_context_rejects_foreign_body_scope() {
+        let service = deny_test_service();
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-a",
+            "tenant-a",
+            "project-a",
+            &["udb:authn:write"],
+            &[],
+        );
+        let request_context = body_scope("tenant-b", "project-b");
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            claim,
+            async { service.request_authn_context(Some(&request_context)) },
+        )
+        .await
+        .expect_err("request body scope must not override the validated bearer claim");
+
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
     }
 
     fn decode_detail(status: &Status) -> ErrorDetail {
@@ -2628,6 +2757,35 @@ mod tests {
         .await
         .expect_err("no pool wired → reaches DB stage and fails precondition");
         assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    }
+
+    #[test]
+    fn completed_tenant_revoke_resumes_strictly_after_inclusive_cutoff() {
+        use crate::runtime::authn::revocation::{
+            TenantDenylistDecision, tenant_denylist_check_outcome,
+        };
+
+        let cutoff = 1_000;
+        let resume_at = first_unrevoked_tenant_issue_second(cutoff);
+        assert_eq!(resume_at, cutoff + 1);
+        assert!(
+            tenant_denylist_check_outcome(
+                TenantDenylistDecision::Cutoff(cutoff),
+                cutoff,
+                true,
+            )
+            .is_some(),
+            "same-second tokens remain denied"
+        );
+        assert!(
+            tenant_denylist_check_outcome(
+                TenantDenylistDecision::Cutoff(cutoff),
+                resume_at,
+                true,
+            )
+            .is_none(),
+            "issuance after the completed-revoke barrier is fresh"
+        );
     }
 
     #[test]

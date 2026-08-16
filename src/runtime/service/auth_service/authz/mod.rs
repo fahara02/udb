@@ -140,6 +140,61 @@ fn assigned_by_caller_mismatch_status() -> Status {
     )
 }
 
+fn reserved_platform_role_status(operation: &'static str, message: &'static str) -> Status {
+    authz_attribution_policy_status(
+        operation,
+        "reserved_platform_role_authority_required",
+        message,
+    )
+}
+
+/// Platform-authority role tokens are claim authority, not tenant-defined labels.
+/// A normal role create or literal tuple must never be able to manufacture one.
+fn is_reserved_platform_role(role: &str) -> bool {
+    crate::runtime::service::method_security::is_platform_authority_role(role)
+}
+
+/// A platform role loaded from the durable role table is trusted only when it is
+/// an explicitly system-owned, global role.  This provenance check also prevents
+/// a role planted by an older vulnerable binary from becoming authority after an
+/// upgrade.
+fn platform_role_has_system_provenance(
+    role: &str,
+    is_system: bool,
+    role_tenant: &str,
+    role_project: &str,
+    role_scope_type: &str,
+) -> bool {
+    !is_reserved_platform_role(role)
+        || (is_system
+            && role_tenant.trim().is_empty()
+            && role_project.trim().is_empty()
+            && matches!(
+                role_scope_type.trim().to_ascii_uppercase().as_str(),
+                "GLOBAL" | "ROLE_SCOPE_TYPE_GLOBAL"
+            ))
+}
+
+fn require_platform_claim_for_reserved_role(
+    role: &str,
+    operation: &'static str,
+) -> Result<(), Status> {
+    if !is_reserved_platform_role(role)
+        || !crate::runtime::service::method_security::claim_context_present()
+    {
+        return Ok(());
+    }
+    let claim = crate::runtime::service::method_security::current_claim_context();
+    if claim.is_cross_tenant_admin() {
+        Ok(())
+    } else {
+        Err(reserved_platform_role_status(
+            operation,
+            "reserved platform roles require an existing platform-authorized identity",
+        ))
+    }
+}
+
 fn policy_bundle_signing_not_configured_status() -> Status {
     authz_capability_status(
         "policy_bundle_signing",
@@ -915,6 +970,86 @@ impl AuthzServiceImpl {
         Ok(row.and_then(|r| r.try_get::<String, _>("role").ok()))
     }
 
+    /// Resolve the authority-sensitive provenance of a role before assignment or
+    /// mutation. Reserved platform roles must be system-owned and globally scoped;
+    /// ordinary tenant-created rows with a lookalike role_code are never authority.
+    async fn role_authority_provenance(
+        &self,
+        role_id: Uuid,
+    ) -> Result<Option<(String, bool, String, String, String)>, Status> {
+        let pool = self.require_pool()?;
+        let m = self.roles_model();
+        let row = sqlx::query(&format!(
+            "SELECT COALESCE(NULLIF({role_code}, ''), {name}) AS role, \
+                    {is_system} AS is_system, {tenant_id}::TEXT AS role_tenant, \
+                    COALESCE({project_id}, '') AS role_project, {scope_type} AS role_scope_type \
+             FROM {rel} WHERE {role_id} = $1::UUID AND {deleted_at} IS NULL LIMIT 1",
+            rel = m.relation.clone(),
+            role_code = m.q("role_code"),
+            name = m.q("name"),
+            is_system = m.q("is_system"),
+            tenant_id = m.q("tenant_id"),
+            project_id = m.q("project_id"),
+            scope_type = m.q("scope_type"),
+            role_id = m.q("role_id"),
+            deleted_at = m.q("deleted_at"),
+        ))
+        .bind(role_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| {
+            authz_internal_status(
+                "resolve_role_authority_provenance",
+                format!("resolve role authority provenance failed: {err}"),
+            )
+        })?;
+        row.map(|row| {
+            Ok((
+                row.try_get("role").map_err(|err| {
+                    authz_internal_status("decode_role_authority", err.to_string())
+                })?,
+                row.try_get("is_system").map_err(|err| {
+                    authz_internal_status("decode_role_authority", err.to_string())
+                })?,
+                row.try_get("role_tenant").map_err(|err| {
+                    authz_internal_status("decode_role_authority", err.to_string())
+                })?,
+                row.try_get("role_project").map_err(|err| {
+                    authz_internal_status("decode_role_authority", err.to_string())
+                })?,
+                row.try_get("role_scope_type").map_err(|err| {
+                    authz_internal_status("decode_role_authority", err.to_string())
+                })?,
+            ))
+        })
+        .transpose()
+    }
+
+    async fn enforce_role_authority_mutation(
+        &self,
+        role_id: Uuid,
+        operation: &'static str,
+    ) -> Result<(), Status> {
+        let Some((role, is_system, role_tenant, role_project, role_scope_type)) =
+            self.role_authority_provenance(role_id).await?
+        else {
+            return Ok(());
+        };
+        if !platform_role_has_system_provenance(
+            &role,
+            is_system,
+            &role_tenant,
+            &role_project,
+            &role_scope_type,
+        ) {
+            return Err(reserved_platform_role_status(
+                operation,
+                "reserved platform role lacks trusted system/global provenance",
+            ));
+        }
+        require_platform_claim_for_reserved_role(&role, operation)
+    }
+
     /// Role/assignment/audit management is durable-only: fail closed when no
     /// Postgres pool is configured.
     pub(super) fn require_pool(&self) -> Result<&PgPool, Status> {
@@ -1292,7 +1427,8 @@ impl AuthzServiceImpl {
         }
 
         let binding_rows = sqlx::query(&format!(
-            "SELECT ur.{user_id}::TEXT AS subject, COALESCE(NULLIF(r.{role_code}, ''), NULLIF(r.{name}, ''), ur.{role_id}::TEXT) AS role, ur.{tenant_id} AS tenant, COALESCE(r.{project_id}, '') AS project \
+            "SELECT ur.{user_id}::TEXT AS subject, COALESCE(NULLIF(r.{role_code}, ''), NULLIF(r.{name}, ''), ur.{role_id}::TEXT) AS role, ur.{tenant_id} AS tenant, COALESCE(r.{project_id}, '') AS project, \
+                    COALESCE(r.{is_system}, FALSE) AS role_is_system, COALESCE(r.{role_tenant_id}, '') AS role_tenant, COALESCE(r.{role_scope_type}, '') AS role_scope_type \
              FROM {binding_rel} ur \
              LEFT JOIN {role_rel} r ON r.{role_role_id} = ur.{role_id} \
              WHERE (ur.{expires_at} IS NULL OR ur.{expires_at} > NOW()) \
@@ -1308,8 +1444,11 @@ impl AuthzServiceImpl {
             role_code = role.q("role_code"),
             name = role.q("name"),
             project_id = role.q("project_id"),
+            role_tenant_id = role.q("tenant_id"),
+            role_scope_type = role.q("scope_type"),
             deleted_at = role.q("deleted_at"),
             is_active = role.q("is_active"),
+            is_system = role.q("is_system"),
         ))
         .fetch_all(pool)
         .await
@@ -1321,6 +1460,52 @@ impl AuthzServiceImpl {
         })?;
         let mut role_bindings = Vec::with_capacity(binding_rows.len());
         for row in binding_rows {
+            let role: String = row.try_get("role").map_err(|err| {
+                authz_internal_status(
+                    "decode_role_binding",
+                    format!("decode role binding failed: {err}"),
+                )
+            })?;
+            let role_is_system: bool = row.try_get("role_is_system").map_err(|err| {
+                authz_internal_status(
+                    "decode_role_binding_provenance",
+                    format!("decode role binding provenance failed: {err}"),
+                )
+            })?;
+            let role_tenant: String = row.try_get("role_tenant").map_err(|err| {
+                authz_internal_status(
+                    "decode_role_binding_provenance",
+                    format!("decode role binding provenance failed: {err}"),
+                )
+            })?;
+            let role_project: String = row.try_get("project").map_err(|err| {
+                authz_internal_status(
+                    "decode_role_binding_provenance",
+                    format!("decode role binding provenance failed: {err}"),
+                )
+            })?;
+            let role_scope_type: String = row.try_get("role_scope_type").map_err(|err| {
+                authz_internal_status(
+                    "decode_role_binding_provenance",
+                    format!("decode role binding provenance failed: {err}"),
+                )
+            })?;
+            if !platform_role_has_system_provenance(
+                &role,
+                role_is_system,
+                &role_tenant,
+                &role_project,
+                &role_scope_type,
+            ) {
+                tracing::error!(
+                    role = %role,
+                    role_tenant = %role_tenant,
+                    role_project = %role_project,
+                    role_scope_type = %role_scope_type,
+                    "ignoring reserved platform role binding without trusted system/global provenance"
+                );
+                continue;
+            }
             role_bindings.push(RoleBinding {
                 subject: row.try_get("subject").map_err(|err| {
                     authz_internal_status(
@@ -1328,24 +1513,14 @@ impl AuthzServiceImpl {
                         format!("decode role binding failed: {err}"),
                     )
                 })?,
-                role: row.try_get("role").map_err(|err| {
-                    authz_internal_status(
-                        "decode_role_binding",
-                        format!("decode role binding failed: {err}"),
-                    )
-                })?,
+                role,
                 tenant: row.try_get("tenant").map_err(|err| {
                     authz_internal_status(
                         "decode_role_binding",
                         format!("decode role binding failed: {err}"),
                     )
                 })?,
-                project: row.try_get("project").map_err(|err| {
-                    authz_internal_status(
-                        "decode_role_binding",
-                        format!("decode role binding failed: {err}"),
-                    )
-                })?,
+                project: role_project,
             });
         }
 
@@ -1380,6 +1555,19 @@ impl AuthzServiceImpl {
             if tuple_condition_expired(&condition, now) {
                 continue;
             }
+            let role: String = row.try_get("role").map_err(|err| {
+                authz_internal_status(
+                    "decode_grouping_tuple",
+                    format!("decode grouping tuple failed: {err}"),
+                )
+            })?;
+            if is_reserved_platform_role(&role) {
+                tracing::error!(
+                    role = %role,
+                    "ignoring reserved platform role from provenance-free grouping tuple"
+                );
+                continue;
+            }
             role_bindings.push(RoleBinding {
                 subject: row.try_get("subject").map_err(|err| {
                     authz_internal_status(
@@ -1387,12 +1575,7 @@ impl AuthzServiceImpl {
                         format!("decode grouping tuple failed: {err}"),
                     )
                 })?,
-                role: row.try_get("role").map_err(|err| {
-                    authz_internal_status(
-                        "decode_grouping_tuple",
-                        format!("decode grouping tuple failed: {err}"),
-                    )
-                })?,
+                role,
                 tenant: row.try_get("tenant").map_err(|err| {
                     authz_internal_status(
                         "decode_grouping_tuple",
@@ -2123,6 +2306,12 @@ impl AuthzService for AuthzServiceImpl {
                 ],
             ));
         }
+        if is_reserved_platform_role(&req.role_code) || is_reserved_platform_role(&req.name) {
+            return Err(reserved_platform_role_status(
+                "create_role",
+                "reserved platform roles can only be provisioned by the trusted offline bootstrap",
+            ));
+        }
         // Bind `created_by` to the authenticated caller on the served path: derive
         // it from the claim subject when the body omits it, and forge-guard a
         // supplied value that disagrees with the caller's claim-derived UUID unless
@@ -2384,6 +2573,8 @@ impl AuthzService for AuthzServiceImpl {
                 ],
             ));
         }
+        self.enforce_role_authority_mutation(role_id, "assign_role")
+            .await?;
 
         // Non-USER principals (service account / workload / group / external)
         // bind via a grouping tuple keyed on the LITERAL principal id so the
@@ -3336,6 +3527,8 @@ impl AuthzService for AuthzServiceImpl {
             "is_active",
             req.is_active.is_some(),
         );
+        self.enforce_role_authority_mutation(role_id, "update_role")
+            .await?;
         let pool = self.require_pool()?;
         let role_model = self.roles_model();
         let rel = role_model.relation.clone();
@@ -3437,6 +3630,8 @@ impl AuthzService for AuthzServiceImpl {
         }
         let role_id = parse_uuid_field("role_id", &req.role_id)?;
         let deleted_by = parse_uuid_field("deleted_by", &req.deleted_by)?;
+        self.enforce_role_authority_mutation(role_id, "delete_role")
+            .await?;
         let pool = self.require_pool()?;
         let role_model = self.roles_model();
         let role_rel = role_model.relation.clone();
@@ -4269,6 +4464,37 @@ mod version_tests {
         // And it is stable across calls.
         assert_eq!(policy_content_version(&a), policy_content_version(&a));
     }
+
+    #[test]
+    fn reserved_platform_roles_require_system_global_provenance() {
+        assert!(platform_role_has_system_provenance(
+            "reader", false, "tenant-a", "project-a", "TENANT"
+        ));
+        assert!(platform_role_has_system_provenance(
+            "platform_admin",
+            true,
+            "",
+            "",
+            "GLOBAL"
+        ));
+        for (is_system, tenant, project, scope_type) in [
+            (false, "", "", "GLOBAL"),
+            (true, "tenant-a", "", "GLOBAL"),
+            (true, "", "project-a", "GLOBAL"),
+            (true, "", "", "TENANT"),
+        ] {
+            assert!(
+                !platform_role_has_system_provenance(
+                    "platform_admin",
+                    is_system,
+                    tenant,
+                    project,
+                    scope_type
+                ),
+                "platform role must fail closed without system/global provenance"
+            );
+        }
+    }
 }
 
 #[cfg(test)]
@@ -4726,6 +4952,34 @@ mod validation_tests {
 
         assert_eq!(err.message(), "created_by must be a UUID");
         assert_validation_fields(&err, &[("created_by", "must be a UUID")]);
+    }
+
+    #[tokio::test]
+    async fn create_role_rejects_reserved_platform_authority_labels() {
+        for (role_code, name) in [
+            ("platform_admin", "Tenant operator"),
+            ("udb:platform_admin", "Tenant operator"),
+            ("tenant_operator", "superadmin"),
+            ("tenant_operator", "super_admin"),
+        ] {
+            let err = svc()
+                .create_role(Request::new(authz_pb::CreateRoleRequest {
+                    name: name.to_string(),
+                    role_code: role_code.to_string(),
+                    tenant_id: "tenant-a".to_string(),
+                    created_by: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("tenant role creation must not mint platform authority");
+
+            assert_permission_policy_detail(
+                &err,
+                "create_role",
+                "reserved_platform_role_authority_required",
+                "reserved platform roles can only be provisioned by the trusted offline bootstrap",
+            );
+        }
     }
 
     #[tokio::test]

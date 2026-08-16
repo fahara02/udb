@@ -89,7 +89,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"grant_create_user_id":      "11111111-1111-4111-8111-000000000202",
 		"grant_transfer_to_user_id": "11111111-1111-4111-8111-000000000203",
 		"join_session_room_id":      "join-room-1", "leave_peer_id": "leave-peer-1", "mark_saga_id": "mark-saga-1",
-		"otp_code": "123456", "otp_id": "otp-1", "owner_id": "owner-1", "quarantine_dlq_id": "quarantine-dlq-1",
+		"otp_code": "123456", "otp_id": "otp-1", "recovery_code": "recovery-code-1", "owner_id": "owner-1", "quarantine_dlq_id": "quarantine-dlq-1",
 		"policy_version_id": "policy-version-1", "approve_draft_id": "approve-draft-1", "reject_draft_id": "reject-draft-1",
 		"refresh_session_id": "refresh-session-1", "reg_challenge_id": "reg-challenge-1", "replay_dlq_id": "replay-dlq-1",
 		"reset_otp_code": "654321", "reset_otp_id": "reset-otp-1", "resource_name": "resource-1",
@@ -101,7 +101,10 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"unpublish_track_id": "unpublish-track-1", "update_draft_id": "update-draft-1", "update_key_id": "update-key-1", "username": "perf-u",
 		"vault_ciphertext": "vault-ciphertext-1", "vault_db_role": "readonly", "vault_db_idempotency_key": "vault-db-idempotency-1", "vault_db_lease_id": "vault-db-lease-1", "vault_delete_secret_path": "secret/delete",
 		"vault_create_key_name": "transit-create-key", "vault_destroy_secret_path": "secret/destroy", "vault_key_name": "transit-key", "vault_put_secret_path": "secret/put", "vault_secret_path": "secret/path",
-		"vault_signature": "vault-signature-1", "vault_signing_key_name": "transit-signing-key", "vault_hmac_key_name": "transit-hmac-key", "reissue_file_id": "reissue-file-1", "workflow_id": "workflow-1",
+		"vault_signature": "vault-signature-1", "vault_signing_key_name": "transit-signing-key", "vault_hmac_key_name": "transit-hmac-key",
+		"webauthn_delete_user_id": "webauthn-delete-user-1", "webauthn_delete_credential_id": "delete-credential-1",
+		"webauthn_rename_user_id": "webauthn-rename-user-1", "webauthn_rename_credential_id": "rename-credential-1",
+		"reissue_file_id": "reissue-file-1", "workflow_id": "workflow-1",
 	} {
 		fix.set(k, v)
 	}
@@ -335,6 +338,47 @@ func resolveManifestSeeds(body string, fix *perfFixtures) (string, bool) {
 	}
 }
 
+func setBenchmarkStringField(message protoreflect.Message, name, value string) {
+	if value == "" {
+		return
+	}
+	field := message.Descriptor().Fields().ByName(protoreflect.Name(name))
+	if field != nil && field.Kind() == protoreflect.StringKind {
+		message.Set(field, protoreflect.ValueOfString(value))
+	}
+}
+
+// The shared manifest carries semantic seed placeholders, but attribution and
+// governance identity must be bound to the credential actually used for this
+// call. Keep that authority rewrite in the harness rather than weakening the
+// server or changing the cross-language manifest to one benchmark's user IDs.
+func bindBenchmarkAuthorityIdentity(fullMethod string, message protoreflect.Message, fix *perfFixtures) {
+	actorUserID, _ := fix.lookupSeed("actor_user_id")
+	platformActorID, _ := fix.lookupSeed("platform_actor_user_id")
+	rpc, ok := LookupRPC(fullMethod)
+	if !ok {
+		return
+	}
+	if rpc.Service == "AuthzService" {
+		if requiresPlatformBenchmarkIdentity(rpc) {
+			actorField := message.Descriptor().Fields().ByName("actor")
+			if actorField != nil && actorField.Kind() == protoreflect.MessageKind && message.Has(actorField) {
+				setBenchmarkStringField(message.Mutable(actorField).Message(), "subject", platformActorID)
+			}
+			setBenchmarkStringField(message, "reviewer", platformActorID)
+		} else {
+			for _, field := range []string{
+				"created_by", "assigned_by", "updated_by", "deleted_by", "revoked_by",
+			} {
+				setBenchmarkStringField(message, field, actorUserID)
+			}
+		}
+	}
+	if rpc.Service == "TenantService" && rpc.Name == "AdminPurgeTenant" {
+		setBenchmarkStringField(message, "delegated_actor", platformActorID)
+	}
+}
+
 func buildManifestJSONBody(fullMethod string, fix *perfFixtures) (proto.Message, proto.Message, bool) {
 	body, ok := manifestBodyForFullMethod(fullMethod)
 	if !ok {
@@ -357,7 +401,47 @@ func buildManifestJSONBody(fullMethod string, fix *perfFixtures) (proto.Message,
 	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal([]byte(jsonBody), in); err != nil {
 		return nil, nil, false
 	}
+	bindBenchmarkAuthorityIdentity(fullMethod, in.ProtoReflect(), fix)
 	return in, dynamicpb.NewMessage(md.Output()), true
+}
+
+func TestManifestAuthorityIdentityFollowsSelectedCredential(t *testing.T) {
+	fix := newPerfFixtures()
+	for key, value := range map[string]string{
+		"tenant_id": "tenant-1", "tenant": "tenant-1", "project": "project-1",
+		"user_id": "target-user", "subject": "user:target-user", "role_code": "reader",
+		"actor_user_id": "11111111-1111-4111-8111-111111111111",
+		"platform_actor_user_id": "22222222-2222-4222-8222-222222222222",
+		"gov_exp": "1900000000",
+	} {
+		fix.set(key, value)
+	}
+
+	roleIn, _, ok := buildManifestJSONBody(
+		"/udb.core.authz.services.v1.AuthzService/CreateRole",
+		fix,
+	)
+	if !ok {
+		t.Fatal("CreateRole manifest did not hydrate")
+	}
+	role := roleIn.ProtoReflect()
+	if got := role.Get(role.Descriptor().Fields().ByName("created_by")).String(); got != "11111111-1111-4111-8111-111111111111" {
+		t.Fatalf("CreateRole attribution = %q", got)
+	}
+
+	draftIn, _, ok := buildManifestJSONBody(
+		"/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft",
+		fix,
+	)
+	if !ok {
+		t.Fatal("CreatePolicyDraft manifest did not hydrate")
+	}
+	draft := draftIn.ProtoReflect()
+	actorField := draft.Descriptor().Fields().ByName("actor")
+	actor := draft.Get(actorField).Message()
+	if got := actor.Get(actor.Descriptor().Fields().ByName("subject")).String(); got != "22222222-2222-4222-8222-222222222222" {
+		t.Fatalf("governance actor = %q", got)
+	}
 }
 
 func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
@@ -602,6 +686,17 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	if got := mfaMsg.Get(mfaFields.ByName("challenge_id")).String(); got != "challenge-1" {
 		t.Fatalf("authn challenge_id = %q, want challenge-1", got)
 	}
+	if got := mfaMsg.Get(mfaFields.ByName("code")).String(); got != "recovery-code-1" {
+		t.Fatalf("authn MFA recovery code = %q, want recovery-code-1", got)
+	}
+	mfaContext := mfaMsg.Get(mfaFields.ByName("context")).Message()
+	mfaTenant := mfaContext.Get(mfaContext.Descriptor().Fields().ByName("tenant")).Message()
+	if got := mfaTenant.Get(mfaTenant.Descriptor().Fields().ByName("tenant_id")).String(); got != "tenant-1" {
+		t.Fatalf("authn MFA context tenant_id = %q, want tenant-1", got)
+	}
+	if got := mfaTenant.Get(mfaTenant.Descriptor().Fields().ByName("project_id")).String(); got != "project-1" {
+		t.Fatalf("authn MFA context project_id = %q, want project-1", got)
+	}
 	loginIn, _, ok := buildManifestJSONBody("/udb.core.authn.services.v1.AuthnService/Login", fix)
 	if !ok {
 		t.Fatalf("AuthnService Login manifest JSON body was not hydrated")
@@ -780,6 +875,10 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	fix.set("reg_challenge_id", "reg-challenge-1")
 	fix.set("auth_challenge_id", "auth-challenge-1")
 	fix.set("record_id", "credential-1")
+	fix.set("webauthn_delete_user_id", "webauthn-delete-user-1")
+	fix.set("webauthn_delete_credential_id", "delete-credential-1")
+	fix.set("webauthn_rename_user_id", "webauthn-rename-user-1")
+	fix.set("webauthn_rename_credential_id", "rename-credential-1")
 	fix.set("admin_reset_mfa_user_id", "admin-reset-mfa-user-1")
 	fix.set("admin_reset_password_user_id", "admin-reset-password-user-1")
 	fix.set("change_password_user_id", "change-password-user-1")
@@ -857,6 +956,12 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 		t.Fatalf("authn disable mfa factor_kind was not set from manifest")
 	}
 	renameMsg, renameFields := authnManifest("RenamePasskey")
+	if got := renameMsg.Get(renameFields.ByName("user_id")).String(); got != "webauthn-rename-user-1" {
+		t.Fatalf("authn rename passkey user_id = %q, want webauthn-rename-user-1", got)
+	}
+	if got := renameMsg.Get(renameFields.ByName("credential_id")).String(); got != "rename-credential-1" {
+		t.Fatalf("authn rename passkey credential_id = %q, want rename-credential-1", got)
+	}
 	if got := renameMsg.Get(renameFields.ByName("new_label")).String(); got != "perf-key2" {
 		t.Fatalf("authn rename passkey label = %q, want perf-key2", got)
 	}
@@ -876,8 +981,11 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 		t.Fatalf("authn revoke device_id = %q, want revoke-device-1", got)
 	}
 	deleteWebAuthnMsg, deleteWebAuthnFields := authnManifest("DeleteWebAuthnCredential")
-	if got := deleteWebAuthnMsg.Get(deleteWebAuthnFields.ByName("credential_id")).String(); got != "credential-1" {
-		t.Fatalf("authn delete webauthn credential_id = %q, want credential-1", got)
+	if got := deleteWebAuthnMsg.Get(deleteWebAuthnFields.ByName("user_id")).String(); got != "webauthn-delete-user-1" {
+		t.Fatalf("authn delete webauthn user_id = %q, want webauthn-delete-user-1", got)
+	}
+	if got := deleteWebAuthnMsg.Get(deleteWebAuthnFields.ByName("credential_id")).String(); got != "delete-credential-1" {
+		t.Fatalf("authn delete webauthn credential_id = %q, want delete-credential-1", got)
 	}
 	startRegMsg, startRegFields := authnManifest("StartWebAuthnRegistration")
 	if got := startRegMsg.Get(startRegFields.ByName("label")).String(); got != "perf-key" {

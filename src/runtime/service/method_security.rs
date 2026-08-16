@@ -193,6 +193,24 @@ const PLATFORM_ADMIN_ROLES: [&str; 4] = [
 ];
 const PLATFORM_ADMIN_SCOPES: [&str; 1] = ["udb:platform_admin"];
 
+/// Whether a role token is reserved for explicit platform authority.  These
+/// tokens are not ordinary tenant-defined role names: once present in a
+/// verified claim they authorize cross-tenant/project operations.
+pub(crate) fn is_platform_authority_role(role: &str) -> bool {
+    let role = role.trim();
+    PLATFORM_ADMIN_ROLES
+        .iter()
+        .any(|admin| role.eq_ignore_ascii_case(admin))
+}
+
+/// Whether a scope token is reserved for explicit platform authority.
+pub(crate) fn is_platform_authority_scope(scope: &str) -> bool {
+    let scope = scope.trim();
+    PLATFORM_ADMIN_SCOPES
+        .iter()
+        .any(|admin| scope.eq_ignore_ascii_case(admin))
+}
+
 /// Canonical cross-tenant/project authority predicate shared by the method
 /// security layer and native auth handlers.
 ///
@@ -206,15 +224,12 @@ pub(crate) fn has_cross_tenant_platform_authority(
     scopes: &[String],
     roles: &[String],
 ) -> bool {
-    let explicit_role = roles.iter().any(|role| {
-        let role = role.trim();
-        PLATFORM_ADMIN_ROLES
-            .iter()
-            .any(|admin| role.eq_ignore_ascii_case(admin))
-    });
+    let explicit_role = roles
+        .iter()
+        .any(|role| is_platform_authority_role(role));
     let explicit_scope = scopes
         .iter()
-        .any(|scope| PLATFORM_ADMIN_SCOPES.contains(&scope.trim()));
+        .any(|scope| is_platform_authority_scope(scope));
     if explicit_role || explicit_scope {
         return true;
     }

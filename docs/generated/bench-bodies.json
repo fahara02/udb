@@ -452,8 +452,8 @@
     "operation_id": "deleteWebAuthnCredential",
     "op_kind": "MUTATION",
     "request_msg": "DeleteWebAuthnCredentialRequest",
-    "body": "`{ \"user_id\": \"<seed:user_id>\", \"credential_id\": \"<seed:record_id>\" }`",
-    "notes": "`credential_id` ref (WebAuthn credential id; no dedicated seed key — use record_id). Optional `context`."
+    "body": "`{ \"user_id\": \"<seed:webauthn_delete_user_id>\", \"credential_id\": \"<seed:webauthn_delete_credential_id>\", \"context\": { \"tenant\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" } } }`",
+    "notes": "Uses a dedicated disposable user's real credential id returned by bootstrap FinishWebAuthnRegistration. The explicit context is validated against the bearer claim and pins neutral dispatch to the active tenant/project."
   },
   {
     "file": "authn.md",
@@ -776,8 +776,8 @@
     "operation_id": "renamePasskey",
     "op_kind": "MUTATION",
     "request_msg": "RenamePasskeyRequest",
-    "body": "`{ \"user_id\": \"<seed:user_id>\", \"credential_id\": \"<seed:record_id>\", \"new_label\": \"perf-key2\" }`",
-    "notes": "`credential_id` ref (WebAuthn credential id; no dedicated seed key — use record_id). Optional `context`."
+    "body": "`{ \"user_id\": \"<seed:webauthn_rename_user_id>\", \"credential_id\": \"<seed:webauthn_rename_credential_id>\", \"new_label\": \"perf-key2\", \"context\": { \"tenant\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" } } }`",
+    "notes": "Uses a different disposable user's real credential id, so Delete and Rename are order-independent. The explicit context is validated against the bearer claim and pins neutral dispatch to the active tenant/project."
   },
   {
     "file": "authn.md",
@@ -990,10 +990,10 @@
     "wire_rpc": "AuthnService/VerifyMfaChallenge",
     "api_alias": "verify_mfa_challenge",
     "operation_id": "verifyMfaChallenge",
-    "op_kind": "READ_ONLY",
+    "op_kind": "MUTATION",
     "request_msg": "VerifyMfaChallengeRequest",
-    "body": "`{ \"challenge_id\": \"<seed:challenge_id>\", \"code\": \"<seed:otp_code>\" }`",
-    "notes": "`challenge_id` from IssueMfaChallenge; `code` = TOTP/OTP/recovery proof (runtime-dependent). Optional `device_fingerprint`, `context`."
+    "body": "`{ \"challenge_id\": \"<seed:challenge_id>\", \"code\": \"<seed:recovery_code>\", \"context\": { \"tenant\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" } } }`",
+    "notes": "`challenge_id` is seeded for the RECOVERY_CODE factor and the proof is one of the same user's generated recovery codes. The explicit context pins neutral dispatch to the claim-bound store."
   },
   {
     "file": "authn.md",

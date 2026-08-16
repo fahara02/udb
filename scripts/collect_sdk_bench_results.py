@@ -929,6 +929,16 @@ def _gate_results(
     return 0
 
 
+def _stamp_evidence_status(payload: dict[str, Any], failures: list[str]) -> str:
+    """Expose whether an uploaded reporting artifact actually passed the gate."""
+    status = "canonical_complete" if not failures else "incomplete"
+    payload["evidence_status"] = status
+    history = payload.get("history")
+    if isinstance(history, list) and history and isinstance(history[-1], dict):
+        history[-1]["evidence_status"] = status
+    return status
+
+
 def _selftest() -> int:
     with tempfile.TemporaryDirectory(prefix="udb-bench-collector-") as tmp:
         path = Path(tmp) / "perf_report.md"
@@ -1185,6 +1195,14 @@ RPCs measured: 2
         failures = _benchmark_gate_failures(missing_rpc, contract, canonical_rpcs)
         assert any("full_rpcs has 1 rows" in failure for failure in failures), failures
         assert any("missing RPCs: BetaService/PutBeta" in failure for failure in failures), failures
+        assert _stamp_evidence_status(missing_rpc, failures) == "incomplete"
+        assert missing_rpc["evidence_status"] == "incomplete"
+        assert missing_rpc["history"][-1]["evidence_status"] == "incomplete"
+
+        complete_status = cloned_payload()
+        assert _stamp_evidence_status(complete_status, []) == "canonical_complete"
+        assert complete_status["evidence_status"] == "canonical_complete"
+        assert complete_status["history"][-1]["evidence_status"] == "canonical_complete"
 
         extra_rpc = cloned_payload()
         extra_rpc["sdks"][0]["full_rpcs"].append({"wire_api": "GammaService/GetGamma"})
@@ -1631,6 +1649,13 @@ def main() -> int:
         "history": history[-25:],
         "sdks": sdks,
     }
+
+    # Reporting artifacts are uploaded even when the final gate fails so CI has
+    # actionable per-SDK diagnostics. Never label such a debug artifact as
+    # canonical proof: compute the same central gate result before writing and
+    # stamp both the payload and current history point accordingly.
+    candidate_failures = _benchmark_gate_failures(payload, benchmark_contract, canonical_rpcs)
+    _stamp_evidence_status(payload, candidate_failures)
 
     out = (ROOT / args.out).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)

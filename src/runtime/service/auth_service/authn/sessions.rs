@@ -86,6 +86,26 @@ fn session_internal_status(operation: impl Into<String>, message: impl Into<Stri
     crate::runtime::executor_utils::internal_status("authn", operation, message)
 }
 
+/// Bind token-family side effects to the same validated tenant/project authority
+/// as the Logout request. A served request with no body scope inherits the
+/// bearer claim; a conflicting body scope is rejected. Direct in-process callers
+/// retain their explicit body scope through the shared resolver contract.
+fn logout_family_scope(
+    request_context: Option<&crate::proto::udb::core::common::v1::RequestContext>,
+) -> Result<(String, String), Status> {
+    let tenant = request_context.and_then(|context| context.tenant.as_ref());
+    let body_tenant = tenant.map(|scope| scope.tenant_id.as_str()).unwrap_or_default();
+    let body_project = tenant
+        .map(|scope| scope.project_id.as_str())
+        .unwrap_or_default();
+    let claim = crate::runtime::service::method_security::current_claim_context();
+    crate::runtime::service::method_security::resolve_body_tenant_scope(
+        &claim,
+        body_tenant,
+        body_project,
+    )
+}
+
 fn validate_session_response(
     rec: Option<SessionRecord>,
     now_unix: u64,
@@ -383,6 +403,41 @@ mod tests {
                 "must be a non-empty principal id when all_sessions is true",
             )],
         );
+    }
+
+    #[tokio::test]
+    async fn logout_family_scope_inherits_claim_and_rejects_foreign_body_scope() {
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-a",
+            "tenant-a",
+            "project-a",
+            &["udb:authn:logout"],
+            &[],
+        );
+        let inherited =
+            crate::runtime::service::method_security::scope_claim_context_for_test(
+                claim.clone(),
+                async { logout_family_scope(None) },
+            )
+            .await
+            .expect("an omitted Logout body scope inherits the validated claim");
+        assert_eq!(inherited, ("tenant-a".to_string(), "project-a".to_string()));
+
+        let foreign = crate::proto::udb::core::common::v1::RequestContext {
+            tenant: Some(crate::proto::udb::core::common::v1::TenantContext {
+                tenant_id: "tenant-b".to_string(),
+                project_id: "project-b".to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            claim,
+            async { logout_family_scope(Some(&foreign)) },
+        )
+        .await
+        .expect_err("Logout family cleanup must not accept a foreign body scope");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
     }
 
     #[tokio::test]
@@ -1001,6 +1056,7 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::LogoutResponse>, Status> {
         let req = request.into_inner();
         let now = now_unix();
+        let (tenant_id, project_id) = logout_family_scope(req.context.as_ref())?;
         let count = if req.all_sessions {
             let propagation_started = std::time::Instant::now();
             let principal_id = req
@@ -1020,7 +1076,8 @@ impl AuthnServiceImpl {
             // Kill every refresh-token family for the principal too — otherwise a
             // refresh token survives the all-sessions logout and keeps minting
             // access tokens.
-            self.revoke_families_for_principal(&principal_id).await?;
+            self.revoke_families_for_principal(&principal_id, &tenant_id, &project_id)
+                .await?;
             self.sessions
                 .revoke_all_for_principal(&principal_id, now)
                 .await
@@ -1047,12 +1104,13 @@ impl AuthnServiceImpl {
                     crate::runtime::service::method_security::current_claim_context().tenant_id;
                 self.revoke_token_jti(&req.session_id, "session", &claim_tenant, 0, "", "logout")
                     .await?;
-                // The refresh-token family bound to this session must die with it,
-                // or the logged-out session's refresh token could still mint access
-                // tokens via `RefreshToken` (the family path only checks the user is
-                // active, not whether the session was revoked).
-                self.revoke_families_for_session(&req.session_id).await?;
             }
+            // Always replay the idempotent family revoke, even when the session
+            // was already revoked by a prior partial Logout attempt. Otherwise a
+            // retry after session-revoke/family-revoke failure would report success
+            // while its refresh family remained live.
+            self.revoke_families_for_session(&req.session_id, &tenant_id, &project_id)
+                .await?;
             i32::from(revoked)
         };
         Ok(Response::new(authn_pb::LogoutResponse {

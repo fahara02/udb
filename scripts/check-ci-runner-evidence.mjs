@@ -31,6 +31,7 @@ const MAX_EVIDENCE_AGE_DAYS = DEFAULT_MAX_EVIDENCE_AGE_DAYS;
 const GITHUB_API_REQUEST_TIMEOUT_MS = 30 * 1000;
 const MAX_GITHUB_API_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAX_FIXTURE_BYTES = 1 * 1024 * 1024;
+const MAX_RELEASE_CHAIN_ARTIFACT_BYTES = 8 * 1024 * 1024;
 const MAX_GITHUB_RUN_JOBS = 500;
 const MAX_GITHUB_JOBS_PAGE_SIZE = 100;
 const MAX_GITHUB_WORKFLOW_RUN_CANDIDATES = 100;
@@ -69,6 +70,10 @@ const RUN_ID_PATTERN = /^[1-9]\d*$/;
 const POSITIVE_DECIMAL_PATTERN = /^(?:[1-9]\d*(?:\.\d+)?|0\.\d*[1-9]\d*)$/;
 const ACTIONS_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const GITHUB_ACTIONS_RUN_URL_PATTERN = /^https:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\/actions\/runs\/([1-9]\d*)$/;
+const RELEASE_ASSET_PATTERN = /^udb-linux-amd64(?:-[a-z0-9]+)?$/;
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+const BENCHMARK_ARTIFACT_NAME = "sdk-benchmark-results";
+const PAGES_ARTIFACT_NAME = "github-pages";
 
 const PR_REQUIRED_JOBS = [
   "quick-gate",
@@ -775,7 +780,12 @@ function assertReleaseChainTags({ release, benchmark, pages }) {
   if (!releaseShaText) {
     throw new Error("release chain has missing release head_sha");
   }
-  const releaseSha = assertGitSha(releaseShaText, "release chain");
+  assertGitSha(releaseShaText, "release chain");
+  // A workflow_run's head_sha is the default-branch revision that supplied the
+  // downstream workflow definition, not the immutable commit behind the
+  // release tag. Pages binds the benchmark artifact to that release commit by
+  // tag dereference and binary digest; this run-level audit only validates the
+  // downstream SHA's shape and branch authority.
   for (const [label, run] of Object.entries({ "post-release benchmark": benchmark, "post-benchmark Pages": pages })) {
     const actualBranch = String(run?.head_branch || "");
     if (run?.event === "workflow_run" && actualBranch !== DEFAULT_INTEGRATION_BRANCH) {
@@ -789,9 +799,6 @@ function assertReleaseChainTags({ release, benchmark, pages }) {
       throw new Error(`${label} run ${run?.id || "(unknown)"} is missing head_sha`);
     }
     assertGitSha(actualSha, `${label} run ${run?.id || "(unknown)"}`);
-    if (actualSha !== releaseSha) {
-      throw new Error(`${label} run ${run?.id || "(unknown)"} used head_sha ${actualSha}, want ${releaseSha}`);
-    }
   }
   return releaseTag;
 }
@@ -844,6 +851,263 @@ function assertReleaseChainOrder({ release, benchmark, pages }) {
     throw new Error(
       `post-benchmark Pages run ${pages?.id || "(unknown)"} started before benchmark run ${benchmark?.id || "(unknown)"} completed`,
     );
+  }
+}
+
+function releaseChainArtifactText(value, label) {
+  if (typeof value !== "string" && !Buffer.isBuffer(value)) {
+    throw new Error(`${label} must be UTF-8 artifact bytes`);
+  }
+  const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
+  if (bytes.length === 0) throw new Error(`${label} is empty`);
+  if (bytes.length > MAX_RELEASE_CHAIN_ARTIFACT_BYTES) {
+    throw new Error(`${label} must be <= ${MAX_RELEASE_CHAIN_ARTIFACT_BYTES} bytes`);
+  }
+  const text = bytes.toString("utf8");
+  if (!Buffer.from(text, "utf8").equals(bytes)) {
+    throw new Error(`${label} is not canonical UTF-8 text`);
+  }
+  return text;
+}
+
+function parseReleaseChainBenchmarkArtifact(value, label) {
+  const text = releaseChainArtifactText(value, label);
+  rejectDuplicateJsonObjectKeys(text, label);
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch (error) {
+    throw new Error(`${label} is not valid JSON: ${error.message}`);
+  }
+  return { payload: githubObject(payload, label), text };
+}
+
+function releaseAssetFromBenchmarkPayload(payload, label) {
+  const release = githubObject(payload?.release, `${label} release`);
+  const asset = String(release.asset || "");
+  if (!RELEASE_ASSET_PATTERN.test(asset)) {
+    throw new Error(`${label} release asset ${asset || "(missing)"} is not a supported Linux benchmark asset`);
+  }
+  return asset;
+}
+
+function assertPublishedChecksum(value, expectedAsset, expectedDigest) {
+  const text = releaseChainArtifactText(value, "published release checksum");
+  const lines = text.trimEnd().split(/\r?\n/);
+  if (lines.length !== 1) {
+    throw new Error("published release checksum must contain exactly one checksum record");
+  }
+  const match = /^([0-9a-fA-F]{64})[\t ]+(\*?)([^\s]+)$/.exec(lines[0]);
+  if (!match) {
+    throw new Error("published release checksum must use sha256sum '<digest>  <asset>' syntax");
+  }
+  const actualDigest = match[1].toLowerCase();
+  const actualAsset = match[3];
+  if (actualAsset !== expectedAsset) {
+    throw new Error(`published release checksum names ${actualAsset}, want ${expectedAsset}`);
+  }
+  if (actualDigest !== expectedDigest) {
+    throw new Error(`published release checksum digest ${actualDigest}, want ${expectedDigest}`);
+  }
+}
+
+function assertReleaseChainArtifactEvidence({ release, benchmark, pages, repo, evidence }) {
+  const evidenceObject = githubObject(evidence, "release-chain artifact evidence");
+  const benchmarkRunId = assertRunEvidenceRunId(benchmark, "post-release benchmark");
+  const pagesRunId = assertRunEvidenceRunId(pages, "post-benchmark Pages");
+  const evidenceBenchmarkRunId = assertPositiveIntegerEvidenceToken(
+    evidenceObject.benchmarkArtifactRunId,
+    "benchmark artifact source run id",
+  );
+  const evidencePagesRunId = assertPositiveIntegerEvidenceToken(
+    evidenceObject.pagesArtifactRunId,
+    "Pages artifact source run id",
+  );
+  if (evidenceBenchmarkRunId !== benchmarkRunId) {
+    throw new Error(`benchmark artifact came from run ${evidenceBenchmarkRunId}, want selected run ${benchmarkRunId}`);
+  }
+  if (evidencePagesRunId !== pagesRunId) {
+    throw new Error(`Pages artifact came from run ${evidencePagesRunId}, want selected run ${pagesRunId}`);
+  }
+  if (evidenceObject.benchmarkArtifactName !== BENCHMARK_ARTIFACT_NAME) {
+    throw new Error(`benchmark artifact name is ${evidenceObject.benchmarkArtifactName || "(missing)"}, want ${BENCHMARK_ARTIFACT_NAME}`);
+  }
+  if (evidenceObject.pagesArtifactName !== PAGES_ARTIFACT_NAME) {
+    throw new Error(`Pages artifact name is ${evidenceObject.pagesArtifactName || "(missing)"}, want ${PAGES_ARTIFACT_NAME}`);
+  }
+
+  const benchmarkArtifact = parseReleaseChainBenchmarkArtifact(
+    evidenceObject.benchmarkArtifact,
+    "selected benchmark artifact bench-results.json",
+  );
+  const pagesArtifact = parseReleaseChainBenchmarkArtifact(
+    evidenceObject.pagesArtifact,
+    "selected Pages artifact bench-results.json",
+  );
+  if (benchmarkArtifact.text !== pagesArtifact.text) {
+    throw new Error("selected Pages artifact does not contain the exact selected benchmark artifact evidence");
+  }
+
+  const payload = benchmarkArtifact.payload;
+  const releaseTag = assertReleaseTag(release?.head_branch, "release-chain artifact");
+  const releaseSha = assertGitSha(release?.head_sha, "release-chain artifact");
+  const releasePayload = githubObject(payload.release, "benchmark artifact release");
+  const gitPayload = githubObject(payload.git, "benchmark artifact git");
+  const environment = githubObject(payload.environment, "benchmark artifact environment");
+  if (payload.schema_version !== 2 || payload.evidence_status !== "canonical_complete") {
+    throw new Error("benchmark artifact must be schema_version 2 canonical_complete evidence");
+  }
+  if (payload.source !== "github-actions") {
+    throw new Error(`benchmark artifact source is ${payload.source || "(missing)"}, want github-actions`);
+  }
+  if (String(environment.workflow || "") !== "Benchmark · SDKs") {
+    throw new Error(`benchmark artifact workflow is ${environment.workflow || "(missing)"}, want Benchmark · SDKs`);
+  }
+  if (String(environment.run_id || "") !== benchmarkRunId) {
+    throw new Error(`benchmark artifact run_id is ${environment.run_id || "(missing)"}, want ${benchmarkRunId}`);
+  }
+  const benchmarkAttempt = assertRunEvidenceAttempt(benchmark, "post-release benchmark");
+  if (String(environment.run_attempt || "") !== benchmarkAttempt) {
+    throw new Error(`benchmark artifact run_attempt is ${environment.run_attempt || "(missing)"}, want ${benchmarkAttempt}`);
+  }
+  if (String(releasePayload.tag || "") !== releaseTag) {
+    throw new Error(`benchmark artifact release tag is ${releasePayload.tag || "(missing)"}, want ${releaseTag}`);
+  }
+  if (String(gitPayload.commit || "") !== releaseSha) {
+    throw new Error(`benchmark artifact commit is ${gitPayload.commit || "(missing)"}, want ${releaseSha}`);
+  }
+  const expectedReleaseUrl = `https://github.com/${repo}/releases/tag/${releaseTag}`;
+  if (String(releasePayload.url || "") !== expectedReleaseUrl) {
+    throw new Error(`benchmark artifact release URL is ${releasePayload.url || "(missing)"}, want ${expectedReleaseUrl}`);
+  }
+  const asset = releaseAssetFromBenchmarkPayload(payload, "benchmark artifact");
+  const digest = String(releasePayload.sha256 || "");
+  if (!SHA256_PATTERN.test(digest)) {
+    throw new Error(`benchmark artifact release digest ${digest || "(missing)"} is not 64 lowercase hex characters`);
+  }
+  const publishedCommit = assertGitSha(evidenceObject.publishedCommit, "published release tag");
+  if (publishedCommit !== releaseSha) {
+    throw new Error(`published release tag resolves to ${publishedCommit}, want audited release commit ${releaseSha}`);
+  }
+  assertPublishedChecksum(evidenceObject.publishedChecksum, asset, digest);
+
+  const history = payload.history;
+  if (!Array.isArray(history) || history.length === 0) {
+    throw new Error("benchmark artifact has no current history point");
+  }
+  const currentHistory = githubObject(history[history.length - 1], "benchmark artifact current history point");
+  if (currentHistory.release_tag !== releaseTag || currentHistory.release_sha256 !== digest) {
+    throw new Error("benchmark artifact current history point does not match its release tag and digest");
+  }
+  return digest;
+}
+
+function readReleaseChainFile(path, label) {
+  if (!existsSync(path)) throw new Error(`${label} is missing at ${path}`);
+  const stat = statSync(path);
+  if (!stat.isFile()) throw new Error(`${label} must be a regular file`);
+  if (stat.size > MAX_RELEASE_CHAIN_ARTIFACT_BYTES) {
+    throw new Error(`${label} must be <= ${MAX_RELEASE_CHAIN_ARTIFACT_BYTES} bytes`);
+  }
+  return readFileSync(path);
+}
+
+function releaseChainCommand(command, args, label, options = {}) {
+  try {
+    return execFileSync(command, args, {
+      encoding: Object.prototype.hasOwnProperty.call(options, "encoding") ? options.encoding : "utf8",
+      env: options.env || process.env,
+      maxBuffer: MAX_RELEASE_CHAIN_ARTIFACT_BYTES,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (error) {
+    const stderr = Buffer.isBuffer(error?.stderr) ? error.stderr.toString("utf8") : String(error?.stderr || "");
+    throw new Error(`${label} failed: ${stderr.trim() || error.message}`);
+  }
+}
+
+function extractPagesBenchmarkArtifact(artifactTar) {
+  const listing = releaseChainCommand("tar", ["-tf", artifactTar], "list selected Pages artifact");
+  const entries = String(listing)
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .filter((entry) => entry.replace(/^\.\//, "") === "bench-results.json");
+  if (entries.length !== 1) {
+    throw new Error(`selected Pages artifact must contain exactly one root bench-results.json, found ${entries.length}`);
+  }
+  return releaseChainCommand(
+    "tar",
+    ["-xOf", artifactTar, entries[0]],
+    "read selected Pages benchmark evidence",
+    { encoding: null },
+  );
+}
+
+async function fetchReleaseChainArtifactEvidence({ repo, token, release, benchmark, pages }) {
+  const root = mkdtempSync(join(tmpdir(), "udb-release-chain-evidence-"));
+  const commandEnv = { ...process.env, GH_TOKEN: token || process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "" };
+  try {
+    const benchmarkRunId = assertRunEvidenceRunId(benchmark, "post-release benchmark");
+    const pagesRunId = assertRunEvidenceRunId(pages, "post-benchmark Pages");
+    const benchmarkDir = join(root, "benchmark");
+    const pagesDir = join(root, "pages");
+    const releaseDir = join(root, "release");
+    mkdirSync(benchmarkDir);
+    mkdirSync(pagesDir);
+    mkdirSync(releaseDir);
+    releaseChainCommand(
+      "gh",
+      ["run", "download", benchmarkRunId, "--repo", repo, "--name", BENCHMARK_ARTIFACT_NAME, "--dir", benchmarkDir],
+      "download selected benchmark artifact",
+      { env: commandEnv },
+    );
+    const benchmarkArtifact = readReleaseChainFile(
+      join(benchmarkDir, "docs", "site", "bench-results.json"),
+      "selected benchmark artifact bench-results.json",
+    );
+    const { payload } = parseReleaseChainBenchmarkArtifact(
+      benchmarkArtifact,
+      "selected benchmark artifact bench-results.json",
+    );
+    const asset = releaseAssetFromBenchmarkPayload(payload, "selected benchmark artifact");
+    const releaseTag = assertReleaseTag(release?.head_branch, "selected release run");
+    releaseChainCommand(
+      "gh",
+      ["release", "download", releaseTag, "--repo", repo, "--pattern", `${asset}.sha256`, "--dir", releaseDir],
+      "download published release checksum",
+      { env: commandEnv },
+    );
+    const publishedChecksum = readReleaseChainFile(
+      join(releaseDir, `${asset}.sha256`),
+      "published release checksum",
+    );
+    const publishedCommit = String(
+      releaseChainCommand(
+        "gh",
+        ["api", `repos/${repo}/commits/${releaseTag}`, "--jq", ".sha"],
+        "resolve published release tag",
+        { env: commandEnv },
+      ),
+    ).trim();
+    releaseChainCommand(
+      "gh",
+      ["run", "download", pagesRunId, "--repo", repo, "--name", PAGES_ARTIFACT_NAME, "--dir", pagesDir],
+      "download selected Pages artifact",
+      { env: commandEnv },
+    );
+    const pagesArtifact = extractPagesBenchmarkArtifact(join(pagesDir, "artifact.tar"));
+    return {
+      benchmarkArtifactRunId: benchmarkRunId,
+      pagesArtifactRunId: pagesRunId,
+      benchmarkArtifactName: BENCHMARK_ARTIFACT_NAME,
+      pagesArtifactName: PAGES_ARTIFACT_NAME,
+      benchmarkArtifact,
+      pagesArtifact,
+      publishedCommit,
+      publishedChecksum,
+    };
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 }
 
@@ -1290,6 +1554,7 @@ async function findLatestSuccessfulRun(repo, token, workflow, { event, branch, r
 function assertFixtureShape(fixture) {
   const runs = githubObject(fixture?.runs, "fixture runs");
   const jobs = githubObject(fixture?.jobs, "fixture jobs");
+  githubObject(fixture?.releaseChainEvidence, "fixture releaseChainEvidence");
   for (const lane of CI_EVIDENCE_LANES) {
     githubObject(runs[lane], `fixture runs.${lane}`);
     const laneJobs = jobs[lane];
@@ -1378,8 +1643,16 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
     benchmark: fixture.runs.benchmark,
     pages: fixture.runs.pages,
   });
+  const releaseSha256 = assertReleaseChainArtifactEvidence({
+    release: fixture.runs.release,
+    benchmark: fixture.runs.benchmark,
+    pages: fixture.runs.pages,
+    repo: assertRunInspectionUrl(fixture.runs.release, "release"),
+    evidence: fixture.releaseChainEvidence,
+  });
   const summary = {
     releaseTag: auditedReleaseTag,
+    releaseSha256,
     lint: assertSuccessfulBudgetRun(fixture.runs.lint, "lint/actionlint", budgets.lint, evidenceOptions),
     integration: assertSuccessfulBudgetRun(fixture.runs.integration, "integration CI", budgets.integration, evidenceOptions),
     release: assertSuccessfulBudgetRun(fixture.runs.release, "release", budgets.release, evidenceOptions),
@@ -1457,7 +1730,13 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
   return summary;
 }
 
-async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJson) {
+async function auditLive(
+  args,
+  budgets,
+  evidenceOptions = {},
+  fetcher = fetchJson,
+  releaseChainEvidenceFetcher = fetchReleaseChainArtifactEvidence,
+) {
   const repo = repoArg(args, "--repo", process.env.GITHUB_REPOSITORY);
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "";
   const branch = branchArg(args, "--branch", DEFAULT_INTEGRATION_BRANCH);
@@ -1500,7 +1779,6 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
       : findLatestSuccessfulRun(repo, token, WORKFLOWS.release, { event: "push", releaseTag }, fetcher),
   );
   const expectedReleaseTag = releaseTag || String(releaseRun?.head_branch || "");
-  const expectedReleaseSha = releaseRun?.head_sha ? assertGitSha(releaseRun.head_sha, "release discovery") : "";
   const releaseDryRunRun = expectedReleaseTag
     ? await discoverRun("release dry-run", () =>
         releaseDryRunId
@@ -1512,26 +1790,18 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
       )
     : (discoveryFailures.push("release dry-run: release tag is required because release discovery failed and --release-tag was not provided"), null);
   const benchmarkRun = expectedReleaseTag
-    ? await discoverRun("post-release benchmark", () =>
-        benchmarkRunId
-          ? fetchRun(repo, token, benchmarkRunId, fetcher)
-          : findLatestSuccessfulRun(repo, token, WORKFLOWS.benchmark, {
-              event: "workflow_run",
-              releaseTag: expectedReleaseTag,
-              headSha: expectedReleaseSha,
-            }, fetcher),
-      )
+    ? benchmarkRunId
+      ? await discoverRun("post-release benchmark", () => fetchRun(repo, token, benchmarkRunId, fetcher))
+      : (discoveryFailures.push(
+          "post-release benchmark: --benchmark-run-id is required because workflow_run metadata does not identify the immutable release tag",
+        ), null)
     : (discoveryFailures.push("post-release benchmark: release tag is required because release discovery failed and --release-tag was not provided"), null);
   const pagesRun = expectedReleaseTag
-    ? await discoverRun("post-benchmark Pages", () =>
-        pagesRunId
-          ? fetchRun(repo, token, pagesRunId, fetcher)
-          : findLatestSuccessfulRun(repo, token, WORKFLOWS.pages, {
-              event: "workflow_run",
-              releaseTag: expectedReleaseTag,
-              headSha: expectedReleaseSha,
-            }, fetcher),
-      )
+    ? pagesRunId
+      ? await discoverRun("post-benchmark Pages", () => fetchRun(repo, token, pagesRunId, fetcher))
+      : (discoveryFailures.push(
+          "post-benchmark Pages: --pages-run-id is required because workflow_run metadata does not identify the immutable release tag",
+        ), null)
     : (discoveryFailures.push("post-benchmark Pages: release tag is required because release discovery failed and --release-tag was not provided"), null);
   const branchProtectionRun = await discoverRun("branch-protection", () =>
     branchProtectionRunId
@@ -1619,8 +1889,23 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
     benchmark: benchmarkRun,
     pages: pagesRun,
   });
+  const releaseChainEvidence = await releaseChainEvidenceFetcher({
+    repo,
+    token,
+    release: releaseRun,
+    benchmark: benchmarkRun,
+    pages: pagesRun,
+  });
+  const releaseSha256 = assertReleaseChainArtifactEvidence({
+    release: releaseRun,
+    benchmark: benchmarkRun,
+    pages: pagesRun,
+    repo,
+    evidence: releaseChainEvidence,
+  });
   const summary = {
     releaseTag: auditedReleaseTag,
+    releaseSha256,
     lint: assertSuccessfulBudgetRun(lintRun, "lint/actionlint", budgets.lint, evidenceOptions),
     integration: assertSuccessfulBudgetRun(integrationRun, "integration CI", budgets.integration, evidenceOptions),
     releaseDryRun: assertSuccessfulBudgetRun(releaseDryRunRun, "release dry-run", budgets.releaseDryRun, evidenceOptions),
@@ -1829,6 +2114,7 @@ async function runSelftest() {
   const benchmarkSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
   const pagesSha = "cccccccccccccccccccccccccccccccccccccccc";
   const integrationSha = "dddddddddddddddddddddddddddddddddddddddd";
+  const releaseDigest = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
   try {
     const good = {
       runs: {
@@ -1867,7 +2153,7 @@ async function runSelftest() {
           path: ".github/workflows/benchmark-sdks.yml",
           event: "workflow_run",
           head_branch: "main",
-          head_sha: releaseSha,
+          head_sha: benchmarkSha,
         }),
         pages: fixtureRun(13, 12, "success", {
           created_at: "2026-07-01T02:01:00Z",
@@ -1876,7 +2162,7 @@ async function runSelftest() {
           path: ".github/workflows/pages.yml",
           event: "workflow_run",
           head_branch: "main",
-          head_sha: releaseSha,
+          head_sha: pagesSha,
         }),
         branchProtection: fixtureRun(10, 3, "success", {
           path: ".github/workflows/branch-protection-audit.yml",
@@ -1896,6 +2182,32 @@ async function runSelftest() {
         branchProtection: REQUIRED_JOBS.branchProtection.map((name) => fixtureJob(name)),
       },
     };
+    const benchmarkArtifact = `${JSON.stringify({
+      schema_version: 2,
+      evidence_status: "canonical_complete",
+      source: "github-actions",
+      release: {
+        tag: "v0.3.7",
+        asset: "udb-linux-amd64-full",
+        url: "https://github.com/udb/selftest/releases/tag/v0.3.7",
+        sha256: releaseDigest,
+      },
+      git: { commit: releaseSha },
+      environment: { run_id: "12", run_attempt: "1", workflow: "Benchmark · SDKs" },
+      summary: { failed_rpc_count: 0 },
+      history: [{ release_tag: "v0.3.7", release_sha256: releaseDigest }],
+      sdks: [],
+    }, null, 2)}\n`;
+    good.releaseChainEvidence = {
+      benchmarkArtifactRunId: "12",
+      pagesArtifactRunId: "13",
+      benchmarkArtifactName: BENCHMARK_ARTIFACT_NAME,
+      pagesArtifactName: PAGES_ARTIFACT_NAME,
+      benchmarkArtifact,
+      pagesArtifact: benchmarkArtifact,
+      publishedCommit: releaseSha,
+      publishedChecksum: `${releaseDigest}  udb-linux-amd64-full\n`,
+    };
     for (const [lane, jobs] of Object.entries(good.jobs)) {
       for (const job of jobs) {
         job.run_id = good.runs[lane].id;
@@ -1907,6 +2219,52 @@ async function runSelftest() {
     const goodPath = join(root, "good.json");
     writeFileSync(goodPath, JSON.stringify(good));
     auditSelftestFixture(goodPath);
+
+    const expectReleaseChainFixtureFailure = (name, mutate, expectedMessage) => {
+      const fixture = structuredClone(good);
+      mutate(fixture);
+      const path = join(root, `${name}.json`);
+      writeFileSync(path, JSON.stringify(fixture));
+      try {
+        auditSelftestFixture(path);
+        throw new Error(`${name} release-chain regression was not caught`);
+      } catch (error) {
+        if (!String(error.message).includes(expectedMessage)) throw error;
+      }
+    };
+    expectReleaseChainFixtureFailure(
+      "wrong-benchmark-artifact-run",
+      (fixture) => { fixture.releaseChainEvidence.benchmarkArtifactRunId = "999"; },
+      "benchmark artifact came from run 999, want selected run 12",
+    );
+    expectReleaseChainFixtureFailure(
+      "pages-artifact-splice",
+      (fixture) => { fixture.releaseChainEvidence.pagesArtifact += " "; },
+      "Pages artifact does not contain the exact selected benchmark artifact evidence",
+    );
+    expectReleaseChainFixtureFailure(
+      "wrong-artifact-release-commit",
+      (fixture) => {
+        const payload = JSON.parse(fixture.releaseChainEvidence.benchmarkArtifact);
+        payload.git.commit = benchmarkSha;
+        const artifact = `${JSON.stringify(payload)}\n`;
+        fixture.releaseChainEvidence.benchmarkArtifact = artifact;
+        fixture.releaseChainEvidence.pagesArtifact = artifact;
+      },
+      `benchmark artifact commit is ${benchmarkSha}, want ${releaseSha}`,
+    );
+    expectReleaseChainFixtureFailure(
+      "wrong-published-release-commit",
+      (fixture) => { fixture.releaseChainEvidence.publishedCommit = benchmarkSha; },
+      `published release tag resolves to ${benchmarkSha}, want audited release commit ${releaseSha}`,
+    );
+    expectReleaseChainFixtureFailure(
+      "wrong-published-release-digest",
+      (fixture) => {
+        fixture.releaseChainEvidence.publishedChecksum = `${"e".repeat(64)}  udb-linux-amd64-full\n`;
+      },
+      `published release checksum digest ${"e".repeat(64)}, want ${releaseDigest}`,
+    );
 
     const slowOptionalPrJob = structuredClone(good);
     slowOptionalPrJob.runs.pr = {
@@ -1979,6 +2337,7 @@ async function runSelftest() {
         if (!run) throw new Error(`unexpected custom branch evidence run ${runId}`);
         return run;
       },
+      async () => customBranchEvidence.releaseChainEvidence,
     );
     if (customBranchSummary.integration !== 29 || customBranchSummary.branchProtection !== 3) {
       throw new Error("custom branch live evidence summary regression was not caught");
@@ -3049,38 +3408,6 @@ async function runSelftest() {
       }
     }
 
-    const wrongBenchmarkSha = structuredClone(good);
-    wrongBenchmarkSha.runs.benchmark = {
-      ...wrongBenchmarkSha.runs.benchmark,
-      head_sha: benchmarkSha,
-    };
-    const wrongBenchmarkShaPath = join(root, "wrong-benchmark-sha.json");
-    writeFileSync(wrongBenchmarkShaPath, JSON.stringify(wrongBenchmarkSha));
-    try {
-      auditSelftestFixture(wrongBenchmarkShaPath);
-      throw new Error("wrong benchmark head_sha regression was not caught");
-    } catch (error) {
-      if (!String(error.message).includes(`post-release benchmark run 12 used head_sha ${benchmarkSha}, want ${releaseSha}`)) {
-        throw error;
-      }
-    }
-
-    const wrongPagesSha = structuredClone(good);
-    wrongPagesSha.runs.pages = {
-      ...wrongPagesSha.runs.pages,
-      head_sha: pagesSha,
-    };
-    const wrongPagesShaPath = join(root, "wrong-pages-sha.json");
-    writeFileSync(wrongPagesShaPath, JSON.stringify(wrongPagesSha));
-    try {
-      auditSelftestFixture(wrongPagesShaPath);
-      throw new Error("wrong Pages head_sha regression was not caught");
-    } catch (error) {
-      if (!String(error.message).includes(`post-benchmark Pages run 13 used head_sha ${pagesSha}, want ${releaseSha}`)) {
-        throw error;
-      }
-    }
-
     const malformedBenchmarkSha = structuredClone(good);
     malformedBenchmarkSha.runs.benchmark = {
       ...malformedBenchmarkSha.runs.benchmark,
@@ -3680,7 +4007,9 @@ async function runSelftest() {
       if (
         !message.includes("runner evidence discovery failed:") ||
         !message.includes("PR CI: no successful completed ci.yml run found") ||
-        !message.includes("integration CI: no successful completed ci.yml run found")
+        !message.includes("integration CI: no successful completed ci.yml run found") ||
+        !message.includes("post-release benchmark: --benchmark-run-id is required") ||
+        !message.includes("post-benchmark Pages: --pages-run-id is required")
       ) {
         throw error;
       }
@@ -3998,7 +4327,7 @@ async function main() {
     : "";
   console.log(
     `CI runner evidence passed: lint=${summary.lint.toFixed(2)}m, PR=${summary.pr.toFixed(2)}m, integration=${summary.integration.toFixed(2)}m, release=${summary.release.toFixed(2)}m, releaseDryRun=${summary.releaseDryRun.toFixed(2)}m`,
-    `benchmark=${summary.benchmark.toFixed(2)}m, pages=${summary.pages.toFixed(2)}m, branchProtection=${summary.branchProtection.toFixed(2)}m, releaseTag=${summary.releaseTag}${servedText}`,
+    `benchmark=${summary.benchmark.toFixed(2)}m, pages=${summary.pages.toFixed(2)}m, branchProtection=${summary.branchProtection.toFixed(2)}m, releaseTag=${summary.releaseTag}, releaseSha256=${summary.releaseSha256}${servedText}`,
   );
 }
 

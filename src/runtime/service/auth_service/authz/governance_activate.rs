@@ -343,6 +343,16 @@ impl AuthzServiceImpl {
         actor: &str,
         is_rollback: bool,
     ) -> Result<(i64, i64), Status> {
+        if document
+            .role_bindings
+            .iter()
+            .any(|binding| is_reserved_platform_role(&binding.role))
+        {
+            return Err(reserved_platform_role_status(
+                "activate_policy_version",
+                "stored governance document contains a provenance-free reserved platform role binding",
+            ));
+        }
         let pool = self.require_pool()?;
         let tenant = version.tenant_id.clone();
         let project = version.project_id.clone();

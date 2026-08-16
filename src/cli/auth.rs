@@ -103,6 +103,7 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
             password,
             tenant,
             project,
+            platform_admin,
         } => {
             // urgent_fix #20: OFFLINE — connect straight to Postgres and create the
             // first verified admin user via the in-process authn service (no running
@@ -127,8 +128,19 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                     v == "1" || v == "true"
                 })
                 .unwrap_or(false);
+            if served && platform_admin {
+                return Err(
+                    "--platform-admin is offline-only and cannot be combined with served bootstrap"
+                        .to_string(),
+                );
+            }
             let admin = if served {
                 udb::runtime::service::served_bootstrap_admin(
+                    &dsn, &username, &email, &password, &tenant, &project,
+                )
+                .await?
+            } else if platform_admin {
+                udb::runtime::service::bootstrap_platform_admin_user(
                     &dsn, &username, &email, &password, &tenant, &project,
                 )
                 .await?
@@ -141,6 +153,7 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
             Ok(json!({
                 "bootstrapped": true,
                 "served": served,
+                "platform_admin": platform_admin,
                 "user_id": admin.user_id,
                 "username": username,
                 // `tenant` is the human code/input; `tenant_id` is the CANONICAL
@@ -149,7 +162,11 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 "tenant": tenant,
                 "tenant_id": admin.tenant_id,
                 "project": project,
-                "note": "user is ACTIVE; clients can now Authenticate with these credentials",
+                "note": if platform_admin {
+                    "user is ACTIVE with offline-provisioned system/global platform authority"
+                } else {
+                    "user is ACTIVE; clients can now Authenticate with these credentials"
+                },
             }))
         }
         AuthCommand::MigrateGrants { dry_run } => {

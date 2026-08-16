@@ -298,6 +298,14 @@ async fn live_postgres_refresh_token_dies_with_session_logout() {
         .logout(Request::new(authn_pb::LogoutRequest {
             session_id: login.session_id.clone(),
             revoke_reason: "live_test".to_string(),
+            context: Some(crate::proto::udb::core::common::v1::RequestContext {
+                tenant: Some(crate::proto::udb::core::common::v1::TenantContext {
+                    tenant_id: "acme".to_string(),
+                    project_id: "billing".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
             ..Default::default()
         }))
         .await

@@ -3,6 +3,11 @@
 Date: 2026-08-16
 Release: 0.5.9
 
+The automatic v0.5.9 benchmark run `31919949691` failed closed as designed and
+its downstream Pages run did not deploy. This follow-up also makes the retained
+diagnostic artifact honest: failed candidates are labeled `incomplete`, not
+`canonical_complete`.
+
 ## Changed
 
 - The benchmark collector now derives its expected RPC surface from
@@ -23,6 +28,10 @@ Release: 0.5.9
 - The reusable benchmark passes the generated manifest explicitly to both
   collection and the final always-run gate, preserving upload-before-fail
   diagnostics.
+- Before writing that always-uploaded diagnostic, the collector runs the same
+  central validator and stamps both the payload and current history point as
+  `incomplete` when any gate failure exists. Failed runs can no longer leave a
+  misleading `canonical_complete` artifact.
 - A fresh post-release Pages run fetches the canonical manifest from the exact
   benchmarked commit and invokes the same collector gate before deployment.
   The previously committed historical dashboard remains publishable on direct

@@ -7,6 +7,13 @@ Severity: release blocker
 
 ## Observed
 
+The first automatic v0.5.9 benchmark (`31919949691`) proved the gate was
+working: it rejected 1,143 attempted rows against the required 1,524 and kept
+Pages from publishing the incomplete result. Its always-uploaded diagnostic
+artifact nevertheless still claimed `evidence_status=canonical_complete` even
+though it contained 113 fatal rows, a missing PHP report, and a TypeScript
+identity mismatch. That label was inconsistent with the gate conclusion.
+
 The SDK benchmark collector recorded each report's `RPCs measured` header and
 the parsed `full_rpcs` rows, but its final gate checked only that no measured SDK
 had a failed process status and that the aggregate failed-RPC count was zero.
@@ -47,6 +54,9 @@ the expected wire-RPC identity set.
   count that disagrees with the dynamically derived contract.
 - Keep artifact collection and upload ahead of the final failure gate so an
   incomplete run remains diagnosable.
+- Stamp a failing diagnostic payload and its current history point as
+  `incomplete`; only a candidate with zero central-gate failures may retain
+  `canonical_complete`.
 - Make Pages invoke the same collector gate against the benchmark artifact and
   the canonical manifest fetched from the artifact's exact release commit.
   Pages must not implement a second identity validator or validate against a
