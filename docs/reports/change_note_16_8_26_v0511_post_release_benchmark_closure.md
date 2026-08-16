@@ -64,3 +64,9 @@ identified the parallel udb-coding mirror family. The canonical
 `udb-skill/shared/udb-coding.md` was propagated through
 `sync_udb_coding.py`, updating its plugin, OpenAI, and Ollama references from
 `0.5.10` to `0.5.11` without altering coding doctrine.
+
+With quick-gate green, run `31944426938` narrowed SDK conformance to one remaining
+Go source test: Scheduler still expected an empty project. Scheduler and the
+adjacent Workflow assertion now both expect the canonical `project-1` fixture;
+all TypeScript, Python, C#, Java, PHP, metadata, and error-detail conformance
+sections had already passed in that run.
