@@ -4067,7 +4067,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS",
             '"rate_limit_connection"',
             '"rate_limit_eval"',
-            'format!("rate limit redis error: {e}")',
+            'format!("rate limit redis error: {err}")',
         ),
     ),
     TokenCheck(

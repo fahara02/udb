@@ -68,6 +68,9 @@ fails. A registered executor whose circuit is open returns typed retryable `UNAV
   replayed, and proves a later request uses a different reconnected client ID.
 - `circuit_breaker_failover_skips_open_instance` now also proves that an all-open registered backend is
   reported as retryable `UNAVAILABLE`.
+- PR CI run `31960319688` exposed a stale error-detail posture literal after the production error
+  binding was named `err`; the guard now pins the actual typed retryable status construction instead
+  of the obsolete `{e}` spelling.
 
 CI must run the normal locked all-features checks and the ignored Redis IR live filter; no local
 Cargo build or test was run because this repair is CI-only by instruction.

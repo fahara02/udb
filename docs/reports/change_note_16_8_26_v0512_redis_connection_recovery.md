@@ -15,9 +15,12 @@ Target release: v0.5.12.
 - Added ignored live coverage that kills the exact cached Redis client and verifies first-failure,
   no-replay, and later-request reconnection semantics, plus unit coverage for all-open circuit
   classification.
+- Updated the error-detail posture guard to require the current `{err}` Redis failure binding after
+  PR CI run `31960319688` proved its previous `{e}` token was stale.
 
 Files covered by this note: `Cargo.toml`, `Cargo.lock`,
 `src/runtime/executors/redis.rs`, `src/runtime/canonical_store/redis.rs`,
 `src/runtime/service/mod.rs`, `src/runtime/cdc/engine_tail.rs`,
 `src/runtime/core/accessors.rs`, `src/runtime/core/mod.rs`, and
-`src/ir/compile/live_tests/redis_live.rs`.
+`src/ir/compile/live_tests/redis_live.rs`, plus
+`scripts/check-error-detail-posture.py`.
