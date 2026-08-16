@@ -1249,6 +1249,15 @@ CI_DOCS_LINKS_REQUIREMENTS = (
 
 CI_RUST_GENERATED_CONTRACT_DOC_GATES = (
     (
+        "SDK robustness clients + benchmark docs drift",
+        "SDK robustness client/benchmark documentation drift",
+        (
+            "target/debug/udb sdk generate --lang all --out sdk",
+            "node scripts/gen-sdk-benchmark-docs.mjs",
+            "git diff --quiet -- sdk",
+        ),
+    ),
+    (
         "Native contract manifest drift + lint (F13 hard gate)",
         "native contract manifest drift/lint",
         (
@@ -1285,12 +1294,15 @@ CI_RUST_GENERATED_CONTRACT_DOC_GATES = (
         "generated native/reference repair",
         (
             "if: failure() && runner.os == 'Linux'",
+            "target/debug/udb sdk generate --lang all --out sdk",
+            "node scripts/gen-sdk-benchmark-docs.mjs",
             "python3 scripts/generate-codebase-map.py",
             "python3 udb-skill/sync_references.py",
             "docs/generated/codebase-map.md",
             "docs/generated/udb-native-contract.json",
             "docs/generated/native-services.md",
             "docs/generated/contract-baseline.bin",
+            "sdk",
             "udb-skill/plugins/udb/skills/udb-coding/references/codebase-map.md",
             "> ci-native-docs.patch",
         ),
@@ -6836,6 +6848,14 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           force-nasm-package-fallback: ${{ github.event_name == 'pull_request' && matrix.os == 'windows-latest' && 'true' || 'false' }}
+      - name: SDK robustness clients + benchmark docs drift
+        if: runner.os == 'Linux'
+        run: |
+          target/debug/udb sdk generate --lang all --out sdk
+          node scripts/gen-sdk-benchmark-docs.mjs
+          if ! git diff --quiet -- sdk; then
+            exit 1
+          fi
       - name: Native contract manifest drift + lint (F13 hard gate)
         if: runner.os == 'Linux'
         run: |
@@ -6873,12 +6893,14 @@ jobs:
         if: failure() && runner.os == 'Linux'
         continue-on-error: true
         run: |
+          target/debug/udb sdk generate --lang all --out sdk
+          node scripts/gen-sdk-benchmark-docs.mjs
           python3 scripts/generate-codebase-map.py
           python3 udb-skill/sync_references.py
           target/debug/udb native manifest > docs/generated/udb-native-contract.json
           target/debug/udb native docs > docs/generated/native-services.md
           target/debug/udb native contract-baseline --baseline docs/generated/contract-baseline.bin
-          git diff --binary -- docs/generated/codebase-map.md docs/generated/udb-native-contract.json docs/generated/native-services.md docs/generated/contract-baseline.bin udb-skill/plugins/udb/skills/udb-coding/references/codebase-map.md > ci-native-docs.patch
+          git diff --binary -- sdk docs/generated/codebase-map.md docs/generated/udb-native-contract.json docs/generated/native-services.md docs/generated/contract-baseline.bin udb-skill/plugins/udb/skills/udb-coding/references/codebase-map.md > ci-native-docs.patch
   build-broker:
     needs: quick-gate
     runs-on: ubuntu-latest
@@ -10264,6 +10286,20 @@ jobs:
             "\n".join(needle for needle, _label in RETRY_SAFE_SERVED_SMOKE_REQUIREMENTS),
             encoding="utf-8",
         )
+
+        (wf / "ci.yml").write_text(
+            ci_good.replace(
+                "          target/debug/udb sdk generate --lang all --out sdk\n",
+                "          target/debug/udb sdk manifest\n",
+                1,
+            ),
+            encoding="utf-8",
+        )
+        failures = check_ci_rust_generated_contract_doc_gates(root)
+        assert any(
+            "SDK robustness client/benchmark documentation drift" in failure
+            for failure in failures
+        ), failures
 
         (wf / "ci.yml").write_text(
             ci_good.replace(

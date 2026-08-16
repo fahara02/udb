@@ -57,3 +57,11 @@ CI run `31923594749` reached the remaining udb-coding sync guard and identified
 one stale baseline line in each provider wrapper. The plugin reference, OpenAI
 instructions, and Ollama Modelfile now mirror the canonical 0.5.10 baseline;
 their curated companion content is unchanged.
+
+CI run `31923743283` then exposed the same repair gap for the descriptor-driven
+high-level SDK clients: the raw protobuf stubs and Swagger were current, but the
+six robustness clients still advertised `VerifyMfaChallenge` as read-only, so
+the generated SDK benchmark listing could not be refreshed. The Linux Rust job
+now regenerates all six clients and both SDK benchmark documents, fails on any
+`sdk/` drift, and includes that entire deterministic diff in the existing
+binary-safe repair artifact.

@@ -32,3 +32,10 @@ service docs, and binary descriptor baseline.
 CI run `31923594749` also exposed the final udb-coding provider-version drift.
 All three wrappers now advertise the canonical 0.5.10 product/SDK baseline. No
 local skill sync was run.
+
+The Linux repair contract now also owns descriptor-driven SDK robustness
+clients and SDK benchmark documentation. It runs the built v0.5.10 broker's
+canonical `sdk generate --lang all` pipeline, refreshes benchmark docs, fails
+on any `sdk/` drift, and returns those changes in the same CI artifact. This
+closes the missing repair path reported by CI run `31923743283`; no local SDK
+generator or benchmark-doc generator was run.

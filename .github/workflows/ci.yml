@@ -268,6 +268,16 @@ jobs:
         run: cargo test --locked --no-run --all-targets
       - name: Test UDB library
         run: cargo test --locked --lib
+      - name: SDK robustness clients + benchmark docs drift
+        if: runner.os == 'Linux'
+        run: |
+          target/debug/udb sdk generate --lang all --out sdk
+          node scripts/gen-sdk-benchmark-docs.mjs
+          if ! git diff --quiet -- sdk; then
+            echo "::error::Generated SDK robustness clients or benchmark docs are stale. Apply the CI repair artifact and commit."
+            git diff --stat -- sdk
+            exit 1
+          fi
       - name: Native contract manifest drift + lint (F13 hard gate)
         # Phase 0A: the committed native-contract manifest must match the
         # descriptor, and `native lint` must report zero error-severity
@@ -338,6 +348,8 @@ jobs:
         continue-on-error: true
         run: |
           test -x target/debug/udb
+          target/debug/udb sdk generate --lang all --out sdk
+          node scripts/gen-sdk-benchmark-docs.mjs
           python3 scripts/generate-codebase-map.py
           python3 udb-skill/sync_references.py
           target/debug/udb native manifest > docs/generated/udb-native-contract.json
@@ -345,6 +357,7 @@ jobs:
           target/debug/udb native contract-baseline \
             --baseline docs/generated/contract-baseline.bin
           git diff --binary -- \
+            sdk \
             docs/generated/codebase-map.md \
             docs/generated/udb-native-contract.json \
             docs/generated/native-services.md \
