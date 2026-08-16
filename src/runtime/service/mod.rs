@@ -954,13 +954,7 @@ impl DataBrokerService {
                     format!("rate limit redis error: {err}"),
                 );
                 return self
-                    .rate_limit_failure_fallback(
-                        &key,
-                        window_secs,
-                        max_rps,
-                        unix_epoch,
-                        status,
-                    )
+                    .rate_limit_failure_fallback(&key, window_secs, max_rps, unix_epoch, status)
                     .await;
             }
         };

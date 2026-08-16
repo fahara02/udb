@@ -455,13 +455,12 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
         notification_log.q("tenant_id"),
         notification_log.q("event_type"),
     );
-    let (target_log_id, target_created_at): (String, String) =
-        sqlx::query_as(&restored_log_sql)
-            .bind(&target_tenant)
-            .bind(&event_type)
-            .fetch_one(&pool)
-            .await
-            .expect("read restored partitioned notification log");
+    let (target_log_id, target_created_at): (String, String) = sqlx::query_as(&restored_log_sql)
+        .bind(&target_tenant)
+        .bind(&event_type)
+        .fetch_one(&pool)
+        .await
+        .expect("read restored partitioned notification log");
     assert_ne!(
         target_log_id, source_log_id,
         "the UUID identity member of the partition-aware key must be remapped"
@@ -502,7 +501,10 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
     assert_eq!(restored_a.3.as_deref(), Some(restored_b.0.as_str()));
     assert_eq!(restored_b.3.as_deref(), Some(restored_a.0.as_str()));
     for restored_user in [&restored_a, &restored_b] {
-        assert_eq!(restored_user.2, "", "partial-index-excluded email stays empty");
+        assert_eq!(
+            restored_user.2, "",
+            "partial-index-excluded email stays empty"
+        );
         assert_eq!(restored_user.1.len(), 33);
         assert!(restored_user.1.starts_with('r'));
     }

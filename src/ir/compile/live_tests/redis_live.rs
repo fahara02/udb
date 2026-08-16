@@ -33,9 +33,7 @@ async fn redis_compiled_kv_read_write_delete_match_live_keys() {
         .or_else(|_| std::env::var("REDIS_URL"))
         .or_else(|_| std::env::var("UDB_INTEGRATION_REDIS_URL"))
     else {
-        eprintln!(
-            "Redis DSN unset - skipping live Redis IR golden"
-        );
+        eprintln!("Redis DSN unset - skipping live Redis IR golden");
         return;
     };
 

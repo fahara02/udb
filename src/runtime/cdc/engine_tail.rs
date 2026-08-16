@@ -2527,11 +2527,7 @@ impl CdcEngine {
     /// pipelined `tail_outbox` loop instead uses `enqueue_outbox_produce` +
     /// `await_and_ack_delivery` so a batch of produces overlaps in flight (#81).
     #[cfg(feature = "kafka")]
-    async fn produce_and_ack<C>(
-        &self,
-        prepared: PreparedOutbox,
-        mut redis_conn: Option<&mut C>,
-    )
+    async fn produce_and_ack<C>(&self, prepared: PreparedOutbox, mut redis_conn: Option<&mut C>)
     where
         C: redis::aio::ConnectionLike + Send,
     {
@@ -2648,11 +2644,7 @@ impl CdcEngine {
     /// `DeliveryFuture` resolves to `Result<delivery, Canceled>`; a cancel is
     /// treated as a transient failure (#81).
     #[cfg(feature = "kafka")]
-    async fn await_and_ack_delivery<C>(
-        &self,
-        pending: PendingDelivery,
-        redis_conn: Option<&mut C>,
-    )
+    async fn await_and_ack_delivery<C>(&self, pending: PendingDelivery, redis_conn: Option<&mut C>)
     where
         C: redis::aio::ConnectionLike + Send,
     {
@@ -2691,8 +2683,7 @@ impl CdcEngine {
         prepared: &PreparedOutbox,
         reason: &str,
         mut redis_conn: Option<&mut C>,
-    )
-    where
+    ) where
         C: redis::aio::ConnectionLike + Send,
     {
         // Rate-limit the log (NOT the metric or the per-event pending mark): an

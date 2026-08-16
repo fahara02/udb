@@ -50,10 +50,7 @@ type RestoreValueRemaps = HashMap<RestoreColumnKey, HashMap<String, serde_json::
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum RestoreRemapAuthority {
-    GeneratedText {
-        uuid: bool,
-        max_len: Option<usize>,
-    },
+    GeneratedText { uuid: bool, max_len: Option<usize> },
     OwnedSequence(String),
 }
 
@@ -210,10 +207,7 @@ const MIN_BOUNDED_TEXT_RESTORE_LENGTH: usize = 33;
 const MAX_RESTORE_REMAP_PLANS_PER_TABLE: usize = 256;
 const MAX_PARTIAL_RESTORE_PREDICATE_ITERATIONS: usize = 64;
 
-fn restored_unique_value(
-    authority: &RestoreRemapAuthority,
-    target_tenant_id: &str,
-) -> String {
+fn restored_unique_value(authority: &RestoreRemapAuthority, target_tenant_id: &str) -> String {
     let RestoreRemapAuthority::GeneratedText { uuid, max_len } = authority else {
         unreachable!("text restore values require generated-text authority");
     };
@@ -340,11 +334,7 @@ fn apply_parent_restore_remaps(
                         "restore_tenant",
                         format!(
                             "foreign-key restore value for {}.{}.{} references {}.{} later in restore order",
-                            table.schema,
-                            table.table,
-                            column,
-                            fk.ref_schema,
-                            fk.ref_table
+                            table.schema, table.table, column, fk.ref_schema, fk.ref_table
                         ),
                     ));
                 }
@@ -826,9 +816,7 @@ fn plan_protects_unique_key(
         plan.column == column
             && (plan.predicates.is_empty()
                 || predicate.is_some_and(|predicate| {
-                    plan.predicates
-                        .iter()
-                        .any(|planned| planned == predicate)
+                    plan.predicates.iter().any(|planned| planned == predicate)
                 }))
     })
 }
@@ -930,9 +918,7 @@ async fn postgres_live_unique_restore_keys(
         let predicate: Option<String> = row.try_get("predicate").map_err(|err| {
             backup_internal_status(
                 "restore_unique_index_probe",
-                format!(
-                    "restore unique-index predicate decode failed for {schema}.{table}: {err}"
-                ),
+                format!("restore unique-index predicate decode failed for {schema}.{table}: {err}"),
             )
         })?;
         let nulls_not_distinct: bool = row.try_get("nulls_not_distinct").map_err(|err| {
@@ -1053,8 +1039,8 @@ async fn postgres_restore_remap_plans(
         }
         let predicate = key.predicate.as_deref();
         if key.columns.iter().any(|column| {
-            let guaranteed_non_null = manifest_column(table_meta, column)
-                .is_some_and(|column| column.not_null);
+            let guaranteed_non_null =
+                manifest_column(table_meta, column).is_some_and(|column| column.not_null);
             (!key.nulls_not_distinct || guaranteed_non_null)
                 && (plan_protects_unique_key(&plans, column, predicate)
                     || foreign_key_remap_available(
@@ -1714,12 +1700,8 @@ pub(crate) async fn restore_tenant(
                 })?;
             restored_rows += 1;
         }
-        apply_deferred_self_references(
-            &mut *tx,
-            manifest_table,
-            &deferred_self_reference_rows,
-        )
-        .await?;
+        apply_deferred_self_references(&mut *tx, manifest_table, &deferred_self_reference_rows)
+            .await?;
         restored_table_count += 1;
     }
     tx.commit().await.map_err(|err| {
@@ -2116,32 +2098,27 @@ mod restore_remap_tests {
 
     #[test]
     fn bounded_text_restore_authority_retains_full_entropy_and_username_lexical_check() {
-        let denied = restore_remap_authority(
-            "app",
-            "short_codes",
-            "code",
-            "character varying(22)",
-            None,
-        )
-        .expect_err("truncating away random uniqueness must fail closed");
+        let denied =
+            restore_remap_authority("app", "short_codes", "code", "character varying(22)", None)
+                .expect_err("truncating away random uniqueness must fail closed");
         assert_eq!(denied.code(), tonic::Code::FailedPrecondition);
         assert!(denied.message().contains("below the 33-character"));
 
-        let authority = restore_remap_authority(
-            "app",
-            "wide_codes",
-            "code",
-            "character varying(33)",
-            None,
-        )
-        .expect("a complete 128-bit bounded encoding is supported");
+        let authority =
+            restore_remap_authority("app", "wide_codes", "code", "character varying(33)", None)
+                .expect("a complete 128-bit bounded encoding is supported");
         let first = restored_unique_value(&authority, "tenant-a");
         let second = restored_unique_value(&authority, "tenant-a");
         assert_eq!(first.len(), 33);
         assert_eq!(second.len(), 33);
         assert!(first.starts_with('r'));
         assert!(second.starts_with('r'));
-        assert!(first.chars().next().is_some_and(|ch| ch.is_ascii_lowercase()));
+        assert!(
+            first
+                .chars()
+                .next()
+                .is_some_and(|ch| ch.is_ascii_lowercase())
+        );
         assert!(
             first
                 .chars()
