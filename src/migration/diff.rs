@@ -102,6 +102,20 @@ pub enum ChangeSafety {
 pub struct ChangeOperation {
     pub kind: ChangeKind,
     pub safety: ChangeSafety,
+    /// Whether applying this operation can DESTROY existing row data.
+    ///
+    /// Consumers gate deploys on the plan, and the only signal used to be the
+    /// operation name — so "never drop a column" had to be written as "reject
+    /// anything starting with Drop". That also rejects `DropIndex`/`DropPolicy`
+    /// (reissued on ordinary version upgrades, each paired with a matching
+    /// Create) and `DropNotNull` (a widening that cannot reject any write which
+    /// succeeds today), which makes routine upgrades impossible. Downstream
+    /// tooling should gate on THIS flag, never on the verb.
+    ///
+    /// True only where committed rows or their values can be lost. Dropping a
+    /// constraint, index, policy or default removes enforcement or a derived
+    /// object, not data, so those are false.
+    pub data_destructive: bool,
     pub priority: i32,
     pub schema: String,
     pub table: String,
@@ -1612,6 +1626,7 @@ fn rename_sources(tables: &[ManifestTable]) -> BTreeSet<String> {
 fn finalize_ops(ops: &mut [ChangeOperation]) {
     for op in ops.iter_mut() {
         op.priority = priority(&op.kind);
+        op.data_destructive = is_data_destructive(&op.kind);
         op.fingerprint = operation_fingerprint(op);
     }
     ops.sort_by(|a, b| {
@@ -1639,6 +1654,36 @@ fn operation_fingerprint(op: &ChangeOperation) -> String {
         op.kind, op.schema, op.table, op.column, op.object_name, op.safety
     ));
     format!("sha256:{:x}", hasher.finalize())
+}
+
+/// Whether a change kind can destroy committed row data.
+///
+/// Deliberately conservative: anything that removes rows, removes a column's
+/// values, or rewrites values in place is destructive. Removing enforcement (a
+/// constraint, index, policy, default or NOT NULL) is not, and neither is
+/// detaching a partition, whose rows survive in the detached table.
+pub fn is_data_destructive(kind: &ChangeKind) -> bool {
+    match kind {
+        // Rows or their values are lost.
+        ChangeKind::DropTable
+        | ChangeKind::DropColumn
+        | ChangeKind::DropPartition
+        | ChangeKind::DropCollection
+        | ChangeKind::DropBucket
+        | ChangeKind::DropStore => true,
+        // An in-place type rewrite can be lossy (narrowing, failed cast); the
+        // planner emits a USING expression where it can, but the operation is
+        // still value-rewriting, so it must not be auto-approved as harmless.
+        ChangeKind::ChangeColumnType => true,
+        // Storage-engine and validator rewrites re-materialise existing rows.
+        ChangeKind::ChangeTableEngine => true,
+        // Everything else removes enforcement (constraint, index, policy, default,
+        // NOT NULL), removes a DERIVED object that can be rebuilt
+        // (`DropMaterializedView`), detaches a partition whose rows survive in the
+        // detached table, or only adds. None of those lose source-of-truth rows,
+        // and flagging them is what made routine upgrades impossible downstream.
+        _ => false,
+    }
 }
 
 fn priority(kind: &ChangeKind) -> i32 {
@@ -2028,6 +2073,96 @@ mod tests {
     /// created, reported success, and startup then failed verification on an
     /// index the manifest requires.
     #[test]
+    /// The verb is not the signal. A downstream guard written as "reject anything
+    /// starting with Drop" also rejects the drops UDB reissues on ordinary version
+    /// upgrades, which made every upgrade impossible for a consumer. `data_destructive`
+    /// exists so tooling gates on intent instead.
+    #[test]
+    fn data_destructive_marks_row_loss_and_not_mere_verbs() {
+        for kind in [
+            ChangeKind::DropTable,
+            ChangeKind::DropColumn,
+            ChangeKind::DropPartition,
+            ChangeKind::DropCollection,
+            ChangeKind::DropBucket,
+            ChangeKind::DropStore,
+            ChangeKind::ChangeColumnType,
+            ChangeKind::ChangeTableEngine,
+        ] {
+            assert!(
+                is_data_destructive(&kind),
+                "{kind:?} can lose committed rows or values and must be flagged"
+            );
+        }
+
+        // Each of these is a "Drop*" that removes enforcement or a derived object.
+        // Flagging them is what blocked routine upgrades downstream.
+        for kind in [
+            ChangeKind::DropIndex,
+            ChangeKind::DropPolicy,
+            ChangeKind::DropNotNull,
+            ChangeKind::DropUnique,
+            ChangeKind::DropForeignKey,
+            ChangeKind::DropConstraint,
+            ChangeKind::DropDefault,
+            ChangeKind::DropTrigger,
+            ChangeKind::DropMaterializedView,
+            ChangeKind::DetachPartition,
+        ] {
+            assert!(
+                !is_data_destructive(&kind),
+                "{kind:?} removes enforcement or a rebuildable object, not rows"
+            );
+        }
+
+        // Additive work is never destructive.
+        for kind in [
+            ChangeKind::CreateTable,
+            ChangeKind::AddColumn,
+            ChangeKind::CreateIndex,
+        ] {
+            assert!(!is_data_destructive(&kind), "{kind:?} only adds");
+        }
+    }
+
+    /// The flag must be populated on every finalized operation, not left default.
+    #[test]
+    fn finalize_populates_data_destructive() {
+        let mut ops = vec![
+            op(
+                ChangeKind::DropColumn,
+                ChangeSafety::RequiresReview,
+                "public",
+                "patients",
+                "ssn",
+                "",
+                "column removed from proto",
+                "",
+            ),
+            op(
+                ChangeKind::DropIndex,
+                ChangeSafety::SafeAuto,
+                "public",
+                "patients",
+                "",
+                "idx_patients_name",
+                "index removed from proto",
+                "",
+            ),
+        ];
+        finalize_ops(&mut ops);
+        let dropped_column = ops
+            .iter()
+            .find(|o| o.kind == ChangeKind::DropColumn)
+            .expect("drop column present");
+        let dropped_index = ops
+            .iter()
+            .find(|o| o.kind == ChangeKind::DropIndex)
+            .expect("drop index present");
+        assert!(dropped_column.data_destructive);
+        assert!(!dropped_index.data_destructive);
+    }
+
     fn redefined_index_drops_before_it_creates() {
         let mut ops = vec![
             op(

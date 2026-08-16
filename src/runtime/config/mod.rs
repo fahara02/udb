@@ -1002,6 +1002,9 @@ impl MigrationOptions {
     /// Currently honours:
     /// - `UDB_SEEDERS_PATH`
     /// - `UDB_SEEDER_PATH` (legacy alias)
+    /// - `UDB_DB_OPS_ROOT`, `UDB_LEDGER_SCHEMA`
+    /// - `UDB_FORCE_RESEED`, `UDB_SKIP_UNCHANGED_VERIFY`,
+    ///   `UDB_STARTUP_SKIP_IF_UNCHANGED`, `UDB_MIGRATION_EMERGENCY_AUTO_ALTER`
     pub fn from_env() -> Self {
         let mut opts = Self::default();
         opts.merge_env();
@@ -1042,6 +1045,13 @@ impl MigrationOptions {
         }
         if let Some(value) = bool_env("UDB_STARTUP_SKIP_IF_UNCHANGED") {
             self.skip_if_unchanged = value;
+        }
+        // Settable by env on purpose. This is the documented repair path for a
+        // startup that fail-closes on live-vs-manifest drift, and an operator
+        // hitting that is in a crash-loop — often with the config baked into a
+        // container image, where `-e` is reachable and editing a file is not.
+        if let Some(value) = bool_env("UDB_MIGRATION_EMERGENCY_AUTO_ALTER") {
+            self.emergency_auto_alter = value;
         }
     }
 

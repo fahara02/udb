@@ -43,6 +43,44 @@ const COMMANDS: &[CmdHelp] = &[
   Example: udb serve proto \"\" 0.0.0.0:50051",
     },
     CmdHelp {
+        name: "verify",
+        group: "Core",
+        summary: "Compare the proto manifest against a LIVE database, read-only, before applying anything.",
+        usage: "udb verify --live [--dsn <dsn>] [--json]",
+        details: "  Runs the SAME comparison `serve` runs during startup verification, but
+  read-only and before any DDL. `udb drift --prior` compares protos against a
+  prior MANIFEST; this compares them against the actual database, which is the
+  class of divergence that otherwise surfaces only at startup — after the
+  migration has already been applied.
+
+  Prints each finding with its schema, table and column. Exits 1 when any
+  finding exists, so it can gate a deploy.
+
+  Typical use before upgrading a long-lived deployment:
+    udb verify --live --dsn \"$UDB_PG_DSN\"",
+    },
+    CmdHelp {
+        name: "env",
+        group: "Core",
+        summary: "Generate a working .env for a deployment posture, with real generated secrets.",
+        usage: "udb env [--profile dev|enterprise] [--out .env] [--dsn <dsn>] [--force]",
+        details: "  Writes the variables that actually decide whether a broker boots, each with a
+  one-line reason, instead of making you assemble them from the ~270 in
+  .env.example. Secrets (UDB_ENCRYPTION_KEY, UDB_APPROVAL_SIGNING_KEY) are
+  generated fresh per file from the OS CSPRNG, so a generated file is never a
+  shared placeholder.
+
+  --profile enterprise (default) writes production posture: mandatory mTLS and
+  UDB_MIGRATE_ENABLED=false, so a restart never migrates a live database.
+  --profile dev writes loopback posture with mTLS commented out.
+
+  Prints to stdout unless --out is given, and refuses to overwrite an existing
+  file without --force, because replacing a file that holds an encryption key
+  can lock you out of encrypted data.
+
+  Then: udb requirements (backends this manifest needs) and udb doctor.",
+    },
+    CmdHelp {
         name: "requirements",
         group: "Core",
         summary: "Print the backend contract this project's manifest declares (run before first start).",
@@ -485,6 +523,7 @@ mod tests {
             "serve",
             "doctor",
             "requirements",
+            "env",
             "auth bootstrap user",
             "sdk generate",
         ] {

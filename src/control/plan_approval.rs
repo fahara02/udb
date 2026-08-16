@@ -36,7 +36,26 @@ pub struct PlanOperation {
     /// Explanation for blocked operations.
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub blocked_reason: String,
+    /// Whether applying this operation can DESTROY committed row data.
+    ///
+    /// Gate deploys on THIS, not on the operation name. Verb-based rules such as
+    /// "reject anything starting with Drop" also reject `DropIndex`/`DropPolicy`
+    /// — which are reissued on ordinary version upgrades, each paired with a
+    /// matching Create — and `DropNotNull`, a widening that cannot reject any
+    /// write that succeeds today. Such a rule blocks every routine UDB upgrade.
+    ///
+    /// True only where rows or their values can be lost: dropping a table,
+    /// column, partition, collection, bucket or store, an in-place column type
+    /// rewrite, or a storage-engine change. Removing a constraint, index, policy,
+    /// default or NOT NULL removes enforcement, not data, so it is false.
+    #[serde(default)]
+    pub data_destructive: bool,
     /// Deterministic fingerprint of this operation (kind+schema+table+column+safety).
+    ///
+    /// Note `data_destructive` is deliberately NOT part of the fingerprint or the
+    /// plan's `operations_hash`: it is derived from `kind`, so including it would
+    /// change every hash without changing the plan's meaning and invalidate
+    /// already-approved plans across an upgrade.
     pub fingerprint: String,
     /// Optional SQL preview (excluded from fingerprint comparison).
     #[serde(skip_serializing_if = "String::is_empty", default)]
@@ -110,6 +129,7 @@ pub fn build_exported_plan(
             column: c.column.clone(),
             safety,
             blocked_reason: c.blocked_reason.clone(),
+            data_destructive: crate::migration::diff::is_data_destructive(&c.kind),
             fingerprint: fp,
             sql_preview: String::new(),
         }

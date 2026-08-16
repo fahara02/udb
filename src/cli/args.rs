@@ -40,6 +40,23 @@ pub(crate) enum Command {
     Requirements {
         json: bool,
     },
+    /// Generate a working `.env` for the chosen deployment posture, with real
+    /// generated secrets, instead of assembling one from the ~270 variables in
+    /// `.env.example`.
+    Env {
+        profile: String,
+        out: Option<String>,
+        force: bool,
+        dsn: String,
+    },
+    /// Compare the proto manifest against a LIVE database, read-only, using the
+    /// same comparison startup runs — so drift is found before any DDL is
+    /// applied rather than after.
+    Verify {
+        live: bool,
+        dsn: Option<String>,
+        json: bool,
+    },
     /// Lightweight Docker HEALTHCHECK — exit 0 if healthy, 1 otherwise.
     HealthCheck,
     /// Start the tonic DataBroker skeleton.
@@ -1021,6 +1038,25 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         Some("health-check") | Some("healthcheck") => {
             offset = 1;
             Command::HealthCheck
+        }
+        Some("verify") => {
+            offset = 1;
+            Command::Verify {
+                live: has_flag("--live"),
+                dsn: flag_value("--dsn"),
+                json: has_flag("--json"),
+            }
+        }
+        Some("env") => {
+            offset = 1;
+            Command::Env {
+                profile: flag_value("--profile").unwrap_or_else(|| "enterprise".to_string()),
+                out: flag_value("--out"),
+                force: has_flag("--force"),
+                dsn: flag_value("--dsn").unwrap_or_else(|| {
+                    "postgres://udb:udb@127.0.0.1:5432/udb?sslmode=disable".to_string()
+                }),
+            }
         }
         Some("init") => {
             offset = 1;

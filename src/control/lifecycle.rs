@@ -1881,6 +1881,13 @@ async fn run_startup_lifecycle_core(
                 report.errors.push(format!(
                     "{finding_count} live-schema drift finding(s) above; the migration's DDL has already been applied                      but the new manifest was NOT recorded in proto_schema_versions, so restarting repeats this                      verification against the same live schema"
                 ));
+                // Name the documented repair path. `emergency_auto_alter` feeds these
+                // exact findings to the repair planner instead of fail-closing, and it
+                // is otherwise discoverable only by reading this file.
+                report.errors.push(
+                    "remedy: run `udb verify --live --dsn <dsn>` to review these findings against the database                      before applying anything, or set migration.emergency_auto_alter=true                      (UDB_MIGRATION_EMERGENCY_AUTO_ALTER=true) to let startup feed them to the repair planner                      and apply the safe repairs"
+                        .to_string(),
+                );
                 return Err(report_failure_json(
                     &report,
                     "PostgreSQL drift detected".to_string(),

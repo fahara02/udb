@@ -27,6 +27,7 @@ mod auth;
 mod authz_cli;
 mod doctor;
 mod env_setup;
+mod env_template;
 mod evidence;
 mod help;
 mod init;
@@ -368,6 +369,26 @@ pub fn run() {
                 DoctorOutputMode::Human => print_doctor_human(&report),
             }
             process::exit(exit_code);
+        }
+        Command::Env {
+            ref profile,
+            ref out,
+            force,
+            ref dsn,
+        } => {
+            // Dispatched BEFORE proto parsing on purpose: an operator generating
+            // an env file is bringing a deployment up and may not have a parseable
+            // project yet. Requiring one would defeat the point of the command.
+            let Some(parsed) = env_template::EnvProfile::parse(profile) else {
+                eprintln!("udb env: unknown profile {profile:?} — expected `dev` or `enterprise`");
+                process::exit(2);
+            };
+            process::exit(env_template::run(
+                parsed,
+                out.as_deref(),
+                force,
+                dsn.as_str(),
+            ));
         }
         Command::HealthCheck => {
             // Lightweight Docker HEALTHCHECK: connect to PG and verify system catalog.
@@ -968,6 +989,100 @@ pub fn run() {
             }
             process::exit(exit_code);
         }
+        Command::Verify { live, dsn, json } => {
+            if !live {
+                eprintln!(
+                    "udb verify currently supports only --live.
+                     For an offline proto-vs-prior-manifest comparison use `udb drift --prior <manifest>`."
+                );
+                process::exit(2);
+            }
+            let manifest = CatalogManifest::from_schemas(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
+            // Same merge `serve` and `drift` do: without the embedded native
+            // schemas the CLI manifest omits the `udb_*` tables and would report
+            // them all as missing.
+            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
+            if let Some(dsn) = dsn.as_deref().filter(|value| !value.trim().is_empty()) {
+                #[allow(unused_unsafe)]
+                unsafe {
+                    env::set_var("UDB_PG_DSN", dsn);
+                }
+            }
+            let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
+                eprintln!("failed to create tokio runtime: {err}");
+                process::exit(1);
+            });
+            let exit_code = runtime.block_on(async {
+                let rt = DataBrokerRuntime::from_env().await;
+                if rt.pg_pool_clone().is_none() {
+                    eprintln!(
+                        "verify --live: PostgreSQL is not configured. Pass --dsn <dsn> or set UDB_PG_DSN."
+                    );
+                    return 1i32;
+                }
+                // Read-only: this is exactly the comparison startup performs, run
+                // BEFORE any apply, so the findings that would fail a boot are
+                // visible while the database is still untouched.
+                let drift = match rt.verify_postgres_manifest_drift(&manifest).await {
+                    Ok(drift) => drift,
+                    Err(err) => {
+                        eprintln!("verify --live: could not read the live schema: {err}");
+                        return 1i32;
+                    }
+                };
+                if json {
+                    #[derive(Serialize)]
+                    struct Finding<'a> {
+                        kind: &'a str,
+                        schema: &'a str,
+                        table: &'a str,
+                        column: &'a str,
+                        message: &'a str,
+                    }
+                    let findings: Vec<Finding<'_>> = drift
+                        .iter()
+                        .map(|d| Finding {
+                            kind: &d.kind,
+                            schema: &d.schema,
+                            table: &d.table,
+                            column: &d.column,
+                            message: &d.message,
+                        })
+                        .collect();
+                    println!(
+                        "{}",
+                        serde_json::json!({
+                            "verified_tables": manifest.tables.len(),
+                            "finding_count": findings.len(),
+                            "findings": findings,
+                        })
+                    );
+                } else if drift.is_empty() {
+                    eprintln!(
+                        "verify --live: OK — {} manifest table(s) match the live schema.",
+                        manifest.tables.len()
+                    );
+                } else {
+                    eprintln!(
+                        "verify --live: {} finding(s) across {} manifest table(s):",
+                        drift.len(),
+                        manifest.tables.len()
+                    );
+                    for finding in &drift {
+                        eprintln!("  [{}] {}", finding.kind, finding.message);
+                    }
+                    eprintln!(
+                        "
+These are what a startup verification would fail on. Reconcile the proto or the
+                         database before applying, or set UDB_MIGRATION_EMERGENCY_AUTO_ALTER=true to let
+                         startup feed them to the repair planner."
+                    );
+                }
+                if drift.is_empty() { 0 } else { 1 }
+            });
+            process::exit(exit_code);
+        }
         Command::Drift => {
             let manifest = CatalogManifest::from_schemas(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
@@ -1264,7 +1379,8 @@ pub fn run() {
         | Command::Orm { .. }
         | Command::Native { .. }
         | Command::AppInit { .. }
-        | Command::CompatMatrix => {
+        | Command::CompatMatrix
+        | Command::Env { .. } => {
             // Already handled before proto parsing above; unreachable.
         }
         Command::Explain => {

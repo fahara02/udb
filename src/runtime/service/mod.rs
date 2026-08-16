@@ -611,12 +611,21 @@ impl DataBrokerService {
                 .active_exact_for(&security.project_id)
                 .is_none()
         {
+            // Name the project and the remedy. This refusal is the first thing a
+            // deployment predating the project-catalog model hits after an
+            // upgrade — every service authenticating under a named project fails
+            // its first call — and the message used to name neither the project
+            // nor any way out, so the operator had to read the source to learn
+            // that StageCatalog + ActivateCatalog is what unblocks it.
+            let project = security.project_id.trim();
             return Err(crate::runtime::executor_utils::schema_status(
                 tonic::Code::FailedPrecondition,
                 "catalog",
                 operation,
                 "catalog_project_not_active",
-                "the authenticated project has no exact ACTIVE catalog; default-project fallback is refused",
+                format!(
+                    "project '{project}' has no ACTIVE catalog, and falling back to the default                      project is refused because it would serve another project's schema.                      Stage and activate a catalog for '{project}' (CatalogService StageCatalog then                      ActivateCatalog, or `udb catalog activate --project {project}`). A deployment                      created before projects had catalogs has no rows in the catalog-version or                      project-binding tables and needs this once per project."
+                ),
             ));
         }
 

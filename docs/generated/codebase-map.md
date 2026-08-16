@@ -133,13 +133,14 @@ graph LR
 - **src/backend/plugins/sqlite.rs** — NW3-2 — SQLite plugin. Same shape as the MySQL plugin. The runtime register function detects `sqlite::memory:` / `:memory:` in the DSN and clamps to `max_connections = 1` so the in-memory schema and data survive acros… · types: `SqlitePlugin` · consts: `PLUGIN`
 - **src/backend/plugins/weaviate.rs** — C9 — Weaviate backend plugin. REST + GraphQL via reqwest. Same shape as the Qdrant plugin. · types: `WeaviatePlugin` · consts: `PLUGIN`
 
-### cli  (17 files)
+### cli  (18 files)
 
 - **src/cli/args.rs** — main.rs split — args (Phase H). · types: `Command`, `InitArgs`, `SdkSelector`, `SdkAction`, `OrmAction`, `NativeAction`, `AuthCommand`, `AuthzCommand`, `ComplianceCommand`, `DevAction` · fns: `parse`, `split_csv`, `parse_args`
 - **src/cli/auth.rs** — Native auth CLI commands. These commands call the generated UDB authn/authz/apikey clients. The CLI is a control-plane convenience layer only; CRUD still flows through the native service protos and their server implem… · fns: `run_auth_command`
 - **src/cli/authz_cli.rs** — Native authz governance CLI commands. Surfaces the policy-governance UX over the generated `AuthzService` client. `udb authz simulate` answers "what would change if this policy bundle shipped?" by calling the EXISTING… · fns: `run_authz_command`
 - **src/cli/doctor.rs** — main.rs split — doctor (Phase H). · types: `Remediation`, `DoctorReport`, `DoctorStatus`, `CompatEntry` · fns: `is_auto_fixable`, `describe`, `remediation_for_preflight`, `tls_path_remediation`, `env_with_default`, `normalize_crlf`, `exit_code`, `doctor_status`, `run_doctor`, `build_compat_matrix`, `print_doctor_human`, `bool_icon`
 - **src/cli/env_setup.rs** — main.rs split — env_setup (Phase H). · types: `DoctorOutputMode` · fns: `run_force_sync_for_instance`, `run_dry_run_for_instance`, `load_project_dotenv`, `resolve_existing_project_path`, `load_udb_config_overlay`, `parse_config_overlay_value`, `cli_config_path`, `set_env_from_yaml`, `yaml_string`, `expand_env_template`, `set_env_if_absent`, `set_env` · consts: `DEFAULT_GRPC_BIND_HOST`, `DEFAULT_GRPC_TARGET_HOST`, `DEFAULT_GRPC_PORT`, `DEFAULT_GRPC_BIND_ADDR`, `DEFAULT_GRPC_TARGET_ADDR`
+- **src/cli/env_template.rs** — `udb env` — generate a working `.env` instead of assembling one by hand. `.env.example` documents ~270 variables. That is the right reference and the wrong starting point: an operator bringing up a broker has to read … · types: `EnvProfile` · fns: `parse`, `render`, `run`
 - **src/cli/evidence.rs** — `udb compliance evidence` — master-plan 4.4 compliance-evidence automation. Thin CLI over existing machinery. It drains the durable auth-audit window (the append-only `udb_system.auth_audit_log` relation OWNED by the … · fns: `run_compliance_command`
 - **src/cli/help.rs** — CLI discoverability layer (stopgap pending the full clap migration in `CLI_UPGRADE_PLAN.md`). The hand-rolled `parse_args` has no `--help`/`-h`/ `--version`; this module answers them from a static registry so `udb` is… · fns: `handle_help_or_version`
 - **src/cli/init.rs** — `udb init` command runner. · types: `InitRunError` · fns: `run`
@@ -262,7 +263,7 @@ graph LR
 ### migration  (7 files)
 
 - **src/migration/apply.rs** — Apply engine extension — `ApplyTarget` trait for multi-backend migration apply. Each backend implements `ApplyTarget` so the apply engine can run migrations without knowing the backend's wire protocol. After every app… · traits: `ApplyTarget` · types: `ApplyError`, `ApplyFuture`
-- **src/migration/diff.rs** — types: `ChangeKind`, `ChangeSafety`, `ChangeOperation` · fns: `diff_manifests`
+- **src/migration/diff.rs** — types: `ChangeKind`, `ChangeSafety`, `ChangeOperation` · fns: `diff_manifests`, `is_data_destructive`
 - **src/migration/diff_backends.rs** — Per-backend manifest diff (U14). The original `migration/diff.rs` is **1,400+ lines of Postgres-shaped semantics** — CreateTable, AddColumn, AddCheck, EnableRls, … nothing in it understands a Qdrant `vectors_config` c… · types: `MigrationPhase` · fns: `as_str`, `all`, `diff_qdrant_targets`, `diff_mongodb_targets`, `diff_neo4j_targets`, `diff_clickhouse_targets`, `diff_s3_targets`, `diff_all_backends`
 - **src/migration/mod.rs** — (no public items)
 - **src/migration/phase_runner.rs** — U14 — online migration phase orchestrator. `MigrationPhase` already enumerates `Prepare → Backfill → Validate → Switch → Cleanup` (see `migration/diff_backends.rs`). What was missing — and what the upgrade doc flagged… · traits: `PhaseLedger`, `MigrationPhaseHook` · types: `PhaseStatus`, `PhaseRecord`, `PostgresPhaseLedger`, `RunnerOutcome` · fns: `as_str`, `terminal`, `new`, `run_to_completion`
