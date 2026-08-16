@@ -265,6 +265,22 @@ macro_rules! authorized_call {
     }};
 }
 
+/// `redis::aio::ConnectionManager` does not implement `Debug`, and
+/// `DataBrokerService` derives it. Wrapping the handle keeps the derive working
+/// without hand-writing `Debug` for the whole service. The manager is an opaque
+/// reconnecting handle with no diagnosable state, so the placeholder loses
+/// nothing.
+#[cfg(feature = "redis")]
+#[derive(Clone)]
+pub(crate) struct RateLimitRedisConnection(pub(crate) redis::aio::ConnectionManager);
+
+#[cfg(feature = "redis")]
+impl std::fmt::Debug for RateLimitRedisConnection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("RateLimitRedisConnection(..)")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct DataBrokerService {
     pub catalog: Arc<crate::runtime::catalog::CatalogManager>,
@@ -287,7 +303,7 @@ pub struct DataBrokerService {
     catalog_reconcile_lock: Arc<tokio::sync::Mutex<()>>,
     catalog_generation: Arc<AtomicI64>,
     #[cfg(feature = "redis")]
-    rate_limit_redis: Arc<tokio::sync::Mutex<Option<redis::aio::ConnectionManager>>>,
+    rate_limit_redis: Arc<tokio::sync::Mutex<Option<RateLimitRedisConnection>>>,
     /// W4: set while the limiter is running on its declared failure-mode
     /// fallback (Redis unreachable, mode `local`/`open`); surfaced as a
     /// health-report warning + the rate_limit_degraded metric.
@@ -892,7 +908,7 @@ impl DataBrokerService {
             let mut guard = self.rate_limit_redis.lock().await;
             if guard.is_none() {
                 match redis::aio::ConnectionManager::new(redis.clone()).await {
-                    Ok(conn) => *guard = Some(conn),
+                    Ok(conn) => *guard = Some(RateLimitRedisConnection(conn)),
                     Err(err) => {
                         drop(guard);
                         let status = crate::runtime::executor_utils::retryable_status(
@@ -916,6 +932,7 @@ impl DataBrokerService {
             guard
                 .as_ref()
                 .expect("rate limit redis connection just initialized")
+                .0
                 .clone()
         };
 
