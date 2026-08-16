@@ -45,50 +45,50 @@ public final class AssetProto {
       "f/timestamp.proto\032\033udb/core/common/v1/db" +
       ".proto\032!udb/core/common/v1/security.prot" +
       "o\032\036udb/core/common/v1/types.proto\032$udb/c" +
-      "ore/asset/entity/v1/enums.proto\"\237\013\n\005Asse" +
+      "ore/asset/entity/v1/enums.proto\"\272\013\n\005Asse" +
       "t\022F\n\010asset_id\030\001 \001(\tB+\202\267\030\'\n\010asset_id\022\004UUI" +
       "D\030\001(\001:\021gen_random_uuid()R\007assetId\0227\n\tten" +
       "ant_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002\001" +
-      "R\010tenantId\0225\n\nproject_id\030\003 \001(\tB\026\202\267\030\022\n\npr" +
-      "oject_id\022\004UUIDR\tprojectId\022Q\n\007file_id\030\004 \001" +
-      "(\tB8\202\267\0304\n\007file_id\022\004UUID\030\001Z!The storage F" +
-      "ile this asset wrapsR\006fileId\022,\n\004name\030\005 \001" +
-      "(\tB\030\202\267\030\024\n\004name\022\014VARCHAR(512)R\004name\022<\n\nme" +
-      "dia_type\030\006 \001(\tB\035\202\267\030\031\n\nmedia_type\022\013VARCHA" +
-      "R(40)R\tmediaType\022\201\001\n\006status\030\007 \001(\0162%.udb." +
-      "core.asset.entity.v1.AssetStatusBB\202\267\030>\n\006" +
-      "status\022\013VARCHAR(20)\030\001:\t\'PENDING\'R\032\n\021idx_" +
-      "assets_status\022\005BTREER\006status\022M\n\010metadata" +
-      "\030\010 \001(\tB1\202\267\030-\n\010metadata\022\005JSONBZ\030Arbitrary" +
-      " asset metadatax\001R\010metadata\022\202\001\n\naudit_in" +
-      "fo\030\t \001(\0132\035.udb.core.common.v1.AuditInfoB" +
-      "D\202\267\030@\n\naudit_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ" +
-      "\032Audit trail stored as JSONx\001R\tauditInfo" +
-      "\022o\n\ndeleted_at\030\n \001(\0132\032.google.protobuf.T" +
-      "imestampB4\202\267\0300\n\ndeleted_at\022\013TIMESTAMPTZZ" +
-      "\025Soft delete timestampR\tdeletedAt\022H\n\ndel" +
-      "eted_by\030\013 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021S" +
-      "oft delete actorR\tdeletedBy:\213\004\372\266\030\352\002\n\006ass" +
-      "ets\022\tudb_asset\030\001 \001*?Managed assets wrapp" +
-      "ing storage files with processing lifecy" +
-      "cle0\0018\001@\001b\227\001\n\027assets_tenant_isolation\032z(" +
-      "tenant_id::text = current_setting(\'app.c" +
-      "urrent_tenant_id\', true) OR current_sett" +
-      "ing(\'app.platform_admin\', true) = \'true\'" +
-      ")(\001h\001\212\001%\n\021idx_assets_tenant\022\005BTREEZ\ttena" +
-      "nt_id\212\001!\n\017idx_assets_file\022\005BTREEZ\007file_i" +
-      "d\362\001\024udb.asset.assets.cdc\372\001\nasset:read\212\262\031" +
-      "\227\001\n\006tenant\032\ttenant_id*4tenant_id = curre" +
-      "nt_setting(\'app.current_tenant_id\')2\013sof" +
-      "t_delete:\021asset.operational@\373\023H\002R\006tenant" +
-      "Z\010standardr\025tenant.data_residencyB\365\001\n\034co" +
-      "m.udb.core.asset.entity.v1B\nAssetProtoP\001" +
-      "ZDgithub.com/fahara02/udb/sdk/go/gen/udb" +
-      "/core/asset/entity/v1;entityv1\242\002\004UCAE\252\002\030" +
-      "udb.core.Asset.Entity.V1\312\002\030Udb\\Core\\Asse" +
-      "t\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Asset" +
-      "\\Entity\\V1\352\002\034Udb::Core::Asset::Entity::V" +
-      "1b\006proto3"
+      "R\010tenantId\022P\n\nproject_id\030\003 \001(\tB1\202\267\030-\n\npr" +
+      "oject_id\022\014VARCHAR(120)\322\001\020project_id::tex" +
+      "tR\tprojectId\022Q\n\007file_id\030\004 \001(\tB8\202\267\0304\n\007fil" +
+      "e_id\022\004UUID\030\001Z!The storage File this asse" +
+      "t wrapsR\006fileId\022,\n\004name\030\005 \001(\tB\030\202\267\030\024\n\004nam" +
+      "e\022\014VARCHAR(512)R\004name\022<\n\nmedia_type\030\006 \001(" +
+      "\tB\035\202\267\030\031\n\nmedia_type\022\013VARCHAR(40)R\tmediaT" +
+      "ype\022\201\001\n\006status\030\007 \001(\0162%.udb.core.asset.en" +
+      "tity.v1.AssetStatusBB\202\267\030>\n\006status\022\013VARCH" +
+      "AR(20)\030\001:\t\'PENDING\'R\032\n\021idx_assets_status" +
+      "\022\005BTREER\006status\022M\n\010metadata\030\010 \001(\tB1\202\267\030-\n" +
+      "\010metadata\022\005JSONBZ\030Arbitrary asset metada" +
+      "tax\001R\010metadata\022\202\001\n\naudit_info\030\t \001(\0132\035.ud" +
+      "b.core.common.v1.AuditInfoBD\202\267\030@\n\naudit_" +
+      "info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audit trail " +
+      "stored as JSONx\001R\tauditInfo\022o\n\ndeleted_a" +
+      "t\030\n \001(\0132\032.google.protobuf.TimestampB4\202\267\030" +
+      "0\n\ndeleted_at\022\013TIMESTAMPTZZ\025Soft delete " +
+      "timestampR\tdeletedAt\022H\n\ndeleted_by\030\013 \001(\t" +
+      "B)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft delete ac" +
+      "torR\tdeletedBy:\213\004\372\266\030\352\002\n\006assets\022\tudb_asse" +
+      "t\030\001 \001*?Managed assets wrapping storage f" +
+      "iles with processing lifecycle0\0018\001@\001b\227\001\n" +
+      "\027assets_tenant_isolation\032z(tenant_id::te" +
+      "xt = current_setting(\'app.current_tenant" +
+      "_id\', true) OR current_setting(\'app.plat" +
+      "form_admin\', true) = \'true\')(\001h\001\212\001%\n\021idx" +
+      "_assets_tenant\022\005BTREEZ\ttenant_id\212\001!\n\017idx" +
+      "_assets_file\022\005BTREEZ\007file_id\362\001\024udb.asset" +
+      ".assets.cdc\372\001\nasset:read\212\262\031\227\001\n\006tenant\032\tt" +
+      "enant_id*4tenant_id = current_setting(\'a" +
+      "pp.current_tenant_id\')2\013soft_delete:\021ass" +
+      "et.operational@\373\023H\002R\006tenantZ\010standardr\025t" +
+      "enant.data_residencyB\365\001\n\034com.udb.core.as" +
+      "set.entity.v1B\nAssetProtoP\001ZDgithub.com/" +
+      "fahara02/udb/sdk/go/gen/udb/core/asset/e" +
+      "ntity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Asse" +
+      "t.Entity.V1\312\002\030Udb\\Core\\Asset\\Entity\\V1\342\002" +
+      "$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\352\002\034" +
+      "Udb::Core::Asset::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

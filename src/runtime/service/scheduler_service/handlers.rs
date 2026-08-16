@@ -33,8 +33,10 @@ use super::quota::{job_quota_exhausted_status, max_jobs_per_tenant};
 use crate::runtime::native_catalog::NativeModel;
 
 /// Resolve Scheduler's authorization project claim-first. ScheduledJob stores
-/// UUID project identifiers, so every non-empty authority is validated before
+/// Project ids are OPAQUE strings across the control plane, AuthN, policy and the
 /// reaching SQL; an empty value deliberately preserves tenant-wide operators.
+const MAX_PROJECT_ID_LEN: usize = 120;
+
 fn resolved_scheduler_project_scope(
     metadata: &MetadataMap,
     request_project_id: &str,
@@ -42,11 +44,20 @@ fn resolved_scheduler_project_scope(
     let project_id = metadata_project_id(metadata)
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| request_project_id.trim().to_string());
+    let project_id = project_id.trim();
     if project_id.is_empty() {
-        Ok(String::new())
-    } else {
-        Ok(parse_uuid("project_id", &project_id)?.to_string())
+        return Ok(String::new());
     }
+    if project_id.chars().count() > MAX_PROJECT_ID_LEN {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "project_id is too long",
+            [(
+                "project_id",
+                format!("must be at most {MAX_PROJECT_ID_LEN} characters"),
+            )],
+        ));
+    }
+    Ok(project_id.to_string())
 }
 
 /// Optional project-ownership predicate shared by every post-create Scheduler

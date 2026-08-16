@@ -46,67 +46,68 @@ public final class ScheduledJobProto {
       "ore/common/v1/db.proto\032!udb/core/common/" +
       "v1/security.proto\032\036udb/core/common/v1/ty" +
       "pes.proto\032(udb/core/scheduler/entity/v1/" +
-      "enums.proto\"\325\020\n\014ScheduledJob\022@\n\006job_id\030\001" +
+      "enums.proto\"\360\020\n\014ScheduledJob\022@\n\006job_id\030\001" +
       " \001(\tB)\202\267\030%\n\006job_id\022\004UUID\030\001(\001:\021gen_random" +
       "_uuid()R\005jobId\0227\n\ttenant_id\030\002 \001(\tB\032\202\267\030\026\n" +
-      "\ttenant_id\022\004UUID\030\001\230\002\001R\010tenantId\0225\n\nproje" +
-      "ct_id\030\003 \001(\tB\026\202\267\030\022\n\nproject_id\022\004UUIDR\tpro" +
-      "jectId\022.\n\004name\030\004 \001(\tB\032\202\267\030\026\n\004name\022\014VARCHA" +
-      "R(255)\030\001R\004name\022s\n\rschedule_type\030\005 \001(\0162*." +
-      "udb.core.scheduler.entity.v1.ScheduleTyp" +
-      "eB\"\202\267\030\036\n\rschedule_type\022\013VARCHAR(20)\030\001R\014s" +
-      "cheduleType\022L\n\017cron_expression\030\006 \001(\tB#\202\267" +
-      "\030\037\n\017cron_expression\022\014VARCHAR(160)R\016cronE" +
-      "xpression\022_\n\007payload\030\007 \001(\tBE\202\267\030A\n\007payloa" +
-      "d\022\005JSONBZ-Opaque payload delivered with " +
-      "the fired eventx\001R\007payload\022C\n\014target_top" +
-      "ic\030\010 \001(\tB \202\267\030\034\n\014target_topic\022\014VARCHAR(25" +
-      "5)R\013targetTopic\022\212\001\n\006status\030\t \001(\0162\'.udb.c" +
-      "ore.scheduler.entity.v1.JobStatusBI\202\267\030E\n" +
-      "\006status\022\013VARCHAR(20)\030\001:\010\'ACTIVE\'R\"\n\031idx_" +
-      "scheduled_jobs_status\022\005BTREER\006status\022\177\n\014" +
-      "next_fire_at\030\n \001(\0132\032.google.protobuf.Tim" +
-      "estampBA\202\267\030=\n\014next_fire_at\022\013TIMESTAMPTZZ" +
-      " When the job is next due to fireR\nnextF" +
-      "ireAt\022y\n\rlast_fired_at\030\013 \001(\0132\032.google.pr" +
-      "otobuf.TimestampB9\202\267\0305\n\rlast_fired_at\022\013T" +
-      "IMESTAMPTZZ\027When the job last firedR\013las" +
-      "tFiredAt\022C\n\014max_attempts\030\014 \001(\005B \202\267\030\034\n\014ma" +
-      "x_attempts\022\007INTEGER\030\001:\0015R\013maxAttempts\022F\n" +
-      "\rattempt_count\030\r \001(\005B!\202\267\030\035\n\rattempt_coun" +
-      "t\022\007INTEGER\030\001:\0010R\014attemptCount\022M\n\017backoff" +
-      "_seconds\030\016 \001(\005B$\202\267\030 \n\017backoff_seconds\022\007I" +
-      "NTEGER\030\001:\00260R\016backoffSeconds\022\202\001\n\naudit_i" +
-      "nfo\030\017 \001(\0132\035.udb.core.common.v1.AuditInfo" +
-      "BD\202\267\030@\n\naudit_info\022\005JSONB\030\001:\013\'{}\'::jsonb" +
-      "Z\032Audit trail stored as JSONx\001R\tauditInf" +
-      "o\022o\n\ndeleted_at\030\020 \001(\0132\032.google.protobuf." +
-      "TimestampB4\202\267\0300\n\ndeleted_at\022\013TIMESTAMPTZ" +
-      "Z\025Soft delete timestampR\tdeletedAt\022H\n\nde" +
-      "leted_by\030\021 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021" +
-      "Soft delete actorR\tdeletedBy:\324\004\372\266\030\257\003\n\016sc" +
-      "heduled_jobs\022\rudb_scheduler\030\001 \001*IDurable" +
-      " cron and one-shot jobs fired by the lea" +
-      "der-elected scheduler tick0\0018\001@\001b\232\001\n\032sch" +
-      "eduler_tenant_isolation\032z(tenant_id::tex" +
-      "t = current_setting(\'app.current_tenant_" +
-      "id\', true) OR current_setting(\'app.platf" +
-      "orm_admin\', true) = \'true\')(\001h\001\212\001-\n\031idx_" +
-      "scheduled_jobs_tenant\022\005BTREEZ\ttenant_id\212" +
-      "\0015\n\026idx_scheduled_jobs_due\022\005BTREEZ\006statu" +
-      "sZ\014next_fire_at\362\001 udb.scheduler.schedule" +
-      "d_jobs.cdc\372\001\016scheduler:read\212\262\031\233\001\n\006tenant" +
-      "\032\ttenant_id*4tenant_id = current_setting" +
-      "(\'app.current_tenant_id\')2\013soft_delete:\025" +
-      "scheduler.operational@\373\023H\002R\006tenantZ\010stan" +
-      "dardr\025tenant.data_residencyB\224\002\n com.udb." +
-      "core.scheduler.entity.v1B\021ScheduledJobPr" +
-      "otoP\001ZHgithub.com/fahara02/udb/sdk/go/ge" +
-      "n/udb/core/scheduler/entity/v1;entityv1\242" +
-      "\002\004UCSE\252\002\034udb.core.Scheduler.Entity.V1\312\002\034" +
-      "Udb\\Core\\Scheduler\\Entity\\V1\342\002(Udb\\GPBMe" +
-      "tadata\\Core\\Scheduler\\Entity\\V1\352\002 Udb::C" +
-      "ore::Scheduler::Entity::V1b\006proto3"
+      "\ttenant_id\022\004UUID\030\001\230\002\001R\010tenantId\022P\n\nproje" +
+      "ct_id\030\003 \001(\tB1\202\267\030-\n\nproject_id\022\014VARCHAR(1" +
+      "20)\322\001\020project_id::textR\tprojectId\022.\n\004nam" +
+      "e\030\004 \001(\tB\032\202\267\030\026\n\004name\022\014VARCHAR(255)\030\001R\004nam" +
+      "e\022s\n\rschedule_type\030\005 \001(\0162*.udb.core.sche" +
+      "duler.entity.v1.ScheduleTypeB\"\202\267\030\036\n\rsche" +
+      "dule_type\022\013VARCHAR(20)\030\001R\014scheduleType\022L" +
+      "\n\017cron_expression\030\006 \001(\tB#\202\267\030\037\n\017cron_expr" +
+      "ession\022\014VARCHAR(160)R\016cronExpression\022_\n\007" +
+      "payload\030\007 \001(\tBE\202\267\030A\n\007payload\022\005JSONBZ-Opa" +
+      "que payload delivered with the fired eve" +
+      "ntx\001R\007payload\022C\n\014target_topic\030\010 \001(\tB \202\267\030" +
+      "\034\n\014target_topic\022\014VARCHAR(255)R\013targetTop" +
+      "ic\022\212\001\n\006status\030\t \001(\0162\'.udb.core.scheduler" +
+      ".entity.v1.JobStatusBI\202\267\030E\n\006status\022\013VARC" +
+      "HAR(20)\030\001:\010\'ACTIVE\'R\"\n\031idx_scheduled_job" +
+      "s_status\022\005BTREER\006status\022\177\n\014next_fire_at\030" +
+      "\n \001(\0132\032.google.protobuf.TimestampBA\202\267\030=\n" +
+      "\014next_fire_at\022\013TIMESTAMPTZZ When the job" +
+      " is next due to fireR\nnextFireAt\022y\n\rlast" +
+      "_fired_at\030\013 \001(\0132\032.google.protobuf.Timest" +
+      "ampB9\202\267\0305\n\rlast_fired_at\022\013TIMESTAMPTZZ\027W" +
+      "hen the job last firedR\013lastFiredAt\022C\n\014m" +
+      "ax_attempts\030\014 \001(\005B \202\267\030\034\n\014max_attempts\022\007I" +
+      "NTEGER\030\001:\0015R\013maxAttempts\022F\n\rattempt_coun" +
+      "t\030\r \001(\005B!\202\267\030\035\n\rattempt_count\022\007INTEGER\030\001:" +
+      "\0010R\014attemptCount\022M\n\017backoff_seconds\030\016 \001(" +
+      "\005B$\202\267\030 \n\017backoff_seconds\022\007INTEGER\030\001:\00260R" +
+      "\016backoffSeconds\022\202\001\n\naudit_info\030\017 \001(\0132\035.u" +
+      "db.core.common.v1.AuditInfoBD\202\267\030@\n\naudit" +
+      "_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audit trail" +
+      " stored as JSONx\001R\tauditInfo\022o\n\ndeleted_" +
+      "at\030\020 \001(\0132\032.google.protobuf.TimestampB4\202\267" +
+      "\0300\n\ndeleted_at\022\013TIMESTAMPTZZ\025Soft delete" +
+      " timestampR\tdeletedAt\022H\n\ndeleted_by\030\021 \001(" +
+      "\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft delete a" +
+      "ctorR\tdeletedBy:\324\004\372\266\030\257\003\n\016scheduled_jobs\022" +
+      "\rudb_scheduler\030\001 \001*IDurable cron and one" +
+      "-shot jobs fired by the leader-elected s" +
+      "cheduler tick0\0018\001@\001b\232\001\n\032scheduler_tenant" +
+      "_isolation\032z(tenant_id::text = current_s" +
+      "etting(\'app.current_tenant_id\', true) OR" +
+      " current_setting(\'app.platform_admin\', t" +
+      "rue) = \'true\')(\001h\001\212\001-\n\031idx_scheduled_job" +
+      "s_tenant\022\005BTREEZ\ttenant_id\212\0015\n\026idx_sched" +
+      "uled_jobs_due\022\005BTREEZ\006statusZ\014next_fire_" +
+      "at\362\001 udb.scheduler.scheduled_jobs.cdc\372\001\016" +
+      "scheduler:read\212\262\031\233\001\n\006tenant\032\ttenant_id*4" +
+      "tenant_id = current_setting(\'app.current" +
+      "_tenant_id\')2\013soft_delete:\025scheduler.ope" +
+      "rational@\373\023H\002R\006tenantZ\010standardr\025tenant." +
+      "data_residencyB\224\002\n com.udb.core.schedule" +
+      "r.entity.v1B\021ScheduledJobProtoP\001ZHgithub" +
+      ".com/fahara02/udb/sdk/go/gen/udb/core/sc" +
+      "heduler/entity/v1;entityv1\242\002\004UCSE\252\002\034udb." +
+      "core.Scheduler.Entity.V1\312\002\034Udb\\Core\\Sche" +
+      "duler\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\S" +
+      "cheduler\\Entity\\V1\352\002 Udb::Core::Schedule" +
+      "r::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -232,17 +232,17 @@ var File_udb_core_workflow_entity_v1_workflow_instance_proto protoreflect.FileDe
 
 const file_udb_core_workflow_entity_v1_workflow_instance_proto_rawDesc = "" +
 	"\n" +
-	"3udb/core/workflow/entity/v1/workflow_instance.proto\x12\x1budb.core.workflow.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a'udb/core/workflow/entity/v1/enums.proto\"\x92\x12\n" +
+	"3udb/core/workflow/entity/v1/workflow_instance.proto\x12\x1budb.core.workflow.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a'udb/core/workflow/entity/v1/enums.proto\"\xad\x12\n" +
 	"\x10WorkflowInstance\x12O\n" +
 	"\vworkflow_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vworkflow_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
 	"workflowId\x127\n" +
 	"\ttenant_id\x18\x02 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x125\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x12P\n" +
 	"\n" +
-	"project_id\x18\x03 \x01(\tB\x16\x82\xb7\x18\x12\n" +
+	"project_id\x18\x03 \x01(\tB1\x82\xb7\x18-\n" +
 	"\n" +
-	"project_id\x12\x04UUIDR\tprojectId\x12H\n" +
+	"project_id\x12\fVARCHAR(120)\xd2\x01\x10project_id::textR\tprojectId\x12H\n" +
 	"\rworkflow_type\x18\x04 \x01(\tB#\x82\xb7\x18\x1f\n" +
 	"\rworkflow_type\x12\fVARCHAR(255)\x18\x01R\fworkflowType\x12\x93\x01\n" +
 	"\x06status\x18\x05 \x01(\x0e2+.udb.core.workflow.entity.v1.WorkflowStatusBN\x82\xb7\x18J\n" +

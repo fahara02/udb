@@ -212,16 +212,16 @@ var File_udb_core_scheduler_entity_v1_scheduled_job_proto protoreflect.FileDescr
 
 const file_udb_core_scheduler_entity_v1_scheduled_job_proto_rawDesc = "" +
 	"\n" +
-	"0udb/core/scheduler/entity/v1/scheduled_job.proto\x12\x1cudb.core.scheduler.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a(udb/core/scheduler/entity/v1/enums.proto\"\xd5\x10\n" +
+	"0udb/core/scheduler/entity/v1/scheduled_job.proto\x12\x1cudb.core.scheduler.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a(udb/core/scheduler/entity/v1/enums.proto\"\xf0\x10\n" +
 	"\fScheduledJob\x12@\n" +
 	"\x06job_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06job_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05jobId\x127\n" +
 	"\ttenant_id\x18\x02 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x125\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x12P\n" +
 	"\n" +
-	"project_id\x18\x03 \x01(\tB\x16\x82\xb7\x18\x12\n" +
+	"project_id\x18\x03 \x01(\tB1\x82\xb7\x18-\n" +
 	"\n" +
-	"project_id\x12\x04UUIDR\tprojectId\x12.\n" +
+	"project_id\x12\fVARCHAR(120)\xd2\x01\x10project_id::textR\tprojectId\x12.\n" +
 	"\x04name\x18\x04 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
 	"\x04name\x12\fVARCHAR(255)\x18\x01R\x04name\x12s\n" +
 	"\rschedule_type\x18\x05 \x01(\x0e2*.udb.core.scheduler.entity.v1.ScheduleTypeB\"\x82\xb7\x18\x1e\n" +

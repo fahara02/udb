@@ -8,16 +8,21 @@ use tonic::Status;
 
 /// Normalize project authority before binding it to the UUID-backed Workflow
 /// schema. Empty authority deliberately retains tenant-wide administration;
-/// every non-empty value must be a UUID. A textual project code must never be
+/// every non-empty value is kept verbatim. A textual project code must never be
 /// translated to empty because the optional predicate interprets empty as
 /// tenant-wide and would turn a project-scoped credential into a broader one.
 pub(crate) fn workflow_project_bind(project_id: &str) -> Result<String, Status> {
     let trimmed = project_id.trim();
     if trimmed.is_empty() {
-        Ok(String::new())
-    } else {
-        Ok(parse_uuid("project_id", trimmed)?.to_string())
+        return Ok(String::new());
     }
+    if trimmed.chars().count() > 120 {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "project_id is too long",
+            [("project_id", "must be at most 120 characters")],
+        ));
+    }
+    Ok(trimmed.to_string())
 }
 
 /// Tenant + project scope predicate shared by get/list/cancel/signal (16.3.1).

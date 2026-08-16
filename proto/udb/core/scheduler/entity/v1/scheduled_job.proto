@@ -69,7 +69,7 @@ message ScheduledJob {
   string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" not_null: true }];
   // @inject_tag: gorm:"column:tenant_id;not null"
 
-  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "UUID" }];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" using_expression: "project_id::text" }];
   // @inject_tag: gorm:"column:project_id"
 
   string name = 4 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(255)" not_null: true }];

@@ -46,72 +46,73 @@ public final class WorkflowInstanceProto {
       "/core/common/v1/db.proto\032!udb/core/commo" +
       "n/v1/security.proto\032\036udb/core/common/v1/" +
       "types.proto\032\'udb/core/workflow/entity/v1" +
-      "/enums.proto\"\222\022\n\020WorkflowInstance\022O\n\013wor" +
+      "/enums.proto\"\255\022\n\020WorkflowInstance\022O\n\013wor" +
       "kflow_id\030\001 \001(\tB.\202\267\030*\n\013workflow_id\022\004UUID\030" +
       "\001(\001:\021gen_random_uuid()R\nworkflowId\0227\n\tte" +
       "nant_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002" +
-      "\001R\010tenantId\0225\n\nproject_id\030\003 \001(\tB\026\202\267\030\022\n\np" +
-      "roject_id\022\004UUIDR\tprojectId\022H\n\rworkflow_t" +
-      "ype\030\004 \001(\tB#\202\267\030\037\n\rworkflow_type\022\014VARCHAR(" +
-      "255)\030\001R\014workflowType\022\223\001\n\006status\030\005 \001(\0162+." +
-      "udb.core.workflow.entity.v1.WorkflowStat" +
-      "usBN\202\267\030J\n\006status\022\013VARCHAR(24)\030\001:\t\'RUNNIN" +
-      "G\'R&\n\035idx_workflow_instances_status\022\005BTR" +
-      "EER\006status\022C\n\014current_step\030\006 \001(\005B \202\267\030\034\n\014" +
-      "current_step\022\007INTEGER\030\001:\0010R\013currentStep\022" +
-      "@\n\013total_steps\030\007 \001(\005B\037\202\267\030\033\n\013total_steps\022" +
-      "\007INTEGER\030\001:\0011R\ntotalSteps\022j\n\007payload\030\010 \001" +
-      "(\tBP\202\267\030L\n\007payload\022\005JSONBZ8Opaque workflo" +
-      "w payload delivered with transition even" +
-      "tsx\001R\007payload\022{\n\rcompensations\030\t \001(\tBU\202\267" +
-      "\030Q\n\rcompensations\022\005JSONBZ7Reverse-order " +
-      "compensation payloads for the saga engin" +
-      "ex\001R\rcompensations\022I\n\016correlation_id\030\n \001" +
-      "(\tB\"\202\267\030\036\n\016correlation_id\022\014VARCHAR(255)R\r" +
-      "correlationId\022R\n\007saga_id\030\013 \001(\tB9\202\267\0305\n\007sa" +
-      "ga_id\022\004UUIDZ$Linked saga row driving com" +
-      "pensationR\006sagaId\022I\n\016pending_signal\030\014 \001(" +
-      "\tB\"\202\267\030\036\n\016pending_signal\022\014VARCHAR(255)R\rp" +
-      "endingSignal\0225\n\nlast_error\030\r \001(\tB\026\202\267\030\022\n\n" +
-      "last_error\022\004TEXTR\tlastError\022\204\001\n\013next_run" +
-      "_at\030\016 \001(\0132\032.google.protobuf.TimestampBH\202" +
-      "\267\030D\n\013next_run_at\022\013TIMESTAMPTZZ(When the " +
-      "instance is next due to advanceR\tnextRun" +
-      "At\022\225\001\n\022last_transition_at\030\017 \001(\0132\032.google" +
-      ".protobuf.TimestampBK\202\267\030G\n\022last_transiti" +
-      "on_at\022\013TIMESTAMPTZZ$When the instance la" +
-      "st changed stateR\020lastTransitionAt\022\202\001\n\na" +
-      "udit_info\030\020 \001(\0132\035.udb.core.common.v1.Aud" +
-      "itInfoBD\202\267\030@\n\naudit_info\022\005JSONB\030\001:\013\'{}\':" +
-      ":jsonbZ\032Audit trail stored as JSONx\001R\tau" +
-      "ditInfo\022o\n\ndeleted_at\030\021 \001(\0132\032.google.pro" +
-      "tobuf.TimestampB4\202\267\0300\n\ndeleted_at\022\013TIMES" +
-      "TAMPTZZ\025Soft delete timestampR\tdeletedAt" +
-      "\022H\n\ndeleted_by\030\022 \001(\tB)\202\267\030%\n\ndeleted_by\022\004" +
-      "UUIDZ\021Soft delete actorR\tdeletedBy:\354\004\372\266\030" +
-      "\310\003\n\022workflow_instances\022\014udb_workflow\030\001 \001" +
-      "*WDurable multi-step workflow/saga insta" +
-      "nces advanced by the leader-elected work" +
-      "flow tick0\0018\001@\001b\231\001\n\031workflow_tenant_isol" +
-      "ation\032z(tenant_id::text = current_settin" +
-      "g(\'app.current_tenant_id\', true) OR curr" +
-      "ent_setting(\'app.platform_admin\', true) " +
-      "= \'true\')(\001h\001\212\0011\n\035idx_workflow_instances" +
-      "_tenant\022\005BTREEZ\ttenant_id\212\0018\n\032idx_workfl" +
-      "ow_instances_due\022\005BTREEZ\006statusZ\013next_ru" +
-      "n_at\362\001#udb.workflow.workflow_instances.c" +
-      "dc\372\001\rworkflow:read\212\262\031\232\001\n\006tenant\032\ttenant_" +
-      "id*4tenant_id = current_setting(\'app.cur" +
-      "rent_tenant_id\')2\013soft_delete:\024workflow." +
-      "operational@\373\023H\002R\006tenantZ\010standardr\025tena" +
-      "nt.data_residencyB\222\002\n\037com.udb.core.workf" +
-      "low.entity.v1B\025WorkflowInstanceProtoP\001ZG" +
-      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
-      "ore/workflow/entity/v1;entityv1\242\002\004UCWE\252\002" +
-      "\033udb.core.Workflow.Entity.V1\312\002\033Udb\\Core\\" +
-      "Workflow\\Entity\\V1\342\002\'Udb\\GPBMetadata\\Cor" +
-      "e\\Workflow\\Entity\\V1\352\002\037Udb::Core::Workfl" +
-      "ow::Entity::V1b\006proto3"
+      "\001R\010tenantId\022P\n\nproject_id\030\003 \001(\tB1\202\267\030-\n\np" +
+      "roject_id\022\014VARCHAR(120)\322\001\020project_id::te" +
+      "xtR\tprojectId\022H\n\rworkflow_type\030\004 \001(\tB#\202\267" +
+      "\030\037\n\rworkflow_type\022\014VARCHAR(255)\030\001R\014workf" +
+      "lowType\022\223\001\n\006status\030\005 \001(\0162+.udb.core.work" +
+      "flow.entity.v1.WorkflowStatusBN\202\267\030J\n\006sta" +
+      "tus\022\013VARCHAR(24)\030\001:\t\'RUNNING\'R&\n\035idx_wor" +
+      "kflow_instances_status\022\005BTREER\006status\022C\n" +
+      "\014current_step\030\006 \001(\005B \202\267\030\034\n\014current_step\022" +
+      "\007INTEGER\030\001:\0010R\013currentStep\022@\n\013total_step" +
+      "s\030\007 \001(\005B\037\202\267\030\033\n\013total_steps\022\007INTEGER\030\001:\0011" +
+      "R\ntotalSteps\022j\n\007payload\030\010 \001(\tBP\202\267\030L\n\007pay" +
+      "load\022\005JSONBZ8Opaque workflow payload del" +
+      "ivered with transition eventsx\001R\007payload" +
+      "\022{\n\rcompensations\030\t \001(\tBU\202\267\030Q\n\rcompensat" +
+      "ions\022\005JSONBZ7Reverse-order compensation " +
+      "payloads for the saga enginex\001R\rcompensa" +
+      "tions\022I\n\016correlation_id\030\n \001(\tB\"\202\267\030\036\n\016cor" +
+      "relation_id\022\014VARCHAR(255)R\rcorrelationId" +
+      "\022R\n\007saga_id\030\013 \001(\tB9\202\267\0305\n\007saga_id\022\004UUIDZ$" +
+      "Linked saga row driving compensationR\006sa" +
+      "gaId\022I\n\016pending_signal\030\014 \001(\tB\"\202\267\030\036\n\016pend" +
+      "ing_signal\022\014VARCHAR(255)R\rpendingSignal\022" +
+      "5\n\nlast_error\030\r \001(\tB\026\202\267\030\022\n\nlast_error\022\004T" +
+      "EXTR\tlastError\022\204\001\n\013next_run_at\030\016 \001(\0132\032.g" +
+      "oogle.protobuf.TimestampBH\202\267\030D\n\013next_run" +
+      "_at\022\013TIMESTAMPTZZ(When the instance is n" +
+      "ext due to advanceR\tnextRunAt\022\225\001\n\022last_t" +
+      "ransition_at\030\017 \001(\0132\032.google.protobuf.Tim" +
+      "estampBK\202\267\030G\n\022last_transition_at\022\013TIMEST" +
+      "AMPTZZ$When the instance last changed st" +
+      "ateR\020lastTransitionAt\022\202\001\n\naudit_info\030\020 \001" +
+      "(\0132\035.udb.core.common.v1.AuditInfoBD\202\267\030@\n" +
+      "\naudit_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audit" +
+      " trail stored as JSONx\001R\tauditInfo\022o\n\nde" +
+      "leted_at\030\021 \001(\0132\032.google.protobuf.Timesta" +
+      "mpB4\202\267\0300\n\ndeleted_at\022\013TIMESTAMPTZZ\025Soft " +
+      "delete timestampR\tdeletedAt\022H\n\ndeleted_b" +
+      "y\030\022 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft de" +
+      "lete actorR\tdeletedBy:\354\004\372\266\030\310\003\n\022workflow_" +
+      "instances\022\014udb_workflow\030\001 \001*WDurable mul" +
+      "ti-step workflow/saga instances advanced" +
+      " by the leader-elected workflow tick0\0018\001" +
+      "@\001b\231\001\n\031workflow_tenant_isolation\032z(tenan" +
+      "t_id::text = current_setting(\'app.curren" +
+      "t_tenant_id\', true) OR current_setting(\'" +
+      "app.platform_admin\', true) = \'true\')(\001h\001" +
+      "\212\0011\n\035idx_workflow_instances_tenant\022\005BTRE" +
+      "EZ\ttenant_id\212\0018\n\032idx_workflow_instances_" +
+      "due\022\005BTREEZ\006statusZ\013next_run_at\362\001#udb.wo" +
+      "rkflow.workflow_instances.cdc\372\001\rworkflow" +
+      ":read\212\262\031\232\001\n\006tenant\032\ttenant_id*4tenant_id" +
+      " = current_setting(\'app.current_tenant_i" +
+      "d\')2\013soft_delete:\024workflow.operational@\373" +
+      "\023H\002R\006tenantZ\010standardr\025tenant.data_resid" +
+      "encyB\222\002\n\037com.udb.core.workflow.entity.v1" +
+      "B\025WorkflowInstanceProtoP\001ZGgithub.com/fa" +
+      "hara02/udb/sdk/go/gen/udb/core/workflow/" +
+      "entity/v1;entityv1\242\002\004UCWE\252\002\033udb.core.Wor" +
+      "kflow.Entity.V1\312\002\033Udb\\Core\\Workflow\\Enti" +
+      "ty\\V1\342\002\'Udb\\GPBMetadata\\Core\\Workflow\\En" +
+      "tity\\V1\352\002\037Udb::Core::Workflow::Entity::V" +
+      "1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
