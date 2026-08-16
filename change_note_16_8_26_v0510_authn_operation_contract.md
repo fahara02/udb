@@ -25,3 +25,7 @@ CI run `31923101583` then passed the Linux build and 2,757 library tests with
 zero failures. The expected contract freshness failure produced
 `ci-native-docs-repair-1` (`9257086678`), whose 7.1.0 manifest, docs, binary
 baseline, and synchronized maps are now checked in for a clean follow-up run.
+
+The following run, `31923594749`, supplied the final OpenAPI repair artifact
+`9257136304`; Swagger now exposes the same mutation and retry-safety semantics
+as the proto and native contract.

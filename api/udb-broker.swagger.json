@@ -6291,7 +6291,7 @@
         "x-udb-scope": [
           "udb:authn:verify-mfa-challenge"
         ],
-        "x-udb-retry-safe": true,
+        "x-udb-retry-safe": false,
         "x-udb-idempotency": {
           "request_key_field": "",
           "server_generated_key": false,
@@ -6299,7 +6299,7 @@
           "replay_safe": false
         },
         "x-udb-resource": "auth",
-        "x-udb-operation-kind": "read_only"
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/otps:resend": {

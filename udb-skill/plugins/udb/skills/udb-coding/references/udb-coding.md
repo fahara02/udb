@@ -19,7 +19,7 @@ Developers declare entities as annotated protobuf messages; from that ONE
 contract UDB derives DB schema (DDL), runtime security enforcement, the
 descriptor-declared service/RPC surface, six language SDKs, CLI
 scaffolds and docs. Three planes:
-Current product/SDK baseline is **0.5.9** with wire protocol **1.0.0**.
+Current product/SDK baseline is **0.5.10** with wire protocol **1.0.0**.
 Version strings must continue to derive from
 manifests/`env!("CARGO_PKG_VERSION")`, not hand-coded literals.
 

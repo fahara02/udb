@@ -52,3 +52,8 @@ build and complete library suite passed, the expected native-contract
 freshness failure emitted `ci-native-docs-repair-1` artifact `9257086678`.
 The artifact contains all five governed outputs, including both codebase maps,
 so no generated reference was hand-authored.
+
+CI run `31923594749` reached the remaining udb-coding sync guard and identified
+one stale baseline line in each provider wrapper. The plugin reference, OpenAI
+instructions, and Ollama Modelfile now mirror the canonical 0.5.10 baseline;
+their curated companion content is unchanged.

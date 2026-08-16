@@ -28,3 +28,7 @@ CI run `31923101583` emitted the first complete repair artifact under this
 contract: `ci-native-docs-repair-1` (`9257086678`). It supplied the canonical
 and bundled codebase maps together with the 7.1.0 native manifest, generated
 service docs, and binary descriptor baseline.
+
+CI run `31923594749` also exposed the final udb-coding provider-version drift.
+All three wrappers now advertise the canonical 0.5.10 product/SDK baseline. No
+local skill sync was run.

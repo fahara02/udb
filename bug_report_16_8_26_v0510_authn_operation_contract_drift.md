@@ -47,3 +47,8 @@ intentional 7.0.0-to-7.1.0 native-contract freshness gate, which emitted
 `ci-native-docs-repair-1` artifact `9257086678`. That binary-safe artifact is
 the sole source of the regenerated native manifest, native docs, descriptor
 baseline, canonical codebase map, and bundled map.
+
+CI run `31923594749` then reached the OpenAPI freshness gate and emitted
+`ci-sdk-codegen-repair-1` artifact `9257136304`. Its sole change marks
+`VerifyMfaChallenge` non-retry-safe and `mutation` in Swagger, matching the
+descriptor contract.
