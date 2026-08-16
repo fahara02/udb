@@ -46,3 +46,9 @@ The first PR run, `31943894065`, identified only Backup rustfmt drift at its
 quick gate and emitted `ci-rustfmt-repair-1` (`9262760140`). That CI-produced
 patch was applied without running a local formatter; the successor exact-head
 CI run remains the release authority.
+
+The same run's SDK-conformance job exposed four stale source assertions left
+behind when the canonical Asset, Scheduler, and Workflow bodies began carrying
+the live project. The Go Asset assertion and the three TypeScript assertions now
+expect the canonical `project-1` fixture, matching the generated manifest rather
+than preserving the obsolete empty-project expectation.
