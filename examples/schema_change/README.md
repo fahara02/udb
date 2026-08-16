@@ -67,9 +67,26 @@ UDB_MANIFEST_EXPORT_PATH=prior-manifest.json udb manifest-export proto
 Use **`manifest-export`**, not `udb catalog`. They are different files and the
 mistake is expensive:
 
-- `udb catalog` prints the parsed proto catalog. `--prior` expects a
-  `CatalogManifest`, so it cannot parse that file — it warns and silently
-  continues **with no diff at all**, which looks like "no changes".
+- `udb catalog` prints the parsed proto catalog (`{"schemas": [...]}`).
+  `--prior` expects a `CatalogManifest` (`checksum_sha256`, `tables`, ...), so
+  it cannot use that file. Measured on this repository with **no changes at
+  all**, the wrong file produced:
+
+  ```text
+  warning: could not parse prior manifest '...': missing field `checksum_sha256` — running without diff
+  drift: 100 auto-safe, 0 requires-review, 0 blocked      "has_drift": true
+  ```
+
+  versus the correct file:
+
+  ```text
+  loaded prior manifest from prior-manifest.json
+  drift (with prior manifest): 0 auto-safe, 0 requires-review, 0 blocked   "has_drift": false
+  ```
+
+  With no prior, every table diffs as new. From 0.5.16 this is a hard error
+  instead of a warning, because the warning went to stderr while the report said
+  100 changes — a pipeline reading the exit code or the JSON never saw it.
 - `manifest-export` writes the same ledger-shaped manifest the broker stores,
   including the embedded `udb_*` native schemas. An app-only manifest is missing
   those tables, so the next diff reports them as **removed** and proposes

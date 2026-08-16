@@ -249,7 +249,15 @@ pub(crate) fn fatal_json<T>(label: &str, err: serde_json::Error) -> T {
 /// 1. `--prior <path>` CLI flag in `args`
 /// 2. `UDB_PRIOR_MANIFEST_PATH` env-var
 ///
-/// Returns `None` when neither is set.
+/// Returns `None` only when NEITHER is set. If a prior was explicitly requested
+/// but cannot be read or parsed, this exits non-zero rather than continuing.
+///
+/// It used to warn and continue "without diff", which is a fail-open: with no
+/// prior, every table diffs as new, so a tree with zero real changes reported
+/// ~100 auto-safe operations and `has_drift: true`. The warning went to stderr
+/// while the JSON said 100 changes, so a pipeline reading the exit code or the
+/// report never saw it. The most common cause is passing the output of
+/// `udb catalog` (a ProtoCatalog) where a CatalogManifest is required.
 pub(crate) fn load_prior_manifest_from_args(args: &[String]) -> Option<CatalogManifest> {
     let path = args
         .windows(2)
@@ -268,16 +276,27 @@ pub(crate) fn load_prior_manifest_from_args(args: &[String]) -> Option<CatalogMa
             }
             Err(err) => {
                 eprintln!(
-                    "warning: could not parse prior manifest '{path}': {err} — running without diff"
+                    "error: '{path}' is not a catalog manifest: {err}
+                     
+                     A prior manifest was requested, so continuing without one would be worse than 
+                     stopping: with no prior every table diffs as NEW, and a tree with no real 
+                     changes reports a large auto-safe count with has_drift=true.
+                     
+                     If this file came from `udb catalog`, that is the wrong command — it prints the 
+                     parsed proto catalog, not a manifest. Produce a prior with:
+                     
+                       UDB_MANIFEST_EXPORT_PATH={path} udb manifest-export <proto-root>
+"
                 );
-                None
+                std::process::exit(1);
             }
         },
         Err(err) => {
             eprintln!(
-                "warning: could not read prior manifest '{path}': {err} — running without diff"
+                "error: could not read prior manifest '{path}': {err}
+                 A prior was requested, so this stops rather than silently diffing against nothing."
             );
-            None
+            std::process::exit(1);
         }
     }
 }
