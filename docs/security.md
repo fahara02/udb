@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.14 | protocol v1.0.0                                          │
+│    crate v0.5.15 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This page explains how UDB keeps data safe: who a request is, what it's allowed

@@ -5,6 +5,49 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.15] - 2026-08-17
+
+Patch release fixing an upgrade that applied its whole migration and then
+refused to start against it. Anyone upgrading a pre-0.5.9 database should go
+straight to 0.5.15.
+
+### Fixed
+
+- **A redefined index no longer deletes itself.** `CreateIndex` and `DropIndex`
+  shared one migration priority, and the differ emits every create before any
+  drop. For an index whose definition changed but whose name did not, both
+  operations carried the same sort key, so the stable sort kept that order and
+  the migration emitted `CREATE INDEX x` followed by `DROP INDEX x`. The index
+  was destroyed by the same run that built it, the apply still reported success,
+  and startup verification then failed on an index the manifest requires — with
+  the schema already modified. Index drops now sort before index creates, the
+  same ordering policy changes have always used.
+
+- **A failed startup verification names the differing objects.** Every other
+  failure path emitted each finding as its own log line; the drift path
+  serialized its report inline and skipped that, so the findings — which do name
+  schema, table and column — reached the operator only inside a compact JSON
+  blob. On a deployment with hundreds of schemas that made the failure
+  effectively undiagnosable. It now uses the same path as every other failure and
+  states explicitly that the DDL has been applied while the manifest was not
+  recorded, so a restart repeats the same verification.
+
+- **A stricter live column no longer blocks startup forever.** When the manifest
+  allows NULL but the live column is `NOT NULL`, the live schema is stricter than
+  UDB requires: no read can break, and the planner never emits a `DROP NOT NULL`
+  to reconcile it, so startup could never converge. This check first shipped in
+  0.5.9, so every database created before it met the condition on its first
+  upgrade — after the DDL had already been applied. That direction is a warning
+  now. The opposite direction, where the manifest requires `NOT NULL` but the
+  live column is nullable and may already hold NULLs the contract forbids,
+  remains a blocking error.
+
+### Notes
+
+- `udb drift --prior` diffs a proto catalog against a prior manifest offline,
+  with no database, and surfaces this class of problem before any broker touches
+  a deployment. It is the recommended pre-upgrade gate.
+
 ## [0.5.14] - 2026-08-16
 
 Patch release restoring the in-place upgrade path, recovering poisoned Redis

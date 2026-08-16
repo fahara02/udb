@@ -105,7 +105,7 @@ $env:UDB_CLI = "E:/Projects/udb/target/release/udb.exe"
 | `UDB_RUNNER` | how to source the CLI: `auto`, `docker`, or `release` | `auto` |
 | `UDB_CLI` | path to a local `udb` binary (used by `auto`) | unset |
 | `UDB_CLI_URL` | exact URL (or path) to a CLI binary to download | unset |
-| `UDB_VERSION` | Release tag to pull (`latest` or e.g. `v0.5.14`) | `latest` |
+| `UDB_VERSION` | Release tag to pull (`latest` or e.g. `v0.5.15`) | `latest` |
 | `UDB_GITHUB_REPO` | repo to fetch releases from | `fahara02/udb` |
 
 `-Runner auto` tries, in order: `$UDB_CLI`, a `udb` on your `PATH`, then Docker.
