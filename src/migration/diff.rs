@@ -982,6 +982,30 @@ fn diff_column(
     }
 }
 
+/// True when `column` is one of the auto-appended audit columns on an
+/// audit-enabled table, i.e. generator-owned rather than schema-author-owned.
+fn is_audit_column(table: &ManifestTable, column: &ManifestColumn) -> bool {
+    table.audit_fields
+        && crate::generation::manifest::AUDIT_FIELD_COLUMNS.contains(&column.column_name.as_str())
+}
+
+/// True when `old_col` held the contested number as a generator-appended audit
+/// column and the new manifest has relocated that same column into the reserved
+/// audit range. See the call site for why this is not a compatibility break.
+fn audit_column_vacated_number(
+    old: &ManifestTable,
+    new: &ManifestTable,
+    old_col: &ManifestColumn,
+) -> bool {
+    if !is_audit_column(old, old_col) {
+        return false;
+    }
+    new.columns.iter().any(|candidate| {
+        candidate.column_name == old_col.column_name
+            && candidate.field_number >= crate::generation::manifest::AUDIT_FIELD_NUMBER_BASE
+    })
+}
+
 fn detect_field_number_reuse(
     old: &ManifestTable,
     new: &ManifestTable,
@@ -1009,6 +1033,23 @@ fn detect_field_number_reuse(
         {
             continue;
         }
+        // The number used to belong to a generator-appended audit column that has
+        // since moved into the reserved audit range. Nothing on the wire breaks:
+        // `created_at`/`updated_at`/`created_by` are synthesized into the manifest
+        // and appear in no `.proto`, so their number was never a real protobuf
+        // field number — it was an artifact of numbering them `max(explicit) + 1`.
+        // Without this, every deployment whose manifest recorded the audit block at
+        // low numbers is permanently blocked from upgrading the moment an explicit
+        // field is appended, with no supported recovery.
+        //
+        // The rule is deliberately narrow: the vacating column must be one of the
+        // audit trio on an audit-enabled table AND must now sit at or above
+        // `AUDIT_FIELD_NUMBER_BASE`. Only the generator places a column there, so a
+        // hand-written `created_at` that a schema author renumbered is still
+        // reported.
+        if audit_column_vacated_number(old, new, old_col) {
+            continue;
+        }
         ops.push(op(
             ChangeKind::ValidationError,
             ChangeSafety::Blocked,
@@ -1017,7 +1058,11 @@ fn detect_field_number_reuse(
             &column.column_name,
             &column.field_number.to_string(),
             "proto field number is reused by a different field",
-            "field number reuse breaks protobuf compatibility; reserve the old number or declare previous_column_name for an intentional rename",
+            if is_audit_column(old, old_col) {
+                "field number reuse breaks protobuf compatibility; this number previously held the auto-generated audit column, so it is not a field you declared — regenerate the manifest with a build that anchors the audit block, or reserve the old number"
+            } else {
+                "field number reuse breaks protobuf compatibility; reserve the old number or declare previous_column_name for an intentional rename"
+            },
         ));
     }
 }
@@ -1957,6 +2002,94 @@ mod tests {
             tables: vec![table],
             ..CatalogManifest::default()
         }
+    }
+
+    /// A deployment created before the audit block was anchored records
+    /// `created_at`/`updated_at`/`created_by` at low numbers. Appending explicit
+    /// fields moved the block, so those numbers were re-used by real fields and
+    /// the drift gate blocked startup — unconditionally, on numbers the schema
+    /// author never wrote. Relocating the audit block into the reserved range is
+    /// not a wire break (audit columns exist in no `.proto`), so it must not be
+    /// reported.
+    #[test]
+    fn audit_block_relocation_is_not_field_number_reuse() {
+        let numbered = |name: &str, number: i32| {
+            let mut c = column(name, "TEXT");
+            c.field_number = number;
+            c
+        };
+        let audited = |columns: Vec<ManifestColumn>| {
+            let mut t = table(columns);
+            t.audit_fields = true;
+            t
+        };
+
+        // Recorded by the older broker: 11 explicit fields, audit block at 12-14.
+        let old = audited(vec![
+            numbered("f1", 1),
+            numbered("created_at", 12),
+            numbered("updated_at", 13),
+            numbered("created_by", 14),
+        ]);
+        // Current schema: explicit fields appended onto 12-14, audit block moved
+        // into the reserved range.
+        let new = audited(vec![
+            numbered("f1", 1),
+            numbered("project_id", 12),
+            numbered("idempotency_key", 13),
+            numbered("request_hash", 14),
+            numbered(
+                "created_at",
+                crate::generation::manifest::AUDIT_FIELD_NUMBER_BASE,
+            ),
+            numbered(
+                "updated_at",
+                crate::generation::manifest::AUDIT_FIELD_NUMBER_BASE + 1,
+            ),
+            numbered(
+                "created_by",
+                crate::generation::manifest::AUDIT_FIELD_NUMBER_BASE + 2,
+            ),
+        ]);
+
+        let old_columns: BTreeMap<String, &ManifestColumn> = old
+            .columns
+            .iter()
+            .map(|c| (c.column_name.clone(), c))
+            .collect();
+        let mut ops = Vec::new();
+        detect_field_number_reuse(&old, &new, &old_columns, &mut ops);
+        assert!(
+            ops.is_empty(),
+            "relocating the generated audit block must not block the upgrade: {:?}",
+            ops.iter().map(|o| o.column.clone()).collect::<Vec<_>>()
+        );
+    }
+
+    /// The forgiveness above must stay narrow: a genuine reuse of a number that a
+    /// non-audit column vacated is still a blocked change.
+    #[test]
+    fn ordinary_field_number_reuse_is_still_blocked() {
+        let numbered = |name: &str, number: i32| {
+            let mut c = column(name, "TEXT");
+            c.field_number = number;
+            c
+        };
+        let old = table(vec![numbered("legacy_code", 7)]);
+        let new = table(vec![numbered("tenant_ref", 7)]);
+        let old_columns: BTreeMap<String, &ManifestColumn> = old
+            .columns
+            .iter()
+            .map(|c| (c.column_name.clone(), c))
+            .collect();
+        let mut ops = Vec::new();
+        detect_field_number_reuse(&old, &new, &old_columns, &mut ops);
+        assert_eq!(
+            ops.len(),
+            1,
+            "a real field-number reuse must still be caught"
+        );
+        assert_eq!(ops[0].safety, ChangeSafety::Blocked);
     }
 
     fn sql_artifact(name: &str, sql: &str) -> ManifestSqlArtifact {

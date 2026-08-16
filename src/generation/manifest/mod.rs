@@ -9,6 +9,27 @@ use crate::ast::{
 };
 
 pub const GENERATOR_VERSION: &str = "3";
+
+/// First field number of the auto-appended audit block (`created_at`,
+/// `updated_at`, `created_by`).
+///
+/// These columns are synthesized by the generator and appear in NO `.proto`, so
+/// their field number is a manifest-internal artifact and never reaches the
+/// wire. They used to be numbered `max(explicit) + 1`, which meant appending an
+/// explicit field to a message with `audit_fields: true` slid the whole block
+/// upward — and the new explicit fields inherited the numbers a deployed
+/// manifest had recorded for the audit trio. The drift gate then reported
+/// field-number reuse against fields the schema author never numbered, and
+/// blocked the upgrade unconditionally (a startup crash-loop, not a skipped
+/// table).
+///
+/// Anchoring the block well above hand-written fields makes it stable: explicit
+/// fields can be appended forever without moving it. 9000 sits far above real
+/// UDB messages and below protobuf's reserved 19000-19999 range.
+pub const AUDIT_FIELD_NUMBER_BASE: i32 = 9000;
+
+/// Column names of the auto-appended audit block, in emission order.
+pub const AUDIT_FIELD_COLUMNS: [&str; 3] = ["created_at", "updated_at", "created_by"];
 pub const POLICY_PRIMARY: &str = "primary";
 pub const POLICY_REPLICA: &str = "replica";
 pub const POLICY_PRIMARY_ONLY: &str = "primary_only";

@@ -630,12 +630,18 @@ fn build_language_classes(schema: &ProtoSchema) -> std::collections::BTreeMap<St
 }
 
 pub(crate) fn append_missing_audit_columns(columns: &mut Vec<ManifestColumn>) {
-    let mut next_field_number = columns
+    // Anchor the block at a reserved base instead of `max(explicit) + 1`. The old
+    // scheme moved every audit column whenever an explicit field was appended, so
+    // the newly appended fields took the numbers a deployed manifest had recorded
+    // for the audit trio and the drift gate blocked the upgrade on field-number
+    // reuse. The `.max()` guard keeps the allocation valid for the pathological
+    // case of a message that already declares a field at or above the base.
+    let highest_explicit = columns
         .iter()
         .map(|column| column.field_number)
         .max()
-        .unwrap_or(0)
-        + 1;
+        .unwrap_or(0);
+    let mut next_field_number = AUDIT_FIELD_NUMBER_BASE.max(highest_explicit + 1);
 
     for column in [
         audit_column(
@@ -1688,6 +1694,56 @@ mod oneof_check_tests {
         schema.columns = vec![col("id", 1, "")];
         let table = table_from_schema(&schema);
         assert_eq!(table.retention_days, 7);
+    }
+
+    /// The audit block must not move when an explicit field is appended.
+    ///
+    /// It used to be numbered `max(explicit) + 1`, so a message that grew from 11
+    /// to 20 explicit fields handed the numbers 12/13/14 — which a deployed
+    /// manifest had recorded for `created_at`/`updated_at`/`created_by` — to three
+    /// brand new fields. The drift gate then blocked startup on field-number reuse
+    /// against fields nobody had numbered by hand, with no way past it.
+    #[test]
+    fn audit_block_is_anchored_and_survives_appended_explicit_fields() {
+        let audited = |explicit: i32| {
+            let mut schema = ProtoSchema::new("VaultDbCredentialLease");
+            schema.table_name = "vault_db_credential_leases".to_string();
+            schema.is_table = true;
+            schema.audit_fields = true;
+            schema.columns = (1..=explicit)
+                .map(|n| col(&format!("f{n}"), n, ""))
+                .collect();
+            table_from_schema(&schema)
+        };
+        let number_of = |table: &ManifestTable, name: &str| {
+            table
+                .columns
+                .iter()
+                .find(|c| c.column_name == name)
+                .unwrap_or_else(|| panic!("{name} present"))
+                .field_number
+        };
+
+        let before = audited(11);
+        let after = audited(20);
+        for name in AUDIT_FIELD_COLUMNS {
+            assert!(
+                number_of(&before, name) >= AUDIT_FIELD_NUMBER_BASE,
+                "{name} must be allocated from the reserved audit range"
+            );
+            assert_eq!(
+                number_of(&before, name),
+                number_of(&after, name),
+                "{name} must keep its number when explicit fields are appended"
+            );
+        }
+        // The appended explicit fields must not land on an audit number.
+        for n in 12..=20 {
+            assert!(
+                n < AUDIT_FIELD_NUMBER_BASE,
+                "explicit field {n} must stay below the reserved audit range"
+            );
+        }
     }
 
     #[test]
