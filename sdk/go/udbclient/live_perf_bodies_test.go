@@ -1059,8 +1059,8 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	registerAssetMsg := registerAssetIn.ProtoReflect()
 	registerAssetFields := registerAssetMsg.Descriptor().Fields()
-	if got := registerAssetMsg.Get(registerAssetFields.ByName("project_id")).String(); got != "" {
-		t.Fatalf("asset register project_id = %q, want empty project_id", got)
+	if got := registerAssetMsg.Get(registerAssetFields.ByName("project_id")).String(); got != "project-1" {
+		t.Fatalf("asset register project_id = %q, want the hydrated seed project", got)
 	}
 	if got := registerAssetMsg.Get(registerAssetFields.ByName("file_id")).String(); got != "file-1" {
 		t.Fatalf("asset register file_id = %q, want file-1", got)
@@ -1496,8 +1496,8 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	createJobMsg := createJobIn.ProtoReflect()
 	createJobFields := createJobMsg.Descriptor().Fields()
-	if got := createJobMsg.Get(createJobFields.ByName("project_id")).String(); got != "" {
-		t.Fatalf("scheduler create project_id = %q, want empty project_id", got)
+	if got := createJobMsg.Get(createJobFields.ByName("project_id")).String(); got != "project-1" {
+		t.Fatalf("scheduler create project_id = %q, want the hydrated seed project", got)
 	}
 	if got := createJobMsg.Get(createJobFields.ByName("cron_expression")).String(); got != "*/5 * * * *" {
 		t.Fatalf("scheduler create cron_expression = %q, want */5 * * * *", got)
@@ -1724,8 +1724,8 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	startWorkflowMsg := startWorkflowIn.ProtoReflect()
 	startWorkflowFields := startWorkflowMsg.Descriptor().Fields()
-	if got := startWorkflowMsg.Get(startWorkflowFields.ByName("project_id")).String(); got != "" {
-		t.Fatalf("workflow start project_id = %q, want empty project_id", got)
+	if got := startWorkflowMsg.Get(startWorkflowFields.ByName("project_id")).String(); got != "project-1" {
+		t.Fatalf("workflow start project_id = %q, want the hydrated seed project", got)
 	}
 	if got := startWorkflowMsg.Get(startWorkflowFields.ByName("workflow_type")).String(); got != "sdk.perf.workflow" {
 		t.Fatalf("workflow start workflow_type = %q, want sdk.perf.workflow", got)

@@ -1257,7 +1257,7 @@ test("manifest JSON body hydrates AssetService rows with seed refs", () => {
   assert.equal(list?.tenant_id, "tenant-1");
   assert.equal(list?.media_type, "image/png");
   assert.equal(list?.page_size, 20);
-  assert.equal(registered?.project_id, "");
+  assert.equal(registered?.project_id, "project-1");
   assert.equal(registered?.file_id, "file-1");
   assert.equal(registered?.metadata, "{\"source\":\"upload\"}");
   assert.equal(started?.definition_id, "definition-1");
@@ -1501,7 +1501,7 @@ test("manifest JSON body hydrates SchedulerService mutation rows", () => {
   const paused = manifestJSONBody("SchedulerService", "pause_job", fixtures);
   const resumed = manifestJSONBody("SchedulerService", "resume_job", fixtures);
   const deleted = manifestJSONBody("SchedulerService", "delete_job", fixtures);
-  assert.equal(created?.project_id, "");
+  assert.equal(created?.project_id, "project-1");
   assert.equal(created?.name, "sdk-perf-job");
   assert.equal(created?.schedule_type, "CRON");
   assert.equal(created?.cron_expression, "*/5 * * * *");
@@ -1620,7 +1620,7 @@ test("manifest JSON body hydrates WorkflowService mutation rows", () => {
   const started = manifestJSONBody("WorkflowService", "start_workflow", fixtures);
   const cancelled = manifestJSONBody("WorkflowService", "cancel_workflow", fixtures);
   const signalled = manifestJSONBody("WorkflowService", "signal_workflow", fixtures);
-  assert.equal(started?.project_id, "");
+  assert.equal(started?.project_id, "project-1");
   assert.equal(started?.workflow_type, "sdk.perf.workflow");
   assert.equal(started?.total_steps, 20);
   assert.equal(started?.payload, "{}");
