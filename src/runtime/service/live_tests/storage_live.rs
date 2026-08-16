@@ -243,7 +243,10 @@ async fn live_postgres_storage_project_ownership_isolation() {
     migrate_native_service_db(&pool).await;
     let svc = storage_service(pool.clone()).await;
     let tenant_id = Uuid::new_v4().to_string();
-    let project_a = Uuid::new_v4().to_string();
+    // Project ids are opaque control-plane identities, not UUIDs. Keep the
+    // real AmbuLife-shaped value on the served path so RegisterUpload and the
+    // HARD-delete GC ledger cannot silently regress to UUID-only SQL binds.
+    let project_a = "ambulife".to_string();
     let project_b = Uuid::new_v4().to_string();
 
     let file_a = svc
@@ -423,6 +426,34 @@ async fn live_postgres_storage_project_ownership_isolation() {
         .expect("tenant-wide credential may list both projects")
         .into_inner();
     assert_eq!(tenant_wide_list.total_count, 2);
+
+    let deleted_a = svc
+        .delete_file(storage_project_request(
+            storage_pb::DeleteFileRequest {
+                tenant_id: tenant_id.clone(),
+                file_id: file_a.file_id.clone(),
+                mode: storage_pb::DeleteMode::Hard as i32,
+                idempotency_key: Uuid::new_v4().to_string(),
+                reason: "opaque project regression".to_string(),
+                ..Default::default()
+            },
+            &tenant_id,
+            &project_a,
+        ))
+        .await
+        .expect("hard delete must accept an opaque project id")
+        .into_inner();
+    assert!(deleted_a.success);
+
+    let gc_project: String = sqlx::query_scalar(
+        "SELECT project_id FROM udb_storage.gc_intents WHERE tenant_id = $1::uuid AND file_id = $2::uuid",
+    )
+    .bind(&tenant_id)
+    .bind(&file_a.file_id)
+    .fetch_one(&pool)
+    .await
+    .expect("read opaque project from GC intent");
+    assert_eq!(gc_project, project_a);
 
     cleanup_native_service_db(&pool).await;
 }

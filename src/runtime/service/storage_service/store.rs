@@ -615,7 +615,7 @@ impl StorageServiceImpl {
             "INSERT INTO {GC_INTENTS_RELATION} \
                (intent_id, tenant_id, project_id, file_id, backend, bucket, object_key, mode, \
                 reason, status, idempotency_key, request_fingerprint) \
-             VALUES ($1::uuid, $2::uuid, NULLIF($3,'')::uuid, $4::uuid, $5, $6, $7, 'HARD', $8, \
+             VALUES ($1::uuid, $2::uuid, NULLIF($3,'')::varchar(120), $4::uuid, $5, $6, $7, 'HARD', $8, \
                 'PENDING', NULLIF($9,''), $10)"
         );
         let insert = sqlx::query(&insert_sql)
