@@ -1866,9 +1866,25 @@ async fn run_startup_lifecycle_core(
                 );
                 pg_drift = drift;
             } else {
+                // Every drift finding names its schema/table/column. Route them
+                // through `report_failure_json` like every other failure path so
+                // each one is emitted as its own `tracing::error!` line —
+                // serializing the report inline here skipped that, leaving the
+                // operator with a headline that named no differing object and a
+                // compact JSON blob. On a 221-schema deployment "something
+                // differs" is not actionable.
+                let finding_count = drift.len();
                 report.errors.extend(drift.into_iter().map(|d| d.message));
-                return Err(serde_json::to_string(&report)
-                    .unwrap_or_else(|_| "PostgreSQL drift detected".to_string()));
+                // State the consequence explicitly: the DDL already landed, and
+                // the new manifest is deliberately NOT recorded, so a restart
+                // re-verifies the same way rather than silently converging.
+                report.errors.push(format!(
+                    "{finding_count} live-schema drift finding(s) above; the migration's DDL has already been applied                      but the new manifest was NOT recorded in proto_schema_versions, so restarting repeats this                      verification against the same live schema"
+                ));
+                return Err(report_failure_json(
+                    &report,
+                    "PostgreSQL drift detected".to_string(),
+                ));
             }
         }
     }

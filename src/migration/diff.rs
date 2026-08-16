@@ -1667,7 +1667,16 @@ fn priority(kind: &ChangeKind) -> i32 {
         ChangeKind::AddUnique | ChangeKind::DropUnique => 60,
         ChangeKind::DropForeignKey => 63,
         ChangeKind::AddForeignKey => 65,
-        ChangeKind::CreateIndex | ChangeKind::DropIndex => 70,
+        // A redefined index is represented as Drop+Create with the SAME name, and
+        // `diff_indexes` pushes every CreateIndex before any DropIndex. While both
+        // shared one priority the sort tied on (schema, priority, table, column,
+        // object_name) and the stable sort kept that insertion order, so the
+        // migration emitted `CREATE INDEX x` followed by `DROP INDEX x` and
+        // destroyed the index it had just built — the apply still reported
+        // success, and startup verification then failed on an index the manifest
+        // requires. Drop sorts first now, exactly as DropPolicy/CreatePolicy below.
+        ChangeKind::DropIndex => 69,
+        ChangeKind::CreateIndex => 70,
         ChangeKind::EnableRls | ChangeKind::DisableRls => 80,
         // A changed policy is represented as Drop+Create with the same name.
         // Drop must sort first or CREATE collides with the still-live old policy.
@@ -2012,6 +2021,49 @@ mod tests {
     /// not a wire break (audit columns exist in no `.proto`), so it must not be
     /// reported.
     #[test]
+    /// A redefined index (same name, changed columns) must DROP before it
+    /// CREATEs. Both ops previously shared priority 70, and `diff_indexes` emits
+    /// every create before any drop, so the stable sort left `CREATE INDEX x`
+    /// ahead of `DROP INDEX x` — the migration deleted the index it had just
+    /// created, reported success, and startup then failed verification on an
+    /// index the manifest requires.
+    #[test]
+    fn redefined_index_drops_before_it_creates() {
+        let mut ops = vec![
+            op(
+                ChangeKind::CreateIndex,
+                ChangeSafety::SafeAuto,
+                "udb_vault",
+                "vault_db_credential_leases",
+                "",
+                "idx_vault_db_credential_leases_tenant",
+                "index was added to desired proto AST",
+                "",
+            ),
+            op(
+                ChangeKind::DropIndex,
+                ChangeSafety::SafeAuto,
+                "udb_vault",
+                "vault_db_credential_leases",
+                "",
+                "idx_vault_db_credential_leases_tenant",
+                "index no longer exists in desired proto AST",
+                "",
+            ),
+        ];
+        finalize_ops(&mut ops);
+        assert_eq!(
+            ops[0].kind,
+            ChangeKind::DropIndex,
+            "the drop must run first or the create is undone by it"
+        );
+        assert_eq!(ops[1].kind, ChangeKind::CreateIndex);
+        assert!(
+            priority(&ChangeKind::DropIndex) < priority(&ChangeKind::CreateIndex),
+            "index drop/create must not share a priority"
+        );
+    }
+
     fn audit_block_relocation_is_not_field_number_reuse() {
         let numbered = |name: &str, number: i32| {
             let mut c = column(name, "TEXT");

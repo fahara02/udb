@@ -2025,6 +2025,24 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
     }
 }
 
+/// Nullability divergence between the manifest and the live column.
+///
+/// The two directions are NOT symmetric, and treating them as if they were made
+/// every in-place upgrade from a database predating this check impossible:
+///
+/// - manifest `not_null=true`, live nullable — the table can already hold NULLs
+///   that UDB's contract says cannot exist, so reads decode into a non-optional
+///   field. Real divergence; keep it blocking.
+/// - manifest `not_null=false`, live `not_null=true` — the live column is
+///   STRICTER than UDB requires. Nothing UDB reads can break; at worst a write
+///   of NULL is refused by Postgres with an explicit error. Crucially, the
+///   migration planner never emits a DROP NOT NULL for it, so blocking startup
+///   on this can never converge: the operator gets a permanent crash-loop with
+///   no remedy, on a schema the broker itself did not author.
+///
+/// This check landed in 0.5.9. Deployments created earlier never had it
+/// enforced, so their pre-existing stricter columns turned the first upgrade
+/// into an outage AFTER the DDL had already been applied.
 fn nullability_drift(
     schema: &str,
     table: &str,
@@ -2033,6 +2051,15 @@ fn nullability_drift(
     actual_not_null: bool,
 ) -> Option<ManifestDrift> {
     if expected_not_null == actual_not_null {
+        return None;
+    }
+    if !expected_not_null && actual_not_null {
+        tracing::warn!(
+            schema = schema,
+            table = table,
+            column = column,
+            "live column is NOT NULL while the manifest allows NULL; the stricter live              constraint is preserved and startup continues — a write of NULL to this column              will be refused by PostgreSQL"
+        );
         return None;
     }
     Some(ManifestDrift {
@@ -2203,17 +2230,30 @@ mod tests {
     }
 
     #[test]
-    fn nullability_drift_preserves_manifest_direction() {
-        let drop = nullability_drift("marketplace", "requests", "user_id", false, true)
-            .expect("live NOT NULL must drift from a nullable manifest");
-        assert_eq!(drop.kind, "nullability_mismatch");
-        assert!(!drop.not_null);
-
+    fn nullability_drift_blocks_only_when_live_is_looser() {
+        // Live nullable under a NOT NULL manifest is real divergence: the table
+        // can already hold NULLs the contract says cannot exist.
         let set = nullability_drift("marketplace", "requests", "tenant_id", true, false)
             .expect("live nullable must drift from a NOT NULL manifest");
+        assert_eq!(set.kind, "nullability_mismatch");
         assert!(set.not_null);
 
+        // The opposite direction is a STRICTER live column. It breaks no read,
+        // the planner never emits a DROP NOT NULL to reconcile it, and this
+        // check only landed in 0.5.9 — so blocking on it turned the first
+        // upgrade of any older database into an unrecoverable crash-loop, after
+        // the DDL had already been applied. It must not block startup.
+        assert!(
+            nullability_drift("marketplace", "requests", "user_id", false, true).is_none(),
+            "a stricter live column must not block startup"
+        );
+        assert!(
+            nullability_drift("dispatch", "trips", "pickup_location", false, true).is_none(),
+            "reported production shape must not block startup"
+        );
+
         assert!(nullability_drift("marketplace", "requests", "id", true, true).is_none());
+        assert!(nullability_drift("marketplace", "requests", "note", false, false).is_none());
     }
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
