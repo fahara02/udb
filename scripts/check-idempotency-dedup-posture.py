@@ -249,7 +249,10 @@ CHECKS: tuple[SourceCheck, ...] = (
         "delete key plumbing and keyed replay path",
         "src/runtime/core/setup_data.rs",
         (
-            "pub async fn delete(",
+            # Anchor on the name, not the visibility: `delete` is `pub(crate)`
+            # because it takes the crate-private `MutationGuards`. What this
+            # guard pins is the keyed-replay plumbing below, not who can call it.
+            "async fn delete(",
             "idempotency_key: String",
             "let key = idempotency_key_for_dedup(&idempotency_key)?;",
             "if let Some(key) = key",
