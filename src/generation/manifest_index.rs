@@ -183,6 +183,17 @@ pub enum TableLookup<'a> {
 pub enum TableLookupError {
     Missing {
         message_type: String,
+        /// How many entities this broker image actually knows, and the catalog
+        /// checksum that produced them.
+        ///
+        /// A broker only serves entities baked into its image, so adding one to
+        /// the project proto and deploying the services that use it fails at the
+        /// FIRST WRITE — which for a new feature can be hours later, in whatever
+        /// code path happens to run first. "unknown message_type X" alone reads
+        /// like a typo; the count and checksum say "this image predates your
+        /// entity" and point at a rebuild.
+        known_entities: usize,
+        catalog_checksum: String,
     },
     Ambiguous {
         message_type: String,
@@ -193,8 +204,16 @@ pub enum TableLookupError {
 impl fmt::Display for TableLookupError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Missing { message_type } => {
-                write!(formatter, "unknown message_type {message_type}")
+            Self::Missing {
+                message_type,
+                known_entities,
+                catalog_checksum,
+            } => {
+                let checksum = catalog_checksum.get(..12).unwrap_or(catalog_checksum);
+                write!(
+                    formatter,
+                    "unknown message_type {message_type}: this broker serves {known_entities}                      entities from catalog {checksum}. If you just added this entity, the running                      broker image predates it — rebuild and redeploy the broker, then retry"
+                )
             }
             Self::Ambiguous {
                 message_type,
@@ -270,6 +289,8 @@ pub fn resolve_table_for_message<'a>(
         TableLookup::Found(table) => Ok(table),
         TableLookup::Missing => Err(TableLookupError::Missing {
             message_type: message_type.to_string(),
+            known_entities: manifest.tables.len(),
+            catalog_checksum: manifest.checksum_sha256.clone(),
         }),
         TableLookup::Ambiguous { candidates } => Err(TableLookupError::Ambiguous {
             message_type: message_type.to_string(),

@@ -187,9 +187,15 @@ fn source_message_type_missing_from_catalog_carries_field_violation() {
         .resolve_source_tenant_column("default", "acme.crm.entity.v1.Contact")
         .expect_err("unknown source message type must fail before store access");
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
-    assert_eq!(
-        err.message(),
-        "unknown message_type acme.crm.entity.v1.Contact"
+    // The message now also names how many entities this broker serves and the
+    // catalog checksum, so a caller who just added an entity can tell "the
+    // broker image predates it" from "you typo'd the name". Assert the identity
+    // it must always carry, not the surrounding advice.
+    assert!(
+        err.message()
+            .starts_with("unknown message_type acme.crm.entity.v1.Contact"),
+        "must name the unresolved type first: {}",
+        err.message()
     );
     assert_single_field_violation(
         &err,
