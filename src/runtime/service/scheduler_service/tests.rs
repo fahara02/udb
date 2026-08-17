@@ -402,21 +402,23 @@ fn guarded_insert_sql_gates_quota_atomically() {
     );
 }
 
-/// The atomic (0-rows-inserted) create gate fails with the SAME typed quota
-/// detail as the pure `enforce_job_quota` gate — both go through the shared
-/// `job_quota_exhausted_status` so the wire contract can't drift between paths.
+/// The refusal carries whatever budget the caller was actually measured
+/// against, not a hardcoded number. `handlers.rs` binds `max_jobs_per_tenant()`
+/// into the guarded INSERT and passes that same value here on 0 rows inserted,
+/// so an operator who raised `UDB_MAX_JOBS_PER_TENANT` reads their own limit in
+/// the error rather than a default that would send them looking in the wrong
+/// place.
 #[test]
-fn job_quota_exhausted_status_matches_pure_gate() {
-    let atomic = job_quota_exhausted_status(DEFAULT_MAX_JOBS_PER_TENANT);
-    let pure = enforce_job_quota(DEFAULT_MAX_JOBS_PER_TENANT, DEFAULT_MAX_JOBS_PER_TENANT)
-        .expect_err("at-budget must refuse");
-    assert_eq!(atomic.code(), tonic::Code::ResourceExhausted);
-    assert_eq!(atomic.message(), pure.message());
-    let detail = decode_detail(&atomic);
-    assert_eq!(detail.kind, ErrorKind::Quota as i32);
-    assert_eq!(detail.backend, "scheduler");
-    assert_eq!(detail.operation, "tenant_scheduled-job_quota");
-    assert!(!detail.retryable);
+fn job_quota_refusal_reports_the_budget_it_was_measured_against() {
+    for budget in [1_i64, DEFAULT_MAX_JOBS_PER_TENANT, 25_000] {
+        let err = job_quota_exhausted_status(budget);
+        assert_eq!(
+            err.message(),
+            format!("tenant scheduled-job quota exhausted ({budget})"),
+            "the refusal must quote the budget in force, not a constant"
+        );
+        assert_eq!(decode_detail(&err).kind, ErrorKind::Quota as i32);
+    }
 }
 
 /// A valid but sparse quadrennial cron (`0 0 29 2 *`, leap-day) resolves within

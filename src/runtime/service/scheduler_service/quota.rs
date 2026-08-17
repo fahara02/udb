@@ -1,4 +1,5 @@
-//! Per-tenant scheduled-job budget: a resolve-once cap and the PURE quota gate.
+//! Per-tenant scheduled-job budget: a resolve-once cap and the shared typed
+//! refusal. The gate itself lives in the guarded INSERT (see below).
 
 use tonic::Status;
 
@@ -46,5 +47,5 @@ pub(crate) fn job_quota_exhausted_status(budget: i64) -> Status {
 // COMMITTED, and every one of them proceeds. The quota is enforced instead by
 // `guarded_insert_job_sql`, which counts inside the same statement as the INSERT
 // under the per-tenant advisory lock, so 0 rows inserted means at/over budget.
-// `job_quota_exhausted_status` above is the shared typed refusal both paths
-// would return; the create path still uses it.
+// `job_quota_exhausted_status` above is the refusal the create path returns
+// when that guarded INSERT reports 0 rows.

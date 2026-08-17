@@ -407,12 +407,14 @@ mod deny_reason {
     pub const CREDENTIAL_TYPE: &str = "credential_type";
     pub const SCOPE: &str = "scope";
     pub const ROLE: &str = "role";
+    /// Reason code for the C23 body-owner guard. Unused while that guard is
+    /// unwired — see `enforce_body_owner_matches_claim`, whose annotation
+    /// `udb native lint` currently rejects.
+    #[allow(dead_code)]
+    pub const OWNER: &str = "owner_mismatch";
     /// The bearer's authentication assurance level (AAL/MFA) is below the level
     /// the RPC declares via `required_assurance_level` (C21 step-up gate).
     pub const ASSURANCE: &str = "assurance_level";
-    /// The decoded body's owner field does not match the authenticated principal
-    /// (C23 ownership guard).
-    pub const OWNER: &str = "owner_mismatch";
     pub const INTERNAL_ONLY: &str = "internal_only";
     pub const CSRF: &str = "csrf";
     pub const REQUEST_CONTEXT: &str = "request_context";
@@ -927,7 +929,16 @@ pub fn enforce_body_tenant_matches_claim(
 }
 
 /// C23 — post-decode body-owner guard, the ownership analogue of
-/// [`enforce_body_tenant_matches_claim`]. When an RPC declares an
+/// [`enforce_body_tenant_matches_claim`].
+///
+/// KEPT BUT UNWIRED ON PURPOSE. No handler calls this, so `udb native lint`
+/// rejects any RPC that declares `endpoint_security.owner_field`
+/// (`owner_field_not_enforced`) rather than letting the annotation read as a
+/// working control. The function and its tests stay so the guard is ready the
+/// moment a handler extracts an owner — deleting it would only mean rewriting it
+/// later, and its tests already pin the semantics.
+///
+/// When an RPC declares an
 /// `endpoint_security.owner_field`, a handler extracts that field from the
 /// decoded body and calls this so that — WITHIN a tenant — a caller cannot act on
 /// another principal's owned resource by naming a foreign owner. Fail-closed: a
@@ -935,6 +946,7 @@ pub fn enforce_body_tenant_matches_claim(
 /// caller is a genuine cross-tenant admin. An empty body owner inherits the
 /// principal (no override). Skipped on the in-process/loopback path (no claim
 /// context installed), matching the tenant guard.
+#[allow(dead_code)]
 pub fn enforce_body_owner_matches_claim(
     ctx: &VerifiedClaimContext,
     body_owner: &str,
