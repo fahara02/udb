@@ -216,6 +216,33 @@ pub(crate) fn descriptor_lint_findings(
                 continue;
             };
 
+            // 0. owner_field_not_enforced (error): `endpoint_security.owner_field`
+            //    names the body field identifying the principal that owns the
+            //    target row, and its guard —
+            //    `method_security::enforce_body_owner_matches_claim` — has no
+            //    production call site. Its tenant analogue
+            //    (`enforce_body_tenant_matches_claim`) IS wired by handlers, so
+            //    the owner half is simply unfinished.
+            //
+            //    Accepting the annotation while enforcing nothing is the worst
+            //    outcome: it reads like an ownership control, so the first RPC to
+            //    declare it silently permits a caller to name another principal in
+            //    the body. No RPC declares it today, so refusing it costs nothing
+            //    and keeps the contract honest until a handler enforces it.
+            if !security.owner_field.trim().is_empty() {
+                findings.push(serde_json::json!({
+                    "severity": "error",
+                    "code": "owner_field_not_enforced",
+                    "path": rpc.grpc_path(),
+                    "message": format!(
+                        "RPC {} declares endpoint_security.owner_field '{}', but no handler enforces it — the annotation grants no ownership check",
+                        rpc.grpc_path(),
+                        security.owner_field.trim()
+                    ),
+                    "hint": "call method_security::enforce_body_owner_matches_claim(&ctx, <the extracted owner>) in the handler after decoding the body, the way handlers already call enforce_body_tenant_matches_claim; until then remove owner_field so it cannot be mistaken for an enforced control",
+                }));
+            }
+
             // 1. public_rpc_missing_abuse_policy (warning)
             if security.mode == 1
                 && security.rate_limit_policy_ref.trim().is_empty()
@@ -713,6 +740,41 @@ mod tests {
             .iter()
             .filter_map(|f| f.get("code").and_then(|c| c.as_str()).map(str::to_string))
             .collect()
+    }
+
+    #[test]
+    fn declaring_owner_field_is_rejected_until_a_handler_enforces_it() {
+        // `enforce_body_owner_matches_claim` exists and is tested but has no
+        // production call site, unlike its tenant analogue. An annotation that
+        // reads as an ownership control while enforcing nothing is worse than no
+        // annotation, so declaring it is a hard error until the guard is wired.
+        let mut sec = empty_security();
+        sec.owner_field = "owner_id".to_string();
+        let rpc = rpc_with("UpdateThing", ".udb.test.v1.UpdateThingRequest", sec);
+        let manifest = manifest_of(vec![service_with(vec![rpc])], Vec::new());
+
+        let findings = descriptor_lint_findings(&manifest);
+        let codes = codes(&findings);
+        assert!(
+            codes.contains(&"owner_field_not_enforced".to_string()),
+            "expected owner_field_not_enforced, got {codes:?}"
+        );
+        let finding = findings
+            .iter()
+            .find(|f| f["code"] == "owner_field_not_enforced")
+            .expect("finding present");
+        assert_eq!(finding["severity"], "error");
+    }
+
+    #[test]
+    fn an_rpc_without_owner_field_is_not_flagged() {
+        let rpc = rpc_with("Ping", ".udb.test.v1.PingRequest", empty_security());
+        let manifest = manifest_of(vec![service_with(vec![rpc])], Vec::new());
+        assert!(
+            !codes(&descriptor_lint_findings(&manifest))
+                .contains(&"owner_field_not_enforced".to_string()),
+            "an RPC that declares no owner_field must not be flagged"
+        );
     }
 
     #[test]

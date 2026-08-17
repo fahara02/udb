@@ -93,8 +93,15 @@ pub struct MethodSecurity {
     /// (no step-up requirement). Enforced against the bearer's `acr` claim (C21).
     pub required_assurance_level: i32,
     /// `endpoint_security.owner_field` — the body field naming the principal that
-    /// owns the target resource. Enforced via
-    /// [`enforce_body_owner_matches_claim`] when a handler extracts it (C23).
+    /// owns the target resource.
+    ///
+    /// NOT ENFORCED. [`enforce_body_owner_matches_claim`] exists and is tested but
+    /// has no production call site, unlike its tenant analogue
+    /// [`enforce_body_tenant_matches_claim`], which handlers do call. Declaring
+    /// `owner_field` therefore grants no ownership check, so `udb native lint`
+    /// rejects the annotation (`owner_field_not_enforced`) rather than letting it
+    /// read as a working control. Wire the guard in the handler before allowing
+    /// it again.
     pub owner_field: Option<String>,
     /// `endpoint_security.rate_limit_policy_ref` — the named rate-limit policy this
     /// RPC's abuse bucket is keyed under, so distinct policies get distinct buckets
