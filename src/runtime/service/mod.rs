@@ -1801,6 +1801,7 @@ fn spawn_uds_data_plane(
     service: DataBrokerService,
     grpc_timeout: Duration,
     grpc_max_concurrent: usize,
+    max_message_bytes: usize,
 ) -> Option<tokio::task::JoinHandle<()>> {
     let path = std::env::var("UDB_DATA_UDS_PATH")
         .ok()
@@ -1853,7 +1854,11 @@ fn spawn_uds_data_plane(
         if let Err(err) = tonic::transport::Server::builder()
             .layer(layer)
             .add_service(reflection)
-            .add_service(DataBrokerServer::new(service))
+            .add_service(
+                DataBrokerServer::new(service)
+                    .max_decoding_message_size(max_message_bytes)
+                    .max_encoding_message_size(max_message_bytes),
+            )
             .serve_with_incoming_shutdown(incoming, shutdown_signal())
             .await
         {
@@ -2615,6 +2620,9 @@ pub async fn serve(
     // ── gRPC server with timeout + concurrency limit (GAP 22) ────────────────
     let grpc_timeout = Duration::from_secs(runtime_config.service.grpc_timeout_secs);
     let grpc_max_concurrent: usize = runtime_config.service.grpc_max_concurrent;
+    // tonic defaults to 4 MiB, which is smaller than a real catalog manifest, so
+    // StageCatalog was refused on large deployments before any validation ran.
+    let grpc_max_message_bytes: usize = runtime_config.service.grpc_max_message_bytes;
 
     let make_layer = || {
         tower::ServiceBuilder::new()
@@ -2660,12 +2668,20 @@ pub async fn serve(
         // Optional co-located UDS data-plane (PERF_TODO §3) — clone before the
         // service is moved into the TCP builder below. No-op unless configured.
         #[cfg(unix)]
-        let _uds_data_plane =
-            spawn_uds_data_plane(service.clone(), grpc_timeout, grpc_max_concurrent);
+        let _uds_data_plane = spawn_uds_data_plane(
+            service.clone(),
+            grpc_timeout,
+            grpc_max_concurrent,
+            grpc_max_message_bytes,
+        );
         server
             .add_service(reflection_service)
             .add_service(health_service)
-            .add_service(DataBrokerServer::new(service))
+            .add_service(
+                DataBrokerServer::new(service)
+                    .max_decoding_message_size(grpc_max_message_bytes)
+                    .max_encoding_message_size(grpc_max_message_bytes),
+            )
             .serve_with_shutdown(addr, shutdown_signal())
             .await?;
         return Ok(());
@@ -3691,11 +3707,20 @@ pub async fn serve(
     // Optional co-located UDS data-plane (PERF_TODO §3) — clone before the
     // service is moved into the TCP builder. No-op unless UDB_DATA_UDS_PATH is set.
     #[cfg(unix)]
-    let _uds_data_plane = spawn_uds_data_plane(service.clone(), grpc_timeout, grpc_max_concurrent);
+    let _uds_data_plane = spawn_uds_data_plane(
+        service.clone(),
+        grpc_timeout,
+        grpc_max_concurrent,
+        grpc_max_message_bytes,
+    );
     let main_fut = server
         .add_service(reflection_service)
         .add_service(health_service)
-        .add_service(DataBrokerServer::new(service))
+        .add_service(
+            DataBrokerServer::new(service)
+                .max_decoding_message_size(grpc_max_message_bytes)
+                .max_encoding_message_size(grpc_max_message_bytes),
+        )
         .serve_with_shutdown(addr, listener_shutdown_signal(listener_shutdown_rx.clone()));
 
     // Optional ws:// signalling bridge (feature `ws-signalling`, activated by

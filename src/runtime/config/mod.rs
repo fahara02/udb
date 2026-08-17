@@ -352,6 +352,15 @@ pub struct ServiceSettings {
     pub abac_default_allow: bool,
     pub grpc_timeout_secs: u64,
     pub grpc_max_concurrent: usize,
+    /// Largest gRPC message the broker will accept or return, in bytes.
+    ///
+    /// tonic's default is 4 MiB, which is smaller than a real catalog manifest:
+    /// a 221-schema deployment's manifest is ~7 MB, so `StageCatalog` was
+    /// refused before any validation ran — making the documented remedy for
+    /// "project has no ACTIVE catalog" unreachable on exactly the deployments
+    /// big enough to need it. `UDB_GRPC_MAX_RECV_BYTES` was documented in
+    /// `.env.example` but read nowhere, so raising it did nothing.
+    pub grpc_max_message_bytes: usize,
     pub allow_degraded_backends: bool,
     pub catalog_compat_warn_only: bool,
     pub catalog_compatibility_level: String,
@@ -394,6 +403,8 @@ impl Default for ServiceSettings {
             abac_default_allow: false,
             grpc_timeout_secs: 30,
             grpc_max_concurrent: 200,
+            // 10 MB: comfortably above real manifests, still a bound.
+            grpc_max_message_bytes: 10 * 1024 * 1024,
             allow_degraded_backends: false,
             catalog_compat_warn_only: false,
             catalog_compatibility_level: "backward".to_string(),
@@ -478,6 +489,13 @@ impl ServiceSettings {
         }
         if let Some(value) = env_u32("UDB_GRPC_MAX_CONCURRENT") {
             self.grpc_max_concurrent = value.max(1) as usize;
+        }
+        // Accept the name that has been documented all along.
+        if let Some(value) = env_u32("UDB_GRPC_MAX_RECV_BYTES") {
+            self.grpc_max_message_bytes = (value as usize).max(1024);
+        }
+        if let Some(value) = env_u32("UDB_GRPC_MAX_MESSAGE_BYTES") {
+            self.grpc_max_message_bytes = (value as usize).max(1024);
         }
         if let Some(value) = bool_env("UDB_ALLOW_DEGRADED_BACKENDS") {
             self.allow_degraded_backends = value;

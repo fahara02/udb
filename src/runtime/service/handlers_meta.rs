@@ -170,13 +170,22 @@ impl DataBrokerService {
         // send_compressed on the server builder), so we advertise none. If
         // compression is wired later, populate this from that config.
         //
-        // Max message bytes: the server relies on tonic's transport defaults
-        // (no max_decoding_message_size / max_encoding_message_size override),
-        // so we report 0 ("not advertised / use transport default").
+        // Max message bytes: the server sets an explicit decode/encode limit
+        // (`UDB_GRPC_MAX_RECV_BYTES`, default 10 MB), so report the real value.
+        // It used to report 0 while relying on tonic's 4 MiB default, which is
+        // smaller than a real catalog manifest — StageCatalog was refused on
+        // large deployments and nothing advertised why.
         // urgent_fix #37: annotate the compile-time capability matrix with which
         // backends are actually CONFIGURED on this node (have a live instance/DSN),
         // so `GetCapabilities` advertises real deployment capability, not merely
         // "the binary was compiled with this backend".
+        let advertised_max_message_bytes = i64::try_from(
+            self.runtime_snapshot()
+                .config()
+                .service
+                .grpc_max_message_bytes,
+        )
+        .unwrap_or(0);
         let backend_caps = crate::backend::capability_matrix_configured(&configured_backends);
         let backend_protocol_support: Vec<crate::proto::BackendProtocolSupport> = backend_caps
             .iter()
@@ -210,9 +219,12 @@ impl DataBrokerService {
             // ObjectExecutor::get_object_stream).
             supports_streaming_reads: true,
             supports_object_streaming: true,
-            // 0 == transport default (no explicit server-side override).
-            max_recv_message_bytes: 0,
-            max_send_message_bytes: 0,
+            // The server now sets an explicit limit on both directions, so
+            // advertise it: a client that has to decide whether a large payload
+            // (a catalog manifest, a bulk batch) will fit should not have to
+            // guess at tonic's default.
+            max_recv_message_bytes: advertised_max_message_bytes,
+            max_send_message_bytes: advertised_max_message_bytes,
             supported_rpcs: supported_rpcs.clone(),
         });
         let native_services: Vec<crate::proto::NativeServiceStatus> =

@@ -577,6 +577,7 @@ impl CatalogManifest {
             }
         }
         warnings.extend(partitioned_fk_warnings(&tables));
+        warnings.extend(duplicate_migration_order_warnings(&tables));
         let checksum_sha256 = checksum_hex(&catalog_ddl(&tables, &stores))?;
 
         Ok(Self {
@@ -898,6 +899,39 @@ fn dfs_cycle(
     state.insert(node.to_string(), 2);
 }
 
+/// Warn when two tables in the same schema claim the same `migration_order`.
+///
+/// Tables sort by `(schema, migration_order, table)`, so a collision does not
+/// crash — the tie is broken by table name and the declared ordering is quietly
+/// wrong from then on. Worse, the next person to add a table has no way to see
+/// which orders are taken without grepping every proto, so collisions
+/// accumulate. Naming the next free order turns the warning into the fix.
+fn duplicate_migration_order_warnings(tables: &[ManifestTable]) -> Vec<String> {
+    let mut by_schema: BTreeMap<&str, BTreeMap<i32, Vec<&str>>> = BTreeMap::new();
+    for table in tables {
+        by_schema
+            .entry(table.schema.as_str())
+            .or_default()
+            .entry(table.migration_order)
+            .or_default()
+            .push(table.table.as_str());
+    }
+    let mut warnings = Vec::new();
+    for (schema, orders) in &by_schema {
+        let next_free = orders.keys().max().map(|max| max + 1).unwrap_or(1);
+        for (order, names) in orders {
+            if names.len() > 1 {
+                warnings.push(format!(
+                    "{schema} has {} tables sharing migration_order {order} ({}); the declared                      order is decided by table name instead. Next free order in {schema}: {next_free}",
+                    names.len(),
+                    names.join(", ")
+                ));
+            }
+        }
+    }
+    warnings
+}
+
 fn validate_table_shape(schema: &str, table: &str, columns: &[ManifestColumn]) -> Vec<String> {
     let mut warnings = Vec::new();
     let mut names = BTreeSet::new();
@@ -916,7 +950,49 @@ fn validate_table_shape(schema: &str, table: &str, columns: &[ManifestColumn]) -
             ));
         }
     }
+    warnings.extend(validate_mutation_identity_shape(schema, table, columns));
     warnings
+}
+
+/// Warn when a table is shaped so that ordinary writes cannot name the row they
+/// touched.
+///
+/// A database-assigned primary key (`BIGSERIAL`/auto-increment) is absent from
+/// the request record, so the broker falls back to scanning for an `id`/`*_id`
+/// field to build the mutation's `resource_uri`. With more than one such column
+/// that scan is ambiguous and fails CLOSED — every write to the table is
+/// rejected with `mutation_resource_uri_identity_ambiguous`.
+///
+/// A deployment lost six days of tracking rows to exactly this: the writer
+/// produced rows, the broker refused all of them, and it surfaced only when
+/// somebody noticed the table's newest row was a week old. The runtime error
+/// already names the remedies, but it arrives at every write rather than once,
+/// at publish time — which is where a shape problem belongs.
+fn validate_mutation_identity_shape(
+    schema: &str,
+    table: &str,
+    columns: &[ManifestColumn],
+) -> Vec<String> {
+    let database_assigned_pk = columns
+        .iter()
+        .any(|column| column.is_primary && column.auto_increment);
+    if !database_assigned_pk {
+        return Vec::new();
+    }
+    let identity_candidates: Vec<&str> = columns
+        .iter()
+        .filter(|column| !column.is_primary)
+        .map(|column| column.column_name.as_str())
+        .filter(|name| *name == "id" || name.ends_with("_id"))
+        .collect();
+    if identity_candidates.len() < 2 {
+        return Vec::new();
+    }
+    vec![format!(
+        "{schema}.{table} has a database-assigned primary key and {} identity-shaped columns          ({}); every write will be refused as ambiguous unless the caller sets return_record          (so the persisted row's key names it), declares conflict_fields, or supplies the          primary key itself",
+        identity_candidates.len(),
+        identity_candidates.join(", ")
+    )]
 }
 
 fn validate_audit_fields(schema: &str, table: &str, columns: &[ManifestColumn]) -> Vec<String> {
