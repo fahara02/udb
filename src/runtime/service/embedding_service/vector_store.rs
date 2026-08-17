@@ -103,7 +103,12 @@ impl RuntimeVectorStore {
             )
         })?;
         self.runtime
-            .mutate_backend_target(&self.backend, self.instance(), &request_json)
+            .mutate_backend_target_for_project(
+                &self.backend,
+                self.instance(),
+                &self.project_id,
+                &request_json,
+            )
             .await
             .map(|_| ())
     }

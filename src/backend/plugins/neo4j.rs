@@ -37,10 +37,17 @@ impl crate::runtime::executors::handle::DispatchFactory for Neo4jPlugin {
         runtime: &crate::runtime::core::DataBrokerRuntime,
         instance: Option<&str>,
         write: bool,
-        _context: Option<&crate::broker::RequestContext>,
+        context: Option<&crate::broker::RequestContext>,
     ) -> Result<crate::runtime::executors::handle::DispatchExecutor, tonic::Status> {
+        // With no explicit instance a write picks one. Choose among the
+        // instances this project may use: the unscoped chooser can land on an
+        // instance an operator labelled for a different project, and the
+        // caller-supplied-instance case is already refused upstream in
+        // `resolve_dispatch_executor`. An absent context yields an empty
+        // project, which is the unscoped behaviour.
+        let project = context.map_or("", |ctx| ctx.project_id.as_str());
         let routed = if write {
-            instance.or_else(|| runtime.choose_instance_name("neo4j", true))
+            instance.or_else(|| runtime.choose_instance_name_for_project("neo4j", true, project))
         } else {
             instance
         };
