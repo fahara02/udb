@@ -11,6 +11,13 @@ Isolation release. A caller could reach another project's backend instance by
 naming it, on six separate paths. If you label backend instances per project,
 upgrade; if you run a single project, nothing here changes behaviour.
 
+**Coming from 0.5.15?** You are not missing a version. 0.5.16 was tagged, but its
+release run was cancelled before any artifact was built, so no 0.5.16 was ever
+published to GitHub Releases, crates.io, or any SDK registry. Per the release
+integrity rule the tag was left where it stood rather than moved, and the work
+was carried forward: everything in the 0.5.16 section below ships in this
+release.
+
 ### Fixed
 
 - **Backend instance project labels are now enforced on every dispatch path.**
