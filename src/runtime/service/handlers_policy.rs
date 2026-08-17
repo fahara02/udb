@@ -457,10 +457,15 @@ impl DataBrokerService {
                 .map(|kind| self.runtime_snapshot().backend_transport_label(kind))
                 .unwrap_or("unknown")
         };
+        // Project-filtered like every other field in this response (CDC status,
+        // DLQ events). `GetAdminSummary` resolves one project and is not gated on
+        // platform authority, so listing instances an operator labelled for a
+        // different project would disclose another tenant's topology — the exact
+        // case `backend_instances_for_project` exists to prevent.
         let mut configured: Vec<BackendSummaryRow> = self
             .runtime_snapshot()
-            .backend_instances()
-            .iter()
+            .backend_instances_for_project(&project_id)
+            .into_iter()
             .filter(|instance| instance.enabled)
             .map(|instance| {
                 let display = format!("{}:{}", instance.backend, instance.name);

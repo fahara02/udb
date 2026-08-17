@@ -1790,6 +1790,44 @@ impl DataBrokerRuntime {
         None
     }
 
+    /// Project-scoped Redis resolver.
+    ///
+    /// Redis is hand-written rather than macro-backed, so it never got the
+    /// project-aware chooser the `impl_instance_resolver!` backends have. With no
+    /// instance named, the unscoped fallback below picks among every enabled
+    /// Redis instance — including one an operator labelled for another project.
+    /// `resolve_dispatch_executor` gates the *policy* for the unnamed case, but
+    /// the *choice* still has to be made from instances this project may use.
+    #[cfg(feature = "redis")]
+    pub(crate) fn redis_for_instance_for_project(
+        &self,
+        instance: Option<&str>,
+        project_id: &str,
+    ) -> Result<&redis::Client, tonic::Status> {
+        if instance
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .is_some()
+        {
+            // A named instance is already label-checked upstream.
+            return self.redis_for_instance(instance);
+        }
+        // Mirrors the macro's unnamed branch: choose within the project, then
+        // fall back exactly as the unscoped resolver does.
+        self.choose_instance_name_for_project("redis", false, project_id)
+            .and_then(|name| self.redis_instances.get(name))
+            .or(self.redis.as_ref())
+            .or_else(|| self.redis_instances.values().next())
+            .ok_or_else(|| {
+                backend_not_configured_status(
+                    "redis",
+                    "instance_resolver",
+                    "redis_backend",
+                    "redis not configured",
+                )
+            })
+    }
+
     #[cfg(feature = "redis")]
     pub(crate) fn redis_for_instance(
         &self,

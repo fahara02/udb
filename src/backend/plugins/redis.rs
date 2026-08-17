@@ -48,7 +48,12 @@ impl crate::runtime::executors::handle::DispatchFactory for RedisPlugin {
         });
         Ok(crate::runtime::executors::handle::DispatchExecutor::Redis(
             crate::runtime::executors::redis::RedisExecutor::new(
-                runtime.redis_for_instance(instance)?.clone(),
+                runtime
+                    .redis_for_instance_for_project(
+                        instance,
+                        context.map_or("", |c| c.project_id.as_str()),
+                    )?
+                    .clone(),
             )
             .with_namespace(namespace),
         ))
