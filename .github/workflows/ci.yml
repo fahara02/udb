@@ -283,6 +283,65 @@ jobs:
         run: cargo test --locked --no-run --all-targets
       - name: Test UDB library
         run: cargo test --locked --lib
+      - name: Operator CLI smoke (the commands an upgrade actually needs)
+        # These are the commands an operator reaches for when a schema change or
+        # an upgrade goes wrong. They were documented before they were exercised,
+        # and one of them (`--prior`) silently reported a hundred phantom
+        # operations for a year. Prove they behave, on every push, without a
+        # database.
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          udb=target/debug/udb
+
+          echo "--- udb env --profile enterprise"
+          "$udb" env --profile enterprise > /tmp/env-ent
+          grep -q '^UDB_ENV=production' /tmp/env-ent
+          grep -q '^UDB_MTLS_REQUIRED=true' /tmp/env-ent
+          grep -q '^UDB_MIGRATE_ENABLED=false' /tmp/env-ent
+
+          echo "--- udb env --profile dev leaves mTLS off"
+          "$udb" env --profile dev > /tmp/env-dev
+          grep -q '^UDB_ENV=development' /tmp/env-dev
+          grep -q '^# UDB_MTLS_REQUIRED=true' /tmp/env-dev
+
+          echo "--- generated secrets differ per file"
+          a=$(grep '^UDB_ENCRYPTION_KEY=' /tmp/env-ent)
+          "$udb" env --profile enterprise > /tmp/env-ent2
+          b=$(grep '^UDB_ENCRYPTION_KEY=' /tmp/env-ent2)
+          if [ "$a" = "$b" ]; then
+            echo "::error::udb env reused a secret across files"; exit 1
+          fi
+
+          echo "--- unknown profile is rejected"
+          if "$udb" env --profile nonsense > /dev/null 2>&1; then
+            echo "::error::udb env accepted an unknown profile"; exit 1
+          fi
+
+          echo "--- an unusable --prior is a HARD error, not a phantom diff"
+          "$udb" catalog proto > /tmp/not-a-manifest.json
+          if "$udb" drift proto --prior /tmp/not-a-manifest.json > /tmp/drift.out 2>&1; then
+            echo "::error::drift accepted a non-manifest prior and kept going"
+            cat /tmp/drift.out; exit 1
+          fi
+          grep -q 'manifest-export' /tmp/drift.out
+
+          echo "--- a real prior round-trips and reports no drift"
+          UDB_MANIFEST_EXPORT_PATH=/tmp/prior.json "$udb" manifest-export proto
+          "$udb" drift proto --prior /tmp/prior.json > /tmp/drift-ok.out 2>&1
+          grep -q 'loaded prior manifest' /tmp/drift-ok.out
+
+          echo "--- catalog bootstrap requires a project"
+          if "$udb" catalog bootstrap > /dev/null 2>&1; then
+            echo "::error::catalog bootstrap ran without --project"; exit 1
+          fi
+
+          echo "--- verify --live without a DSN fails cleanly"
+          if "$udb" verify proto --live --dsn "" > /tmp/verify.out 2>&1; then
+            echo "::error::verify --live succeeded with no database"; exit 1
+          fi
+
+          echo "operator CLI checks passed - all commands behaved"
       - name: SDK robustness clients + benchmark docs drift
         if: runner.os == 'Linux'
         run: |
