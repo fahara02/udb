@@ -2058,21 +2058,6 @@ mod tests {
         }
     }
 
-    /// A deployment created before the audit block was anchored records
-    /// `created_at`/`updated_at`/`created_by` at low numbers. Appending explicit
-    /// fields moved the block, so those numbers were re-used by real fields and
-    /// the drift gate blocked startup — unconditionally, on numbers the schema
-    /// author never wrote. Relocating the audit block into the reserved range is
-    /// not a wire break (audit columns exist in no `.proto`), so it must not be
-    /// reported.
-    #[test]
-    /// A redefined index (same name, changed columns) must DROP before it
-    /// CREATEs. Both ops previously shared priority 70, and `diff_indexes` emits
-    /// every create before any drop, so the stable sort left `CREATE INDEX x`
-    /// ahead of `DROP INDEX x` — the migration deleted the index it had just
-    /// created, reported success, and startup then failed verification on an
-    /// index the manifest requires.
-    #[test]
     /// The verb is not the signal. A downstream guard written as "reject anything
     /// starting with Drop" also rejects the drops UDB reissues on ordinary version
     /// upgrades, which made every upgrade impossible for a consumer. `data_destructive`
@@ -2163,6 +2148,13 @@ mod tests {
         assert!(!dropped_index.data_destructive);
     }
 
+    /// A redefined index (same name, changed columns) must DROP before it
+    /// CREATEs. Both ops previously shared priority 70, and `diff_indexes` emits
+    /// every create before any drop, so the stable sort left `CREATE INDEX x`
+    /// ahead of `DROP INDEX x` — the migration deleted the index it had just
+    /// created, reported success, and startup then failed verification on an
+    /// index the manifest requires.
+    #[test]
     fn redefined_index_drops_before_it_creates() {
         let mut ops = vec![
             op(
@@ -2199,6 +2191,14 @@ mod tests {
         );
     }
 
+    /// A deployment created before the audit block was anchored records
+    /// `created_at`/`updated_at`/`created_by` at low numbers. Appending explicit
+    /// fields moved the block, so those numbers were re-used by real fields and
+    /// the drift gate blocked startup — unconditionally, on numbers the schema
+    /// author never wrote. Relocating the audit block into the reserved range is
+    /// not a wire break (audit columns exist in no `.proto`), so it must not be
+    /// reported.
+    #[test]
     fn audit_block_relocation_is_not_field_number_reuse() {
         let numbered = |name: &str, number: i32| {
             let mut c = column(name, "TEXT");

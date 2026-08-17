@@ -107,8 +107,20 @@ pub struct MethodSecurity {
     /// RPC's abuse bucket is keyed under, so distinct policies get distinct buckets
     /// and an operator can tune a named policy's ceiling (C24).
     pub rate_limit_policy_ref: Option<String>,
-    /// `endpoint_security.audit_event_type` — the per-RPC audit event type to
-    /// stamp instead of a synthesized one (C25).
+    /// `endpoint_security.audit_event_type` — the per-RPC audit event type the
+    /// proto declares (C25).
+    ///
+    /// PROJECTED BUT NOT CONSUMED. No audit writer reads this. The audit trail's
+    /// event types are the versioned `auth_service::events::topics` constants
+    /// (`udb.authn.session.refreshed.v1` and friends), which handlers emit
+    /// explicitly at the point the thing happened. The seven authn RPCs that
+    /// declare `audit_event_type` use a flatter, unversioned vocabulary
+    /// (`authn.refresh_token`), so having it override the topic would coarsen
+    /// the trail rather than improve it — which is why it is carried as
+    /// declarative metadata about which RPCs are audit-significant, not as a
+    /// runtime gate. Read the topics constants, not this, to know what is
+    /// actually recorded.
+    #[allow(dead_code)]
     pub audit_event_type: Option<String>,
 }
 
@@ -2726,7 +2738,12 @@ mod tests {
         // `method_security_from_contract` + assert it above (enforced), or add it to
         // the metadata-only whitelist here with a rationale.
         let EndpointSecurityContract {
-            // ── enforced (projected into MethodSecurity) ──
+            // ── projected into MethodSecurity ──
+            // Projection is not enforcement. Most of these back a real gate, but
+            // `owner_field` (guard unwired — `udb native lint` rejects the
+            // annotation) and `audit_event_type` (no audit writer reads it) are
+            // carried without one. Each says so on its MethodSecurity field.
+            // When adding a field here, state which of the two it is.
             mode: _,
             roles: _,
             scopes: _,

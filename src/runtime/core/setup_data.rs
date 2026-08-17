@@ -1728,7 +1728,10 @@ impl DataBrokerRuntime {
         })
     }
 
-    pub async fn delete(
+    /// `pub(crate)`: takes `MutationGuards`, which is crate-private, so this was
+    /// never callable from outside the crate — the `pub` only tripped the
+    /// private-interface lint.
+    pub(crate) async fn delete(
         &self,
         manifest: &CatalogManifest,
         message_type: &str,
@@ -2257,7 +2260,8 @@ impl DataBrokerRuntime {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub async fn update(
+    /// `pub(crate)` for the same reason as [`Self::delete`] — see there.
+    pub(crate) async fn update(
         &self,
         manifest: &CatalogManifest,
         message_type: &str,

@@ -1038,7 +1038,8 @@ impl DataBrokerRuntime {
     }
 
     /// Stage a new catalog version.  Returns the assigned catalog_id.
-    pub async fn stage_catalog(
+    /// `pub(crate)`: returns the crate-private `CatalogMutationResult`.
+    pub(crate) async fn stage_catalog(
         &self,
         project_id: &str,
         version: &str,
@@ -1433,7 +1434,7 @@ impl DataBrokerRuntime {
     }
 
     /// Activate a catalog version (marks it ACTIVE, records activation log).
-    pub async fn activate_catalog(
+    pub(crate) async fn activate_catalog(
         &self,
         project_id: &str,
         catalog_id: &str,
@@ -1961,7 +1962,7 @@ impl DataBrokerRuntime {
     }
 
     /// Rollback the active catalog version.
-    pub async fn rollback_catalog(
+    pub(crate) async fn rollback_catalog(
         &self,
         project_id: &str,
         target_catalog_id: &str,

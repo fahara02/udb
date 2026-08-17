@@ -3948,7 +3948,7 @@ pub async fn deliver_otp(channel: &str, address: &str, code: &str, otp_type: i32
     }
     #[cfg(not(feature = "http-client"))]
     {
-        let _ = (address, code, otp_type, user_id);
+        let _ = (url, address, code, otp_type, user_id);
         tracing::error!(
             channel,
             "OTP delivery webhook configured but this build lacks the http-client feature"

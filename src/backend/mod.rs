@@ -2272,6 +2272,24 @@ mod tests {
         // a real plugin / executor / compiler. No more metadata-only
         // exclusions.
         let matrix = capability_matrix();
+        // Assert something feature-independently: both blocks below are gated,
+        // so in a slim build this test used to pass while checking nothing.
+        assert!(
+            !matrix.is_empty(),
+            "the capability matrix must describe at least the always-present backends"
+        );
+        for entry in &matrix {
+            assert!(
+                !entry.backend.is_empty(),
+                "every matrix entry names a backend"
+            );
+            assert_eq!(
+                entry.unsupported_error_code, UNSUPPORTED_OPERATION_CODE,
+                "backend '{}' must refuse unsupported operations with the shared code",
+                entry.backend
+            );
+        }
+
         #[cfg(feature = "redis")]
         {
             let redis = matrix
