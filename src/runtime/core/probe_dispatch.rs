@@ -871,6 +871,20 @@ impl DataBrokerRuntime {
             "mongodb" | "mongo" => Some(BackendKind::Mongodb),
             other => BackendKind::from_token(other),
         };
+        // A request context means this is a data-plane dispatch, where `instance`
+        // came from the caller's `x-udb-target-instance` header. Check the
+        // instance's project label before any plugin resolves a client: the
+        // factories all use the unscoped accessors, which pass an empty project
+        // and therefore skip the check entirely. Probe/admin paths pass no
+        // context and are unaffected.
+        if let Some(ctx) = context {
+            self.ensure_dispatch_instance_allowed_for_project(
+                kind.as_ref(),
+                backend,
+                instance,
+                &ctx.project_id,
+            )?;
+        }
         // U2 step 5: the per-backend construction match has moved into each
         // plugin's `DispatchFactory` impl. The resolver looks the factory up
         // by `BackendKind` and delegates; adding a backend means one plugin
@@ -1310,6 +1324,8 @@ impl DataBrokerRuntime {
     ) -> Result<(), tonic::Status> {
         parse_dispatch_json(request_json)?;
         use crate::runtime::executors::ObjectExecutor;
+        #[cfg(not(feature = "s3"))]
+        let _ = project_id;
         #[cfg(feature = "s3")]
         if matches!(backend, "s3" | "minio") {
             let project = project_id.trim();

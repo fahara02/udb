@@ -785,6 +785,32 @@ impl DataBrokerRuntime {
         })
     }
 
+    /// Project-scoped Azure Blob resolver — the object-store analogue of
+    /// `s3_for_instance_for_project`.
+    ///
+    /// The instance name reaching this is caller-supplied
+    /// (`x-udb-target-instance`), so naming an instance is not the same as being
+    /// entitled to it. This refuses an instance whose project label does not
+    /// admit `project_id` BEFORE handing back a client, which is what makes an
+    /// operator's `project=` label on an Azure instance mean anything. Every
+    /// data-plane object path must use this, never the unscoped resolver.
+    /// `Err` means the project may not use this instance; `Ok(None)` means no
+    /// such instance is connected — so callers keep their own "not configured"
+    /// diagnostic and only gain the refusal.
+    #[cfg(feature = "azureblob")]
+    pub(crate) fn azureblob_for_instance_for_project(
+        &self,
+        instance: &str,
+        project_id: &str,
+    ) -> Result<Option<&crate::runtime::executors::azureblob::AzureBlobClient>, tonic::Status> {
+        self.ensure_backend_instance_name_allowed_for_project(
+            &["azureblob"],
+            instance,
+            project_id,
+        )?;
+        Ok(self.azureblob_for_instance(instance))
+    }
+
     #[cfg(feature = "gcs")]
     pub(crate) fn gcs_for_instance(
         &self,
@@ -797,6 +823,19 @@ impl DataBrokerRuntime {
                 None
             }
         })
+    }
+
+    /// Project-scoped GCS resolver. See
+    /// [`Self::azureblob_for_instance_for_project`] — same reasoning, same
+    /// caller-supplied instance name, same refusal.
+    #[cfg(feature = "gcs")]
+    pub(crate) fn gcs_for_instance_for_project(
+        &self,
+        instance: &str,
+        project_id: &str,
+    ) -> Result<Option<&crate::runtime::executors::gcs::GcsClient>, tonic::Status> {
+        self.ensure_backend_instance_name_allowed_for_project(&["gcs"], instance, project_id)?;
+        Ok(self.gcs_for_instance(instance))
     }
 
     /// NW3-2: SQLite pool resolver.
@@ -2043,6 +2082,53 @@ impl DataBrokerRuntime {
             project_id,
         )
     }
+
+    /// Project-label enforcement for the generic-dispatch path, applied once for
+    /// every backend instead of once per plugin.
+    ///
+    /// `build_dispatch_executor` receives the `RequestContext` but each plugin
+    /// resolved its instance with the unscoped accessor, which passes
+    /// `project_id = ""` — and an empty project short-circuits every check
+    /// above. The instance name on that path comes from the caller's
+    /// `x-udb-target-instance` header, so the effect was that a request
+    /// authenticated to one project could name an instance an operator had
+    /// explicitly labelled for another and be served from it. Explicit labels
+    /// are honoured even under the default Permissive routing mode, so this was
+    /// not confined to strict deployments.
+    ///
+    /// Enforcing here rather than in each `DispatchFactory` means a new backend
+    /// plugin cannot forget it.
+    pub(crate) fn ensure_dispatch_instance_allowed_for_project(
+        &self,
+        kind: Option<&crate::backend::BackendKind>,
+        backend_token: &str,
+        instance: Option<&str>,
+        project_id: &str,
+    ) -> Result<(), tonic::Status> {
+        if project_id.trim().is_empty() {
+            return Ok(());
+        }
+        // Instances are registered under the canonical `BackendKind::as_str()`
+        // token, so normalise the request's alias (`pg`, `postgresql`, `mongo`)
+        // before matching. s3 and minio are separate kinds that share one pool,
+        // exactly as the project-scoped resolver macro declares.
+        let canonical = kind.map_or(backend_token, |kind| kind.as_str());
+        let single = [canonical];
+        let allow: &[&str] = match kind {
+            Some(crate::backend::BackendKind::S3 | crate::backend::BackendKind::Minio) => {
+                &["s3", "minio"]
+            }
+            _ => &single,
+        };
+        match instance.map(str::trim).filter(|name| !name.is_empty()) {
+            Some(name) => {
+                self.ensure_backend_instance_name_allowed_for_project(allow, name, project_id)
+            }
+            // No explicit instance: the plugin will fall back to its unlabeled
+            // default, which strict routing reserves for the default project.
+            None => self.ensure_unlabeled_default_allowed_for_project(canonical, project_id),
+        }
+    }
 }
 
 /// RAII guard returned by [`DataBrokerRuntime::pg_read_pool_routed`]: the
@@ -2376,5 +2462,150 @@ mod read_fence_tests {
             "read_fence_json",
             "must decode as a ReadFence JSON payload",
         );
+    }
+}
+
+#[cfg(test)]
+mod dispatch_project_scope_tests {
+    use super::*;
+    use crate::backend::BackendKind;
+    use std::collections::HashMap;
+
+    /// One instance an operator has explicitly labelled for a single project.
+    fn labelled_instance(name: &str, backend: &str, project: &str) -> RuntimeBackendInstance {
+        RuntimeBackendInstance {
+            name: name.to_string(),
+            backend: backend.to_string(),
+            role: "read_write".to_string(),
+            enabled: true,
+            configured: true,
+            connected: true,
+            read_weight: 1,
+            write_weight: 1,
+            dsn_env: None,
+            labels: HashMap::from([("project_id".to_string(), project.to_string())]),
+            capabilities: Vec::new(),
+            healthy: true,
+            circuit_open: false,
+        }
+    }
+
+    fn runtime_with(instances: Vec<RuntimeBackendInstance>) -> DataBrokerRuntime {
+        DataBrokerRuntime {
+            backend_instances: instances,
+            ..DataBrokerRuntime::default()
+        }
+    }
+
+    /// The core of the fix: generic dispatch resolved every instance with an
+    /// empty project, which short-circuits the label check. The instance name
+    /// arrives on the caller's `x-udb-target-instance` header, so before this
+    /// guard a request authenticated to `hr` could name `billing`'s instance and
+    /// be served from it. The runtime is left on the DEFAULT routing mode here
+    /// on purpose — explicit labels bind regardless of strictness.
+    #[test]
+    fn generic_dispatch_refuses_an_instance_labelled_for_another_project() {
+        let runtime = runtime_with(vec![labelled_instance(
+            "billing_vector",
+            "qdrant",
+            "billing",
+        )]);
+
+        runtime
+            .ensure_dispatch_instance_allowed_for_project(
+                Some(&BackendKind::Qdrant),
+                "qdrant",
+                Some("billing_vector"),
+                "billing",
+            )
+            .expect("the owning project must still reach its own instance");
+
+        let status = runtime
+            .ensure_dispatch_instance_allowed_for_project(
+                Some(&BackendKind::Qdrant),
+                "qdrant",
+                Some("billing_vector"),
+                "hr",
+            )
+            .expect_err("a foreign project must not reach a labelled instance");
+        assert!(
+            status.message().contains("labeled for a different project"),
+            "the refusal must say why: {}",
+            status.message()
+        );
+    }
+
+    /// Probe and admin paths carry no request context and therefore no project.
+    /// They must keep working exactly as before, or the guard would break
+    /// startup and diagnostics.
+    #[test]
+    fn an_absent_project_is_still_unrestricted() {
+        let runtime = runtime_with(vec![labelled_instance(
+            "billing_vector",
+            "qdrant",
+            "billing",
+        )]);
+        runtime
+            .ensure_dispatch_instance_allowed_for_project(
+                Some(&BackendKind::Qdrant),
+                "qdrant",
+                Some("billing_vector"),
+                "",
+            )
+            .expect("probe/admin dispatch has no project and must not be gated");
+    }
+
+    /// Instances are registered under the canonical `BackendKind` token, but
+    /// callers may send an alias. Matching on the raw request token alone would
+    /// find no instance and silently fall through to the unlabeled-fallback
+    /// path — enforcing nothing.
+    #[test]
+    fn backend_aliases_resolve_to_the_registered_token() {
+        let runtime = runtime_with(vec![labelled_instance("billing_pg", "postgres", "billing")]);
+
+        for alias in ["pg", "postgresql", "postgres"] {
+            let kind = match alias {
+                "postgres" | "pg" | "postgresql" => Some(BackendKind::Postgres),
+                other => BackendKind::from_token(other),
+            };
+            runtime
+                .ensure_dispatch_instance_allowed_for_project(
+                    kind.as_ref(),
+                    alias,
+                    Some("billing_pg"),
+                    "hr",
+                )
+                .expect_err(&format!("alias '{alias}' must resolve and refuse"));
+        }
+    }
+
+    /// s3 and minio are distinct kinds sharing one client pool, so an instance
+    /// registered as `minio` must be found when the request names `s3` — the
+    /// same pairing the project-scoped resolver macro declares.
+    #[test]
+    fn s3_and_minio_are_matched_as_one_pool() {
+        let runtime = runtime_with(vec![labelled_instance(
+            "billing_objects",
+            "minio",
+            "billing",
+        )]);
+
+        runtime
+            .ensure_dispatch_instance_allowed_for_project(
+                Some(&BackendKind::S3),
+                "s3",
+                Some("billing_objects"),
+                "billing",
+            )
+            .expect("the owning project reaches its minio instance through the s3 token");
+
+        runtime
+            .ensure_dispatch_instance_allowed_for_project(
+                Some(&BackendKind::S3),
+                "s3",
+                Some("billing_objects"),
+                "hr",
+            )
+            .expect_err("a foreign project must not reach it either");
     }
 }

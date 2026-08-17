@@ -3303,7 +3303,7 @@ impl DataBrokerRuntime {
                             context.target_instance.as_str()
                         };
                         let client = self
-                            .gcs_for_instance(instance)
+                            .gcs_for_instance_for_project(instance, &project)?
                             .ok_or_else(|| {
                                 object_instance_missing_status("gcs", "put_object", instance)
                             })?
@@ -3333,7 +3333,7 @@ impl DataBrokerRuntime {
                             context.target_instance.as_str()
                         };
                         let client = self
-                            .azureblob_for_instance(instance)
+                            .azureblob_for_instance_for_project(instance, &project)?
                             .ok_or_else(|| {
                                 object_instance_missing_status("azureblob", "put_object", instance)
                             })?
@@ -3463,7 +3463,7 @@ impl DataBrokerRuntime {
                             context.target_instance.as_str()
                         };
                         let client = self
-                            .gcs_for_instance(instance)
+                            .gcs_for_instance_for_project(instance, &project)?
                             .ok_or_else(|| {
                                 object_instance_missing_status("gcs", "get_object", instance)
                             })?
@@ -3485,7 +3485,7 @@ impl DataBrokerRuntime {
                             context.target_instance.as_str()
                         };
                         let client = self
-                            .azureblob_for_instance(instance)
+                            .azureblob_for_instance_for_project(instance, &project)?
                             .ok_or_else(|| {
                                 object_instance_missing_status("azureblob", "get_object", instance)
                             })?
