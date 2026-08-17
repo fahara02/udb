@@ -3651,6 +3651,33 @@ impl DataBrokerRuntime {
         }
     }
 
+    /// Enforce the instance's project label before a portable (non-Qdrant)
+    /// vector dispatch.
+    ///
+    /// Each `vector_*_backend_kind_target` resolves Qdrant through
+    /// `qdrant_for_instance_for_project`, which refuses an instance labelled for
+    /// another project; the portable fallback below it dispatched with no
+    /// project at all. Both the backend and the instance arrive from the
+    /// caller's request (`vector_backend` / `vector_instance` on an
+    /// embedding-model registration), so without this a caller could point a
+    /// model at another project's Weaviate or Pinecone instance and create
+    /// collections in it or write vectors to it.
+    fn ensure_vector_instance_allowed_for_project(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+    ) -> Result<(), tonic::Status> {
+        let lowered = backend.to_ascii_lowercase();
+        let kind = crate::backend::BackendKind::from_token(&lowered);
+        self.ensure_dispatch_instance_allowed_for_project(
+            kind.as_ref(),
+            &lowered,
+            instance,
+            project_id,
+        )
+    }
+
     pub async fn vector_ensure_backend_kind_target(
         &self,
         backend: &str,
@@ -3704,6 +3731,7 @@ impl DataBrokerRuntime {
                 "vector_ensure_backend_kind_target",
             ));
         }
+        self.ensure_vector_instance_allowed_for_project(backend, instance, project_id)?;
         let spec = serde_json::json!({
             "dimension": dimension,
             "distance": distance,
@@ -3750,7 +3778,7 @@ impl DataBrokerRuntime {
                 "vector_upsert_existing_backend_kind_target",
             ));
         }
-        let _ = project_id;
+        self.ensure_vector_instance_allowed_for_project(backend, instance, project_id)?;
         self.vector_upsert_dispatch_target(
             &backend.to_ascii_lowercase(),
             instance,
@@ -3802,7 +3830,8 @@ impl DataBrokerRuntime {
                 )
                 .await;
         }
-        let _ = (project_id, dimension, distance, output_dtype);
+        self.ensure_vector_instance_allowed_for_project(backend, instance, project_id)?;
+        let _ = (dimension, distance, output_dtype);
         self.vector_upsert_dispatch_target(
             &backend.to_ascii_lowercase(),
             instance,
@@ -3844,7 +3873,7 @@ impl DataBrokerRuntime {
                 "vector_search_backend_kind_target",
             ));
         }
-        let _ = project_id;
+        self.ensure_vector_instance_allowed_for_project(backend, instance, project_id)?;
         self.vector_search_dispatch_target(&backend.to_ascii_lowercase(), instance, request)
             .await
     }
@@ -10975,5 +11004,65 @@ fn ensure_typed_object_backend(backend: &str) -> Result<(), tonic::Status> {
         Ok(())
     } else {
         Err(typed_object_backend_required_status(backend))
+    }
+}
+
+#[cfg(test)]
+mod vector_project_scope_tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn runtime_with_labelled_weaviate() -> DataBrokerRuntime {
+        DataBrokerRuntime {
+            backend_instances: vec![RuntimeBackendInstance {
+                name: "billing_vectors".to_string(),
+                backend: "weaviate".to_string(),
+                role: "read_write".to_string(),
+                enabled: true,
+                configured: true,
+                connected: true,
+                read_weight: 1,
+                write_weight: 1,
+                dsn_env: None,
+                labels: HashMap::from([("project_id".to_string(), "billing".to_string())]),
+                capabilities: Vec::new(),
+                healthy: true,
+                circuit_open: false,
+            }],
+            ..DataBrokerRuntime::default()
+        }
+    }
+
+    /// The portable vector fallback used to dispatch with no project, so an
+    /// embedding-model registration naming another project's instance was
+    /// served. Qdrant was never affected — it resolves through the
+    /// project-scoped resolver — which is exactly why the gap was easy to miss.
+    #[test]
+    fn portable_vector_dispatch_refuses_a_foreign_projects_instance() {
+        let runtime = runtime_with_labelled_weaviate();
+
+        runtime
+            .ensure_vector_instance_allowed_for_project(
+                "weaviate",
+                Some("billing_vectors"),
+                "billing",
+            )
+            .expect("the owning project must still reach its own vector instance");
+
+        runtime
+            .ensure_vector_instance_allowed_for_project("weaviate", Some("billing_vectors"), "hr")
+            .expect_err("a foreign project must not reach a labelled vector instance");
+    }
+
+    /// The vector entry points receive the backend token as the caller spelled
+    /// it. Instances are registered lowercased and canonical, so the adapter has
+    /// to normalise or it would match nothing and enforce nothing.
+    #[test]
+    fn the_backend_token_is_normalised_before_matching() {
+        let runtime = runtime_with_labelled_weaviate();
+
+        runtime
+            .ensure_vector_instance_allowed_for_project("WEAVIATE", Some("billing_vectors"), "hr")
+            .expect_err("a mixed-case backend token must still resolve and refuse");
     }
 }
