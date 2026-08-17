@@ -596,6 +596,50 @@ fn parse_args_recognizes_field_mask_preview() {
 }
 
 #[test]
+fn lint_policy_entity_coverage_flags_an_entity_no_rule_reaches() {
+    use udb::{AuthzEffect, AuthzPolicy, lint_policy_entity_coverage};
+    let covering = AuthzPolicy {
+        effect: AuthzEffect::Allow,
+        enabled: true,
+        resource: "acme.crm.entity.v1.Contact".to_string(),
+        ..AuthzPolicy::default()
+    };
+    let entities = vec![
+        (
+            "acme.crm.entity.v1.Contact".to_string(),
+            "crm.contacts".to_string(),
+        ),
+        (
+            "acme.crm.entity.v1.TripRoutePlan".to_string(),
+            "location.trip_route_plans".to_string(),
+        ),
+    ];
+    let findings = lint_policy_entity_coverage(std::slice::from_ref(&covering), &entities);
+    assert_eq!(findings.len(), 1, "only the uncovered entity is reported");
+    assert_eq!(findings[0].category, "entity_without_policy");
+    assert!(findings[0].message.contains("TripRoutePlan"));
+
+    // A wildcard resource covers everything — no findings.
+    let wildcard = AuthzPolicy {
+        effect: AuthzEffect::Allow,
+        enabled: true,
+        resource: "*".to_string(),
+        ..AuthzPolicy::default()
+    };
+    assert!(lint_policy_entity_coverage(&[wildcard], &entities).is_empty());
+
+    // A disabled policy covers nothing, but an empty enabled set defers to the
+    // deny_by_default finding rather than reporting every entity.
+    let disabled = AuthzPolicy {
+        effect: AuthzEffect::Allow,
+        enabled: false,
+        resource: "acme.crm.entity.v1.Contact".to_string(),
+        ..AuthzPolicy::default()
+    };
+    assert!(lint_policy_entity_coverage(&[disabled], &entities).is_empty());
+}
+
+#[test]
 fn lint_policies_empty_set_returns_deny_by_default_warning() {
     use udb::lint_policies;
     let findings = lint_policies(&[]);

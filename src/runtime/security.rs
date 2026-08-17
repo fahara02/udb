@@ -2874,6 +2874,57 @@ pub struct PolicyLintFinding {
 ///   for the same (subject, tenant, purpose, resource, action) unreachable.
 /// - `broad_wildcard`: warn when a Deny policy uses `*` for tenant or purpose,
 ///   which could silently block unintended callers.
+/// Report entities that no policy can possibly reach.
+///
+/// Policies are authored per entity, so a newly added entity starts with **no
+/// rules at all** and the first access is a runtime permission denial. The
+/// natural order of work is proto -> code -> deploy -> policy, and the middle
+/// two steps give no signal that the last one is missing — the same class of
+/// omission as an index nothing references, and just as cheap to detect.
+///
+/// A policy covers an entity when its `resource` selector is a wildcard or
+/// mentions the entity's message type or `schema.table`. Wildcard-only policy
+/// sets cover everything and produce no findings.
+pub fn lint_policy_entity_coverage(
+    policies: &[AuthzPolicy],
+    entities: &[(String, String)],
+) -> Vec<PolicyLintFinding> {
+    if entities.is_empty() {
+        return Vec::new();
+    }
+    let enabled: Vec<&AuthzPolicy> = policies.iter().filter(|policy| policy.enabled).collect();
+    if enabled.is_empty() {
+        // `lint_policies` already reports the empty/deny-by-default case; adding
+        // one finding per entity on top would bury it.
+        return Vec::new();
+    }
+    let covers_everything = enabled.iter().any(|policy| {
+        let resource = policy.resource.trim();
+        resource.is_empty() || resource == "*"
+    });
+    if covers_everything {
+        return Vec::new();
+    }
+    let mut findings = Vec::new();
+    for (message_type, schema_table) in entities {
+        let covered = enabled.iter().any(|policy| {
+            let resource = policy.resource.trim();
+            resource.contains(message_type.as_str()) || resource.contains(schema_table.as_str())
+        });
+        if !covered {
+            findings.push(PolicyLintFinding {
+                severity: "warning".to_string(),
+                category: "entity_without_policy".to_string(),
+                message: format!(
+                    "no enabled policy names {message_type} ({schema_table}); every access to it                      will be denied until a rule covers it"
+                ),
+                policy_index: None,
+            });
+        }
+    }
+    findings
+}
+
 pub fn lint_policies(policies: &[AuthzPolicy]) -> Vec<PolicyLintFinding> {
     let mut findings = Vec::new();
 

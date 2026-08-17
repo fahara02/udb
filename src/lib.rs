@@ -137,6 +137,7 @@ pub use runtime::core::{BackendProbeResult, EnqueueOutboxEventResult, PostgresPr
 pub use runtime::{DataBrokerRuntime, RuntimeInitReport};
 pub use security::{
     LogSafeSecurityContext, PolicyEffect, PolicyLintFinding, SecurityContext, lint_policies,
+    lint_policy_entity_coverage,
 };
 pub use service::{DataBrokerService, context_from_metadata, serve};
 pub use signal::{AnalyticsEvent, DDL_ANALYTICS_EVENTS_DAILY, SignalConfig, common_events};

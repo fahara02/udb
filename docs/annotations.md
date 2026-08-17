@@ -77,6 +77,28 @@ message Customer {
 UDB parses the message into a catalog manifest, generates backend artifacts,
 and uses the manifest at runtime to route broker requests.
 
+## Repeated Fields And Arrays
+
+A `repeated` field maps to a SQL array (`repeated float` over `REAL[]`,
+`repeated string` over `TEXT[]`). The mapping works, but there is one thing to
+know before you use it:
+
+**`udb sdk generate` emits no marshalling for array columns.** The generator
+skips them deliberately, alongside injected audit columns — so unlike every
+other column, you write the conversion yourself. Nothing tells you this at
+generate time; you find out when a write does not round-trip.
+
+What that means in practice, for the Go SDK:
+
+| | |
+|---|---|
+| **Writing** | Put the array in the record yourself. It is not produced by the generated `…ToUDBRecord` helper. |
+| **Empty vs absent** | An empty array and a missing value are different. A Go `nil` slice marshals to JSON `null`, which is SQL `NULL` — not an empty array. A `NOT NULL` array column rejects it. Send `[]` explicitly. |
+| **Reading numerics** | Numbers arrive as `json.Number`, not `float64`. The decoder uses `UseNumber()` so large integers survive exactly (see `sdk/go/udbclient/entity.go`). Parse with `.Int64()`, `.Float64()`, or `strconv.ParseUint` for `uint64`, and surface the parse error rather than ignoring it. |
+
+The last row applies to every numeric read, not only arrays — it is listed here
+because arrays are where people meet it first, having hand-written the binding.
+
 ## Security Metadata
 
 Use field and table security annotations to describe sensitive fields, tenant

@@ -1017,6 +1017,26 @@ pub fn run() {
             // (…column) and (…storage)) on a single line are accepted by UDB +
             // buf but commonly misparsed by editor protobuf language servers.
             // Surface a non-fatal formatting hint with file:line.
+            // Entity/policy coverage: a newly added entity has no ABAC rule, and
+            // the first access is a runtime denial. Nothing between "added the
+            // entity" and "someone tried to use it" says so, even though both
+            // halves are known here. Only runs when a policy file is configured;
+            // `udb policy lint` remains the policy-only entry point.
+            if let Ok(policies) = load_authz_policies_for_lint() {
+                let entities: Vec<(String, String)> = manifest
+                    .tables
+                    .iter()
+                    .map(|table| {
+                        (
+                            table.message_name.clone(),
+                            format!("{}.{}", table.schema, table.table),
+                        )
+                    })
+                    .collect();
+                for finding in udb::lint_policy_entity_coverage(&policies, &entities) {
+                    eprintln!("lint[{}] {}", finding.category, finding.message);
+                }
+            }
             let mut dense_hints = Vec::new();
             scan_dense_aggregate_annotations(&proto_root, &mut dense_hints);
             for hint in &dense_hints {
