@@ -5,6 +5,80 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.17] - 2026-08-17
+
+Isolation release. A caller could reach another project's backend instance by
+naming it, on six separate paths. If you label backend instances per project,
+upgrade; if you run a single project, nothing here changes behaviour.
+
+### Fixed
+
+- **Backend instance project labels are now enforced on every dispatch path.**
+  `x-udb-target-instance` is a request header, so the instance name arriving at
+  dispatch is caller-supplied. Naming an instance was treated as being entitled
+  to it:
+
+  - **Generic dispatch, all 18 backends.** `resolve_dispatch_executor` handed the
+    request context to each backend plugin, but every plugin resolved its client
+    with the unscoped accessor, which passes an empty project — and an empty
+    project short-circuits the entitlement check on its first line. Five backends
+    had a project-scoped resolver sitting beside the one being called.
+  - **Object streaming (GCS, Azure Blob).** The streaming PutObject/GetObject
+    path checked the project for s3/minio and then resolved GCS and Azure Blob by
+    raw lookup in the next two arms. Neither had a project-scoped resolver at all.
+  - **Vector dispatch (Weaviate, Pinecone, Elasticsearch).** All five vector entry
+    points check the project in their Qdrant arm and discarded it in the portable
+    fallback. Reachable because `vector_backend` and `vector_instance` are request
+    fields on embedding-model registration, so a caller could point a model at
+    another project's store, create collections in it and write vectors to it.
+  - **Vector erasure.** The portable delete path — GDPR teardown for
+    Elasticsearch, Pinecone and Weaviate — held the project and dispatched
+    without it.
+  - **Instance auto-selection.** With no instance named, a write still picks one,
+    and the ClickHouse, MongoDB, Neo4j, Qdrant and Redis paths picked it without
+    consulting project labels.
+
+  This was not confined to strict routing. An explicit label is honoured before
+  the routing mode is consulted, so an operator labelling an instance
+  `project_id: billing` drew a boundary that held on some paths and not others.
+  Unlabeled instances remain available to every project under the default
+  Permissive mode, so no working deployment changes behaviour — what changes is
+  that a label you did set is enforced everywhere.
+
+  Enforcement lives at the dispatch chokepoint rather than in each plugin, so a
+  new backend cannot omit it.
+
+- **`GetAdminSummary` disclosed every backend instance in the deployment.** It
+  resolves a single project and filters CDC status and DLQ events by it, then
+  listed the name, backend, transport and connection state of every enabled
+  instance — so a project administrator could read another project's topology.
+  Now filtered to the caller's project.
+
+- **Configurable gRPC message size, defaulting to 10 MB.** The 4 MiB tonic
+  default rejected legitimate payloads with an opaque decode error. Set
+  `UDB_GRPC_MAX_MESSAGE_BYTES` (or `UDB_GRPC_MAX_RECV_BYTES`) to change it; it
+  applies to all three listeners.
+
+- **Two migration tests never ran.** A doc comment and its `#[test]` had drifted
+  apart, leaving the tests for the two defects that blocked the 0.5.6 → 0.5.14
+  upgrade — the index that deleted itself, and the audit-block relocation
+  reported as field-number reuse — compiled but never executed. A regression in
+  either would have shipped silently.
+
+- **`endpoint_security.owner_field` is rejected until its guard is wired.** The
+  ownership guard exists and is tested but no handler calls it, so declaring the
+  annotation granted no ownership check while reading like one. `udb native lint`
+  now refuses it. `audit_event_type` is documented as declarative metadata rather
+  than a runtime gate, because no audit writer reads it.
+
+- **A racy job-quota helper was removed.** It counted a tenant's jobs and then
+  refused at budget — a check-then-insert race. The budget is enforced inside the
+  guarded INSERT under a per-tenant advisory lock, which is the wired path.
+
+- **Clearer diagnostics for two recurring dead ends.** An unknown entity now
+  names the entities the catalog does know and its checksum; a stale SDK
+  generator is named rather than producing a confusing diff.
+
 ## [0.5.16] - 2026-08-17
 
 Usability release for changing a schema that already holds data, from operator

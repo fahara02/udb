@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.16 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.17 | protocol v1.0.0</sub>
 </p>
 
 This page explains how UDB numbers its releases, and it's the reference to reach
@@ -19,19 +19,19 @@ separate wire-protocol version that only moves when the network contract changes
 
 | Item | Version |
 |---|---:|
-| UDB crate and CLI | `0.5.16` |
-| SDK packages | `0.5.16` |
+| UDB crate and CLI | `0.5.17` |
+| SDK packages | `0.5.17` |
 | Wire protocol | `1.0.0` |
-| Release tag | `v0.5.16` |
+| Release tag | `v0.5.17` |
 
 The single source of truth for all of these numbers is
 [versions.json](versions.json). Everything else — package manifests and SDK
 protocol constants — is checked against that file in CI, so you edit it in one
 place and the checks keep the rest honest.
 
-## 0.5.16 Release Gate Assumptions
+## 0.5.17 Release Gate Assumptions
 
-Before you tag 0.5.16, the staged tree needs to pass the gates that tripped up
+Before you tag 0.5.17, the staged tree needs to pass the gates that tripped up
 the last two release attempts:
 
 - `node scripts/check-versions.mjs` must agree with [versions.json](versions.json).
