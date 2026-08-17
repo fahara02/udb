@@ -38,12 +38,13 @@ pub(crate) fn job_quota_exhausted_status(budget: i64) -> Status {
     )
 }
 
-/// PURE quota gate: refuse when the tenant's non-deleted job count has reached
-/// the budget. Shares [`job_quota_exhausted_status`] with the atomic create-time
-/// gate so both paths carry the same typed detail.
-pub(crate) fn enforce_job_quota(active_jobs: i64, budget: i64) -> Result<(), Status> {
-    if active_jobs >= budget {
-        return Err(job_quota_exhausted_status(budget));
-    }
-    Ok(())
-}
+// A `enforce_job_quota(active_jobs, budget)` helper used to live here: count the
+// tenant's jobs, then refuse if the count had reached the budget. It had no
+// caller, and it must not gain one — COUNT-then-INSERT is a TOCTOU race, as the
+// create path documents: concurrent creates at budget-1 each read
+// `count < budget` because their peers' inserts are invisible under READ
+// COMMITTED, and every one of them proceeds. The quota is enforced instead by
+// `guarded_insert_job_sql`, which counts inside the same statement as the INSERT
+// under the per-tenant advisory lock, so 0 rows inserted means at/over budget.
+// `job_quota_exhausted_status` above is the shared typed refusal both paths
+// would return; the create path still uses it.

@@ -22,7 +22,7 @@ use super::errors::{
 };
 use super::handlers::{guarded_insert_job_sql, project_scope_predicate};
 use super::model::{job_status_filter_to_db, schedule_type_to_db, scheduled_job_model};
-use super::quota::{DEFAULT_MAX_JOBS_PER_TENANT, enforce_job_quota, job_quota_exhausted_status};
+use super::quota::{DEFAULT_MAX_JOBS_PER_TENANT, job_quota_exhausted_status};
 use super::tick::{due_jobs_claim_sql, fired_idempotency_key};
 
 fn decode_detail(status: &Status) -> ErrorDetail {
@@ -320,17 +320,17 @@ fn due_claim_sql_uses_skip_locked() {
     );
 }
 
-/// The per-tenant job budget refuses at/over budget with the shared typed
-/// quota detail (ResourceExhausted + kind QUOTA, not retryable) and admits
-/// under-budget creates — same shape as the search-index gate.
+/// The per-tenant job budget refuses with the shared typed quota detail
+/// (ResourceExhausted + kind QUOTA, not retryable).
+///
+/// The refusal is asserted directly rather than through a count-then-check
+/// helper: that helper was removed because COUNT-then-INSERT is a TOCTOU race,
+/// and the budget is enforced inside `guarded_insert_job_sql` — see
+/// `insert_job_sql_is_quota_guarded_and_atomic` for the SQL-shape assertion.
 #[test]
 fn job_quota_gate_refuses_over_budget_with_typed_detail() {
-    enforce_job_quota(0, DEFAULT_MAX_JOBS_PER_TENANT).expect("empty tenant admitted");
-    enforce_job_quota(DEFAULT_MAX_JOBS_PER_TENANT - 1, DEFAULT_MAX_JOBS_PER_TENANT)
-        .expect("under-budget create admitted");
-    for count in [DEFAULT_MAX_JOBS_PER_TENANT, DEFAULT_MAX_JOBS_PER_TENANT + 7] {
-        let err = enforce_job_quota(count, DEFAULT_MAX_JOBS_PER_TENANT)
-            .expect_err("at/over-budget create must be refused");
+    {
+        let err = job_quota_exhausted_status(DEFAULT_MAX_JOBS_PER_TENANT);
         assert_eq!(err.code(), tonic::Code::ResourceExhausted);
         assert_eq!(
             err.message(),
