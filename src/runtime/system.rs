@@ -351,8 +351,8 @@ pub async fn ensure_system_catalog(pool: &PgPool) -> Result<SystemCatalogReport,
             continue;
         };
         let refs: Vec<&str> = columns.iter().map(String::as_str).collect();
-        if let Err(err) = crate::runtime::core::audit::verify_table_columns(pool, &relation, &refs)
-            .await
+        if let Err(err) =
+            crate::runtime::core::audit::verify_table_columns(pool, &relation, &refs).await
         {
             tracing::error!(
                 relation = %relation,
@@ -397,11 +397,14 @@ fn declared_table_columns(statement: &str) -> Option<(String, Vec<String>)> {
     let mut parts = Vec::new();
     for ch in body.chars() {
         match ch {
-            '(' => {
+            // Square brackets count too: `DEFAULT ARRAY[10, 60, 300]` puts commas
+            // inside a column definition without a single paren in sight, and an
+            // array TYPE is written `INTEGER[]`.
+            '(' | '[' => {
                 depth += 1;
                 part.push(ch);
             }
-            ')' => {
+            ')' | ']' => {
                 depth = depth.checked_sub(1)?;
                 part.push(ch);
             }
@@ -1984,6 +1987,28 @@ mod tests {
         let (rel, cols) = declared_table_columns(ddl).expect("must parse");
         assert_eq!(rel, "\"s\".\"t\"");
         assert_eq!(cols, vec!["id", "amount", "label"]);
+    }
+
+    /// Regression: `DEFAULT ARRAY[10, 60, 300]` (real, in `udb_topic_policy`) puts
+    /// commas inside a column definition with no paren involved. Counting only
+    /// parens split that column into fragments, and the statement was declined -
+    /// so the table silently went unverified. CI caught this; keep it caught.
+    #[test]
+    fn declared_table_columns_handles_array_defaults_and_array_types() {
+        let ddl = concat!(
+            "CREATE TABLE IF NOT EXISTS s.t ( ",
+            "policy_id BIGSERIAL PRIMARY KEY, ",
+            "retry_delay_secs INTEGER[] NOT NULL DEFAULT ARRAY[10, 60, 300], ",
+            "retention_class TEXT NOT NULL DEFAULT 'standard' ",
+            "CHECK (retention_class IN ('ephemeral','standard')), ",
+            "UNIQUE (policy_id) )"
+        );
+        let (rel, cols) = declared_table_columns(ddl).expect("array defaults must parse");
+        assert_eq!(rel, "s.t");
+        assert_eq!(
+            cols,
+            vec!["policy_id", "retry_delay_secs", "retention_class"]
+        );
     }
 
     #[test]
