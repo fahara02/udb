@@ -167,9 +167,17 @@ ships — files carry a scan verdict and both download paths check it.
   relations that are all operator-overridable (`UDB_CDC_OUTBOX_TABLE`,
   `UDB_DLQ_TABLE`, `UDB_IDEMPOTENCY_KEYS_TABLE`, …). Pointing any of them at an
   existing table of the wrong shape bootstrapped clean and then failed on first
-  write. Each is now verified at startup and named with its missing columns. The
-  expected columns are parsed from the bootstrap DDL itself rather than kept in a
-  second list that could drift.
+  write. Each is now verified at startup and any mismatch is reported at ERROR
+  naming the relation and its missing columns. The expected columns are parsed from
+  the bootstrap DDL itself rather than kept in a second list that could drift.
+
+  This one **reports** rather than refusing to start, unlike the audit sink, which
+  fails closed. The audit sink loses events silently, so only a hard failure makes
+  it visible; these tables fail loudly on write already. Refusing to start would
+  also be dangerous here, because existing deployments gain new system-table
+  columns through `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` rather than the
+  CREATE — so a strict check could brick a working broker on upgrade over a column
+  that may never be written.
 
 - **Batch streams were charged one request for unlimited work.** The rate limiter
   ran in the unary prologue, so `BatchSelect`, `BatchUpsert` and

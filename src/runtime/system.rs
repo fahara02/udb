@@ -330,24 +330,38 @@ pub async fn ensure_system_catalog(pool: &PgPool) -> Result<SystemCatalogReport,
     // instead, at the one chokepoint that owns all of these tables, so a bad
     // relation is named at STARTUP with its missing columns rather than surfacing
     // later as a raw Postgres error under load.
+    // Deliberately REPORTED, not fatal - unlike the durable audit sink, which
+    // fails closed.
+    //
+    // The difference is the failure mode. A wrong-shaped audit table loses events
+    // SILENTLY, so only refusing to start makes it visible. These tables fail
+    // LOUDLY on write: the DLQ insert keeps its outbox row unacked, the CDC
+    // journal propagates its error and increments a counter, the outbox write
+    // aborts its transaction. Nothing is lost quietly, so an operator already
+    // learns about it.
+    //
+    // And the upgrade path makes strictness dangerous here. Existing deployments
+    // acquire new system-table columns through the 76 `ALTER TABLE ... ADD COLUMN
+    // IF NOT EXISTS` statements above, not through the CREATE. If any CREATE
+    // column ever lacked its matching ALTER, refusing to start would brick a
+    // working broker on upgrade over a column that may never be written. That is
+    // a worse outcome than the drift it would report.
     for statement in &statements {
         let Some((relation, columns)) = declared_table_columns(statement) else {
             continue;
         };
         let refs: Vec<&str> = columns.iter().map(String::as_str).collect();
-        crate::runtime::core::audit::verify_table_columns(pool, &relation, &refs)
+        if let Err(err) = crate::runtime::core::audit::verify_table_columns(pool, &relation, &refs)
             .await
-            .map_err(|err| {
-                system_catalog_internal_status(
-                    "bootstrap_shape",
-                    format!(
-                        "UDB system table {relation} exists but does not match the shape UDB \
-                         requires: {err}. It was not created by this bootstrap - point the \
-                         corresponding UDB_*_TABLE override at a dedicated relation, or drop the \
-                         conflicting table"
-                    ),
-                )
-            })?;
+        {
+            tracing::error!(
+                relation = %relation,
+                detail = %err,
+                "UDB system table does not match the shape UDB requires; writes against it will \
+                 fail. If a UDB_*_TABLE override points at a pre-existing table, point it at a \
+                 dedicated relation instead"
+            );
+        }
     }
 
     Ok(SystemCatalogReport {
@@ -359,9 +373,9 @@ pub async fn ensure_system_catalog(pool: &PgPool) -> Result<SystemCatalogReport,
 /// Extract `(relation, column_names)` from a `CREATE TABLE IF NOT EXISTS` DDL
 /// statement, or `None` for anything else.
 ///
-/// Deliberately conservative: this drives a check that can REFUSE TO START the
-/// broker, so any statement it cannot parse unambiguously yields `None` and is
-/// skipped rather than risking a false refusal on a healthy deployment. Reading
+/// Deliberately conservative: any statement it cannot parse unambiguously yields
+/// `None` and is skipped, so a parser gap can never manufacture a false report
+/// about a healthy deployment. Reading
 /// the column list off the DDL keeps the check honest - there is no second,
 /// hand-maintained list to drift out of sync with the schema.
 fn declared_table_columns(statement: &str) -> Option<(String, Vec<String>)> {
@@ -1916,10 +1930,10 @@ mod tests {
         }));
     }
 
-    /// The shape check in `ensure_system_catalog` can REFUSE TO START the broker,
-    /// so a parser bug here would brick every healthy deployment. Run the parser
-    /// over every real bootstrap statement and assert it either declines cleanly
-    /// or returns plausible identifiers - never an invented column name.
+    /// A parser bug here would make `ensure_system_catalog` report shape drift
+    /// against healthy deployments on every boot. Run the parser over every real
+    /// bootstrap statement and assert it either declines cleanly or returns
+    /// plausible identifiers - never an invented column name.
     #[test]
     fn declared_table_columns_parses_every_real_bootstrap_statement() {
         let statements = system_catalog_statements(&SystemCatalogConfig::default());
