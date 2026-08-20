@@ -200,14 +200,15 @@ async fn load_webhook_delivery_jobs(
     Ok(jobs)
 }
 
-/// Insert one terminal delivery-journal row (best-effort; logged on failure).
-#[cfg(feature = "http-client")]
-#[allow(clippy::too_many_arguments)]
 /// Bounded retries for the delivery-journal write. Small and quick: the goal
 /// is to survive a transient blip, not to hold the worker while a database is
 /// down.
+#[cfg(feature = "http-client")]
 const JOURNAL_INSERT_MAX_ATTEMPTS: u32 = 3;
 
+/// Insert one terminal delivery-journal row (best-effort; logged on failure).
+#[cfg(feature = "http-client")]
+#[allow(clippy::too_many_arguments)]
 async fn insert_delivery_journal(
     pool: &PgPool,
     tenant_id: &str,

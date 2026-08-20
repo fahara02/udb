@@ -3829,6 +3829,18 @@
   },
   {
     "file": "storage.md",
+    "rpc": "SetScanVerdict",
+    "service": "StorageService",
+    "wire_rpc": "StorageService/SetScanVerdict",
+    "api_alias": "set_scan_verdict",
+    "operation_id": "setScanVerdict",
+    "op_kind": "MUTATION",
+    "request_msg": "SetScanVerdictRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"file_id\": \"<seed:file_id>\", \"verdict\": \"SCAN_VERDICT_CLEAN\", \"detail\": \"\", \"idempotency_key\": \"\" }`",
+    "notes": "fields: tenant_id(str), file_id(str), verdict(enum ScanVerdict), detail(str), scanned_at(Timestamp), idempotency_key(str). Privileged: requires udb:storage:set-scan-verdict. UNSPECIFIED is refused, so the bench records a CLEAN verdict on the seeded finalized file; scanned_by comes from the verified principal, never the body."
+  },
+  {
+    "file": "storage.md",
     "rpc": "UpdateFile",
     "service": "StorageService",
     "wire_rpc": "StorageService/UpdateFile",

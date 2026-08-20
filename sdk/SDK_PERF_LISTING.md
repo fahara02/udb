@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 381 RPCs across 28 services.
+Current generated RPC surface: 382 RPCs across 28 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -69,7 +69,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | SchedulerService | 6 | 2 | 3 | 1 | 0 |
 | SearchService | 5 | 2 | 2 | 1 | 0 |
 | SignalingService | 1 | 0 | 1 | 0 | 0 |
-| StorageService | 9 | 5 | 4 | 0 | 0 |
+| StorageService | 10 | 5 | 5 | 0 | 0 |
 | TenantService | 8 | 3 | 3 | 2 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
@@ -419,6 +419,7 @@ identity surface available to benchmark reports.
 | `StorageService/ListFiles` | `list_files` | `listFiles` | READ_ONLY |
 | `StorageService/RegisterUpload` | `register_upload` | `registerUpload` | MUTATION |
 | `StorageService/ReissueUploadUrl` | `reissue_upload_url` | `reissueUploadUrl` | READ_ONLY |
+| `StorageService/SetScanVerdict` | `set_scan_verdict` | `setScanVerdict` | MUTATION |
 | `StorageService/UpdateFile` | `update_file` | `updateFile` | MUTATION |
 | `TenantService/AdminPurgeTenant` | `admin_purge_tenant` | `adminPurgeTenant` | DESTRUCTIVE |
 | `TenantService/CreateTenant` | `create_tenant` | `createTenant` | MUTATION |

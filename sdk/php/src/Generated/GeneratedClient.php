@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.5.17
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 381
+ *   RPCs ............. 382
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -302,6 +302,7 @@ final class GeneratedClient
         "ListFiles" => "read_only",
         "RegisterUpload" => "mutation",
         "ReissueUploadUrl" => "read_only",
+        "SetScanVerdict" => "mutation",
         "UpdateFile" => "mutation",
         "AdminPurgeTenant" => "destructive",
         "CreateTenant" => "mutation",
@@ -692,6 +693,7 @@ final class GeneratedClient
         "StorageService/ListFiles" => "read_only",
         "StorageService/RegisterUpload" => "mutation",
         "StorageService/ReissueUploadUrl" => "read_only",
+        "StorageService/SetScanVerdict" => "mutation",
         "StorageService/UpdateFile" => "mutation",
         "TenantService/AdminPurgeTenant" => "destructive",
         "TenantService/CreateTenant" => "mutation",
@@ -1082,6 +1084,7 @@ final class GeneratedClient
         "StorageService/ListFiles" => "list_files",
         "StorageService/RegisterUpload" => "register_upload",
         "StorageService/ReissueUploadUrl" => "reissue_upload_url",
+        "StorageService/SetScanVerdict" => "set_scan_verdict",
         "StorageService/UpdateFile" => "update_file",
         "TenantService/AdminPurgeTenant" => "admin_purge_tenant",
         "TenantService/CreateTenant" => "create_tenant",
@@ -1471,6 +1474,7 @@ final class GeneratedClient
         "StorageService/ListFiles" => "listFiles",
         "StorageService/RegisterUpload" => "registerUpload",
         "StorageService/ReissueUploadUrl" => "reissueUploadUrl",
+        "StorageService/SetScanVerdict" => "setScanVerdict",
         "StorageService/UpdateFile" => "updateFile",
         "TenantService/AdminPurgeTenant" => "adminPurgeTenant",
         "TenantService/CreateTenant" => "createTenant",
@@ -1860,6 +1864,7 @@ final class GeneratedClient
         "StorageService/ListFiles" => "get",
         "StorageService/RegisterUpload" => "post",
         "StorageService/ReissueUploadUrl" => "get",
+        "StorageService/SetScanVerdict" => "post",
         "StorageService/UpdateFile" => "patch",
         "TenantService/AdminPurgeTenant" => "post",
         "TenantService/CreateTenant" => "post",
@@ -2249,6 +2254,7 @@ final class GeneratedClient
         "StorageService/ListFiles" => "/v1/storage/files",
         "StorageService/RegisterUpload" => "/v1/storage/uploads",
         "StorageService/ReissueUploadUrl" => "/v1/storage/files/{file_id}:reissueUploadUrl",
+        "StorageService/SetScanVerdict" => "/v1/storage/files/{file_id}:setScanVerdict",
         "StorageService/UpdateFile" => "/v1/storage/files/{file_id}",
         "TenantService/AdminPurgeTenant" => "/v1/tenants/{target_tenant_id}:adminPurge",
         "TenantService/CreateTenant" => "/v1/tenants",
@@ -2469,7 +2475,7 @@ final class GeneratedClient
         "udb.core.notification.entity.v1.NotificationTemplate" => ['table' => "notification_templates", 'primary_keys' => ["template_id"], 'fields' => ["template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id", "project_id"], 'relations_json' => "[{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Notification\Entity\V1\NotificationTemplate"],
         "udb.core.scheduler.entity.v1.ScheduledJob" => ['table' => "scheduled_jobs", 'primary_keys' => ["job_id"], 'fields' => ["job_id", "tenant_id", "project_id", "name", "schedule_type", "cron_expression", "payload", "target_topic", "status", "next_fire_at", "last_fired_at", "max_attempts", "attempt_count", "backoff_seconds", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Scheduler\Entity\V1\ScheduledJob"],
         "udb.core.search.entity.v1.SearchIndex" => ['table' => "search_indexes", 'primary_keys' => ["index_id"], 'fields' => ["index_id", "tenant_id", "index_name", "source_message_type", "backend", "resource_name", "vector_dims", "tenant_column", "source_cdc_topic", "status", "created_at", "updated_at", "metadata_json", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Search\Entity\V1\SearchIndex"],
-        "udb.core.storage.entity.v1.File" => ['table' => "files", 'primary_keys' => ["file_id"], 'fields' => ["file_id", "tenant_id", "project_id", "filename", "content_type", "size_bytes", "backend", "bucket", "object_key", "url", "cdn_url", "file_type", "reference_id", "reference_type", "is_public", "status", "checksum", "expires_at", "uploaded_by", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Storage\Entity\V1\File"],
+        "udb.core.storage.entity.v1.File" => ['table' => "files", 'primary_keys' => ["file_id"], 'fields' => ["file_id", "tenant_id", "project_id", "filename", "content_type", "size_bytes", "backend", "bucket", "object_key", "url", "cdn_url", "file_type", "reference_id", "reference_type", "is_public", "status", "checksum", "expires_at", "uploaded_by", "audit_info", "deleted_at", "deleted_by", "scan_verdict", "scanned_at", "scanned_by", "scan_detail", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Storage\Entity\V1\File"],
         "udb.core.tenant.entity.v1.Tenant" => ['table' => "tenants", 'primary_keys' => ["tenant_id"], 'fields' => ["tenant_id", "code", "name", "type", "status", "parent_tenant_id", "config", "branding", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"parent_tenant\",\"kind\":\"belongs_to\",\"local_fields\":[\"parent_tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"tenant_configs\",\"kind\":\"has_many\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.TenantConfig\",\"target_table\":\"udb_tenant.tenant_configs\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"tenants\",\"kind\":\"has_many\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"parent_tenant_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Tenant\Entity\V1\Tenant"],
         "udb.core.tenant.entity.v1.TenantConfig" => ['table' => "tenant_configs", 'primary_keys' => ["config_id"], 'fields' => ["id", "tenant_id", "config_key", "config_value", "type", "description", "audit_info", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"tenant\",\"kind\":\"belongs_to\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Tenant\Entity\V1\TenantConfig"],
         "udb.core.vault.entity.v1.VaultDbCredentialLease" => ['table' => "vault_db_credential_leases", 'primary_keys' => ["lease_id"], 'fields' => ["lease_id", "tenant_id", "role_name", "username", "parent_role", "backend", "issued_at", "expires_at", "revoked_at", "state", "metadata_json", "project_id", "idempotency_key", "request_hash", "credential_ciphertext", "target_instance", "last_error", "revoke_reason", "revocation_operation_id", "revocation_requested_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Vault\Entity\V1\VaultDbCredentialLease"],
@@ -2742,6 +2748,7 @@ final class GeneratedClient
         "list_files" => "listFiles",
         "register_upload" => "registerUpload",
         "reissue_upload_url" => "reissueUploadUrl",
+        "set_scan_verdict" => "setScanVerdict",
         "update_file" => "updateFile",
         "admin_purge_tenant" => "adminPurgeTenant",
         "create_tenant" => "createTenant",
@@ -7924,6 +7931,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.storage.services.v1.StorageService / SetScanVerdict (unary), public alias set_scan_verdict.
+     *
+     * Forwards to {@see stubFor()}->SetScanVerdict(); retries transient codes.
+     * Path: /udb.core.storage.services.v1.StorageService/SetScanVerdict
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SetScanVerdictResponse
+     */
+    public function setScanVerdict($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SetScanVerdict',
+            'StorageService',
+            'udb.core.storage.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SetScanVerdict($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.storage.services.v1.StorageService / UpdateFile (unary), public alias update_file.
      *
      * Forwards to {@see stubFor()}->UpdateFile(); retries transient codes.
@@ -11050,7 +11078,7 @@ final class GeneratedClient
         return $this->stubFor('SearchService', 'udb.core.search.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.storage.services.v1.StorageService (9 RPC(s)).
+     * Underlying buf-generated stub for udb.core.storage.services.v1.StorageService (10 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a StorageServiceClient

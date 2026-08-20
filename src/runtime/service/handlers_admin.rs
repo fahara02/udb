@@ -66,6 +66,14 @@ impl DataBrokerService {
         request: Request<DlqListRequest>,
     ) -> Result<Response<DlqListResponse>, Status> {
         let (started, security) = authorized_call!(self, request, "ListDlqEvents");
+        // A dead-letter record carries the failed event VERBATIM - payload_json,
+        // error_type, error_message - unredacted. Every DLQ mutation handler
+        // requires the admin scope; the two reads did not, so the more sensitive
+        // half of the surface was the less protected one. Tenant scoping alone is
+        // not enough: this is operator data, not tenant data.
+        if let Err(err) = require_admin_scope(&security) {
+            return self.record_grpc("ListDlqEvents", started, Err(err));
+        }
         let req = request.into_inner();
         let limit = bounded_list_limit(req.limit);
         let offset = page_offset(&req.page_token);
@@ -109,6 +117,14 @@ impl DataBrokerService {
         request: Request<DlqEventRequest>,
     ) -> Result<Response<DlqEventResponse>, Status> {
         let (started, security) = authorized_call!(self, request, "GetDlqEvent");
+        // A dead-letter record carries the failed event VERBATIM - payload_json,
+        // error_type, error_message - unredacted. Every DLQ mutation handler
+        // requires the admin scope; the two reads did not, so the more sensitive
+        // half of the surface was the less protected one. Tenant scoping alone is
+        // not enough: this is operator data, not tenant data.
+        if let Err(err) = require_admin_scope(&security) {
+            return self.record_grpc("GetDlqEvent", started, Err(err));
+        }
         let req = request.into_inner();
         let result = self
             .runtime_snapshot()

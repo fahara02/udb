@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 381 RPCs across 28 services.
+Current generated RPC surface: 382 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -53,7 +53,7 @@ do not yet publish per-RPC live benchmark results.
 | SchedulerService | 6 | 2 | 3 | 1 | 0 |
 | SearchService | 5 | 2 | 2 | 1 | 0 |
 | SignalingService | 1 | 0 | 1 | 0 | 0 |
-| StorageService | 9 | 5 | 4 | 0 | 0 |
+| StorageService | 10 | 5 | 5 | 0 | 0 |
 | TenantService | 8 | 3 | 3 | 2 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
@@ -402,6 +402,7 @@ benchmark harnesses.
 | StorageService | `StorageService/ListFiles` | `list_files` | `listFiles` | READ_ONLY | storage.md |
 | StorageService | `StorageService/RegisterUpload` | `register_upload` | `registerUpload` | MUTATION | storage.md |
 | StorageService | `StorageService/ReissueUploadUrl` | `reissue_upload_url` | `reissueUploadUrl` | READ_ONLY | storage.md |
+| StorageService | `StorageService/SetScanVerdict` | `set_scan_verdict` | `setScanVerdict` | MUTATION | storage.md |
 | StorageService | `StorageService/UpdateFile` | `update_file` | `updateFile` | MUTATION | storage.md |
 | TenantService | `TenantService/AdminPurgeTenant` | `admin_purge_tenant` | `adminPurgeTenant` | DESTRUCTIVE | tenant.md |
 | TenantService | `TenantService/CreateTenant` | `create_tenant` | `createTenant` | MUTATION | tenant.md |

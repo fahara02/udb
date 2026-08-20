@@ -6,7 +6,7 @@
 //   UDB version:      0.5.17
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             381
+//   RPCs:             382
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -303,6 +303,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.storage.services.v1.StorageService/ListFiles"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/ListFiles", "StorageService", "ListFiles", "list_files", "listFiles", "read_only", "get", "/v1/storage/files");
         map["/udb.core.storage.services.v1.StorageService/RegisterUpload"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/RegisterUpload", "StorageService", "RegisterUpload", "register_upload", "registerUpload", "mutation", "post", "/v1/storage/uploads");
         map["/udb.core.storage.services.v1.StorageService/ReissueUploadUrl"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/ReissueUploadUrl", "StorageService", "ReissueUploadUrl", "reissue_upload_url", "reissueUploadUrl", "read_only", "get", "/v1/storage/files/{file_id}:reissueUploadUrl");
+        map["/udb.core.storage.services.v1.StorageService/SetScanVerdict"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/SetScanVerdict", "StorageService", "SetScanVerdict", "set_scan_verdict", "setScanVerdict", "mutation", "post", "/v1/storage/files/{file_id}:setScanVerdict");
         map["/udb.core.storage.services.v1.StorageService/UpdateFile"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/UpdateFile", "StorageService", "UpdateFile", "update_file", "updateFile", "mutation", "patch", "/v1/storage/files/{file_id}");
         map["/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant", "TenantService", "AdminPurgeTenant", "admin_purge_tenant", "adminPurgeTenant", "destructive", "post", "/v1/tenants/{target_tenant_id}:adminPurge");
         map["/udb.core.tenant.services.v1.TenantService/CreateTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/CreateTenant", "TenantService", "CreateTenant", "create_tenant", "createTenant", "mutation", "post", "/v1/tenants");
@@ -915,7 +916,7 @@ public sealed partial class GeneratedSearchServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.storage.services.v1.StorageService</c> service
-/// (9 RPCs). Forwards to the buf-generated
+/// (10 RPCs). Forwards to the buf-generated
 /// <c>StorageServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedStorageServiceClient : GeneratedServiceBase
@@ -6643,6 +6644,29 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
+    /// <c>set_scan_verdict</c> (unary) — forwards to <c>StorageServiceClient.SetScanVerdictAsync</c>.
+    /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/SetScanVerdict</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> SetScanVerdictAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SetScanVerdictAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.storage.services.v1.StorageService/SetScanVerdict",
+            co => (object)_stub.SetScanVerdictAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedStorageServiceClient
+{
+    /// <summary>
     /// <c>update_file</c> (unary) — forwards to <c>StorageServiceClient.UpdateFileAsync</c>.
     /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/UpdateFile</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -10308,7 +10332,7 @@ public static class UdbIr
             "udb.core.storage.entity.v1.File",
             "files",
             new List<string> { "file_id" },
-            new List<string> { "file_id", "tenant_id", "project_id", "filename", "content_type", "size_bytes", "backend", "bucket", "object_key", "url", "cdn_url", "file_type", "reference_id", "reference_type", "is_public", "status", "checksum", "expires_at", "uploaded_by", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by" },
+            new List<string> { "file_id", "tenant_id", "project_id", "filename", "content_type", "size_bytes", "backend", "bucket", "object_key", "url", "cdn_url", "file_type", "reference_id", "reference_type", "is_public", "status", "checksum", "expires_at", "uploaded_by", "audit_info", "deleted_at", "deleted_by", "scan_verdict", "scanned_at", "scanned_by", "scan_detail", "created_at", "updated_at", "created_by" },
             "[]",
             "",
             "tenant_id",
