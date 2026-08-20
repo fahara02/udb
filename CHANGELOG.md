@@ -5,6 +5,233 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.18] - 2026-08-21
+
+Stability release, from working the open bug-report backlog against source
+rather than waiting for the next report. Twenty-five defects. The headline is
+tenant isolation on the authorization service itself: a tenant-A credential
+holding the right method scope could create roles, assign roles and write policy
+rules inside tenant B, and could read every role and rule the service could see
+by omitting an optional field. If you run more than one tenant, upgrade.
+
+Also here: the Go entity generator no longer emits uncompilable adapters for a
+message stored in a JSON column (reported three times, against 0.5.6, 0.5.8 and
+0.5.17), `udb proto fmt` no longer changes what a declaration means, and V050-3
+ships — files carry a scan verdict and both download paths check it.
+
+### Fixed
+
+- **Cross-tenant writes and reads through AuthzService.** The RPCs are
+  bearer-protected and declare `tenant_required`, but the handlers took tenant
+  and project from caller-controlled body fields and bound only the *actor* to
+  the claim. Five write paths (`CreateRole`, `AssignRole`, `CreatePolicyRule`,
+  role bindings, relationship tuples) now bind the resource scope to the verified
+  claim before field validation, because a caller aiming at another tenant should
+  be refused, not coached on which field is malformed. Tuple writes check tenant
+  and project *as supplied*, rather than after `tuple_scope_tenant` substitutes
+  one for the other.
+
+  The reads were worse in one respect. `GetRole`, `ListRoles`, `GetPolicyRule`
+  and `ListPolicyRules` filtered on an optional caller-supplied domain, so
+  omitting it returned everything. `UpdateRole`, `DeleteRole`, `RevokeRole` and
+  `DeletePolicyRule` addressed records by globally unique UUID with no tenant
+  predicate at all — possession of an id was sufficient, and an id is not a
+  secret. `UpdateRole` needed the predicate inside the statement: it issued
+  `UPDATE ... WHERE role_id = $1` and only then read the row back, so no
+  post-read check could have helped.
+
+  A genuine cross-tenant admin still passes, and the claim-less in-process path
+  is untouched, so broker bootstrap is unaffected.
+
+- **`EnqueueOutboxEvent` accepted a forged tenant.** The envelope was built from
+  the caller's payload and only checked for a non-empty `tenant_id`, so any
+  principal allowed to publish on a topic could emit a CDC envelope attributed to
+  any tenant — forged provenance on the event stream, which is why a
+  tenant-scoped read check never caught it.
+
+- **`ListDlqEvents` and `GetDlqEvent` required no admin scope**, though every DLQ
+  *mutation* did. A dead-letter record carries the failed event verbatim,
+  unredacted, so the more sensitive half of the surface was the less protected
+  half.
+
+- **SSRF through IdP configuration.** `issuer`, `jwks_url` and
+  `saml_metadata_url` are set by a tenant administrator and then fetched from the
+  *broker's* network. The fetch built a default client: redirects followed, any
+  host accepted, no address-range check, no DNS pinning, unbounded body — so a
+  stored public URL could redirect, or DNS-rebind after validation, onto
+  loopback, RFC1918 or the cloud metadata endpoint. It now reuses the hardened
+  resolver UDB already had one module away, pins the resolved addresses, refuses
+  redirects, and bounds the body both by declared `Content-Length` and as bytes
+  arrive.
+
+- **`GetHealthReport` could report `passed: true` with a dead backend.** Each
+  probe's `ok` flag was serialized into `probes_json` and never read; only the
+  Postgres write-authority probe folded into `errors`. Redis, Qdrant, S3 or Kafka
+  could be unreachable while the broker reported itself healthy — which is what
+  stops anything from taking it out of rotation.
+
+- **CDC pause could be used against another tenant, and then reported healthy.**
+  `resume_cdc` guarded its upsert by tenant/project; `pause_cdc` did not. A
+  replication slot is keyed by name alone, so any tenant could pause another
+  tenant's pipeline — and could not un-pause it, because resume *is* guarded.
+  Both now carry the guard and both report when the upsert matched nothing
+  instead of returning success for a control that did nothing. `GetCdcStatus`
+  followed from the same mismatch: the tenant whose row had been overwritten was
+  told `paused=false, depth=0` — a healthy empty pipeline, while it was stopped.
+  Unknown is now not-found, the RPC requires the admin scope `PauseCdc` already
+  demanded, and `updated_at` is reported rather than defaulted.
+
+- **The CDC leader kept publishing when it could not read its own pause flag.** A
+  failed control-row read was treated as not-paused; the comment called it
+  safe-fail while doing the opposite, continuing publication precisely when the
+  broker could not verify it had been told to stop. It now tolerates a bounded
+  number of unreadable heartbeats and then steps down, and if a pause was already
+  known to be in force the first unreadable heartbeat steps down — an unknown
+  state can never *resume* a pause.
+
+- **Dry runs returned success before the checks that decide anything.**
+  `EnsureResource`, `DropResource` and `GenericDispatch` returned before the
+  capability guard, project target resolution, the RLS-bypass guard, the
+  neutral-IR compile and the raw-dispatch gate. `GenericDispatch` even returned an
+  `execution_plan` naming those steps as though they had run. A dry run now runs
+  every side-effect-free check and skips only the mutation.
+
+- **`StageCatalog` never linted**, while `ValidateCatalog` lints the identical
+  payload and reports `valid: false`. A catalog that validation rejects could be
+  staged and then activated; staging now fails closed on the same lint.
+
+- **A failed delivery-journal insert made the webhook worker redeliver forever.**
+  The loader selects outbox events with no DELIVERED/DEAD row, so an unwritten
+  journal entry meant the same webhook was POSTed again on every pass against a
+  receiver that already had it. The insert now retries with backoff and, if it
+  still cannot be written, says plainly that redelivery will continue.
+
+- **A committed native write could emit no CDC event at all.** The outbox insert
+  logged at WARN and returned, and nothing re-derives that event, so a transient
+  pool blip left the row present and the event permanently missing. The insert now
+  retries with backoff and otherwise reports at ERROR naming the consequence. This
+  narrows the window rather than closing it — emitting the event inside the
+  caller's transaction requires the dispatch layer to accept a caller-supplied
+  transaction, which it does not yet do.
+
+- **The Postgres audit sink accepted a table it could not write to, and reported
+  ready.** `ensure_pg_audit_table` creates with `CREATE TABLE IF NOT EXISTS`, which
+  is a no-op against a pre-existing relation of *any* shape — so the startup
+  readiness check proved the table was **creatable** and never that it was
+  **writable**. Pointing `UDB_AUDIT_PG_TABLE` at an existing table of the wrong
+  shape booted healthy and then failed every insert: one live broker logged 4,326
+  failed writes in six hours with zero rows durably stored, which is exactly the
+  0.4.34 failure mode the check was written to prevent.
+
+  Boot now verifies the columns the sink binds actually exist and names the missing
+  ones. It also refuses a table carrying a `NOT NULL` column the sink never
+  populates and that has no default — the same defect wearing a different hat. The
+  check is read-only by design; a trial insert would burn a sequence value and
+  could fire triggers on a table UDB does not own.
+
+  Two related points. `udb_admin_audit_log` is the documented default of UDB's own
+  hash-chained *admin* audit, so it is exactly the name an operator reaches for; the
+  refusal now says outright that the table is UDB-owned rather than implying the
+  remedy is to `ALTER TABLE` it. And a failed table check no longer re-runs on every
+  event — a shape mismatch never heals on its own, so it is retried on an interval
+  instead of costing three failed round trips per audit event.
+
+- **A degraded audit sink is now observable — the reason this recurred.** This was
+  the *second* time the same outcome reached production: 0.4.34 lost every audit
+  event because the writer task exited, and that was fixed as its own mechanism.
+  What let the outcome come back through a different door is that the data-plane
+  audit module recorded **no metric, exposed no health signal, and counted
+  nothing**, while the auth plane's sink had all three. Nothing could observe a
+  broker losing every audit event for days.
+
+  Every fallback path now runs through one chokepoint that counts the event,
+  records an actionable reason, logs on a throttle, and always writes the event to
+  stdout. `GetHealthReport` reads that and **fails**, so an audit gap takes the
+  broker out of rotation instead of sitting in a log. A future failure mechanism is
+  visible the moment it appears, without needing its own wiring.
+
+  Auditing those paths found two the incident report did not mention: the **File
+  sink dropped events outright** on both its failure paths — an unset
+  `UDB_AUDIT_FILE_PATH` and an append error — logging and returning without writing
+  the event anywhere, in a module documented as never dropping one. A third arm, an
+  unusable table identifier, fell back with no warning at all.
+
+- **The auth-plane audit sink had the identical hole.**
+  `PostgresAuditLogSink::ensure_table` self-creates the same way, and is worse: its
+  `ensured` flag latches on success and never resets, so a wrong-shaped table would
+  fail every export for the life of the process without re-checking. Both planes now
+  share one shape check.
+
+- **Twenty-six system tables were bootstrapped without shape verification.**
+  `ensure_system_catalog` issues 26 `CREATE TABLE IF NOT EXISTS` statements for
+  relations that are all operator-overridable (`UDB_CDC_OUTBOX_TABLE`,
+  `UDB_DLQ_TABLE`, `UDB_IDEMPOTENCY_KEYS_TABLE`, …). Pointing any of them at an
+  existing table of the wrong shape bootstrapped clean and then failed on first
+  write. Each is now verified at startup and named with its missing columns. The
+  expected columns are parsed from the bootstrap DDL itself rather than kept in a
+  second list that could drift.
+
+- **Batch streams were charged one request for unlimited work.** The rate limiter
+  ran in the unary prologue, so `BatchSelect`, `BatchUpsert` and
+  `VectorBatchUpsert` were metered once at stream open and never again: a tenant
+  could hold one authorized stream and push millions of operations past a
+  hundred-per-minute quota. Each item is now charged before it is authorized or
+  executed, under the same gate as a unary call, and a refusal surfaces as that
+  item's error instead of cutting the connection.
+
+- **The Go entity generator emitted uncompilable adapters for a protobuf message
+  in a JSON/JSONB column.** Reported three times — against 0.5.6, 0.5.8 and
+  0.5.17 — each from a consumer build. Both emitters tested the JSON annotation
+  *before* the message-type guard, so a message field reached arms written for
+  text and got `json.RawMessage(m.GetX())` on the way out and `m.X = encoded` on
+  the way in. Messages now round-trip through protojson, and the read side
+  allocates the field's own message via protoreflect, so the generated file never
+  names that type or imports its package.
+
+  `ToUDBRecord` now returns `(map[string]any, error)`: `protojson.Marshal` can
+  fail and the old signature had nowhere to put that. **This is a source-breaking
+  change to generated Go entity code** — regenerate and add the error return at
+  call sites.
+
+- **`udb proto fmt` changed what declarations mean.** It collapsed whitespace and
+  tightened punctuation across the whole joined line with no notion of string
+  literals, so a `default_value` of `draft, review, pending` came back with its
+  spacing and commas rewritten — a different SQL DEFAULT than the proto declared.
+  The same collapse hit CHECK expressions and regexes. It also destroyed any field
+  carrying a `//` comment, pulling the annotation and the closing bracket onto the
+  comment line. Reach was wider than the subcommand, because `udb proto export
+  --fmt` runs it over a *consumer's* tree.
+
+- **Synthetic audit field numbers blocked upgrades permanently.** The generator
+  appends `created_at`/`updated_at`/`created_by` after the highest explicit field;
+  adding a field on one of those numbers later was refused as protobuf
+  field-number reuse, though a synthetic number was never a wire number. 0.5.14
+  exempted this only when the stored manifest recorded `audit_fields` *and* still
+  carried the column, so two shapes escaped and stayed stuck.
+
+- **Eleven operator-facing messages rendered with 15–25 space gaps mid-sentence**
+  from lost string continuations, including the catalog-bootstrap refusal, the
+  schema-drift remedy and the unknown-entity diagnostic.
+
+### Added
+
+- **File scan verdicts (V050-3).** A file carries a scan verdict written only by
+  the new privileged `SetScanVerdict`, and **both** download paths check it — the
+  presigned URL and the native stream, which is the bypass the report singles out.
+  The column defaults to `SCAN_VERDICT_UNSPECIFIED` (never scanned, and distinct
+  from `PENDING`), and enforcement is **off** unless
+  `UDB_STORAGE_REQUIRE_CLEAN_SCAN` is set, because requiring CLEAN by default
+  would refuse every pre-existing file the moment the column appeared. `INFECTED`
+  is refused regardless: if something read the bytes and called them malicious,
+  serving them is not a configuration choice.
+
+  `NATIVE_CONTRACT_VERSION` moves 7.1.0 → 7.2.0; stubs are regenerated across six
+  SDKs plus OpenAPI.
+
+- Documentation for the new-entity startup preflight (`LookupMessageSchema` and
+  `GetCatalogManifest`, which already existed and were simply never documented as
+  the pattern) and for the storage scanning surface.
+
 ## [0.5.17] - 2026-08-17
 
 Isolation release. A caller could reach another project's backend instance by
