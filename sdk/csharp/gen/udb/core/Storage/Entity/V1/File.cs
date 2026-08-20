@@ -29,7 +29,7 @@ namespace udb.core.Storage.Entity.V1 {
             "dGFtcC5wcm90bxobdWRiL2NvcmUvY29tbW9uL3YxL2RiLnByb3RvGiF1ZGIv",
             "Y29yZS9jb21tb24vdjEvc2VjdXJpdHkucHJvdG8aHnVkYi9jb3JlL2NvbW1v",
             "bi92MS90eXBlcy5wcm90bxomdWRiL2NvcmUvc3RvcmFnZS9lbnRpdHkvdjEv",
-            "ZW51bXMucHJvdG8i9REKBEZpbGUSQwoHZmlsZV9pZBgBIAEoCUIqgrcYJgoH",
+            "ZW51bXMucHJvdG8i1xYKBEZpbGUSQwoHZmlsZV9pZBgBIAEoCUIqgrcYJgoH",
             "ZmlsZV9pZBIEVVVJRBgBKAE6EWdlbl9yYW5kb21fdXVpZCgpUgZmaWxlSWQS",
             "NwoJdGVuYW50X2lkGAIgASgJQhqCtxgWCgl0ZW5hbnRfaWQSBFVVSUQYAZgC",
             "AVIIdGVuYW50SWQSUAoKcHJvamVjdF9pZBgDIAEoCUIxgrcYLQoKcHJvamVj",
@@ -66,31 +66,44 @@ namespace udb.core.Storage.Entity.V1 {
             "IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCNIK3GDAKCmRlbGV0",
             "ZWRfYXQSC1RJTUVTVEFNUFRaWhVTb2Z0IGRlbGV0ZSB0aW1lc3RhbXBSCWRl",
             "bGV0ZWRBdBJICgpkZWxldGVkX2J5GBYgASgJQimCtxglCgpkZWxldGVkX2J5",
-            "EgRVVUlEWhFTb2Z0IGRlbGV0ZSBhY3RvclIJZGVsZXRlZEJ5OtsE+rYYuAMK",
-            "BWZpbGVzEgt1ZGJfc3RvcmFnZRgBIAEqQk9iamVjdC1zdG9yYWdlIGZpbGUg",
-            "bWV0YWRhdGEgZm9yIHVwbG9hZHMsIGRvd25sb2FkcywgYW5kIGxpZmVjeWNs",
-            "ZTABOAFAAWKYAQoYc3RvcmFnZV90ZW5hbnRfaXNvbGF0aW9uGnoodGVuYW50",
-            "X2lkOjp0ZXh0ID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5h",
-            "bnRfaWQnLCB0cnVlKSBPUiBjdXJyZW50X3NldHRpbmcoJ2FwcC5wbGF0Zm9y",
-            "bV9hZG1pbicsIHRydWUpID0gJ3RydWUnKSgBaAGKASQKEGlkeF9maWxlc190",
-            "ZW5hbnQSBUJUUkVFWgl0ZW5hbnRfaWSKAToKE2lkeF9maWxlc19yZWZlcmVu",
-            "Y2USBUJUUkVFWgxyZWZlcmVuY2VfaWRaDnJlZmVyZW5jZV90eXBligErChVp",
-            "ZHhfZmlsZXNfdXBsb2FkZWRfYnkSBUJUUkVFWgt1cGxvYWRlZF9iefIBFXVk",
-            "Yi5zdG9yYWdlLmZpbGVzLmNkY/oBDHN0b3JhZ2U6cmVhZIqyGZkBCgZ0ZW5h",
-            "bnQaCXRlbmFudF9pZCo0dGVuYW50X2lkID0gY3VycmVudF9zZXR0aW5nKCdh",
-            "cHAuY3VycmVudF90ZW5hbnRfaWQnKTILc29mdF9kZWxldGU6E3N0b3JhZ2Uu",
-            "b3BlcmF0aW9uYWxA+xNIAlIGdGVuYW50WghzdGFuZGFyZHIVdGVuYW50LmRh",
-            "dGFfcmVzaWRlbmN5QoACCh5jb20udWRiLmNvcmUuc3RvcmFnZS5lbnRpdHku",
-            "djFCCUZpbGVQcm90b1ABWkZnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsv",
-            "Z28vZ2VuL3VkYi9jb3JlL3N0b3JhZ2UvZW50aXR5L3YxO2VudGl0eXYxogIE",
-            "VUNTRaoCGnVkYi5jb3JlLlN0b3JhZ2UuRW50aXR5LlYxygIaVWRiXENvcmVc",
-            "U3RvcmFnZVxFbnRpdHlcVjHiAiZVZGJcR1BCTWV0YWRhdGFcQ29yZVxTdG9y",
-            "YWdlXEVudGl0eVxWMeoCHlVkYjo6Q29yZTo6U3RvcmFnZTo6RW50aXR5OjpW",
-            "MWIGcHJvdG8z"));
+            "EgRVVUlEWhFTb2Z0IGRlbGV0ZSBhY3RvclIJZGVsZXRlZEJ5EvMBCgxzY2Fu",
+            "X3ZlcmRpY3QYFyABKA4yJy51ZGIuY29yZS5zdG9yYWdlLmVudGl0eS52MS5T",
+            "Y2FuVmVyZGljdEKmAYK3GKEBCgxzY2FuX3ZlcmRpY3QSC1ZBUkNIQVIoMjQp",
+            "GAE6GidTQ0FOX1ZFUkRJQ1RfVU5TUEVDSUZJRUQnUh8KFmlkeF9maWxlc19z",
+            "Y2FuX3ZlcmRpY3QSBUJUUkVFWkVDb250ZW50LXNjYW4gdmVyZGljdDsgb25s",
+            "eSBTQ0FOX1ZFUkRJQ1RfQ0xFQU4gcGFzc2VzIGEgZ2F0ZWQgZG93bmxvYWRS",
+            "C3NjYW5WZXJkaWN0EoABCgpzY2FubmVkX2F0GBggASgLMhouZ29vZ2xlLnBy",
+            "b3RvYnVmLlRpbWVzdGFtcEJFgrcYQQoKc2Nhbm5lZF9hdBILVElNRVNUQU1Q",
+            "VFpaJldoZW4gdGhlIHJlY29yZGVkIHZlcmRpY3Qgd2FzIHByb2R1Y2VkUglz",
+            "Y2FubmVkQXQScgoKc2Nhbm5lZF9ieRgZIAEoCUJTgrcYTwoKc2Nhbm5lZF9i",
+            "eRIMVkFSQ0hBUigyMDApWjNWZXJpZmllZCBzY2FubmVyIGlkZW50aXR5IHRo",
+            "YXQgcmVjb3JkZWQgdGhlIHZlcmRpY3RSCXNjYW5uZWRCeRJzCgtzY2FuX2Rl",
+            "dGFpbBgaIAEoCUJSgrcYTgoLc2Nhbl9kZXRhaWwSBFRFWFRaOVNpZ25hdHVy",
+            "ZSBuYW1lIG9yIGZhaWx1cmUgcmVhc29uIGZyb20gdGhlIHNjYW5uaW5nIGVu",
+            "Z2luZVIKc2NhbkRldGFpbDrbBPq2GLgDCgVmaWxlcxILdWRiX3N0b3JhZ2UY",
+            "ASABKkJPYmplY3Qtc3RvcmFnZSBmaWxlIG1ldGFkYXRhIGZvciB1cGxvYWRz",
+            "LCBkb3dubG9hZHMsIGFuZCBsaWZlY3ljbGUwATgBQAFimAEKGHN0b3JhZ2Vf",
+            "dGVuYW50X2lzb2xhdGlvbhp6KHRlbmFudF9pZDo6dGV4dCA9IGN1cnJlbnRf",
+            "c2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJywgdHJ1ZSkgT1IgY3Vy",
+            "cmVudF9zZXR0aW5nKCdhcHAucGxhdGZvcm1fYWRtaW4nLCB0cnVlKSA9ICd0",
+            "cnVlJykoAWgBigEkChBpZHhfZmlsZXNfdGVuYW50EgVCVFJFRVoJdGVuYW50",
+            "X2lkigE6ChNpZHhfZmlsZXNfcmVmZXJlbmNlEgVCVFJFRVoMcmVmZXJlbmNl",
+            "X2lkWg5yZWZlcmVuY2VfdHlwZYoBKwoVaWR4X2ZpbGVzX3VwbG9hZGVkX2J5",
+            "EgVCVFJFRVoLdXBsb2FkZWRfYnnyARV1ZGIuc3RvcmFnZS5maWxlcy5jZGP6",
+            "AQxzdG9yYWdlOnJlYWSKshmZAQoGdGVuYW50Ggl0ZW5hbnRfaWQqNHRlbmFu",
+            "dF9pZCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lk",
+            "JykyC3NvZnRfZGVsZXRlOhNzdG9yYWdlLm9wZXJhdGlvbmFsQPsTSAJSBnRl",
+            "bmFudFoIc3RhbmRhcmRyFXRlbmFudC5kYXRhX3Jlc2lkZW5jeUKAAgoeY29t",
+            "LnVkYi5jb3JlLnN0b3JhZ2UuZW50aXR5LnYxQglGaWxlUHJvdG9QAVpGZ2l0",
+            "aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9zdG9y",
+            "YWdlL2VudGl0eS92MTtlbnRpdHl2MaICBFVDU0WqAhp1ZGIuY29yZS5TdG9y",
+            "YWdlLkVudGl0eS5WMcoCGlVkYlxDb3JlXFN0b3JhZ2VcRW50aXR5XFYx4gIm",
+            "VWRiXEdQQk1ldGFkYXRhXENvcmVcU3RvcmFnZVxFbnRpdHlcVjHqAh5VZGI6",
+            "OkNvcmU6OlN0b3JhZ2U6OkVudGl0eTo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Common.V1.TypesReflection.Descriptor, global::udb.core.Storage.Entity.V1.EnumsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Entity.V1.File), global::udb.core.Storage.Entity.V1.File.Parser, new[]{ "FileId", "TenantId", "ProjectId", "Filename", "ContentType", "SizeBytes", "Backend", "Bucket", "ObjectKey", "Url", "CdnUrl", "FileType", "ReferenceId", "ReferenceType", "IsPublic", "Status", "Checksum", "ExpiresAt", "UploadedBy", "AuditInfo", "DeletedAt", "DeletedBy" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Entity.V1.File), global::udb.core.Storage.Entity.V1.File.Parser, new[]{ "FileId", "TenantId", "ProjectId", "Filename", "ContentType", "SizeBytes", "Backend", "Bucket", "ObjectKey", "Url", "CdnUrl", "FileType", "ReferenceId", "ReferenceType", "IsPublic", "Status", "Checksum", "ExpiresAt", "UploadedBy", "AuditInfo", "DeletedAt", "DeletedBy", "ScanVerdict", "ScannedAt", "ScannedBy", "ScanDetail" }, null, null, null, null)
           }));
     }
     #endregion
@@ -157,6 +170,10 @@ namespace udb.core.Storage.Entity.V1 {
       auditInfo_ = other.auditInfo_ != null ? other.auditInfo_.Clone() : null;
       deletedAt_ = other.deletedAt_ != null ? other.deletedAt_.Clone() : null;
       deletedBy_ = other.deletedBy_;
+      scanVerdict_ = other.scanVerdict_;
+      scannedAt_ = other.scannedAt_ != null ? other.scannedAt_.Clone() : null;
+      scannedBy_ = other.scannedBy_;
+      scanDetail_ = other.scanDetail_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -495,6 +512,73 @@ namespace udb.core.Storage.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "scan_verdict" field.</summary>
+    public const int ScanVerdictFieldNumber = 23;
+    private global::udb.core.Storage.Entity.V1.ScanVerdict scanVerdict_ = global::udb.core.Storage.Entity.V1.ScanVerdict.Unspecified;
+    /// <summary>
+    /// ── Content scanning (V050-3) ─────────────────────────────────────────────
+    ///
+    /// Written only by `SetScanVerdict`, which requires the privileged scanner
+    /// scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+    /// predate scanning must not be mistaken for work in flight, and defaulting to
+    /// anything else would make an upgrade look like a scanner outage.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Storage.Entity.V1.ScanVerdict ScanVerdict {
+      get { return scanVerdict_; }
+      set {
+        scanVerdict_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "scanned_at" field.</summary>
+    public const int ScannedAtFieldNumber = 24;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp scannedAt_;
+    /// <summary>
+    /// @inject_tag: gorm:"column:scanned_at"
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp ScannedAt {
+      get { return scannedAt_; }
+      set {
+        scannedAt_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "scanned_by" field.</summary>
+    public const int ScannedByFieldNumber = 25;
+    private string scannedBy_ = "";
+    /// <summary>
+    /// Identity of the scanner that produced the verdict, taken from the verified
+    /// principal rather than the request body so it cannot be spoofed.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ScannedBy {
+      get { return scannedBy_; }
+      set {
+        scannedBy_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "scan_detail" field.</summary>
+    public const int ScanDetailFieldNumber = 26;
+    private string scanDetail_ = "";
+    /// <summary>
+    /// Engine-supplied detail: signature name for INFECTED, failure reason for
+    /// FAILED. Free text, shown to operators, never used for a control decision.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ScanDetail {
+      get { return scanDetail_; }
+      set {
+        scanDetail_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -532,6 +616,10 @@ namespace udb.core.Storage.Entity.V1 {
       if (!object.Equals(AuditInfo, other.AuditInfo)) return false;
       if (!object.Equals(DeletedAt, other.DeletedAt)) return false;
       if (DeletedBy != other.DeletedBy) return false;
+      if (ScanVerdict != other.ScanVerdict) return false;
+      if (!object.Equals(ScannedAt, other.ScannedAt)) return false;
+      if (ScannedBy != other.ScannedBy) return false;
+      if (ScanDetail != other.ScanDetail) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -561,6 +649,10 @@ namespace udb.core.Storage.Entity.V1 {
       if (auditInfo_ != null) hash ^= AuditInfo.GetHashCode();
       if (deletedAt_ != null) hash ^= DeletedAt.GetHashCode();
       if (DeletedBy.Length != 0) hash ^= DeletedBy.GetHashCode();
+      if (ScanVerdict != global::udb.core.Storage.Entity.V1.ScanVerdict.Unspecified) hash ^= ScanVerdict.GetHashCode();
+      if (scannedAt_ != null) hash ^= ScannedAt.GetHashCode();
+      if (ScannedBy.Length != 0) hash ^= ScannedBy.GetHashCode();
+      if (ScanDetail.Length != 0) hash ^= ScanDetail.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -667,6 +759,22 @@ namespace udb.core.Storage.Entity.V1 {
         output.WriteRawTag(178, 1);
         output.WriteString(DeletedBy);
       }
+      if (ScanVerdict != global::udb.core.Storage.Entity.V1.ScanVerdict.Unspecified) {
+        output.WriteRawTag(184, 1);
+        output.WriteEnum((int) ScanVerdict);
+      }
+      if (scannedAt_ != null) {
+        output.WriteRawTag(194, 1);
+        output.WriteMessage(ScannedAt);
+      }
+      if (ScannedBy.Length != 0) {
+        output.WriteRawTag(202, 1);
+        output.WriteString(ScannedBy);
+      }
+      if (ScanDetail.Length != 0) {
+        output.WriteRawTag(210, 1);
+        output.WriteString(ScanDetail);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -765,6 +873,22 @@ namespace udb.core.Storage.Entity.V1 {
         output.WriteRawTag(178, 1);
         output.WriteString(DeletedBy);
       }
+      if (ScanVerdict != global::udb.core.Storage.Entity.V1.ScanVerdict.Unspecified) {
+        output.WriteRawTag(184, 1);
+        output.WriteEnum((int) ScanVerdict);
+      }
+      if (scannedAt_ != null) {
+        output.WriteRawTag(194, 1);
+        output.WriteMessage(ScannedAt);
+      }
+      if (ScannedBy.Length != 0) {
+        output.WriteRawTag(202, 1);
+        output.WriteString(ScannedBy);
+      }
+      if (ScanDetail.Length != 0) {
+        output.WriteRawTag(210, 1);
+        output.WriteString(ScanDetail);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -840,6 +964,18 @@ namespace udb.core.Storage.Entity.V1 {
       }
       if (DeletedBy.Length != 0) {
         size += 2 + pb::CodedOutputStream.ComputeStringSize(DeletedBy);
+      }
+      if (ScanVerdict != global::udb.core.Storage.Entity.V1.ScanVerdict.Unspecified) {
+        size += 2 + pb::CodedOutputStream.ComputeEnumSize((int) ScanVerdict);
+      }
+      if (scannedAt_ != null) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(ScannedAt);
+      }
+      if (ScannedBy.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(ScannedBy);
+      }
+      if (ScanDetail.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(ScanDetail);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -927,6 +1063,21 @@ namespace udb.core.Storage.Entity.V1 {
       }
       if (other.DeletedBy.Length != 0) {
         DeletedBy = other.DeletedBy;
+      }
+      if (other.ScanVerdict != global::udb.core.Storage.Entity.V1.ScanVerdict.Unspecified) {
+        ScanVerdict = other.ScanVerdict;
+      }
+      if (other.scannedAt_ != null) {
+        if (scannedAt_ == null) {
+          ScannedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        ScannedAt.MergeFrom(other.ScannedAt);
+      }
+      if (other.ScannedBy.Length != 0) {
+        ScannedBy = other.ScannedBy;
+      }
+      if (other.ScanDetail.Length != 0) {
+        ScanDetail = other.ScanDetail;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1044,6 +1195,25 @@ namespace udb.core.Storage.Entity.V1 {
             DeletedBy = input.ReadString();
             break;
           }
+          case 184: {
+            ScanVerdict = (global::udb.core.Storage.Entity.V1.ScanVerdict) input.ReadEnum();
+            break;
+          }
+          case 194: {
+            if (scannedAt_ == null) {
+              ScannedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(ScannedAt);
+            break;
+          }
+          case 202: {
+            ScannedBy = input.ReadString();
+            break;
+          }
+          case 210: {
+            ScanDetail = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1158,6 +1328,25 @@ namespace udb.core.Storage.Entity.V1 {
           }
           case 178: {
             DeletedBy = input.ReadString();
+            break;
+          }
+          case 184: {
+            ScanVerdict = (global::udb.core.Storage.Entity.V1.ScanVerdict) input.ReadEnum();
+            break;
+          }
+          case 194: {
+            if (scannedAt_ == null) {
+              ScannedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(ScannedAt);
+            break;
+          }
+          case 202: {
+            ScannedBy = input.ReadString();
+            break;
+          }
+          case 210: {
+            ScanDetail = input.ReadString();
             break;
           }
         }

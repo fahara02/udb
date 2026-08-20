@@ -5,6 +5,7 @@ from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from udb.core.common.v1 import dto_pb2 as _dto_pb2
 from udb.core.common.v1 import security_pb2 as _security_pb2
+from udb.core.storage.entity.v1 import enums_pb2 as _enums_pb2
 from udb.core.storage.entity.v1 import file_pb2 as _file_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
@@ -205,6 +206,32 @@ class UpdateFileResponse(_message.Message):
     message: str
     error: _dto_pb2.ApiError
     def __init__(self, message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class SetScanVerdictRequest(_message.Message):
+    __slots__ = ("tenant_id", "file_id", "verdict", "detail", "scanned_at", "idempotency_key")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    VERDICT_FIELD_NUMBER: _ClassVar[int]
+    DETAIL_FIELD_NUMBER: _ClassVar[int]
+    SCANNED_AT_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    file_id: str
+    verdict: _enums_pb2.ScanVerdict
+    detail: str
+    scanned_at: _timestamp_pb2.Timestamp
+    idempotency_key: str
+    def __init__(self, tenant_id: _Optional[str] = ..., file_id: _Optional[str] = ..., verdict: _Optional[_Union[_enums_pb2.ScanVerdict, str]] = ..., detail: _Optional[str] = ..., scanned_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+
+class SetScanVerdictResponse(_message.Message):
+    __slots__ = ("message", "verdict", "error")
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    VERDICT_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    verdict: _enums_pb2.ScanVerdict
+    error: _dto_pb2.ApiError
+    def __init__(self, message: _Optional[str] = ..., verdict: _Optional[_Union[_enums_pb2.ScanVerdict, str]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class DeleteFileRequest(_message.Message):
     __slots__ = ("tenant_id", "file_id", "mode", "reason", "expected_status", "idempotency_key")

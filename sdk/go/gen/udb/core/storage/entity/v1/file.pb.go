@@ -54,6 +54,20 @@ type File struct {
 	AuditInfo     *v1.AuditInfo          `protobuf:"bytes,20,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"`                                        // @inject_tag: gorm:"column:audit_info;not null"
 	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
 	DeletedBy     string                 `protobuf:"bytes,22,opt,name=deleted_by,json=deletedBy,proto3" json:"deleted_by,omitempty"`
+	// ── Content scanning (V050-3) ─────────────────────────────────────────────
+	//
+	// Written only by `SetScanVerdict`, which requires the privileged scanner
+	// scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+	// predate scanning must not be mistaken for work in flight, and defaulting to
+	// anything else would make an upgrade look like a scanner outage.
+	ScanVerdict ScanVerdict            `protobuf:"varint,23,opt,name=scan_verdict,json=scanVerdict,proto3,enum=udb.core.storage.entity.v1.ScanVerdict" json:"scan_verdict,omitempty"` // @inject_tag: gorm:"column:scan_verdict;not null;serializer:proto_enum"
+	ScannedAt   *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=scanned_at,json=scannedAt,proto3" json:"scanned_at,omitempty"`                                                    // @inject_tag: gorm:"column:scanned_at"
+	// Identity of the scanner that produced the verdict, taken from the verified
+	// principal rather than the request body so it cannot be spoofed.
+	ScannedBy string `protobuf:"bytes,25,opt,name=scanned_by,json=scannedBy,proto3" json:"scanned_by,omitempty"` // @inject_tag: gorm:"column:scanned_by"
+	// Engine-supplied detail: signature name for INFECTED, failure reason for
+	// FAILED. Free text, shown to operators, never used for a control decision.
+	ScanDetail    string `protobuf:"bytes,26,opt,name=scan_detail,json=scanDetail,proto3" json:"scan_detail,omitempty"` // @inject_tag: gorm:"column:scan_detail"
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -242,11 +256,39 @@ func (x *File) GetDeletedBy() string {
 	return ""
 }
 
+func (x *File) GetScanVerdict() ScanVerdict {
+	if x != nil {
+		return x.ScanVerdict
+	}
+	return ScanVerdict_SCAN_VERDICT_UNSPECIFIED
+}
+
+func (x *File) GetScannedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ScannedAt
+	}
+	return nil
+}
+
+func (x *File) GetScannedBy() string {
+	if x != nil {
+		return x.ScannedBy
+	}
+	return ""
+}
+
+func (x *File) GetScanDetail() string {
+	if x != nil {
+		return x.ScanDetail
+	}
+	return ""
+}
+
 var File_udb_core_storage_entity_v1_file_proto protoreflect.FileDescriptor
 
 const file_udb_core_storage_entity_v1_file_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/storage/entity/v1/file.proto\x12\x1audb.core.storage.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a&udb/core/storage/entity/v1/enums.proto\"\xf5\x11\n" +
+	"%udb/core/storage/entity/v1/file.proto\x12\x1audb.core.storage.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a&udb/core/storage/entity/v1/enums.proto\"\xd7\x16\n" +
 	"\x04File\x12C\n" +
 	"\afile_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\afile_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06fileId\x127\n" +
@@ -309,7 +351,21 @@ const file_udb_core_storage_entity_v1_file_proto_rawDesc = "" +
 	"\n" +
 	"deleted_by\x18\x16 \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xdb\x04\xfa\xb6\x18\xb8\x03\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy\x12\xf3\x01\n" +
+	"\fscan_verdict\x18\x17 \x01(\x0e2'.udb.core.storage.entity.v1.ScanVerdictB\xa6\x01\x82\xb7\x18\xa1\x01\n" +
+	"\fscan_verdict\x12\vVARCHAR(24)\x18\x01:\x1a'SCAN_VERDICT_UNSPECIFIED'R\x1f\n" +
+	"\x16idx_files_scan_verdict\x12\x05BTREEZEContent-scan verdict; only SCAN_VERDICT_CLEAN passes a gated downloadR\vscanVerdict\x12\x80\x01\n" +
+	"\n" +
+	"scanned_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampBE\x82\xb7\x18A\n" +
+	"\n" +
+	"scanned_at\x12\vTIMESTAMPTZZ&When the recorded verdict was producedR\tscannedAt\x12r\n" +
+	"\n" +
+	"scanned_by\x18\x19 \x01(\tBS\x82\xb7\x18O\n" +
+	"\n" +
+	"scanned_by\x12\fVARCHAR(200)Z3Verified scanner identity that recorded the verdictR\tscannedBy\x12s\n" +
+	"\vscan_detail\x18\x1a \x01(\tBR\x82\xb7\x18N\n" +
+	"\vscan_detail\x12\x04TEXTZ9Signature name or failure reason from the scanning engineR\n" +
+	"scanDetail:\xdb\x04\xfa\xb6\x18\xb8\x03\n" +
 	"\x05files\x12\vudb_storage\x18\x01 \x01*BObject-storage file metadata for uploads, downloads, and lifecycle0\x018\x01@\x01b\x98\x01\n" +
 	"\x18storage_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01$\n" +
 	"\x10idx_files_tenant\x12\x05BTREEZ\ttenant_id\x8a\x01:\n" +
@@ -337,6 +393,7 @@ var file_udb_core_storage_entity_v1_file_proto_goTypes = []any{
 	(FileStatus)(0),               // 2: udb.core.storage.entity.v1.FileStatus
 	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
 	(*v1.AuditInfo)(nil),          // 4: udb.core.common.v1.AuditInfo
+	(ScanVerdict)(0),              // 5: udb.core.storage.entity.v1.ScanVerdict
 }
 var file_udb_core_storage_entity_v1_file_proto_depIdxs = []int32{
 	1, // 0: udb.core.storage.entity.v1.File.file_type:type_name -> udb.core.storage.entity.v1.FileType
@@ -344,11 +401,13 @@ var file_udb_core_storage_entity_v1_file_proto_depIdxs = []int32{
 	3, // 2: udb.core.storage.entity.v1.File.expires_at:type_name -> google.protobuf.Timestamp
 	4, // 3: udb.core.storage.entity.v1.File.audit_info:type_name -> udb.core.common.v1.AuditInfo
 	3, // 4: udb.core.storage.entity.v1.File.deleted_at:type_name -> google.protobuf.Timestamp
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	5, // 5: udb.core.storage.entity.v1.File.scan_verdict:type_name -> udb.core.storage.entity.v1.ScanVerdict
+	3, // 6: udb.core.storage.entity.v1.File.scanned_at:type_name -> google.protobuf.Timestamp
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_storage_entity_v1_file_proto_init() }

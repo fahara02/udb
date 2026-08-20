@@ -1003,21 +1003,65 @@ fn is_audit_column(table: &ManifestTable, column: &ManifestColumn) -> bool {
         && crate::generation::manifest::AUDIT_FIELD_COLUMNS.contains(&column.column_name.as_str())
 }
 
-/// True when `old_col` held the contested number as a generator-appended audit
-/// column and the new manifest has relocated that same column into the reserved
-/// audit range. See the call site for why this is not a compatibility break.
+/// True when `old_col` sat in the block the generator APPENDS: one of the audit
+/// trio, numbered above every column the schema author declared.
+///
+/// `append_missing_audit_columns` only ever adds the trio after the highest
+/// explicit number, so an author-declared `created_at` in the middle of a
+/// message does not match. This is the structural half of the proof that a
+/// number was synthetic rather than a real wire field number.
+fn sat_in_appended_audit_block(old: &ManifestTable, old_col: &ManifestColumn) -> bool {
+    if !crate::generation::manifest::AUDIT_FIELD_COLUMNS.contains(&old_col.column_name.as_str()) {
+        return false;
+    }
+    old.columns
+        .iter()
+        .filter(|c| {
+            !crate::generation::manifest::AUDIT_FIELD_COLUMNS.contains(&c.column_name.as_str())
+        })
+        .all(|c| c.field_number < old_col.field_number)
+}
+
+/// True when the number `old_col` held was a GENERATOR-APPENDED audit column's
+/// number, so nothing on the wire can break by reusing it.
+///
+/// Two independent proofs, either of which is sufficient once
+/// [`sat_in_appended_audit_block`] holds:
+///
+/// * the new manifest carries that column at or above
+///   `AUDIT_FIELD_NUMBER_BASE`. Only the generator puts a column there - had the
+///   author declared `created_at`, the generator would have left their number
+///   alone - so the column is generator-owned on both sides.
+/// * the new manifest has no column of that name at all, and audit was enabled
+///   on the old table. A column the author declares does not disappear when
+///   audit is switched off, so its absence proves it existed only because the
+///   generator appended it.
+///
+/// The old table's `audit_fields` flag is deliberately NOT required for the
+/// first proof. Requiring it blocked upgrades for any deployment whose stored
+/// manifest did not carry the flag, which is exactly the unrecoverable case
+/// this exemption exists to prevent.
 fn audit_column_vacated_number(
     old: &ManifestTable,
     new: &ManifestTable,
     old_col: &ManifestColumn,
 ) -> bool {
-    if !is_audit_column(old, old_col) {
+    if !sat_in_appended_audit_block(old, old_col) {
         return false;
     }
-    new.columns.iter().any(|candidate| {
+    let relocated_into_reserved_range = new.columns.iter().any(|candidate| {
         candidate.column_name == old_col.column_name
             && candidate.field_number >= crate::generation::manifest::AUDIT_FIELD_NUMBER_BASE
-    })
+    });
+    if relocated_into_reserved_range {
+        return true;
+    }
+    let dropped_with_audit = old.audit_fields
+        && !new
+            .columns
+            .iter()
+            .any(|candidate| candidate.column_name == old_col.column_name);
+    dropped_with_audit
 }
 
 fn detect_field_number_reuse(
@@ -2191,6 +2235,89 @@ mod tests {
         );
     }
 
+    /// The generator appends the audit trio after the highest explicit field.
+    /// When the schema author later adds a field on one of those numbers, the
+    /// upgrade was refused as protobuf field-number reuse - but a synthetic audit
+    /// number was never a wire field number, so there is nothing to break.
+    ///
+    /// The first exemption only recognised this when the OLD manifest recorded
+    /// `audit_fields: true` and the new one still carried the column. Two shapes
+    /// escaped it and left an upgrade permanently blocked with no recovery: a
+    /// stored manifest without the flag, and audit switched off so the columns
+    /// are gone. Both are proved synthetic by other means; a genuine user-field
+    /// reuse must still be refused.
+    #[test]
+    fn synthetic_audit_numbers_never_block_a_later_explicit_field() {
+        let numbered = |name: &str, number: i32| {
+            let mut c = column(name, "TEXT");
+            c.field_number = number;
+            c
+        };
+        let base = crate::generation::manifest::AUDIT_FIELD_NUMBER_BASE;
+        let mk = |cols: Vec<ManifestColumn>, audit: bool| {
+            let mut t = table(cols);
+            t.audit_fields = audit;
+            t
+        };
+        let blocked = |old: &ManifestTable, new: &ManifestTable| -> Vec<String> {
+            let oc: BTreeMap<String, &ManifestColumn> = old
+                .columns
+                .iter()
+                .map(|c| (c.column_name.clone(), c))
+                .collect();
+            let mut ops = Vec::new();
+            detect_field_number_reuse(old, new, &oc, &mut ops);
+            ops.iter().map(|o| o.column.clone()).collect()
+        };
+
+        // The stored manifest never recorded `audit_fields`, but the new manifest
+        // puts `created_at` in the reserved range - only the generator does that,
+        // so the column is generator-owned and its old number was synthetic.
+        let old = mk(vec![numbered("f1", 1), numbered("created_at", 12)], false);
+        let new = mk(
+            vec![
+                numbered("f1", 1),
+                numbered("project_id", 12),
+                numbered("created_at", base),
+            ],
+            true,
+        );
+        assert!(
+            blocked(&old, &new).is_empty(),
+            "a manifest without the audit flag must still upgrade: {:?}",
+            blocked(&old, &new)
+        );
+
+        // Audit switched off: the trio is gone. A column the AUTHOR declares does
+        // not vanish when audit is disabled, so its absence proves it was
+        // generator-appended.
+        let old = mk(vec![numbered("f1", 1), numbered("created_at", 12)], true);
+        let new = mk(vec![numbered("f1", 1), numbered("project_id", 12)], false);
+        assert!(
+            blocked(&old, &new).is_empty(),
+            "dropping audit must not block reusing its synthetic number: {:?}",
+            blocked(&old, &new)
+        );
+
+        // A real user field losing its number is still a compatibility break.
+        let old = mk(vec![numbered("f1", 1), numbered("legacy", 12)], true);
+        let new = mk(vec![numbered("f1", 1), numbered("replacement", 12)], true);
+        assert_eq!(
+            blocked(&old, &new).len(),
+            1,
+            "a genuine field-number reuse must stay blocked"
+        );
+
+        // An author-declared audit column sitting BELOW an explicit field is not
+        // in the appended block, so reusing its number stays blocked.
+        let old = mk(vec![numbered("created_at", 3), numbered("f9", 9)], true);
+        let new = mk(vec![numbered("taken", 3), numbered("f9", 9)], true);
+        assert_eq!(
+            blocked(&old, &new).len(),
+            1,
+            "an author-declared created_at is a real wire field"
+        );
+    }
     /// A deployment created before the audit block was anchored records
     /// `created_at`/`updated_at`/`created_by` at low numbers. Appending explicit
     /// fields moved the block, so those numbers were re-used by real fields and

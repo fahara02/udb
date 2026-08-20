@@ -148,6 +148,36 @@ class File extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string deleted_by = 22 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $deleted_by = '';
+    /**
+     * ── Content scanning (V050-3) ─────────────────────────────────────────────
+     * Written only by `SetScanVerdict`, which requires the privileged scanner
+     * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+     * predate scanning must not be mistaken for work in flight, and defaulting to
+     * anything else would make an upgrade look like a scanner outage.
+     *
+     * Generated from protobuf field <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $scan_verdict = 0;
+    /**
+     * \@inject_tag: gorm:"column:scanned_at"
+     *
+     * Generated from protobuf field <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $scanned_at = null;
+    /**
+     * Identity of the scanner that produced the verdict, taken from the verified
+     * principal rather than the request body so it cannot be spoofed.
+     *
+     * Generated from protobuf field <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $scanned_by = '';
+    /**
+     * Engine-supplied detail: signature name for INFECTED, failure reason for
+     * FAILED. Free text, shown to operators, never used for a control decision.
+     *
+     * Generated from protobuf field <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $scan_detail = '';
 
     /**
      * Constructor.
@@ -201,6 +231,20 @@ class File extends \Google\Protobuf\Internal\Message
      *           \@inject_tag: gorm:"column:audit_info;not null"
      *     @type \Google\Protobuf\Timestamp $deleted_at
      *     @type string $deleted_by
+     *     @type int $scan_verdict
+     *           ── Content scanning (V050-3) ─────────────────────────────────────────────
+     *           Written only by `SetScanVerdict`, which requires the privileged scanner
+     *           scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+     *           predate scanning must not be mistaken for work in flight, and defaulting to
+     *           anything else would make an upgrade look like a scanner outage.
+     *     @type \Google\Protobuf\Timestamp $scanned_at
+     *           \@inject_tag: gorm:"column:scanned_at"
+     *     @type string $scanned_by
+     *           Identity of the scanner that produced the verdict, taken from the verified
+     *           principal rather than the request body so it cannot be spoofed.
+     *     @type string $scan_detail
+     *           Engine-supplied detail: signature name for INFECTED, failure reason for
+     *           FAILED. Free text, shown to operators, never used for a control decision.
      * }
      */
     public function __construct($data = NULL) {
@@ -806,6 +850,132 @@ class File extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->deleted_by = $var;
+
+        return $this;
+    }
+
+    /**
+     * ── Content scanning (V050-3) ─────────────────────────────────────────────
+     * Written only by `SetScanVerdict`, which requires the privileged scanner
+     * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+     * predate scanning must not be mistaken for work in flight, and defaulting to
+     * anything else would make an upgrade look like a scanner outage.
+     *
+     * Generated from protobuf field <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = {</code>
+     * @return int
+     */
+    public function getScanVerdict()
+    {
+        return $this->scan_verdict;
+    }
+
+    /**
+     * ── Content scanning (V050-3) ─────────────────────────────────────────────
+     * Written only by `SetScanVerdict`, which requires the privileged scanner
+     * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+     * predate scanning must not be mistaken for work in flight, and defaulting to
+     * anything else would make an upgrade look like a scanner outage.
+     *
+     * Generated from protobuf field <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = {</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setScanVerdict($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Core\Storage\Entity\V1\ScanVerdict::class);
+        $this->scan_verdict = $var;
+
+        return $this;
+    }
+
+    /**
+     * \@inject_tag: gorm:"column:scanned_at"
+     *
+     * Generated from protobuf field <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = {</code>
+     * @return \Google\Protobuf\Timestamp|null
+     */
+    public function getScannedAt()
+    {
+        return $this->scanned_at;
+    }
+
+    public function hasScannedAt()
+    {
+        return isset($this->scanned_at);
+    }
+
+    public function clearScannedAt()
+    {
+        unset($this->scanned_at);
+    }
+
+    /**
+     * \@inject_tag: gorm:"column:scanned_at"
+     *
+     * Generated from protobuf field <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = {</code>
+     * @param \Google\Protobuf\Timestamp $var
+     * @return $this
+     */
+    public function setScannedAt($var)
+    {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
+        $this->scanned_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * Identity of the scanner that produced the verdict, taken from the verified
+     * principal rather than the request body so it cannot be spoofed.
+     *
+     * Generated from protobuf field <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getScannedBy()
+    {
+        return $this->scanned_by;
+    }
+
+    /**
+     * Identity of the scanner that produced the verdict, taken from the verified
+     * principal rather than the request body so it cannot be spoofed.
+     *
+     * Generated from protobuf field <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setScannedBy($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->scanned_by = $var;
+
+        return $this;
+    }
+
+    /**
+     * Engine-supplied detail: signature name for INFECTED, failure reason for
+     * FAILED. Free text, shown to operators, never used for a control decision.
+     *
+     * Generated from protobuf field <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getScanDetail()
+    {
+        return $this->scan_detail;
+    }
+
+    /**
+     * Engine-supplied detail: signature name for INFECTED, failure reason for
+     * FAILED. Free text, shown to operators, never used for a control decision.
+     *
+     * Generated from protobuf field <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setScanDetail($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->scan_detail = $var;
 
         return $this;
     }

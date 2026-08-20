@@ -138,6 +138,24 @@ fn catalog_admin_internal_status(
     crate::runtime::executor_utils::internal_status("catalog_admin", operation, message)
 }
 
+/// A CDC slot exists but is not controlled by the caller's tenant/project, or
+/// is not registered at all.
+///
+/// A replication slot is keyed by name alone, while the control row records the
+/// tenant/project that owns it. Pause and resume are ownership-guarded, so a
+/// caller aiming at someone else's slot changes nothing — and must be told so
+/// rather than handed a success it can act on.
+fn cdc_slot_not_controllable_status(operation: &'static str, slot_name: &str) -> tonic::Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::NotFound,
+        format!("catalog_admin.{operation}"),
+        "cdc_slot_not_controllable",
+        format!(
+            "CDC slot '{slot_name}' is not registered for this tenant/project, so the control had no effect"
+        ),
+    )
+}
+
 fn catalog_idempotency_required_status(operation: &'static str) -> tonic::Status {
     catalog_admin_invalid_field(
         "idempotency_key",
@@ -3793,6 +3811,7 @@ impl DataBrokerRuntime {
             // per-row `dispatched_at` column. Outbox depth is therefore the count of
             // rows currently present (the pending/unconsumed backlog).
             "SELECT c.slot_name, c.paused, c.pause_reason,
+                    EXTRACT(EPOCH FROM c.updated_at)::BIGINT AS updated_at_unix,
                     (SELECT COUNT(*) FROM {out_rel}) AS outbox_depth
              FROM {ctrl_rel} c
              WHERE c.slot_name = $1 AND c.tenant_id = $2 AND c.project_id = $3"
@@ -3810,16 +3829,21 @@ impl DataBrokerRuntime {
                 "slot_name": r.try_get::<String,_>("slot_name").unwrap_or_default(),
                 "paused": r.try_get::<bool,_>("paused").unwrap_or(false),
                 "pause_reason": r.try_get::<String,_>("pause_reason").unwrap_or_default(),
+                // Broker-global: the outbox carries no tenant/project ownership, so
+                // this is the whole broker's backlog, not the caller's. Reported as
+                // such because GetCdcStatus is an admin-scoped operational surface.
                 "outbox_depth": r.try_get::<i64,_>("outbox_depth").unwrap_or(0),
+                "updated_at_unix": r.try_get::<i64,_>("updated_at_unix").unwrap_or(0),
             })),
             None => {
-                // Slot not registered — return a default healthy status
-                Ok(serde_json::json!({
-                    "slot_name": slot_name,
-                    "paused": false,
-                    "pause_reason": "",
-                    "outbox_depth": 0,
-                }))
+                // Previously returned paused=false / depth=0, i.e. a healthy empty
+                // pipeline. An unregistered slot — or one owned by another
+                // tenant/project — is UNKNOWN, and presenting unknown as healthy is
+                // how a stopped pipeline goes unnoticed.
+                Err(cdc_slot_not_controllable_status(
+                    "get_cdc_status",
+                    slot_name,
+                ))
             }
         }
     }
@@ -3836,11 +3860,12 @@ impl DataBrokerRuntime {
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let ctrl_rel = config.cdc_control_relation();
-        sqlx::query(&format!(
+        let result = sqlx::query(&format!(
             "INSERT INTO {ctrl_rel} (slot_name, tenant_id, project_id, paused, pause_reason)
              VALUES ($1, $2, $3, TRUE, $4)
              ON CONFLICT (slot_name) DO UPDATE
                 SET paused = TRUE, pause_reason = EXCLUDED.pause_reason, updated_at = NOW()
+                WHERE {ctrl_rel}.tenant_id = EXCLUDED.tenant_id AND {ctrl_rel}.project_id = EXCLUDED.project_id
                 WHERE {ctrl_rel}.tenant_id = EXCLUDED.tenant_id AND {ctrl_rel}.project_id = EXCLUDED.project_id"
         ))
         .bind(slot_name)
@@ -3852,6 +3877,13 @@ impl DataBrokerRuntime {
         .map_err(|err| {
             catalog_admin_internal_status("pause_cdc", format!("pause_cdc failed: {err}"))
         })?;
+        // The ownership guard above makes a foreign slot a NO-OP. Reporting
+        // success would tell an operator the pipeline is paused when it is still
+        // publishing — the worst possible answer for a control they reached for
+        // during an incident.
+        if result.rows_affected() == 0 {
+            return Err(cdc_slot_not_controllable_status("pause_cdc", slot_name));
+        }
         Ok(())
     }
 
@@ -3866,7 +3898,7 @@ impl DataBrokerRuntime {
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let ctrl_rel = config.cdc_control_relation();
-        sqlx::query(&format!(
+        let result = sqlx::query(&format!(
             "INSERT INTO {ctrl_rel} (slot_name, tenant_id, project_id, paused, pause_reason)
              VALUES ($1, $2, $3, FALSE, '')
              ON CONFLICT (slot_name) DO UPDATE
@@ -3881,6 +3913,11 @@ impl DataBrokerRuntime {
         .map_err(|err| {
             catalog_admin_internal_status("resume_cdc", format!("resume_cdc failed: {err}"))
         })?;
+        // Resume was already ownership-guarded, but reported success either way,
+        // so a caller could believe it had restarted a pipeline it never touched.
+        if result.rows_affected() == 0 {
+            return Err(cdc_slot_not_controllable_status("resume_cdc", slot_name));
+        }
         Ok(())
     }
 

@@ -1810,6 +1810,20 @@ impl CdcEngine {
         // the 300s in-doubt grace window without hammering the DB each tick.
         const MAINTENANCE_EVERY_TICKS: u32 = 12;
         let mut maintenance_tick: u32 = 0;
+        // A pause is a SAFETY CONTROL - compliance hold, incident response,
+        // maintenance - so "we could not read the control row" must not resolve to
+        // "not paused". It previously did, which meant publication continued
+        // precisely when UDB could not verify it had been told to stop.
+        //
+        // A single transient blip should not step down a healthy leader, so a
+        // bounded number of consecutive read failures is tolerated; past that the
+        // tailer steps down and publication stops until control state is
+        // legible again. If a pause was already known to be in force, the very
+        // first unreadable heartbeat steps down - an unknown state can never
+        // RESUME a pause.
+        const CONTROL_READ_FAILURE_LIMIT: u32 = 3;
+        let mut control_read_failures: u32 = 0;
+        let mut last_known_paused = false;
 
         loop {
             tokio::select! {
@@ -1849,13 +1863,30 @@ impl CdcEngine {
                         .fetch_optional(&pool)
                         .await
                         {
-                            Ok(row) => row,
+                            Ok(row) => {
+                                control_read_failures = 0;
+                                last_known_paused = matches!(row, Some((true,)));
+                                row
+                            }
                             Err(err) => {
-                                // Transient DB error — treat as "not paused" (safe-fail)
-                                // so the tailer continues rather than silently stopping.
+                                control_read_failures += 1;
+                                if last_known_paused {
+                                    error!(
+                                        "[cdc] slot '{}' is paused and the control read failed ({}); stepping down rather than resuming on an unknown control state",
+                                        self.config.slot_name, err
+                                    );
+                                    break;
+                                }
+                                if control_read_failures >= CONTROL_READ_FAILURE_LIMIT {
+                                    error!(
+                                        "[cdc] control state for slot '{}' unreadable for {} consecutive heartbeats ({}); stepping down fail-closed",
+                                        self.config.slot_name, control_read_failures, err
+                                    );
+                                    break;
+                                }
                                 warn!(
-                                    "[cdc] paused-state check failed (treating as not-paused): {}",
-                                    err
+                                    "[cdc] paused-state check failed ({}/{} before fail-closed step-down): {}",
+                                    control_read_failures, CONTROL_READ_FAILURE_LIMIT, err
                                 );
                                 None
                             }

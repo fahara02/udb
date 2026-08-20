@@ -92,7 +92,7 @@ What that means in practice, for the Go SDK:
 
 | | |
 |---|---|
-| **Writing** | Put the array in the record yourself. It is not produced by the generated `…ToUDBRecord` helper. |
+| **Writing** | Put the array in the record yourself. It is not produced by the generated `…ToUDBRecord` helper, which returns `(map[string]any, error)`. |
 | **Empty vs absent** | An empty array and a missing value are different. A Go `nil` slice marshals to JSON `null`, which is SQL `NULL` — not an empty array. A `NOT NULL` array column rejects it. Send `[]` explicitly. |
 | **Reading numerics** | Numbers arrive as `json.Number`, not `float64`. The decoder uses `UseNumber()` so large integers survive exactly (see `sdk/go/udbclient/entity.go`). Parse with `.Int64()`, `.Float64()`, or `strconv.ParseUint` for `uint64`, and surface the parse error rather than ignoring it. |
 

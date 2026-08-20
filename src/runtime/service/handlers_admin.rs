@@ -288,6 +288,12 @@ impl DataBrokerService {
         request: Request<CdcControlRequest>,
     ) -> Result<Response<CdcStatusResponse>, Status> {
         let (started, security) = authorized_call!(self, request, "GetCdcStatus");
+        // CDC status is broker-global operational state: the outbox depth it
+        // reports has no tenant/project ownership at all. PauseCdc and ResumeCdc
+        // already require the admin scope; reading the same surface must too.
+        if let Err(err) = require_admin_scope(&security) {
+            return self.record_grpc("GetCdcStatus", started, Err(err));
+        }
         let req = request.into_inner();
         let result = self
             .runtime_snapshot()
@@ -302,6 +308,9 @@ impl DataBrokerService {
                     paused: v["paused"].as_bool().unwrap_or(false),
                     pause_reason: v["pause_reason"].as_str().unwrap_or_default().into(),
                     outbox_depth: v["outbox_depth"].as_i64().unwrap_or(0),
+                    updated_at_unix: v["updated_at_unix"].as_i64().unwrap_or(0),
+                    // is_leader / last_event_id / lag_seconds have no source on this
+                    // path and stay at their defaults; they are NOT observations.
                     ..Default::default()
                 })),
             ),

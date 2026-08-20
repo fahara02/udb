@@ -49,6 +49,9 @@ private static final long serialVersionUID = 0L;
     checksum_ = "";
     uploadedBy_ = "";
     deletedBy_ = "";
+    scanVerdict_ = 0;
+    scannedBy_ = "";
+    scanDetail_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -956,6 +959,178 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SCAN_VERDICT_FIELD_NUMBER = 23;
+  private int scanVerdict_ = 0;
+  /**
+   * <pre>
+   * ── Content scanning (V050-3) ─────────────────────────────────────────────
+   *
+   * Written only by `SetScanVerdict`, which requires the privileged scanner
+   * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+   * predate scanning must not be mistaken for work in flight, and defaulting to
+   * anything else would make an upgrade look like a scanner outage.
+   * </pre>
+   *
+   * <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The enum numeric value on the wire for scanVerdict.
+   */
+  @java.lang.Override public int getScanVerdictValue() {
+    return scanVerdict_;
+  }
+  /**
+   * <pre>
+   * ── Content scanning (V050-3) ─────────────────────────────────────────────
+   *
+   * Written only by `SetScanVerdict`, which requires the privileged scanner
+   * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+   * predate scanning must not be mistaken for work in flight, and defaulting to
+   * anything else would make an upgrade look like a scanner outage.
+   * </pre>
+   *
+   * <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scanVerdict.
+   */
+  @java.lang.Override public com.udb.core.storage.entity.v1.ScanVerdict getScanVerdict() {
+    com.udb.core.storage.entity.v1.ScanVerdict result = com.udb.core.storage.entity.v1.ScanVerdict.forNumber(scanVerdict_);
+    return result == null ? com.udb.core.storage.entity.v1.ScanVerdict.UNRECOGNIZED : result;
+  }
+
+  public static final int SCANNED_AT_FIELD_NUMBER = 24;
+  private com.google.protobuf.Timestamp scannedAt_;
+  /**
+   * <pre>
+   * &#64;inject_tag: gorm:"column:scanned_at"
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return Whether the scannedAt field is set.
+   */
+  @java.lang.Override
+  public boolean hasScannedAt() {
+    return ((bitField0_ & 0x00000008) != 0);
+  }
+  /**
+   * <pre>
+   * &#64;inject_tag: gorm:"column:scanned_at"
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scannedAt.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getScannedAt() {
+    return scannedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : scannedAt_;
+  }
+  /**
+   * <pre>
+   * &#64;inject_tag: gorm:"column:scanned_at"
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getScannedAtOrBuilder() {
+    return scannedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : scannedAt_;
+  }
+
+  public static final int SCANNED_BY_FIELD_NUMBER = 25;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object scannedBy_ = "";
+  /**
+   * <pre>
+   * Identity of the scanner that produced the verdict, taken from the verified
+   * principal rather than the request body so it cannot be spoofed.
+   * </pre>
+   *
+   * <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scannedBy.
+   */
+  @java.lang.Override
+  public java.lang.String getScannedBy() {
+    java.lang.Object ref = scannedBy_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      scannedBy_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Identity of the scanner that produced the verdict, taken from the verified
+   * principal rather than the request body so it cannot be spoofed.
+   * </pre>
+   *
+   * <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for scannedBy.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getScannedByBytes() {
+    java.lang.Object ref = scannedBy_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      scannedBy_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int SCAN_DETAIL_FIELD_NUMBER = 26;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object scanDetail_ = "";
+  /**
+   * <pre>
+   * Engine-supplied detail: signature name for INFECTED, failure reason for
+   * FAILED. Free text, shown to operators, never used for a control decision.
+   * </pre>
+   *
+   * <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scanDetail.
+   */
+  @java.lang.Override
+  public java.lang.String getScanDetail() {
+    java.lang.Object ref = scanDetail_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      scanDetail_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Engine-supplied detail: signature name for INFECTED, failure reason for
+   * FAILED. Free text, shown to operators, never used for a control decision.
+   * </pre>
+   *
+   * <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for scanDetail.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getScanDetailBytes() {
+    java.lang.Object ref = scanDetail_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      scanDetail_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -1035,6 +1210,18 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deletedBy_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 22, deletedBy_);
+    }
+    if (scanVerdict_ != com.udb.core.storage.entity.v1.ScanVerdict.SCAN_VERDICT_UNSPECIFIED.getNumber()) {
+      output.writeEnum(23, scanVerdict_);
+    }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      output.writeMessage(24, getScannedAt());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scannedBy_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 25, scannedBy_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scanDetail_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 26, scanDetail_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -1118,6 +1305,20 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deletedBy_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(22, deletedBy_);
     }
+    if (scanVerdict_ != com.udb.core.storage.entity.v1.ScanVerdict.SCAN_VERDICT_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(23, scanVerdict_);
+    }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(24, getScannedAt());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scannedBy_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(25, scannedBy_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scanDetail_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(26, scanDetail_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -1184,6 +1385,16 @@ private static final long serialVersionUID = 0L;
     }
     if (!getDeletedBy()
         .equals(other.getDeletedBy())) return false;
+    if (scanVerdict_ != other.scanVerdict_) return false;
+    if (hasScannedAt() != other.hasScannedAt()) return false;
+    if (hasScannedAt()) {
+      if (!getScannedAt()
+          .equals(other.getScannedAt())) return false;
+    }
+    if (!getScannedBy()
+        .equals(other.getScannedBy())) return false;
+    if (!getScanDetail()
+        .equals(other.getScanDetail())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1247,6 +1458,16 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + DELETED_BY_FIELD_NUMBER;
     hash = (53 * hash) + getDeletedBy().hashCode();
+    hash = (37 * hash) + SCAN_VERDICT_FIELD_NUMBER;
+    hash = (53 * hash) + scanVerdict_;
+    if (hasScannedAt()) {
+      hash = (37 * hash) + SCANNED_AT_FIELD_NUMBER;
+      hash = (53 * hash) + getScannedAt().hashCode();
+    }
+    hash = (37 * hash) + SCANNED_BY_FIELD_NUMBER;
+    hash = (53 * hash) + getScannedBy().hashCode();
+    hash = (37 * hash) + SCAN_DETAIL_FIELD_NUMBER;
+    hash = (53 * hash) + getScanDetail().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1384,6 +1605,7 @@ private static final long serialVersionUID = 0L;
         internalGetExpiresAtFieldBuilder();
         internalGetAuditInfoFieldBuilder();
         internalGetDeletedAtFieldBuilder();
+        internalGetScannedAtFieldBuilder();
       }
     }
     @java.lang.Override
@@ -1424,6 +1646,14 @@ private static final long serialVersionUID = 0L;
         deletedAtBuilder_ = null;
       }
       deletedBy_ = "";
+      scanVerdict_ = 0;
+      scannedAt_ = null;
+      if (scannedAtBuilder_ != null) {
+        scannedAtBuilder_.dispose();
+        scannedAtBuilder_ = null;
+      }
+      scannedBy_ = "";
+      scanDetail_ = "";
       return this;
     }
 
@@ -1532,6 +1762,21 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00200000) != 0)) {
         result.deletedBy_ = deletedBy_;
+      }
+      if (((from_bitField0_ & 0x00400000) != 0)) {
+        result.scanVerdict_ = scanVerdict_;
+      }
+      if (((from_bitField0_ & 0x00800000) != 0)) {
+        result.scannedAt_ = scannedAtBuilder_ == null
+            ? scannedAt_
+            : scannedAtBuilder_.build();
+        to_bitField0_ |= 0x00000008;
+      }
+      if (((from_bitField0_ & 0x01000000) != 0)) {
+        result.scannedBy_ = scannedBy_;
+      }
+      if (((from_bitField0_ & 0x02000000) != 0)) {
+        result.scanDetail_ = scanDetail_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1642,6 +1887,22 @@ private static final long serialVersionUID = 0L;
       if (!other.getDeletedBy().isEmpty()) {
         deletedBy_ = other.deletedBy_;
         bitField0_ |= 0x00200000;
+        onChanged();
+      }
+      if (other.scanVerdict_ != 0) {
+        setScanVerdictValue(other.getScanVerdictValue());
+      }
+      if (other.hasScannedAt()) {
+        mergeScannedAt(other.getScannedAt());
+      }
+      if (!other.getScannedBy().isEmpty()) {
+        scannedBy_ = other.scannedBy_;
+        bitField0_ |= 0x01000000;
+        onChanged();
+      }
+      if (!other.getScanDetail().isEmpty()) {
+        scanDetail_ = other.scanDetail_;
+        bitField0_ |= 0x02000000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1786,6 +2047,28 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00200000;
               break;
             } // case 178
+            case 184: {
+              scanVerdict_ = input.readEnum();
+              bitField0_ |= 0x00400000;
+              break;
+            } // case 184
+            case 194: {
+              input.readMessage(
+                  internalGetScannedAtFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00800000;
+              break;
+            } // case 194
+            case 202: {
+              scannedBy_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x01000000;
+              break;
+            } // case 202
+            case 210: {
+              scanDetail_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x02000000;
+              break;
+            } // case 210
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -3849,6 +4132,453 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       deletedBy_ = value;
       bitField0_ |= 0x00200000;
+      onChanged();
+      return this;
+    }
+
+    private int scanVerdict_ = 0;
+    /**
+     * <pre>
+     * ── Content scanning (V050-3) ─────────────────────────────────────────────
+     *
+     * Written only by `SetScanVerdict`, which requires the privileged scanner
+     * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+     * predate scanning must not be mistaken for work in flight, and defaulting to
+     * anything else would make an upgrade look like a scanner outage.
+     * </pre>
+     *
+     * <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The enum numeric value on the wire for scanVerdict.
+     */
+    @java.lang.Override public int getScanVerdictValue() {
+      return scanVerdict_;
+    }
+    /**
+     * <pre>
+     * ── Content scanning (V050-3) ─────────────────────────────────────────────
+     *
+     * Written only by `SetScanVerdict`, which requires the privileged scanner
+     * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+     * predate scanning must not be mistaken for work in flight, and defaulting to
+     * anything else would make an upgrade look like a scanner outage.
+     * </pre>
+     *
+     * <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The enum numeric value on the wire for scanVerdict to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScanVerdictValue(int value) {
+      scanVerdict_ = value;
+      bitField0_ |= 0x00400000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ── Content scanning (V050-3) ─────────────────────────────────────────────
+     *
+     * Written only by `SetScanVerdict`, which requires the privileged scanner
+     * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+     * predate scanning must not be mistaken for work in flight, and defaulting to
+     * anything else would make an upgrade look like a scanner outage.
+     * </pre>
+     *
+     * <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The scanVerdict.
+     */
+    @java.lang.Override
+    public com.udb.core.storage.entity.v1.ScanVerdict getScanVerdict() {
+      com.udb.core.storage.entity.v1.ScanVerdict result = com.udb.core.storage.entity.v1.ScanVerdict.forNumber(scanVerdict_);
+      return result == null ? com.udb.core.storage.entity.v1.ScanVerdict.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * ── Content scanning (V050-3) ─────────────────────────────────────────────
+     *
+     * Written only by `SetScanVerdict`, which requires the privileged scanner
+     * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+     * predate scanning must not be mistaken for work in flight, and defaulting to
+     * anything else would make an upgrade look like a scanner outage.
+     * </pre>
+     *
+     * <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The scanVerdict to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScanVerdict(com.udb.core.storage.entity.v1.ScanVerdict value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00400000;
+      scanVerdict_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ── Content scanning (V050-3) ─────────────────────────────────────────────
+     *
+     * Written only by `SetScanVerdict`, which requires the privileged scanner
+     * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+     * predate scanning must not be mistaken for work in flight, and defaulting to
+     * anything else would make an upgrade look like a scanner outage.
+     * </pre>
+     *
+     * <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearScanVerdict() {
+      bitField0_ = (bitField0_ & ~0x00400000);
+      scanVerdict_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp scannedAt_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> scannedAtBuilder_;
+    /**
+     * <pre>
+     * &#64;inject_tag: gorm:"column:scanned_at"
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return Whether the scannedAt field is set.
+     */
+    public boolean hasScannedAt() {
+      return ((bitField0_ & 0x00800000) != 0);
+    }
+    /**
+     * <pre>
+     * &#64;inject_tag: gorm:"column:scanned_at"
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The scannedAt.
+     */
+    public com.google.protobuf.Timestamp getScannedAt() {
+      if (scannedAtBuilder_ == null) {
+        return scannedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : scannedAt_;
+      } else {
+        return scannedAtBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * &#64;inject_tag: gorm:"column:scanned_at"
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder setScannedAt(com.google.protobuf.Timestamp value) {
+      if (scannedAtBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        scannedAt_ = value;
+      } else {
+        scannedAtBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00800000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;inject_tag: gorm:"column:scanned_at"
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder setScannedAt(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (scannedAtBuilder_ == null) {
+        scannedAt_ = builderForValue.build();
+      } else {
+        scannedAtBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00800000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;inject_tag: gorm:"column:scanned_at"
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder mergeScannedAt(com.google.protobuf.Timestamp value) {
+      if (scannedAtBuilder_ == null) {
+        if (((bitField0_ & 0x00800000) != 0) &&
+          scannedAt_ != null &&
+          scannedAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getScannedAtBuilder().mergeFrom(value);
+        } else {
+          scannedAt_ = value;
+        }
+      } else {
+        scannedAtBuilder_.mergeFrom(value);
+      }
+      if (scannedAt_ != null) {
+        bitField0_ |= 0x00800000;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;inject_tag: gorm:"column:scanned_at"
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder clearScannedAt() {
+      bitField0_ = (bitField0_ & ~0x00800000);
+      scannedAt_ = null;
+      if (scannedAtBuilder_ != null) {
+        scannedAtBuilder_.dispose();
+        scannedAtBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;inject_tag: gorm:"column:scanned_at"
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getScannedAtBuilder() {
+      bitField0_ |= 0x00800000;
+      onChanged();
+      return internalGetScannedAtFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * &#64;inject_tag: gorm:"column:scanned_at"
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getScannedAtOrBuilder() {
+      if (scannedAtBuilder_ != null) {
+        return scannedAtBuilder_.getMessageOrBuilder();
+      } else {
+        return scannedAt_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : scannedAt_;
+      }
+    }
+    /**
+     * <pre>
+     * &#64;inject_tag: gorm:"column:scanned_at"
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
+        internalGetScannedAtFieldBuilder() {
+      if (scannedAtBuilder_ == null) {
+        scannedAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getScannedAt(),
+                getParentForChildren(),
+                isClean());
+        scannedAt_ = null;
+      }
+      return scannedAtBuilder_;
+    }
+
+    private java.lang.Object scannedBy_ = "";
+    /**
+     * <pre>
+     * Identity of the scanner that produced the verdict, taken from the verified
+     * principal rather than the request body so it cannot be spoofed.
+     * </pre>
+     *
+     * <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The scannedBy.
+     */
+    public java.lang.String getScannedBy() {
+      java.lang.Object ref = scannedBy_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        scannedBy_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Identity of the scanner that produced the verdict, taken from the verified
+     * principal rather than the request body so it cannot be spoofed.
+     * </pre>
+     *
+     * <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for scannedBy.
+     */
+    public com.google.protobuf.ByteString
+        getScannedByBytes() {
+      java.lang.Object ref = scannedBy_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        scannedBy_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Identity of the scanner that produced the verdict, taken from the verified
+     * principal rather than the request body so it cannot be spoofed.
+     * </pre>
+     *
+     * <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The scannedBy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScannedBy(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      scannedBy_ = value;
+      bitField0_ |= 0x01000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Identity of the scanner that produced the verdict, taken from the verified
+     * principal rather than the request body so it cannot be spoofed.
+     * </pre>
+     *
+     * <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearScannedBy() {
+      scannedBy_ = getDefaultInstance().getScannedBy();
+      bitField0_ = (bitField0_ & ~0x01000000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Identity of the scanner that produced the verdict, taken from the verified
+     * principal rather than the request body so it cannot be spoofed.
+     * </pre>
+     *
+     * <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for scannedBy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScannedByBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      scannedBy_ = value;
+      bitField0_ |= 0x01000000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object scanDetail_ = "";
+    /**
+     * <pre>
+     * Engine-supplied detail: signature name for INFECTED, failure reason for
+     * FAILED. Free text, shown to operators, never used for a control decision.
+     * </pre>
+     *
+     * <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The scanDetail.
+     */
+    public java.lang.String getScanDetail() {
+      java.lang.Object ref = scanDetail_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        scanDetail_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Engine-supplied detail: signature name for INFECTED, failure reason for
+     * FAILED. Free text, shown to operators, never used for a control decision.
+     * </pre>
+     *
+     * <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for scanDetail.
+     */
+    public com.google.protobuf.ByteString
+        getScanDetailBytes() {
+      java.lang.Object ref = scanDetail_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        scanDetail_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Engine-supplied detail: signature name for INFECTED, failure reason for
+     * FAILED. Free text, shown to operators, never used for a control decision.
+     * </pre>
+     *
+     * <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The scanDetail to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScanDetail(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      scanDetail_ = value;
+      bitField0_ |= 0x02000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Engine-supplied detail: signature name for INFECTED, failure reason for
+     * FAILED. Free text, shown to operators, never used for a control decision.
+     * </pre>
+     *
+     * <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearScanDetail() {
+      scanDetail_ = getDefaultInstance().getScanDetail();
+      bitField0_ = (bitField0_ & ~0x02000000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Engine-supplied detail: signature name for INFECTED, failure reason for
+     * FAILED. Free text, shown to operators, never used for a control decision.
+     * </pre>
+     *
+     * <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for scanDetail to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScanDetailBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      scanDetail_ = value;
+      bitField0_ |= 0x02000000;
       onChanged();
       return this;
     }

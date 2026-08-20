@@ -191,6 +191,40 @@ pub(crate) fn api_error_upload_url_unavailable(
     }
 }
 
+/// A download was refused because the file's scan verdict does not permit it.
+///
+/// PermissionDenied rather than NotFound: the caller is entitled to know the
+/// object exists and why it is withheld, otherwise an operator debugging a
+/// quarantined upload sees an indistinguishable "missing file".
+pub(crate) fn storage_scan_verdict_status(
+    operation: &'static str,
+    reason: &'static str,
+    verdict: crate::proto::udb::core::storage::entity::v1::ScanVerdict,
+) -> Status {
+    use crate::proto::udb::core::storage::entity::v1::ScanVerdict as V;
+    let detail = match verdict {
+        V::Infected => "the file was scanned and found malicious",
+        V::Pending => "a content scan is still in flight",
+        V::Failed => "the content scan could not produce a verdict",
+        _ => "the file has not been scanned",
+    };
+    // A typed policy detail, not a bare `permission_denied`: the SDKs branch on
+    // `policy_decision_id`, so a refusal an application must handle
+    // programmatically has to carry one. PermissionDenied is kept as the code -
+    // the caller is entitled to know the object exists and why it is withheld.
+    status_with_reason(
+        crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            format!("storage.{operation}"),
+            reason,
+            format!(
+                "storage {operation} refused: {detail}. A download requires a CLEAN scan verdict; grant udb:storage:download-unscanned to override deliberately."
+            ),
+        ),
+        reason,
+    )
+}
+
 pub(crate) fn storage_capability_status(
     operation: &'static str,
     capability_required: &'static str,

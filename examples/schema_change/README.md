@@ -185,6 +185,44 @@ UDB_MANIFEST_EXPORT_PATH=prior-manifest.json udb manifest-export proto
 
 ---
 
+## Adding a NEW entity
+
+A new entity has a different failure mode from changing an existing one, and it
+is the one that costs the most time: **the broker only serves entities baked
+into its image.** Add a message to your protos, deploy the services that use it,
+and nothing fails at startup. The first `Upsert` fails instead:
+
+```text
+INVALID_ARGUMENT: unknown message_type "your.project.v1.NewThing"
+```
+
+For a new feature that can be hours after the deploy, in whichever code path
+happens to run first.
+
+Check it at startup instead. The broker already exposes both halves:
+
+| RPC | Answers |
+|---|---|
+| `LookupMessageSchema` | Does the broker know this one entity? |
+| `GetCatalogManifest` | What is the full entity set this broker serves? |
+
+Call `LookupMessageSchema` once per entity your service writes, during boot, and
+refuse to start if any is unknown. That converts a late runtime `INVALID_ARGUMENT`
+into an immediate, named startup failure — and it is the same check the broker
+would make on the first write anyway.
+
+The order that avoids this entirely:
+
+1. add the entity to the protos;
+2. rebuild and redeploy **the broker**;
+3. then deploy the services that use it.
+
+A broker image that predates the entity cannot serve it, no matter what the
+services believe. The unknown-entity error names the entities the broker does
+know and its catalog checksum, so a mismatch is identifiable from one log line.
+
+---
+
 ## Changes that need more thought
 
 | Change | Classified | Why |

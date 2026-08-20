@@ -9,7 +9,7 @@ import { enumDesc, fileDesc } from "@bufbuild/protobuf/codegenv2";
  * Describes the file udb/core/storage/entity/v1/enums.proto.
  */
 export const file_udb_core_storage_entity_v1_enums: GenFile = /*@__PURE__*/
-  fileDesc("CiZ1ZGIvY29yZS9zdG9yYWdlL2VudGl0eS92MS9lbnVtcy5wcm90bxIadWRiLmNvcmUuc3RvcmFnZS5lbnRpdHkudjEquwEKCEZpbGVUeXBlEhkKFUZJTEVfVFlQRV9VTlNQRUNJRklFRBAAEhMKD0ZJTEVfVFlQRV9JTUFHRRABEhMKD0ZJTEVfVFlQRV9WSURFTxACEhMKD0ZJTEVfVFlQRV9BVURJTxADEhEKDUZJTEVfVFlQRV9QREYQBBIWChJGSUxFX1RZUEVfRE9DVU1FTlQQBRIVChFGSUxFX1RZUEVfQVJDSElWRRAGEhMKD0ZJTEVfVFlQRV9PVEhFUhBjKnMKCkZpbGVTdGF0dXMSGwoXRklMRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIXChNGSUxFX1NUQVRVU19QRU5ESU5HEAESFgoSRklMRV9TVEFUVVNfQUNUSVZFEAISFwoTRklMRV9TVEFUVVNfREVMRVRFRBADQoECCh5jb20udWRiLmNvcmUuc3RvcmFnZS5lbnRpdHkudjFCCkVudW1zUHJvdG9QAVpGZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9zdG9yYWdlL2VudGl0eS92MTtlbnRpdHl2MaICBFVDU0WqAhp1ZGIuY29yZS5TdG9yYWdlLkVudGl0eS5WMcoCGlVkYlxDb3JlXFN0b3JhZ2VcRW50aXR5XFYx4gImVWRiXEdQQk1ldGFkYXRhXENvcmVcU3RvcmFnZVxFbnRpdHlcVjHqAh5VZGI6OkNvcmU6OlN0b3JhZ2U6OkVudGl0eTo6VjFiBnByb3RvMw");
+  fileDesc("CiZ1ZGIvY29yZS9zdG9yYWdlL2VudGl0eS92MS9lbnVtcy5wcm90bxIadWRiLmNvcmUuc3RvcmFnZS5lbnRpdHkudjEquwEKCEZpbGVUeXBlEhkKFUZJTEVfVFlQRV9VTlNQRUNJRklFRBAAEhMKD0ZJTEVfVFlQRV9JTUFHRRABEhMKD0ZJTEVfVFlQRV9WSURFTxACEhMKD0ZJTEVfVFlQRV9BVURJTxADEhEKDUZJTEVfVFlQRV9QREYQBBIWChJGSUxFX1RZUEVfRE9DVU1FTlQQBRIVChFGSUxFX1RZUEVfQVJDSElWRRAGEhMKD0ZJTEVfVFlQRV9PVEhFUhBjKnMKCkZpbGVTdGF0dXMSGwoXRklMRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIXChNGSUxFX1NUQVRVU19QRU5ESU5HEAESFgoSRklMRV9TVEFUVVNfQUNUSVZFEAISFwoTRklMRV9TVEFUVVNfREVMRVRFRBADKpEBCgtTY2FuVmVyZGljdBIcChhTQ0FOX1ZFUkRJQ1RfVU5TUEVDSUZJRUQQABIYChRTQ0FOX1ZFUkRJQ1RfUEVORElORxABEhYKElNDQU5fVkVSRElDVF9DTEVBThACEhkKFVNDQU5fVkVSRElDVF9JTkZFQ1RFRBADEhcKE1NDQU5fVkVSRElDVF9GQUlMRUQQBEKBAgoeY29tLnVkYi5jb3JlLnN0b3JhZ2UuZW50aXR5LnYxQgpFbnVtc1Byb3RvUAFaRmdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvc3RvcmFnZS9lbnRpdHkvdjE7ZW50aXR5djGiAgRVQ1NFqgIadWRiLmNvcmUuU3RvcmFnZS5FbnRpdHkuVjHKAhpVZGJcQ29yZVxTdG9yYWdlXEVudGl0eVxWMeICJlVkYlxHUEJNZXRhZGF0YVxDb3JlXFN0b3JhZ2VcRW50aXR5XFYx6gIeVWRiOjpDb3JlOjpTdG9yYWdlOjpFbnRpdHk6OlYxYgZwcm90bzM");
 
 /**
  * @generated from enum udb.core.storage.entity.v1.FileType
@@ -92,3 +92,56 @@ export enum FileStatus {
  */
 export const FileStatusSchema: GenEnum<FileStatus> = /*@__PURE__*/
   enumDesc(file_udb_core_storage_entity_v1_enums, 1);
+
+/**
+ * Antivirus / content-scan verdict for a stored object (V050-3).
+ *
+ * UNSPECIFIED means NOT SCANNED, and is deliberately distinct from PENDING.
+ * Rows that predate scanning carry it after upgrade, so an operator can tell
+ * "no scanner has ever looked at this" apart from "a scan is in flight" — and
+ * so enabling enforcement later is a decision, not a silent cutover.
+ *
+ * @generated from enum udb.core.storage.entity.v1.ScanVerdict
+ */
+export enum ScanVerdict {
+  /**
+   * @generated from enum value: SCAN_VERDICT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * A scan has been requested and has not yet returned.
+   *
+   * @generated from enum value: SCAN_VERDICT_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * Scanned and found clean. The only verdict a gated download accepts.
+   *
+   * @generated from enum value: SCAN_VERDICT_CLEAN = 2;
+   */
+  CLEAN = 2,
+
+  /**
+   * Scanned and found malicious. Refused on every download path regardless of
+   * whether enforcement is enabled; only an explicit override scope can reach it.
+   *
+   * @generated from enum value: SCAN_VERDICT_INFECTED = 3;
+   */
+  INFECTED = 3,
+
+  /**
+   * The scanner ran and could not produce a verdict (timeout, unreadable
+   * archive, engine error). Not clean, and not proof of malice.
+   *
+   * @generated from enum value: SCAN_VERDICT_FAILED = 4;
+   */
+  FAILED = 4,
+}
+
+/**
+ * Describes the enum udb.core.storage.entity.v1.ScanVerdict.
+ */
+export const ScanVerdictSchema: GenEnum<ScanVerdict> = /*@__PURE__*/
+  enumDesc(file_udb_core_storage_entity_v1_enums, 2);

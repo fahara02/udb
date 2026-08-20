@@ -538,7 +538,7 @@ impl PrometheusMetrics {
         let rate_limit_degraded = prometheus::IntCounterVec::new(
             prometheus::Opts::new(
                 "udb_rate_limit_degraded_total",
-                "Data-plane requests served under the rate limiter's declared                  failure-mode fallback (Redis unreachable), by mode",
+                "Data-plane requests served under the rate limiter's declared failure-mode fallback (Redis unreachable), by mode",
             ),
             &["mode"],
         )?;

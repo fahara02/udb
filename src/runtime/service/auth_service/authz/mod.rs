@@ -529,6 +529,50 @@ pub(super) fn timestamp_unix_field(
     Ok(Some(value.seconds))
 }
 
+/// Bind a body-supplied authorization scope to the VERIFIED claim.
+///
+/// Authz RPCs are bearer-protected and declare `tenant_required`, but the
+/// handlers derived their tenant/project from caller-controlled body fields and
+/// bound only the ACTOR (`created_by`) to the claim. A tenant-scoped credential
+/// holding the method scope could therefore create or mutate authorization
+/// state - roles, assignments, policy rules - inside ANOTHER tenant, which is
+/// the boundary authorization exists to defend.
+///
+/// A genuine cross-tenant admin is still allowed through, and the guard is
+/// skipped on the in-process / loopback path where no claim is installed (the
+/// broker's own bootstrap), matching every other body-scope check.
+/// The tenant a UUID-addressed authz record operation is confined to.
+///
+/// `None` means unconstrained - the in-process / loopback path (no claim), or a
+/// genuine cross-tenant admin. Otherwise the caller's VERIFIED tenant, applied
+/// as a SQL predicate rather than checked after the row is read: these handlers
+/// address a role by globally unique UUID, so without it a tenant-A caller could
+/// mutate a tenant-B record and the row would already be changed by the time its
+/// tenant was visible.
+///
+/// A claim with no tenant on a `tenant_required` RPC is an anomaly and yields
+/// `Some("")`, which matches no row - fail closed, not unconstrained.
+fn authz_record_tenant_scope() -> Option<String> {
+    if !crate::runtime::service::method_security::claim_context_present() {
+        return None;
+    }
+    let ctx = crate::runtime::service::method_security::current_claim_context();
+    if ctx.is_cross_tenant_admin() {
+        return None;
+    }
+    Some(ctx.tenant_id.trim().to_string())
+}
+
+pub(super) fn enforce_authz_body_scope(tenant_id: &str, project_id: &str) -> Result<(), Status> {
+    if !crate::runtime::service::method_security::claim_context_present() {
+        return Ok(());
+    }
+    let ctx = crate::runtime::service::method_security::current_claim_context();
+    crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+        &ctx, tenant_id, project_id,
+    )
+}
+
 fn tenant_from_domain(tenant_id: &str, domain: &str) -> String {
     if !tenant_id.trim().is_empty() {
         tenant_id.to_string()
@@ -2302,6 +2346,13 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::CreateRoleResponse>, Status> {
         governance::guard_governed_role_mutation("CreateRole")?;
         let req = request.into_inner();
+        // The tenant boundary is an authorization decision, so it is settled
+        // BEFORE any field validation: a caller aiming at another tenant is
+        // refused, not coached on which field is malformed.
+        enforce_authz_body_scope(
+            &tenant_from_domain(&req.tenant_id, &req.domain),
+            &req.project_id,
+        )?;
         if req.name.trim().is_empty() {
             return Err(authz_required_field(
                 "name is required",
@@ -2499,6 +2550,13 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::AssignRoleResponse>, Status> {
         governance::guard_governed_role_mutation("AssignRole")?;
         let req = request.into_inner();
+        // The tenant boundary is an authorization decision, so it is settled
+        // BEFORE any field validation: a caller aiming at another tenant is
+        // refused, not coached on which field is malformed.
+        enforce_authz_body_scope(
+            &tenant_from_domain(&req.tenant_id, &req.domain),
+            &req.project_id,
+        )?;
         // K7 principal-kind parity: a binding identifies a principal by either a
         // UUID user_id (USER compat) or a non-UUID principal_id for service
         // accounts / workloads / groups / external subjects. The `user_roles`
@@ -2910,6 +2968,13 @@ impl AuthzService for AuthzServiceImpl {
             ));
         }
         let req = request.into_inner();
+        // The tenant boundary is an authorization decision, so it is settled
+        // BEFORE any field validation: a caller aiming at another tenant is
+        // refused, not coached on which field is malformed.
+        enforce_authz_body_scope(
+            &tenant_from_domain(&req.tenant_id, &req.domain),
+            &req.project_id,
+        )?;
         if req.subject.trim().is_empty() {
             return Err(authz_required_field(
                 "subject is required",
@@ -3224,13 +3289,27 @@ impl AuthzService for AuthzServiceImpl {
         })?;
         // P6.10 Wave 1: typed DELETE returning the tenant so the revocation can bump
         // the tenant-scoped authz revision (K2.1). project stays '' (raw literal).
+        // A user_role_id is globally unique, so an id alone addresses any tenant's
+        // assignment. Confine the delete to the caller's verified tenant; a
+        // cross-tenant admin and the claim-less loopback path stay unconstrained.
+        let mut filter = LogicalFilter::Comparison {
+            field: "user_role_id".to_string(),
+            op: ComparisonOp::Eq,
+            value: LogicalValue::String(user_role_id.to_string()),
+        };
+        if let Some(scope) = authz_record_tenant_scope() {
+            filter = LogicalFilter::And(vec![
+                filter,
+                LogicalFilter::Comparison {
+                    field: "tenant_id".to_string(),
+                    op: ComparisonOp::Eq,
+                    value: LogicalValue::String(scope),
+                },
+            ]);
+        }
         let op = LogicalDelete {
             message_type: "udb.core.authz.entity.v1.UserRole".to_string(),
-            filter: LogicalFilter::Comparison {
-                field: "user_role_id".to_string(),
-                op: ComparisonOp::Eq,
-                value: LogicalValue::String(user_role_id.to_string()),
-            },
+            filter,
             return_fields: vec!["tenant_id".to_string()],
         };
         let context = authz_tenant_mutation_context(&metadata, "revoke_role")?;
@@ -3378,15 +3457,20 @@ impl AuthzService for AuthzServiceImpl {
              WHERE {deleted_at} IS NULL \
                AND (($1::UUID IS NOT NULL AND {role_id} = $1) OR ($1::UUID IS NULL AND {role_code} = $2)) \
                AND ($3 = '' OR {domain_col} = $3) \
+               AND ($4::TEXT IS NULL OR {tenant_id} = $4) \
              LIMIT 1",
             role_id = role_model.q("role_id"),
             role_code = role_model.q("role_code"),
             domain_col = role_model.q("domain"),
             deleted_at = role_model.q("deleted_at"),
+            tenant_id = role_model.q("tenant_id"),
         ))
         .bind(role_id_filter)
         .bind(&req.role_code)
         .bind(&req.domain)
+        // `domain` is caller-supplied and OPTIONAL, so omitting it exposed every
+        // role the service pool can see. Confine the read to the verified tenant.
+        .bind(authz_record_tenant_scope())
         .fetch_optional(pool)
         .await
         .map_err(|err| authz_internal_status("get_role", format!("get role failed: {err}")))?;
@@ -3416,14 +3500,19 @@ impl AuthzService for AuthzServiceImpl {
              WHERE {deleted_at} IS NULL \
                AND ($1 = '' OR {domain_col} = $1) \
                AND (NOT $2 OR {is_active} = TRUE) \
+               AND ($3::TEXT IS NULL OR {tenant_id} = $3) \
              ORDER BY {name} ASC",
             domain_col = role_model.q("domain"),
             is_active = role_model.q("is_active"),
             name = role_model.q("name"),
             deleted_at = role_model.q("deleted_at"),
+            tenant_id = role_model.q("tenant_id"),
         ))
         .bind(&req.domain)
         .bind(req.active_only)
+        // Without this, omitting the optional `domain` listed every role the
+        // service pool can see, across every tenant.
+        .bind(authz_record_tenant_scope())
         .fetch_all(pool)
         .await
         .map_err(|err| authz_internal_status("list_roles", format!("list roles failed: {err}")))?;
@@ -3559,12 +3648,14 @@ impl AuthzService for AuthzServiceImpl {
                {description} = CASE WHEN $4 THEN $5 ELSE {description} END, \
                {is_active} = CASE WHEN $6 THEN $7 ELSE {is_active} END \
              WHERE {role_id} = $1::UUID AND {deleted_at} IS NULL \
+               AND ($8::TEXT IS NULL OR {tenant_id} = $8) \
              RETURNING {projection}",
             name = role_model.q("name"),
             description = role_model.q("description"),
             is_active = role_model.q("is_active"),
             role_id = role_model.q("role_id"),
             deleted_at = role_model.q("deleted_at"),
+            tenant_id = role_model.q("tenant_id"),
         ))
         .bind(role_id)
         .bind(update_name)
@@ -3573,6 +3664,7 @@ impl AuthzService for AuthzServiceImpl {
         .bind(&req.description)
         .bind(update_is_active)
         .bind(req.is_active.unwrap_or(false))
+        .bind(authz_record_tenant_scope())
         .fetch_optional(pool)
         .await
         .map_err(|err| {
@@ -3682,6 +3774,18 @@ impl AuthzService for AuthzServiceImpl {
                 )
             })
             .unwrap_or_default();
+        // The role is addressed by globally unique UUID, so confine the delete to
+        // the caller's tenant. Reported as not-found rather than denied: a caller
+        // has no business learning that another tenant's role exists.
+        if let Some(scope) = authz_record_tenant_scope()
+            && scope != role_tenant
+        {
+            return Err(authz_not_found_status(
+                "delete_role",
+                "role_not_found",
+                "role not found",
+            ));
+        }
         let runtime = self.runtime.as_ref().ok_or_else(|| {
             authz_capability_status(
                 "role_persistence",
@@ -3789,11 +3893,14 @@ impl AuthzService for AuthzServiceImpl {
                 "SELECT {projection} \
                  FROM {rel} \
                  WHERE {policy_id} = $1::UUID AND {deleted_at} IS NULL \
+                   AND ($2::TEXT IS NULL OR {tenant_id} = $2) \
                  LIMIT 1",
                 policy_id = policy_model.q("policy_id"),
                 deleted_at = policy_model.q("deleted_at"),
+                tenant_id = policy_model.q("tenant_id"),
             ))
             .bind(policy_id)
+            .bind(authz_record_tenant_scope())
             .fetch_optional(pool)
             .await
             .map_err(|err| {
@@ -3835,6 +3942,7 @@ impl AuthzService for AuthzServiceImpl {
                    AND ($2 = '' OR {subject} = $2) \
                    AND ($3 = '' OR {object_col} = $3) \
                    AND (NOT $4 OR {is_active} = TRUE) \
+                   AND ($5::TEXT IS NULL OR {tenant_id} = $5) \
                  ORDER BY {is_active} DESC, {policy_id} ASC",
                 deleted_at = policy_model.q("deleted_at"),
                 domain_col = policy_model.q("domain"),
@@ -3849,6 +3957,9 @@ impl AuthzService for AuthzServiceImpl {
             .bind(&req.subject)
             .bind(&req.object)
             .bind(req.active_only)
+            // `domain` is optional and caller-supplied; without a tenant bound
+            // from the CLAIM, omitting it listed every policy rule in the store.
+            .bind(authz_record_tenant_scope())
             .fetch_all(pool)
             .await
             .map_err(|err| {
@@ -3941,14 +4052,26 @@ impl AuthzService for AuthzServiceImpl {
             );
             let op = LogicalUpdate {
                 message_type: "udb.core.authz.entity.v1.PolicyRule".to_string(),
-                filter: LogicalFilter::And(vec![
-                    LogicalFilter::Comparison {
-                        field: "policy_id".to_string(),
-                        op: ComparisonOp::Eq,
-                        value: LogicalValue::String(policy_id.to_string()),
-                    },
-                    LogicalFilter::IsNull("deleted_at".to_string()),
-                ]),
+                filter: LogicalFilter::And({
+                    // A policy_id is globally unique, so confine the soft delete
+                    // to the caller's verified tenant.
+                    let mut parts = vec![
+                        LogicalFilter::Comparison {
+                            field: "policy_id".to_string(),
+                            op: ComparisonOp::Eq,
+                            value: LogicalValue::String(policy_id.to_string()),
+                        },
+                        LogicalFilter::IsNull("deleted_at".to_string()),
+                    ];
+                    if let Some(scope) = authz_record_tenant_scope() {
+                        parts.push(LogicalFilter::Comparison {
+                            field: "tenant_id".to_string(),
+                            op: ComparisonOp::Eq,
+                            value: LogicalValue::String(scope),
+                        });
+                    }
+                    parts
+                }),
                 assignments,
                 return_fields: Vec::new(),
                 require_affected: false,
@@ -5131,6 +5254,90 @@ mod validation_tests {
 
         assert_eq!(err.message(), "assigned_by is required");
         assert_validation_fields(&err, &[("assigned_by", "must be a non-empty assigner id")]);
+    }
+
+    /// A tenant-scoped credential holding the method scope could create a role,
+    /// an assignment or a policy rule inside ANOTHER tenant: the handlers bound
+    /// only the actor to the claim and took the resource scope from the body.
+    /// Writing authorization state across that boundary grants access there.
+    #[tokio::test]
+    async fn authz_writes_cannot_target_another_tenant() {
+        let claim = || {
+            crate::runtime::service::method_security::test_claim_context(
+                "role-admin",
+                "tenant-a",
+                "",
+                &["udb:authz:admin"],
+                &[],
+            )
+        };
+
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            claim(),
+            svc().create_role(Request::new(authz_pb::CreateRoleRequest {
+                name: "ops".to_string(),
+                tenant_id: "tenant-b".to_string(),
+                ..Default::default()
+            })),
+        )
+        .await
+        .expect_err("create_role into a foreign tenant must be refused");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            claim(),
+            svc().assign_role(Request::new(authz_pb::AssignRoleRequest {
+                user_id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                role_id: "3d89cab2-1b72-46c8-9577-4a09d3a08848".to_string(),
+                tenant_id: "tenant-b".to_string(),
+                ..Default::default()
+            })),
+        )
+        .await
+        .expect_err("assign_role into a foreign tenant must be refused");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            claim(),
+            svc().create_policy_rule(Request::new(authz_pb::CreatePolicyRuleRequest {
+                subject: "user:1".to_string(),
+                effect: 1,
+                tenant_id: "tenant-b".to_string(),
+                ..Default::default()
+            })),
+        )
+        .await
+        .expect_err("create_policy_rule into a foreign tenant must be refused");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    }
+
+    /// The caller's OWN tenant is unaffected - the guard binds the boundary, it
+    /// does not block ordinary use. (The call still fails later for want of a
+    /// runtime; what matters is that it is not refused as cross-tenant.)
+    #[tokio::test]
+    async fn authz_writes_in_the_callers_own_tenant_are_not_refused_as_cross_tenant() {
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "role-admin",
+            "tenant-a",
+            "",
+            &["udb:authz:admin"],
+            &[],
+        );
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            ctx,
+            svc().create_role(Request::new(authz_pb::CreateRoleRequest {
+                name: "ops".to_string(),
+                tenant_id: "tenant-a".to_string(),
+                ..Default::default()
+            })),
+        )
+        .await
+        .expect_err("no runtime is wired in this unit context");
+        assert_ne!(
+            err.code(),
+            tonic::Code::PermissionDenied,
+            "a same-tenant write must not be refused as cross-tenant: {err:?}"
+        );
     }
 
     #[tokio::test]

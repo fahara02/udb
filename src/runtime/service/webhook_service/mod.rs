@@ -73,6 +73,9 @@ pub(crate) use config::{
     WEBHOOK_DELIVERY_BATCH, webhook_delivery_interval, webhook_delivery_timeout,
 };
 pub(crate) use security::resolve_and_validate_target;
+// The IdP federation fetch (OIDC discovery / JWKS / SAML metadata) reuses the
+// SAME resolver rather than growing a second partial URL check.
+pub(crate) use security::resolve_and_pin_target;
 // `validate_webhook_target_url` is re-exported at the module root ONLY for the
 // notification_service SSRF cross-check test; in-crate callers import it directly
 // from `security`, so a non-test (`--bin`) build sees the re-export as unused.

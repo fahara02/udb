@@ -143,7 +143,6 @@ pub(crate) fn validate_webhook_target_url(url: &str) -> Result<(), Status> {
 /// back to the HTTP client to re-resolve), which closes the check→connect TOCTOU
 /// a DNS-rebinding attacker would otherwise use to swing a validated public name
 /// onto an internal address after the check but before the connect.
-#[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) struct ValidatedTarget {
     pub host: String,

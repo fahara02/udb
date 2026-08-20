@@ -12,18 +12,6 @@ impl DataBrokerService {
         }
         let req = request.into_inner();
         let metadata_context = security.request_context();
-        if req.dry_run {
-            return self.record_grpc(
-                "EnsureResource",
-                started,
-                Ok(Response::new(MutationResponse {
-                    mutation_id: req.idempotency_key.clone(),
-                    resource_uri: format!("{}/{}", req.backend, req.resource_name),
-                    affected_rows: 0,
-                    ..Default::default()
-                })),
-            );
-        }
         // Capability guard: the target backend must support resource lifecycle management.
         if let Err(err) = check_backend_capability(&req.backend, "ensure_resource", |c| {
             c.supports_resource_lifecycle
@@ -39,6 +27,24 @@ impl DataBrokerService {
             Ok(resolved) => resolved,
             Err(err) => return self.record_grpc("EnsureResource", started, Err(err)),
         };
+        // A dry run answers "would this succeed?", so it must run the checks that
+        // decide that: the backend-capability guard above and the project target
+        // resolution. Returning before them reported success for a backend that
+        // does not support resource lifecycle at all, or a project with no
+        // resolvable target — the two things a dry run exists to catch. Only the
+        // MUTATION is skipped.
+        if req.dry_run {
+            return self.record_grpc(
+                "EnsureResource",
+                started,
+                Ok(Response::new(MutationResponse {
+                    mutation_id: req.idempotency_key.clone(),
+                    resource_uri: format!("{}/{}", req.backend, req.resource_name),
+                    affected_rows: 0,
+                    ..Default::default()
+                })),
+            );
+        }
         let resolved_targets = targets.clone();
         // Phase 8 (§9): observe scatter-gather fan-out width per backend kind.
         self.metrics
@@ -131,18 +137,6 @@ impl DataBrokerService {
         }
         let req = request.into_inner();
         let metadata_context = security.request_context();
-        if req.dry_run {
-            return self.record_grpc(
-                "DropResource",
-                started,
-                Ok(Response::new(MutationResponse {
-                    mutation_id: req.idempotency_key.clone(),
-                    resource_uri: format!("{}/{}", req.backend, req.resource_name),
-                    affected_rows: 0,
-                    ..Default::default()
-                })),
-            );
-        }
         if let Err(err) = guard_rls_bypass_operation("drop_resource", &req.spec_json) {
             return self.record_grpc("DropResource", started, Err(err));
         }
@@ -161,6 +155,23 @@ impl DataBrokerService {
             Ok(resolved) => resolved,
             Err(err) => return self.record_grpc("DropResource", started, Err(err)),
         };
+        // Same as EnsureResource: a dry run must clear the RLS-bypass guard, the
+        // capability guard and target resolution before it can claim the drop
+        // would succeed. This one skipped `guard_rls_bypass_operation` too, so a
+        // spec that would be REFUSED for attempting an RLS bypass was reported as
+        // a clean dry run.
+        if req.dry_run {
+            return self.record_grpc(
+                "DropResource",
+                started,
+                Ok(Response::new(MutationResponse {
+                    mutation_id: req.idempotency_key.clone(),
+                    resource_uri: format!("{}/{}", req.backend, req.resource_name),
+                    affected_rows: 0,
+                    ..Default::default()
+                })),
+            );
+        }
         self.metrics
             .inc_backend_fanout(&req.backend, targets.len() as u64);
         let resource_name = req.resource_name.clone();

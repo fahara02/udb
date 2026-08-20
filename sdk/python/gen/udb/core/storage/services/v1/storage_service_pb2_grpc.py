@@ -59,6 +59,11 @@ class StorageServiceStub(object):
                 request_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ListFilesRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ListFilesResponse.FromString,
                 _registered_method=True)
+        self.SetScanVerdict = channel.unary_unary(
+                '/udb.core.storage.services.v1.StorageService/SetScanVerdict',
+                request_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.SetScanVerdictRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.SetScanVerdictResponse.FromString,
+                _registered_method=True)
 
 
 class StorageServiceServicer(object):
@@ -137,6 +142,19 @@ class StorageServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SetScanVerdict(self, request, context):
+        """Record a content-scan verdict for a stored file (V050-3).
+
+        PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is
+        deliberately not bundled with any ordinary storage scope: a caller that can
+        upload or read files must not be able to declare its own upload clean. The
+        recorded `scanned_by` is taken from the verified principal, never from the
+        request body, so a verdict cannot be attributed to another scanner.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_StorageServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -184,6 +202,11 @@ def add_StorageServiceServicer_to_server(servicer, server):
                     servicer.ListFiles,
                     request_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ListFilesRequest.FromString,
                     response_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ListFilesResponse.SerializeToString,
+            ),
+            'SetScanVerdict': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetScanVerdict,
+                    request_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.SetScanVerdictRequest.FromString,
+                    response_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.SetScanVerdictResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -429,6 +452,33 @@ class StorageService(object):
             '/udb.core.storage.services.v1.StorageService/ListFiles',
             udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ListFilesRequest.SerializeToString,
             udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ListFilesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SetScanVerdict(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.storage.services.v1.StorageService/SetScanVerdict',
+            udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.SetScanVerdictRequest.SerializeToString,
+            udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.SetScanVerdictResponse.FromString,
             options,
             channel_credentials,
             insecure,

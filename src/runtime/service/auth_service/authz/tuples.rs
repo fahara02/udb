@@ -139,6 +139,11 @@ impl AuthzServiceImpl {
                 ],
             ));
         }
+        // Bind the BINDING's scope to the caller's claim. `tuple_scope_tenant`
+        // substitutes the project for an empty tenant, which collapses two
+        // different security dimensions, so the tenant and project are checked as
+        // they were supplied rather than after that fallback.
+        super::enforce_authz_body_scope(&binding.tenant, &binding.project)?;
         let condition = serde_json::json!({
             "source": binding.source,
             "expires_at_unix": binding.expires_at_unix,
@@ -243,6 +248,9 @@ impl AuthzServiceImpl {
                 ],
             ));
         }
+        // Bind the TUPLE's scope to the caller's claim: a relationship tuple is a
+        // grant, so writing one into another tenant grants access there.
+        super::enforce_authz_body_scope(&tuple.tenant, &tuple.project)?;
         let condition = serde_json::json!({
             "source": tuple.source,
             "version": tuple.version,

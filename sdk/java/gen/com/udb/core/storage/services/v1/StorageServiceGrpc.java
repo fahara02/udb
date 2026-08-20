@@ -291,6 +291,37 @@ public final class StorageServiceGrpc {
     return getListFilesMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.SetScanVerdictRequest,
+      com.udb.core.storage.services.v1.SetScanVerdictResponse> getSetScanVerdictMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SetScanVerdict",
+      requestType = com.udb.core.storage.services.v1.SetScanVerdictRequest.class,
+      responseType = com.udb.core.storage.services.v1.SetScanVerdictResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.SetScanVerdictRequest,
+      com.udb.core.storage.services.v1.SetScanVerdictResponse> getSetScanVerdictMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.SetScanVerdictRequest, com.udb.core.storage.services.v1.SetScanVerdictResponse> getSetScanVerdictMethod;
+    if ((getSetScanVerdictMethod = StorageServiceGrpc.getSetScanVerdictMethod) == null) {
+      synchronized (StorageServiceGrpc.class) {
+        if ((getSetScanVerdictMethod = StorageServiceGrpc.getSetScanVerdictMethod) == null) {
+          StorageServiceGrpc.getSetScanVerdictMethod = getSetScanVerdictMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.storage.services.v1.SetScanVerdictRequest, com.udb.core.storage.services.v1.SetScanVerdictResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SetScanVerdict"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.storage.services.v1.SetScanVerdictRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.storage.services.v1.SetScanVerdictResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new StorageServiceMethodDescriptorSupplier("SetScanVerdict"))
+              .build();
+        }
+      }
+    }
+    return getSetScanVerdictMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -453,6 +484,21 @@ public final class StorageServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.ListFilesResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListFilesMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * Record a content-scan verdict for a stored file (V050-3).
+     * PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is
+     * deliberately not bundled with any ordinary storage scope: a caller that can
+     * upload or read files must not be able to declare its own upload clean. The
+     * recorded `scanned_by` is taken from the verified principal, never from the
+     * request body, so a verdict cannot be attributed to another scanner.
+     * </pre>
+     */
+    default void setScanVerdict(com.udb.core.storage.services.v1.SetScanVerdictRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.SetScanVerdictResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSetScanVerdictMethod(), responseObserver);
+    }
   }
 
   /**
@@ -590,6 +636,22 @@ public final class StorageServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getListFilesMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * Record a content-scan verdict for a stored file (V050-3).
+     * PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is
+     * deliberately not bundled with any ordinary storage scope: a caller that can
+     * upload or read files must not be able to declare its own upload clean. The
+     * recorded `scanned_by` is taken from the verified principal, never from the
+     * request body, so a verdict cannot be attributed to another scanner.
+     * </pre>
+     */
+    public void setScanVerdict(com.udb.core.storage.services.v1.SetScanVerdictRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.SetScanVerdictResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSetScanVerdictMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -709,6 +771,21 @@ public final class StorageServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getListFilesMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Record a content-scan verdict for a stored file (V050-3).
+     * PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is
+     * deliberately not bundled with any ordinary storage scope: a caller that can
+     * upload or read files must not be able to declare its own upload clean. The
+     * recorded `scanned_by` is taken from the verified principal, never from the
+     * request body, so a verdict cannot be attributed to another scanner.
+     * </pre>
+     */
+    public com.udb.core.storage.services.v1.SetScanVerdictResponse setScanVerdict(com.udb.core.storage.services.v1.SetScanVerdictRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSetScanVerdictMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -827,6 +904,21 @@ public final class StorageServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getListFilesMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Record a content-scan verdict for a stored file (V050-3).
+     * PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is
+     * deliberately not bundled with any ordinary storage scope: a caller that can
+     * upload or read files must not be able to declare its own upload clean. The
+     * recorded `scanned_by` is taken from the verified principal, never from the
+     * request body, so a verdict cannot be attributed to another scanner.
+     * </pre>
+     */
+    public com.udb.core.storage.services.v1.SetScanVerdictResponse setScanVerdict(com.udb.core.storage.services.v1.SetScanVerdictRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSetScanVerdictMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -939,6 +1031,22 @@ public final class StorageServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getListFilesMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * Record a content-scan verdict for a stored file (V050-3).
+     * PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is
+     * deliberately not bundled with any ordinary storage scope: a caller that can
+     * upload or read files must not be able to declare its own upload clean. The
+     * recorded `scanned_by` is taken from the verified principal, never from the
+     * request body, so a verdict cannot be attributed to another scanner.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.storage.services.v1.SetScanVerdictResponse> setScanVerdict(
+        com.udb.core.storage.services.v1.SetScanVerdictRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSetScanVerdictMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_REGISTER_UPLOAD = 0;
@@ -950,6 +1058,7 @@ public final class StorageServiceGrpc {
   private static final int METHODID_UPDATE_FILE = 6;
   private static final int METHODID_DELETE_FILE = 7;
   private static final int METHODID_LIST_FILES = 8;
+  private static final int METHODID_SET_SCAN_VERDICT = 9;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1003,6 +1112,10 @@ public final class StorageServiceGrpc {
         case METHODID_LIST_FILES:
           serviceImpl.listFiles((com.udb.core.storage.services.v1.ListFilesRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.ListFilesResponse>) responseObserver);
+          break;
+        case METHODID_SET_SCAN_VERDICT:
+          serviceImpl.setScanVerdict((com.udb.core.storage.services.v1.SetScanVerdictRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.SetScanVerdictResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -1085,6 +1198,13 @@ public final class StorageServiceGrpc {
               com.udb.core.storage.services.v1.ListFilesRequest,
               com.udb.core.storage.services.v1.ListFilesResponse>(
                 service, METHODID_LIST_FILES)))
+        .addMethod(
+          getSetScanVerdictMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.storage.services.v1.SetScanVerdictRequest,
+              com.udb.core.storage.services.v1.SetScanVerdictResponse>(
+                service, METHODID_SET_SCAN_VERDICT)))
         .build();
   }
 
@@ -1142,6 +1262,7 @@ public final class StorageServiceGrpc {
               .addMethod(getUpdateFileMethod())
               .addMethod(getDeleteFileMethod())
               .addMethod(getListFilesMethod())
+              .addMethod(getSetScanVerdictMethod())
               .build();
         }
       }

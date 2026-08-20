@@ -15,6 +15,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
+// `bytes_stream()` on a reqwest response is a Stream; bounding the body
+// requires its adapter.
+#[cfg(feature = "http-client")]
+use futures_util::StreamExt as _;
+
 /// Cached JWKS for one provider, with the unix instant it was fetched.
 #[derive(Clone)]
 struct JwksEntry {
@@ -169,10 +174,40 @@ pub fn parse_jwks_kids(jwks_json: &str) -> Vec<String> {
 
 /// Best-effort HTTP GET that works whether or not the `http-client` feature is
 /// built. Without it, JWKS resolution fails closed with a clear message.
+/// Largest IdP document we will read. A discovery doc or JWKS is a few KiB; a
+/// SAML metadata blob is larger but still small. Anything past this is either
+/// misconfiguration or an endpoint trying to exhaust broker memory, and the
+/// previous unbounded `resp.text()` gave it a free hand.
+#[cfg(feature = "http-client")]
+const MAX_IDP_DOCUMENT_BYTES: usize = 2 * 1024 * 1024;
+
+/// Fetch an IdP document under the SAME SSRF policy webhook delivery uses.
+///
+/// These URLs (`issuer`, `jwks_url`, `saml_metadata_url`) are persisted by a
+/// tenant administrator and then fetched from the BROKER's network, so they are
+/// attacker-influenced input to a server-side request. The previous
+/// implementation built a default client: redirects followed, any scheme or
+/// host accepted, no address-range check, no DNS pinning, and an unbounded
+/// body. A stored public URL could redirect - or DNS-rebind after validation -
+/// onto loopback, RFC1918, or the cloud metadata endpoint.
+///
+/// Rather than grow a second partial check, this reuses
+/// `webhook_service::resolve_and_pin_target`, which already enforces
+/// https-only and rejects private, loopback, link-local, CGNAT, unspecified,
+/// multicast and reserved ranges. Its resolved addresses are PINNED onto the
+/// client here, which closes the check-to-connect rebinding window - the
+/// pinning that struct was written for and that nothing had wired up.
 #[cfg(feature = "http-client")]
 async fn fetch_url(url: &str) -> Result<String, String> {
+    let target = crate::runtime::service::webhook_service::resolve_and_pin_target(url)
+        .await
+        .map_err(|status| format!("refused to fetch {url}: {}", status.message()))?;
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
+        // A redirect is a second, unvalidated URL. Refuse rather than re-run the
+        // policy per hop: an IdP document is served directly in practice.
+        .redirect(reqwest::redirect::Policy::none())
+        .resolve_to_addrs(&target.host, &target.addrs)
         .build()
         .map_err(|e| format!("http client build failed: {e}"))?;
     let resp = client
@@ -183,9 +218,28 @@ async fn fetch_url(url: &str) -> Result<String, String> {
     if !resp.status().is_success() {
         return Err(format!("GET {url} returned HTTP {}", resp.status()));
     }
-    resp.text()
-        .await
-        .map_err(|e| format!("reading {url} body failed: {e}"))
+    // Refuse a DECLARED oversize body before reading a byte...
+    if let Some(len) = resp.content_length()
+        && len as usize > MAX_IDP_DOCUMENT_BYTES
+    {
+        return Err(format!(
+            "{url} declared {len} bytes, over the {MAX_IDP_DOCUMENT_BYTES}-byte IdP document limit"
+        ));
+    }
+    // ...and bound the STREAMED body too, since Content-Length is optional under
+    // chunked encoding and is supplied by the same untrusted endpoint.
+    let mut body = Vec::new();
+    let mut stream = resp.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("reading {url} body failed: {e}"))?;
+        if body.len() + chunk.len() > MAX_IDP_DOCUMENT_BYTES {
+            return Err(format!(
+                "{url} exceeded the {MAX_IDP_DOCUMENT_BYTES}-byte IdP document limit"
+            ));
+        }
+        body.extend_from_slice(&chunk);
+    }
+    String::from_utf8(body).map_err(|e| format!("reading {url} body failed: {e}"))
 }
 
 #[cfg(not(feature = "http-client"))]

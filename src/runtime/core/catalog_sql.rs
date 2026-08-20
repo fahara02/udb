@@ -2058,7 +2058,7 @@ fn nullability_drift(
             schema = schema,
             table = table,
             column = column,
-            "live column is NOT NULL while the manifest allows NULL; the stricter live              constraint is preserved and startup continues — a write of NULL to this column              will be refused by PostgreSQL"
+            "live column is NOT NULL while the manifest allows NULL; the stricter live constraint is preserved and startup continues — a write of NULL to this column will be refused by PostgreSQL"
         );
         return None;
     }

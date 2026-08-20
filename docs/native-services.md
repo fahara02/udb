@@ -370,7 +370,36 @@ Typical SCIM flow:
 - finalize upload;
 - get download URL;
 - get/update/delete/list file metadata;
-- enforce tenant scope and optional quotas.
+- enforce tenant scope and optional quotas;
+- record and enforce a content-scan verdict.
+
+### Content scanning
+
+A file carries a scan verdict — `UNSPECIFIED` (never scanned), `PENDING`,
+`CLEAN`, `INFECTED` or `FAILED`. Only `SetScanVerdict` writes it, and that RPC
+requires `udb:storage:set-scan-verdict`, a scope deliberately not bundled with
+any ordinary storage scope: a caller that can upload must not be able to declare
+its own upload clean. The identity credited with a verdict is taken from the
+verified principal, never the request body.
+
+Both download paths check it — the presigned `GetDownloadUrl` and the native
+`DownloadFile` stream. Gating only in your own HTTP layer leaves the native
+stream open, which reads object bytes directly.
+
+| Setting | Purpose |
+|---|---|
+| `UDB_STORAGE_REQUIRE_CLEAN_SCAN` | Require a `CLEAN` verdict before any download. Off by default |
+| `udb:storage:set-scan-verdict` | Scope the scanner presents to record a verdict |
+| `udb:storage:download-unscanned` | Scope that overrides the gate, for quarantine review |
+
+Enforcement is off by default on purpose. Turning it on for every deployment at
+upgrade would refuse every pre-existing file the moment the column appeared,
+because nothing has scanned them. Enable it once a scanner is actually writing
+verdicts.
+
+`INFECTED` is refused whether or not enforcement is enabled: if something read
+the bytes and called them malicious, serving them is not a configuration choice.
+Only the override scope reaches such an object.
 
 `AssetService` builds on storage metadata:
 

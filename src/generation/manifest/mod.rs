@@ -922,7 +922,7 @@ fn duplicate_migration_order_warnings(tables: &[ManifestTable]) -> Vec<String> {
         for (order, names) in orders {
             if names.len() > 1 {
                 warnings.push(format!(
-                    "{schema} has {} tables sharing migration_order {order} ({}); the declared                      order is decided by table name instead. Next free order in {schema}: {next_free}",
+                    "{schema} has {} tables sharing migration_order {order} ({}); the declared order is decided by table name instead. Next free order in {schema}: {next_free}",
                     names.len(),
                     names.join(", ")
                 ));
@@ -989,7 +989,7 @@ fn validate_mutation_identity_shape(
         return Vec::new();
     }
     vec![format!(
-        "{schema}.{table} has a database-assigned primary key and {} identity-shaped columns          ({}); every write will be refused as ambiguous unless the caller sets return_record          (so the persisted row's key names it), declares conflict_fields, or supplies the          primary key itself",
+        "{schema}.{table} has a database-assigned primary key and {} identity-shaped columns          ({}); every write will be refused as ambiguous unless the caller sets return_record          (so the persisted row's key names it), declares conflict_fields, or supplies the primary key itself",
         identity_candidates.len(),
         identity_candidates.join(", ")
     )]

@@ -28,6 +28,7 @@ const (
 	StorageService_UpdateFile_FullMethodName       = "/udb.core.storage.services.v1.StorageService/UpdateFile"
 	StorageService_DeleteFile_FullMethodName       = "/udb.core.storage.services.v1.StorageService/DeleteFile"
 	StorageService_ListFiles_FullMethodName        = "/udb.core.storage.services.v1.StorageService/ListFiles"
+	StorageService_SetScanVerdict_FullMethodName   = "/udb.core.storage.services.v1.StorageService/SetScanVerdict"
 )
 
 // StorageServiceClient is the client API for StorageService service.
@@ -62,6 +63,14 @@ type StorageServiceClient interface {
 	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*DeleteFileResponse, error)
 	// List files
 	ListFiles(ctx context.Context, in *ListFilesRequest, opts ...grpc.CallOption) (*ListFilesResponse, error)
+	// Record a content-scan verdict for a stored file (V050-3).
+	//
+	// PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is
+	// deliberately not bundled with any ordinary storage scope: a caller that can
+	// upload or read files must not be able to declare its own upload clean. The
+	// recorded `scanned_by` is taken from the verified principal, never from the
+	// request body, so a verdict cannot be attributed to another scanner.
+	SetScanVerdict(ctx context.Context, in *SetScanVerdictRequest, opts ...grpc.CallOption) (*SetScanVerdictResponse, error)
 }
 
 type storageServiceClient struct {
@@ -171,6 +180,16 @@ func (c *storageServiceClient) ListFiles(ctx context.Context, in *ListFilesReque
 	return out, nil
 }
 
+func (c *storageServiceClient) SetScanVerdict(ctx context.Context, in *SetScanVerdictRequest, opts ...grpc.CallOption) (*SetScanVerdictResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetScanVerdictResponse)
+	err := c.cc.Invoke(ctx, StorageService_SetScanVerdict_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StorageServiceServer is the server API for StorageService service.
 // All implementations should embed UnimplementedStorageServiceServer
 // for forward compatibility.
@@ -203,6 +222,14 @@ type StorageServiceServer interface {
 	DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error)
 	// List files
 	ListFiles(context.Context, *ListFilesRequest) (*ListFilesResponse, error)
+	// Record a content-scan verdict for a stored file (V050-3).
+	//
+	// PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is
+	// deliberately not bundled with any ordinary storage scope: a caller that can
+	// upload or read files must not be able to declare its own upload clean. The
+	// recorded `scanned_by` is taken from the verified principal, never from the
+	// request body, so a verdict cannot be attributed to another scanner.
+	SetScanVerdict(context.Context, *SetScanVerdictRequest) (*SetScanVerdictResponse, error)
 }
 
 // UnimplementedStorageServiceServer should be embedded to have
@@ -238,6 +265,9 @@ func (UnimplementedStorageServiceServer) DeleteFile(context.Context, *DeleteFile
 }
 func (UnimplementedStorageServiceServer) ListFiles(context.Context, *ListFilesRequest) (*ListFilesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListFiles not implemented")
+}
+func (UnimplementedStorageServiceServer) SetScanVerdict(context.Context, *SetScanVerdictRequest) (*SetScanVerdictResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetScanVerdict not implemented")
 }
 func (UnimplementedStorageServiceServer) testEmbeddedByValue() {}
 
@@ -414,6 +444,24 @@ func _StorageService_ListFiles_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StorageService_SetScanVerdict_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetScanVerdictRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StorageServiceServer).SetScanVerdict(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StorageService_SetScanVerdict_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StorageServiceServer).SetScanVerdict(ctx, req.(*SetScanVerdictRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StorageService_ServiceDesc is the grpc.ServiceDesc for StorageService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -452,6 +500,10 @@ var StorageService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListFiles",
 			Handler:    _StorageService_ListFiles_Handler,
+		},
+		{
+			MethodName: "SetScanVerdict",
+			Handler:    _StorageService_SetScanVerdict_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

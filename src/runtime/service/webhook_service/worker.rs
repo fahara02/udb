@@ -203,6 +203,11 @@ async fn load_webhook_delivery_jobs(
 /// Insert one terminal delivery-journal row (best-effort; logged on failure).
 #[cfg(feature = "http-client")]
 #[allow(clippy::too_many_arguments)]
+/// Bounded retries for the delivery-journal write. Small and quick: the goal
+/// is to survive a transient blip, not to hold the worker while a database is
+/// down.
+const JOURNAL_INSERT_MAX_ATTEMPTS: u32 = 3;
+
 async fn insert_delivery_journal(
     pool: &PgPool,
     tenant_id: &str,
@@ -220,7 +225,8 @@ async fn insert_delivery_journal(
     let rel = m.relation.clone();
     let delivery_id = Uuid::new_v4().to_string();
     let payload_text = serde_json::to_string(payload).unwrap_or_else(|_| "{}".to_string());
-    let result = sqlx::query(&format!(
+    // Hoisted so the retry below reuses the EXACT same statement.
+    let sql = format!(
         "INSERT INTO {rel} \
          ({delivery_id}, {tenant_id}, {endpoint_id}, {event_id}, {topic}, {status}, {attempt_count}, {response_status}, {signature}, {last_error}, {payload_json}, {delivered_at}) \
          VALUES ($1::UUID, $2::UUID, $3::UUID, $4, $5, $6, $7, $8, NULLIF($9, ''), NULLIF($10, ''), $11::JSONB, now())",
@@ -236,22 +242,63 @@ async fn insert_delivery_journal(
         last_error = m.q("last_error"),
         payload_json = m.q("payload_json"),
         delivered_at = m.q("delivered_at"),
-    ))
-    .bind(&delivery_id)
-    .bind(tenant_id)
-    .bind(endpoint_id)
-    .bind(event_id)
-    .bind(topic)
-    .bind(status)
-    .bind(attempt_count)
-    .bind(response_status)
-    .bind(signature)
-    .bind(last_error)
-    .bind(&payload_text)
-    .execute(pool)
-    .await;
+    );
+    let result = sqlx::query(&sql)
+        .bind(&delivery_id)
+        .bind(tenant_id)
+        .bind(endpoint_id)
+        .bind(event_id)
+        .bind(topic)
+        .bind(status)
+        .bind(attempt_count)
+        .bind(response_status)
+        .bind(signature)
+        .bind(last_error)
+        .bind(&payload_text)
+        .execute(pool)
+        .await;
     if let Err(err) = result {
-        tracing::warn!(endpoint_id, event_id, error = %err, "webhook delivery journal insert failed");
+        // This is NOT a cosmetic logging failure. The loader selects outbox events
+        // that have no DELIVERED/DEAD delivery row, so an unwritten journal entry
+        // means the very same webhook is POSTed again on the next pass, and the
+        // next — an unbounded redelivery loop against a receiver that already got
+        // the event, caused by our own bookkeeping.
+        //
+        // The POST has already happened and cannot be un-sent, so the only correct
+        // response is to try harder to record it, then say plainly what will
+        // happen if we still cannot.
+        for attempt in 1..=JOURNAL_INSERT_MAX_ATTEMPTS {
+            tokio::time::sleep(std::time::Duration::from_millis(100 * attempt as u64)).await;
+            let retry = sqlx::query(&sql)
+                .bind(&delivery_id)
+                .bind(tenant_id)
+                .bind(endpoint_id)
+                .bind(event_id)
+                .bind(topic)
+                .bind(status)
+                .bind(attempt_count)
+                .bind(response_status)
+                .bind(signature)
+                .bind(last_error)
+                .bind(&payload_text)
+                .execute(pool)
+                .await;
+            if retry.is_ok() {
+                tracing::warn!(
+                    endpoint_id,
+                    event_id,
+                    attempt,
+                    "webhook delivery journal insert succeeded on retry"
+                );
+                return;
+            }
+        }
+        tracing::error!(
+            endpoint_id,
+            event_id,
+            error = %err,
+            "webhook delivery journal insert failed after retries; this event has ALREADY been              delivered but is not recorded, so the worker will redeliver it on every subsequent              pass until the row can be written"
+        );
     }
 }
 

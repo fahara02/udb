@@ -161,4 +161,25 @@ class StorageServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * Record a content-scan verdict for a stored file (V050-3).
+     *
+     * PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is
+     * deliberately not bundled with any ordinary storage scope: a caller that can
+     * upload or read files must not be able to declare its own upload clean. The
+     * recorded `scanned_by` is taken from the verified principal, never from the
+     * request body, so a verdict cannot be attributed to another scanner.
+     * @param \Udb\Core\Storage\Services\V1\SetScanVerdictRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Storage\Services\V1\SetScanVerdictResponse>
+     */
+    public function SetScanVerdict(\Udb\Core\Storage\Services\V1\SetScanVerdictRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.storage.services.v1.StorageService/SetScanVerdict',
+        $argument,
+        ['\Udb\Core\Storage\Services\V1\SetScanVerdictResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

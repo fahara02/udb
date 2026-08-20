@@ -37418,6 +37418,156 @@
         "x-udb-operation-kind": "read_only"
       }
     },
+    "/v1/storage/files/{fileId}:setScanVerdict": {
+      "post": {
+        "summary": "Record a content-scan verdict for a stored file (V050-3).",
+        "description": "PRIVILEGED. `udb:storage:set-scan-verdict` is the scanner's scope and is\ndeliberately not bundled with any ordinary storage scope: a caller that can\nupload or read files must not be able to declare its own upload clean. The\nrecorded `scanned_by` is taken from the verified principal, never from the\nrequest body, so a verdict cannot be attributed to another scanner.",
+        "operationId": "setScanVerdict",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetScanVerdictResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/StorageServiceSetScanVerdictBody"
+            }
+          }
+        ],
+        "tags": [
+          "StorageService"
+        ],
+        "x-udb-sdk-alias": "set_scan_verdict",
+        "x-udb-scope": [
+          "udb:storage:set-scan-verdict"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "storage",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
     "/v1/storage/uploads": {
       "post": {
         "summary": "Register a new upload and obtain a pre-signed upload URL",
@@ -47583,6 +47733,31 @@
         }
       }
     },
+    "StorageServiceSetScanVerdictBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/definitions/v1ScanVerdict",
+          "description": "Required. UNSPECIFIED is refused: a scanner reporting \"no verdict\" would\notherwise silently clear a previously recorded INFECTED."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Signature name for INFECTED, failure reason for FAILED. Optional."
+        },
+        "scannedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the engine produced the verdict. Absent means \"now\"."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Idempotency key so a scanner retry does not emit a second CDC transition."
+        }
+      }
+    },
     "StorageServiceUpdateFileBody": {
       "type": "object",
       "properties": {
@@ -51682,6 +51857,24 @@
         },
         "deletedBy": {
           "type": "string"
+        },
+        "scanVerdict": {
+          "$ref": "#/definitions/v1ScanVerdict",
+          "description": "Written only by `SetScanVerdict`, which requires the privileged scanner\nscope. The default is UNSPECIFIED (\"never scanned\"), NOT pending: rows that\npredate scanning must not be mistaken for work in flight, and defaulting to\nanything else would make an upgrade look like a scanner outage.\n\n@inject_tag: gorm:\"column:scan_verdict;not null;serializer:proto_enum\"",
+          "title": "── Content scanning (V050-3) ─────────────────────────────────────────────"
+        },
+        "scannedAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "@inject_tag: gorm:\"column:scanned_at\""
+        },
+        "scannedBy": {
+          "type": "string",
+          "description": "Identity of the scanner that produced the verdict, taken from the verified\nprincipal rather than the request body so it cannot be spoofed.\n\n@inject_tag: gorm:\"column:scanned_by\""
+        },
+        "scanDetail": {
+          "type": "string",
+          "description": "Engine-supplied detail: signature name for INFECTED, failure reason for\nFAILED. Free text, shown to operators, never used for a control decision.\n\n@inject_tag: gorm:\"column:scan_detail\""
         }
       },
       "title": "File (object-storage metadata)"
@@ -57594,6 +57787,18 @@
         }
       }
     },
+    "v1ScanVerdict": {
+      "type": "string",
+      "enum": [
+        "SCAN_VERDICT_UNSPECIFIED",
+        "SCAN_VERDICT_PENDING",
+        "SCAN_VERDICT_CLEAN",
+        "SCAN_VERDICT_INFECTED",
+        "SCAN_VERDICT_FAILED"
+      ],
+      "default": "SCAN_VERDICT_UNSPECIFIED",
+      "description": "Antivirus / content-scan verdict for a stored object (V050-3).\n\nUNSPECIFIED means NOT SCANNED, and is deliberately distinct from PENDING.\nRows that predate scanning carry it after upgrade, so an operator can tell\n\"no scanner has ever looked at this\" apart from \"a scan is in flight\" — and\nso enabling enforcement later is a decision, not a silent cutover.\n\n - SCAN_VERDICT_PENDING: A scan has been requested and has not yet returned.\n - SCAN_VERDICT_CLEAN: Scanned and found clean. The only verdict a gated download accepts.\n - SCAN_VERDICT_INFECTED: Scanned and found malicious. Refused on every download path regardless of\nwhether enforcement is enabled; only an explicit override scope can reach it.\n - SCAN_VERDICT_FAILED: The scanner ran and could not produce a verdict (timeout, unreadable\narchive, engine error). Not clean, and not proof of malice."
+    },
     "v1ScheduleType": {
       "type": "string",
       "enum": [
@@ -58389,6 +58594,22 @@
         },
         "message": {
           "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
+        }
+      }
+    },
+    "v1SetScanVerdictResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/definitions/v1ScanVerdict",
+          "description": "The verdict now stored, after the transition rules were applied."
         },
         "error": {
           "$ref": "#/definitions/v1ApiError",

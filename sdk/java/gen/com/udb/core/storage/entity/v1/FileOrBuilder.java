@@ -438,4 +438,104 @@ public interface FileOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDeletedByBytes();
+
+  /**
+   * <pre>
+   * ── Content scanning (V050-3) ─────────────────────────────────────────────
+   *
+   * Written only by `SetScanVerdict`, which requires the privileged scanner
+   * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+   * predate scanning must not be mistaken for work in flight, and defaulting to
+   * anything else would make an upgrade look like a scanner outage.
+   * </pre>
+   *
+   * <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The enum numeric value on the wire for scanVerdict.
+   */
+  int getScanVerdictValue();
+  /**
+   * <pre>
+   * ── Content scanning (V050-3) ─────────────────────────────────────────────
+   *
+   * Written only by `SetScanVerdict`, which requires the privileged scanner
+   * scope. The default is UNSPECIFIED ("never scanned"), NOT pending: rows that
+   * predate scanning must not be mistaken for work in flight, and defaulting to
+   * anything else would make an upgrade look like a scanner outage.
+   * </pre>
+   *
+   * <code>.udb.core.storage.entity.v1.ScanVerdict scan_verdict = 23 [json_name = "scanVerdict", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scanVerdict.
+   */
+  com.udb.core.storage.entity.v1.ScanVerdict getScanVerdict();
+
+  /**
+   * <pre>
+   * &#64;inject_tag: gorm:"column:scanned_at"
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return Whether the scannedAt field is set.
+   */
+  boolean hasScannedAt();
+  /**
+   * <pre>
+   * &#64;inject_tag: gorm:"column:scanned_at"
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scannedAt.
+   */
+  com.google.protobuf.Timestamp getScannedAt();
+  /**
+   * <pre>
+   * &#64;inject_tag: gorm:"column:scanned_at"
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp scanned_at = 24 [json_name = "scannedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getScannedAtOrBuilder();
+
+  /**
+   * <pre>
+   * Identity of the scanner that produced the verdict, taken from the verified
+   * principal rather than the request body so it cannot be spoofed.
+   * </pre>
+   *
+   * <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scannedBy.
+   */
+  java.lang.String getScannedBy();
+  /**
+   * <pre>
+   * Identity of the scanner that produced the verdict, taken from the verified
+   * principal rather than the request body so it cannot be spoofed.
+   * </pre>
+   *
+   * <code>string scanned_by = 25 [json_name = "scannedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for scannedBy.
+   */
+  com.google.protobuf.ByteString
+      getScannedByBytes();
+
+  /**
+   * <pre>
+   * Engine-supplied detail: signature name for INFECTED, failure reason for
+   * FAILED. Free text, shown to operators, never used for a control decision.
+   * </pre>
+   *
+   * <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scanDetail.
+   */
+  java.lang.String getScanDetail();
+  /**
+   * <pre>
+   * Engine-supplied detail: signature name for INFECTED, failure reason for
+   * FAILED. Free text, shown to operators, never used for a control decision.
+   * </pre>
+   *
+   * <code>string scan_detail = 26 [json_name = "scanDetail", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for scanDetail.
+   */
+  com.google.protobuf.ByteString
+      getScanDetailBytes();
 }

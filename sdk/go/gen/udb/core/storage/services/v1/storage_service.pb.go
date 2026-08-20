@@ -1111,6 +1111,157 @@ func (x *UpdateFileResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+type SetScanVerdictRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	FileId   string                 `protobuf:"bytes,2,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`
+	// Required. UNSPECIFIED is refused: a scanner reporting "no verdict" would
+	// otherwise silently clear a previously recorded INFECTED.
+	Verdict v11.ScanVerdict `protobuf:"varint,3,opt,name=verdict,proto3,enum=udb.core.storage.entity.v1.ScanVerdict" json:"verdict,omitempty"`
+	// Signature name for INFECTED, failure reason for FAILED. Optional.
+	Detail string `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
+	// When the engine produced the verdict. Absent means "now".
+	ScannedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=scanned_at,json=scannedAt,proto3" json:"scanned_at,omitempty"`
+	// Idempotency key so a scanner retry does not emit a second CDC transition.
+	IdempotencyKey string `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SetScanVerdictRequest) Reset() {
+	*x = SetScanVerdictRequest{}
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetScanVerdictRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetScanVerdictRequest) ProtoMessage() {}
+
+func (x *SetScanVerdictRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetScanVerdictRequest.ProtoReflect.Descriptor instead.
+func (*SetScanVerdictRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SetScanVerdictRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *SetScanVerdictRequest) GetFileId() string {
+	if x != nil {
+		return x.FileId
+	}
+	return ""
+}
+
+func (x *SetScanVerdictRequest) GetVerdict() v11.ScanVerdict {
+	if x != nil {
+		return x.Verdict
+	}
+	return v11.ScanVerdict(0)
+}
+
+func (x *SetScanVerdictRequest) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+func (x *SetScanVerdictRequest) GetScannedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ScannedAt
+	}
+	return nil
+}
+
+func (x *SetScanVerdictRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type SetScanVerdictResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Message string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	// The verdict now stored, after the transition rules were applied.
+	Verdict v11.ScanVerdict `protobuf:"varint,2,opt,name=verdict,proto3,enum=udb.core.storage.entity.v1.ScanVerdict" json:"verdict,omitempty"`
+	// Error information if operation failed
+	Error         *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetScanVerdictResponse) Reset() {
+	*x = SetScanVerdictResponse{}
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetScanVerdictResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetScanVerdictResponse) ProtoMessage() {}
+
+func (x *SetScanVerdictResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetScanVerdictResponse.ProtoReflect.Descriptor instead.
+func (*SetScanVerdictResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SetScanVerdictResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *SetScanVerdictResponse) GetVerdict() v11.ScanVerdict {
+	if x != nil {
+		return x.Verdict
+	}
+	return v11.ScanVerdict(0)
+}
+
+func (x *SetScanVerdictResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 type DeleteFileRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -1136,7 +1287,7 @@ type DeleteFileRequest struct {
 
 func (x *DeleteFileRequest) Reset() {
 	*x = DeleteFileRequest{}
-	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[14]
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1148,7 +1299,7 @@ func (x *DeleteFileRequest) String() string {
 func (*DeleteFileRequest) ProtoMessage() {}
 
 func (x *DeleteFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[14]
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1161,7 +1312,7 @@ func (x *DeleteFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFileRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFileRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{14}
+	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DeleteFileRequest) GetTenantId() string {
@@ -1217,7 +1368,7 @@ type DeleteFileResponse struct {
 
 func (x *DeleteFileResponse) Reset() {
 	*x = DeleteFileResponse{}
-	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[15]
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1229,7 +1380,7 @@ func (x *DeleteFileResponse) String() string {
 func (*DeleteFileResponse) ProtoMessage() {}
 
 func (x *DeleteFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[15]
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1242,7 +1393,7 @@ func (x *DeleteFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFileResponse.ProtoReflect.Descriptor instead.
 func (*DeleteFileResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{15}
+	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteFileResponse) GetSuccess() bool {
@@ -1276,7 +1427,7 @@ type ListFilesRequest struct {
 
 func (x *ListFilesRequest) Reset() {
 	*x = ListFilesRequest{}
-	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[16]
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1288,7 +1439,7 @@ func (x *ListFilesRequest) String() string {
 func (*ListFilesRequest) ProtoMessage() {}
 
 func (x *ListFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[16]
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1301,7 +1452,7 @@ func (x *ListFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFilesRequest.ProtoReflect.Descriptor instead.
 func (*ListFilesRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{16}
+	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListFilesRequest) GetTenantId() string {
@@ -1374,7 +1525,7 @@ type ListFilesResponse struct {
 
 func (x *ListFilesResponse) Reset() {
 	*x = ListFilesResponse{}
-	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[17]
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1386,7 +1537,7 @@ func (x *ListFilesResponse) String() string {
 func (*ListFilesResponse) ProtoMessage() {}
 
 func (x *ListFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[17]
+	mi := &file_udb_core_storage_services_v1_storage_service_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1399,7 +1550,7 @@ func (x *ListFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFilesResponse.ProtoReflect.Descriptor instead.
 func (*ListFilesResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{17}
+	return file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListFilesResponse) GetFiles() []*v11.File {
@@ -1434,7 +1585,7 @@ var File_udb_core_storage_services_v1_storage_service_proto protoreflect.FileDes
 
 const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/storage/services/v1/storage_service.proto\x12\x1cudb.core.storage.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a%udb/core/storage/entity/v1/file.proto\"\x96\x03\n" +
+	"2udb/core/storage/services/v1/storage_service.proto\x12\x1cudb.core.storage.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a&udb/core/storage/entity/v1/enums.proto\x1a%udb/core/storage/entity/v1/file.proto\"\x96\x03\n" +
 	"\x15RegisterUploadRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
@@ -1537,7 +1688,19 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"_is_public\"\x82\x01\n" +
 	"\x12UpdateFileResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\x91\x02\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xac\x02\n" +
+	"\x15SetScanVerdictRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
+	"\afile_id\x18\x02 \x01(\tR\x06fileId\x12A\n" +
+	"\averdict\x18\x03 \x01(\x0e2'.udb.core.storage.entity.v1.ScanVerdictR\averdict\x12\x16\n" +
+	"\x06detail\x18\x04 \x01(\tR\x06detail\x129\n" +
+	"\n" +
+	"scanned_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tscannedAt\x12'\n" +
+	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xc9\x01\n" +
+	"\x16SetScanVerdictResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\x12A\n" +
+	"\averdict\x18\x02 \x01(\x0e2'.udb.core.storage.entity.v1.ScanVerdictR\averdict\x122\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\x91\x02\n" +
 	"\x11DeleteFileRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\afile_id\x18\x02 \x01(\tR\x06fileId\x12<\n" +
@@ -1569,7 +1732,7 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"DeleteMode\x12\x1b\n" +
 	"\x17DELETE_MODE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10DELETE_MODE_SOFT\x10\x01\x12\x14\n" +
-	"\x10DELETE_MODE_HARD\x10\x022\xeb3\n" +
+	"\x10DELETE_MODE_HARD\x10\x022\x999\n" +
 	"\x0eStorageService\x12\x8c\x06\n" +
 	"\x0eRegisterUpload\x123.udb.core.storage.services.v1.RegisterUploadRequest\x1a4.udb.core.storage.services.v1.RegisterUploadResponse\"\x8e\x05\xca\xf3\x18A\b\x02\x1a\x1budb:storage:register-upload \x01J\x03\x01\x02\x03j\x16storage.RegisterUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18;\b\x01\x12\x0fregister_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01Z\x0eregisterUpload\xe2\xf3\x18\xc1\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.storage.register_upload.boilerplate*\x0fregister_upload2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x9f\x01\n" +
@@ -1624,7 +1787,11 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.storage.list_files.boilerplate*\n" +
 	"list_files2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18O\n" +
 	"\x11storage.ListFiles\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/storage/files\x1a\x80\x03\xca\xf0\x19f\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/storage/files\x12\xab\x05\n" +
+	"\x0eSetScanVerdict\x123.udb.core.storage.services.v1.SetScanVerdictRequest\x1a4.udb.core.storage.services.v1.SetScanVerdictResponse\"\xad\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:storage:set-scan-verdict \x01J\x02\x01\x03j\x16storage.SetScanVerdict\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x10set_scan_verdict\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01Z\x0esetScanVerdict\xe2\xf3\x18\xc3\x01\n" +
+	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"/udb.native.storage.set_scan_verdict.boilerplate*\x10set_scan_verdict2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18T\n" +
+	"\x16storage.SetScanVerdict\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18A\n" +
+	"\astorage\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/storage/files/{file_id}:setScanVerdict\x1a\x80\x03\xca\xf0\x19f\n" +
 	"\astorage\x12\astorage\x1a\astorage\"\aStorage*\astorage0\x018\x01H\x01h\x01z\astorage\x82\x01\astorage\x8a\x01\astorage\x92\x01\x0enative.storage\x98\x01\x01\xd2\xf0\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xda\xf0\x19\x92\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1eudb.native.storage.config.json:\astorageJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19]\n" +
 	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET:\fobject_storeB\x98\x02\n" +
@@ -1643,7 +1810,7 @@ func file_udb_core_storage_services_v1_storage_service_proto_rawDescGZIP() []byt
 }
 
 var file_udb_core_storage_services_v1_storage_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_udb_core_storage_services_v1_storage_service_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_udb_core_storage_services_v1_storage_service_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_udb_core_storage_services_v1_storage_service_proto_goTypes = []any{
 	(DeleteMode)(0),                  // 0: udb.core.storage.services.v1.DeleteMode
 	(*RegisterUploadRequest)(nil),    // 1: udb.core.storage.services.v1.RegisterUploadRequest
@@ -1660,53 +1827,62 @@ var file_udb_core_storage_services_v1_storage_service_proto_goTypes = []any{
 	(*GetFileResponse)(nil),          // 12: udb.core.storage.services.v1.GetFileResponse
 	(*UpdateFileRequest)(nil),        // 13: udb.core.storage.services.v1.UpdateFileRequest
 	(*UpdateFileResponse)(nil),       // 14: udb.core.storage.services.v1.UpdateFileResponse
-	(*DeleteFileRequest)(nil),        // 15: udb.core.storage.services.v1.DeleteFileRequest
-	(*DeleteFileResponse)(nil),       // 16: udb.core.storage.services.v1.DeleteFileResponse
-	(*ListFilesRequest)(nil),         // 17: udb.core.storage.services.v1.ListFilesRequest
-	(*ListFilesResponse)(nil),        // 18: udb.core.storage.services.v1.ListFilesResponse
-	(*v1.ApiError)(nil),              // 19: udb.core.common.v1.ApiError
-	(*v11.File)(nil),                 // 20: udb.core.storage.entity.v1.File
-	(*timestamppb.Timestamp)(nil),    // 21: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),    // 22: google.protobuf.FieldMask
+	(*SetScanVerdictRequest)(nil),    // 15: udb.core.storage.services.v1.SetScanVerdictRequest
+	(*SetScanVerdictResponse)(nil),   // 16: udb.core.storage.services.v1.SetScanVerdictResponse
+	(*DeleteFileRequest)(nil),        // 17: udb.core.storage.services.v1.DeleteFileRequest
+	(*DeleteFileResponse)(nil),       // 18: udb.core.storage.services.v1.DeleteFileResponse
+	(*ListFilesRequest)(nil),         // 19: udb.core.storage.services.v1.ListFilesRequest
+	(*ListFilesResponse)(nil),        // 20: udb.core.storage.services.v1.ListFilesResponse
+	(*v1.ApiError)(nil),              // 21: udb.core.common.v1.ApiError
+	(*v11.File)(nil),                 // 22: udb.core.storage.entity.v1.File
+	(*timestamppb.Timestamp)(nil),    // 23: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),    // 24: google.protobuf.FieldMask
+	(v11.ScanVerdict)(0),             // 25: udb.core.storage.entity.v1.ScanVerdict
 }
 var file_udb_core_storage_services_v1_storage_service_proto_depIdxs = []int32{
-	19, // 0: udb.core.storage.services.v1.RegisterUploadResponse.error:type_name -> udb.core.common.v1.ApiError
-	19, // 1: udb.core.storage.services.v1.ReissueUploadUrlResponse.error:type_name -> udb.core.common.v1.ApiError
-	20, // 2: udb.core.storage.services.v1.FinalizeUploadResponse.file:type_name -> udb.core.storage.entity.v1.File
-	19, // 3: udb.core.storage.services.v1.FinalizeUploadResponse.error:type_name -> udb.core.common.v1.ApiError
-	21, // 4: udb.core.storage.services.v1.GetDownloadUrlResponse.expires_at:type_name -> google.protobuf.Timestamp
-	19, // 5: udb.core.storage.services.v1.GetDownloadUrlResponse.error:type_name -> udb.core.common.v1.ApiError
-	20, // 6: udb.core.storage.services.v1.GetFileResponse.file:type_name -> udb.core.storage.entity.v1.File
-	19, // 7: udb.core.storage.services.v1.GetFileResponse.error:type_name -> udb.core.common.v1.ApiError
-	22, // 8: udb.core.storage.services.v1.UpdateFileRequest.update_mask:type_name -> google.protobuf.FieldMask
-	19, // 9: udb.core.storage.services.v1.UpdateFileResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 10: udb.core.storage.services.v1.DeleteFileRequest.mode:type_name -> udb.core.storage.services.v1.DeleteMode
-	19, // 11: udb.core.storage.services.v1.DeleteFileResponse.error:type_name -> udb.core.common.v1.ApiError
-	20, // 12: udb.core.storage.services.v1.ListFilesResponse.files:type_name -> udb.core.storage.entity.v1.File
-	19, // 13: udb.core.storage.services.v1.ListFilesResponse.error:type_name -> udb.core.common.v1.ApiError
-	1,  // 14: udb.core.storage.services.v1.StorageService.RegisterUpload:input_type -> udb.core.storage.services.v1.RegisterUploadRequest
-	5,  // 15: udb.core.storage.services.v1.StorageService.FinalizeUpload:input_type -> udb.core.storage.services.v1.FinalizeUploadRequest
-	7,  // 16: udb.core.storage.services.v1.StorageService.GetDownloadUrl:input_type -> udb.core.storage.services.v1.GetDownloadUrlRequest
-	3,  // 17: udb.core.storage.services.v1.StorageService.ReissueUploadUrl:input_type -> udb.core.storage.services.v1.ReissueUploadUrlRequest
-	9,  // 18: udb.core.storage.services.v1.StorageService.DownloadFile:input_type -> udb.core.storage.services.v1.DownloadFileRequest
-	11, // 19: udb.core.storage.services.v1.StorageService.GetFile:input_type -> udb.core.storage.services.v1.GetFileRequest
-	13, // 20: udb.core.storage.services.v1.StorageService.UpdateFile:input_type -> udb.core.storage.services.v1.UpdateFileRequest
-	15, // 21: udb.core.storage.services.v1.StorageService.DeleteFile:input_type -> udb.core.storage.services.v1.DeleteFileRequest
-	17, // 22: udb.core.storage.services.v1.StorageService.ListFiles:input_type -> udb.core.storage.services.v1.ListFilesRequest
-	2,  // 23: udb.core.storage.services.v1.StorageService.RegisterUpload:output_type -> udb.core.storage.services.v1.RegisterUploadResponse
-	6,  // 24: udb.core.storage.services.v1.StorageService.FinalizeUpload:output_type -> udb.core.storage.services.v1.FinalizeUploadResponse
-	8,  // 25: udb.core.storage.services.v1.StorageService.GetDownloadUrl:output_type -> udb.core.storage.services.v1.GetDownloadUrlResponse
-	4,  // 26: udb.core.storage.services.v1.StorageService.ReissueUploadUrl:output_type -> udb.core.storage.services.v1.ReissueUploadUrlResponse
-	10, // 27: udb.core.storage.services.v1.StorageService.DownloadFile:output_type -> udb.core.storage.services.v1.DownloadFileChunk
-	12, // 28: udb.core.storage.services.v1.StorageService.GetFile:output_type -> udb.core.storage.services.v1.GetFileResponse
-	14, // 29: udb.core.storage.services.v1.StorageService.UpdateFile:output_type -> udb.core.storage.services.v1.UpdateFileResponse
-	16, // 30: udb.core.storage.services.v1.StorageService.DeleteFile:output_type -> udb.core.storage.services.v1.DeleteFileResponse
-	18, // 31: udb.core.storage.services.v1.StorageService.ListFiles:output_type -> udb.core.storage.services.v1.ListFilesResponse
-	23, // [23:32] is the sub-list for method output_type
-	14, // [14:23] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	21, // 0: udb.core.storage.services.v1.RegisterUploadResponse.error:type_name -> udb.core.common.v1.ApiError
+	21, // 1: udb.core.storage.services.v1.ReissueUploadUrlResponse.error:type_name -> udb.core.common.v1.ApiError
+	22, // 2: udb.core.storage.services.v1.FinalizeUploadResponse.file:type_name -> udb.core.storage.entity.v1.File
+	21, // 3: udb.core.storage.services.v1.FinalizeUploadResponse.error:type_name -> udb.core.common.v1.ApiError
+	23, // 4: udb.core.storage.services.v1.GetDownloadUrlResponse.expires_at:type_name -> google.protobuf.Timestamp
+	21, // 5: udb.core.storage.services.v1.GetDownloadUrlResponse.error:type_name -> udb.core.common.v1.ApiError
+	22, // 6: udb.core.storage.services.v1.GetFileResponse.file:type_name -> udb.core.storage.entity.v1.File
+	21, // 7: udb.core.storage.services.v1.GetFileResponse.error:type_name -> udb.core.common.v1.ApiError
+	24, // 8: udb.core.storage.services.v1.UpdateFileRequest.update_mask:type_name -> google.protobuf.FieldMask
+	21, // 9: udb.core.storage.services.v1.UpdateFileResponse.error:type_name -> udb.core.common.v1.ApiError
+	25, // 10: udb.core.storage.services.v1.SetScanVerdictRequest.verdict:type_name -> udb.core.storage.entity.v1.ScanVerdict
+	23, // 11: udb.core.storage.services.v1.SetScanVerdictRequest.scanned_at:type_name -> google.protobuf.Timestamp
+	25, // 12: udb.core.storage.services.v1.SetScanVerdictResponse.verdict:type_name -> udb.core.storage.entity.v1.ScanVerdict
+	21, // 13: udb.core.storage.services.v1.SetScanVerdictResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 14: udb.core.storage.services.v1.DeleteFileRequest.mode:type_name -> udb.core.storage.services.v1.DeleteMode
+	21, // 15: udb.core.storage.services.v1.DeleteFileResponse.error:type_name -> udb.core.common.v1.ApiError
+	22, // 16: udb.core.storage.services.v1.ListFilesResponse.files:type_name -> udb.core.storage.entity.v1.File
+	21, // 17: udb.core.storage.services.v1.ListFilesResponse.error:type_name -> udb.core.common.v1.ApiError
+	1,  // 18: udb.core.storage.services.v1.StorageService.RegisterUpload:input_type -> udb.core.storage.services.v1.RegisterUploadRequest
+	5,  // 19: udb.core.storage.services.v1.StorageService.FinalizeUpload:input_type -> udb.core.storage.services.v1.FinalizeUploadRequest
+	7,  // 20: udb.core.storage.services.v1.StorageService.GetDownloadUrl:input_type -> udb.core.storage.services.v1.GetDownloadUrlRequest
+	3,  // 21: udb.core.storage.services.v1.StorageService.ReissueUploadUrl:input_type -> udb.core.storage.services.v1.ReissueUploadUrlRequest
+	9,  // 22: udb.core.storage.services.v1.StorageService.DownloadFile:input_type -> udb.core.storage.services.v1.DownloadFileRequest
+	11, // 23: udb.core.storage.services.v1.StorageService.GetFile:input_type -> udb.core.storage.services.v1.GetFileRequest
+	13, // 24: udb.core.storage.services.v1.StorageService.UpdateFile:input_type -> udb.core.storage.services.v1.UpdateFileRequest
+	17, // 25: udb.core.storage.services.v1.StorageService.DeleteFile:input_type -> udb.core.storage.services.v1.DeleteFileRequest
+	19, // 26: udb.core.storage.services.v1.StorageService.ListFiles:input_type -> udb.core.storage.services.v1.ListFilesRequest
+	15, // 27: udb.core.storage.services.v1.StorageService.SetScanVerdict:input_type -> udb.core.storage.services.v1.SetScanVerdictRequest
+	2,  // 28: udb.core.storage.services.v1.StorageService.RegisterUpload:output_type -> udb.core.storage.services.v1.RegisterUploadResponse
+	6,  // 29: udb.core.storage.services.v1.StorageService.FinalizeUpload:output_type -> udb.core.storage.services.v1.FinalizeUploadResponse
+	8,  // 30: udb.core.storage.services.v1.StorageService.GetDownloadUrl:output_type -> udb.core.storage.services.v1.GetDownloadUrlResponse
+	4,  // 31: udb.core.storage.services.v1.StorageService.ReissueUploadUrl:output_type -> udb.core.storage.services.v1.ReissueUploadUrlResponse
+	10, // 32: udb.core.storage.services.v1.StorageService.DownloadFile:output_type -> udb.core.storage.services.v1.DownloadFileChunk
+	12, // 33: udb.core.storage.services.v1.StorageService.GetFile:output_type -> udb.core.storage.services.v1.GetFileResponse
+	14, // 34: udb.core.storage.services.v1.StorageService.UpdateFile:output_type -> udb.core.storage.services.v1.UpdateFileResponse
+	18, // 35: udb.core.storage.services.v1.StorageService.DeleteFile:output_type -> udb.core.storage.services.v1.DeleteFileResponse
+	20, // 36: udb.core.storage.services.v1.StorageService.ListFiles:output_type -> udb.core.storage.services.v1.ListFilesResponse
+	16, // 37: udb.core.storage.services.v1.StorageService.SetScanVerdict:output_type -> udb.core.storage.services.v1.SetScanVerdictResponse
+	28, // [28:38] is the sub-list for method output_type
+	18, // [18:28] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_storage_services_v1_storage_service_proto_init() }
@@ -1725,7 +1901,7 @@ func file_udb_core_storage_services_v1_storage_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_storage_services_v1_storage_service_proto_rawDesc), len(file_udb_core_storage_services_v1_storage_service_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

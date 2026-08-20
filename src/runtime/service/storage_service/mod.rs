@@ -47,6 +47,7 @@ mod errors;
 mod handlers;
 mod model;
 mod presign;
+mod scan;
 mod store;
 #[cfg(test)]
 mod tests;
@@ -243,6 +244,13 @@ impl StorageService for StorageServiceImpl {
         request: Request<storage_pb::GetFileRequest>,
     ) -> Result<Response<storage_pb::GetFileResponse>, Status> {
         handlers::get_file(self, request).await
+    }
+
+    async fn set_scan_verdict(
+        &self,
+        request: Request<storage_pb::SetScanVerdictRequest>,
+    ) -> Result<Response<storage_pb::SetScanVerdictResponse>, Status> {
+        handlers::set_scan_verdict(self, request).await
     }
 
     async fn update_file(

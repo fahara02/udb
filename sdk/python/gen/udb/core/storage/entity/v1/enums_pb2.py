@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n&udb/core/storage/entity/v1/enums.proto\x12\x1audb.core.storage.entity.v1*\xbb\x01\n\x08\x46ileType\x12\x19\n\x15\x46ILE_TYPE_UNSPECIFIED\x10\x00\x12\x13\n\x0f\x46ILE_TYPE_IMAGE\x10\x01\x12\x13\n\x0f\x46ILE_TYPE_VIDEO\x10\x02\x12\x13\n\x0f\x46ILE_TYPE_AUDIO\x10\x03\x12\x11\n\rFILE_TYPE_PDF\x10\x04\x12\x16\n\x12\x46ILE_TYPE_DOCUMENT\x10\x05\x12\x15\n\x11\x46ILE_TYPE_ARCHIVE\x10\x06\x12\x13\n\x0f\x46ILE_TYPE_OTHER\x10\x63*s\n\nFileStatus\x12\x1b\n\x17\x46ILE_STATUS_UNSPECIFIED\x10\x00\x12\x17\n\x13\x46ILE_STATUS_PENDING\x10\x01\x12\x16\n\x12\x46ILE_STATUS_ACTIVE\x10\x02\x12\x17\n\x13\x46ILE_STATUS_DELETED\x10\x03\x42\x81\x02\n\x1e\x63om.udb.core.storage.entity.v1B\nEnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1audb.core.Storage.Entity.V1\xca\x02\x1aUdb\\Core\\Storage\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\xea\x02\x1eUdb::Core::Storage::Entity::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n&udb/core/storage/entity/v1/enums.proto\x12\x1audb.core.storage.entity.v1*\xbb\x01\n\x08\x46ileType\x12\x19\n\x15\x46ILE_TYPE_UNSPECIFIED\x10\x00\x12\x13\n\x0f\x46ILE_TYPE_IMAGE\x10\x01\x12\x13\n\x0f\x46ILE_TYPE_VIDEO\x10\x02\x12\x13\n\x0f\x46ILE_TYPE_AUDIO\x10\x03\x12\x11\n\rFILE_TYPE_PDF\x10\x04\x12\x16\n\x12\x46ILE_TYPE_DOCUMENT\x10\x05\x12\x15\n\x11\x46ILE_TYPE_ARCHIVE\x10\x06\x12\x13\n\x0f\x46ILE_TYPE_OTHER\x10\x63*s\n\nFileStatus\x12\x1b\n\x17\x46ILE_STATUS_UNSPECIFIED\x10\x00\x12\x17\n\x13\x46ILE_STATUS_PENDING\x10\x01\x12\x16\n\x12\x46ILE_STATUS_ACTIVE\x10\x02\x12\x17\n\x13\x46ILE_STATUS_DELETED\x10\x03*\x91\x01\n\x0bScanVerdict\x12\x1c\n\x18SCAN_VERDICT_UNSPECIFIED\x10\x00\x12\x18\n\x14SCAN_VERDICT_PENDING\x10\x01\x12\x16\n\x12SCAN_VERDICT_CLEAN\x10\x02\x12\x19\n\x15SCAN_VERDICT_INFECTED\x10\x03\x12\x17\n\x13SCAN_VERDICT_FAILED\x10\x04\x42\x81\x02\n\x1e\x63om.udb.core.storage.entity.v1B\nEnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1audb.core.Storage.Entity.V1\xca\x02\x1aUdb\\Core\\Storage\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\xea\x02\x1eUdb::Core::Storage::Entity::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,4 +36,6 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_FILETYPE']._serialized_end=258
   _globals['_FILESTATUS']._serialized_start=260
   _globals['_FILESTATUS']._serialized_end=375
+  _globals['_SCANVERDICT']._serialized_start=378
+  _globals['_SCANVERDICT']._serialized_end=523
 # @@protoc_insertion_point(module_scope)

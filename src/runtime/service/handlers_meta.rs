@@ -555,6 +555,23 @@ impl DataBrokerService {
             .as_ref()
             .and_then(|p| serde_json::to_vec(p).ok())
             .unwrap_or_default();
+        // A probe's `ok` flag was serialized into `probes_json` and never read, so
+        // `passed: errors.is_empty()` below reported a HEALTHY broker while a
+        // configured backend was unreachable. Only the Postgres write-authority
+        // probe folded into `errors`; Redis, Qdrant, S3 and Kafka did not.
+        //
+        // A probe only runs for a backend the operator CONFIGURED, so a failure is
+        // a real fault rather than an absent optional: it belongs in the channel
+        // that decides `passed`. Deduped because the Postgres branch already
+        // recorded its own message.
+        for probe in probes.iter().filter(|p| !p.ok) {
+            let detail = probe.error.as_deref().unwrap_or("probe failed");
+            let message = format!("backend probe failed for {}: {detail}", probe.backend);
+            if !errors.contains(&message) {
+                errors.push(message);
+            }
+        }
+
         let probes_json = serde_json::to_vec(&probes).unwrap_or_default();
 
         // ── Phase 10: unified readiness contract ──────────────────────────────

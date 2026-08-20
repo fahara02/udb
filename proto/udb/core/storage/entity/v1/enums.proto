@@ -25,3 +25,23 @@ enum FileStatus {
   FILE_STATUS_ACTIVE = 2;
   FILE_STATUS_DELETED = 3;
 }
+
+// Antivirus / content-scan verdict for a stored object (V050-3).
+//
+// UNSPECIFIED means NOT SCANNED, and is deliberately distinct from PENDING.
+// Rows that predate scanning carry it after upgrade, so an operator can tell
+// "no scanner has ever looked at this" apart from "a scan is in flight" — and
+// so enabling enforcement later is a decision, not a silent cutover.
+enum ScanVerdict {
+  SCAN_VERDICT_UNSPECIFIED = 0;
+  // A scan has been requested and has not yet returned.
+  SCAN_VERDICT_PENDING = 1;
+  // Scanned and found clean. The only verdict a gated download accepts.
+  SCAN_VERDICT_CLEAN = 2;
+  // Scanned and found malicious. Refused on every download path regardless of
+  // whether enforcement is enabled; only an explicit override scope can reach it.
+  SCAN_VERDICT_INFECTED = 3;
+  // The scanner ran and could not produce a verdict (timeout, unreadable
+  // archive, engine error). Not clean, and not proof of malice.
+  SCAN_VERDICT_FAILED = 4;
+}

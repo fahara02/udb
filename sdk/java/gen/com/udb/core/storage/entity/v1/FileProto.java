@@ -45,7 +45,7 @@ public final class FileProto {
       "obuf/timestamp.proto\032\033udb/core/common/v1" +
       "/db.proto\032!udb/core/common/v1/security.p" +
       "roto\032\036udb/core/common/v1/types.proto\032&ud" +
-      "b/core/storage/entity/v1/enums.proto\"\365\021\n" +
+      "b/core/storage/entity/v1/enums.proto\"\327\026\n" +
       "\004File\022C\n\007file_id\030\001 \001(\tB*\202\267\030&\n\007file_id\022\004U" +
       "UID\030\001(\001:\021gen_random_uuid()R\006fileId\0227\n\tte" +
       "nant_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002" +
@@ -88,28 +88,44 @@ public final class FileProto {
       "ed_at\022\013TIMESTAMPTZZ\025Soft delete timestam" +
       "pR\tdeletedAt\022H\n\ndeleted_by\030\026 \001(\tB)\202\267\030%\n\n" +
       "deleted_by\022\004UUIDZ\021Soft delete actorR\tdel" +
-      "etedBy:\333\004\372\266\030\270\003\n\005files\022\013udb_storage\030\001 \001*B" +
-      "Object-storage file metadata for uploads" +
-      ", downloads, and lifecycle0\0018\001@\001b\230\001\n\030sto" +
-      "rage_tenant_isolation\032z(tenant_id::text " +
-      "= current_setting(\'app.current_tenant_id" +
-      "\', true) OR current_setting(\'app.platfor" +
-      "m_admin\', true) = \'true\')(\001h\001\212\001$\n\020idx_fi" +
-      "les_tenant\022\005BTREEZ\ttenant_id\212\001:\n\023idx_fil" +
-      "es_reference\022\005BTREEZ\014reference_idZ\016refer" +
-      "ence_type\212\001+\n\025idx_files_uploaded_by\022\005BTR" +
-      "EEZ\013uploaded_by\362\001\025udb.storage.files.cdc\372" +
-      "\001\014storage:read\212\262\031\231\001\n\006tenant\032\ttenant_id*4" +
-      "tenant_id = current_setting(\'app.current" +
-      "_tenant_id\')2\013soft_delete:\023storage.opera" +
-      "tional@\373\023H\002R\006tenantZ\010standardr\025tenant.da" +
-      "ta_residencyB\200\002\n\036com.udb.core.storage.en" +
-      "tity.v1B\tFileProtoP\001ZFgithub.com/fahara0" +
-      "2/udb/sdk/go/gen/udb/core/storage/entity" +
-      "/v1;entityv1\242\002\004UCSE\252\002\032udb.core.Storage.E" +
-      "ntity.V1\312\002\032Udb\\Core\\Storage\\Entity\\V1\342\002&" +
-      "Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\352\002" +
-      "\036Udb::Core::Storage::Entity::V1b\006proto3"
+      "etedBy\022\363\001\n\014scan_verdict\030\027 \001(\0162\'.udb.core" +
+      ".storage.entity.v1.ScanVerdictB\246\001\202\267\030\241\001\n\014" +
+      "scan_verdict\022\013VARCHAR(24)\030\001:\032\'SCAN_VERDI" +
+      "CT_UNSPECIFIED\'R\037\n\026idx_files_scan_verdic" +
+      "t\022\005BTREEZEContent-scan verdict; only SCA" +
+      "N_VERDICT_CLEAN passes a gated downloadR" +
+      "\013scanVerdict\022\200\001\n\nscanned_at\030\030 \001(\0132\032.goog" +
+      "le.protobuf.TimestampBE\202\267\030A\n\nscanned_at\022" +
+      "\013TIMESTAMPTZZ&When the recorded verdict " +
+      "was producedR\tscannedAt\022r\n\nscanned_by\030\031 " +
+      "\001(\tBS\202\267\030O\n\nscanned_by\022\014VARCHAR(200)Z3Ver" +
+      "ified scanner identity that recorded the" +
+      " verdictR\tscannedBy\022s\n\013scan_detail\030\032 \001(\t" +
+      "BR\202\267\030N\n\013scan_detail\022\004TEXTZ9Signature nam" +
+      "e or failure reason from the scanning en" +
+      "gineR\nscanDetail:\333\004\372\266\030\270\003\n\005files\022\013udb_sto" +
+      "rage\030\001 \001*BObject-storage file metadata f" +
+      "or uploads, downloads, and lifecycle0\0018\001" +
+      "@\001b\230\001\n\030storage_tenant_isolation\032z(tenant" +
+      "_id::text = current_setting(\'app.current" +
+      "_tenant_id\', true) OR current_setting(\'a" +
+      "pp.platform_admin\', true) = \'true\')(\001h\001\212" +
+      "\001$\n\020idx_files_tenant\022\005BTREEZ\ttenant_id\212\001" +
+      ":\n\023idx_files_reference\022\005BTREEZ\014reference" +
+      "_idZ\016reference_type\212\001+\n\025idx_files_upload" +
+      "ed_by\022\005BTREEZ\013uploaded_by\362\001\025udb.storage." +
+      "files.cdc\372\001\014storage:read\212\262\031\231\001\n\006tenant\032\tt" +
+      "enant_id*4tenant_id = current_setting(\'a" +
+      "pp.current_tenant_id\')2\013soft_delete:\023sto" +
+      "rage.operational@\373\023H\002R\006tenantZ\010standardr" +
+      "\025tenant.data_residencyB\200\002\n\036com.udb.core." +
+      "storage.entity.v1B\tFileProtoP\001ZFgithub.c" +
+      "om/fahara02/udb/sdk/go/gen/udb/core/stor" +
+      "age/entity/v1;entityv1\242\002\004UCSE\252\002\032udb.core" +
+      ".Storage.Entity.V1\312\002\032Udb\\Core\\Storage\\En" +
+      "tity\\V1\342\002&Udb\\GPBMetadata\\Core\\Storage\\E" +
+      "ntity\\V1\352\002\036Udb::Core::Storage::Entity::V" +
+      "1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -125,7 +141,7 @@ public final class FileProto {
     internal_static_udb_core_storage_entity_v1_File_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_storage_entity_v1_File_descriptor,
-        new java.lang.String[] { "FileId", "TenantId", "ProjectId", "Filename", "ContentType", "SizeBytes", "Backend", "Bucket", "ObjectKey", "Url", "CdnUrl", "FileType", "ReferenceId", "ReferenceType", "IsPublic", "Status", "Checksum", "ExpiresAt", "UploadedBy", "AuditInfo", "DeletedAt", "DeletedBy", });
+        new java.lang.String[] { "FileId", "TenantId", "ProjectId", "Filename", "ContentType", "SizeBytes", "Backend", "Bucket", "ObjectKey", "Url", "CdnUrl", "FileType", "ReferenceId", "ReferenceType", "IsPublic", "Status", "Checksum", "ExpiresAt", "UploadedBy", "AuditInfo", "DeletedAt", "DeletedBy", "ScanVerdict", "ScannedAt", "ScannedBy", "ScanDetail", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();

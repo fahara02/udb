@@ -401,7 +401,7 @@ impl DataBrokerService {
                         "GetCatalogManifest",
                         "catalog_project_not_active",
                         format!(
-                            "project '{}' has no ACTIVE catalog, and falling back to the default                              project is refused because it would return another project's manifest.                              Stage and activate a catalog for it (StageCatalog then ActivateCatalog).",
+                            "project '{}' has no ACTIVE catalog, and falling back to the default project is refused because it would return another project's manifest.                              Stage and activate a catalog for it (StageCatalog then ActivateCatalog).",
                             security.project_id.trim()
                         ),
                     )),
@@ -474,6 +474,32 @@ impl DataBrokerService {
             Ok(manifest) => manifest,
             Err(err) => return self.record_grpc("StageCatalog", started, Err(err)),
         };
+        // ValidateCatalog lints the very same payload and reports `valid: false`,
+        // but StageCatalog only parsed it — so a catalog ValidateCatalog rejects
+        // could still be staged, and then activated. Staging is the point where a
+        // bad catalog stops being the caller's problem and becomes the broker's,
+        // so it fails closed on the same lint.
+        let lint = crate::generation::lint_catalog(&manifest);
+        if !lint.passed {
+            let details: Vec<String> = lint
+                .items
+                .iter()
+                .filter(|item| matches!(item.severity, crate::generation::LintSeverity::Error))
+                .map(|item| item.description.clone())
+                .collect();
+            return self.record_grpc(
+                "StageCatalog",
+                started,
+                Err(crate::runtime::executor_utils::invalid_argument_fields(
+                    format!(
+                        "catalog failed validation with {} error(s); run ValidateCatalog for the full report: {}",
+                        details.len(),
+                        details.join("; ")
+                    ),
+                    [("manifest_json", "must pass catalog lint before it can be staged")],
+                )),
+            );
+        }
         let fallback_version = self
             .catalog
             .active_exact_for(&project_id)

@@ -24,7 +24,8 @@ use super::super::native_helpers::{
 use super::StorageServiceImpl;
 use super::config::{
     FILE_MSG, STORAGE_QUOTA_EXCEEDED, TOPIC_FILE_DELETED, TOPIC_FILE_FINALIZED,
-    TOPIC_FILE_METADATA_UPDATED, TOPIC_UPLOAD_URL_ISSUED, UNSUPPORTED_OBJECT_BACKEND,
+    TOPIC_FILE_METADATA_UPDATED, TOPIC_FILE_SCAN_VERDICT_SET, TOPIC_UPLOAD_URL_ISSUED,
+    UNSUPPORTED_OBJECT_BACKEND,
 };
 use super::errors::{
     api_error_upload_url_unavailable, delete_expected_status_mismatch_status,
@@ -615,6 +616,10 @@ pub(crate) async fn get_download_url(
     let Some(file) = rows.first().map(file_from_json) else {
         return Err(storage_file_not_found_status("get_download_url"));
     };
+    // V050-3: a presigned URL is a bearer capability for the bytes - once minted
+    // it is used outside the broker, so the verdict must be checked BEFORE it is
+    // handed out, not when it is redeemed.
+    super::scan::enforce_scan_gate(file.scan_verdict, &file.file_id, "get_download_url")?;
     let object_key = file.object_key;
     let object_project_id = file.project_id;
     let minutes = if req.expires_in_minutes > 0 {
@@ -772,6 +777,11 @@ pub(crate) async fn download_file(
     let Some(file) = rows.first().map(file_from_json) else {
         return Err(storage_file_not_found_status("download_file"));
     };
+    // V050-3: the native stream reads object bytes directly, so an application
+    // that gates downloads in its own HTTP layer is bypassed here. This is the
+    // path the report singles out; it must apply the same verdict rule as the
+    // presigned one, before any byte is read.
+    super::scan::enforce_scan_gate(file.scan_verdict, &file.file_id, "download_file")?;
     if file.object_key.trim().is_empty() {
         return Err(file_object_bytes_missing_status());
     }
@@ -1035,6 +1045,127 @@ pub(crate) async fn update_file(
     }
     Ok(Response::new(storage_pb::UpdateFileResponse {
         message: "file updated".to_string(),
+        error: None,
+    }))
+}
+
+/// Record a content-scan verdict for a file (V050-3).
+///
+/// Privileged: the proto requires `udb:storage:set-scan-verdict`, which is not
+/// bundled with any ordinary storage scope, so a caller that can upload cannot
+/// declare its own upload clean.
+///
+/// `scanned_by` comes from the VERIFIED principal, never the request body — a
+/// scanner must not be able to file a verdict under another scanner's name.
+/// Re-reporting the same verdict is a no-op that emits no second event, so a
+/// scanner retry cannot amplify into duplicate CDC transitions.
+pub(crate) async fn set_scan_verdict(
+    svc: &StorageServiceImpl,
+    request: Request<storage_pb::SetScanVerdictRequest>,
+) -> Result<Response<storage_pb::SetScanVerdictResponse>, Status> {
+    use crate::proto::udb::core::storage::entity::v1::ScanVerdict as V;
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    validate_request_tenant(&metadata, &req.tenant_id)?;
+    let project_id = resolved_storage_project_scope(&metadata, "")?;
+    let _admit = svc.admit(&req.tenant_id, &project_id).await?;
+    let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+    let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
+
+    // UNSPECIFIED is refused rather than stored: accepting it would let a
+    // scanner reporting "no verdict" silently clear a recorded INFECTED.
+    let verdict = V::try_from(req.verdict).unwrap_or(V::Unspecified);
+    if matches!(verdict, V::Unspecified) {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "verdict must be PENDING, CLEAN, INFECTED or FAILED",
+            [(
+                "verdict",
+                "SCAN_VERDICT_UNSPECIFIED is not a recordable verdict",
+            )],
+        ));
+    }
+
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let runtime = svc.require_runtime()?;
+    let rows = runtime
+        .native_entity_read_for_service(
+            "storage",
+            &context,
+            file_read_by_id(&tenant_id, &project_id, &file_id),
+        )
+        .await?;
+    let Some(prior) = rows.first().map(file_from_json) else {
+        return Err(storage_file_not_found_status("set_scan_verdict"));
+    };
+    let previous = V::try_from(prior.scan_verdict).unwrap_or(V::Unspecified);
+
+    // Idempotent: an unchanged verdict writes nothing and emits nothing.
+    if previous == verdict {
+        return Ok(Response::new(storage_pb::SetScanVerdictResponse {
+            message: "scan verdict unchanged".to_string(),
+            verdict: req.verdict,
+            error: None,
+        }));
+    }
+
+    // Clearing INFECTED is permitted — a re-scan with updated signatures does
+    // legitimately clear a false positive — but it is the one transition that
+    // un-quarantines bytes, so it is logged and carried in the event with the
+    // previous verdict for audit.
+    if matches!(previous, V::Infected) {
+        tracing::warn!(
+            file_id = %prior.file_id,
+            new_verdict = ?verdict,
+            "a file previously marked INFECTED is being re-verdicted"
+        );
+    }
+
+    let scanned_by = super::scan::verified_scanner_identity();
+    let mut record = file_full_record(&prior);
+    record.insert(
+        "scan_verdict".to_string(),
+        logical_string(super::model::scan_verdict_to_db(req.verdict)),
+    );
+    record.insert("scanned_by".to_string(), logical_string(scanned_by.clone()));
+    record.insert(
+        "scan_detail".to_string(),
+        logical_string(req.detail.clone()),
+    );
+    runtime
+        .native_entity_write_for_service(
+            "storage",
+            &context,
+            FILE_MSG,
+            record,
+            ConflictStrategy::update(vec![
+                "scan_verdict".to_string(),
+                "scanned_by".to_string(),
+                "scan_detail".to_string(),
+            ]),
+        )
+        .await?;
+
+    if let Some(pool) = svc.pg_pool.as_ref() {
+        emit_payload_event(
+            pool,
+            svc.outbox_relation.as_deref(),
+            TOPIC_FILE_SCAN_VERDICT_SET,
+            &req.file_id,
+            serde_json::json!({
+                "file_id": req.file_id,
+                "tenant_id": req.tenant_id,
+                "previous_verdict": super::model::scan_verdict_to_db(prior.scan_verdict),
+                "verdict": super::model::scan_verdict_to_db(req.verdict),
+                "scanned_by": scanned_by,
+            }),
+            Some(&svc.metrics),
+        )
+        .await;
+    }
+
+    Ok(Response::new(storage_pb::SetScanVerdictResponse {
+        message: "scan verdict recorded".to_string(),
+        verdict: req.verdict,
         error: None,
     }))
 }

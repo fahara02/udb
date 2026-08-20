@@ -137,6 +137,73 @@ func (FileStatus) EnumDescriptor() ([]byte, []int) {
 	return file_udb_core_storage_entity_v1_enums_proto_rawDescGZIP(), []int{1}
 }
 
+// Antivirus / content-scan verdict for a stored object (V050-3).
+//
+// UNSPECIFIED means NOT SCANNED, and is deliberately distinct from PENDING.
+// Rows that predate scanning carry it after upgrade, so an operator can tell
+// "no scanner has ever looked at this" apart from "a scan is in flight" — and
+// so enabling enforcement later is a decision, not a silent cutover.
+type ScanVerdict int32
+
+const (
+	ScanVerdict_SCAN_VERDICT_UNSPECIFIED ScanVerdict = 0
+	// A scan has been requested and has not yet returned.
+	ScanVerdict_SCAN_VERDICT_PENDING ScanVerdict = 1
+	// Scanned and found clean. The only verdict a gated download accepts.
+	ScanVerdict_SCAN_VERDICT_CLEAN ScanVerdict = 2
+	// Scanned and found malicious. Refused on every download path regardless of
+	// whether enforcement is enabled; only an explicit override scope can reach it.
+	ScanVerdict_SCAN_VERDICT_INFECTED ScanVerdict = 3
+	// The scanner ran and could not produce a verdict (timeout, unreadable
+	// archive, engine error). Not clean, and not proof of malice.
+	ScanVerdict_SCAN_VERDICT_FAILED ScanVerdict = 4
+)
+
+// Enum value maps for ScanVerdict.
+var (
+	ScanVerdict_name = map[int32]string{
+		0: "SCAN_VERDICT_UNSPECIFIED",
+		1: "SCAN_VERDICT_PENDING",
+		2: "SCAN_VERDICT_CLEAN",
+		3: "SCAN_VERDICT_INFECTED",
+		4: "SCAN_VERDICT_FAILED",
+	}
+	ScanVerdict_value = map[string]int32{
+		"SCAN_VERDICT_UNSPECIFIED": 0,
+		"SCAN_VERDICT_PENDING":     1,
+		"SCAN_VERDICT_CLEAN":       2,
+		"SCAN_VERDICT_INFECTED":    3,
+		"SCAN_VERDICT_FAILED":      4,
+	}
+)
+
+func (x ScanVerdict) Enum() *ScanVerdict {
+	p := new(ScanVerdict)
+	*p = x
+	return p
+}
+
+func (x ScanVerdict) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ScanVerdict) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_storage_entity_v1_enums_proto_enumTypes[2].Descriptor()
+}
+
+func (ScanVerdict) Type() protoreflect.EnumType {
+	return &file_udb_core_storage_entity_v1_enums_proto_enumTypes[2]
+}
+
+func (x ScanVerdict) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ScanVerdict.Descriptor instead.
+func (ScanVerdict) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_storage_entity_v1_enums_proto_rawDescGZIP(), []int{2}
+}
+
 var File_udb_core_storage_entity_v1_enums_proto protoreflect.FileDescriptor
 
 const file_udb_core_storage_entity_v1_enums_proto_rawDesc = "" +
@@ -156,7 +223,13 @@ const file_udb_core_storage_entity_v1_enums_proto_rawDesc = "" +
 	"\x17FILE_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13FILE_STATUS_PENDING\x10\x01\x12\x16\n" +
 	"\x12FILE_STATUS_ACTIVE\x10\x02\x12\x17\n" +
-	"\x13FILE_STATUS_DELETED\x10\x03B\x81\x02\n" +
+	"\x13FILE_STATUS_DELETED\x10\x03*\x91\x01\n" +
+	"\vScanVerdict\x12\x1c\n" +
+	"\x18SCAN_VERDICT_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14SCAN_VERDICT_PENDING\x10\x01\x12\x16\n" +
+	"\x12SCAN_VERDICT_CLEAN\x10\x02\x12\x19\n" +
+	"\x15SCAN_VERDICT_INFECTED\x10\x03\x12\x17\n" +
+	"\x13SCAN_VERDICT_FAILED\x10\x04B\x81\x02\n" +
 	"\x1ecom.udb.core.storage.entity.v1B\n" +
 	"EnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1audb.core.Storage.Entity.V1\xca\x02\x1aUdb\\Core\\Storage\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\xea\x02\x1eUdb::Core::Storage::Entity::V1b\x06proto3"
 
@@ -172,10 +245,11 @@ func file_udb_core_storage_entity_v1_enums_proto_rawDescGZIP() []byte {
 	return file_udb_core_storage_entity_v1_enums_proto_rawDescData
 }
 
-var file_udb_core_storage_entity_v1_enums_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_udb_core_storage_entity_v1_enums_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_udb_core_storage_entity_v1_enums_proto_goTypes = []any{
-	(FileType)(0),   // 0: udb.core.storage.entity.v1.FileType
-	(FileStatus)(0), // 1: udb.core.storage.entity.v1.FileStatus
+	(FileType)(0),    // 0: udb.core.storage.entity.v1.FileType
+	(FileStatus)(0),  // 1: udb.core.storage.entity.v1.FileStatus
+	(ScanVerdict)(0), // 2: udb.core.storage.entity.v1.ScanVerdict
 }
 var file_udb_core_storage_entity_v1_enums_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -195,7 +269,7 @@ func file_udb_core_storage_entity_v1_enums_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_storage_entity_v1_enums_proto_rawDesc), len(file_udb_core_storage_entity_v1_enums_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,

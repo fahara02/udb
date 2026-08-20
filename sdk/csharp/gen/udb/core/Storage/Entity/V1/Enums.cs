@@ -32,16 +32,19 @@ namespace udb.core.Storage.Entity.V1 {
             "UEVfQVJDSElWRRAGEhMKD0ZJTEVfVFlQRV9PVEhFUhBjKnMKCkZpbGVTdGF0",
             "dXMSGwoXRklMRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIXChNGSUxFX1NUQVRV",
             "U19QRU5ESU5HEAESFgoSRklMRV9TVEFUVVNfQUNUSVZFEAISFwoTRklMRV9T",
-            "VEFUVVNfREVMRVRFRBADQoECCh5jb20udWRiLmNvcmUuc3RvcmFnZS5lbnRp",
-            "dHkudjFCCkVudW1zUHJvdG9QAVpGZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIv",
-            "c2RrL2dvL2dlbi91ZGIvY29yZS9zdG9yYWdlL2VudGl0eS92MTtlbnRpdHl2",
-            "MaICBFVDU0WqAhp1ZGIuY29yZS5TdG9yYWdlLkVudGl0eS5WMcoCGlVkYlxD",
-            "b3JlXFN0b3JhZ2VcRW50aXR5XFYx4gImVWRiXEdQQk1ldGFkYXRhXENvcmVc",
-            "U3RvcmFnZVxFbnRpdHlcVjHqAh5VZGI6OkNvcmU6OlN0b3JhZ2U6OkVudGl0",
-            "eTo6VjFiBnByb3RvMw=="));
+            "VEFUVVNfREVMRVRFRBADKpEBCgtTY2FuVmVyZGljdBIcChhTQ0FOX1ZFUkRJ",
+            "Q1RfVU5TUEVDSUZJRUQQABIYChRTQ0FOX1ZFUkRJQ1RfUEVORElORxABEhYK",
+            "ElNDQU5fVkVSRElDVF9DTEVBThACEhkKFVNDQU5fVkVSRElDVF9JTkZFQ1RF",
+            "RBADEhcKE1NDQU5fVkVSRElDVF9GQUlMRUQQBEKBAgoeY29tLnVkYi5jb3Jl",
+            "LnN0b3JhZ2UuZW50aXR5LnYxQgpFbnVtc1Byb3RvUAFaRmdpdGh1Yi5jb20v",
+            "ZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvc3RvcmFnZS9lbnRp",
+            "dHkvdjE7ZW50aXR5djGiAgRVQ1NFqgIadWRiLmNvcmUuU3RvcmFnZS5FbnRp",
+            "dHkuVjHKAhpVZGJcQ29yZVxTdG9yYWdlXEVudGl0eVxWMeICJlVkYlxHUEJN",
+            "ZXRhZGF0YVxDb3JlXFN0b3JhZ2VcRW50aXR5XFYx6gIeVWRiOjpDb3JlOjpT",
+            "dG9yYWdlOjpFbnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
-          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::udb.core.Storage.Entity.V1.FileType), typeof(global::udb.core.Storage.Entity.V1.FileStatus), }, null, null));
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::udb.core.Storage.Entity.V1.FileType), typeof(global::udb.core.Storage.Entity.V1.FileStatus), typeof(global::udb.core.Storage.Entity.V1.ScanVerdict), }, null, null));
     }
     #endregion
 
@@ -63,6 +66,36 @@ namespace udb.core.Storage.Entity.V1 {
     [pbr::OriginalName("FILE_STATUS_PENDING")] Pending = 1,
     [pbr::OriginalName("FILE_STATUS_ACTIVE")] Active = 2,
     [pbr::OriginalName("FILE_STATUS_DELETED")] Deleted = 3,
+  }
+
+  /// <summary>
+  /// Antivirus / content-scan verdict for a stored object (V050-3).
+  ///
+  /// UNSPECIFIED means NOT SCANNED, and is deliberately distinct from PENDING.
+  /// Rows that predate scanning carry it after upgrade, so an operator can tell
+  /// "no scanner has ever looked at this" apart from "a scan is in flight" — and
+  /// so enabling enforcement later is a decision, not a silent cutover.
+  /// </summary>
+  public enum ScanVerdict {
+    [pbr::OriginalName("SCAN_VERDICT_UNSPECIFIED")] Unspecified = 0,
+    /// <summary>
+    /// A scan has been requested and has not yet returned.
+    /// </summary>
+    [pbr::OriginalName("SCAN_VERDICT_PENDING")] Pending = 1,
+    /// <summary>
+    /// Scanned and found clean. The only verdict a gated download accepts.
+    /// </summary>
+    [pbr::OriginalName("SCAN_VERDICT_CLEAN")] Clean = 2,
+    /// <summary>
+    /// Scanned and found malicious. Refused on every download path regardless of
+    /// whether enforcement is enabled; only an explicit override scope can reach it.
+    /// </summary>
+    [pbr::OriginalName("SCAN_VERDICT_INFECTED")] Infected = 3,
+    /// <summary>
+    /// The scanner ran and could not produce a verdict (timeout, unreadable
+    /// archive, engine error). Not clean, and not proof of malice.
+    /// </summary>
+    [pbr::OriginalName("SCAN_VERDICT_FAILED")] Failed = 4,
   }
 
   #endregion

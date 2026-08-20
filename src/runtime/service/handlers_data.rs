@@ -631,12 +631,38 @@ impl DataBrokerService {
         }
         if req.dry_run {
             let runtime = self.runtime_snapshot();
+            // The plan below advertises a pipeline including the RLS-bypass guard
+            // and the raw-dispatch gate. Only the selector resolution actually ran,
+            // so a spec that the real call REFUSES was reported as a clean dry run
+            // — the plan described steps that had not happened. Run every check
+            // that is side-effect free; only `execute` is skipped.
+            if let Err(err) = guard_rls_bypass_operation(&req.operation, &req.spec_json) {
+                return self.record_grpc("GenericDispatch", started, Err(err));
+            }
             let resolved_backend = match runtime
                 .resolve_backend_selector_for_project(&req.backend, &metadata_context.project_id)
             {
                 Ok(resolved) => resolved,
                 Err(err) => return self.record_grpc("GenericDispatch", started, Err(err)),
             };
+            let active_catalog = self.catalog.active_for(&metadata_context.project_id);
+            let compiled_dispatch = match compile_neutral_ir_dispatch(
+                &resolved_backend.backend,
+                resolved_backend.instance.as_deref(),
+                &metadata_context,
+                &active_catalog.manifest,
+                &req.operation,
+                &req.spec_json,
+            ) {
+                Ok(compiled) => compiled,
+                Err(err) => return self.record_grpc("GenericDispatch", started, Err(err)),
+            };
+            if compiled_dispatch.is_none()
+                && let Err(err) =
+                    enforce_raw_dispatch_gate(&resolved_backend.backend, self.metrics.as_ref())
+            {
+                return self.record_grpc("GenericDispatch", started, Err(err));
+            }
             return self.record_grpc(
                 "GenericDispatch",
                 started,
@@ -652,10 +678,18 @@ impl DataBrokerService {
                                 "authorize",
                                 "check_capability",
                                 "resolve_backend_selector",
+                                "guard_rls_bypass_operation",
+                                "compile_neutral_ir_dispatch",
+                                "enforce_raw_dispatch_gate",
                                 "admit_generic_dispatch_channel",
                                 "resolve_dispatch_executor",
                                 "execute"
                             ],
+                            // Every step above through `enforce_raw_dispatch_gate`
+                            // was actually evaluated for this request; the rest are
+                            // what a real call would do next.
+                            "verified_through": "enforce_raw_dispatch_gate",
+                            "ir_mediated": compiled_dispatch.is_some(),
                             "backend": resolved_backend.backend,
                             "instance": resolved_backend.instance,
                             "operation": req.operation,

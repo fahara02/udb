@@ -44,6 +44,33 @@ fn file_status_from_db(value: &str) -> i32 {
     }
 }
 
+/// DB token -> `ScanVerdict`. Accepts the short and fully-qualified spellings,
+/// matching `file_status_from_db`. An unknown token decodes to UNSPECIFIED,
+/// which the download gate treats as NOT scanned — never as clean.
+pub(crate) fn scan_verdict_from_db(value: &str) -> i32 {
+    use storage_entity_pb::ScanVerdict as V;
+    match value.trim() {
+        "PENDING" | "SCAN_VERDICT_PENDING" => V::Pending as i32,
+        "CLEAN" | "SCAN_VERDICT_CLEAN" => V::Clean as i32,
+        "INFECTED" | "SCAN_VERDICT_INFECTED" => V::Infected as i32,
+        "FAILED" | "SCAN_VERDICT_FAILED" => V::Failed as i32,
+        _ => V::Unspecified as i32,
+    }
+}
+
+/// `ScanVerdict` -> the canonical DB token. Fully-qualified so the stored value
+/// matches the column default the manifest declares.
+pub(crate) fn scan_verdict_to_db(value: i32) -> &'static str {
+    use storage_entity_pb::ScanVerdict as V;
+    match V::try_from(value) {
+        Ok(V::Pending) => "SCAN_VERDICT_PENDING",
+        Ok(V::Clean) => "SCAN_VERDICT_CLEAN",
+        Ok(V::Infected) => "SCAN_VERDICT_INFECTED",
+        Ok(V::Failed) => "SCAN_VERDICT_FAILED",
+        _ => "SCAN_VERDICT_UNSPECIFIED",
+    }
+}
+
 pub(crate) fn file_type_to_db(value: &str, default: &str) -> Result<String, Status> {
     let v = value.trim();
     if v.is_empty() {
@@ -199,6 +226,9 @@ pub(crate) fn file_from_json(row: &serde_json::Value) -> storage_entity_pb::File
         checksum: json_string(row, "checksum"),
         uploaded_by: json_string(row, "uploaded_by"),
         deleted_by: json_string(row, "deleted_by"),
+        scan_verdict: scan_verdict_from_db(&json_string(row, "scan_verdict")),
+        scanned_by: json_string(row, "scanned_by"),
+        scan_detail: json_string(row, "scan_detail"),
         ..Default::default()
     }
 }

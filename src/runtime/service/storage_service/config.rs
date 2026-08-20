@@ -98,3 +98,47 @@ pub(crate) fn storage_sse_required() -> bool {
         })
         .unwrap_or(false)
 }
+
+// ── Content scanning (V050-3) ────────────────────────────────────────────────
+
+/// Topic for the scan-verdict transition, emitted through the same
+/// transactional outbox as the other storage events so a consumer can gate on
+/// "this file became CLEAN" without polling.
+pub(crate) const TOPIC_FILE_SCAN_VERDICT_SET: &str = "udb.storage.file.scan_verdict_set.v1";
+
+/// A download was refused because the file's scan verdict is not CLEAN.
+pub(crate) const SCAN_VERDICT_NOT_CLEAN: &str = "SCAN_VERDICT_NOT_CLEAN";
+/// `SetScanVerdict` was called with UNSPECIFIED, or tried an illegal transition.
+pub(crate) const SCAN_VERDICT_INVALID: &str = "SCAN_VERDICT_INVALID";
+
+/// Require a CLEAN scan verdict before any download path hands out bytes or a
+/// presigned URL.
+///
+/// OFF by default, and that default is deliberate. Turning it on for every
+/// deployment at upgrade would refuse every pre-existing file the moment the
+/// column appeared, because nothing has scanned them — an availability outage
+/// dressed as a security fix. An operator enables this once a scanner is
+/// actually writing verdicts.
+///
+/// INFECTED is refused whether or not this is set: if something looked at the
+/// bytes and said they are malicious, serving them is not a configurable
+/// choice. Only the explicit override scope reaches an infected object.
+pub(crate) const STORAGE_REQUIRE_CLEAN_SCAN_ENV: &str = "UDB_STORAGE_REQUIRE_CLEAN_SCAN";
+
+/// Scope that lets a caller download an object whose verdict is not CLEAN —
+/// quarantine review, incident response, or a deliberate operator override. It
+/// is separate from every ordinary storage scope so it cannot be held by
+/// accident.
+pub(crate) const SCAN_OVERRIDE_SCOPE: &str = "udb:storage:download-unscanned";
+
+pub(crate) fn storage_require_clean_scan() -> bool {
+    std::env::var(STORAGE_REQUIRE_CLEAN_SCAN_ENV)
+        .ok()
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}

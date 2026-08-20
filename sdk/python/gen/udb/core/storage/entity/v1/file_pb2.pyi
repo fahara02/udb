@@ -14,7 +14,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class File(_message.Message):
-    __slots__ = ("file_id", "tenant_id", "project_id", "filename", "content_type", "size_bytes", "backend", "bucket", "object_key", "url", "cdn_url", "file_type", "reference_id", "reference_type", "is_public", "status", "checksum", "expires_at", "uploaded_by", "audit_info", "deleted_at", "deleted_by")
+    __slots__ = ("file_id", "tenant_id", "project_id", "filename", "content_type", "size_bytes", "backend", "bucket", "object_key", "url", "cdn_url", "file_type", "reference_id", "reference_type", "is_public", "status", "checksum", "expires_at", "uploaded_by", "audit_info", "deleted_at", "deleted_by", "scan_verdict", "scanned_at", "scanned_by", "scan_detail")
     FILE_ID_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
@@ -37,6 +37,10 @@ class File(_message.Message):
     AUDIT_INFO_FIELD_NUMBER: _ClassVar[int]
     DELETED_AT_FIELD_NUMBER: _ClassVar[int]
     DELETED_BY_FIELD_NUMBER: _ClassVar[int]
+    SCAN_VERDICT_FIELD_NUMBER: _ClassVar[int]
+    SCANNED_AT_FIELD_NUMBER: _ClassVar[int]
+    SCANNED_BY_FIELD_NUMBER: _ClassVar[int]
+    SCAN_DETAIL_FIELD_NUMBER: _ClassVar[int]
     file_id: str
     tenant_id: str
     project_id: str
@@ -59,4 +63,8 @@ class File(_message.Message):
     audit_info: _types_pb2.AuditInfo
     deleted_at: _timestamp_pb2.Timestamp
     deleted_by: str
-    def __init__(self, file_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., filename: _Optional[str] = ..., content_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., backend: _Optional[str] = ..., bucket: _Optional[str] = ..., object_key: _Optional[str] = ..., url: _Optional[str] = ..., cdn_url: _Optional[str] = ..., file_type: _Optional[_Union[_enums_pb2.FileType, str]] = ..., reference_id: _Optional[str] = ..., reference_type: _Optional[str] = ..., is_public: bool = ..., status: _Optional[_Union[_enums_pb2.FileStatus, str]] = ..., checksum: _Optional[str] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., uploaded_by: _Optional[str] = ..., audit_info: _Optional[_Union[_types_pb2.AuditInfo, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_by: _Optional[str] = ...) -> None: ...
+    scan_verdict: _enums_pb2.ScanVerdict
+    scanned_at: _timestamp_pb2.Timestamp
+    scanned_by: str
+    scan_detail: str
+    def __init__(self, file_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., filename: _Optional[str] = ..., content_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., backend: _Optional[str] = ..., bucket: _Optional[str] = ..., object_key: _Optional[str] = ..., url: _Optional[str] = ..., cdn_url: _Optional[str] = ..., file_type: _Optional[_Union[_enums_pb2.FileType, str]] = ..., reference_id: _Optional[str] = ..., reference_type: _Optional[str] = ..., is_public: bool = ..., status: _Optional[_Union[_enums_pb2.FileStatus, str]] = ..., checksum: _Optional[str] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., uploaded_by: _Optional[str] = ..., audit_info: _Optional[_Union[_types_pb2.AuditInfo, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_by: _Optional[str] = ..., scan_verdict: _Optional[_Union[_enums_pb2.ScanVerdict, str]] = ..., scanned_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., scanned_by: _Optional[str] = ..., scan_detail: _Optional[str] = ...) -> None: ...

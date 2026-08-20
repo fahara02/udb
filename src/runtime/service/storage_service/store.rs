@@ -274,6 +274,20 @@ pub(crate) fn file_full_record(file: &storage_entity_pb::File) -> LogicalRecord 
         "deleted_by".to_string(),
         logical_uuid_or_null(&file.deleted_by),
     );
+    // V050-3. Carried on the full record so an ordinary metadata upsert cannot
+    // silently reset a file's scan verdict back to the column default.
+    record.insert(
+        "scan_verdict".to_string(),
+        logical_string(super::model::scan_verdict_to_db(file.scan_verdict)),
+    );
+    record.insert(
+        "scanned_by".to_string(),
+        logical_string(file.scanned_by.clone()),
+    );
+    record.insert(
+        "scan_detail".to_string(),
+        logical_string(file.scan_detail.clone()),
+    );
     record
 }
 
@@ -340,7 +354,7 @@ impl StorageServiceImpl {
                 )
             })?;
         let total: i64 = sqlx::query_scalar(
-            "SELECT COALESCE(SUM(size_bytes), 0)::bigint FROM udb_storage.files              WHERE tenant_id::text = $1 AND deleted_at IS NULL",
+            "SELECT COALESCE(SUM(size_bytes), 0)::bigint FROM udb_storage.files WHERE tenant_id::text = $1 AND deleted_at IS NULL",
         )
         .bind(tenant_id)
         .fetch_one(&mut *tx)

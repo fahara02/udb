@@ -2916,7 +2916,7 @@ pub fn lint_policy_entity_coverage(
                 severity: "warning".to_string(),
                 category: "entity_without_policy".to_string(),
                 message: format!(
-                    "no enabled policy names {message_type} ({schema_table}); every access to it                      will be denied until a rule covers it"
+                    "no enabled policy names {message_type} ({schema_table}); every access to it will be denied until a rule covers it"
                 ),
                 policy_index: None,
             });

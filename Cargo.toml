@@ -119,7 +119,10 @@ kafka = [
 otel = ["dep:opentelemetry", "dep:opentelemetry-otlp", "dep:opentelemetry_sdk", "dep:tracing-opentelemetry", "runtime-logging"]
 runtime-logging = ["dep:tracing-subscriber"]
 # Shared HTTP client used by REST-backed integrations.
-http-client = ["dep:reqwest"]
+# `futures-util` is required to bound a streamed response body: the IdP
+# federation fetch caps bytes as they arrive rather than trusting an
+# untrusted endpoint's Content-Length.
+http-client = ["dep:reqwest", "dep:futures-util"]
 # ── OFF-by-default optional integrations (not in `default`). ──────────────────
 # OpenID Connect discovery / token verification for the auth plane.
 oidc = ["dep:openidconnect", "openidconnect/reqwest-blocking", "openidconnect/rustls-tls"]
@@ -207,7 +210,7 @@ azure_storage = { version = "0.21", default-features = false, optional = true }
 azure_storage_blobs = { version = "0.21", default-features = false, optional = true }
 # Google Cloud Storage client with rustls TLS.
 google-cloud-storage = { version = "0.22", default-features = false, features = ["rustls-tls", "auth"], optional = true }
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking"], optional = true }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking", "stream"], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"

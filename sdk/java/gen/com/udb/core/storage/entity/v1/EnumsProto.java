@@ -44,14 +44,17 @@ public final class EnumsProto {
       "\017FILE_TYPE_OTHER\020c*s\n\nFileStatus\022\033\n\027FILE" +
       "_STATUS_UNSPECIFIED\020\000\022\027\n\023FILE_STATUS_PEN" +
       "DING\020\001\022\026\n\022FILE_STATUS_ACTIVE\020\002\022\027\n\023FILE_S" +
-      "TATUS_DELETED\020\003B\201\002\n\036com.udb.core.storage" +
-      ".entity.v1B\nEnumsProtoP\001ZFgithub.com/fah" +
-      "ara02/udb/sdk/go/gen/udb/core/storage/en" +
-      "tity/v1;entityv1\242\002\004UCSE\252\002\032udb.core.Stora" +
-      "ge.Entity.V1\312\002\032Udb\\Core\\Storage\\Entity\\V" +
-      "1\342\002&Udb\\GPBMetadata\\Core\\Storage\\Entity\\" +
-      "V1\352\002\036Udb::Core::Storage::Entity::V1b\006pro" +
-      "to3"
+      "TATUS_DELETED\020\003*\221\001\n\013ScanVerdict\022\034\n\030SCAN_" +
+      "VERDICT_UNSPECIFIED\020\000\022\030\n\024SCAN_VERDICT_PE" +
+      "NDING\020\001\022\026\n\022SCAN_VERDICT_CLEAN\020\002\022\031\n\025SCAN_" +
+      "VERDICT_INFECTED\020\003\022\027\n\023SCAN_VERDICT_FAILE" +
+      "D\020\004B\201\002\n\036com.udb.core.storage.entity.v1B\n" +
+      "EnumsProtoP\001ZFgithub.com/fahara02/udb/sd" +
+      "k/go/gen/udb/core/storage/entity/v1;enti" +
+      "tyv1\242\002\004UCSE\252\002\032udb.core.Storage.Entity.V1" +
+      "\312\002\032Udb\\Core\\Storage\\Entity\\V1\342\002&Udb\\GPBM" +
+      "etadata\\Core\\Storage\\Entity\\V1\352\002\036Udb::Co" +
+      "re::Storage::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
