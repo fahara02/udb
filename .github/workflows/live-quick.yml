@@ -86,7 +86,11 @@ jobs:
         run: |
           set -euo pipefail
           # shellcheck disable=SC2086
-          cargo test --locked --lib $TEST_FILTER -- --ignored --nocapture --test-threads=1
+          # Filters go AFTER `--`: cargo itself accepts only ONE positional filter
+          # and rejects the rest as unexpected arguments, so the space-separated
+          # contract this input documents (and its own default) could never work.
+          # libtest takes multiple filters and matches any of them.
+          cargo test --locked --lib -- --ignored --nocapture --test-threads=1 $TEST_FILTER
       - name: Dump stack logs on failure
         if: failure()
         run: docker compose -f docker-compose.integration.yml logs --no-color --tail=200
