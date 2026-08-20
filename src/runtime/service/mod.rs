@@ -859,233 +859,28 @@ impl DataBrokerService {
         principal_id: &str,
         per_key_per_minute: i64,
     ) -> Result<(), Status> {
-        let redis = self.runtime_snapshot().redis_clone();
-        let window_secs = self
-            .runtime_snapshot()
-            .config()
-            .service
-            .rate_limit_window_secs
-            .max(1);
-        let per_key_enabled = self
-            .runtime_snapshot()
-            .config()
-            .service
-            .rate_limit_per_key_enabled;
-        let base_max_rps = self
-            .runtime_snapshot()
-            .config()
-            .service
-            .rate_limit_max_per_window;
-
-        let unix_epoch = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-        let window_index = unix_epoch / window_secs;
-
-        let (key, max_rps) = resolve_rate_limit_bucket(
-            per_key_enabled,
-            tenant_id,
-            principal_id,
-            operation,
-            window_index,
-            base_max_rps,
-            window_secs,
-            per_key_per_minute,
-        );
-
-        // C5: no Redis configured — do NOT silently fail OPEN. Explicit
-        // `UDB_RATE_LIMIT_FAILURE_MODE=open` allows; every other mode (including the
-        // default `closed`) applies the local per-process limiter so requests are
-        // still bounded rather than unconditionally allowed.
-        let Some(redis) = redis else {
-            let mode = self
-                .runtime_snapshot()
-                .config()
-                .service
-                .rate_limit_failure_mode
-                .clone();
-            if rate_limit_absent_backend_allows_open(&mode) {
-                return Ok(());
-            }
-            return self
-                .apply_local_rate_limit(&key, window_secs, max_rps, unix_epoch, "no_backend")
-                .await;
-        };
-
-        let mut conn = {
-            let mut guard = self.rate_limit_redis.lock().await;
-            if guard.is_none() {
-                match redis::aio::ConnectionManager::new(redis.clone()).await {
-                    Ok(conn) => *guard = Some(RateLimitRedisConnection(conn)),
-                    Err(err) => {
-                        drop(guard);
-                        let status = crate::runtime::executor_utils::retryable_status(
-                            "redis",
-                            "rate_limit_connection",
-                            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                            format!("rate limit redis error: {err}"),
-                        );
-                        return self
-                            .rate_limit_failure_fallback(
-                                &key,
-                                window_secs,
-                                max_rps,
-                                unix_epoch,
-                                status,
-                            )
-                            .await;
-                    }
-                }
-            }
-            guard
-                .as_ref()
-                .expect("rate limit redis connection just initialized")
-                .0
-                .clone()
-        };
-
-        // INCR + EXPIRE-on-first-hit must be atomic and fail-CLOSED:
-        //  - A bare INCR followed by a separate EXPIRE can orphan a key without
-        //    a TTL (crash/EXPIRE-error between the two), which then counts
-        //    forever and permanently blocks the tenant.
-        //  - `unwrap_or(0)` on errors fails OPEN (a Redis blip disables the
-        //    limiter entirely). A rate limiter that silently stops limiting is
-        //    worse than one that rejects on infra failure.
-        // A single Lua eval does both atomically and propagates errors.
-        const RATE_LIMIT_LUA: &str = "local c = redis.call('INCR', KEYS[1]) \
-             if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end \
-             return c";
-        let script = redis::Script::new(RATE_LIMIT_LUA);
-        let first_attempt: Result<u64, redis::RedisError> = script
-            .key(&key)
-            .arg(window_secs)
-            .invoke_async(&mut conn)
-            .await;
-        let count: u64 = match first_attempt {
-            Ok(count) => {
-                self.rate_limit_degraded
-                    .store(false, std::sync::atomic::Ordering::Relaxed);
-                count
-            }
-            Err(err) => {
-                // The Lua body mutates state before the response arrives, so an I/O
-                // error is an uncertain outcome and MUST NOT be replayed in-call.
-                // ConnectionManager returns this failure while reconnecting in the
-                // background; the next request uses the replacement connection.
-                let status = crate::runtime::executor_utils::retryable_status(
-                    "redis",
-                    "rate_limit_eval",
-                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                    format!("rate limit redis error: {err}"),
-                );
-                return self
-                    .rate_limit_failure_fallback(&key, window_secs, max_rps, unix_epoch, status)
-                    .await;
-            }
-        };
-
-        if count > u64::from(max_rps) {
-            let retry_after_ms =
-                (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
-            return Err(crate::runtime::executor_utils::quota_status(
-                "data_broker",
-                "distributed rate limit",
-                retry_after_ms,
-                // Name the governing knob and the bucket identity so operators can
-                // attribute the pressure and raise the ceiling without grepping
-                // the binary. The budget is per (tenant, operation) — every
-                // principal in the tenant shares it — so callers know the fix is a
-                // higher tenant budget, not a per-principal one.
-                format!(
-                    "rate limit exceeded for tenant '{}' on {}: {}/{} requests per {}s window \
-                     (raise UDB_RATE_LIMIT_MAX_PER_WINDOW to increase the per-tenant budget)",
-                    tenant_id, operation, count, max_rps, window_secs
-                ),
-            ));
-        }
-        Ok(())
+        self.rate_limit_handle()
+            .check(tenant_id, operation, principal_id, per_key_per_minute)
+            .await
     }
 
-    /// Per-process fixed-window limiter used when the distributed (Redis) limiter
-    /// is unavailable — either after a connection/command failure (`local` failure
-    /// mode) or when no Redis is configured at all (C5). Sets the degraded flag so the
-    /// health report surfaces the degraded state. `N×limit` across N replicas —
-    /// degraded but NOT absent (never a silent fail-open).
-    #[cfg(feature = "redis")]
-    async fn apply_local_rate_limit(
-        &self,
-        key: &str,
-        window_secs: u64,
-        max_rps: u32,
-        unix_epoch: u64,
-        degraded_label: &'static str,
-    ) -> Result<(), Status> {
-        self.rate_limit_degraded
-            .store(true, std::sync::atomic::Ordering::Relaxed);
-        self.metrics.record_rate_limit_degraded(degraded_label);
-        let window = unix_epoch / window_secs;
-        let count = {
-            let mut windows = self.rate_limit_local.lock().await;
-            // Prune expired windows so an outage never grows the map beyond the
-            // currently-active keys.
-            windows.retain(|_, (w, _)| *w == window);
-            let entry = windows.entry(key.to_string()).or_insert((window, 0));
-            entry.1 += 1;
-            entry.1
-        };
-        if count > u64::from(max_rps) {
-            let retry_after_ms =
-                (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
-            return Err(crate::runtime::executor_utils::quota_status(
-                "data_broker",
-                "local rate limit (degraded)",
-                retry_after_ms,
-                format!(
-                    "rate limit exceeded: {}/{} requests per {}s window \
-                     (per-process fallback; raise UDB_RATE_LIMIT_MAX_PER_WINDOW \
-                     to increase the budget)",
-                    count, max_rps, window_secs
-                ),
-            ));
+    /// A cloneable limiter handle for call sites that cannot borrow `&self` -
+    /// notably the `'static` batch stream closures, which is why those streams
+    /// were rate-limited once at establishment and never again.
+    pub(crate) fn rate_limit_handle(&self) -> RateLimitHandle {
+        #[cfg(feature = "redis")]
+        {
+            RateLimitHandle {
+                runtime: self.runtime_snapshot(),
+                redis_conn: self.rate_limit_redis.clone(),
+                degraded: self.rate_limit_degraded.clone(),
+                metrics: self.metrics.clone(),
+                local_counters: self.rate_limit_local.clone(),
+            }
         }
-        Ok(())
-    }
-
-    /// W4: the limiter's DECLARED behavior when Redis is unreachable
-    /// (`service.rate_limit_failure_mode`):
-    /// `closed` returns the typed retryable status; `local` enforces a
-    /// per-process fixed window (N×limit across N replicas — degraded but not
-    /// absent); `open` allows. `local`/`open` set the degraded flag, which the
-    /// health report surfaces as a warning until Redis recovers.
-    #[cfg(feature = "redis")]
-    async fn rate_limit_failure_fallback(
-        &self,
-        key: &str,
-        window_secs: u64,
-        max_rps: u32,
-        unix_epoch: u64,
-        closed_status: Status,
-    ) -> Result<(), Status> {
-        let mode = self
-            .runtime_snapshot()
-            .config()
-            .service
-            .rate_limit_failure_mode
-            .clone();
-        match mode.as_str() {
-            "local" => {
-                self.apply_local_rate_limit(key, window_secs, max_rps, unix_epoch, "local")
-                    .await
-            }
-            "open" => {
-                self.rate_limit_degraded
-                    .store(true, std::sync::atomic::Ordering::Relaxed);
-                self.metrics.record_rate_limit_degraded("open");
-                Ok(())
-            }
-            // "closed" and anything unrecognized keep the fail-closed stance.
-            _ => Err(closed_status),
+        #[cfg(not(feature = "redis"))]
+        {
+            RateLimitHandle
         }
     }
 
@@ -5078,3 +4873,270 @@ mod live_tests;
 mod native_context_posture_tests;
 #[cfg(test)]
 mod tests;
+
+/// The rate limiter dependencies, detached from `&DataBrokerService`.
+///
+/// Batch RPCs authorize each streamed item from inside a `'static` stream
+/// closure that cannot borrow `&self`. That is why per-item authorization went
+/// through the Casbin-only `authorize_message_item` and the per-minute quota was
+/// checked ONCE, at stream establishment; the stream then ran until the client
+/// closed it with no aggregate cap, so one authorized open let a tenant push
+/// unlimited operations past a quota it was nominally subject to.
+///
+/// Every dependency the limiter touches is already behind an `Arc`, so this is
+/// cheap to clone and can be captured beside `abac_snapshot`. The limiter logic
+/// is unchanged - only its receiver moved.
+#[cfg(feature = "redis")]
+#[derive(Clone)]
+pub(crate) struct RateLimitHandle {
+    metrics: Arc<dyn MetricsRecorder>,
+    local_counters: Arc<tokio::sync::Mutex<std::collections::HashMap<String, (u64, u64)>>>,
+    runtime: Arc<DataBrokerRuntime>,
+    redis_conn: Arc<tokio::sync::Mutex<Option<RateLimitRedisConnection>>>,
+    degraded: Arc<std::sync::atomic::AtomicBool>,
+}
+
+/// Stand-in so batch call sites compile without redis, where the limiter is
+/// already a warn-once no-op.
+#[cfg(not(feature = "redis"))]
+#[derive(Clone)]
+pub(crate) struct RateLimitHandle;
+
+#[cfg(not(feature = "redis"))]
+impl RateLimitHandle {
+    pub(crate) async fn check(
+        &self,
+        _tenant_id: &str,
+        _operation: &str,
+        _principal_id: &str,
+        _per_key_per_minute: i64,
+    ) -> Result<(), Status> {
+        Ok(())
+    }
+}
+
+#[cfg(feature = "redis")]
+impl RateLimitHandle {
+    pub(crate) async fn check(
+        &self,
+        tenant_id: &str,
+        operation: &str,
+        principal_id: &str,
+        per_key_per_minute: i64,
+    ) -> Result<(), Status> {
+        let redis = self.runtime.redis_clone();
+        let window_secs = self.runtime.config().service.rate_limit_window_secs.max(1);
+        let per_key_enabled = self.runtime.config().service.rate_limit_per_key_enabled;
+        let base_max_rps = self.runtime.config().service.rate_limit_max_per_window;
+
+        let unix_epoch = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let window_index = unix_epoch / window_secs;
+
+        let (key, max_rps) = resolve_rate_limit_bucket(
+            per_key_enabled,
+            tenant_id,
+            principal_id,
+            operation,
+            window_index,
+            base_max_rps,
+            window_secs,
+            per_key_per_minute,
+        );
+
+        // C5: no Redis configured — do NOT silently fail OPEN. Explicit
+        // `UDB_RATE_LIMIT_FAILURE_MODE=open` allows; every other mode (including the
+        // default `closed`) applies the local per-process limiter so requests are
+        // still bounded rather than unconditionally allowed.
+        let Some(redis) = redis else {
+            let mode = self
+                .runtime
+                .config()
+                .service
+                .rate_limit_failure_mode
+                .clone();
+            if rate_limit_absent_backend_allows_open(&mode) {
+                return Ok(());
+            }
+            return self
+                .apply_local_rate_limit(&key, window_secs, max_rps, unix_epoch, "no_backend")
+                .await;
+        };
+
+        let mut conn = {
+            let mut guard = self.redis_conn.lock().await;
+            if guard.is_none() {
+                match redis::aio::ConnectionManager::new(redis.clone()).await {
+                    Ok(conn) => *guard = Some(RateLimitRedisConnection(conn)),
+                    Err(err) => {
+                        drop(guard);
+                        let status = crate::runtime::executor_utils::retryable_status(
+                            "redis",
+                            "rate_limit_connection",
+                            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                            format!("rate limit redis error: {err}"),
+                        );
+                        return self
+                            .rate_limit_failure_fallback(
+                                &key,
+                                window_secs,
+                                max_rps,
+                                unix_epoch,
+                                status,
+                            )
+                            .await;
+                    }
+                }
+            }
+            guard
+                .as_ref()
+                .expect("rate limit redis connection just initialized")
+                .0
+                .clone()
+        };
+
+        // INCR + EXPIRE-on-first-hit must be atomic and fail-CLOSED:
+        //  - A bare INCR followed by a separate EXPIRE can orphan a key without
+        //    a TTL (crash/EXPIRE-error between the two), which then counts
+        //    forever and permanently blocks the tenant.
+        //  - `unwrap_or(0)` on errors fails OPEN (a Redis blip disables the
+        //    limiter entirely). A rate limiter that silently stops limiting is
+        //    worse than one that rejects on infra failure.
+        // A single Lua eval does both atomically and propagates errors.
+        const RATE_LIMIT_LUA: &str = "local c = redis.call('INCR', KEYS[1]) \
+             if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end \
+             return c";
+        let script = redis::Script::new(RATE_LIMIT_LUA);
+        let first_attempt: Result<u64, redis::RedisError> = script
+            .key(&key)
+            .arg(window_secs)
+            .invoke_async(&mut conn)
+            .await;
+        let count: u64 = match first_attempt {
+            Ok(count) => {
+                self.degraded
+                    .store(false, std::sync::atomic::Ordering::Relaxed);
+                count
+            }
+            Err(err) => {
+                // The Lua body mutates state before the response arrives, so an I/O
+                // error is an uncertain outcome and MUST NOT be replayed in-call.
+                // ConnectionManager returns this failure while reconnecting in the
+                // background; the next request uses the replacement connection.
+                let status = crate::runtime::executor_utils::retryable_status(
+                    "redis",
+                    "rate_limit_eval",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    format!("rate limit redis error: {err}"),
+                );
+                return self
+                    .rate_limit_failure_fallback(&key, window_secs, max_rps, unix_epoch, status)
+                    .await;
+            }
+        };
+
+        if count > u64::from(max_rps) {
+            let retry_after_ms =
+                (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
+            return Err(crate::runtime::executor_utils::quota_status(
+                "data_broker",
+                "distributed rate limit",
+                retry_after_ms,
+                // Name the governing knob and the bucket identity so operators can
+                // attribute the pressure and raise the ceiling without grepping
+                // the binary. The budget is per (tenant, operation) — every
+                // principal in the tenant shares it — so callers know the fix is a
+                // higher tenant budget, not a per-principal one.
+                format!(
+                    "rate limit exceeded for tenant '{}' on {}: {}/{} requests per {}s window \
+                     (raise UDB_RATE_LIMIT_MAX_PER_WINDOW to increase the per-tenant budget)",
+                    tenant_id, operation, count, max_rps, window_secs
+                ),
+            ));
+        }
+        Ok(())
+    }
+    /// Per-process fixed-window limiter used when the distributed (Redis) limiter
+    /// is unavailable — either after a connection/command failure (`local` failure
+    /// mode) or when no Redis is configured at all (C5). Sets the degraded flag so the
+    /// health report surfaces the degraded state. `N×limit` across N replicas —
+    /// degraded but NOT absent (never a silent fail-open).
+    #[cfg(feature = "redis")]
+    async fn apply_local_rate_limit(
+        &self,
+        key: &str,
+        window_secs: u64,
+        max_rps: u32,
+        unix_epoch: u64,
+        degraded_label: &'static str,
+    ) -> Result<(), Status> {
+        self.degraded
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        self.metrics.record_rate_limit_degraded(degraded_label);
+        let window = unix_epoch / window_secs;
+        let count = {
+            let mut windows = self.local_counters.lock().await;
+            // Prune expired windows so an outage never grows the map beyond the
+            // currently-active keys.
+            windows.retain(|_, (w, _)| *w == window);
+            let entry = windows.entry(key.to_string()).or_insert((window, 0));
+            entry.1 += 1;
+            entry.1
+        };
+        if count > u64::from(max_rps) {
+            let retry_after_ms =
+                (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
+            return Err(crate::runtime::executor_utils::quota_status(
+                "data_broker",
+                "local rate limit (degraded)",
+                retry_after_ms,
+                format!(
+                    "rate limit exceeded: {}/{} requests per {}s window \
+                     (per-process fallback; raise UDB_RATE_LIMIT_MAX_PER_WINDOW \
+                     to increase the budget)",
+                    count, max_rps, window_secs
+                ),
+            ));
+        }
+        Ok(())
+    }
+
+    /// W4: the limiter's DECLARED behavior when Redis is unreachable
+    /// (`service.rate_limit_failure_mode`):
+    /// `closed` returns the typed retryable status; `local` enforces a
+    /// per-process fixed window (N×limit across N replicas — degraded but not
+    /// absent); `open` allows. `local`/`open` set the degraded flag, which the
+    /// health report surfaces as a warning until Redis recovers.
+    #[cfg(feature = "redis")]
+    async fn rate_limit_failure_fallback(
+        &self,
+        key: &str,
+        window_secs: u64,
+        max_rps: u32,
+        unix_epoch: u64,
+        closed_status: Status,
+    ) -> Result<(), Status> {
+        let mode = self
+            .runtime
+            .config()
+            .service
+            .rate_limit_failure_mode
+            .clone();
+        match mode.as_str() {
+            "local" => {
+                self.apply_local_rate_limit(key, window_secs, max_rps, unix_epoch, "local")
+                    .await
+            }
+            "open" => {
+                self.degraded
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+                self.metrics.record_rate_limit_degraded("open");
+                Ok(())
+            }
+            // "closed" and anything unrecognized keep the fail-closed stance.
+            _ => Err(closed_status),
+        }
+    }
+}

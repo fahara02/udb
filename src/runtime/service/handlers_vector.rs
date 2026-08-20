@@ -185,9 +185,23 @@ impl DataBrokerService {
         // Casbin-only per-item authz (see batch_select_inner): capture the
         // cloneable snapshot and decide each item via `casbin_authorize`.
         let abac_snapshot = self.current_authz_snapshot();
+        // Per-item quota: see batch_select_inner. A stream open charged the
+        // limiter once and then ran unbounded.
+        let rate_limiter = self.rate_limit_handle();
+        let rate_limit_enabled = self.runtime_snapshot().config().service.rate_limit_enabled;
         let out = async_stream::try_stream! {
             while let Some(item) = stream.message().await? {
                 metrics.inc_vector_op(&item.collection, "batch_upsert");
+                if rate_limit_enabled && !security_for_stream.tenant_id.is_empty() {
+                    rate_limiter
+                        .check(
+                            &security_for_stream.tenant_id,
+                            "VectorBatchUpsert",
+                            &security_for_stream.credential_id,
+                            security_for_stream.rate_limit_per_minute,
+                        )
+                        .await?;
+                }
                 // #112: authorize THIS item's collection + stamp its decision id.
                 let item_decision_id = DataBrokerService::authorize_message_item(
                     &abac_snapshot,

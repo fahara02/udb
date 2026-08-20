@@ -701,6 +701,11 @@ pub(crate) async fn enqueue_outbox_event(
     .await;
 }
 
+/// Bounded retries for a best-effort outbox enqueue. Short: this runs after the
+/// caller's row is already committed, so the aim is to survive a transient blip
+/// without holding the request.
+const OUTBOX_ENQUEUE_MAX_ATTEMPTS: u32 = 3;
+
 pub(crate) async fn emit_payload_event(
     pool: &PgPool,
     relation: Option<&str>,
@@ -842,9 +847,49 @@ pub(crate) async fn enqueue_outbox_event_with_context(
     )
     .await
     {
-        tracing::warn!(topic, error = %err, "native outbox enqueue failed");
-        if let Some(m) = metrics {
-            m.inc_outbox_enqueue_failures_total("native");
+        // The caller's row is ALREADY committed by the time this runs - the
+        // native entity write goes through the dispatch executor, which owns its
+        // own connection and exposes no transaction to join. So a lost enqueue is
+        // a row that exists with no event ever emitted, and no later pass will
+        // notice: unlike the webhook journal, nothing re-derives this event.
+        //
+        // A single warn was too quiet for that. Retry the insert briefly first -
+        // most failures here are a transient pool blip, and the envelope is
+        // already built and idempotent by event_id - then report at ERROR naming
+        // the consequence, so the gap is alertable rather than a warn in a log.
+        //
+        // This narrows the window; it does not close it. Emitting the event
+        // atomically with the entity write requires the dispatch layer to accept a
+        // caller-supplied transaction (as `enqueue_outbox_event_in_tx` already
+        // does for the raw-SQL metering path).
+        let mut enqueued = false;
+        for attempt in 1..=OUTBOX_ENQUEUE_MAX_ATTEMPTS {
+            tokio::time::sleep(std::time::Duration::from_millis(100 * attempt as u64)).await;
+            if crate::runtime::cdc::insert_outbox_row(
+                pool,
+                rel,
+                event_uuid,
+                topic,
+                partition_key,
+                &envelope,
+            )
+            .await
+            .is_ok()
+            {
+                tracing::warn!(topic, attempt, "native outbox enqueue succeeded on retry");
+                enqueued = true;
+                break;
+            }
+        }
+        if !enqueued {
+            tracing::error!(
+                topic,
+                error = %err,
+                "native outbox enqueue failed after retries; the entity write is COMMITTED but its \n                 event was never emitted, and nothing will re-derive it - downstream CDC \n                 consumers will not see this change"
+            );
+            if let Some(m) = metrics {
+                m.inc_outbox_enqueue_failures_total("native");
+            }
         }
     }
 }

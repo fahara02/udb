@@ -242,6 +242,12 @@ impl DataBrokerService {
         // path as the single-item gate — deny-by-default, no legacy `evaluate_abac`,
         // no v2 flag. The stream body is async, so it `.await`s the decision.
         let abac_snapshot = self.current_authz_snapshot();
+        // Per-item quota: the limiter was applied ONCE at stream establishment,
+        // so an authorized batch open let a tenant push unlimited operations past
+        // its per-minute quota. The handle is cloneable precisely so a `'static`
+        // stream closure can charge every item, exactly as a unary call is charged.
+        let rate_limiter = self.rate_limit_handle();
+        let rate_limit_enabled = self.runtime_snapshot().config().service.rate_limit_enabled;
         // #155: batch items are admitted and executed ONE AT A TIME on purpose.
         // The fair-admission permit is acquired PER ITEM (it drops at the end of
         // each loop iteration, not held across the whole batch) so every item
@@ -252,6 +258,18 @@ impl DataBrokerService {
         let out = async_stream::try_stream! {
             while let Some(item) = stream.message().await? {
                 enforce_select_export_controls(&manifest, &security_for_stream, &item.message_type, &item.fields)?;
+                // Charge this item against the tenant quota BEFORE authorizing or
+                // executing it, mirroring the unary prologue.
+                if rate_limit_enabled && !security_for_stream.tenant_id.is_empty() {
+                    rate_limiter
+                        .check(
+                            &security_for_stream.tenant_id,
+                            "BatchSelect",
+                            &security_for_stream.credential_id,
+                            security_for_stream.rate_limit_per_minute,
+                        )
+                        .await?;
+                }
                 // #112: authorize THIS item's message_type and stamp its own
                 // decision id (the batch-level grant covered only "BatchSelect").
                 let item_decision_id = DataBrokerService::authorize_message_item(
@@ -358,11 +376,29 @@ impl DataBrokerService {
         // Casbin-only per-item authz (see batch_select_inner): capture the
         // cloneable snapshot and decide each item via `casbin_authorize`.
         let abac_snapshot = self.current_authz_snapshot();
+        // Per-item quota: the limiter was applied ONCE at stream establishment,
+        // so an authorized batch open let a tenant push unlimited operations past
+        // its per-minute quota. The handle is cloneable precisely so a `'static`
+        // stream closure can charge every item, exactly as a unary call is charged.
+        let rate_limiter = self.rate_limit_handle();
+        let rate_limit_enabled = self.runtime_snapshot().config().service.rate_limit_enabled;
         // #155: per-item fair-admission permit (dropped each iteration) + per-item
         // timeout below — intentional bounded-concurrency admission for the
         // streaming RPC, not a permit-held-across-batch serialization bug.
         let out = async_stream::try_stream! {
             while let Some(item) = stream.message().await? {
+                // Charge this item against the tenant quota BEFORE authorizing or
+                // executing it, mirroring the unary prologue.
+                if rate_limit_enabled && !security_for_stream.tenant_id.is_empty() {
+                    rate_limiter
+                        .check(
+                            &security_for_stream.tenant_id,
+                            "BatchUpsert",
+                            &security_for_stream.credential_id,
+                            security_for_stream.rate_limit_per_minute,
+                        )
+                        .await?;
+                }
                 // #112: authorize THIS item's message_type + stamp its decision id.
                 let item_decision_id = DataBrokerService::authorize_message_item(
                     &abac_snapshot,
