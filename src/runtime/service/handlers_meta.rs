@@ -572,6 +572,23 @@ impl DataBrokerService {
             }
         }
 
+        // Durable audit degradation is a health fault, not a log line. The same
+        // outcome — every audit event falling back to stdout while the broker
+        // reported ready — reached production twice through two different
+        // mechanisms, because nothing here ever asked. Now it does, so any FUTURE
+        // mechanism surfaces without needing its own wiring. Recorded on the
+        // metrics recorder too, so it alerts without anyone reading the report.
+        if let Some((degraded_events, reason, last_unix)) =
+            crate::runtime::core::audit::audit_degradation_snapshot()
+        {
+            self.metrics.record_audit_sink_failure("data_plane_audit");
+            errors.push(format!(
+                "durable audit sink is DEGRADED: {degraded_events} audit event(s) could not be \
+                 durably stored (most recent reason: {reason}, at unix {last_unix}). Audit \
+                 events are going to stdout and are NOT retained"
+            ));
+        }
+
         let probes_json = serde_json::to_vec(&probes).unwrap_or_default();
 
         // ── Phase 10: unified readiness contract ──────────────────────────────

@@ -121,6 +121,15 @@ without standing up broker TLS or an external SIEM:**
   gate; enable both for a full data-plane + auth-plane trail. (These are two
   independent sinks — `UDB_AUDIT_SINK` governs data-plane mutations,
   `UDB_AUDIT_EXPORT_POSTGRES` the auth plane.)
+
+  > **Point `UDB_AUDIT_PG_TABLE` at a dedicated table and let the sink create it.**
+  > Naming a table that already exists is checked at startup: the boot check proves
+  > the relation is *writable in the sink's shape*, not merely creatable, and refuses
+  > to start (under `UDB_FAIL_CLOSED`) naming the columns that are missing.
+  > In particular do **not** point it at `udb_system.udb_admin_audit_log` — that is
+  > UDB's own hash-chained admin-audit table, with a different shape and its own
+  > writer. Adding columns to it by hand would leave two writers with incompatible
+  > expectations on one relation.
 - **`UDB_TRUSTED_TRANSPORT=true`** — an explicit, auditable acknowledgment that
   transport is secured **outside** the broker (a TLS-terminating reverse proxy,
   a service mesh with mTLS sidecars, or a trusted private network). It satisfies

@@ -18,7 +18,7 @@
 //! gateway transcoding layer, not inside these handlers.
 
 mod apikey;
-mod audit_export;
+pub(crate) mod audit_export;
 mod authn;
 mod authz;
 mod control_plane;

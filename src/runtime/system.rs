@@ -319,10 +319,113 @@ pub async fn ensure_system_catalog(pool: &PgPool) -> Result<SystemCatalogReport,
         )
     })?;
 
+    // `CREATE TABLE IF NOT EXISTS` is a NO-OP against a pre-existing relation of
+    // any shape, so the loop above proves these tables are creatable and NOT that
+    // they are usable. Every relation here is operator-overridable (`UDB_*_TABLE`),
+    // so pointing one at an existing table of the wrong shape bootstraps clean and
+    // then fails on first write - the broker comes up healthy and every CDC,
+    // outbox or DLQ write fails afterwards.
+    //
+    // The durable audit sink shipped exactly that defect twice. Verify here
+    // instead, at the one chokepoint that owns all of these tables, so a bad
+    // relation is named at STARTUP with its missing columns rather than surfacing
+    // later as a raw Postgres error under load.
+    for statement in &statements {
+        let Some((relation, columns)) = declared_table_columns(statement) else {
+            continue;
+        };
+        let refs: Vec<&str> = columns.iter().map(String::as_str).collect();
+        crate::runtime::core::audit::verify_table_columns(pool, &relation, &refs)
+            .await
+            .map_err(|err| {
+                system_catalog_internal_status(
+                    "bootstrap_shape",
+                    format!(
+                        "UDB system table {relation} exists but does not match the shape UDB \
+                         requires: {err}. It was not created by this bootstrap - point the \
+                         corresponding UDB_*_TABLE override at a dedicated relation, or drop the \
+                         conflicting table"
+                    ),
+                )
+            })?;
+    }
+
     Ok(SystemCatalogReport {
         schema: config.cdc.system_schema,
         statements_applied: statements.len(),
     })
+}
+
+/// Extract `(relation, column_names)` from a `CREATE TABLE IF NOT EXISTS` DDL
+/// statement, or `None` for anything else.
+///
+/// Deliberately conservative: this drives a check that can REFUSE TO START the
+/// broker, so any statement it cannot parse unambiguously yields `None` and is
+/// skipped rather than risking a false refusal on a healthy deployment. Reading
+/// the column list off the DDL keeps the check honest - there is no second,
+/// hand-maintained list to drift out of sync with the schema.
+fn declared_table_columns(statement: &str) -> Option<(String, Vec<String>)> {
+    let trimmed = statement.trim();
+    let rest = trimmed.strip_prefix("CREATE TABLE IF NOT EXISTS ")?;
+    let open = rest.find('(')?;
+    let relation = rest[..open].trim().to_string();
+    if relation.is_empty() {
+        return None;
+    }
+    // Body between the OUTERMOST parens; inner parens belong to types like
+    // VARCHAR(80) and to CHECK expressions.
+    let body = rest[open + 1..].trim_end();
+    let body = body.strip_suffix(')')?;
+
+    let mut columns = Vec::new();
+    let mut depth = 0usize;
+    let mut part = String::new();
+    let mut parts = Vec::new();
+    for ch in body.chars() {
+        match ch {
+            '(' => {
+                depth += 1;
+                part.push(ch);
+            }
+            ')' => {
+                depth = depth.checked_sub(1)?;
+                part.push(ch);
+            }
+            ',' if depth == 0 => parts.push(std::mem::take(&mut part)),
+            _ => part.push(ch),
+        }
+    }
+    if depth != 0 {
+        return None;
+    }
+    parts.push(part);
+
+    for raw in parts {
+        let piece = raw.trim();
+        if piece.is_empty() {
+            continue;
+        }
+        let first = piece.split_whitespace().next()?;
+        // Table-level constraints are not columns.
+        if matches!(
+            first.to_ascii_uppercase().as_str(),
+            "PRIMARY" | "FOREIGN" | "UNIQUE" | "CHECK" | "CONSTRAINT" | "EXCLUDE" | "LIKE"
+        ) {
+            continue;
+        }
+        let name = first.trim_matches('"');
+        // Anything that does not look like a bare identifier means this DDL uses a
+        // form this parser does not model; skip the whole statement rather than
+        // guess a column name that does not exist.
+        if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            return None;
+        }
+        columns.push(name.to_string());
+    }
+    if columns.is_empty() {
+        return None;
+    }
+    Some((relation, columns))
 }
 
 pub async fn inspect_system_catalog(
@@ -1811,5 +1914,67 @@ mod tests {
                 || relation.display_relation.starts_with("udb_workflow.")
                 || relation.display_relation.starts_with("udb_embedding.")
         }));
+    }
+
+    /// The shape check in `ensure_system_catalog` can REFUSE TO START the broker,
+    /// so a parser bug here would brick every healthy deployment. Run the parser
+    /// over every real bootstrap statement and assert it either declines cleanly
+    /// or returns plausible identifiers - never an invented column name.
+    #[test]
+    fn declared_table_columns_parses_every_real_bootstrap_statement() {
+        let statements = system_catalog_statements(&SystemCatalogConfig::default());
+        let mut parsed = 0usize;
+        for stmt in &statements {
+            let Some((relation, columns)) = declared_table_columns(stmt) else {
+                // Only non-CREATE-TABLE statements (CREATE SCHEMA, indexes) may decline.
+                assert!(
+                    !stmt.trim_start().starts_with("CREATE TABLE IF NOT EXISTS "),
+                    "a real CREATE TABLE statement failed to parse, so its shape would go                      unverified: {stmt}"
+                );
+                continue;
+            };
+            parsed += 1;
+            assert!(!relation.is_empty(), "empty relation from: {stmt}");
+            assert!(!columns.is_empty(), "no columns parsed from: {stmt}");
+            for c in &columns {
+                assert!(
+                    c.chars().all(|ch| ch.is_alphanumeric() || ch == '_'),
+                    "implausible column name {c:?} parsed from: {stmt}"
+                );
+                let up = c.to_ascii_uppercase();
+                assert!(
+                    !matches!(
+                        up.as_str(),
+                        "PRIMARY" | "UNIQUE" | "CHECK" | "CONSTRAINT" | "FOREIGN"
+                    ),
+                    "constraint keyword {c:?} mistaken for a column in: {stmt}"
+                );
+                // Every parsed column must actually appear in the DDL text.
+                assert!(
+                    stmt.contains(c.as_str()),
+                    "column {c:?} not present in: {stmt}"
+                );
+            }
+        }
+        assert!(
+            parsed >= 20,
+            "expected the real bootstrap to yield many tables, got {parsed}"
+        );
+    }
+
+    /// Nested parens (VARCHAR(80), NUMERIC(10,2)) must not split a column, and
+    /// table-level constraints must not be mistaken for columns.
+    #[test]
+    fn declared_table_columns_handles_nested_parens_and_constraints() {
+        let ddl = "CREATE TABLE IF NOT EXISTS \"s\".\"t\" (             id UUID PRIMARY KEY,             amount NUMERIC(10,2) NOT NULL DEFAULT 0,             label VARCHAR(80) NOT NULL DEFAULT '',             PRIMARY KEY (id, label),             CHECK (amount >= 0) )";
+        let (rel, cols) = declared_table_columns(ddl).expect("must parse");
+        assert_eq!(rel, "\"s\".\"t\"");
+        assert_eq!(cols, vec!["id", "amount", "label"]);
+    }
+
+    #[test]
+    fn declared_table_columns_declines_non_create_table() {
+        assert!(declared_table_columns("CREATE SCHEMA IF NOT EXISTS udb_system").is_none());
+        assert!(declared_table_columns("CREATE INDEX IF NOT EXISTS i ON t (c)").is_none());
     }
 }

@@ -63,6 +63,15 @@ impl PostgresAuditLogSink {
         }
     }
 
+    /// Override the target relation, mirroring the `with_*_relation` builders the
+    /// canonical stores already expose. Lets the shape-check conformance test use
+    /// its own fixture table instead of dropping and recreating the real
+    /// `auth_audit_log` other live tests write to.
+    pub(crate) fn with_relation(mut self, relation: impl Into<String>) -> Self {
+        self.relation = relation.into();
+        self
+    }
+
     /// `CREATE SCHEMA`/`CREATE TABLE IF NOT EXISTS` for the durable audit log.
     /// Idempotent. The leading `CREATE SCHEMA IF NOT EXISTS udb_system` makes the
     /// sink fully self-creating even on a fresh database with no migration run.
@@ -95,10 +104,40 @@ impl PostgresAuditLogSink {
         sqlx::query(&sql)
             .execute(&self.pool)
             .await
-            .map(|_| ())
-            .map_err(|e| format!("ensure auth_audit_log table failed: {e}"))
+            .map_err(|e| format!("ensure auth_audit_log table failed: {e}"))?;
+        // Same hole as the data-plane sink had: `CREATE TABLE IF NOT EXISTS` is a
+        // no-op against a pre-existing relation of ANY shape, so it proved the
+        // table was creatable and never that the 14 columns the INSERT below binds
+        // actually exist. This one is worse in one respect — `ensured` latches to
+        // true on success and is never reset, so a wrong-shaped table would fail
+        // every export for the life of the process without re-checking.
+        crate::runtime::core::audit::verify_table_columns(
+            &self.pool,
+            &self.relation,
+            &AUTH_AUDIT_BOUND_COLUMNS,
+        )
+        .await
     }
 }
+
+/// The columns [`PostgresAuditLogSink::export`] binds. Kept beside the INSERT so
+/// the shape check and the binder cannot drift apart.
+const AUTH_AUDIT_BOUND_COLUMNS: [&str; 14] = [
+    "event_id",
+    "event_type",
+    "tenant_id",
+    "actor",
+    "target_resource",
+    "operation",
+    "outcome",
+    "reason_code",
+    "correlation_id",
+    "trace_id",
+    "decision_id",
+    "source_ip",
+    "redaction_version",
+    "envelope",
+];
 
 #[async_trait]
 impl AuditExportSink for PostgresAuditLogSink {

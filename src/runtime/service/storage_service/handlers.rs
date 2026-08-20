@@ -1078,9 +1078,15 @@ pub(crate) async fn set_scan_verdict(
     if matches!(verdict, V::Unspecified) {
         return Err(crate::runtime::executor_utils::invalid_argument_fields(
             "verdict must be PENDING, CLEAN, INFECTED or FAILED",
+            // Carry the stable machine-readable code, like its sibling
+            // SCAN_VERDICT_NOT_CLEAN: a scanner integration needs to branch on
+            // this without string-matching prose.
             [(
                 "verdict",
-                "SCAN_VERDICT_UNSPECIFIED is not a recordable verdict",
+                format!(
+                    "{}: SCAN_VERDICT_UNSPECIFIED is not a recordable verdict",
+                    super::config::SCAN_VERDICT_INVALID
+                ),
             )],
         ));
     }

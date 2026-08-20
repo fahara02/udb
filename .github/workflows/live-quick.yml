@@ -18,7 +18,7 @@ on:
       filter:
         description: "cargo test name filter(s), space-separated. Empty = all ignored lib tests."
         required: false
-        default: "apikey_live authn_authenticate_live authn_security_live authn_session_live grants_live grants_transfer_live notification_events_live notification_live data_plane_tenant_rls_live native_events_live search_tenant_iso_live storage_live vault_db_credentials_live ha_multinode_live"
+        default: "audit_sink_live apikey_live authn_authenticate_live authn_security_live authn_session_live grants_live grants_transfer_live notification_events_live notification_live data_plane_tenant_rls_live native_events_live search_tenant_iso_live storage_live vault_db_credentials_live ha_multinode_live"
   push:
     branches:
       - "livefix/**"
