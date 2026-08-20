@@ -428,6 +428,39 @@ impl DataBrokerService {
         };
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context();
+        // The envelope's tenant/project come from the caller-supplied PAYLOAD, and
+        // `prepare_outbox_envelope` only checks that tenant_id is non-empty - it
+        // takes no request context, so it cannot tell the payload's tenant from the
+        // caller's. A principal allowed to publish on a topic could therefore emit
+        // a CDC envelope attributed to ANY tenant, and every downstream consumer
+        // that trusts the envelope would believe it.
+        //
+        // Bind them to the verified claim here, where the context IS available. A
+        // genuine cross-tenant admin may still publish on another tenant's behalf;
+        // everyone else is held to their own scope. An absent payload tenant is
+        // left alone for `prepare_outbox_envelope` to reject with its own message.
+        if let Some(obj) = payload.as_object() {
+            let payload_tenant = obj
+                .get("tenant_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
+            let payload_project = obj
+                .get("project_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
+            if crate::runtime::service::method_security::claim_context_present() {
+                let ctx = crate::runtime::service::method_security::current_claim_context();
+                if let Err(err) =
+                    crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+                        &ctx,
+                        payload_tenant,
+                        payload_project,
+                    )
+                {
+                    return self.record_grpc("EnqueueOutboxEvent", started, Err(err));
+                }
+            }
+        }
         let response_context = metadata_context.clone();
         let topic = request.topic.clone();
         let partition_key = request.partition_key.clone();
