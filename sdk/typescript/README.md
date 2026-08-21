@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.18 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.19 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,7 +18,7 @@ version-matched `udb` CLI from a project that installed the package.
 ## Install
 
 ```bash
-npm i @udb_plus/sdk@0.5.18
+npm i @udb_plus/sdk@0.5.19
 ```
 
 Runtime: Node 18+

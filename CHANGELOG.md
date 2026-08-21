@@ -5,6 +5,74 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.19] - 2026-08-21
+
+**Upgrade from 0.5.18 if you generate Go entity code.** 0.5.18 could not generate
+it at all: `udb sdk generate --project-proto <tree> --lang go` failed against any
+proto set containing a message-valued JSON column — the exact shape reported three
+times by consumers, and the one 0.5.18 set out to fix. Nothing else in 0.5.18 is
+affected; the broker, the SDKs and every other surface are unchanged.
+
+This release also turns on a CI step that had been switched off since the CLI
+tests were written, which immediately found stale numbers in the public README.
+
+### Fixed
+
+- **The Go entity generator emitted syntactically invalid Go (0.5.18 regression).**
+  The protojson helper block is written with `push_str`, but carried `format!`
+  escapes, so ten doubled braces reached the generated file verbatim:
+
+  ```go
+  func udbEncodeJSONMessage(...) (json.RawMessage, error) {{
+  ```
+
+  `gofmt` rejected it, and the generator aborts on that — so generation failed
+  outright rather than producing bad output. 0.5.17 succeeds on the same input.
+
+- **A proto `map` column was treated as a message (pre-existing, never caught).**
+  `is_message_json_column` matched `map<string, string>` because a map's Go scalar
+  kind is also `Unknown`. `map[string]string` does not implement `proto.Message`,
+  so the write arm could not compile:
+
+  ```
+  cannot use m.GetTemplateData() (map[string]string) as proto.Message
+  ```
+
+  0.5.17 was no better — it routed the same column to the *text* arm and emitted
+  `json.RawMessage(m.GetTemplateData())`, which also fails to compile. **The Go
+  entity generator had therefore never produced compilable output for a proto tree
+  containing a map column.** Map columns now marshal with `json.Marshal` and
+  unmarshal into a typed `map[K]V`; a map with a message or enum value is skipped
+  with a TODO, like the repeated case.
+
+- **README understated UDB's public RPC surface.** The generated *Current Surface*
+  block was stale on five counts — control-plane total 302 → **303**, and
+  `authn` 59 → **60**, `tenant` 7 → **8**, `vault` 20 → **22**, `storage` 9 → **10**.
+  The declared total did not even match the sum of its own rows. Corrected against
+  `udb native docs`.
+
+- **The authn/authz inventory test pinned a count four releases stale** (298 vs the
+  generated 303).
+
+### Changed
+
+- **CI now runs the binary-target tests.** `mod cli` is declared in `main.rs`, not
+  `lib.rs`, so `cargo test --lib` never reaches `src/cli/**`. Every `cargo test` in
+  CI was `--lib`, `--test`, or `--no-run`, which meant **178 CLI tests were compiled
+  on every push and executed on none of them** — including all 56 in `sdk_gen.rs`,
+  written specifically to stop the Go emitter shipping uncompilable adapters. It
+  shipped them anyway, four times. `cargo test --locked --bins` turns the detector
+  back on; the two failures above are what it found on its first run.
+
+- **The generator's output is now compiled in CI.** `render_go_entities_file`
+  claimed its output "is verified by the litmus compile (`go build` on the
+  output)". No such gate existed, and the stated substitute mirrors the emitted
+  code by hand — a hand-written mirror cannot catch an emitter bug, which is
+  exactly how the doubled-brace defect passed. `check-scaffold-compiles.sh` now
+  runs the real generator over this repo's proto tree (which contains both a
+  message-in-JSONB column and a `map<string, string>` column) and fails on a
+  doubled brace.
+
 ## [0.5.18] - 2026-08-21
 
 Stability release, from working the open bug-report backlog against source
