@@ -60,6 +60,33 @@ EOF
 ( cd "$GO_DIR" && go mod tidy && go build ./... )
 echo "    Go scaffold example built OK"
 
+# ── Go ENTITY ADAPTERS: run the real generator over a proto tree that HAS a
+# message-valued JSON column, and require it to succeed.
+#
+# This closes the gap that let four releases ship a broken Go entity emitter.
+# The scaffold example above is the SDK CLIENT; nothing compiled the generator's
+# ENTITY output, and `entity_repo_contract_test.go` only MIRRORS the emitted code
+# by hand - a hand-written mirror cannot catch an emitter bug, which is exactly
+# how 0.5.18 shipped a helper block carrying literal `{{` that gofmt rejected.
+#
+# The repo proto tree contains `udb.core.common.v1.AuditInfo` in a JSONB column
+# (asset.proto), so this exercises the message-in-JSON arm. `udb sdk generate`
+# gofmt-checks its own output and exits non-zero when the Go does not parse, so
+# running it here is load-bearing on its own.
+echo "==> generating Go entity adapters from the repo proto tree"
+ENT_DIR="$WORK/entcheck"
+if [[ -n "${UDB_BIN:-}" ]]; then
+  "$UDB_BIN" sdk generate --project-proto "$REPO/proto" --lang go --out "$ENT_DIR"
+else
+  ( cd "$REPO" && cargo run --quiet -- sdk generate --project-proto "$REPO/proto" --lang go --out "$ENT_DIR" )
+fi
+require_file "$ENT_DIR/go/udb_entities_gen.go"
+if grep -q "{{" "$ENT_DIR/go/udb_entities_gen.go"; then
+  echo "generated Go contains a doubled brace - push_str does not process format! escapes" >&2
+  exit 1
+fi
+echo "    Go entity adapters generated and gofmt-clean OK"
+
 # ── TypeScript: type-check the emitted example ────────────────────────────────
 echo "==> type-checking TypeScript scaffold example"
 TS_DIR="$WORK/tscheck"
