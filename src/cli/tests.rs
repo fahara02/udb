@@ -754,7 +754,7 @@ fn baseline_generated_authn_authz_inventory_docs_are_present() {
     // Counts pin the CURRENT generator output (`node
     // scripts/generate-authn-authz-inventory.mjs`); regenerate the docs and
     // update these together when the RPC/field surface grows.
-    assert!(rpc.contains("- Native RPCs inventoried: 298"));
+    assert!(rpc.contains("- Native RPCs inventoried: 303"));
     assert!(rpc.contains("- RPCs without endpoint_security: 0"));
     assert!(rpc.contains("- WebRTC SignalingService.Signal endpoint security: present"));
 
