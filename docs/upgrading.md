@@ -199,6 +199,45 @@ start on a database created earlier, reporting field-number reuse on
 the numbering was fixed in 0.5.14 and existing deployments migrate cleanly from
 that release onward. Upgrade to 0.5.14 or later directly.
 
+**Upgrading to 0.5.18 — generated Go entity code is source-breaking.**
+`<Entity>ToUDBRecord` now returns `(map[string]any, error)` instead of
+`map[string]any`. `protojson.Marshal` can fail for a message stored in a JSON
+column, and the old signature had nowhere to put that failure — the alternatives
+were dropping the column silently or panicking. `FromUDBRow` was already
+`(*T, error)`, so the two are now symmetric. Regenerate, then take the error at
+each call site:
+
+```go
+rec, err := UserToUDBRecord(u)
+if err != nil {
+    return fmt.Errorf("encode user: %w", err)
+}
+```
+
+**Skip 0.5.18 if you generate Go entity code — use 0.5.19.** 0.5.18 could not
+generate it at all for a proto set containing a message-valued JSON column: the
+emitter wrote doubled braces into the file and its own `gofmt` check rejected the
+result, so generation failed rather than producing bad code. Fixed in 0.5.19.
+Nothing else in 0.5.18 is affected — the broker and every SDK client are
+unchanged — so a deployment that does not regenerate Go entities can run 0.5.18
+safely.
+
+**Upgrading to 0.5.19 — proto `map` columns in JSON columns now round-trip.** A
+`map<K, V>` field annotated onto a JSON/JSONB column was emitted as if it were a
+message (0.5.18) or as raw JSON text (0.5.17 and earlier), and neither form
+compiled. It now marshals with `json.Marshal` and decodes into a typed
+`map[K]V`. If you hand-wrote that column as a workaround, drop the workaround
+after regenerating.
+
+**Upgrading to 0.5.18 — the durable audit sink now verifies its table.** With
+`UDB_AUDIT_SINK=postgres`, boot now checks that `UDB_AUDIT_PG_TABLE` names a
+relation UDB can actually *write to*, not merely one it can create. Pointing it
+at a pre-existing table of the wrong shape used to boot healthy and then fail
+every insert. Under `UDB_FAIL_CLOSED` a bad table now refuses startup and names
+the missing columns; otherwise it logs the same detail, the sink degrades to
+stdout, and `GetHealthReport` reports that degradation as a failure instead of
+staying silent.
+
 ---
 
 ## Related

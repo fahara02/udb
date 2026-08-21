@@ -45,7 +45,7 @@
     <title>Native auth/admin listener. Default is loopback on the DataBroker port plus 10.</title>
     <rect class="card auth" x="344" y="326" width="480" height="66"/>
     <text class="text" x="584" y="352" text-anchor="middle">Native control-plane listener</text>
-    <text class="small" x="584" y="372" text-anchor="middle">27 native services, 302 RPCs</text>
+    <text class="small" x="584" y="372" text-anchor="middle">27 native services, 303 RPCs</text>
   </g>
 
   <g class="node" tabindex="0">

@@ -2,7 +2,7 @@
 
 _proto: core/tenant/services/v1/tenant_service.proto · 8 RPCs_
 
-All request messages are defined inline in `tenant_service.proto`; every request field is a proto3 scalar `string`/`int32` except `UpdateTenantRequest.update_mask` (omitted here for legacy full update semantics). `type`/`status` are free-form `string` columns, NOT proto enums. All 7 RPCs carry `tenant_required: true` + `request_context_required: true` (must send tenant context + bearer JWT/session).
+All request messages are defined inline in `tenant_service.proto`; every request field is a proto3 scalar `string`/`int32` except `UpdateTenantRequest.update_mask` (omitted here for legacy full update semantics). `type`/`status` are free-form `string` columns, NOT proto enums. All 8 RPCs carry `tenant_required: true` + `request_context_required: true` (must send tenant context + bearer JWT/session).
 
 | done | RPC | op_kind | request msg | valid body | seed refs / notes |
 | --- | --- | --- | --- | --- | --- |

@@ -1,6 +1,6 @@
 ## StorageService
 
-_proto: core/storage/services/v1/storage_service.proto · 7 RPCs_
+_proto: core/storage/services/v1/storage_service.proto · 10 RPCs_
 
 | done | RPC | op_kind | request msg | valid body | seed refs / notes |
 | --- | --- | --- | --- | --- | --- |

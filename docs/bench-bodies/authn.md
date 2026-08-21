@@ -1,6 +1,6 @@
 ## AuthnService
 
-_proto: core/authn/services/v1/authn_service.proto · 51 RPCs_
+_proto: core/authn/services/v1/authn_service.proto · 60 RPCs_
 
 All request/response message bodies live in `core/authn/services/v1/core.proto`. Enum fields resolve against `core/authn/entity/v1/enums.proto`; `context` is `udb.core.common.v1.RequestContext` (from `common/v1/types.proto`, fields: `tenant{TenantContext}`, `request_id`, `correlation_id`, `user_id`, `headers`, `trace_id`, `ip_address`, `user_agent`, `idempotency_key`, `scopes`, `roles`, ...). Most authn fields read from `RequestContext` are populated server-side from the bearer/session, so the column below lists only the *message body* fields you set.
 
