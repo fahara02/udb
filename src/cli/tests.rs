@@ -507,7 +507,33 @@ fn parse_args_recognizes_proto_export_fmt() {
             out_dir,
             manage_buf_yaml: true,
             format_proto: true,
+            // No `--yes` here: rewriting an existing, commented buf.yaml must
+            // require explicit consent, so the default has to be false.
+            confirmed: false,
         } if out_dir == "vendor/proto"
+    ));
+}
+
+/// `--yes` is the consent to REWRITE an existing buf.yaml, dropping the comments
+/// a YAML round-trip cannot preserve. Pin the wiring: without the flag the export
+/// must refuse rather than quietly flatten a file the project owns.
+#[test]
+fn parse_args_proto_export_yes_grants_buf_yaml_consent() {
+    let args = vec![
+        "proto".to_string(),
+        "export".to_string(),
+        "--out".to_string(),
+        "vendor/proto".to_string(),
+        "--yes".to_string(),
+    ];
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(
+        command,
+        Command::ProtoExport {
+            confirmed: true,
+            manage_buf_yaml: true,
+            ..
+        }
     ));
 }
 
