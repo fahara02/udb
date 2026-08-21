@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Expected UDB release version, for example 0.5.19"
+        description: "Expected UDB release version, for example 0.5.20"
         required: true
 
 permissions:

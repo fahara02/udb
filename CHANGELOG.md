@@ -5,6 +5,93 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.20] - 2026-08-21
+
+The release that turned the tests back on. Four suites and 178 CLI tests were
+compiled on every push and executed by nothing; enabling them found a customer's
+name shipped in published SDK packages, and running the full silent-failure sweep
+found auth events being discarded without a trace.
+
+Nothing here changes broker behaviour for a working deployment. Every fix is
+either a failure that could not previously be seen, or a gap in what CI checked.
+
+### Fixed
+
+- **Auth domain events were discarded in silence.** If the authn Postgres pool
+  failed to resolve, the error was dropped with `.ok()` and the fallback
+  `NoopAuthEventSink` validated each event and returned `Ok(())`. Every login,
+  MFA, revocation, policy change and admin event then vanished with **no log, no
+  metric and no health signal** — the durable audit-sink defect again, this time
+  on the auth compliance surface. The resolve failure is now logged with its
+  cause, and selecting the no-op sink reports at ERROR that the auth trail has
+  gone dark.
+
+- **Seed checkpoints failed invisibly.** `save_seed_checkpoint`,
+  `save_seed_row_checkpoint` and `clear_seed_checkpoint` wrote through
+  `let _ = sqlx::query(..)`. Those rows exist so an interrupted seed resumes
+  without replaying committed rows, so the failure was silent exactly when it
+  mattered. The table's `CREATE` and its `ALTER TABLE ... ADD COLUMN row_index`
+  backfill were swallowed too — a pre-existing checkpoint table silently lost
+  ROW-level resume while statement-level resume kept appearing to work. All five
+  now report the consequence.
+
+- **A customer's name shipped in the public API surface.** A comment in
+  `storage/entity/v1/file.proto` used a customer as its example project id, and
+  it propagated into **all six generated SDK stubs** and
+  `api/udb-broker.swagger.json` — published to npm, PyPI, crates.io, Packagist,
+  NuGet and Maven. The guard test for exactly this
+  (`generic_udb_surface_has_no_forbidden_project_names`) existed and had never
+  run. Examples are now `acme.*` for proto packages and `billing` for project
+  ids.
+
+- **The Go entity generator emitted duplicate declarations.** Given a proto root
+  holding two messages with the same short name — a consumer vendoring UDB's
+  protos beside their own has two `MfaChallenge`, two `OTP`, two `Session` — every
+  helper is named from the short name, so the output declared
+  `MfaChallengeToUDBRecord` twice: `gofmt`-clean and uncompilable. It now refuses
+  with both fully-qualified names.
+
+- **`udb proto export` silently flattened a project's `buf.yaml`.** Merging UDB's
+  module path and deps into a consumer's `buf.yaml` is the point of the command
+  and remains the default, but the merge re-serialises the YAML and a round-trip
+  cannot preserve comments. A project that documented its own config lost that
+  documentation with nothing said. Creating an absent file still happens
+  automatically; rewriting one that exists **and carries comments** now refuses,
+  states exactly what it needs, and offers `--yes`, a manual edit, or
+  `--no-buf-yaml`.
+
+- **A thirteenth lost string continuation**, in `manifest_index`'s
+  `unknown message_type` error — the message a consumer sees when their broker
+  image predates an entity they just added.
+
+- Two `parser_tests` assertions were corrected rather than the product: the
+  trailing `tenant_id` bind is the **verified-scope predicate** that stops the SQL
+  trusting the caller's own tenant filter, and a dotted protobuf FQN is
+  deliberately never degraded to its leaf. Both now say so in the test.
+
+### Changed
+
+- **CI runs every test target.** `mod cli` is declared in `main.rs`, so
+  `cargo test --lib` never reached `src/cli/**`, and CI named its integration
+  targets one at a time. The result: **178 CLI tests and four whole suites**
+  (`parser_tests` 50, `phase10_tests`, `neutrality_tests`, `ha`) compiled on every
+  push and run by nothing — including all 56 tests in `sdk_gen.rs` written to stop
+  the Go emitter shipping uncompilable adapters, which it did anyway, four times.
+  `--lib --bins --tests` replaces the hand-listed set; `--tests` discovers new
+  `tests/*.rs` automatically, so a suite cannot be orphaned by omission again.
+
+- **The generator's output is compiled in CI.** `render_go_entities_file` claimed
+  correctness was "verified by the litmus compile (`go build` on the output)". No
+  such gate existed, and the stated substitute mirrors the emitted code by hand —
+  a mirror cannot catch an emitter bug. `check-scaffold-compiles.sh` now runs the
+  real generator over this repo's proto tree, which contains both a
+  message-in-JSONB column and a `map<string, string>` column.
+
+- Docs, the docs site, the architecture SVG and the bench-body pages now agree
+  with the descriptor: 27 services, 303 native RPCs, 79 data-plane, 382 total. The
+  README had understated the surface by five and did not match the sum of its own
+  rows. `upgrading.md` gained the 0.5.18 and 0.5.19 notes it was missing.
+
 ## [0.5.19] - 2026-08-21
 
 **Upgrade from 0.5.18 if you generate Go entity code.** 0.5.18 could not generate
