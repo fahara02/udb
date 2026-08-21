@@ -110,4 +110,3 @@ class ErrorInfo extends \Google\Protobuf\Internal\Message
     }
 
 }
-

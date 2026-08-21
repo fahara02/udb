@@ -181,4 +181,3 @@ class RecordPipelineMetricRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

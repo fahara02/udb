@@ -56,4 +56,3 @@ class ErrorContract extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -174,4 +174,3 @@ class EmergencyRevokeDatabaseCredentialsResponse extends \Google\Protobuf\Intern
     }
 
 }
-

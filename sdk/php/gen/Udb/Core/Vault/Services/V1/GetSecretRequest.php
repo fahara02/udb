@@ -117,4 +117,3 @@ class GetSecretRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

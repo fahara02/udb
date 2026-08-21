@@ -493,7 +493,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.idp.entity.v1.ExternalIdentity identity = 1 [json_name = "identity"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.idp.entity.v1.ExternalIdentity, com.udb.core.idp.entity.v1.ExternalIdentity.Builder, com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder> 
+        com.udb.core.idp.entity.v1.ExternalIdentity, com.udb.core.idp.entity.v1.ExternalIdentity.Builder, com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder>
         internalGetIdentityFieldBuilder() {
       if (identityBuilder_ == null) {
         identityBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -556,4 +556,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

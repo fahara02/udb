@@ -501,4 +501,3 @@ class EmbeddingSource extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -120,4 +120,3 @@ class ListPreferencesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

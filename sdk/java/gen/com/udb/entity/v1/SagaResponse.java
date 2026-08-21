@@ -571,7 +571,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.SagaRecord saga = 1 [json_name = "saga"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.SagaRecord, com.udb.entity.v1.SagaRecord.Builder, com.udb.entity.v1.SagaRecordOrBuilder> 
+        com.udb.entity.v1.SagaRecord, com.udb.entity.v1.SagaRecord.Builder, com.udb.entity.v1.SagaRecordOrBuilder>
         internalGetSagaFieldBuilder() {
       if (sagaBuilder_ == null) {
         sagaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -745,4 +745,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

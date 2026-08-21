@@ -414,4 +414,3 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
     }
 
 }
-

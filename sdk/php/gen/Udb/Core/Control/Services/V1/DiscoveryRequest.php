@@ -272,4 +272,3 @@ class DiscoveryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

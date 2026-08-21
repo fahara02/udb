@@ -117,4 +117,3 @@ class ListCertificateBindingsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

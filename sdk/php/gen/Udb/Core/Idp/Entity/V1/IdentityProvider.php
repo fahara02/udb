@@ -922,4 +922,3 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -225,4 +225,3 @@ class PreviewClaimMappingResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

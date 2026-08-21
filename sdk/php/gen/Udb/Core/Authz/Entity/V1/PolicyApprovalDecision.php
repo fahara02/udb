@@ -53,4 +53,3 @@ class PolicyApprovalDecision
         return constant($const);
     }
 }
-

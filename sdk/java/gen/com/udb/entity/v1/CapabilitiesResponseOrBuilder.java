@@ -221,7 +221,7 @@ public interface CapabilitiesResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 7 [json_name = "backendInstances"];</code>
    */
-  java.util.List<com.udb.entity.v1.BackendInstanceStatus> 
+  java.util.List<com.udb.entity.v1.BackendInstanceStatus>
       getBackendInstancesList();
   /**
    * <pre>
@@ -246,7 +246,7 @@ public interface CapabilitiesResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 7 [json_name = "backendInstances"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder>
       getBackendInstancesOrBuilderList();
   /**
    * <pre>
@@ -265,7 +265,7 @@ public interface CapabilitiesResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.BackendCapabilityDescriptor backend_capabilities = 8 [json_name = "backendCapabilities"];</code>
    */
-  java.util.List<com.udb.entity.v1.BackendCapabilityDescriptor> 
+  java.util.List<com.udb.entity.v1.BackendCapabilityDescriptor>
       getBackendCapabilitiesList();
   /**
    * <pre>
@@ -290,7 +290,7 @@ public interface CapabilitiesResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.BackendCapabilityDescriptor backend_capabilities = 8 [json_name = "backendCapabilities"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.BackendCapabilityDescriptorOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.BackendCapabilityDescriptorOrBuilder>
       getBackendCapabilitiesOrBuilderList();
   /**
    * <pre>
@@ -347,7 +347,7 @@ public interface CapabilitiesResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
    */
-  java.util.List<com.udb.entity.v1.BackendProtocolSupport> 
+  java.util.List<com.udb.entity.v1.BackendProtocolSupport>
       getBackendProtocolSupportList();
   /**
    * <pre>
@@ -378,7 +378,7 @@ public interface CapabilitiesResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.BackendProtocolSupportOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.BackendProtocolSupportOrBuilder>
       getBackendProtocolSupportOrBuilderList();
   /**
    * <pre>
@@ -395,7 +395,7 @@ public interface CapabilitiesResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
    */
-  java.util.List<com.udb.entity.v1.NativeServiceStatus> 
+  java.util.List<com.udb.entity.v1.NativeServiceStatus>
       getNativeServicesList();
   /**
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
@@ -408,7 +408,7 @@ public interface CapabilitiesResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder>
       getNativeServicesOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>

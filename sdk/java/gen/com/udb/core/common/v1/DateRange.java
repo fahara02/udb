@@ -557,7 +557,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp from = 1 [json_name = "from"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetFromFieldBuilder() {
       if (fromBuilder_ == null) {
         fromBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -678,7 +678,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp to = 2 [json_name = "to"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetToFieldBuilder() {
       if (toBuilder_ == null) {
         toBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -741,4 +741,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

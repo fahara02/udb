@@ -337,4 +337,3 @@ class NotificationPreference extends \Google\Protobuf\Internal\Message
     }
 
 }
-

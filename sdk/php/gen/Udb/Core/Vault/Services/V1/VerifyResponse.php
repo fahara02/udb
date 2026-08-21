@@ -120,4 +120,3 @@ class VerifyResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -197,4 +197,3 @@ class TxStatus extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -13,7 +13,7 @@ public interface MigrationRunListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.MigrationStatusResponse runs = 1 [json_name = "runs"];</code>
    */
-  java.util.List<com.udb.entity.v1.MigrationStatusResponse> 
+  java.util.List<com.udb.entity.v1.MigrationStatusResponse>
       getRunsList();
   /**
    * <code>repeated .udb.entity.v1.MigrationStatusResponse runs = 1 [json_name = "runs"];</code>
@@ -26,7 +26,7 @@ public interface MigrationRunListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.MigrationStatusResponse runs = 1 [json_name = "runs"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.MigrationStatusResponseOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.MigrationStatusResponseOrBuilder>
       getRunsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.MigrationStatusResponse runs = 1 [json_name = "runs"];</code>

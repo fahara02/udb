@@ -28,12 +28,12 @@ public final class ContextProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_entity_v1_RequestContext_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_RequestContext_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_entity_v1_RequestContext_AttributesEntry_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_RequestContext_AttributesEntry_fieldAccessorTable;
 

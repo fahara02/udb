@@ -25,4 +25,3 @@ class EmbeddingJob
         static::$is_initialized = true;
     }
 }
-

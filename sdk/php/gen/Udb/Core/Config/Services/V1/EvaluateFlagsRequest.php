@@ -120,4 +120,3 @@ class EvaluateFlagsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

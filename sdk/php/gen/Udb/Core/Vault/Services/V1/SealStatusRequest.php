@@ -56,4 +56,3 @@ class SealStatusRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -24,4 +24,3 @@ class Flag
         static::$is_initialized = true;
     }
 }
-

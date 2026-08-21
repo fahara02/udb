@@ -591,7 +591,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.idp.services.v1.ScimGroup group = 1 [json_name = "group"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.idp.services.v1.ScimGroup, com.udb.core.idp.services.v1.ScimGroup.Builder, com.udb.core.idp.services.v1.ScimGroupOrBuilder> 
+        com.udb.core.idp.services.v1.ScimGroup, com.udb.core.idp.services.v1.ScimGroup.Builder, com.udb.core.idp.services.v1.ScimGroupOrBuilder>
         internalGetGroupFieldBuilder() {
       if (groupBuilder_ == null) {
         groupBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -810,4 +810,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

@@ -26,4 +26,3 @@ class IdentityProvider
         static::$is_initialized = true;
     }
 }
-

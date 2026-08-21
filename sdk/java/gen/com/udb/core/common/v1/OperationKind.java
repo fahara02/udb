@@ -184,4 +184,3 @@ public enum OperationKind
 
   // @@protoc_insertion_point(enum_scope:udb.core.common.v1.OperationKind)
 }
-

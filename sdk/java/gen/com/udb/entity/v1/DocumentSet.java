@@ -60,7 +60,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .google.protobuf.Struct documents = 1 [json_name = "documents"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.google.protobuf.StructOrBuilder> 
+  public java.util.List<? extends com.google.protobuf.StructOrBuilder>
       getDocumentsOrBuilderList() {
     return documents_;
   }
@@ -100,7 +100,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -116,7 +116,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -480,7 +480,7 @@ private static final long serialVersionUID = 0L;
             documentsBuilder_ = null;
             documents_ = other.documents_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            documentsBuilder_ = 
+            documentsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetDocumentsFieldBuilder() : null;
           } else {
@@ -759,7 +759,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .google.protobuf.Struct documents = 1 [json_name = "documents"];</code>
      */
-    public java.util.List<? extends com.google.protobuf.StructOrBuilder> 
+    public java.util.List<? extends com.google.protobuf.StructOrBuilder>
          getDocumentsOrBuilderList() {
       if (documentsBuilder_ != null) {
         return documentsBuilder_.getMessageOrBuilderList();
@@ -785,12 +785,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .google.protobuf.Struct documents = 1 [json_name = "documents"];</code>
      */
-    public java.util.List<com.google.protobuf.Struct.Builder> 
+    public java.util.List<com.google.protobuf.Struct.Builder>
          getDocumentsBuilderList() {
       return internalGetDocumentsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
         internalGetDocumentsFieldBuilder() {
       if (documentsBuilder_ == null) {
         documentsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -829,7 +829,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -984,7 +984,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.OperationStats stats = 3 [json_name = "stats"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.OperationStats, com.udb.entity.v1.OperationStats.Builder, com.udb.entity.v1.OperationStatsOrBuilder> 
+        com.udb.entity.v1.OperationStats, com.udb.entity.v1.OperationStats.Builder, com.udb.entity.v1.OperationStatsOrBuilder>
         internalGetStatsFieldBuilder() {
       if (statsBuilder_ == null) {
         statsBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1047,4 +1047,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

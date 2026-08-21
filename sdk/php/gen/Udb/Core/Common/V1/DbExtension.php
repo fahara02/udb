@@ -110,4 +110,3 @@ class DbExtension extends \Google\Protobuf\Internal\Message
     }
 
 }
-

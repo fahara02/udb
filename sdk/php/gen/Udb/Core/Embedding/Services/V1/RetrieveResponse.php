@@ -201,4 +201,3 @@ class RetrieveResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

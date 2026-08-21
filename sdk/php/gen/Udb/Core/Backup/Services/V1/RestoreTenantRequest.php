@@ -234,4 +234,3 @@ class RestoreTenantRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

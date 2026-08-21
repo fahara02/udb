@@ -245,4 +245,3 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

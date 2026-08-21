@@ -26,4 +26,3 @@ class ApiKey
         static::$is_initialized = true;
     }
 }
-

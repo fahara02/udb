@@ -203,4 +203,3 @@ class FileFinalized extends \Google\Protobuf\Internal\Message
     }
 
 }
-

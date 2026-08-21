@@ -120,4 +120,3 @@ class DeleteModelResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

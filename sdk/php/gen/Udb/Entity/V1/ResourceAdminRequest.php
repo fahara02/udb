@@ -215,4 +215,3 @@ class ResourceAdminRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

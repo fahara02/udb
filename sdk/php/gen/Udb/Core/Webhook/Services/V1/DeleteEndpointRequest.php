@@ -83,4 +83,3 @@ class DeleteEndpointRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

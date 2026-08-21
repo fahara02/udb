@@ -72,4 +72,3 @@ class SigningKeyState
         return constant($const);
     }
 }
-

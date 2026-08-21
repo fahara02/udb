@@ -71,4 +71,3 @@ class StepType
         return constant($const);
     }
 }
-

@@ -154,4 +154,3 @@ class ListQuotasResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

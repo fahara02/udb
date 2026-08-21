@@ -515,4 +515,3 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
     }
 
 }
-

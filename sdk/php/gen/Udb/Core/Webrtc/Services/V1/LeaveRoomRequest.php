@@ -110,4 +110,3 @@ class LeaveRoomRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -218,4 +218,3 @@ class DependencyContractOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -60,7 +60,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       userId_ = s;
@@ -76,7 +76,7 @@ private static final long serialVersionUID = 0L;
       getUserIdBytes() {
     java.lang.Object ref = userId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       userId_ = b;
@@ -99,7 +99,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       domain_ = s;
@@ -115,7 +115,7 @@ private static final long serialVersionUID = 0L;
       getDomainBytes() {
     java.lang.Object ref = domain_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       domain_ = b;
@@ -139,7 +139,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.services.v1.PermissionCheck checks = 3 [json_name = "checks"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.services.v1.PermissionCheckOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.services.v1.PermissionCheckOrBuilder>
       getChecksOrBuilderList() {
     return checks_;
   }
@@ -544,7 +544,7 @@ private static final long serialVersionUID = 0L;
             checksBuilder_ = null;
             checks_ = other.checks_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            checksBuilder_ = 
+            checksBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetChecksFieldBuilder() : null;
           } else {
@@ -653,7 +653,7 @@ private static final long serialVersionUID = 0L;
         getUserIdBytes() {
       java.lang.Object ref = userId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         userId_ = b;
@@ -725,7 +725,7 @@ private static final long serialVersionUID = 0L;
         getDomainBytes() {
       java.lang.Object ref = domain_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         domain_ = b;
@@ -967,7 +967,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.PermissionCheck checks = 3 [json_name = "checks"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.services.v1.PermissionCheckOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.services.v1.PermissionCheckOrBuilder>
          getChecksOrBuilderList() {
       if (checksBuilder_ != null) {
         return checksBuilder_.getMessageOrBuilderList();
@@ -993,12 +993,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.PermissionCheck checks = 3 [json_name = "checks"];</code>
      */
-    public java.util.List<com.udb.core.authz.services.v1.PermissionCheck.Builder> 
+    public java.util.List<com.udb.core.authz.services.v1.PermissionCheck.Builder>
          getChecksBuilderList() {
       return internalGetChecksFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.services.v1.PermissionCheck, com.udb.core.authz.services.v1.PermissionCheck.Builder, com.udb.core.authz.services.v1.PermissionCheckOrBuilder> 
+        com.udb.core.authz.services.v1.PermissionCheck, com.udb.core.authz.services.v1.PermissionCheck.Builder, com.udb.core.authz.services.v1.PermissionCheckOrBuilder>
         internalGetChecksFieldBuilder() {
       if (checksBuilder_ == null) {
         checksBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1120,7 +1120,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.AccessContext context = 4 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.AccessContext, com.udb.core.authz.services.v1.AccessContext.Builder, com.udb.core.authz.services.v1.AccessContextOrBuilder> 
+        com.udb.core.authz.services.v1.AccessContext, com.udb.core.authz.services.v1.AccessContext.Builder, com.udb.core.authz.services.v1.AccessContextOrBuilder>
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1183,4 +1183,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

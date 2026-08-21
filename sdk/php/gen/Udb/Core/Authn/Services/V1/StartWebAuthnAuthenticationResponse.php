@@ -110,4 +110,3 @@ class StartWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mess
     }
 
 }
-

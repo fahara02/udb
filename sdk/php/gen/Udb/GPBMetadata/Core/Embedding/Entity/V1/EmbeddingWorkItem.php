@@ -25,4 +25,3 @@ class EmbeddingWorkItem
         static::$is_initialized = true;
     }
 }
-

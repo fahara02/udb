@@ -91,4 +91,3 @@ export type VaultTransitKey = Message<"udb.core.vault.entity.v1.VaultTransitKey"
  */
 export const VaultTransitKeySchema: GenMessage<VaultTransitKey> = /*@__PURE__*/
   messageDesc(file_udb_core_vault_entity_v1_vault_transit_key, 0);
-

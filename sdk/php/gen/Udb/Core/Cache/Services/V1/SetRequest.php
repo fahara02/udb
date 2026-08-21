@@ -171,4 +171,3 @@ class SetRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

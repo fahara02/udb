@@ -63,4 +63,3 @@ class OTPStatus
         return constant($const);
     }
 }
-

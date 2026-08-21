@@ -257,4 +257,3 @@ class RoleUpdatedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

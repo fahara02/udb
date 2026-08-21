@@ -154,4 +154,3 @@ class ListSecretsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

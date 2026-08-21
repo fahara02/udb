@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.entity.v1.PolicyVersion versions = 1 [json_name = "versions"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.entity.v1.PolicyVersionOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.entity.v1.PolicyVersionOrBuilder>
       getVersionsOrBuilderList() {
     return versions_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             versionsBuilder_ = null;
             versions_ = other.versions_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            versionsBuilder_ = 
+            versionsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetVersionsFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.PolicyVersion versions = 1 [json_name = "versions"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.entity.v1.PolicyVersionOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.entity.v1.PolicyVersionOrBuilder>
          getVersionsOrBuilderList() {
       if (versionsBuilder_ != null) {
         return versionsBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.PolicyVersion versions = 1 [json_name = "versions"];</code>
      */
-    public java.util.List<com.udb.core.authz.entity.v1.PolicyVersion.Builder> 
+    public java.util.List<com.udb.core.authz.entity.v1.PolicyVersion.Builder>
          getVersionsBuilderList() {
       return internalGetVersionsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyVersion, com.udb.core.authz.entity.v1.PolicyVersion.Builder, com.udb.core.authz.entity.v1.PolicyVersionOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicyVersion, com.udb.core.authz.entity.v1.PolicyVersion.Builder, com.udb.core.authz.entity.v1.PolicyVersionOrBuilder>
         internalGetVersionsFieldBuilder() {
       if (versionsBuilder_ == null) {
         versionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,4 +911,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

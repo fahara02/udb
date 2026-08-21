@@ -196,4 +196,3 @@ class BulkCasRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

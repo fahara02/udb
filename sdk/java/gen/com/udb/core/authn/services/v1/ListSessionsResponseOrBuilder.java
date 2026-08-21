@@ -13,7 +13,7 @@ public interface ListSessionsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.Session sessions = 1 [json_name = "sessions"];</code>
    */
-  java.util.List<com.udb.core.authn.entity.v1.Session> 
+  java.util.List<com.udb.core.authn.entity.v1.Session>
       getSessionsList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.Session sessions = 1 [json_name = "sessions"];</code>
@@ -26,7 +26,7 @@ public interface ListSessionsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.Session sessions = 1 [json_name = "sessions"];</code>
    */
-  java.util.List<? extends com.udb.core.authn.entity.v1.SessionOrBuilder> 
+  java.util.List<? extends com.udb.core.authn.entity.v1.SessionOrBuilder>
       getSessionsOrBuilderList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.Session sessions = 1 [json_name = "sessions"];</code>

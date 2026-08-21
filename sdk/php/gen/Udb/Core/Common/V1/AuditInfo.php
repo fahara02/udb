@@ -221,4 +221,3 @@ class AuditInfo extends \Google\Protobuf\Internal\Message
     }
 
 }
-

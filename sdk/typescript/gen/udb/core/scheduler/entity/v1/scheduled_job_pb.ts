@@ -167,4 +167,3 @@ export type ScheduledJob = Message<"udb.core.scheduler.entity.v1.ScheduledJob"> 
  */
 export const ScheduledJobSchema: GenMessage<ScheduledJob> = /*@__PURE__*/
   messageDesc(file_udb_core_scheduler_entity_v1_scheduled_job, 0);
-

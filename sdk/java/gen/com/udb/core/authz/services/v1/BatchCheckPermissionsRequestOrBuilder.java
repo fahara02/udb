@@ -37,7 +37,7 @@ public interface BatchCheckPermissionsRequestOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.PermissionCheck checks = 3 [json_name = "checks"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.PermissionCheck> 
+  java.util.List<com.udb.core.authz.services.v1.PermissionCheck>
       getChecksList();
   /**
    * <code>repeated .udb.core.authz.services.v1.PermissionCheck checks = 3 [json_name = "checks"];</code>
@@ -50,7 +50,7 @@ public interface BatchCheckPermissionsRequestOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.PermissionCheck checks = 3 [json_name = "checks"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.PermissionCheckOrBuilder> 
+  java.util.List<? extends com.udb.core.authz.services.v1.PermissionCheckOrBuilder>
       getChecksOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.services.v1.PermissionCheck checks = 3 [json_name = "checks"];</code>

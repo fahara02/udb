@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.tenant.entity.v1.TenantConfig configs = 1 [json_name = "configs"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.tenant.entity.v1.TenantConfigOrBuilder> 
+  public java.util.List<? extends com.udb.core.tenant.entity.v1.TenantConfigOrBuilder>
       getConfigsOrBuilderList() {
     return configs_;
   }
@@ -438,7 +438,7 @@ private static final long serialVersionUID = 0L;
             configsBuilder_ = null;
             configs_ = other.configs_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            configsBuilder_ = 
+            configsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetConfigsFieldBuilder() : null;
           } else {
@@ -707,7 +707,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.tenant.entity.v1.TenantConfig configs = 1 [json_name = "configs"];</code>
      */
-    public java.util.List<? extends com.udb.core.tenant.entity.v1.TenantConfigOrBuilder> 
+    public java.util.List<? extends com.udb.core.tenant.entity.v1.TenantConfigOrBuilder>
          getConfigsOrBuilderList() {
       if (configsBuilder_ != null) {
         return configsBuilder_.getMessageOrBuilderList();
@@ -733,12 +733,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.tenant.entity.v1.TenantConfig configs = 1 [json_name = "configs"];</code>
      */
-    public java.util.List<com.udb.core.tenant.entity.v1.TenantConfig.Builder> 
+    public java.util.List<com.udb.core.tenant.entity.v1.TenantConfig.Builder>
          getConfigsBuilderList() {
       return internalGetConfigsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.tenant.entity.v1.TenantConfig, com.udb.core.tenant.entity.v1.TenantConfig.Builder, com.udb.core.tenant.entity.v1.TenantConfigOrBuilder> 
+        com.udb.core.tenant.entity.v1.TenantConfig, com.udb.core.tenant.entity.v1.TenantConfig.Builder, com.udb.core.tenant.entity.v1.TenantConfigOrBuilder>
         internalGetConfigsFieldBuilder() {
       if (configsBuilder_ == null) {
         configsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -896,7 +896,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 2 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -959,4 +959,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

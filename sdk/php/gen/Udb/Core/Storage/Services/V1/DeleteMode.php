@@ -61,4 +61,3 @@ class DeleteMode
         return constant($const);
     }
 }
-

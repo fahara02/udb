@@ -280,4 +280,3 @@ class AdminSummaryResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

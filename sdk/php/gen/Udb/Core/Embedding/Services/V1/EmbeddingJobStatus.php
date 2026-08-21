@@ -380,4 +380,3 @@ class EmbeddingJobStatus extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -110,4 +110,3 @@ class SeedBuiltinRolesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

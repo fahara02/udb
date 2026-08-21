@@ -114,4 +114,3 @@ export type BackupPolicy = Message<"udb.core.backup.entity.v1.BackupPolicy"> & {
  */
 export const BackupPolicySchema: GenMessage<BackupPolicy> = /*@__PURE__*/
   messageDesc(file_udb_core_backup_entity_v1_backup_policy, 0);
-

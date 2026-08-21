@@ -93,4 +93,3 @@ class DeleteJobResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

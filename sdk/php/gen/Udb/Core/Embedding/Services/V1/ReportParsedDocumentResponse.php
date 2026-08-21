@@ -147,4 +147,3 @@ class ReportParsedDocumentResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

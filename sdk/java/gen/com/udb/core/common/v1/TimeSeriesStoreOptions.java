@@ -84,7 +84,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       databaseName_ = s;
@@ -100,7 +100,7 @@ private static final long serialVersionUID = 0L;
       getDatabaseNameBytes() {
     java.lang.Object ref = databaseName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       databaseName_ = b;
@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       measurementName_ = s;
@@ -139,7 +139,7 @@ private static final long serialVersionUID = 0L;
       getMeasurementNameBytes() {
     java.lang.Object ref = measurementName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       measurementName_ = b;
@@ -162,7 +162,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       timeField_ = s;
@@ -178,7 +178,7 @@ private static final long serialVersionUID = 0L;
       getTimeFieldBytes() {
     java.lang.Object ref = timeField_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       timeField_ = b;
@@ -201,7 +201,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantField_ = s;
@@ -217,7 +217,7 @@ private static final long serialVersionUID = 0L;
       getTenantFieldBytes() {
     java.lang.Object ref = tenantField_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantField_ = b;
@@ -325,7 +325,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       downsamplePolicy_ = s;
@@ -341,7 +341,7 @@ private static final long serialVersionUID = 0L;
       getDownsamplePolicyBytes() {
     java.lang.Object ref = downsamplePolicy_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       downsamplePolicy_ = b;
@@ -940,7 +940,7 @@ private static final long serialVersionUID = 0L;
         getDatabaseNameBytes() {
       java.lang.Object ref = databaseName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         databaseName_ = b;
@@ -1012,7 +1012,7 @@ private static final long serialVersionUID = 0L;
         getMeasurementNameBytes() {
       java.lang.Object ref = measurementName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         measurementName_ = b;
@@ -1084,7 +1084,7 @@ private static final long serialVersionUID = 0L;
         getTimeFieldBytes() {
       java.lang.Object ref = timeField_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         timeField_ = b;
@@ -1156,7 +1156,7 @@ private static final long serialVersionUID = 0L;
         getTenantFieldBytes() {
       java.lang.Object ref = tenantField_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantField_ = b;
@@ -1482,7 +1482,7 @@ private static final long serialVersionUID = 0L;
         getDownsamplePolicyBytes() {
       java.lang.Object ref = downsamplePolicy_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         downsamplePolicy_ = b;
@@ -1579,4 +1579,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

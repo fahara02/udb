@@ -32,4 +32,3 @@ class Governance
         static::$is_initialized = true;
     }
 }
-

@@ -181,4 +181,3 @@ class ActivatePolicyVersionRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

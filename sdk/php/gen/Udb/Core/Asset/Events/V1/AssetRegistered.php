@@ -149,4 +149,3 @@ class AssetRegistered extends \Google\Protobuf\Internal\Message
     }
 
 }
-

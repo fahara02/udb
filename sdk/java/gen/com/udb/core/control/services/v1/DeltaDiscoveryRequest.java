@@ -76,7 +76,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nodeId_ = s;
@@ -92,7 +92,7 @@ private static final long serialVersionUID = 0L;
       getNodeIdBytes() {
     java.lang.Object ref = nodeId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nodeId_ = b;
@@ -137,7 +137,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       responseNonce_ = s;
@@ -157,7 +157,7 @@ private static final long serialVersionUID = 0L;
       getResponseNonceBytes() {
     java.lang.Object ref = responseNonce_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       responseNonce_ = b;
@@ -279,7 +279,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.udb.core.control.services.v1.CoreProto.internal_static_udb_core_control_services_v1_DeltaDiscoveryRequest_InitialResourceVersionsEntry_descriptor, 
+                com.udb.core.control.services.v1.CoreProto.internal_static_udb_core_control_services_v1_DeltaDiscoveryRequest_InitialResourceVersionsEntry_descriptor,
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -1023,7 +1023,7 @@ java.lang.String defaultValue) {
         getNodeIdBytes() {
       java.lang.Object ref = nodeId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nodeId_ = b;
@@ -1154,7 +1154,7 @@ java.lang.String defaultValue) {
         getResponseNonceBytes() {
       java.lang.Object ref = responseNonce_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         responseNonce_ = b;
@@ -1813,7 +1813,7 @@ java.lang.String defaultValue) {
      * <code>.udb.core.control.services.v1.ErrorDetail error_detail = 7 [json_name = "errorDetail"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.control.services.v1.ErrorDetail, com.udb.core.control.services.v1.ErrorDetail.Builder, com.udb.core.control.services.v1.ErrorDetailOrBuilder> 
+        com.udb.core.control.services.v1.ErrorDetail, com.udb.core.control.services.v1.ErrorDetail.Builder, com.udb.core.control.services.v1.ErrorDetailOrBuilder>
         internalGetErrorDetailFieldBuilder() {
       if (errorDetailBuilder_ == null) {
         errorDetailBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1934,7 +1934,7 @@ java.lang.String defaultValue) {
      * <code>.udb.core.common.v1.RequestContext context = 8 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.RequestContext, com.udb.core.common.v1.RequestContext.Builder, com.udb.core.common.v1.RequestContextOrBuilder> 
+        com.udb.core.common.v1.RequestContext, com.udb.core.common.v1.RequestContext.Builder, com.udb.core.common.v1.RequestContextOrBuilder>
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1997,4 +1997,3 @@ java.lang.String defaultValue) {
   }
 
 }
-

@@ -56,4 +56,3 @@ class LogoutResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

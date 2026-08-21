@@ -100,4 +100,3 @@ class GetTenantConfigResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

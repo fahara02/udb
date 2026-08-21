@@ -75,7 +75,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       columnName_ = s;
@@ -91,7 +91,7 @@ private static final long serialVersionUID = 0L;
       getColumnNameBytes() {
     java.lang.Object ref = columnName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       columnName_ = b;
@@ -119,7 +119,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       sqlType_ = s;
@@ -140,7 +140,7 @@ private static final long serialVersionUID = 0L;
       getSqlTypeBytes() {
     java.lang.Object ref = sqlType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       sqlType_ = b;
@@ -211,7 +211,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       defaultValue_ = s;
@@ -231,7 +231,7 @@ private static final long serialVersionUID = 0L;
       getDefaultValueBytes() {
     java.lang.Object ref = defaultValue_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       defaultValue_ = b;
@@ -254,7 +254,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       checkConstraint_ = s;
@@ -270,7 +270,7 @@ private static final long serialVersionUID = 0L;
       getCheckConstraintBytes() {
     java.lang.Object ref = checkConstraint_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       checkConstraint_ = b;
@@ -345,7 +345,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       comment_ = s;
@@ -361,7 +361,7 @@ private static final long serialVersionUID = 0L;
       getCommentBytes() {
     java.lang.Object ref = comment_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       comment_ = b;
@@ -470,7 +470,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tsvectorLanguage_ = s;
@@ -486,7 +486,7 @@ private static final long serialVersionUID = 0L;
       getTsvectorLanguageBytes() {
     java.lang.Object ref = tsvectorLanguage_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tsvectorLanguage_ = b;
@@ -557,7 +557,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       collation_ = s;
@@ -573,7 +573,7 @@ private static final long serialVersionUID = 0L;
       getCollationBytes() {
     java.lang.Object ref = collation_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       collation_ = b;
@@ -633,7 +633,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       previousColumnName_ = s;
@@ -649,7 +649,7 @@ private static final long serialVersionUID = 0L;
       getPreviousColumnNameBytes() {
     java.lang.Object ref = previousColumnName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       previousColumnName_ = b;
@@ -672,7 +672,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       backfillSql_ = s;
@@ -688,7 +688,7 @@ private static final long serialVersionUID = 0L;
       getBackfillSqlBytes() {
     java.lang.Object ref = backfillSql_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       backfillSql_ = b;
@@ -711,7 +711,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       usingExpression_ = s;
@@ -727,7 +727,7 @@ private static final long serialVersionUID = 0L;
       getUsingExpressionBytes() {
     java.lang.Object ref = usingExpression_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       usingExpression_ = b;
@@ -772,7 +772,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       generatedExpr_ = s;
@@ -788,7 +788,7 @@ private static final long serialVersionUID = 0L;
       getGeneratedExprBytes() {
     java.lang.Object ref = generatedExpr_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       generatedExpr_ = b;
@@ -822,7 +822,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       references_ = s;
@@ -838,7 +838,7 @@ private static final long serialVersionUID = 0L;
       getReferencesBytes() {
     java.lang.Object ref = references_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       references_ = b;
@@ -2159,7 +2159,7 @@ private static final long serialVersionUID = 0L;
         getColumnNameBytes() {
       java.lang.Object ref = columnName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         columnName_ = b;
@@ -2241,7 +2241,7 @@ private static final long serialVersionUID = 0L;
         getSqlTypeBytes() {
       java.lang.Object ref = sqlType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         sqlType_ = b;
@@ -2464,7 +2464,7 @@ private static final long serialVersionUID = 0L;
         getDefaultValueBytes() {
       java.lang.Object ref = defaultValue_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         defaultValue_ = b;
@@ -2548,7 +2548,7 @@ private static final long serialVersionUID = 0L;
         getCheckConstraintBytes() {
       java.lang.Object ref = checkConstraint_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         checkConstraint_ = b;
@@ -2703,7 +2703,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ForeignKey foreign_key = 9 [json_name = "foreignKey"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ForeignKey, com.udb.core.common.v1.ForeignKey.Builder, com.udb.core.common.v1.ForeignKeyOrBuilder> 
+        com.udb.core.common.v1.ForeignKey, com.udb.core.common.v1.ForeignKey.Builder, com.udb.core.common.v1.ForeignKeyOrBuilder>
         internalGetForeignKeyFieldBuilder() {
       if (foreignKeyBuilder_ == null) {
         foreignKeyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2824,7 +2824,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.IndexOptions index = 10 [json_name = "index"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.IndexOptions, com.udb.core.common.v1.IndexOptions.Builder, com.udb.core.common.v1.IndexOptionsOrBuilder> 
+        com.udb.core.common.v1.IndexOptions, com.udb.core.common.v1.IndexOptions.Builder, com.udb.core.common.v1.IndexOptionsOrBuilder>
         internalGetIndexFieldBuilder() {
       if (indexBuilder_ == null) {
         indexBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2862,7 +2862,7 @@ private static final long serialVersionUID = 0L;
         getCommentBytes() {
       java.lang.Object ref = comment_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         comment_ = b;
@@ -3185,7 +3185,7 @@ private static final long serialVersionUID = 0L;
         getTsvectorLanguageBytes() {
       java.lang.Object ref = tsvectorLanguage_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tsvectorLanguage_ = b;
@@ -3400,7 +3400,7 @@ private static final long serialVersionUID = 0L;
         getCollationBytes() {
       java.lang.Object ref = collation_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         collation_ = b;
@@ -3583,7 +3583,7 @@ private static final long serialVersionUID = 0L;
         getPreviousColumnNameBytes() {
       java.lang.Object ref = previousColumnName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         previousColumnName_ = b;
@@ -3655,7 +3655,7 @@ private static final long serialVersionUID = 0L;
         getBackfillSqlBytes() {
       java.lang.Object ref = backfillSql_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         backfillSql_ = b;
@@ -3727,7 +3727,7 @@ private static final long serialVersionUID = 0L;
         getUsingExpressionBytes() {
       java.lang.Object ref = usingExpression_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         usingExpression_ = b;
@@ -3863,7 +3863,7 @@ private static final long serialVersionUID = 0L;
         getGeneratedExprBytes() {
       java.lang.Object ref = generatedExpr_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         generatedExpr_ = b;
@@ -3967,7 +3967,7 @@ private static final long serialVersionUID = 0L;
         getReferencesBytes() {
       java.lang.Object ref = references_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         references_ = b;
@@ -4307,4 +4307,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

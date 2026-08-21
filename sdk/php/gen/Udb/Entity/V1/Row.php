@@ -56,4 +56,3 @@ class Row extends \Google\Protobuf\Internal\Message
     }
 
 }
-

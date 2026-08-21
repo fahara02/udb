@@ -161,4 +161,3 @@ class StartRoomCompositeResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

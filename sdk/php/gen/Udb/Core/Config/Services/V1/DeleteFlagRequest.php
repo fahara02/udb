@@ -137,4 +137,3 @@ class DeleteFlagRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

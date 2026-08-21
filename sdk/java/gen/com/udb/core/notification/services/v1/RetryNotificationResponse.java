@@ -493,7 +493,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.notification.entity.v1.NotificationLog log = 1 [json_name = "log"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.notification.entity.v1.NotificationLog, com.udb.core.notification.entity.v1.NotificationLog.Builder, com.udb.core.notification.entity.v1.NotificationLogOrBuilder> 
+        com.udb.core.notification.entity.v1.NotificationLog, com.udb.core.notification.entity.v1.NotificationLog.Builder, com.udb.core.notification.entity.v1.NotificationLogOrBuilder>
         internalGetLogFieldBuilder() {
       if (logBuilder_ == null) {
         logBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -556,4 +556,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

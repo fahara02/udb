@@ -555,4 +555,3 @@ class EmbeddingJob extends \Google\Protobuf\Internal\Message
     }
 
 }
-

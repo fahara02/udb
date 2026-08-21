@@ -26,4 +26,3 @@ class Device
         static::$is_initialized = true;
     }
 }
-

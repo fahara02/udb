@@ -28,7 +28,7 @@ public final class VaultDbCredentialLeaseProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_vault_entity_v1_VaultDbCredentialLease_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_vault_entity_v1_VaultDbCredentialLease_fieldAccessorTable;
 

@@ -60,7 +60,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.tenant.entity.v1.Tenant tenants = 1 [json_name = "tenants"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.tenant.entity.v1.TenantOrBuilder> 
+  public java.util.List<? extends com.udb.core.tenant.entity.v1.TenantOrBuilder>
       getTenantsOrBuilderList() {
     return tenants_;
   }
@@ -153,7 +153,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -173,7 +173,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -526,7 +526,7 @@ private static final long serialVersionUID = 0L;
             tenantsBuilder_ = null;
             tenants_ = other.tenants_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            tenantsBuilder_ = 
+            tenantsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetTenantsFieldBuilder() : null;
           } else {
@@ -813,7 +813,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.tenant.entity.v1.Tenant tenants = 1 [json_name = "tenants"];</code>
      */
-    public java.util.List<? extends com.udb.core.tenant.entity.v1.TenantOrBuilder> 
+    public java.util.List<? extends com.udb.core.tenant.entity.v1.TenantOrBuilder>
          getTenantsOrBuilderList() {
       if (tenantsBuilder_ != null) {
         return tenantsBuilder_.getMessageOrBuilderList();
@@ -839,12 +839,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.tenant.entity.v1.Tenant tenants = 1 [json_name = "tenants"];</code>
      */
-    public java.util.List<com.udb.core.tenant.entity.v1.Tenant.Builder> 
+    public java.util.List<com.udb.core.tenant.entity.v1.Tenant.Builder>
          getTenantsBuilderList() {
       return internalGetTenantsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.tenant.entity.v1.Tenant, com.udb.core.tenant.entity.v1.Tenant.Builder, com.udb.core.tenant.entity.v1.TenantOrBuilder> 
+        com.udb.core.tenant.entity.v1.Tenant, com.udb.core.tenant.entity.v1.Tenant.Builder, com.udb.core.tenant.entity.v1.TenantOrBuilder>
         internalGetTenantsFieldBuilder() {
       if (tenantsBuilder_ == null) {
         tenantsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1034,7 +1034,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1080,7 +1080,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -1189,4 +1189,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

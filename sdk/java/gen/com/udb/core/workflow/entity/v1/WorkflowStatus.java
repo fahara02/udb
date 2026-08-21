@@ -257,4 +257,3 @@ public enum WorkflowStatus
 
   // @@protoc_insertion_point(enum_scope:udb.core.workflow.entity.v1.WorkflowStatus)
 }
-

@@ -25,4 +25,3 @@ class EmbeddingModel
         static::$is_initialized = true;
     }
 }
-

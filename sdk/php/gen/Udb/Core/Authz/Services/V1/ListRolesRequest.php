@@ -120,4 +120,3 @@ class ListRolesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

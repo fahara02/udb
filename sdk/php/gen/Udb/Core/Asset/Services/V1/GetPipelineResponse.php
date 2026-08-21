@@ -137,4 +137,3 @@ class GetPipelineResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

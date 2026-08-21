@@ -86,4 +86,3 @@ class Increment extends \Google\Protobuf\Internal\Message
     }
 
 }
-

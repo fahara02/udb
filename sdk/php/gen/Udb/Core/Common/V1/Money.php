@@ -97,4 +97,3 @@ class Money extends \Google\Protobuf\Internal\Message
     }
 
 }
-

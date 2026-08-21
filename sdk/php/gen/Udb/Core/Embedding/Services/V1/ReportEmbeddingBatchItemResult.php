@@ -137,4 +137,3 @@ class ReportEmbeddingBatchItemResult extends \Google\Protobuf\Internal\Message
     }
 
 }
-

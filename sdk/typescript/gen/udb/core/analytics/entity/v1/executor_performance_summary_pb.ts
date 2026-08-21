@@ -100,4 +100,3 @@ export type ExecutorPerformanceSummary = Message<"udb.core.analytics.entity.v1.E
  */
 export const ExecutorPerformanceSummarySchema: GenMessage<ExecutorPerformanceSummary> = /*@__PURE__*/
   messageDesc(file_udb_core_analytics_entity_v1_executor_performance_summary, 0);
-

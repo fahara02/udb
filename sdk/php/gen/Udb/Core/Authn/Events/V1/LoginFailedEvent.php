@@ -332,4 +332,3 @@ class LoginFailedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -137,4 +137,3 @@ class MaterializedView extends \Google\Protobuf\Internal\Message
     }
 
 }
-

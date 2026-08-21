@@ -155,4 +155,3 @@ export type WorkflowInstance = Message<"udb.core.workflow.entity.v1.WorkflowInst
  */
 export const WorkflowInstanceSchema: GenMessage<WorkflowInstance> = /*@__PURE__*/
   messageDesc(file_udb_core_workflow_entity_v1_workflow_instance, 0);
-

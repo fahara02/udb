@@ -203,4 +203,3 @@ class TenantStatusChangedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

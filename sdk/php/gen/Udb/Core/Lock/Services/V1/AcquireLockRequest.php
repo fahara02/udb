@@ -178,4 +178,3 @@ class AcquireLockRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

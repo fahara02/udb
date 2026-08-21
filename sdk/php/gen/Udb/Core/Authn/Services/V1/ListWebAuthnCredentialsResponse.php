@@ -90,4 +90,3 @@ class ListWebAuthnCredentialsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

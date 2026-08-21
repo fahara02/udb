@@ -190,4 +190,3 @@ class GenerateDatabaseCredentialsRequest extends \Google\Protobuf\Internal\Messa
     }
 
 }
-

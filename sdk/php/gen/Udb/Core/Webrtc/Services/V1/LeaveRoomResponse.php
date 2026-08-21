@@ -100,4 +100,3 @@ class LeaveRoomResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

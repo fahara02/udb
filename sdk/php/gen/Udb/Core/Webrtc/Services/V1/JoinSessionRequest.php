@@ -198,4 +198,3 @@ class JoinSessionRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

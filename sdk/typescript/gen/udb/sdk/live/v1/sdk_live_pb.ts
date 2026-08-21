@@ -69,4 +69,3 @@ export type SdkLiveRecord = Message<"udb.sdk.live.v1.SdkLiveRecord"> & {
  */
 export const SdkLiveRecordSchema: GenMessage<SdkLiveRecord> = /*@__PURE__*/
   messageDesc(file_udb_sdk_live_v1_sdk_live, 0);
-

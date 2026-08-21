@@ -110,4 +110,3 @@ class ReportEmbeddingBatchRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

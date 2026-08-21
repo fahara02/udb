@@ -193,4 +193,3 @@ export enum ErrorKind {
  */
 export const ErrorKindSchema: GenEnum<ErrorKind> = /*@__PURE__*/
   enumDesc(file_udb_entity_v1_error, 0);
-

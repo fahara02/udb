@@ -77,4 +77,3 @@ export type ApiKeyUsage = Message<"udb.core.apikey.entity.v1.ApiKeyUsage"> & {
  */
 export const ApiKeyUsageSchema: GenMessage<ApiKeyUsage> = /*@__PURE__*/
   messageDesc(file_udb_core_apikey_entity_v1_api_key_usage, 0);
-

@@ -28,22 +28,22 @@ public final class UdbEventsProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_events_v1_CDCEnvelope_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_events_v1_CDCEnvelope_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_events_v1_EventEnvelope_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_events_v1_EventEnvelope_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_events_v1_DriftDetectedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_events_v1_DriftDetectedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_events_v1_ProvisioningCompletedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_events_v1_ProvisioningCompletedEvent_fieldAccessorTable;
 

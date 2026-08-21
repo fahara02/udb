@@ -85,4 +85,3 @@ class FieldViolation extends \Google\Protobuf\Internal\Message
     }
 
 }
-

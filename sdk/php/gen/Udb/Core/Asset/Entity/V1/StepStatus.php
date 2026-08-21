@@ -66,4 +66,3 @@ class StepStatus
         return constant($const);
     }
 }
-

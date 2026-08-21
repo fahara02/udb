@@ -31,4 +31,3 @@ class WebrtcService
         static::$is_initialized = true;
     }
 }
-

@@ -470,4 +470,3 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
     }
 
 }
-

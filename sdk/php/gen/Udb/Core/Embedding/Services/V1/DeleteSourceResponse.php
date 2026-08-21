@@ -120,4 +120,3 @@ class DeleteSourceResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -210,4 +210,3 @@ class EgressFailed extends \Google\Protobuf\Internal\Message
     }
 
 }
-

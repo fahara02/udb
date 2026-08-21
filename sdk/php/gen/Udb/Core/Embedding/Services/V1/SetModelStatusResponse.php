@@ -147,4 +147,3 @@ class SetModelStatusResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

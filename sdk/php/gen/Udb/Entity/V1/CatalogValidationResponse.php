@@ -137,4 +137,3 @@ class CatalogValidationResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

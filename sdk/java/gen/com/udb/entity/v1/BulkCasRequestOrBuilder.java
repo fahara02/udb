@@ -40,7 +40,7 @@ public interface BulkCasRequestOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.BulkCasItem items = 3 [json_name = "items"];</code>
    */
-  java.util.List<com.udb.entity.v1.BulkCasItem> 
+  java.util.List<com.udb.entity.v1.BulkCasItem>
       getItemsList();
   /**
    * <code>repeated .udb.entity.v1.BulkCasItem items = 3 [json_name = "items"];</code>
@@ -53,7 +53,7 @@ public interface BulkCasRequestOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.BulkCasItem items = 3 [json_name = "items"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.BulkCasItemOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.BulkCasItemOrBuilder>
       getItemsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.BulkCasItem items = 3 [json_name = "items"];</code>

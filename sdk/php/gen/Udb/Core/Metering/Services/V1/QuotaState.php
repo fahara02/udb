@@ -247,4 +247,3 @@ class QuotaState extends \Google\Protobuf\Internal\Message
     }
 
 }
-

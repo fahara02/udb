@@ -25,4 +25,3 @@ class BackupPolicy
         static::$is_initialized = true;
     }
 }
-

@@ -165,4 +165,3 @@ class BulkCasItemResult extends \Google\Protobuf\Internal\Message
     }
 
 }
-

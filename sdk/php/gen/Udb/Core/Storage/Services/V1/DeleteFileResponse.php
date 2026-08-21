@@ -100,4 +100,3 @@ class DeleteFileResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

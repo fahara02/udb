@@ -372,4 +372,3 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

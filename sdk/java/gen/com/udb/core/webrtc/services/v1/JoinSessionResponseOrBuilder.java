@@ -28,7 +28,7 @@ public interface JoinSessionResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
    */
-  java.util.List<com.udb.core.webrtc.entity.v1.Peer> 
+  java.util.List<com.udb.core.webrtc.entity.v1.Peer>
       getExistingPeersList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
@@ -41,7 +41,7 @@ public interface JoinSessionResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
    */
-  java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
+  java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder>
       getExistingPeersOrBuilderList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
@@ -52,7 +52,7 @@ public interface JoinSessionResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 3 [json_name = "iceServers"];</code>
    */
-  java.util.List<com.udb.core.webrtc.services.v1.IceServer> 
+  java.util.List<com.udb.core.webrtc.services.v1.IceServer>
       getIceServersList();
   /**
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 3 [json_name = "iceServers"];</code>
@@ -65,7 +65,7 @@ public interface JoinSessionResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 3 [json_name = "iceServers"];</code>
    */
-  java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder> 
+  java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder>
       getIceServersOrBuilderList();
   /**
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 3 [json_name = "iceServers"];</code>

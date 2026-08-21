@@ -28,7 +28,7 @@ public final class AssetProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_entity_v1_Asset_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_entity_v1_Asset_fieldAccessorTable;
 

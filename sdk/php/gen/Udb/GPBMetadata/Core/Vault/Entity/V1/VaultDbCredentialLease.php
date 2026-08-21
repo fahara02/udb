@@ -25,4 +25,3 @@ class VaultDbCredentialLease
         static::$is_initialized = true;
     }
 }
-

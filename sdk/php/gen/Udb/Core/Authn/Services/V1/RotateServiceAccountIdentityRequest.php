@@ -164,4 +164,3 @@ class RotateServiceAccountIdentityRequest extends \Google\Protobuf\Internal\Mess
     }
 
 }
-

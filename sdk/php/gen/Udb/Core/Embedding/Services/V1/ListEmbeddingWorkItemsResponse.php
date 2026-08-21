@@ -154,4 +154,3 @@ class ListEmbeddingWorkItemsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

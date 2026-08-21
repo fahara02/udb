@@ -86,7 +86,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 2 [json_name = "tables"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder> 
+  public java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder>
       getTablesOrBuilderList() {
     return tables_;
   }
@@ -127,7 +127,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 3 [json_name = "excluded"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder> 
+  public java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder>
       getExcludedOrBuilderList() {
     return excluded_;
   }
@@ -555,7 +555,7 @@ private static final long serialVersionUID = 0L;
             tablesBuilder_ = null;
             tables_ = other.tables_;
             bitField0_ = (bitField0_ & ~0x00000002);
-            tablesBuilder_ = 
+            tablesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetTablesFieldBuilder() : null;
           } else {
@@ -581,7 +581,7 @@ private static final long serialVersionUID = 0L;
             excludedBuilder_ = null;
             excluded_ = other.excluded_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            excludedBuilder_ = 
+            excludedBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetExcludedFieldBuilder() : null;
           } else {
@@ -783,7 +783,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.backup.services.v1.BackupRunSummary backup = 1 [json_name = "backup"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.backup.services.v1.BackupRunSummary, com.udb.core.backup.services.v1.BackupRunSummary.Builder, com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder> 
+        com.udb.core.backup.services.v1.BackupRunSummary, com.udb.core.backup.services.v1.BackupRunSummary.Builder, com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder>
         internalGetBackupFieldBuilder() {
       if (backupBuilder_ == null) {
         backupBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -991,7 +991,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 2 [json_name = "tables"];</code>
      */
-    public java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder> 
+    public java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder>
          getTablesOrBuilderList() {
       if (tablesBuilder_ != null) {
         return tablesBuilder_.getMessageOrBuilderList();
@@ -1017,12 +1017,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 2 [json_name = "tables"];</code>
      */
-    public java.util.List<com.udb.core.backup.services.v1.BackupTableEntry.Builder> 
+    public java.util.List<com.udb.core.backup.services.v1.BackupTableEntry.Builder>
          getTablesBuilderList() {
       return internalGetTablesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.backup.services.v1.BackupTableEntry, com.udb.core.backup.services.v1.BackupTableEntry.Builder, com.udb.core.backup.services.v1.BackupTableEntryOrBuilder> 
+        com.udb.core.backup.services.v1.BackupTableEntry, com.udb.core.backup.services.v1.BackupTableEntry.Builder, com.udb.core.backup.services.v1.BackupTableEntryOrBuilder>
         internalGetTablesFieldBuilder() {
       if (tablesBuilder_ == null) {
         tablesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1231,7 +1231,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 3 [json_name = "excluded"];</code>
      */
-    public java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder> 
+    public java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder>
          getExcludedOrBuilderList() {
       if (excludedBuilder_ != null) {
         return excludedBuilder_.getMessageOrBuilderList();
@@ -1257,12 +1257,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 3 [json_name = "excluded"];</code>
      */
-    public java.util.List<com.udb.core.backup.services.v1.BackupExcludedTable.Builder> 
+    public java.util.List<com.udb.core.backup.services.v1.BackupExcludedTable.Builder>
          getExcludedBuilderList() {
       return internalGetExcludedFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.backup.services.v1.BackupExcludedTable, com.udb.core.backup.services.v1.BackupExcludedTable.Builder, com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder> 
+        com.udb.core.backup.services.v1.BackupExcludedTable, com.udb.core.backup.services.v1.BackupExcludedTable.Builder, com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder>
         internalGetExcludedFieldBuilder() {
       if (excludedBuilder_ == null) {
         excludedBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1384,7 +1384,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 4 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1447,4 +1447,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

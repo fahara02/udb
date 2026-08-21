@@ -88,4 +88,3 @@ export type ExternalIdentity = Message<"udb.core.idp.entity.v1.ExternalIdentity"
  */
 export const ExternalIdentitySchema: GenMessage<ExternalIdentity> = /*@__PURE__*/
   messageDesc(file_udb_core_idp_entity_v1_external_identity, 0);
-

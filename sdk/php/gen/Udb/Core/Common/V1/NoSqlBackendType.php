@@ -56,4 +56,3 @@ class NoSqlBackendType
         return constant($const);
     }
 }
-

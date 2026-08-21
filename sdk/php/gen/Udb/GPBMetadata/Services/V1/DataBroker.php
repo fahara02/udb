@@ -35,4 +35,3 @@ class DataBroker
         static::$is_initialized = true;
     }
 }
-

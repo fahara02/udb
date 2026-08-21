@@ -25,4 +25,3 @@ class Egress
         static::$is_initialized = true;
     }
 }
-

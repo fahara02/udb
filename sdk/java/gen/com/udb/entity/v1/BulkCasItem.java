@@ -155,7 +155,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       expectedRevision_ = s;
@@ -175,7 +175,7 @@ private static final long serialVersionUID = 0L;
       getExpectedRevisionBytes() {
     java.lang.Object ref = expectedRevision_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       expectedRevision_ = b;
@@ -245,7 +245,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 5 [json_name = "increments"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
       getIncrementsOrBuilderList() {
     return increments_;
   }
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
             incrementsBuilder_ = null;
             increments_ = other.increments_;
             bitField0_ = (bitField0_ & ~0x00000010);
-            incrementsBuilder_ = 
+            incrementsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetIncrementsFieldBuilder() : null;
           } else {
@@ -938,7 +938,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct filter = 1 [json_name = "filter"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
         internalGetFilterFieldBuilder() {
       if (filterBuilder_ == null) {
         filterBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1095,7 +1095,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct changes = 2 [json_name = "changes"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
         internalGetChangesFieldBuilder() {
       if (changesBuilder_ == null) {
         changesBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1141,7 +1141,7 @@ private static final long serialVersionUID = 0L;
         getExpectedRevisionBytes() {
       java.lang.Object ref = expectedRevision_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         expectedRevision_ = b;
@@ -1344,7 +1344,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct expected = 4 [json_name = "expected"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
         internalGetExpectedFieldBuilder() {
       if (expectedBuilder_ == null) {
         expectedBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1612,7 +1612,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 5 [json_name = "increments"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
          getIncrementsOrBuilderList() {
       if (incrementsBuilder_ != null) {
         return incrementsBuilder_.getMessageOrBuilderList();
@@ -1650,12 +1650,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 5 [json_name = "increments"];</code>
      */
-    public java.util.List<com.udb.entity.v1.UpdateRequest.Increment.Builder> 
+    public java.util.List<com.udb.entity.v1.UpdateRequest.Increment.Builder>
          getIncrementsBuilderList() {
       return internalGetIncrementsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.UpdateRequest.Increment, com.udb.entity.v1.UpdateRequest.Increment.Builder, com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> 
+        com.udb.entity.v1.UpdateRequest.Increment, com.udb.entity.v1.UpdateRequest.Increment.Builder, com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
         internalGetIncrementsFieldBuilder() {
       if (incrementsBuilder_ == null) {
         incrementsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1719,4 +1719,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

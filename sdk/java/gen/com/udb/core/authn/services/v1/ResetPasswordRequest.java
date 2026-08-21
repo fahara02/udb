@@ -60,7 +60,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       otpId_ = s;
@@ -76,7 +76,7 @@ private static final long serialVersionUID = 0L;
       getOtpIdBytes() {
     java.lang.Object ref = otpId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       otpId_ = b;
@@ -99,7 +99,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       code_ = s;
@@ -115,7 +115,7 @@ private static final long serialVersionUID = 0L;
       getCodeBytes() {
     java.lang.Object ref = code_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       code_ = b;
@@ -138,7 +138,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       newPassword_ = s;
@@ -154,7 +154,7 @@ private static final long serialVersionUID = 0L;
       getNewPasswordBytes() {
     java.lang.Object ref = newPassword_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       newPassword_ = b;
@@ -602,7 +602,7 @@ private static final long serialVersionUID = 0L;
         getOtpIdBytes() {
       java.lang.Object ref = otpId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         otpId_ = b;
@@ -674,7 +674,7 @@ private static final long serialVersionUID = 0L;
         getCodeBytes() {
       java.lang.Object ref = code_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         code_ = b;
@@ -746,7 +746,7 @@ private static final long serialVersionUID = 0L;
         getNewPasswordBytes() {
       java.lang.Object ref = newPassword_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         newPassword_ = b;
@@ -901,7 +901,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.RequestContext context = 4 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.RequestContext, com.udb.core.common.v1.RequestContext.Builder, com.udb.core.common.v1.RequestContextOrBuilder> 
+        com.udb.core.common.v1.RequestContext, com.udb.core.common.v1.RequestContext.Builder, com.udb.core.common.v1.RequestContextOrBuilder>
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -964,4 +964,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

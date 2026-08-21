@@ -348,4 +348,3 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
     }
 
 }
-

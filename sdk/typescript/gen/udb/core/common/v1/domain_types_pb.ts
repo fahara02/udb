@@ -453,4 +453,3 @@ export enum PaymentMethod {
  */
 export const PaymentMethodSchema: GenEnum<PaymentMethod> = /*@__PURE__*/
   enumDesc(file_udb_core_common_v1_domain_types, 2);
-

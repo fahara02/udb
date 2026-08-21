@@ -230,4 +230,3 @@ class LinkIdentityRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -25,4 +25,3 @@ class SearchIndex
         static::$is_initialized = true;
     }
 }
-

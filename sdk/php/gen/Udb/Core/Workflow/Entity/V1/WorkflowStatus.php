@@ -103,4 +103,3 @@ class WorkflowStatus
         return constant($const);
     }
 }
-

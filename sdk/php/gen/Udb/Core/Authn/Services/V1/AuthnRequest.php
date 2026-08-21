@@ -380,4 +380,3 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

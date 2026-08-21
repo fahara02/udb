@@ -25,7 +25,7 @@ public interface IngestDocumentBatchRequestOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.IngestDocumentRequest documents = 2 [json_name = "documents"];</code>
    */
-  java.util.List<com.udb.core.embedding.services.v1.IngestDocumentRequest> 
+  java.util.List<com.udb.core.embedding.services.v1.IngestDocumentRequest>
       getDocumentsList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.IngestDocumentRequest documents = 2 [json_name = "documents"];</code>
@@ -38,7 +38,7 @@ public interface IngestDocumentBatchRequestOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.IngestDocumentRequest documents = 2 [json_name = "documents"];</code>
    */
-  java.util.List<? extends com.udb.core.embedding.services.v1.IngestDocumentRequestOrBuilder> 
+  java.util.List<? extends com.udb.core.embedding.services.v1.IngestDocumentRequestOrBuilder>
       getDocumentsOrBuilderList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.IngestDocumentRequest documents = 2 [json_name = "documents"];</code>

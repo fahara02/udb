@@ -61,4 +61,3 @@ class PipelineStatus
         return constant($const);
     }
 }
-

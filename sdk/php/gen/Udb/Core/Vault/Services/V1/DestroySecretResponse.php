@@ -120,4 +120,3 @@ class DestroySecretResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

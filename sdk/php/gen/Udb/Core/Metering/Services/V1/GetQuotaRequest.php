@@ -110,4 +110,3 @@ class GetQuotaRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

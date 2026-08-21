@@ -264,4 +264,3 @@ class PolicyApproval extends \Google\Protobuf\Internal\Message
     }
 
 }
-

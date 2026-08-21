@@ -25,4 +25,3 @@ class AnalyticsService
         static::$is_initialized = true;
     }
 }
-

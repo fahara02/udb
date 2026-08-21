@@ -604,4 +604,3 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
 }
-

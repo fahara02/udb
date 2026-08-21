@@ -210,4 +210,3 @@ class RecoveryCodesGeneratedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

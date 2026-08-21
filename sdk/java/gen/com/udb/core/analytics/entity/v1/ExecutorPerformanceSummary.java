@@ -65,7 +65,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       summaryId_ = s;
@@ -81,7 +81,7 @@ private static final long serialVersionUID = 0L;
       getSummaryIdBytes() {
     java.lang.Object ref = summaryId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       summaryId_ = b;
@@ -130,7 +130,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       executorIdentity_ = s;
@@ -146,7 +146,7 @@ private static final long serialVersionUID = 0L;
       getExecutorIdentityBytes() {
     java.lang.Object ref = executorIdentity_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       executorIdentity_ = b;
@@ -169,7 +169,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       workloadKind_ = s;
@@ -185,7 +185,7 @@ private static final long serialVersionUID = 0L;
       getWorkloadKindBytes() {
     java.lang.Object ref = workloadKind_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       workloadKind_ = b;
@@ -996,7 +996,7 @@ private static final long serialVersionUID = 0L;
         getSummaryIdBytes() {
       java.lang.Object ref = summaryId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         summaryId_ = b;
@@ -1151,7 +1151,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp summary_date = 2 [json_name = "summaryDate", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetSummaryDateFieldBuilder() {
       if (summaryDateBuilder_ == null) {
         summaryDateBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1189,7 +1189,7 @@ private static final long serialVersionUID = 0L;
         getExecutorIdentityBytes() {
       java.lang.Object ref = executorIdentity_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         executorIdentity_ = b;
@@ -1261,7 +1261,7 @@ private static final long serialVersionUID = 0L;
         getWorkloadKindBytes() {
       java.lang.Object ref = workloadKind_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         workloadKind_ = b;
@@ -1704,7 +1704,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp recorded_at = 14 [json_name = "recordedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetRecordedAtFieldBuilder() {
       if (recordedAtBuilder_ == null) {
         recordedAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1767,4 +1767,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

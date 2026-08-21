@@ -57,4 +57,3 @@ export type RolePermission = Message<"udb.core.authz.entity.v1.RolePermission"> 
  */
 export const RolePermissionSchema: GenMessage<RolePermission> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_entity_v1_role_permission, 0);
-

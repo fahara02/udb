@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.entity.v1.PolicyRule policies = 1 [json_name = "policies"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.entity.v1.PolicyRuleOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.entity.v1.PolicyRuleOrBuilder>
       getPoliciesOrBuilderList() {
     return policies_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             policiesBuilder_ = null;
             policies_ = other.policies_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            policiesBuilder_ = 
+            policiesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetPoliciesFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.PolicyRule policies = 1 [json_name = "policies"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.entity.v1.PolicyRuleOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.entity.v1.PolicyRuleOrBuilder>
          getPoliciesOrBuilderList() {
       if (policiesBuilder_ != null) {
         return policiesBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.PolicyRule policies = 1 [json_name = "policies"];</code>
      */
-    public java.util.List<com.udb.core.authz.entity.v1.PolicyRule.Builder> 
+    public java.util.List<com.udb.core.authz.entity.v1.PolicyRule.Builder>
          getPoliciesBuilderList() {
       return internalGetPoliciesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyRule, com.udb.core.authz.entity.v1.PolicyRule.Builder, com.udb.core.authz.entity.v1.PolicyRuleOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicyRule, com.udb.core.authz.entity.v1.PolicyRule.Builder, com.udb.core.authz.entity.v1.PolicyRuleOrBuilder>
         internalGetPoliciesFieldBuilder() {
       if (policiesBuilder_ == null) {
         policiesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,4 +911,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

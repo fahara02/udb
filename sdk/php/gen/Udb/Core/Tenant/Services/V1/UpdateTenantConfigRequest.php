@@ -137,4 +137,3 @@ class UpdateTenantConfigRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

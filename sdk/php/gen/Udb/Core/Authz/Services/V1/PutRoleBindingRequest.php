@@ -66,4 +66,3 @@ class PutRoleBindingRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

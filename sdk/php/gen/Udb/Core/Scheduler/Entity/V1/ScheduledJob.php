@@ -643,4 +643,3 @@ class ScheduledJob extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -61,7 +61,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       keyName_ = s;
@@ -77,7 +77,7 @@ private static final long serialVersionUID = 0L;
       getKeyNameBytes() {
     java.lang.Object ref = keyName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       keyName_ = b;
@@ -100,7 +100,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       algorithm_ = s;
@@ -116,7 +116,7 @@ private static final long serialVersionUID = 0L;
       getAlgorithmBytes() {
     java.lang.Object ref = algorithm_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       algorithm_ = b;
@@ -140,7 +140,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.vault.services.v1.TransitPublicKey public_keys = 3 [json_name = "publicKeys"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.vault.services.v1.TransitPublicKeyOrBuilder> 
+  public java.util.List<? extends com.udb.core.vault.services.v1.TransitPublicKeyOrBuilder>
       getPublicKeysOrBuilderList() {
     return publicKeys_;
   }
@@ -180,7 +180,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       message_ = s;
@@ -196,7 +196,7 @@ private static final long serialVersionUID = 0L;
       getMessageBytes() {
     java.lang.Object ref = message_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       message_ = b;
@@ -598,7 +598,7 @@ private static final long serialVersionUID = 0L;
             publicKeysBuilder_ = null;
             publicKeys_ = other.publicKeys_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            publicKeysBuilder_ = 
+            publicKeysBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetPublicKeysFieldBuilder() : null;
           } else {
@@ -717,7 +717,7 @@ private static final long serialVersionUID = 0L;
         getKeyNameBytes() {
       java.lang.Object ref = keyName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         keyName_ = b;
@@ -789,7 +789,7 @@ private static final long serialVersionUID = 0L;
         getAlgorithmBytes() {
       java.lang.Object ref = algorithm_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         algorithm_ = b;
@@ -1031,7 +1031,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.vault.services.v1.TransitPublicKey public_keys = 3 [json_name = "publicKeys"];</code>
      */
-    public java.util.List<? extends com.udb.core.vault.services.v1.TransitPublicKeyOrBuilder> 
+    public java.util.List<? extends com.udb.core.vault.services.v1.TransitPublicKeyOrBuilder>
          getPublicKeysOrBuilderList() {
       if (publicKeysBuilder_ != null) {
         return publicKeysBuilder_.getMessageOrBuilderList();
@@ -1057,12 +1057,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.vault.services.v1.TransitPublicKey public_keys = 3 [json_name = "publicKeys"];</code>
      */
-    public java.util.List<com.udb.core.vault.services.v1.TransitPublicKey.Builder> 
+    public java.util.List<com.udb.core.vault.services.v1.TransitPublicKey.Builder>
          getPublicKeysBuilderList() {
       return internalGetPublicKeysFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.vault.services.v1.TransitPublicKey, com.udb.core.vault.services.v1.TransitPublicKey.Builder, com.udb.core.vault.services.v1.TransitPublicKeyOrBuilder> 
+        com.udb.core.vault.services.v1.TransitPublicKey, com.udb.core.vault.services.v1.TransitPublicKey.Builder, com.udb.core.vault.services.v1.TransitPublicKeyOrBuilder>
         internalGetPublicKeysFieldBuilder() {
       if (publicKeysBuilder_ == null) {
         publicKeysBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1101,7 +1101,7 @@ private static final long serialVersionUID = 0L;
         getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         message_ = b;
@@ -1256,7 +1256,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 5 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1319,4 +1319,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

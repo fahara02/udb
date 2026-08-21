@@ -66,4 +66,3 @@ class GetUserResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

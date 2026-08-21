@@ -25,4 +25,3 @@ class UsageEvent
         static::$is_initialized = true;
     }
 }
-

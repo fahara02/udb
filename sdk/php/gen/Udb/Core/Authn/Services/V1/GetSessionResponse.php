@@ -66,4 +66,3 @@ class GetSessionResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

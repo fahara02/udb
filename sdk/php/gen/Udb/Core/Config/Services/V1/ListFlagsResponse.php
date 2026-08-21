@@ -154,4 +154,3 @@ class ListFlagsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

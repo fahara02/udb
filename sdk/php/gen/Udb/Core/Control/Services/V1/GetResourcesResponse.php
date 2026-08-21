@@ -127,4 +127,3 @@ class GetResourcesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

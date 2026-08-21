@@ -13,7 +13,7 @@ public interface ListLocksResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.lock.services.v1.Lock locks = 1 [json_name = "locks"];</code>
    */
-  java.util.List<com.udb.core.lock.services.v1.Lock> 
+  java.util.List<com.udb.core.lock.services.v1.Lock>
       getLocksList();
   /**
    * <code>repeated .udb.core.lock.services.v1.Lock locks = 1 [json_name = "locks"];</code>
@@ -26,7 +26,7 @@ public interface ListLocksResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.lock.services.v1.Lock locks = 1 [json_name = "locks"];</code>
    */
-  java.util.List<? extends com.udb.core.lock.services.v1.LockOrBuilder> 
+  java.util.List<? extends com.udb.core.lock.services.v1.LockOrBuilder>
       getLocksOrBuilderList();
   /**
    * <code>repeated .udb.core.lock.services.v1.Lock locks = 1 [json_name = "locks"];</code>

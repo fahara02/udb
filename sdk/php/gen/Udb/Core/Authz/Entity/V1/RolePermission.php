@@ -201,4 +201,3 @@ class RolePermission extends \Google\Protobuf\Internal\Message
     }
 
 }
-

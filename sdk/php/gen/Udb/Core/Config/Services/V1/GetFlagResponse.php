@@ -157,4 +157,3 @@ class GetFlagResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -161,4 +161,3 @@ class SealStatusResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

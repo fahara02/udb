@@ -93,4 +93,3 @@ class DeleteEndpointResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

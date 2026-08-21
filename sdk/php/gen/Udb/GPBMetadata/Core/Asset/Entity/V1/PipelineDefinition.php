@@ -25,4 +25,3 @@ class PipelineDefinition
         static::$is_initialized = true;
     }
 }
-

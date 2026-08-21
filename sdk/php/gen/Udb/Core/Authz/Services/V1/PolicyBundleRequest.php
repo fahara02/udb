@@ -15,7 +15,6 @@ use Google\Protobuf\RepeatedField;
  * role bindings, relationship tuples) and signs it so an SDK can cache it
  * and answer `can()` locally without a round-trip, while still being able
  * to verify the bundle was issued by UDB and has not expired.
- *
  * Generated from protobuf message <code>udb.core.authz.services.v1.PolicyBundleRequest</code>
  */
 class PolicyBundleRequest extends \Google\Protobuf\Internal\Message
@@ -116,4 +115,3 @@ class PolicyBundleRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

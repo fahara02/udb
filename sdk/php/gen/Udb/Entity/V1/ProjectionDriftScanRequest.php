@@ -228,4 +228,3 @@ class ProjectionDriftScanRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

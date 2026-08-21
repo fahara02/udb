@@ -120,4 +120,3 @@ class ReportRetrievalEvaluationResponse extends \Google\Protobuf\Internal\Messag
     }
 
 }
-

@@ -28,7 +28,7 @@ public final class ExternalIdentityProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_idp_entity_v1_ExternalIdentity_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_idp_entity_v1_ExternalIdentity_fieldAccessorTable;
 

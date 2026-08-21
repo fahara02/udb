@@ -25,4 +25,3 @@ class SamlReplayEntry
         static::$is_initialized = true;
     }
 }
-

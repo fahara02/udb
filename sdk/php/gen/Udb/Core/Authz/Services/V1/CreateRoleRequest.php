@@ -299,4 +299,3 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

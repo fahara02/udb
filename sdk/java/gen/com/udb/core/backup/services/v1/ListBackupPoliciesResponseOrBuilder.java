@@ -13,7 +13,7 @@ public interface ListBackupPoliciesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupPolicyView policies = 1 [json_name = "policies"];</code>
    */
-  java.util.List<com.udb.core.backup.services.v1.BackupPolicyView> 
+  java.util.List<com.udb.core.backup.services.v1.BackupPolicyView>
       getPoliciesList();
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupPolicyView policies = 1 [json_name = "policies"];</code>
@@ -26,7 +26,7 @@ public interface ListBackupPoliciesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupPolicyView policies = 1 [json_name = "policies"];</code>
    */
-  java.util.List<? extends com.udb.core.backup.services.v1.BackupPolicyViewOrBuilder> 
+  java.util.List<? extends com.udb.core.backup.services.v1.BackupPolicyViewOrBuilder>
       getPoliciesOrBuilderList();
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupPolicyView policies = 1 [json_name = "policies"];</code>

@@ -2100,4 +2100,3 @@ export const storage: GenExtension<FieldOptions, StorageFieldOptions> = /*@__PUR
  */
 export const column_security: GenExtension<FieldOptions, ColumnSecurityOptions> = /*@__PURE__*/
   extDesc(file_udb_core_common_v1_db, 15);
-

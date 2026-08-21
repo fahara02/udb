@@ -28,27 +28,27 @@ public final class AssetEventsProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_events_v1_AssetRegistered_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_events_v1_AssetRegistered_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_events_v1_PipelineStarted_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_events_v1_PipelineStarted_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_events_v1_StepCompleted_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_events_v1_StepCompleted_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_events_v1_PipelineCompleted_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_events_v1_PipelineCompleted_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_events_v1_PipelineFailed_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_events_v1_PipelineFailed_fieldAccessorTable;
 

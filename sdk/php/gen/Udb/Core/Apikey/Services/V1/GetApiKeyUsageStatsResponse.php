@@ -83,4 +83,3 @@ class GetApiKeyUsageStatsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

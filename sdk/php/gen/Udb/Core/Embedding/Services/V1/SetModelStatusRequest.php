@@ -191,4 +191,3 @@ class SetModelStatusRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

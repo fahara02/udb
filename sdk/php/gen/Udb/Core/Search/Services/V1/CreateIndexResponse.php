@@ -188,4 +188,3 @@ class CreateIndexResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

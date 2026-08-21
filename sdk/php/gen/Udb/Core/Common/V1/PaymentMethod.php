@@ -71,4 +71,3 @@ class PaymentMethod
         return constant($const);
     }
 }
-

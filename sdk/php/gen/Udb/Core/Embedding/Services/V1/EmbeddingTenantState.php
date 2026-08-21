@@ -56,4 +56,3 @@ class EmbeddingTenantState
         return constant($const);
     }
 }
-

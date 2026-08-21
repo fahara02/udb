@@ -154,4 +154,3 @@ class GetResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

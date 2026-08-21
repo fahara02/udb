@@ -201,4 +201,3 @@ class RevokeDatabaseCredentialsResponse extends \Google\Protobuf\Internal\Messag
     }
 
 }
-

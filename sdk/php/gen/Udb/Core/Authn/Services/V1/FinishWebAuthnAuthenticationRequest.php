@@ -120,4 +120,3 @@ class FinishWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Mess
     }
 
 }
-

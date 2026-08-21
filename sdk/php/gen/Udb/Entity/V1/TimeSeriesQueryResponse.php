@@ -120,4 +120,3 @@ class TimeSeriesQueryResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

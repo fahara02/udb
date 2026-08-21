@@ -326,4 +326,3 @@ class EmbeddingWorkItemSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
-

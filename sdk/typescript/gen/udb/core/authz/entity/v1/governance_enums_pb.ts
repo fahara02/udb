@@ -141,4 +141,3 @@ export enum AuthzChangeType {
  */
 export const AuthzChangeTypeSchema: GenEnum<AuthzChangeType> = /*@__PURE__*/
   enumDesc(file_udb_core_authz_entity_v1_governance_enums, 2);
-

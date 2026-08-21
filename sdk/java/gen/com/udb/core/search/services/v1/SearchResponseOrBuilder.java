@@ -13,7 +13,7 @@ public interface SearchResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.search.services.v1.SearchHit hits = 1 [json_name = "hits"];</code>
    */
-  java.util.List<com.udb.core.search.services.v1.SearchHit> 
+  java.util.List<com.udb.core.search.services.v1.SearchHit>
       getHitsList();
   /**
    * <code>repeated .udb.core.search.services.v1.SearchHit hits = 1 [json_name = "hits"];</code>
@@ -26,7 +26,7 @@ public interface SearchResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.search.services.v1.SearchHit hits = 1 [json_name = "hits"];</code>
    */
-  java.util.List<? extends com.udb.core.search.services.v1.SearchHitOrBuilder> 
+  java.util.List<? extends com.udb.core.search.services.v1.SearchHitOrBuilder>
       getHitsOrBuilderList();
   /**
    * <code>repeated .udb.core.search.services.v1.SearchHit hits = 1 [json_name = "hits"];</code>

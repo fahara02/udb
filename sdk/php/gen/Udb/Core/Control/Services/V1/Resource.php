@@ -139,4 +139,3 @@ class Resource extends \Google\Protobuf\Internal\Message
     }
 
 }
-

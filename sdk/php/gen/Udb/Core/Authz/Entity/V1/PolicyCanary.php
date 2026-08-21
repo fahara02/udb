@@ -537,4 +537,3 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
     }
 
 }
-

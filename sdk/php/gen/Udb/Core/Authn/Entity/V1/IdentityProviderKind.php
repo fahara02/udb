@@ -71,4 +71,3 @@ class IdentityProviderKind
         return constant($const);
     }
 }
-

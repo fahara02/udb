@@ -406,4 +406,3 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

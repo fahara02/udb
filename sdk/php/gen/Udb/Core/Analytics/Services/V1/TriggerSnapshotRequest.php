@@ -134,4 +134,3 @@ class TriggerSnapshotRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

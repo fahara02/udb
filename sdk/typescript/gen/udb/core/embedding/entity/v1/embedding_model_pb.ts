@@ -190,4 +190,3 @@ export type EmbeddingModel = Message<"udb.core.embedding.entity.v1.EmbeddingMode
  */
 export const EmbeddingModelSchema: GenMessage<EmbeddingModel> = /*@__PURE__*/
   messageDesc(file_udb_core_embedding_entity_v1_embedding_model, 0);
-

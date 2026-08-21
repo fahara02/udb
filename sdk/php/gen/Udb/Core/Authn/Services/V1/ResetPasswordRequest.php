@@ -147,4 +147,3 @@ class ResetPasswordRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

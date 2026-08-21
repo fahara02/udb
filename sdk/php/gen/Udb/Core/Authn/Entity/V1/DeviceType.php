@@ -71,4 +71,3 @@ class DeviceType
         return constant($const);
     }
 }
-

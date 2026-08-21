@@ -138,4 +138,3 @@ class HealthReportRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

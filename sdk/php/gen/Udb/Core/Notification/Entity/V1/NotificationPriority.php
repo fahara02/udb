@@ -61,4 +61,3 @@ class NotificationPriority
         return constant($const);
     }
 }
-

@@ -66,4 +66,3 @@ class GetJwksRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

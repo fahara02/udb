@@ -191,4 +191,3 @@ class FileReference extends \Google\Protobuf\Internal\Message
     }
 
 }
-

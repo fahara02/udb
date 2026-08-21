@@ -63,7 +63,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       backupId_ = s;
@@ -79,7 +79,7 @@ private static final long serialVersionUID = 0L;
       getBackupIdBytes() {
     java.lang.Object ref = backupId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       backupId_ = b;
@@ -102,7 +102,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       objectPrefix_ = s;
@@ -118,7 +118,7 @@ private static final long serialVersionUID = 0L;
       getObjectPrefixBytes() {
     java.lang.Object ref = objectPrefix_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       objectPrefix_ = b;
@@ -141,7 +141,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       manifestChecksum_ = s;
@@ -157,7 +157,7 @@ private static final long serialVersionUID = 0L;
       getManifestChecksumBytes() {
     java.lang.Object ref = manifestChecksum_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       manifestChecksum_ = b;
@@ -216,7 +216,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 7 [json_name = "tables"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder> 
+  public java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder>
       getTablesOrBuilderList() {
     return tables_;
   }
@@ -259,7 +259,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 8 [json_name = "excluded"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder> 
+  public java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder>
       getExcluded8OrBuilderList() {
     return excluded8_;
   }
@@ -299,7 +299,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       message_ = s;
@@ -315,7 +315,7 @@ private static final long serialVersionUID = 0L;
       getMessageBytes() {
     java.lang.Object ref = message_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       message_ = b;
@@ -821,7 +821,7 @@ private static final long serialVersionUID = 0L;
             tablesBuilder_ = null;
             tables_ = other.tables_;
             bitField0_ = (bitField0_ & ~0x00000040);
-            tablesBuilder_ = 
+            tablesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetTablesFieldBuilder() : null;
           } else {
@@ -847,7 +847,7 @@ private static final long serialVersionUID = 0L;
             excluded8Builder_ = null;
             excluded8_ = other.excluded8_;
             bitField0_ = (bitField0_ & ~0x00000080);
-            excluded8Builder_ = 
+            excluded8Builder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetExcluded8FieldBuilder() : null;
           } else {
@@ -999,7 +999,7 @@ private static final long serialVersionUID = 0L;
         getBackupIdBytes() {
       java.lang.Object ref = backupId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         backupId_ = b;
@@ -1071,7 +1071,7 @@ private static final long serialVersionUID = 0L;
         getObjectPrefixBytes() {
       java.lang.Object ref = objectPrefix_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         objectPrefix_ = b;
@@ -1143,7 +1143,7 @@ private static final long serialVersionUID = 0L;
         getManifestChecksumBytes() {
       java.lang.Object ref = manifestChecksum_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         manifestChecksum_ = b;
@@ -1481,7 +1481,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 7 [json_name = "tables"];</code>
      */
-    public java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder> 
+    public java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder>
          getTablesOrBuilderList() {
       if (tablesBuilder_ != null) {
         return tablesBuilder_.getMessageOrBuilderList();
@@ -1507,12 +1507,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 7 [json_name = "tables"];</code>
      */
-    public java.util.List<com.udb.core.backup.services.v1.BackupTableEntry.Builder> 
+    public java.util.List<com.udb.core.backup.services.v1.BackupTableEntry.Builder>
          getTablesBuilderList() {
       return internalGetTablesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.backup.services.v1.BackupTableEntry, com.udb.core.backup.services.v1.BackupTableEntry.Builder, com.udb.core.backup.services.v1.BackupTableEntryOrBuilder> 
+        com.udb.core.backup.services.v1.BackupTableEntry, com.udb.core.backup.services.v1.BackupTableEntry.Builder, com.udb.core.backup.services.v1.BackupTableEntryOrBuilder>
         internalGetTablesFieldBuilder() {
       if (tablesBuilder_ == null) {
         tablesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1721,7 +1721,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 8 [json_name = "excluded"];</code>
      */
-    public java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder> 
+    public java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder>
          getExcluded8OrBuilderList() {
       if (excluded8Builder_ != null) {
         return excluded8Builder_.getMessageOrBuilderList();
@@ -1747,12 +1747,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 8 [json_name = "excluded"];</code>
      */
-    public java.util.List<com.udb.core.backup.services.v1.BackupExcludedTable.Builder> 
+    public java.util.List<com.udb.core.backup.services.v1.BackupExcludedTable.Builder>
          getExcluded8BuilderList() {
       return internalGetExcluded8FieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.backup.services.v1.BackupExcludedTable, com.udb.core.backup.services.v1.BackupExcludedTable.Builder, com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder> 
+        com.udb.core.backup.services.v1.BackupExcludedTable, com.udb.core.backup.services.v1.BackupExcludedTable.Builder, com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder>
         internalGetExcluded8FieldBuilder() {
       if (excluded8Builder_ == null) {
         excluded8Builder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1791,7 +1791,7 @@ private static final long serialVersionUID = 0L;
         getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         message_ = b;
@@ -1946,7 +1946,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 10 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2009,4 +2009,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

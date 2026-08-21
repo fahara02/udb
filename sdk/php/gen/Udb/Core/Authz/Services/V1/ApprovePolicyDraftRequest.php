@@ -147,4 +147,3 @@ class ApprovePolicyDraftRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

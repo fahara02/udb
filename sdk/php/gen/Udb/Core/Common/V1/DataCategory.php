@@ -71,4 +71,3 @@ class DataCategory
         return constant($const);
     }
 }
-

@@ -92,7 +92,7 @@ public interface EventContractOptionsOrBuilder extends
    *
    * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
    */
-  java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent> 
+  java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent>
       getEmitsList();
   /**
    * <pre>
@@ -126,7 +126,7 @@ public interface EventContractOptionsOrBuilder extends
    *
    * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
    */
-  java.util.List<? extends com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder> 
+  java.util.List<? extends com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder>
       getEmitsOrBuilderList();
   /**
    * <pre>

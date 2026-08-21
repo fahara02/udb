@@ -127,4 +127,3 @@ class RevokeCertificateBindingResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

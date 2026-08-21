@@ -106,4 +106,3 @@ export type Asset = Message<"udb.core.asset.entity.v1.Asset"> & {
  */
 export const AssetSchema: GenMessage<Asset> = /*@__PURE__*/
   messageDesc(file_udb_core_asset_entity_v1_asset, 0);
-

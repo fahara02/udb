@@ -154,4 +154,3 @@ class ListDeliveriesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -13,7 +13,7 @@ public interface AnalyticalQueryResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.Row rows = 1 [json_name = "rows"];</code>
    */
-  java.util.List<com.udb.entity.v1.Row> 
+  java.util.List<com.udb.entity.v1.Row>
       getRowsList();
   /**
    * <code>repeated .udb.entity.v1.Row rows = 1 [json_name = "rows"];</code>
@@ -26,7 +26,7 @@ public interface AnalyticalQueryResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.Row rows = 1 [json_name = "rows"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.RowOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.RowOrBuilder>
       getRowsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.Row rows = 1 [json_name = "rows"];</code>
@@ -64,7 +64,7 @@ public interface AnalyticalQueryResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 4 [json_name = "warnings"];</code>
    */
-  java.util.List<com.udb.entity.v1.OperationWarning> 
+  java.util.List<com.udb.entity.v1.OperationWarning>
       getWarningsList();
   /**
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 4 [json_name = "warnings"];</code>
@@ -77,7 +77,7 @@ public interface AnalyticalQueryResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 4 [json_name = "warnings"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder>
       getWarningsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 4 [json_name = "warnings"];</code>

@@ -164,4 +164,3 @@ export enum AssetStatus {
  */
 export const AssetStatusSchema: GenEnum<AssetStatus> = /*@__PURE__*/
   enumDesc(file_udb_core_asset_entity_v1_enums, 3);
-

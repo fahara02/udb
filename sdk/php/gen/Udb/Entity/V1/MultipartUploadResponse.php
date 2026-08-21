@@ -110,4 +110,3 @@ class MultipartUploadResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -56,4 +56,3 @@ class DisableMfaFactorResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

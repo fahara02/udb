@@ -60,7 +60,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       returnedIdField_ = s;
@@ -76,7 +76,7 @@ private static final long serialVersionUID = 0L;
       getReturnedIdFieldBytes() {
     java.lang.Object ref = returnedIdField_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       returnedIdField_ = b;
@@ -99,7 +99,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       readbackRpc_ = s;
@@ -115,7 +115,7 @@ private static final long serialVersionUID = 0L;
       getReadbackRpcBytes() {
     java.lang.Object ref = readbackRpc_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       readbackRpc_ = b;
@@ -138,7 +138,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       readbackRequestField_ = s;
@@ -154,7 +154,7 @@ private static final long serialVersionUID = 0L;
       getReadbackRequestFieldBytes() {
     java.lang.Object ref = readbackRequestField_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       readbackRequestField_ = b;
@@ -199,7 +199,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       noReadbackReason_ = s;
@@ -215,7 +215,7 @@ private static final long serialVersionUID = 0L;
       getNoReadbackReasonBytes() {
     java.lang.Object ref = noReadbackReason_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       noReadbackReason_ = b;
@@ -664,7 +664,7 @@ private static final long serialVersionUID = 0L;
         getReturnedIdFieldBytes() {
       java.lang.Object ref = returnedIdField_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         returnedIdField_ = b;
@@ -736,7 +736,7 @@ private static final long serialVersionUID = 0L;
         getReadbackRpcBytes() {
       java.lang.Object ref = readbackRpc_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         readbackRpc_ = b;
@@ -808,7 +808,7 @@ private static final long serialVersionUID = 0L;
         getReadbackRequestFieldBytes() {
       java.lang.Object ref = readbackRequestField_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         readbackRequestField_ = b;
@@ -944,7 +944,7 @@ private static final long serialVersionUID = 0L;
         getNoReadbackReasonBytes() {
       java.lang.Object ref = noReadbackReason_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         noReadbackReason_ = b;
@@ -1041,4 +1041,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

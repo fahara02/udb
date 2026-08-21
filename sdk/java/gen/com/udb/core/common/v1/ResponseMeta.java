@@ -63,7 +63,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       requestId_ = s;
@@ -79,7 +79,7 @@ private static final long serialVersionUID = 0L;
       getRequestIdBytes() {
     java.lang.Object ref = requestId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       requestId_ = b;
@@ -102,7 +102,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       timestamp_ = s;
@@ -118,7 +118,7 @@ private static final long serialVersionUID = 0L;
       getTimestampBytes() {
     java.lang.Object ref = timestamp_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       timestamp_ = b;
@@ -546,7 +546,7 @@ private static final long serialVersionUID = 0L;
         getRequestIdBytes() {
       java.lang.Object ref = requestId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         requestId_ = b;
@@ -618,7 +618,7 @@ private static final long serialVersionUID = 0L;
         getTimestampBytes() {
       java.lang.Object ref = timestamp_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         timestamp_ = b;
@@ -773,7 +773,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PaginationMeta pagination = 3 [json_name = "pagination"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PaginationMeta, com.udb.core.common.v1.PaginationMeta.Builder, com.udb.core.common.v1.PaginationMetaOrBuilder> 
+        com.udb.core.common.v1.PaginationMeta, com.udb.core.common.v1.PaginationMeta.Builder, com.udb.core.common.v1.PaginationMetaOrBuilder>
         internalGetPaginationFieldBuilder() {
       if (paginationBuilder_ == null) {
         paginationBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -836,4 +836,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

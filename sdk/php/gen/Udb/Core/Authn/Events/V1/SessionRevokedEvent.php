@@ -271,4 +271,3 @@ class SessionRevokedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

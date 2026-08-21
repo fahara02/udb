@@ -83,4 +83,3 @@ class IngestDocumentBatchRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

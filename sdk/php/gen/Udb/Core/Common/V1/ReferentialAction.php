@@ -66,4 +66,3 @@ class ReferentialAction
         return constant($const);
     }
 }
-

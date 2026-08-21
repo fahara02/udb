@@ -120,4 +120,3 @@ class PutMfaPolicyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

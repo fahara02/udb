@@ -84,7 +84,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       notificationId_ = s;
@@ -100,7 +100,7 @@ private static final long serialVersionUID = 0L;
       getNotificationIdBytes() {
     java.lang.Object ref = notificationId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       notificationId_ = b;
@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       recipientId_ = s;
@@ -139,7 +139,7 @@ private static final long serialVersionUID = 0L;
       getRecipientIdBytes() {
     java.lang.Object ref = recipientId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       recipientId_ = b;
@@ -198,7 +198,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       subject_ = s;
@@ -214,7 +214,7 @@ private static final long serialVersionUID = 0L;
       getSubjectBytes() {
     java.lang.Object ref = subject_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       subject_ = b;
@@ -237,7 +237,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       message_ = s;
@@ -253,7 +253,7 @@ private static final long serialVersionUID = 0L;
       getMessageBytes() {
     java.lang.Object ref = message_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       message_ = b;
@@ -269,7 +269,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.udb.core.notification.entity.v1.NotificationProto.internal_static_udb_core_notification_entity_v1_Notification_TemplateDataEntry_descriptor, 
+                com.udb.core.notification.entity.v1.NotificationProto.internal_static_udb_core_notification_entity_v1_Notification_TemplateDataEntry_descriptor,
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -532,7 +532,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       errorMessage_ = s;
@@ -548,7 +548,7 @@ java.lang.String defaultValue) {
       getErrorMessageBytes() {
     java.lang.Object ref = errorMessage_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       errorMessage_ = b;
@@ -571,7 +571,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -587,7 +587,7 @@ java.lang.String defaultValue) {
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -636,7 +636,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       deletedBy_ = s;
@@ -652,7 +652,7 @@ java.lang.String defaultValue) {
       getDeletedByBytes() {
     java.lang.Object ref = deletedBy_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       deletedBy_ = b;
@@ -1536,7 +1536,7 @@ java.lang.String defaultValue) {
         getNotificationIdBytes() {
       java.lang.Object ref = notificationId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         notificationId_ = b;
@@ -1608,7 +1608,7 @@ java.lang.String defaultValue) {
         getRecipientIdBytes() {
       java.lang.Object ref = recipientId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         recipientId_ = b;
@@ -1782,7 +1782,7 @@ java.lang.String defaultValue) {
         getSubjectBytes() {
       java.lang.Object ref = subject_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         subject_ = b;
@@ -1854,7 +1854,7 @@ java.lang.String defaultValue) {
         getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         message_ = b;
@@ -2238,7 +2238,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetScheduledAtFieldBuilder() {
       if (scheduledAtBuilder_ == null) {
         scheduledAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2359,7 +2359,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetSentAtFieldBuilder() {
       if (sentAtBuilder_ == null) {
         sentAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2480,7 +2480,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetDeliveredAtFieldBuilder() {
       if (deliveredAtBuilder_ == null) {
         deliveredAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2601,7 +2601,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetReadAtFieldBuilder() {
       if (readAtBuilder_ == null) {
         readAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2722,7 +2722,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetCreatedAtFieldBuilder() {
       if (createdAtBuilder_ == null) {
         createdAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2792,7 +2792,7 @@ java.lang.String defaultValue) {
         getErrorMessageBytes() {
       java.lang.Object ref = errorMessage_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         errorMessage_ = b;
@@ -2864,7 +2864,7 @@ java.lang.String defaultValue) {
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -3019,7 +3019,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetDeletedAtFieldBuilder() {
       if (deletedAtBuilder_ == null) {
         deletedAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -3057,7 +3057,7 @@ java.lang.String defaultValue) {
         getDeletedByBytes() {
       java.lang.Object ref = deletedBy_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         deletedBy_ = b;
@@ -3154,4 +3154,3 @@ java.lang.String defaultValue) {
   }
 
 }
-

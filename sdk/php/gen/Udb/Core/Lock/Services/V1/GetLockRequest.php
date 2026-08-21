@@ -90,4 +90,3 @@ class GetLockRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

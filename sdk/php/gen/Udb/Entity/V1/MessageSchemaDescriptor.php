@@ -245,4 +245,3 @@ class MessageSchemaDescriptor extends \Google\Protobuf\Internal\Message
     }
 
 }
-

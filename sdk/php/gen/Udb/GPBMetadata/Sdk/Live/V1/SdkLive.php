@@ -24,4 +24,3 @@ class SdkLive
         static::$is_initialized = true;
     }
 }
-

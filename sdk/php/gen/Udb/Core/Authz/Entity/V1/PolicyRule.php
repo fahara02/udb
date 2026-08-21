@@ -547,4 +547,3 @@ class PolicyRule extends \Google\Protobuf\Internal\Message
     }
 
 }
-

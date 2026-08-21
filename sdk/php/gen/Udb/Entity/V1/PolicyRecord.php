@@ -299,4 +299,3 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
     }
 
 }
-

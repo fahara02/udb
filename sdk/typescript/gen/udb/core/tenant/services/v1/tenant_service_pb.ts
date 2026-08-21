@@ -841,4 +841,3 @@ export const TenantService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_tenant_services_v1_tenant_service, 0);
-

@@ -449,4 +449,3 @@ export type ResourceIngestStatusEvent = Message<"udb.core.notification.events.v1
  */
 export const ResourceIngestStatusEventSchema: GenMessage<ResourceIngestStatusEvent> = /*@__PURE__*/
   messageDesc(file_udb_core_notification_events_v1_notification_events, 5);
-

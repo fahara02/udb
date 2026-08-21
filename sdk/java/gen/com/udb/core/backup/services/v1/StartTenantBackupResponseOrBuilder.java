@@ -67,7 +67,7 @@ public interface StartTenantBackupResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 7 [json_name = "tables"];</code>
    */
-  java.util.List<com.udb.core.backup.services.v1.BackupTableEntry> 
+  java.util.List<com.udb.core.backup.services.v1.BackupTableEntry>
       getTablesList();
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 7 [json_name = "tables"];</code>
@@ -80,7 +80,7 @@ public interface StartTenantBackupResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 7 [json_name = "tables"];</code>
    */
-  java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder> 
+  java.util.List<? extends com.udb.core.backup.services.v1.BackupTableEntryOrBuilder>
       getTablesOrBuilderList();
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupTableEntry tables = 7 [json_name = "tables"];</code>
@@ -91,7 +91,7 @@ public interface StartTenantBackupResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 8 [json_name = "excluded"];</code>
    */
-  java.util.List<com.udb.core.backup.services.v1.BackupExcludedTable> 
+  java.util.List<com.udb.core.backup.services.v1.BackupExcludedTable>
       getExcluded8List();
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 8 [json_name = "excluded"];</code>
@@ -104,7 +104,7 @@ public interface StartTenantBackupResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 8 [json_name = "excluded"];</code>
    */
-  java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder> 
+  java.util.List<? extends com.udb.core.backup.services.v1.BackupExcludedTableOrBuilder>
       getExcluded8OrBuilderList();
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupExcludedTable excluded = 8 [json_name = "excluded"];</code>

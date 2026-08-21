@@ -157,4 +157,3 @@ class TimeSeriesWriteRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

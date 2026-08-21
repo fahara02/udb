@@ -26,4 +26,3 @@ class AuthzService
         static::$is_initialized = true;
     }
 }
-

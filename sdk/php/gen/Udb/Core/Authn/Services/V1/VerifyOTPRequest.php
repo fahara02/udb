@@ -90,4 +90,3 @@ class VerifyOTPRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

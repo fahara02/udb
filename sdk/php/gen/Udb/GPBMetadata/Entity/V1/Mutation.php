@@ -24,4 +24,3 @@ class Mutation
         static::$is_initialized = true;
     }
 }
-

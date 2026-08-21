@@ -26,4 +26,3 @@ class Role
         static::$is_initialized = true;
     }
 }
-

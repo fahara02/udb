@@ -22,7 +22,7 @@ export const file_udb_core_authn_entity_v1_otp: GenFile = /*@__PURE__*/
  * ---------------------------------------------------------------------------
  * OTP — One-time password record for email 2FA, account verification,
  * password reset, and sensitive operation approval.
- * 
+ *
  * Migration order 3.  OTPs are never updated — a new row is inserted on each
  * send (including resend, which sets superseded_by_id on the previous row).
  * ---------------------------------------------------------------------------
@@ -115,4 +115,3 @@ export type OTP = Message<"udb.core.authn.entity.v1.OTP"> & {
  */
 export const OTPSchema: GenMessage<OTP> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_otp, 0);
-

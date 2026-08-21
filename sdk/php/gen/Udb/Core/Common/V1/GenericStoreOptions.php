@@ -299,4 +299,3 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

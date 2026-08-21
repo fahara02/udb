@@ -434,4 +434,3 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
     }
 
 }
-

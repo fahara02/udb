@@ -147,4 +147,3 @@ class ChangeUserStatusRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

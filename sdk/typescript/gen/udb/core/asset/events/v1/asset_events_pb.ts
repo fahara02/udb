@@ -204,4 +204,3 @@ export type PipelineFailed = Message<"udb.core.asset.events.v1.PipelineFailed"> 
  */
 export const PipelineFailedSchema: GenMessage<PipelineFailed> = /*@__PURE__*/
   messageDesc(file_udb_core_asset_events_v1_asset_events, 4);
-

@@ -99,4 +99,3 @@ export type PipelineMetricSnapshot = Message<"udb.core.analytics.entity.v1.Pipel
  */
 export const PipelineMetricSnapshotSchema: GenMessage<PipelineMetricSnapshot> = /*@__PURE__*/
   messageDesc(file_udb_core_analytics_entity_v1_pipeline_metric_snapshot, 0);
-

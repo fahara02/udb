@@ -604,4 +604,3 @@ export const ConfigService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_config_services_v1_config_service, 0);
-

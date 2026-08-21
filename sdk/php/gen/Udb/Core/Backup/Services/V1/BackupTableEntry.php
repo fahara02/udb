@@ -194,4 +194,3 @@ class BackupTableEntry extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -557,7 +557,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.webhook.entity.v1.WebhookEndpoint endpoint = 1 [json_name = "endpoint"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.webhook.entity.v1.WebhookEndpoint, com.udb.core.webhook.entity.v1.WebhookEndpoint.Builder, com.udb.core.webhook.entity.v1.WebhookEndpointOrBuilder> 
+        com.udb.core.webhook.entity.v1.WebhookEndpoint, com.udb.core.webhook.entity.v1.WebhookEndpoint.Builder, com.udb.core.webhook.entity.v1.WebhookEndpointOrBuilder>
         internalGetEndpointFieldBuilder() {
       if (endpointBuilder_ == null) {
         endpointBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -678,7 +678,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 2 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -741,4 +741,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

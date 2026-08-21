@@ -66,4 +66,3 @@ class UpdateProviderResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

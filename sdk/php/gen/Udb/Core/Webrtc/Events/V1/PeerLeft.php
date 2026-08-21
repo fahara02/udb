@@ -176,4 +176,3 @@ class PeerLeft extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -138,4 +138,3 @@ class GetCanaryStatusResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

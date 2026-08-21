@@ -25,4 +25,3 @@ class PolicySimulation
         static::$is_initialized = true;
     }
 }
-

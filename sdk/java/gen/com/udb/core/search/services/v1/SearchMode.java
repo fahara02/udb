@@ -168,4 +168,3 @@ public enum SearchMode
 
   // @@protoc_insertion_point(enum_scope:udb.core.search.services.v1.SearchMode)
 }
-

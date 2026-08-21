@@ -257,4 +257,3 @@ class RoleRevokedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

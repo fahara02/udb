@@ -326,4 +326,3 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

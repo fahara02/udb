@@ -218,4 +218,3 @@ class AdminCatalogSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
-

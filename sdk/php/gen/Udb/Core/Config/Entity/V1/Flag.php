@@ -458,4 +458,3 @@ class Flag extends \Google\Protobuf\Internal\Message
     }
 
 }
-

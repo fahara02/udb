@@ -66,4 +66,3 @@ class GetTemplateResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -25,4 +25,3 @@ class LockService
         static::$is_initialized = true;
     }
 }
-

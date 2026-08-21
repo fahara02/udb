@@ -144,4 +144,3 @@ public enum LiveQueryChangeOp
 
   // @@protoc_insertion_point(enum_scope:udb.core.livequery.services.v1.LiveQueryChangeOp)
 }
-

@@ -607,4 +607,3 @@ export const MeteringService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_metering_services_v1_metering_service, 0);
-

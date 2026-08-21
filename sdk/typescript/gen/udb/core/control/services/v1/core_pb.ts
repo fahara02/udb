@@ -622,4 +622,3 @@ export type RollbackResourcesResponse = Message<"udb.core.control.services.v1.Ro
  */
 export const RollbackResourcesResponseSchema: GenMessage<RollbackResourcesResponse> = /*@__PURE__*/
   messageDesc(file_udb_core_control_services_v1_core, 14);
-

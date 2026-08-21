@@ -327,4 +327,3 @@ class QuotaRule extends \Google\Protobuf\Internal\Message
     }
 
 }
-

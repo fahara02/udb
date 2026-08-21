@@ -13,7 +13,7 @@ public interface SimulatePolicyResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.SimulationResult results = 1 [json_name = "results"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.SimulationResult> 
+  java.util.List<com.udb.core.authz.services.v1.SimulationResult>
       getResultsList();
   /**
    * <code>repeated .udb.core.authz.services.v1.SimulationResult results = 1 [json_name = "results"];</code>
@@ -26,7 +26,7 @@ public interface SimulatePolicyResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.SimulationResult results = 1 [json_name = "results"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder> 
+  java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder>
       getResultsOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.services.v1.SimulationResult results = 1 [json_name = "results"];</code>

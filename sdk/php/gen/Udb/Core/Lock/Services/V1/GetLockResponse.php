@@ -171,4 +171,3 @@ class GetLockResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

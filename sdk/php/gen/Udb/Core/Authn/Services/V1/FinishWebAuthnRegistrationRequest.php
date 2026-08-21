@@ -147,4 +147,3 @@ class FinishWebAuthnRegistrationRequest extends \Google\Protobuf\Internal\Messag
     }
 
 }
-

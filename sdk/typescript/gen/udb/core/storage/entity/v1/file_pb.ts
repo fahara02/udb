@@ -231,4 +231,3 @@ export type File = Message<"udb.core.storage.entity.v1.File"> & {
  */
 export const FileSchema: GenMessage<File> = /*@__PURE__*/
   messageDesc(file_udb_core_storage_entity_v1_file, 0);
-

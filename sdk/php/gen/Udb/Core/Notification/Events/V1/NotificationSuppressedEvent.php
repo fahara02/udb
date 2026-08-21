@@ -326,4 +326,3 @@ class NotificationSuppressedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

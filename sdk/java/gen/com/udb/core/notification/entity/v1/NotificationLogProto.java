@@ -28,12 +28,12 @@ public final class NotificationLogProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_entity_v1_NotificationLog_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_entity_v1_NotificationLog_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_entity_v1_NotificationDeliveryAttempt_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_entity_v1_NotificationDeliveryAttempt_fieldAccessorTable;
 

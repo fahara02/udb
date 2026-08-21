@@ -56,4 +56,3 @@ class RoomState
         return constant($const);
     }
 }
-

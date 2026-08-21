@@ -77,4 +77,3 @@ class ScanVerdict
         return constant($const);
     }
 }
-

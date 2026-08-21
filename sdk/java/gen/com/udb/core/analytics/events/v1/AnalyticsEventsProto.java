@@ -28,17 +28,17 @@ public final class AnalyticsEventsProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_analytics_events_v1_PipelineSnapshotCommittedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_analytics_events_v1_PipelineSnapshotCommittedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_analytics_events_v1_SlaBreachDetectedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_analytics_events_v1_SlaBreachDetectedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_analytics_events_v1_DailySummaryGeneratedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_analytics_events_v1_DailySummaryGeneratedEvent_fieldAccessorTable;
 

@@ -176,4 +176,3 @@ class EgressStopped extends \Google\Protobuf\Internal\Message
     }
 
 }
-

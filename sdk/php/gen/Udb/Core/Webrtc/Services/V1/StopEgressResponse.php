@@ -154,4 +154,3 @@ class StopEgressResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

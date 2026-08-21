@@ -83,7 +83,12 @@ struct FileOutcome {
 }
 
 /// Drives the FSM. Returns a process exit code (0 success, 1 failure).
-pub(crate) fn run(out_dir: &str, manage_buf_yaml: bool, format_proto: bool) -> i32 {
+pub(crate) fn run(
+    out_dir: &str,
+    manage_buf_yaml: bool,
+    format_proto: bool,
+    confirmed: bool,
+) -> i32 {
     let proto_dir = if out_dir.trim().is_empty() {
         "proto".to_string()
     } else {
@@ -97,7 +102,7 @@ pub(crate) fn run(out_dir: &str, manage_buf_yaml: bool, format_proto: bool) -> i
         return 1;
     }
     if manage_buf_yaml {
-        match merge_buf_yaml(Path::new("buf.yaml"), &proto_dir) {
+        match merge_buf_yaml(Path::new("buf.yaml"), &proto_dir, confirmed) {
             Ok(status) => fsm.note(format!("buf.yaml {status} (module path `{proto_dir}`)")),
             Err(err) => return fsm.fail(format!("buf.yaml: {err}")),
         }
@@ -283,7 +288,7 @@ fn sync_file(dest: &Path, contents: &[u8]) -> Result<&'static str, String> {
 /// Create-or-merge a v2 `buf.yaml` so it includes the proto module path and the
 /// UDB broker-contract deps, without disturbing the user's existing config.
 /// Returns `"created"`, `"merged"`, or `"unchanged"`.
-fn merge_buf_yaml(path: &Path, proto_dir: &str) -> Result<&'static str, String> {
+fn merge_buf_yaml(path: &Path, proto_dir: &str, confirmed: bool) -> Result<&'static str, String> {
     use serde_yaml::Value;
 
     const DEPS: [&str; 2] = [
@@ -351,11 +356,24 @@ fn merge_buf_yaml(path: &Path, proto_dir: &str) -> Result<&'static str, String> 
         return Err("buf.yaml `deps` is not a sequence".to_string());
     }
 
-    if changed {
-        let out = serde_yaml::to_string(&doc).map_err(|e| e.to_string())?;
-        std::fs::write(path, out).map_err(|e| e.to_string())?;
-        Ok("merged")
-    } else {
-        Ok("unchanged")
+    if !changed {
+        return Ok("unchanged");
     }
+    // Merging is done by parsing and re-serialising, which cannot preserve
+    // comments - a project that documented its own buf.yaml would silently lose
+    // that documentation. Creating an ABSENT buf.yaml destroys nothing and needs
+    // no consent; rewriting one the project already owns does. Say exactly what
+    // would be added and how to proceed, rather than doing it unannounced.
+    if !confirmed && text.contains('#') {
+        return Err(format!(
+            "buf.yaml already exists and carries comments that a merge cannot preserve. \
+             It needs `modules: - path: {proto_dir}` plus the googleapis and \
+             grpc-gateway deps. Re-run with `--yes` to let UDB rewrite it (comments \
+             will be dropped), add those entries by hand, or pass `--no-buf-yaml` to \
+             leave it untouched."
+        ));
+    }
+    let out = serde_yaml::to_string(&doc).map_err(|e| e.to_string())?;
+    std::fs::write(path, out).map_err(|e| e.to_string())?;
+    Ok("merged")
 }

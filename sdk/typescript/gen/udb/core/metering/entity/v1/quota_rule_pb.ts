@@ -92,4 +92,3 @@ export type QuotaRule = Message<"udb.core.metering.entity.v1.QuotaRule"> & {
  */
 export const QuotaRuleSchema: GenMessage<QuotaRule> = /*@__PURE__*/
   messageDesc(file_udb_core_metering_entity_v1_quota_rule, 0);
-

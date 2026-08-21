@@ -225,4 +225,3 @@ class TestProviderDiscoveryResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

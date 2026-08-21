@@ -429,8 +429,14 @@ pub fn run() {
             out_dir,
             manage_buf_yaml,
             format_proto,
+            confirmed,
         } => {
-            process::exit(proto_export::run(&out_dir, manage_buf_yaml, format_proto));
+            process::exit(proto_export::run(
+                &out_dir,
+                manage_buf_yaml,
+                format_proto,
+                confirmed,
+            ));
         }
         Command::ProtoFmt { root, check } => {
             process::exit(proto_fmt::run(&root, check));

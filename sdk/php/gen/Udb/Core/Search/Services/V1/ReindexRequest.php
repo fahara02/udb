@@ -83,4 +83,3 @@ class ReindexRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

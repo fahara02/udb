@@ -160,6 +160,11 @@ pub(crate) enum Command {
         /// Run UDB proto formatting after export so long field annotations stay
         /// on one physical line.
         format_proto: bool,
+        /// Permission to REWRITE an existing buf.yaml. Creating one that is
+        /// absent needs no consent - nothing is lost. Merging into one the
+        /// project already wrote drops its comments (a YAML round-trip cannot
+        /// keep them), so that requires `--yes`.
+        confirmed: bool,
     },
     /// Format exported proto files so long UDB field annotations stay on one
     /// physical line. This is intentionally narrower than `buf format`.
@@ -1200,6 +1205,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 out_dir: flag_value("--out").unwrap_or_default(),
                 manage_buf_yaml: !has_flag("--no-buf-yaml"),
                 format_proto: has_flag("--fmt") || has_flag("--format"),
+                confirmed: has_flag("--yes"),
             }
         }
         // `udb proto fmt [<dir>] [--check]`

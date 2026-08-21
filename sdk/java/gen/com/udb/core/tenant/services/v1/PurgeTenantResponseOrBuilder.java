@@ -29,7 +29,7 @@ public interface PurgeTenantResponseOrBuilder extends
    *
    * <code>repeated .udb.core.tenant.services.v1.PurgedTableCount purged = 2 [json_name = "purged"];</code>
    */
-  java.util.List<com.udb.core.tenant.services.v1.PurgedTableCount> 
+  java.util.List<com.udb.core.tenant.services.v1.PurgedTableCount>
       getPurgedList();
   /**
    * <pre>
@@ -54,7 +54,7 @@ public interface PurgeTenantResponseOrBuilder extends
    *
    * <code>repeated .udb.core.tenant.services.v1.PurgedTableCount purged = 2 [json_name = "purged"];</code>
    */
-  java.util.List<? extends com.udb.core.tenant.services.v1.PurgedTableCountOrBuilder> 
+  java.util.List<? extends com.udb.core.tenant.services.v1.PurgedTableCountOrBuilder>
       getPurgedOrBuilderList();
   /**
    * <pre>
@@ -73,7 +73,7 @@ public interface PurgeTenantResponseOrBuilder extends
    *
    * <code>repeated .udb.core.tenant.services.v1.PurgeExcludedTable excluded = 3 [json_name = "excluded"];</code>
    */
-  java.util.List<com.udb.core.tenant.services.v1.PurgeExcludedTable> 
+  java.util.List<com.udb.core.tenant.services.v1.PurgeExcludedTable>
       getExcludedList();
   /**
    * <pre>
@@ -98,7 +98,7 @@ public interface PurgeTenantResponseOrBuilder extends
    *
    * <code>repeated .udb.core.tenant.services.v1.PurgeExcludedTable excluded = 3 [json_name = "excluded"];</code>
    */
-  java.util.List<? extends com.udb.core.tenant.services.v1.PurgeExcludedTableOrBuilder> 
+  java.util.List<? extends com.udb.core.tenant.services.v1.PurgeExcludedTableOrBuilder>
       getExcludedOrBuilderList();
   /**
    * <pre>

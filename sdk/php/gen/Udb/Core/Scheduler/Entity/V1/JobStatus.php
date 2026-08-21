@@ -71,4 +71,3 @@ class JobStatus
         return constant($const);
     }
 }
-

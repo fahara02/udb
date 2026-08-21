@@ -164,4 +164,3 @@ class GetDeliveryStatsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

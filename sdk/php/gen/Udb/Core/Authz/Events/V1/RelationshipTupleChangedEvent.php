@@ -291,4 +291,3 @@ class RelationshipTupleChangedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

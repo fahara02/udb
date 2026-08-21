@@ -121,4 +121,3 @@ class Http extends \Google\Protobuf\Internal\Message
     }
 
 }
-

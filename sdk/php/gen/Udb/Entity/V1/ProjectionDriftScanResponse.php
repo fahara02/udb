@@ -218,4 +218,3 @@ class ProjectionDriftScanResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

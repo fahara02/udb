@@ -492,4 +492,3 @@ class SearchIndex extends \Google\Protobuf\Internal\Message
     }
 
 }
-

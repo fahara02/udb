@@ -233,4 +233,3 @@ class SetScanVerdictRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

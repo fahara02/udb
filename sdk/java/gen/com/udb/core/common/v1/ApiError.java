@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       code_ = s;
@@ -80,7 +80,7 @@ private static final long serialVersionUID = 0L;
       getCodeBytes() {
     java.lang.Object ref = code_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       code_ = b;
@@ -103,7 +103,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       message_ = s;
@@ -119,7 +119,7 @@ private static final long serialVersionUID = 0L;
       getMessageBytes() {
     java.lang.Object ref = message_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       message_ = b;
@@ -142,7 +142,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       errorId_ = s;
@@ -158,7 +158,7 @@ private static final long serialVersionUID = 0L;
       getErrorIdBytes() {
     java.lang.Object ref = errorId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       errorId_ = b;
@@ -204,7 +204,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.FieldViolation field_violations = 6 [json_name = "fieldViolations"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.FieldViolationOrBuilder> 
+  public java.util.List<? extends com.udb.core.common.v1.FieldViolationOrBuilder>
       getFieldViolationsOrBuilderList() {
     return fieldViolations_;
   }
@@ -607,7 +607,7 @@ private static final long serialVersionUID = 0L;
             fieldViolationsBuilder_ = null;
             fieldViolations_ = other.fieldViolations_;
             bitField0_ = (bitField0_ & ~0x00000020);
-            fieldViolationsBuilder_ = 
+            fieldViolationsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetFieldViolationsFieldBuilder() : null;
           } else {
@@ -721,7 +721,7 @@ private static final long serialVersionUID = 0L;
         getCodeBytes() {
       java.lang.Object ref = code_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         code_ = b;
@@ -793,7 +793,7 @@ private static final long serialVersionUID = 0L;
         getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         message_ = b;
@@ -865,7 +865,7 @@ private static final long serialVersionUID = 0L;
         getErrorIdBytes() {
       java.lang.Object ref = errorId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         errorId_ = b;
@@ -1171,7 +1171,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.common.v1.FieldViolation field_violations = 6 [json_name = "fieldViolations"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.FieldViolationOrBuilder> 
+    public java.util.List<? extends com.udb.core.common.v1.FieldViolationOrBuilder>
          getFieldViolationsOrBuilderList() {
       if (fieldViolationsBuilder_ != null) {
         return fieldViolationsBuilder_.getMessageOrBuilderList();
@@ -1197,12 +1197,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.common.v1.FieldViolation field_violations = 6 [json_name = "fieldViolations"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.FieldViolation.Builder> 
+    public java.util.List<com.udb.core.common.v1.FieldViolation.Builder>
          getFieldViolationsBuilderList() {
       return internalGetFieldViolationsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.FieldViolation, com.udb.core.common.v1.FieldViolation.Builder, com.udb.core.common.v1.FieldViolationOrBuilder> 
+        com.udb.core.common.v1.FieldViolation, com.udb.core.common.v1.FieldViolation.Builder, com.udb.core.common.v1.FieldViolationOrBuilder>
         internalGetFieldViolationsFieldBuilder() {
       if (fieldViolationsBuilder_ == null) {
         fieldViolationsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1266,4 +1266,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

@@ -137,4 +137,3 @@ class VerifyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

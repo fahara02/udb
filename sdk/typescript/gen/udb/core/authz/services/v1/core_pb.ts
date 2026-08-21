@@ -1969,4 +1969,3 @@ export type PolicyBundleResponse = Message<"udb.core.authz.services.v1.PolicyBun
  */
 export const PolicyBundleResponseSchema: GenMessage<PolicyBundleResponse> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_services_v1_core, 54);
-

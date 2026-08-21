@@ -174,4 +174,3 @@ class CacheGetResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

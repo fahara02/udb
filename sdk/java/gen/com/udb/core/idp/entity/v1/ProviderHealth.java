@@ -160,4 +160,3 @@ public enum ProviderHealth
 
   // @@protoc_insertion_point(enum_scope:udb.core.idp.entity.v1.ProviderHealth)
 }
-

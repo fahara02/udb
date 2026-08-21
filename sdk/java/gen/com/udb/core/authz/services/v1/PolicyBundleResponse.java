@@ -493,7 +493,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.SignedPolicyBundle bundle = 1 [json_name = "bundle"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.SignedPolicyBundle, com.udb.core.authz.services.v1.SignedPolicyBundle.Builder, com.udb.core.authz.services.v1.SignedPolicyBundleOrBuilder> 
+        com.udb.core.authz.services.v1.SignedPolicyBundle, com.udb.core.authz.services.v1.SignedPolicyBundle.Builder, com.udb.core.authz.services.v1.SignedPolicyBundleOrBuilder>
         internalGetBundleFieldBuilder() {
       if (bundleBuilder_ == null) {
         bundleBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -556,4 +556,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

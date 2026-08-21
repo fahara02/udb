@@ -633,7 +633,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyDraft draft = 1 [json_name = "draft"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyDraft, com.udb.core.authz.entity.v1.PolicyDraft.Builder, com.udb.core.authz.entity.v1.PolicyDraftOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicyDraft, com.udb.core.authz.entity.v1.PolicyDraft.Builder, com.udb.core.authz.entity.v1.PolicyDraftOrBuilder>
         internalGetDraftFieldBuilder() {
       if (draftBuilder_ == null) {
         draftBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -754,7 +754,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyApproval approval = 2 [json_name = "approval"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyApproval, com.udb.core.authz.entity.v1.PolicyApproval.Builder, com.udb.core.authz.entity.v1.PolicyApprovalOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicyApproval, com.udb.core.authz.entity.v1.PolicyApproval.Builder, com.udb.core.authz.entity.v1.PolicyApprovalOrBuilder>
         internalGetApprovalFieldBuilder() {
       if (approvalBuilder_ == null) {
         approvalBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,7 +911,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyVersion version = 3 [json_name = "version"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyVersion, com.udb.core.authz.entity.v1.PolicyVersion.Builder, com.udb.core.authz.entity.v1.PolicyVersionOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicyVersion, com.udb.core.authz.entity.v1.PolicyVersion.Builder, com.udb.core.authz.entity.v1.PolicyVersionOrBuilder>
         internalGetVersionFieldBuilder() {
       if (versionBuilder_ == null) {
         versionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -974,4 +974,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

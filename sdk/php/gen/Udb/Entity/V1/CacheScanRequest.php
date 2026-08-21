@@ -184,4 +184,3 @@ class CacheScanRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

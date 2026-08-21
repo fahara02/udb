@@ -119,4 +119,3 @@ class ResolveExternalIdentityRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

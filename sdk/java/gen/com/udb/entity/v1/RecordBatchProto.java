@@ -28,12 +28,12 @@ public final class RecordBatchProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_entity_v1_ColumnBatch_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_ColumnBatch_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_entity_v1_RecordBatchV2_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_RecordBatchV2_fieldAccessorTable;
 

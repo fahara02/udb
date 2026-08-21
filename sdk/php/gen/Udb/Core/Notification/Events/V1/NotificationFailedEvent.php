@@ -407,4 +407,3 @@ class NotificationFailedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

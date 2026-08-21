@@ -147,4 +147,3 @@ class CreateTransitKeyResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

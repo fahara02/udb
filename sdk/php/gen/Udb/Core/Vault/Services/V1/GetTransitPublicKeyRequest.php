@@ -83,4 +83,3 @@ class GetTransitPublicKeyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

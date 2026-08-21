@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.ProjectRecord projects = 1 [json_name = "projects"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.ProjectRecordOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.ProjectRecordOrBuilder>
       getProjectsOrBuilderList() {
     return projects_;
   }
@@ -99,7 +99,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -115,7 +115,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -443,7 +443,7 @@ private static final long serialVersionUID = 0L;
             projectsBuilder_ = null;
             projects_ = other.projects_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            projectsBuilder_ = 
+            projectsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetProjectsFieldBuilder() : null;
           } else {
@@ -720,7 +720,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.ProjectRecord projects = 1 [json_name = "projects"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.ProjectRecordOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.ProjectRecordOrBuilder>
          getProjectsOrBuilderList() {
       if (projectsBuilder_ != null) {
         return projectsBuilder_.getMessageOrBuilderList();
@@ -746,12 +746,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.ProjectRecord projects = 1 [json_name = "projects"];</code>
      */
-    public java.util.List<com.udb.entity.v1.ProjectRecord.Builder> 
+    public java.util.List<com.udb.entity.v1.ProjectRecord.Builder>
          getProjectsBuilderList() {
       return internalGetProjectsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.ProjectRecord, com.udb.entity.v1.ProjectRecord.Builder, com.udb.entity.v1.ProjectRecordOrBuilder> 
+        com.udb.entity.v1.ProjectRecord, com.udb.entity.v1.ProjectRecord.Builder, com.udb.entity.v1.ProjectRecordOrBuilder>
         internalGetProjectsFieldBuilder() {
       if (projectsBuilder_ == null) {
         projectsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -790,7 +790,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -919,4 +919,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

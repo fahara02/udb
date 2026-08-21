@@ -23,4 +23,3 @@ class Cdc
         static::$is_initialized = true;
     }
 }
-

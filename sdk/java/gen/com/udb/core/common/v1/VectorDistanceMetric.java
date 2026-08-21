@@ -149,4 +149,3 @@ public enum VectorDistanceMetric
 
   // @@protoc_insertion_point(enum_scope:udb.core.common.v1.VectorDistanceMetric)
 }
-

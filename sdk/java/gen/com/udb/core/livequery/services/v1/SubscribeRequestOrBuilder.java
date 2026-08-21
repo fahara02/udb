@@ -60,7 +60,7 @@ public interface SubscribeRequestOrBuilder extends
    *
    * <code>repeated .udb.core.livequery.services.v1.LiveQueryPredicate filters = 3 [json_name = "filters"];</code>
    */
-  java.util.List<com.udb.core.livequery.services.v1.LiveQueryPredicate> 
+  java.util.List<com.udb.core.livequery.services.v1.LiveQueryPredicate>
       getFiltersList();
   /**
    * <pre>
@@ -88,7 +88,7 @@ public interface SubscribeRequestOrBuilder extends
    *
    * <code>repeated .udb.core.livequery.services.v1.LiveQueryPredicate filters = 3 [json_name = "filters"];</code>
    */
-  java.util.List<? extends com.udb.core.livequery.services.v1.LiveQueryPredicateOrBuilder> 
+  java.util.List<? extends com.udb.core.livequery.services.v1.LiveQueryPredicateOrBuilder>
       getFiltersOrBuilderList();
   /**
    * <pre>

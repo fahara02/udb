@@ -92,4 +92,3 @@ export type ScimDirectoryState = Message<"udb.core.idp.entity.v1.ScimDirectorySt
  */
 export const ScimDirectoryStateSchema: GenMessage<ScimDirectoryState> = /*@__PURE__*/
   messageDesc(file_udb_core_idp_entity_v1_scim_directory_state, 0);
-

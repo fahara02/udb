@@ -61,7 +61,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.Boolean> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.Boolean>newDefaultInstance(
-                com.udb.core.authz.services.v1.CoreProto.internal_static_udb_core_authz_services_v1_BatchCheckPermissionsResponse_ResultsEntry_descriptor, 
+                com.udb.core.authz.services.v1.CoreProto.internal_static_udb_core_authz_services_v1_BatchCheckPermissionsResponse_ResultsEntry_descriptor,
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.BOOL,
@@ -682,4 +682,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

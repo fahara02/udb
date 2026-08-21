@@ -412,4 +412,3 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

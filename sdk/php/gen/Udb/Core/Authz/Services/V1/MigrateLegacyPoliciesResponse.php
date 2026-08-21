@@ -168,4 +168,3 @@ class MigrateLegacyPoliciesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

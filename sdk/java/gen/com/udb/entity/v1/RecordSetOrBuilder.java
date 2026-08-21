@@ -30,7 +30,7 @@ public interface RecordSetOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
    */
-  java.util.List<com.udb.entity.v1.Row> 
+  java.util.List<com.udb.entity.v1.Row>
       getRowsList();
   /**
    * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
@@ -43,7 +43,7 @@ public interface RecordSetOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.RowOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.RowOrBuilder>
       getRowsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>

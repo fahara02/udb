@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.entity.v1.AccessDecisionAudit audits = 1 [json_name = "audits"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.entity.v1.AccessDecisionAuditOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.entity.v1.AccessDecisionAuditOrBuilder>
       getAuditsOrBuilderList() {
     return audits_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             auditsBuilder_ = null;
             audits_ = other.audits_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            auditsBuilder_ = 
+            auditsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetAuditsFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.AccessDecisionAudit audits = 1 [json_name = "audits"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.entity.v1.AccessDecisionAuditOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.entity.v1.AccessDecisionAuditOrBuilder>
          getAuditsOrBuilderList() {
       if (auditsBuilder_ != null) {
         return auditsBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.AccessDecisionAudit audits = 1 [json_name = "audits"];</code>
      */
-    public java.util.List<com.udb.core.authz.entity.v1.AccessDecisionAudit.Builder> 
+    public java.util.List<com.udb.core.authz.entity.v1.AccessDecisionAudit.Builder>
          getAuditsBuilderList() {
       return internalGetAuditsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.entity.v1.AccessDecisionAudit, com.udb.core.authz.entity.v1.AccessDecisionAudit.Builder, com.udb.core.authz.entity.v1.AccessDecisionAuditOrBuilder> 
+        com.udb.core.authz.entity.v1.AccessDecisionAudit, com.udb.core.authz.entity.v1.AccessDecisionAudit.Builder, com.udb.core.authz.entity.v1.AccessDecisionAuditOrBuilder>
         internalGetAuditsFieldBuilder() {
       if (auditsBuilder_ == null) {
         auditsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,4 +911,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

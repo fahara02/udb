@@ -56,4 +56,3 @@ class DeleteWebAuthnCredentialResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

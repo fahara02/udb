@@ -66,4 +66,3 @@ class ChangeUserStatusResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

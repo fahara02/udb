@@ -154,4 +154,3 @@ class RollbackPolicyVersionRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

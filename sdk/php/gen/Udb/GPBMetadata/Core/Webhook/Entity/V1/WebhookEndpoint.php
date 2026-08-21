@@ -26,4 +26,3 @@ class WebhookEndpoint
         static::$is_initialized = true;
     }
 }
-

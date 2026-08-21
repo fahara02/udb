@@ -121,4 +121,3 @@ class DeleteNamespaceRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

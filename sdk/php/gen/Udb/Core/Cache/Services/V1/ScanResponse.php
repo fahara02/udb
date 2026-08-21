@@ -127,4 +127,3 @@ class ScanResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

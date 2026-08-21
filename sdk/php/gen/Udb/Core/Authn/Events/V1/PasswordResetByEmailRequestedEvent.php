@@ -264,4 +264,3 @@ class PasswordResetByEmailRequestedEvent extends \Google\Protobuf\Internal\Messa
     }
 
 }
-

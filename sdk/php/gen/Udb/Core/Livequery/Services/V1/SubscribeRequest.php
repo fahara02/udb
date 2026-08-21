@@ -207,4 +207,3 @@ class SubscribeRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

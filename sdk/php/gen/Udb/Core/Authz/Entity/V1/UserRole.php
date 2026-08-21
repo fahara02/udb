@@ -369,4 +369,3 @@ class UserRole extends \Google\Protobuf\Internal\Message
     }
 
 }
-

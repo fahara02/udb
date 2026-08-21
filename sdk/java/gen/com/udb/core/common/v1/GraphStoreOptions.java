@@ -82,7 +82,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       graphName_ = s;
@@ -98,7 +98,7 @@ private static final long serialVersionUID = 0L;
       getGraphNameBytes() {
     java.lang.Object ref = graphName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       graphName_ = b;
@@ -121,7 +121,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nodeLabel_ = s;
@@ -137,7 +137,7 @@ private static final long serialVersionUID = 0L;
       getNodeLabelBytes() {
     java.lang.Object ref = nodeLabel_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nodeLabel_ = b;
@@ -160,7 +160,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       idField_ = s;
@@ -176,7 +176,7 @@ private static final long serialVersionUID = 0L;
       getIdFieldBytes() {
     java.lang.Object ref = idField_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       idField_ = b;
@@ -199,7 +199,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantField_ = s;
@@ -215,7 +215,7 @@ private static final long serialVersionUID = 0L;
       getTenantFieldBytes() {
     java.lang.Object ref = tenantField_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantField_ = b;
@@ -238,7 +238,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       edgeSourceField_ = s;
@@ -254,7 +254,7 @@ private static final long serialVersionUID = 0L;
       getEdgeSourceFieldBytes() {
     java.lang.Object ref = edgeSourceField_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       edgeSourceField_ = b;
@@ -277,7 +277,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       edgeTargetField_ = s;
@@ -293,7 +293,7 @@ private static final long serialVersionUID = 0L;
       getEdgeTargetFieldBytes() {
     java.lang.Object ref = edgeTargetField_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       edgeTargetField_ = b;
@@ -316,7 +316,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       payloadSchemaJson_ = s;
@@ -332,7 +332,7 @@ private static final long serialVersionUID = 0L;
       getPayloadSchemaJsonBytes() {
     java.lang.Object ref = payloadSchemaJson_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       payloadSchemaJson_ = b;
@@ -878,7 +878,7 @@ private static final long serialVersionUID = 0L;
         getGraphNameBytes() {
       java.lang.Object ref = graphName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         graphName_ = b;
@@ -950,7 +950,7 @@ private static final long serialVersionUID = 0L;
         getNodeLabelBytes() {
       java.lang.Object ref = nodeLabel_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nodeLabel_ = b;
@@ -1022,7 +1022,7 @@ private static final long serialVersionUID = 0L;
         getIdFieldBytes() {
       java.lang.Object ref = idField_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         idField_ = b;
@@ -1094,7 +1094,7 @@ private static final long serialVersionUID = 0L;
         getTenantFieldBytes() {
       java.lang.Object ref = tenantField_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantField_ = b;
@@ -1166,7 +1166,7 @@ private static final long serialVersionUID = 0L;
         getEdgeSourceFieldBytes() {
       java.lang.Object ref = edgeSourceField_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         edgeSourceField_ = b;
@@ -1238,7 +1238,7 @@ private static final long serialVersionUID = 0L;
         getEdgeTargetFieldBytes() {
       java.lang.Object ref = edgeTargetField_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         edgeTargetField_ = b;
@@ -1310,7 +1310,7 @@ private static final long serialVersionUID = 0L;
         getPayloadSchemaJsonBytes() {
       java.lang.Object ref = payloadSchemaJson_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         payloadSchemaJson_ = b;
@@ -1407,4 +1407,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

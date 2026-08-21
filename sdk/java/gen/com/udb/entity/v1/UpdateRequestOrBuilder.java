@@ -139,7 +139,7 @@ public interface UpdateRequestOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 6 [json_name = "increments"];</code>
    */
-  java.util.List<com.udb.entity.v1.UpdateRequest.Increment> 
+  java.util.List<com.udb.entity.v1.UpdateRequest.Increment>
       getIncrementsList();
   /**
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 6 [json_name = "increments"];</code>
@@ -152,7 +152,7 @@ public interface UpdateRequestOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 6 [json_name = "increments"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
       getIncrementsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 6 [json_name = "increments"];</code>

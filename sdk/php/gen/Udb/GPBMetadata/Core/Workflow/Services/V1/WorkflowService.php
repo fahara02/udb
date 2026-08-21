@@ -26,4 +26,3 @@ class WorkflowService
         static::$is_initialized = true;
     }
 }
-

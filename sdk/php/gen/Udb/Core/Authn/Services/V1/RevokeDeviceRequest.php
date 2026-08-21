@@ -120,4 +120,3 @@ class RevokeDeviceRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

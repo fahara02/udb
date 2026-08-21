@@ -56,4 +56,3 @@ class TriggerSnapshotResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

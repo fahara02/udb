@@ -454,4 +454,3 @@ class EmbeddingDocument extends \Google\Protobuf\Internal\Message
     }
 
 }
-

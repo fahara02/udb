@@ -205,4 +205,3 @@ public enum AssuranceLevel
 
   // @@protoc_insertion_point(enum_scope:udb.core.idp.entity.v1.AssuranceLevel)
 }
-

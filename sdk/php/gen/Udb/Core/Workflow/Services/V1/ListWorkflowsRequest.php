@@ -178,4 +178,3 @@ class ListWorkflowsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

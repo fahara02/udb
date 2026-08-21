@@ -83,4 +83,3 @@ class GetWorkflowRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

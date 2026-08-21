@@ -305,4 +305,3 @@ class VaultTransitKey extends \Google\Protobuf\Internal\Message
     }
 
 }
-

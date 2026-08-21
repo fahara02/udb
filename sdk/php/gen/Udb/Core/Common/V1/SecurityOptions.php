@@ -164,4 +164,3 @@ class SecurityOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

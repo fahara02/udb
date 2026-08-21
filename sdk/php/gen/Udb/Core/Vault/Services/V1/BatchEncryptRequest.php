@@ -110,4 +110,3 @@ class BatchEncryptRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

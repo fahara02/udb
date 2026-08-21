@@ -157,4 +157,3 @@ class RotateServiceAccountIdentityResponse extends \Google\Protobuf\Internal\Mes
     }
 
 }
-

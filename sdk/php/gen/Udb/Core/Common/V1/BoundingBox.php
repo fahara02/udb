@@ -137,4 +137,3 @@ class BoundingBox extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -90,4 +90,3 @@ class GetEmbeddingJobStatusRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

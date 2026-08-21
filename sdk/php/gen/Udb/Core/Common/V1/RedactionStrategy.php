@@ -66,4 +66,3 @@ class RedactionStrategy
         return constant($const);
     }
 }
-

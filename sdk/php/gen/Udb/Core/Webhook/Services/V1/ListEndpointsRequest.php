@@ -171,4 +171,3 @@ class ListEndpointsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

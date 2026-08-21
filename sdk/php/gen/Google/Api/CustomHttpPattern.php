@@ -99,4 +99,3 @@ class CustomHttpPattern extends \Google\Protobuf\Internal\Message
     }
 
 }
-

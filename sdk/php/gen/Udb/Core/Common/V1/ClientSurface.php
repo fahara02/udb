@@ -71,4 +71,3 @@ class ClientSurface
         return constant($const);
     }
 }
-

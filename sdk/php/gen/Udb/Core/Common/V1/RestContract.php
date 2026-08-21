@@ -137,4 +137,3 @@ class RestContract extends \Google\Protobuf\Internal\Message
     }
 
 }
-

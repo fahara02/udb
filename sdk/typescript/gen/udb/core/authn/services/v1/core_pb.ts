@@ -3191,4 +3191,3 @@ export type DeleteWebAuthnCredentialResponse = Message<"udb.core.authn.services.
  */
 export const DeleteWebAuthnCredentialResponseSchema: GenMessage<DeleteWebAuthnCredentialResponse> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_services_v1_core, 102);
-

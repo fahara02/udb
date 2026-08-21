@@ -222,4 +222,3 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

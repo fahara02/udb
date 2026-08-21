@@ -518,4 +518,3 @@ class RetrieveRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

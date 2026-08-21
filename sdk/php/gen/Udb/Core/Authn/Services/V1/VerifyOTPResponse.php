@@ -110,4 +110,3 @@ class VerifyOTPResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

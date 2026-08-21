@@ -13,7 +13,7 @@ public interface ListBackupsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupRunSummary backups = 1 [json_name = "backups"];</code>
    */
-  java.util.List<com.udb.core.backup.services.v1.BackupRunSummary> 
+  java.util.List<com.udb.core.backup.services.v1.BackupRunSummary>
       getBackupsList();
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupRunSummary backups = 1 [json_name = "backups"];</code>
@@ -26,7 +26,7 @@ public interface ListBackupsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupRunSummary backups = 1 [json_name = "backups"];</code>
    */
-  java.util.List<? extends com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder> 
+  java.util.List<? extends com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder>
       getBackupsOrBuilderList();
   /**
    * <code>repeated .udb.core.backup.services.v1.BackupRunSummary backups = 1 [json_name = "backups"];</code>

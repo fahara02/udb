@@ -88,7 +88,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       otpId_ = s;
@@ -108,7 +108,7 @@ private static final long serialVersionUID = 0L;
       getOtpIdBytes() {
     java.lang.Object ref = otpId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       otpId_ = b;
@@ -565,7 +565,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authn.entity.v1.User user = 1 [json_name = "user"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authn.entity.v1.User, com.udb.core.authn.entity.v1.User.Builder, com.udb.core.authn.entity.v1.UserOrBuilder> 
+        com.udb.core.authn.entity.v1.User, com.udb.core.authn.entity.v1.User.Builder, com.udb.core.authn.entity.v1.UserOrBuilder>
         internalGetUserFieldBuilder() {
       if (userBuilder_ == null) {
         userBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -611,7 +611,7 @@ private static final long serialVersionUID = 0L;
         getOtpIdBytes() {
       java.lang.Object ref = otpId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         otpId_ = b;
@@ -720,4 +720,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

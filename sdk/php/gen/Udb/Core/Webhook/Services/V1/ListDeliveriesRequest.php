@@ -212,4 +212,3 @@ class ListDeliveriesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.services.v1.SimulationResult results = 1 [json_name = "results"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder>
       getResultsOrBuilderList() {
     return results_;
   }
@@ -103,7 +103,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       diffJson_ = s;
@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
       getDiffJsonBytes() {
     java.lang.Object ref = diffJson_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       diffJson_ = b;
@@ -425,7 +425,7 @@ private static final long serialVersionUID = 0L;
             resultsBuilder_ = null;
             results_ = other.results_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            resultsBuilder_ = 
+            resultsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetResultsFieldBuilder() : null;
           } else {
@@ -694,7 +694,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.SimulationResult results = 1 [json_name = "results"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder>
          getResultsOrBuilderList() {
       if (resultsBuilder_ != null) {
         return resultsBuilder_.getMessageOrBuilderList();
@@ -720,12 +720,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.SimulationResult results = 1 [json_name = "results"];</code>
      */
-    public java.util.List<com.udb.core.authz.services.v1.SimulationResult.Builder> 
+    public java.util.List<com.udb.core.authz.services.v1.SimulationResult.Builder>
          getResultsBuilderList() {
       return internalGetResultsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.services.v1.SimulationResult, com.udb.core.authz.services.v1.SimulationResult.Builder, com.udb.core.authz.services.v1.SimulationResultOrBuilder> 
+        com.udb.core.authz.services.v1.SimulationResult, com.udb.core.authz.services.v1.SimulationResult.Builder, com.udb.core.authz.services.v1.SimulationResultOrBuilder>
         internalGetResultsFieldBuilder() {
       if (resultsBuilder_ == null) {
         resultsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -772,7 +772,7 @@ private static final long serialVersionUID = 0L;
         getDiffJsonBytes() {
       java.lang.Object ref = diffJson_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         diffJson_ = b;
@@ -881,4 +881,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

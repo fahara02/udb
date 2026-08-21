@@ -349,4 +349,3 @@ class UsageEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

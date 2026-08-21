@@ -234,4 +234,3 @@ class SignalResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

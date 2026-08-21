@@ -25,7 +25,7 @@ public interface CatalogVersionListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.CatalogVersionResponse versions = 2 [json_name = "versions"];</code>
    */
-  java.util.List<com.udb.entity.v1.CatalogVersionResponse> 
+  java.util.List<com.udb.entity.v1.CatalogVersionResponse>
       getVersionsList();
   /**
    * <code>repeated .udb.entity.v1.CatalogVersionResponse versions = 2 [json_name = "versions"];</code>
@@ -38,7 +38,7 @@ public interface CatalogVersionListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.CatalogVersionResponse versions = 2 [json_name = "versions"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.CatalogVersionResponseOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.CatalogVersionResponseOrBuilder>
       getVersionsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.CatalogVersionResponse versions = 2 [json_name = "versions"];</code>

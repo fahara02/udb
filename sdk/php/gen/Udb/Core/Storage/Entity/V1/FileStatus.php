@@ -56,4 +56,3 @@ class FileStatus
         return constant($const);
     }
 }
-

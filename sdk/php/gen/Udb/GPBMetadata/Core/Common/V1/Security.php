@@ -22,4 +22,3 @@ class Security
         static::$is_initialized = true;
     }
 }
-

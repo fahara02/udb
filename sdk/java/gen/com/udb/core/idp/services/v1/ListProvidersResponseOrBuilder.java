@@ -13,7 +13,7 @@ public interface ListProvidersResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.entity.v1.IdentityProvider providers = 1 [json_name = "providers"];</code>
    */
-  java.util.List<com.udb.core.idp.entity.v1.IdentityProvider> 
+  java.util.List<com.udb.core.idp.entity.v1.IdentityProvider>
       getProvidersList();
   /**
    * <code>repeated .udb.core.idp.entity.v1.IdentityProvider providers = 1 [json_name = "providers"];</code>
@@ -26,7 +26,7 @@ public interface ListProvidersResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.entity.v1.IdentityProvider providers = 1 [json_name = "providers"];</code>
    */
-  java.util.List<? extends com.udb.core.idp.entity.v1.IdentityProviderOrBuilder> 
+  java.util.List<? extends com.udb.core.idp.entity.v1.IdentityProviderOrBuilder>
       getProvidersOrBuilderList();
   /**
    * <code>repeated .udb.core.idp.entity.v1.IdentityProvider providers = 1 [json_name = "providers"];</code>

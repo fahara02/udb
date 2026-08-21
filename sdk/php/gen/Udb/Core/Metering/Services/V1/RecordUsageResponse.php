@@ -131,4 +131,3 @@ class RecordUsageResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -93,4 +93,3 @@ class GetMfaPolicyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -24,4 +24,3 @@ class NotificationEvents
         static::$is_initialized = true;
     }
 }
-

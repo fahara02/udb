@@ -13,7 +13,7 @@ public interface ListSecretsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.vault.services.v1.SecretSummary secrets = 1 [json_name = "secrets"];</code>
    */
-  java.util.List<com.udb.core.vault.services.v1.SecretSummary> 
+  java.util.List<com.udb.core.vault.services.v1.SecretSummary>
       getSecretsList();
   /**
    * <code>repeated .udb.core.vault.services.v1.SecretSummary secrets = 1 [json_name = "secrets"];</code>
@@ -26,7 +26,7 @@ public interface ListSecretsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.vault.services.v1.SecretSummary secrets = 1 [json_name = "secrets"];</code>
    */
-  java.util.List<? extends com.udb.core.vault.services.v1.SecretSummaryOrBuilder> 
+  java.util.List<? extends com.udb.core.vault.services.v1.SecretSummaryOrBuilder>
       getSecretsOrBuilderList();
   /**
    * <code>repeated .udb.core.vault.services.v1.SecretSummary secrets = 1 [json_name = "secrets"];</code>

@@ -120,4 +120,3 @@ class CdcControlRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

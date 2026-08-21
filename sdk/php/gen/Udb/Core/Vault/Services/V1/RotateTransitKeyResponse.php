@@ -147,4 +147,3 @@ class RotateTransitKeyResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

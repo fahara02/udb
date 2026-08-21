@@ -185,4 +185,3 @@ class DownloadFileChunk extends \Google\Protobuf\Internal\Message
     }
 
 }
-

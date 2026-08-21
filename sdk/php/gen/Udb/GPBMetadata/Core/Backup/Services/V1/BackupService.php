@@ -25,4 +25,3 @@ class BackupService
         static::$is_initialized = true;
     }
 }
-

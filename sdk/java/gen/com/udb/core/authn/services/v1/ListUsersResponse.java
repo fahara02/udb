@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authn.entity.v1.User users = 1 [json_name = "users"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authn.entity.v1.UserOrBuilder> 
+  public java.util.List<? extends com.udb.core.authn.entity.v1.UserOrBuilder>
       getUsersOrBuilderList() {
     return users_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             usersBuilder_ = null;
             users_ = other.users_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            usersBuilder_ = 
+            usersBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetUsersFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authn.entity.v1.User users = 1 [json_name = "users"];</code>
      */
-    public java.util.List<? extends com.udb.core.authn.entity.v1.UserOrBuilder> 
+    public java.util.List<? extends com.udb.core.authn.entity.v1.UserOrBuilder>
          getUsersOrBuilderList() {
       if (usersBuilder_ != null) {
         return usersBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authn.entity.v1.User users = 1 [json_name = "users"];</code>
      */
-    public java.util.List<com.udb.core.authn.entity.v1.User.Builder> 
+    public java.util.List<com.udb.core.authn.entity.v1.User.Builder>
          getUsersBuilderList() {
       return internalGetUsersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authn.entity.v1.User, com.udb.core.authn.entity.v1.User.Builder, com.udb.core.authn.entity.v1.UserOrBuilder> 
+        com.udb.core.authn.entity.v1.User, com.udb.core.authn.entity.v1.User.Builder, com.udb.core.authn.entity.v1.UserOrBuilder>
         internalGetUsersFieldBuilder() {
       if (usersBuilder_ == null) {
         usersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,4 +911,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

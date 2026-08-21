@@ -245,4 +245,3 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

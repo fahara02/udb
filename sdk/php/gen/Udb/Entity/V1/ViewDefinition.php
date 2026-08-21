@@ -201,4 +201,3 @@ class ViewDefinition extends \Google\Protobuf\Internal\Message
     }
 
 }
-

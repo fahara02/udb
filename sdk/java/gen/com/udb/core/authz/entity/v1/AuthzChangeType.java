@@ -173,4 +173,3 @@ public enum AuthzChangeType
 
   // @@protoc_insertion_point(enum_scope:udb.core.authz.entity.v1.AuthzChangeType)
 }
-

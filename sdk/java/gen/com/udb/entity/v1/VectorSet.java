@@ -58,7 +58,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.VectorPoint points = 1 [json_name = "points"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.VectorPointOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.VectorPointOrBuilder>
       getPointsOrBuilderList() {
     return points_;
   }
@@ -363,7 +363,7 @@ private static final long serialVersionUID = 0L;
             pointsBuilder_ = null;
             points_ = other.points_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            pointsBuilder_ = 
+            pointsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetPointsFieldBuilder() : null;
           } else {
@@ -622,7 +622,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.VectorPoint points = 1 [json_name = "points"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.VectorPointOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.VectorPointOrBuilder>
          getPointsOrBuilderList() {
       if (pointsBuilder_ != null) {
         return pointsBuilder_.getMessageOrBuilderList();
@@ -648,12 +648,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.VectorPoint points = 1 [json_name = "points"];</code>
      */
-    public java.util.List<com.udb.entity.v1.VectorPoint.Builder> 
+    public java.util.List<com.udb.entity.v1.VectorPoint.Builder>
          getPointsBuilderList() {
       return internalGetPointsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.VectorPoint, com.udb.entity.v1.VectorPoint.Builder, com.udb.entity.v1.VectorPointOrBuilder> 
+        com.udb.entity.v1.VectorPoint, com.udb.entity.v1.VectorPoint.Builder, com.udb.entity.v1.VectorPointOrBuilder>
         internalGetPointsFieldBuilder() {
       if (pointsBuilder_ == null) {
         pointsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -717,4 +717,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

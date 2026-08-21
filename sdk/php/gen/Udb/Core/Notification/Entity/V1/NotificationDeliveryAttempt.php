@@ -435,4 +435,3 @@ class NotificationDeliveryAttempt extends \Google\Protobuf\Internal\Message
     }
 
 }
-

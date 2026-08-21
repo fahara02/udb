@@ -134,4 +134,3 @@ export type EmbeddingSource = Message<"udb.core.embedding.entity.v1.EmbeddingSou
  */
 export const EmbeddingSourceSchema: GenMessage<EmbeddingSource> = /*@__PURE__*/
   messageDesc(file_udb_core_embedding_entity_v1_embedding_source, 0);
-

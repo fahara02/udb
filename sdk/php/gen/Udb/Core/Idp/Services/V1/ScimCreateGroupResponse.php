@@ -66,4 +66,3 @@ class ScimCreateGroupResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

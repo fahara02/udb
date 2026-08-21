@@ -133,4 +133,3 @@ export type PipelineStep = Message<"udb.core.asset.entity.v1.PipelineStep"> & {
  */
 export const PipelineStepSchema: GenMessage<PipelineStep> = /*@__PURE__*/
   messageDesc(file_udb_core_asset_entity_v1_pipeline_step, 0);
-

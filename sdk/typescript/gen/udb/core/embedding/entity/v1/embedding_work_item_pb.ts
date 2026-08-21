@@ -182,4 +182,3 @@ export type EmbeddingWorkItem = Message<"udb.core.embedding.entity.v1.EmbeddingW
  */
 export const EmbeddingWorkItemSchema: GenMessage<EmbeddingWorkItem> = /*@__PURE__*/
   messageDesc(file_udb_core_embedding_entity_v1_embedding_work_item, 0);
-

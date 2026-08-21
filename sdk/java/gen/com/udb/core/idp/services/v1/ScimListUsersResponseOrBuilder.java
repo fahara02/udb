@@ -13,7 +13,7 @@ public interface ScimListUsersResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimUser users = 1 [json_name = "users"];</code>
    */
-  java.util.List<com.udb.core.idp.services.v1.ScimUser> 
+  java.util.List<com.udb.core.idp.services.v1.ScimUser>
       getUsersList();
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimUser users = 1 [json_name = "users"];</code>
@@ -26,7 +26,7 @@ public interface ScimListUsersResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimUser users = 1 [json_name = "users"];</code>
    */
-  java.util.List<? extends com.udb.core.idp.services.v1.ScimUserOrBuilder> 
+  java.util.List<? extends com.udb.core.idp.services.v1.ScimUserOrBuilder>
       getUsersOrBuilderList();
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimUser users = 1 [json_name = "users"];</code>

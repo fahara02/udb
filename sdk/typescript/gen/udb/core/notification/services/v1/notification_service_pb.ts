@@ -144,4 +144,3 @@ export const NotificationService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_notification_services_v1_notification_service, 0);
-

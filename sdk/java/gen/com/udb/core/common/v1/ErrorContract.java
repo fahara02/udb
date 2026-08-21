@@ -143,7 +143,7 @@ private static final long serialVersionUID = 0L;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         canonicalCode_ = s;
@@ -159,7 +159,7 @@ private static final long serialVersionUID = 0L;
         getCanonicalCodeBytes() {
       java.lang.Object ref = canonicalCode_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         canonicalCode_ = b;
@@ -182,7 +182,7 @@ private static final long serialVersionUID = 0L;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         grpcStatus_ = s;
@@ -198,7 +198,7 @@ private static final long serialVersionUID = 0L;
         getGrpcStatusBytes() {
       java.lang.Object ref = grpcStatus_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         grpcStatus_ = b;
@@ -232,7 +232,7 @@ private static final long serialVersionUID = 0L;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         detailsType_ = s;
@@ -248,7 +248,7 @@ private static final long serialVersionUID = 0L;
         getDetailsTypeBytes() {
       java.lang.Object ref = detailsType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         detailsType_ = b;
@@ -649,7 +649,7 @@ private static final long serialVersionUID = 0L;
           getCanonicalCodeBytes() {
         java.lang.Object ref = canonicalCode_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           canonicalCode_ = b;
@@ -721,7 +721,7 @@ private static final long serialVersionUID = 0L;
           getGrpcStatusBytes() {
         java.lang.Object ref = grpcStatus_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           grpcStatus_ = b;
@@ -825,7 +825,7 @@ private static final long serialVersionUID = 0L;
           getDetailsTypeBytes() {
         java.lang.Object ref = detailsType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           detailsType_ = b;
@@ -937,7 +937,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.ErrorContract.ErrorCase cases = 1 [json_name = "cases"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.ErrorContract.ErrorCaseOrBuilder> 
+  public java.util.List<? extends com.udb.core.common.v1.ErrorContract.ErrorCaseOrBuilder>
       getCasesOrBuilderList() {
     return cases_;
   }
@@ -1242,7 +1242,7 @@ private static final long serialVersionUID = 0L;
             casesBuilder_ = null;
             cases_ = other.cases_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            casesBuilder_ = 
+            casesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetCasesFieldBuilder() : null;
           } else {
@@ -1501,7 +1501,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.common.v1.ErrorContract.ErrorCase cases = 1 [json_name = "cases"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.ErrorContract.ErrorCaseOrBuilder> 
+    public java.util.List<? extends com.udb.core.common.v1.ErrorContract.ErrorCaseOrBuilder>
          getCasesOrBuilderList() {
       if (casesBuilder_ != null) {
         return casesBuilder_.getMessageOrBuilderList();
@@ -1527,12 +1527,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.common.v1.ErrorContract.ErrorCase cases = 1 [json_name = "cases"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.ErrorContract.ErrorCase.Builder> 
+    public java.util.List<com.udb.core.common.v1.ErrorContract.ErrorCase.Builder>
          getCasesBuilderList() {
       return internalGetCasesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.ErrorContract.ErrorCase, com.udb.core.common.v1.ErrorContract.ErrorCase.Builder, com.udb.core.common.v1.ErrorContract.ErrorCaseOrBuilder> 
+        com.udb.core.common.v1.ErrorContract.ErrorCase, com.udb.core.common.v1.ErrorContract.ErrorCase.Builder, com.udb.core.common.v1.ErrorContract.ErrorCaseOrBuilder>
         internalGetCasesFieldBuilder() {
       if (casesBuilder_ == null) {
         casesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1596,4 +1596,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

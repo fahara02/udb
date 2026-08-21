@@ -327,4 +327,3 @@ class IntrospectTokenResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

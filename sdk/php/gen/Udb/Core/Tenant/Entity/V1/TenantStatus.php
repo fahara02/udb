@@ -56,4 +56,3 @@ class TenantStatus
         return constant($const);
     }
 }
-

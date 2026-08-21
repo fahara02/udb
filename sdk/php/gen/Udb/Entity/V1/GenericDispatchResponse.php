@@ -171,4 +171,3 @@ class GenericDispatchResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

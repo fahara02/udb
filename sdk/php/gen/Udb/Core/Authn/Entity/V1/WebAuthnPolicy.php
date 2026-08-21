@@ -253,4 +253,3 @@ class WebAuthnPolicy extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -100,4 +100,3 @@ class UpdateRoomResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -103,4 +103,3 @@ export type EnqueueOutboxEventResponse = Message<"udb.entity.v1.EnqueueOutboxEve
  */
 export const EnqueueOutboxEventResponseSchema: GenMessage<EnqueueOutboxEventResponse> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_outbox, 1);
-

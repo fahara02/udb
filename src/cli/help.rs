@@ -294,7 +294,7 @@ const COMMANDS: &[CmdHelp] = &[
         name: "proto export",
         group: "SDK & native",
         summary: "Vendor UDB's annotation protos so app protos can import udb/core/common/v1/db.proto.",
-        usage: "udb proto export --out <dir> [--no-buf-yaml] [--fmt]",
+        usage: "udb proto export --out <dir> [--no-buf-yaml] [--yes] [--fmt]",
         details: "\
   Sibling verb: `udb proto fmt [<dir>] [--check]` re-wraps long UDB field
   annotations onto one physical line (narrower than `buf format`).",

@@ -161,4 +161,3 @@ public enum DeleteMode
 
   // @@protoc_insertion_point(enum_scope:udb.core.storage.services.v1.DeleteMode)
 }
-

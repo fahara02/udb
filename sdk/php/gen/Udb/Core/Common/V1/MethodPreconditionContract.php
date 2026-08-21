@@ -164,4 +164,3 @@ class MethodPreconditionContract extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -334,4 +334,3 @@ class ReportEmbeddingRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

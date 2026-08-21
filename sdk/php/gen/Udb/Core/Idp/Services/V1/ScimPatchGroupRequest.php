@@ -174,4 +174,3 @@ class ScimPatchGroupRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

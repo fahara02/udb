@@ -120,4 +120,3 @@ class AdminRevokeAllUserSessionsRequest extends \Google\Protobuf\Internal\Messag
     }
 
 }
-

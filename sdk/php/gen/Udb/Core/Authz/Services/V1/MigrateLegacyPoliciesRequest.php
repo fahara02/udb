@@ -181,4 +181,3 @@ class MigrateLegacyPoliciesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

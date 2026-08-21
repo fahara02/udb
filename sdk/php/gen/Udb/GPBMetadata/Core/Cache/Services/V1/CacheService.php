@@ -25,4 +25,3 @@ class CacheService
         static::$is_initialized = true;
     }
 }
-

@@ -122,4 +122,3 @@ export type ServiceAccountGrant = Message<"udb.core.authn.entity.v1.ServiceAccou
  */
 export const ServiceAccountGrantSchema: GenMessage<ServiceAccountGrant> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_service_account_grant, 0);
-

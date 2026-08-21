@@ -83,4 +83,3 @@ class MmrConfig extends \Google\Protobuf\Internal\Message
     }
 
 }
-

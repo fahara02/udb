@@ -87,4 +87,3 @@ class ErrorFieldViolation extends \Google\Protobuf\Internal\Message
     }
 
 }
-

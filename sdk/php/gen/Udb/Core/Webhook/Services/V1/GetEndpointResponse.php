@@ -103,4 +103,3 @@ class GetEndpointResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

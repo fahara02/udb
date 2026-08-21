@@ -228,4 +228,3 @@ class UpsertTemplateRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

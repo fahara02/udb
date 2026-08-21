@@ -185,4 +185,3 @@ public enum AuthCredentialType
 
   // @@protoc_insertion_point(enum_scope:udb.core.authn.entity.v1.AuthCredentialType)
 }
-

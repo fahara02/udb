@@ -233,4 +233,3 @@ export type NotificationDeliveryAttempt = Message<"udb.core.notification.entity.
  */
 export const NotificationDeliveryAttemptSchema: GenMessage<NotificationDeliveryAttempt> = /*@__PURE__*/
   messageDesc(file_udb_core_notification_entity_v1_notification_log, 1);
-

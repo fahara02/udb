@@ -74,4 +74,3 @@ class OperationKind
         return constant($const);
     }
 }
-

@@ -191,4 +191,3 @@ class ReadAfterWriteContract extends \Google\Protobuf\Internal\Message
     }
 
 }
-

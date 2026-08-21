@@ -176,4 +176,3 @@ class PipelineCompleted extends \Google\Protobuf\Internal\Message
     }
 
 }
-

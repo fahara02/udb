@@ -147,4 +147,3 @@ class EncryptResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

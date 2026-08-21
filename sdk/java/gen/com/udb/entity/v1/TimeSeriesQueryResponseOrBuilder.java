@@ -13,7 +13,7 @@ public interface TimeSeriesQueryResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.TimeSeriesPoint points = 1 [json_name = "points"];</code>
    */
-  java.util.List<com.udb.entity.v1.TimeSeriesPoint> 
+  java.util.List<com.udb.entity.v1.TimeSeriesPoint>
       getPointsList();
   /**
    * <code>repeated .udb.entity.v1.TimeSeriesPoint points = 1 [json_name = "points"];</code>
@@ -26,7 +26,7 @@ public interface TimeSeriesQueryResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.TimeSeriesPoint points = 1 [json_name = "points"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.TimeSeriesPointOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.TimeSeriesPointOrBuilder>
       getPointsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.TimeSeriesPoint points = 1 [json_name = "points"];</code>

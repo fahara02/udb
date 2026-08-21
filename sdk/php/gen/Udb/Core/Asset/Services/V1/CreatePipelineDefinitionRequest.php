@@ -198,4 +198,3 @@ class CreatePipelineDefinitionRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

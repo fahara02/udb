@@ -653,4 +653,3 @@ class WorkflowInstance extends \Google\Protobuf\Internal\Message
     }
 
 }
-

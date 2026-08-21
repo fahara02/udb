@@ -63,7 +63,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       targetTenantId_ = s;
@@ -79,7 +79,7 @@ private static final long serialVersionUID = 0L;
       getTargetTenantIdBytes() {
     java.lang.Object ref = targetTenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       targetTenantId_ = b;
@@ -137,7 +137,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.tenant.services.v1.PurgedTableCount purged = 3 [json_name = "purged"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.tenant.services.v1.PurgedTableCountOrBuilder> 
+  public java.util.List<? extends com.udb.core.tenant.services.v1.PurgedTableCountOrBuilder>
       getPurgedOrBuilderList() {
     return purged_;
   }
@@ -202,7 +202,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.tenant.services.v1.PurgeExcludedTable excluded = 4 [json_name = "excluded"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.tenant.services.v1.PurgeExcludedTableOrBuilder> 
+  public java.util.List<? extends com.udb.core.tenant.services.v1.PurgeExcludedTableOrBuilder>
       getExcludedOrBuilderList() {
     return excluded_;
   }
@@ -350,7 +350,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       outcomeId_ = s;
@@ -370,7 +370,7 @@ private static final long serialVersionUID = 0L;
       getOutcomeIdBytes() {
     java.lang.Object ref = outcomeId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       outcomeId_ = b;
@@ -393,7 +393,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       message_ = s;
@@ -409,7 +409,7 @@ private static final long serialVersionUID = 0L;
       getMessageBytes() {
     java.lang.Object ref = message_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       message_ = b;
@@ -960,7 +960,7 @@ private static final long serialVersionUID = 0L;
             purgedBuilder_ = null;
             purged_ = other.purged_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            purgedBuilder_ = 
+            purgedBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetPurgedFieldBuilder() : null;
           } else {
@@ -986,7 +986,7 @@ private static final long serialVersionUID = 0L;
             excludedBuilder_ = null;
             excluded_ = other.excluded_;
             bitField0_ = (bitField0_ & ~0x00000008);
-            excludedBuilder_ = 
+            excludedBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetExcludedFieldBuilder() : null;
           } else {
@@ -1176,7 +1176,7 @@ private static final long serialVersionUID = 0L;
         getTargetTenantIdBytes() {
       java.lang.Object ref = targetTenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         targetTenantId_ = b;
@@ -1549,7 +1549,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.tenant.services.v1.PurgedTableCount purged = 3 [json_name = "purged"];</code>
      */
-    public java.util.List<? extends com.udb.core.tenant.services.v1.PurgedTableCountOrBuilder> 
+    public java.util.List<? extends com.udb.core.tenant.services.v1.PurgedTableCountOrBuilder>
          getPurgedOrBuilderList() {
       if (purgedBuilder_ != null) {
         return purgedBuilder_.getMessageOrBuilderList();
@@ -1587,12 +1587,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.tenant.services.v1.PurgedTableCount purged = 3 [json_name = "purged"];</code>
      */
-    public java.util.List<com.udb.core.tenant.services.v1.PurgedTableCount.Builder> 
+    public java.util.List<com.udb.core.tenant.services.v1.PurgedTableCount.Builder>
          getPurgedBuilderList() {
       return internalGetPurgedFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.tenant.services.v1.PurgedTableCount, com.udb.core.tenant.services.v1.PurgedTableCount.Builder, com.udb.core.tenant.services.v1.PurgedTableCountOrBuilder> 
+        com.udb.core.tenant.services.v1.PurgedTableCount, com.udb.core.tenant.services.v1.PurgedTableCount.Builder, com.udb.core.tenant.services.v1.PurgedTableCountOrBuilder>
         internalGetPurgedFieldBuilder() {
       if (purgedBuilder_ == null) {
         purgedBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1891,7 +1891,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.tenant.services.v1.PurgeExcludedTable excluded = 4 [json_name = "excluded"];</code>
      */
-    public java.util.List<? extends com.udb.core.tenant.services.v1.PurgeExcludedTableOrBuilder> 
+    public java.util.List<? extends com.udb.core.tenant.services.v1.PurgeExcludedTableOrBuilder>
          getExcludedOrBuilderList() {
       if (excludedBuilder_ != null) {
         return excludedBuilder_.getMessageOrBuilderList();
@@ -1935,12 +1935,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.tenant.services.v1.PurgeExcludedTable excluded = 4 [json_name = "excluded"];</code>
      */
-    public java.util.List<com.udb.core.tenant.services.v1.PurgeExcludedTable.Builder> 
+    public java.util.List<com.udb.core.tenant.services.v1.PurgeExcludedTable.Builder>
          getExcludedBuilderList() {
       return internalGetExcludedFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.tenant.services.v1.PurgeExcludedTable, com.udb.core.tenant.services.v1.PurgeExcludedTable.Builder, com.udb.core.tenant.services.v1.PurgeExcludedTableOrBuilder> 
+        com.udb.core.tenant.services.v1.PurgeExcludedTable, com.udb.core.tenant.services.v1.PurgeExcludedTable.Builder, com.udb.core.tenant.services.v1.PurgeExcludedTableOrBuilder>
         internalGetExcludedFieldBuilder() {
       if (excludedBuilder_ == null) {
         excludedBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -2239,7 +2239,7 @@ private static final long serialVersionUID = 0L;
         getOutcomeIdBytes() {
       java.lang.Object ref = outcomeId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         outcomeId_ = b;
@@ -2323,7 +2323,7 @@ private static final long serialVersionUID = 0L;
         getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         message_ = b;
@@ -2514,7 +2514,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 13 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2577,4 +2577,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

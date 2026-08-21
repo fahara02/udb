@@ -66,4 +66,3 @@ class SetPreferenceResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

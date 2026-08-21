@@ -59,7 +59,7 @@ export const CDCEnvelopeSchema: GenMessage<CDCEnvelope> = /*@__PURE__*/
  * the per-domain Kafka topic (e.g. `udb.authn.user.registered.v1`); downstream
  * Apache Spark streaming jobs decode it. The concrete domain event (authn,
  * authz, or apikey) is carried as a JSON object under `payload`.
- * 
+ *
  * This formalizes the shape produced by the native auth services'
  * outbox event sink and by the broker's `prepare_outbox_envelope`, so producers
  * and Spark consumers share one contract.
@@ -204,4 +204,3 @@ export type ProvisioningCompletedEvent = Message<"udb.events.v1.ProvisioningComp
  */
 export const ProvisioningCompletedEventSchema: GenMessage<ProvisioningCompletedEvent> = /*@__PURE__*/
   messageDesc(file_udb_events_v1_udb_events, 3);
-

@@ -13,7 +13,7 @@ public interface ListMfaFactorsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.services.v1.MfaFactorSummary factors = 1 [json_name = "factors"];</code>
    */
-  java.util.List<com.udb.core.authn.services.v1.MfaFactorSummary> 
+  java.util.List<com.udb.core.authn.services.v1.MfaFactorSummary>
       getFactorsList();
   /**
    * <code>repeated .udb.core.authn.services.v1.MfaFactorSummary factors = 1 [json_name = "factors"];</code>
@@ -26,7 +26,7 @@ public interface ListMfaFactorsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.services.v1.MfaFactorSummary factors = 1 [json_name = "factors"];</code>
    */
-  java.util.List<? extends com.udb.core.authn.services.v1.MfaFactorSummaryOrBuilder> 
+  java.util.List<? extends com.udb.core.authn.services.v1.MfaFactorSummaryOrBuilder>
       getFactorsOrBuilderList();
   /**
    * <code>repeated .udb.core.authn.services.v1.MfaFactorSummary factors = 1 [json_name = "factors"];</code>

@@ -129,4 +129,3 @@ export type WebAuthnChallenge = Message<"udb.core.authn.entity.v1.WebAuthnChalle
  */
 export const WebAuthnChallengeSchema: GenMessage<WebAuthnChallenge> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_webauthn, 1);
-

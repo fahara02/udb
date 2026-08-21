@@ -85,7 +85,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       firstBrokenAuditId_ = s;
@@ -101,7 +101,7 @@ private static final long serialVersionUID = 0L;
       getFirstBrokenAuditIdBytes() {
     java.lang.Object ref = firstBrokenAuditId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       firstBrokenAuditId_ = b;
@@ -124,7 +124,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       reason_ = s;
@@ -140,7 +140,7 @@ private static final long serialVersionUID = 0L;
       getReasonBytes() {
     java.lang.Object ref = reason_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       reason_ = b;
@@ -163,7 +163,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       expectedPreviousHash_ = s;
@@ -179,7 +179,7 @@ private static final long serialVersionUID = 0L;
       getExpectedPreviousHashBytes() {
     java.lang.Object ref = expectedPreviousHash_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       expectedPreviousHash_ = b;
@@ -202,7 +202,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       actualPreviousHash_ = s;
@@ -218,7 +218,7 @@ private static final long serialVersionUID = 0L;
       getActualPreviousHashBytes() {
     java.lang.Object ref = actualPreviousHash_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       actualPreviousHash_ = b;
@@ -241,7 +241,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       expectedCurrentHash_ = s;
@@ -257,7 +257,7 @@ private static final long serialVersionUID = 0L;
       getExpectedCurrentHashBytes() {
     java.lang.Object ref = expectedCurrentHash_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       expectedCurrentHash_ = b;
@@ -280,7 +280,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       actualCurrentHash_ = s;
@@ -296,7 +296,7 @@ private static final long serialVersionUID = 0L;
       getActualCurrentHashBytes() {
     java.lang.Object ref = actualCurrentHash_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       actualCurrentHash_ = b;
@@ -319,7 +319,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       lastHash_ = s;
@@ -335,7 +335,7 @@ private static final long serialVersionUID = 0L;
       getLastHashBytes() {
     java.lang.Object ref = lastHash_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       lastHash_ = b;
@@ -919,7 +919,7 @@ private static final long serialVersionUID = 0L;
         getFirstBrokenAuditIdBytes() {
       java.lang.Object ref = firstBrokenAuditId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         firstBrokenAuditId_ = b;
@@ -991,7 +991,7 @@ private static final long serialVersionUID = 0L;
         getReasonBytes() {
       java.lang.Object ref = reason_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         reason_ = b;
@@ -1063,7 +1063,7 @@ private static final long serialVersionUID = 0L;
         getExpectedPreviousHashBytes() {
       java.lang.Object ref = expectedPreviousHash_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         expectedPreviousHash_ = b;
@@ -1135,7 +1135,7 @@ private static final long serialVersionUID = 0L;
         getActualPreviousHashBytes() {
       java.lang.Object ref = actualPreviousHash_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         actualPreviousHash_ = b;
@@ -1207,7 +1207,7 @@ private static final long serialVersionUID = 0L;
         getExpectedCurrentHashBytes() {
       java.lang.Object ref = expectedCurrentHash_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         expectedCurrentHash_ = b;
@@ -1279,7 +1279,7 @@ private static final long serialVersionUID = 0L;
         getActualCurrentHashBytes() {
       java.lang.Object ref = actualCurrentHash_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         actualCurrentHash_ = b;
@@ -1351,7 +1351,7 @@ private static final long serialVersionUID = 0L;
         getLastHashBytes() {
       java.lang.Object ref = lastHash_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         lastHash_ = b;
@@ -1448,4 +1448,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

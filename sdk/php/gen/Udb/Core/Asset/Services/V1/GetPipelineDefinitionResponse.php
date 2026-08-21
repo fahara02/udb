@@ -110,4 +110,3 @@ class GetPipelineDefinitionResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

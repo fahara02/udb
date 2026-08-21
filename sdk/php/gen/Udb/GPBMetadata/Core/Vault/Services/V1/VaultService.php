@@ -25,4 +25,3 @@ class VaultService
         static::$is_initialized = true;
     }
 }
-

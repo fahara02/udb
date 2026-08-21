@@ -120,4 +120,3 @@ class ListSessionsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

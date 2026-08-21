@@ -27,4 +27,3 @@ class WorkflowInstance
         static::$is_initialized = true;
     }
 }
-

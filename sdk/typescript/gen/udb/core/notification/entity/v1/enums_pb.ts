@@ -180,4 +180,3 @@ export enum NotificationPriority {
  */
 export const NotificationPrioritySchema: GenEnum<NotificationPriority> = /*@__PURE__*/
   enumDesc(file_udb_core_notification_entity_v1_enums, 3);
-

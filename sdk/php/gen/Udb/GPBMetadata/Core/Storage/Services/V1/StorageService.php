@@ -29,4 +29,3 @@ class StorageService
         static::$is_initialized = true;
     }
 }
-

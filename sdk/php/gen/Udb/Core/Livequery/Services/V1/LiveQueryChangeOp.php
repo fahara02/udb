@@ -58,4 +58,3 @@ class LiveQueryChangeOp
         return constant($const);
     }
 }
-

@@ -147,4 +147,3 @@ class RegisterModelResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -17,7 +17,7 @@ public interface AdminSummaryResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.AdminCatalogSummary catalog = 1 [json_name = "catalog"];</code>
    */
-  java.util.List<com.udb.entity.v1.AdminCatalogSummary> 
+  java.util.List<com.udb.entity.v1.AdminCatalogSummary>
       getCatalogList();
   /**
    * <pre>
@@ -42,7 +42,7 @@ public interface AdminSummaryResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.AdminCatalogSummary catalog = 1 [json_name = "catalog"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.AdminCatalogSummaryOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.AdminCatalogSummaryOrBuilder>
       getCatalogOrBuilderList();
   /**
    * <pre>
@@ -115,7 +115,7 @@ public interface AdminSummaryResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.AdminBackendSummary backends = 4 [json_name = "backends"];</code>
    */
-  java.util.List<com.udb.entity.v1.AdminBackendSummary> 
+  java.util.List<com.udb.entity.v1.AdminBackendSummary>
       getBackendsList();
   /**
    * <pre>
@@ -140,7 +140,7 @@ public interface AdminSummaryResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.AdminBackendSummary backends = 4 [json_name = "backends"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.AdminBackendSummaryOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.AdminBackendSummaryOrBuilder>
       getBackendsOrBuilderList();
   /**
    * <pre>

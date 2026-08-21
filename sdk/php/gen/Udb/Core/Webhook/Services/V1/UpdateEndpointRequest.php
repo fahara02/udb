@@ -266,4 +266,3 @@ class UpdateEndpointRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

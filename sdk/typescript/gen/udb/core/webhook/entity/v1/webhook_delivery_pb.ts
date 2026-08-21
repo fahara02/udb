@@ -119,4 +119,3 @@ export type WebhookDelivery = Message<"udb.core.webhook.entity.v1.WebhookDeliver
  */
 export const WebhookDeliverySchema: GenMessage<WebhookDelivery> = /*@__PURE__*/
   messageDesc(file_udb_core_webhook_entity_v1_webhook_delivery, 0);
-

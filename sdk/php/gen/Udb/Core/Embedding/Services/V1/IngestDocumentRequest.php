@@ -272,4 +272,3 @@ class IngestDocumentRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

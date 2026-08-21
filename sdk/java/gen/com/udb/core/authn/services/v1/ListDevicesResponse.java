@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authn.entity.v1.Device devices = 1 [json_name = "devices"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authn.entity.v1.DeviceOrBuilder> 
+  public java.util.List<? extends com.udb.core.authn.entity.v1.DeviceOrBuilder>
       getDevicesOrBuilderList() {
     return devices_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             devicesBuilder_ = null;
             devices_ = other.devices_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            devicesBuilder_ = 
+            devicesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetDevicesFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authn.entity.v1.Device devices = 1 [json_name = "devices"];</code>
      */
-    public java.util.List<? extends com.udb.core.authn.entity.v1.DeviceOrBuilder> 
+    public java.util.List<? extends com.udb.core.authn.entity.v1.DeviceOrBuilder>
          getDevicesOrBuilderList() {
       if (devicesBuilder_ != null) {
         return devicesBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authn.entity.v1.Device devices = 1 [json_name = "devices"];</code>
      */
-    public java.util.List<com.udb.core.authn.entity.v1.Device.Builder> 
+    public java.util.List<com.udb.core.authn.entity.v1.Device.Builder>
          getDevicesBuilderList() {
       return internalGetDevicesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authn.entity.v1.Device, com.udb.core.authn.entity.v1.Device.Builder, com.udb.core.authn.entity.v1.DeviceOrBuilder> 
+        com.udb.core.authn.entity.v1.Device, com.udb.core.authn.entity.v1.Device.Builder, com.udb.core.authn.entity.v1.DeviceOrBuilder>
         internalGetDevicesFieldBuilder() {
       if (devicesBuilder_ == null) {
         devicesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,4 +911,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

@@ -27,4 +27,3 @@ class ScheduledJob
         static::$is_initialized = true;
     }
 }
-

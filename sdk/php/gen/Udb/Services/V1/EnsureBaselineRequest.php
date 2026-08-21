@@ -70,4 +70,3 @@ class EnsureBaselineRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

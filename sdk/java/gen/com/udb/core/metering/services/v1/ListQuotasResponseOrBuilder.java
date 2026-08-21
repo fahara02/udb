@@ -13,7 +13,7 @@ public interface ListQuotasResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.metering.services.v1.QuotaState quotas = 1 [json_name = "quotas"];</code>
    */
-  java.util.List<com.udb.core.metering.services.v1.QuotaState> 
+  java.util.List<com.udb.core.metering.services.v1.QuotaState>
       getQuotasList();
   /**
    * <code>repeated .udb.core.metering.services.v1.QuotaState quotas = 1 [json_name = "quotas"];</code>
@@ -26,7 +26,7 @@ public interface ListQuotasResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.metering.services.v1.QuotaState quotas = 1 [json_name = "quotas"];</code>
    */
-  java.util.List<? extends com.udb.core.metering.services.v1.QuotaStateOrBuilder> 
+  java.util.List<? extends com.udb.core.metering.services.v1.QuotaStateOrBuilder>
       getQuotasOrBuilderList();
   /**
    * <code>repeated .udb.core.metering.services.v1.QuotaState quotas = 1 [json_name = "quotas"];</code>

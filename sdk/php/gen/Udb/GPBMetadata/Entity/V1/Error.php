@@ -22,4 +22,3 @@ class Error
         static::$is_initialized = true;
     }
 }
-

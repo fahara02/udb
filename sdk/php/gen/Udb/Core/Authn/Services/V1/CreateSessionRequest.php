@@ -120,4 +120,3 @@ class CreateSessionRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

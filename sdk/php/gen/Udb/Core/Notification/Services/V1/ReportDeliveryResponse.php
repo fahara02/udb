@@ -66,4 +66,3 @@ class ReportDeliveryResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

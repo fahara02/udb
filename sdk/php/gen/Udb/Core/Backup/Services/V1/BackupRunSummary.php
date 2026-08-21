@@ -416,4 +416,3 @@ class BackupRunSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
-

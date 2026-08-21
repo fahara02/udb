@@ -137,4 +137,3 @@ class ReleaseLockRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

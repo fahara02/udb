@@ -112,4 +112,3 @@ class EnsureBaselineResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -13,7 +13,7 @@ public interface PolicyDocumentOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.AuthzPolicyRecord policies = 1 [json_name = "policies"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.AuthzPolicyRecord> 
+  java.util.List<com.udb.core.authz.services.v1.AuthzPolicyRecord>
       getPoliciesList();
   /**
    * <code>repeated .udb.core.authz.services.v1.AuthzPolicyRecord policies = 1 [json_name = "policies"];</code>
@@ -26,7 +26,7 @@ public interface PolicyDocumentOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.AuthzPolicyRecord policies = 1 [json_name = "policies"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.AuthzPolicyRecordOrBuilder> 
+  java.util.List<? extends com.udb.core.authz.services.v1.AuthzPolicyRecordOrBuilder>
       getPoliciesOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.services.v1.AuthzPolicyRecord policies = 1 [json_name = "policies"];</code>
@@ -37,7 +37,7 @@ public interface PolicyDocumentOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.RoleBinding role_bindings = 2 [json_name = "roleBindings"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.RoleBinding> 
+  java.util.List<com.udb.core.authz.services.v1.RoleBinding>
       getRoleBindingsList();
   /**
    * <code>repeated .udb.core.authz.services.v1.RoleBinding role_bindings = 2 [json_name = "roleBindings"];</code>
@@ -50,7 +50,7 @@ public interface PolicyDocumentOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.RoleBinding role_bindings = 2 [json_name = "roleBindings"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.RoleBindingOrBuilder> 
+  java.util.List<? extends com.udb.core.authz.services.v1.RoleBindingOrBuilder>
       getRoleBindingsOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.services.v1.RoleBinding role_bindings = 2 [json_name = "roleBindings"];</code>
@@ -61,7 +61,7 @@ public interface PolicyDocumentOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.RelationshipTuple relationship_tuples = 3 [json_name = "relationshipTuples"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.RelationshipTuple> 
+  java.util.List<com.udb.core.authz.services.v1.RelationshipTuple>
       getRelationshipTuplesList();
   /**
    * <code>repeated .udb.core.authz.services.v1.RelationshipTuple relationship_tuples = 3 [json_name = "relationshipTuples"];</code>
@@ -74,7 +74,7 @@ public interface PolicyDocumentOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.RelationshipTuple relationship_tuples = 3 [json_name = "relationshipTuples"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.RelationshipTupleOrBuilder> 
+  java.util.List<? extends com.udb.core.authz.services.v1.RelationshipTupleOrBuilder>
       getRelationshipTuplesOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.services.v1.RelationshipTuple relationship_tuples = 3 [json_name = "relationshipTuples"];</code>

@@ -149,4 +149,3 @@ class RoomCreated extends \Google\Protobuf\Internal\Message
     }
 
 }
-

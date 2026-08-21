@@ -24,4 +24,3 @@ class TenantEvents
         static::$is_initialized = true;
     }
 }
-

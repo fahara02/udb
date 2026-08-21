@@ -147,4 +147,3 @@ class ScimDeleteGroupRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

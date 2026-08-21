@@ -282,4 +282,3 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

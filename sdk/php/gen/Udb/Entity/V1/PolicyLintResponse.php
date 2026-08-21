@@ -83,4 +83,3 @@ class PolicyLintResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

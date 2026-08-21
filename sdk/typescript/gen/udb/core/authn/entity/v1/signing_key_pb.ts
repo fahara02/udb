@@ -124,4 +124,3 @@ export type SigningKey = Message<"udb.core.authn.entity.v1.SigningKey"> & {
  */
 export const SigningKeySchema: GenMessage<SigningKey> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_signing_key, 0);
-

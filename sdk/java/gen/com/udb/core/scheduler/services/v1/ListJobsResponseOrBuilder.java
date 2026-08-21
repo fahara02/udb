@@ -13,7 +13,7 @@ public interface ListJobsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.scheduler.entity.v1.ScheduledJob jobs = 1 [json_name = "jobs"];</code>
    */
-  java.util.List<com.udb.core.scheduler.entity.v1.ScheduledJob> 
+  java.util.List<com.udb.core.scheduler.entity.v1.ScheduledJob>
       getJobsList();
   /**
    * <code>repeated .udb.core.scheduler.entity.v1.ScheduledJob jobs = 1 [json_name = "jobs"];</code>
@@ -26,7 +26,7 @@ public interface ListJobsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.scheduler.entity.v1.ScheduledJob jobs = 1 [json_name = "jobs"];</code>
    */
-  java.util.List<? extends com.udb.core.scheduler.entity.v1.ScheduledJobOrBuilder> 
+  java.util.List<? extends com.udb.core.scheduler.entity.v1.ScheduledJobOrBuilder>
       getJobsOrBuilderList();
   /**
    * <code>repeated .udb.core.scheduler.entity.v1.ScheduledJob jobs = 1 [json_name = "jobs"];</code>

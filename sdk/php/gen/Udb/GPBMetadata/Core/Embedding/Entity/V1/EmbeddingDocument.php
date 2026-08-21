@@ -25,4 +25,3 @@ class EmbeddingDocument
         static::$is_initialized = true;
     }
 }
-

@@ -164,4 +164,3 @@ class ReportEmbeddingFailureRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

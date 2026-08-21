@@ -248,4 +248,3 @@ class DocumentFindRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

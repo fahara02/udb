@@ -1299,4 +1299,3 @@ export const AuthnService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_authn_services_v1_authn_service, 0);
-

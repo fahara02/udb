@@ -13,7 +13,7 @@ public interface ListIndexesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.search.services.v1.SearchIndexSummary indexes = 1 [json_name = "indexes"];</code>
    */
-  java.util.List<com.udb.core.search.services.v1.SearchIndexSummary> 
+  java.util.List<com.udb.core.search.services.v1.SearchIndexSummary>
       getIndexesList();
   /**
    * <code>repeated .udb.core.search.services.v1.SearchIndexSummary indexes = 1 [json_name = "indexes"];</code>
@@ -26,7 +26,7 @@ public interface ListIndexesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.search.services.v1.SearchIndexSummary indexes = 1 [json_name = "indexes"];</code>
    */
-  java.util.List<? extends com.udb.core.search.services.v1.SearchIndexSummaryOrBuilder> 
+  java.util.List<? extends com.udb.core.search.services.v1.SearchIndexSummaryOrBuilder>
       getIndexesOrBuilderList();
   /**
    * <code>repeated .udb.core.search.services.v1.SearchIndexSummary indexes = 1 [json_name = "indexes"];</code>

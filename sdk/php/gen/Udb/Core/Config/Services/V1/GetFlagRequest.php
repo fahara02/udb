@@ -137,4 +137,3 @@ class GetFlagRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

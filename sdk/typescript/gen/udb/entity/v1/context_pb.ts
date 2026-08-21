@@ -169,4 +169,3 @@ export type RequestContext = Message<"udb.entity.v1.RequestContext"> & {
  */
 export const RequestContextSchema: GenMessage<RequestContext> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_context, 0);
-

@@ -51,4 +51,3 @@ class SortDirection
         return constant($const);
     }
 }
-

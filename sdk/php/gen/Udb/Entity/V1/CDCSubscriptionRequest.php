@@ -120,4 +120,3 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -109,4 +109,3 @@ export type Device = Message<"udb.core.authn.entity.v1.Device"> & {
  */
 export const DeviceSchema: GenMessage<Device> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_device, 0);
-

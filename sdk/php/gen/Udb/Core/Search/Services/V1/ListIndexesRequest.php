@@ -117,4 +117,3 @@ class ListIndexesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

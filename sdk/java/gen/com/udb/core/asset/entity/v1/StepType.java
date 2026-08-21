@@ -167,4 +167,3 @@ public enum StepType
 
   // @@protoc_insertion_point(enum_scope:udb.core.asset.entity.v1.StepType)
 }
-

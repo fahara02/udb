@@ -78,4 +78,3 @@ class EgressStatus
         return constant($const);
     }
 }
-

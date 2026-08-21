@@ -23,4 +23,3 @@ class Context
         static::$is_initialized = true;
     }
 }
-

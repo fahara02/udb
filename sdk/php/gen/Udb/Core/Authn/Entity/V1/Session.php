@@ -13,14 +13,11 @@ use Google\Protobuf\RepeatedField;
  * ---------------------------------------------------------------------------
  * Session — Authenticated session for a user, service account, workload, or
  * external identity mapped into UDB.
- *
  * Hybrid model:
  *   SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify
  *   JWT:         access_token_jti + refresh_token_jti tracked for revocation
- *
  * Migration order 2. RLS scopes rows to the current tenant.
  * ---------------------------------------------------------------------------
- *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.Session</code>
  */
 class Session extends \Google\Protobuf\Internal\Message
@@ -788,4 +785,3 @@ class Session extends \Google\Protobuf\Internal\Message
     }
 
 }
-

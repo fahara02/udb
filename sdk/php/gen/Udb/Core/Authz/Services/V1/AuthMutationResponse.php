@@ -83,4 +83,3 @@ class AuthMutationResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

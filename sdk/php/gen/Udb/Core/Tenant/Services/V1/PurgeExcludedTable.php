@@ -113,4 +113,3 @@ class PurgeExcludedTable extends \Google\Protobuf\Internal\Message
     }
 
 }
-

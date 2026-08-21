@@ -228,4 +228,3 @@ class MultipartUploadRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -561,4 +561,3 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.idp.entity.v1.ExternalIdentity identities = 1 [json_name = "identities"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder> 
+  public java.util.List<? extends com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder>
       getIdentitiesOrBuilderList() {
     return identities_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             identitiesBuilder_ = null;
             identities_ = other.identities_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            identitiesBuilder_ = 
+            identitiesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetIdentitiesFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.idp.entity.v1.ExternalIdentity identities = 1 [json_name = "identities"];</code>
      */
-    public java.util.List<? extends com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder> 
+    public java.util.List<? extends com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder>
          getIdentitiesOrBuilderList() {
       if (identitiesBuilder_ != null) {
         return identitiesBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.idp.entity.v1.ExternalIdentity identities = 1 [json_name = "identities"];</code>
      */
-    public java.util.List<com.udb.core.idp.entity.v1.ExternalIdentity.Builder> 
+    public java.util.List<com.udb.core.idp.entity.v1.ExternalIdentity.Builder>
          getIdentitiesBuilderList() {
       return internalGetIdentitiesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.idp.entity.v1.ExternalIdentity, com.udb.core.idp.entity.v1.ExternalIdentity.Builder, com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder> 
+        com.udb.core.idp.entity.v1.ExternalIdentity, com.udb.core.idp.entity.v1.ExternalIdentity.Builder, com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder>
         internalGetIdentitiesFieldBuilder() {
       if (identitiesBuilder_ == null) {
         identitiesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,4 +911,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

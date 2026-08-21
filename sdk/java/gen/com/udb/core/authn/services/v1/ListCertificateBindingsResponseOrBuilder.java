@@ -13,7 +13,7 @@ public interface ListCertificateBindingsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.CertificateBinding bindings = 1 [json_name = "bindings"];</code>
    */
-  java.util.List<com.udb.core.authn.entity.v1.CertificateBinding> 
+  java.util.List<com.udb.core.authn.entity.v1.CertificateBinding>
       getBindingsList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.CertificateBinding bindings = 1 [json_name = "bindings"];</code>
@@ -26,7 +26,7 @@ public interface ListCertificateBindingsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.CertificateBinding bindings = 1 [json_name = "bindings"];</code>
    */
-  java.util.List<? extends com.udb.core.authn.entity.v1.CertificateBindingOrBuilder> 
+  java.util.List<? extends com.udb.core.authn.entity.v1.CertificateBindingOrBuilder>
       getBindingsOrBuilderList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.CertificateBinding bindings = 1 [json_name = "bindings"];</code>

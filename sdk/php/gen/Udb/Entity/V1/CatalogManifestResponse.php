@@ -63,4 +63,3 @@ class CatalogManifestResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -503,4 +503,3 @@ export const LockService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_lock_services_v1_lock_service, 0);
-

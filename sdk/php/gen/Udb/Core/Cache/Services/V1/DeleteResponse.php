@@ -154,4 +154,3 @@ class DeleteResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

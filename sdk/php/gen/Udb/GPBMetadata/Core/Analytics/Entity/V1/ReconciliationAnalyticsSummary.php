@@ -25,4 +25,3 @@ class ReconciliationAnalyticsSummary
         static::$is_initialized = true;
     }
 }
-

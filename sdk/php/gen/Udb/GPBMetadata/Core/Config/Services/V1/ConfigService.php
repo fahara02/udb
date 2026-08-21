@@ -25,4 +25,3 @@ class ConfigService
         static::$is_initialized = true;
     }
 }
-

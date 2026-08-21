@@ -85,7 +85,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 2 [json_name = "steps"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.asset.entity.v1.PipelineStepOrBuilder> 
+  public java.util.List<? extends com.udb.core.asset.entity.v1.PipelineStepOrBuilder>
       getStepsOrBuilderList() {
     return steps_;
   }
@@ -495,7 +495,7 @@ private static final long serialVersionUID = 0L;
             stepsBuilder_ = null;
             steps_ = other.steps_;
             bitField0_ = (bitField0_ & ~0x00000002);
-            stepsBuilder_ = 
+            stepsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetStepsFieldBuilder() : null;
           } else {
@@ -684,7 +684,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.asset.entity.v1.PipelineInstance instance = 1 [json_name = "instance"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.asset.entity.v1.PipelineInstance, com.udb.core.asset.entity.v1.PipelineInstance.Builder, com.udb.core.asset.entity.v1.PipelineInstanceOrBuilder> 
+        com.udb.core.asset.entity.v1.PipelineInstance, com.udb.core.asset.entity.v1.PipelineInstance.Builder, com.udb.core.asset.entity.v1.PipelineInstanceOrBuilder>
         internalGetInstanceFieldBuilder() {
       if (instanceBuilder_ == null) {
         instanceBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -892,7 +892,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 2 [json_name = "steps"];</code>
      */
-    public java.util.List<? extends com.udb.core.asset.entity.v1.PipelineStepOrBuilder> 
+    public java.util.List<? extends com.udb.core.asset.entity.v1.PipelineStepOrBuilder>
          getStepsOrBuilderList() {
       if (stepsBuilder_ != null) {
         return stepsBuilder_.getMessageOrBuilderList();
@@ -918,12 +918,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 2 [json_name = "steps"];</code>
      */
-    public java.util.List<com.udb.core.asset.entity.v1.PipelineStep.Builder> 
+    public java.util.List<com.udb.core.asset.entity.v1.PipelineStep.Builder>
          getStepsBuilderList() {
       return internalGetStepsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.asset.entity.v1.PipelineStep, com.udb.core.asset.entity.v1.PipelineStep.Builder, com.udb.core.asset.entity.v1.PipelineStepOrBuilder> 
+        com.udb.core.asset.entity.v1.PipelineStep, com.udb.core.asset.entity.v1.PipelineStep.Builder, com.udb.core.asset.entity.v1.PipelineStepOrBuilder>
         internalGetStepsFieldBuilder() {
       if (stepsBuilder_ == null) {
         stepsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1081,7 +1081,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1144,4 +1144,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

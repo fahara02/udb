@@ -58,7 +58,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -74,7 +74,7 @@ private static final long serialVersionUID = 0L;
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -98,7 +98,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingRequest items = 2 [json_name = "items"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.embedding.services.v1.ReportEmbeddingRequestOrBuilder> 
+  public java.util.List<? extends com.udb.core.embedding.services.v1.ReportEmbeddingRequestOrBuilder>
       getItemsOrBuilderList() {
     return items_;
   }
@@ -448,7 +448,7 @@ private static final long serialVersionUID = 0L;
             itemsBuilder_ = null;
             items_ = other.items_;
             bitField0_ = (bitField0_ & ~0x00000002);
-            itemsBuilder_ = 
+            itemsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetItemsFieldBuilder() : null;
           } else {
@@ -550,7 +550,7 @@ private static final long serialVersionUID = 0L;
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -792,7 +792,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingRequest items = 2 [json_name = "items"];</code>
      */
-    public java.util.List<? extends com.udb.core.embedding.services.v1.ReportEmbeddingRequestOrBuilder> 
+    public java.util.List<? extends com.udb.core.embedding.services.v1.ReportEmbeddingRequestOrBuilder>
          getItemsOrBuilderList() {
       if (itemsBuilder_ != null) {
         return itemsBuilder_.getMessageOrBuilderList();
@@ -818,12 +818,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingRequest items = 2 [json_name = "items"];</code>
      */
-    public java.util.List<com.udb.core.embedding.services.v1.ReportEmbeddingRequest.Builder> 
+    public java.util.List<com.udb.core.embedding.services.v1.ReportEmbeddingRequest.Builder>
          getItemsBuilderList() {
       return internalGetItemsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.embedding.services.v1.ReportEmbeddingRequest, com.udb.core.embedding.services.v1.ReportEmbeddingRequest.Builder, com.udb.core.embedding.services.v1.ReportEmbeddingRequestOrBuilder> 
+        com.udb.core.embedding.services.v1.ReportEmbeddingRequest, com.udb.core.embedding.services.v1.ReportEmbeddingRequest.Builder, com.udb.core.embedding.services.v1.ReportEmbeddingRequestOrBuilder>
         internalGetItemsFieldBuilder() {
       if (itemsBuilder_ == null) {
         itemsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -919,4 +919,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

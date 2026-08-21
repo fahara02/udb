@@ -284,4 +284,3 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

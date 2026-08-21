@@ -147,4 +147,3 @@ class PutSecretResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

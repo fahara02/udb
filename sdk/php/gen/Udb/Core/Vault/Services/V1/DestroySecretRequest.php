@@ -121,4 +121,3 @@ class DestroySecretRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -157,4 +157,3 @@ class GetQuotaResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -90,4 +90,3 @@ class LiveQuerySnapshot extends \Google\Protobuf\Internal\Message
     }
 
 }
-

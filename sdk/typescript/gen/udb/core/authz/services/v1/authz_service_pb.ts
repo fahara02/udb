@@ -386,4 +386,3 @@ export const AuthzService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_authz_services_v1_authz_service, 0);
-

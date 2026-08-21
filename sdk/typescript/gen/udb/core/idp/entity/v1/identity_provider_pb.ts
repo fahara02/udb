@@ -208,4 +208,3 @@ export type IdentityProvider = Message<"udb.core.idp.entity.v1.IdentityProvider"
  */
 export const IdentityProviderSchema: GenMessage<IdentityProvider> = /*@__PURE__*/
   messageDesc(file_udb_core_idp_entity_v1_identity_provider, 0);
-

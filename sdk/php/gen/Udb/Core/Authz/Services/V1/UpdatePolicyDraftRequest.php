@@ -245,4 +245,3 @@ class UpdatePolicyDraftRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

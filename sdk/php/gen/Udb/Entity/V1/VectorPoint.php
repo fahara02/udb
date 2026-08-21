@@ -174,4 +174,3 @@ class VectorPoint extends \Google\Protobuf\Internal\Message
     }
 
 }
-

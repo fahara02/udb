@@ -97,4 +97,3 @@ class PreviewGroupMappingResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

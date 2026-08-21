@@ -88,7 +88,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       currentVersion_ = s;
@@ -108,7 +108,7 @@ private static final long serialVersionUID = 0L;
       getCurrentVersionBytes() {
     java.lang.Object ref = currentVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       currentVersion_ = b;
@@ -643,7 +643,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.control.services.v1.NodeAckState node_state = 1 [json_name = "nodeState"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.control.services.v1.NodeAckState, com.udb.core.control.services.v1.NodeAckState.Builder, com.udb.core.control.services.v1.NodeAckStateOrBuilder> 
+        com.udb.core.control.services.v1.NodeAckState, com.udb.core.control.services.v1.NodeAckState.Builder, com.udb.core.control.services.v1.NodeAckStateOrBuilder>
         internalGetNodeStateFieldBuilder() {
       if (nodeStateBuilder_ == null) {
         nodeStateBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -689,7 +689,7 @@ private static final long serialVersionUID = 0L;
         getCurrentVersionBytes() {
       java.lang.Object ref = currentVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         currentVersion_ = b;
@@ -886,4 +886,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

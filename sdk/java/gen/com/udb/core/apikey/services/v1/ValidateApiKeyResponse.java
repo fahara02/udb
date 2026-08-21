@@ -72,7 +72,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       keyId_ = s;
@@ -88,7 +88,7 @@ private static final long serialVersionUID = 0L;
       getKeyIdBytes() {
     java.lang.Object ref = keyId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       keyId_ = b;
@@ -111,7 +111,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       ownerId_ = s;
@@ -127,7 +127,7 @@ private static final long serialVersionUID = 0L;
       getOwnerIdBytes() {
     java.lang.Object ref = ownerId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       ownerId_ = b;
@@ -703,7 +703,7 @@ private static final long serialVersionUID = 0L;
         getKeyIdBytes() {
       java.lang.Object ref = keyId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         keyId_ = b;
@@ -775,7 +775,7 @@ private static final long serialVersionUID = 0L;
         getOwnerIdBytes() {
       java.lang.Object ref = ownerId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         ownerId_ = b;
@@ -1102,4 +1102,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

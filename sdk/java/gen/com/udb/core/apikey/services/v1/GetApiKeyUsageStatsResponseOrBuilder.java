@@ -13,7 +13,7 @@ public interface GetApiKeyUsageStatsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.apikey.services.v1.ApiKeyDailyStat stats = 1 [json_name = "stats"];</code>
    */
-  java.util.List<com.udb.core.apikey.services.v1.ApiKeyDailyStat> 
+  java.util.List<com.udb.core.apikey.services.v1.ApiKeyDailyStat>
       getStatsList();
   /**
    * <code>repeated .udb.core.apikey.services.v1.ApiKeyDailyStat stats = 1 [json_name = "stats"];</code>
@@ -26,7 +26,7 @@ public interface GetApiKeyUsageStatsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.apikey.services.v1.ApiKeyDailyStat stats = 1 [json_name = "stats"];</code>
    */
-  java.util.List<? extends com.udb.core.apikey.services.v1.ApiKeyDailyStatOrBuilder> 
+  java.util.List<? extends com.udb.core.apikey.services.v1.ApiKeyDailyStatOrBuilder>
       getStatsOrBuilderList();
   /**
    * <code>repeated .udb.core.apikey.services.v1.ApiKeyDailyStat stats = 1 [json_name = "stats"];</code>

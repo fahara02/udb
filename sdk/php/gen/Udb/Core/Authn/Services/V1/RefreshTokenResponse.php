@@ -156,4 +156,3 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -103,4 +103,3 @@ class NativeAccessResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

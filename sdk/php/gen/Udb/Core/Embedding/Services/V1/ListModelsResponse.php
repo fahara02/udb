@@ -147,4 +147,3 @@ class ListModelsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

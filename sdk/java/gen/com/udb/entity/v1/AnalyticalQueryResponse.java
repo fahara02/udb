@@ -61,7 +61,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.Row rows = 1 [json_name = "rows"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.RowOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.RowOrBuilder>
       getRowsOrBuilderList() {
     return rows_;
   }
@@ -101,7 +101,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -117,7 +117,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -167,7 +167,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 4 [json_name = "warnings"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder>
       getWarningsOrBuilderList() {
     return warnings_;
   }
@@ -552,7 +552,7 @@ private static final long serialVersionUID = 0L;
             rowsBuilder_ = null;
             rows_ = other.rows_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            rowsBuilder_ = 
+            rowsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetRowsFieldBuilder() : null;
           } else {
@@ -586,7 +586,7 @@ private static final long serialVersionUID = 0L;
             warningsBuilder_ = null;
             warnings_ = other.warnings_;
             bitField0_ = (bitField0_ & ~0x00000008);
-            warningsBuilder_ = 
+            warningsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetWarningsFieldBuilder() : null;
           } else {
@@ -870,7 +870,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.Row rows = 1 [json_name = "rows"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.RowOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.RowOrBuilder>
          getRowsOrBuilderList() {
       if (rowsBuilder_ != null) {
         return rowsBuilder_.getMessageOrBuilderList();
@@ -896,12 +896,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.Row rows = 1 [json_name = "rows"];</code>
      */
-    public java.util.List<com.udb.entity.v1.Row.Builder> 
+    public java.util.List<com.udb.entity.v1.Row.Builder>
          getRowsBuilderList() {
       return internalGetRowsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.Row, com.udb.entity.v1.Row.Builder, com.udb.entity.v1.RowOrBuilder> 
+        com.udb.entity.v1.Row, com.udb.entity.v1.Row.Builder, com.udb.entity.v1.RowOrBuilder>
         internalGetRowsFieldBuilder() {
       if (rowsBuilder_ == null) {
         rowsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -940,7 +940,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -1095,7 +1095,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.OperationStats stats = 3 [json_name = "stats"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.OperationStats, com.udb.entity.v1.OperationStats.Builder, com.udb.entity.v1.OperationStatsOrBuilder> 
+        com.udb.entity.v1.OperationStats, com.udb.entity.v1.OperationStats.Builder, com.udb.entity.v1.OperationStatsOrBuilder>
         internalGetStatsFieldBuilder() {
       if (statsBuilder_ == null) {
         statsBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1303,7 +1303,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.OperationWarning warnings = 4 [json_name = "warnings"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder>
          getWarningsOrBuilderList() {
       if (warningsBuilder_ != null) {
         return warningsBuilder_.getMessageOrBuilderList();
@@ -1329,12 +1329,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.OperationWarning warnings = 4 [json_name = "warnings"];</code>
      */
-    public java.util.List<com.udb.entity.v1.OperationWarning.Builder> 
+    public java.util.List<com.udb.entity.v1.OperationWarning.Builder>
          getWarningsBuilderList() {
       return internalGetWarningsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.OperationWarning, com.udb.entity.v1.OperationWarning.Builder, com.udb.entity.v1.OperationWarningOrBuilder> 
+        com.udb.entity.v1.OperationWarning, com.udb.entity.v1.OperationWarning.Builder, com.udb.entity.v1.OperationWarningOrBuilder>
         internalGetWarningsFieldBuilder() {
       if (warningsBuilder_ == null) {
         warningsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1398,4 +1398,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

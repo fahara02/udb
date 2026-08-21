@@ -120,4 +120,3 @@ class ReportEmbeddingResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

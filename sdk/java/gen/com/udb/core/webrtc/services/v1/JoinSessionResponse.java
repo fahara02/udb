@@ -86,7 +86,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
+  public java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder>
       getExistingPeersOrBuilderList() {
     return existingPeers_;
   }
@@ -127,7 +127,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 3 [json_name = "iceServers"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder> 
+  public java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder>
       getIceServersOrBuilderList() {
     return iceServers_;
   }
@@ -621,7 +621,7 @@ private static final long serialVersionUID = 0L;
             existingPeersBuilder_ = null;
             existingPeers_ = other.existingPeers_;
             bitField0_ = (bitField0_ & ~0x00000002);
-            existingPeersBuilder_ = 
+            existingPeersBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetExistingPeersFieldBuilder() : null;
           } else {
@@ -647,7 +647,7 @@ private static final long serialVersionUID = 0L;
             iceServersBuilder_ = null;
             iceServers_ = other.iceServers_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            iceServersBuilder_ = 
+            iceServersBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetIceServersFieldBuilder() : null;
           } else {
@@ -859,7 +859,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.webrtc.entity.v1.Peer peer = 1 [json_name = "peer"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.webrtc.entity.v1.Peer, com.udb.core.webrtc.entity.v1.Peer.Builder, com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
+        com.udb.core.webrtc.entity.v1.Peer, com.udb.core.webrtc.entity.v1.Peer.Builder, com.udb.core.webrtc.entity.v1.PeerOrBuilder>
         internalGetPeerFieldBuilder() {
       if (peerBuilder_ == null) {
         peerBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1067,7 +1067,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
      */
-    public java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
+    public java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder>
          getExistingPeersOrBuilderList() {
       if (existingPeersBuilder_ != null) {
         return existingPeersBuilder_.getMessageOrBuilderList();
@@ -1093,12 +1093,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
      */
-    public java.util.List<com.udb.core.webrtc.entity.v1.Peer.Builder> 
+    public java.util.List<com.udb.core.webrtc.entity.v1.Peer.Builder>
          getExistingPeersBuilderList() {
       return internalGetExistingPeersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.webrtc.entity.v1.Peer, com.udb.core.webrtc.entity.v1.Peer.Builder, com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
+        com.udb.core.webrtc.entity.v1.Peer, com.udb.core.webrtc.entity.v1.Peer.Builder, com.udb.core.webrtc.entity.v1.PeerOrBuilder>
         internalGetExistingPeersFieldBuilder() {
       if (existingPeersBuilder_ == null) {
         existingPeersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1307,7 +1307,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 3 [json_name = "iceServers"];</code>
      */
-    public java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder> 
+    public java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder>
          getIceServersOrBuilderList() {
       if (iceServersBuilder_ != null) {
         return iceServersBuilder_.getMessageOrBuilderList();
@@ -1333,12 +1333,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 3 [json_name = "iceServers"];</code>
      */
-    public java.util.List<com.udb.core.webrtc.services.v1.IceServer.Builder> 
+    public java.util.List<com.udb.core.webrtc.services.v1.IceServer.Builder>
          getIceServersBuilderList() {
       return internalGetIceServersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.webrtc.services.v1.IceServer, com.udb.core.webrtc.services.v1.IceServer.Builder, com.udb.core.webrtc.services.v1.IceServerOrBuilder> 
+        com.udb.core.webrtc.services.v1.IceServer, com.udb.core.webrtc.services.v1.IceServer.Builder, com.udb.core.webrtc.services.v1.IceServerOrBuilder>
         internalGetIceServersFieldBuilder() {
       if (iceServersBuilder_ == null) {
         iceServersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1460,7 +1460,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp expires_at = 4 [json_name = "expiresAt"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetExpiresAtFieldBuilder() {
       if (expiresAtBuilder_ == null) {
         expiresAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1617,7 +1617,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 5 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1680,4 +1680,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

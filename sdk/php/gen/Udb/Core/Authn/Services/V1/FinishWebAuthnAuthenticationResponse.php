@@ -174,4 +174,3 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
     }
 
 }
-

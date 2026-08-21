@@ -166,4 +166,3 @@ export type ApiKey = Message<"udb.core.apikey.entity.v1.ApiKey"> & {
  */
 export const ApiKeySchema: GenMessage<ApiKey> = /*@__PURE__*/
   messageDesc(file_udb_core_apikey_entity_v1_api_key, 0);
-

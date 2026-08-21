@@ -26,4 +26,3 @@ class ScimDirectoryState
         static::$is_initialized = true;
     }
 }
-

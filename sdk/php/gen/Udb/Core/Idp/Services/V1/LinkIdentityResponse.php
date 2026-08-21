@@ -66,4 +66,3 @@ class LinkIdentityResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

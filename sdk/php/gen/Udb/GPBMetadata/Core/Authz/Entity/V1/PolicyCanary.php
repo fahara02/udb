@@ -25,4 +25,3 @@ class PolicyCanary
         static::$is_initialized = true;
     }
 }
-

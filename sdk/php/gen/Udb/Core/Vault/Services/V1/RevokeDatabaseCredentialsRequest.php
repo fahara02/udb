@@ -137,4 +137,3 @@ class RevokeDatabaseCredentialsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

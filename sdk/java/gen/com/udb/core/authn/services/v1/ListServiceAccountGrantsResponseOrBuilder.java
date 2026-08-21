@@ -13,7 +13,7 @@ public interface ListServiceAccountGrantsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.ServiceAccountGrant grants = 1 [json_name = "grants"];</code>
    */
-  java.util.List<com.udb.core.authn.entity.v1.ServiceAccountGrant> 
+  java.util.List<com.udb.core.authn.entity.v1.ServiceAccountGrant>
       getGrantsList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.ServiceAccountGrant grants = 1 [json_name = "grants"];</code>
@@ -26,7 +26,7 @@ public interface ListServiceAccountGrantsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.ServiceAccountGrant grants = 1 [json_name = "grants"];</code>
    */
-  java.util.List<? extends com.udb.core.authn.entity.v1.ServiceAccountGrantOrBuilder> 
+  java.util.List<? extends com.udb.core.authn.entity.v1.ServiceAccountGrantOrBuilder>
       getGrantsOrBuilderList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.ServiceAccountGrant grants = 1 [json_name = "grants"];</code>

@@ -86,7 +86,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       collection_ = s;
@@ -102,7 +102,7 @@ private static final long serialVersionUID = 0L;
       getCollectionBytes() {
     java.lang.Object ref = collection_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       collection_ = b;
@@ -126,7 +126,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.VectorPointMutation points = 3 [json_name = "points"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder>
       getPointsOrBuilderList() {
     return points_;
   }
@@ -166,7 +166,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       idempotencyKey_ = s;
@@ -182,7 +182,7 @@ private static final long serialVersionUID = 0L;
       getIdempotencyKeyBytes() {
     java.lang.Object ref = idempotencyKey_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       idempotencyKey_ = b;
@@ -542,7 +542,7 @@ private static final long serialVersionUID = 0L;
             pointsBuilder_ = null;
             points_ = other.points_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            pointsBuilder_ = 
+            pointsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetPointsFieldBuilder() : null;
           } else {
@@ -736,7 +736,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.RequestContext context = 1 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder> 
+        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder>
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -774,7 +774,7 @@ private static final long serialVersionUID = 0L;
         getCollectionBytes() {
       java.lang.Object ref = collection_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         collection_ = b;
@@ -1016,7 +1016,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.VectorPointMutation points = 3 [json_name = "points"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder>
          getPointsOrBuilderList() {
       if (pointsBuilder_ != null) {
         return pointsBuilder_.getMessageOrBuilderList();
@@ -1042,12 +1042,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.VectorPointMutation points = 3 [json_name = "points"];</code>
      */
-    public java.util.List<com.udb.entity.v1.VectorPointMutation.Builder> 
+    public java.util.List<com.udb.entity.v1.VectorPointMutation.Builder>
          getPointsBuilderList() {
       return internalGetPointsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.VectorPointMutation, com.udb.entity.v1.VectorPointMutation.Builder, com.udb.entity.v1.VectorPointMutationOrBuilder> 
+        com.udb.entity.v1.VectorPointMutation, com.udb.entity.v1.VectorPointMutation.Builder, com.udb.entity.v1.VectorPointMutationOrBuilder>
         internalGetPointsFieldBuilder() {
       if (pointsBuilder_ == null) {
         pointsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1086,7 +1086,7 @@ private static final long serialVersionUID = 0L;
         getIdempotencyKeyBytes() {
       java.lang.Object ref = idempotencyKey_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         idempotencyKey_ = b;
@@ -1183,4 +1183,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

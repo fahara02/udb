@@ -182,4 +182,3 @@ public enum ConsistencyMode
 
   // @@protoc_insertion_point(enum_scope:udb.entity.v1.ConsistencyMode)
 }
-

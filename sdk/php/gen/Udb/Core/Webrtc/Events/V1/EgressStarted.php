@@ -244,4 +244,3 @@ class EgressStarted extends \Google\Protobuf\Internal\Message
     }
 
 }
-

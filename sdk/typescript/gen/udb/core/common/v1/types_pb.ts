@@ -549,4 +549,3 @@ export enum SortDirection {
  */
 export const SortDirectionSchema: GenEnum<SortDirection> = /*@__PURE__*/
   enumDesc(file_udb_core_common_v1_types, 4);
-

@@ -25,4 +25,3 @@ class PolicySet
         static::$is_initialized = true;
     }
 }
-

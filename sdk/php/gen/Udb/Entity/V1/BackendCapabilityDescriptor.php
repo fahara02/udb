@@ -245,4 +245,3 @@ class BackendCapabilityDescriptor extends \Google\Protobuf\Internal\Message
     }
 
 }
-

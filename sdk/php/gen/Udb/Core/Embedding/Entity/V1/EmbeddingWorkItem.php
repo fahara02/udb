@@ -916,4 +916,3 @@ class EmbeddingWorkItem extends \Google\Protobuf\Internal\Message
     }
 
 }
-

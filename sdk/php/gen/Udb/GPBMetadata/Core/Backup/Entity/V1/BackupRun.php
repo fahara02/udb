@@ -25,4 +25,3 @@ class BackupRun
         static::$is_initialized = true;
     }
 }
-

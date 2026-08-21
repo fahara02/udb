@@ -113,7 +113,7 @@ public interface HealthReportResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 10 [json_name = "backendInstances"];</code>
    */
-  java.util.List<com.udb.entity.v1.BackendInstanceStatus> 
+  java.util.List<com.udb.entity.v1.BackendInstanceStatus>
       getBackendInstancesList();
   /**
    * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 10 [json_name = "backendInstances"];</code>
@@ -126,7 +126,7 @@ public interface HealthReportResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 10 [json_name = "backendInstances"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder>
       getBackendInstancesOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 10 [json_name = "backendInstances"];</code>
@@ -137,7 +137,7 @@ public interface HealthReportResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
    */
-  java.util.List<com.udb.entity.v1.NativeServiceStatus> 
+  java.util.List<com.udb.entity.v1.NativeServiceStatus>
       getNativeServicesList();
   /**
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
@@ -150,7 +150,7 @@ public interface HealthReportResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder>
       getNativeServicesOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>

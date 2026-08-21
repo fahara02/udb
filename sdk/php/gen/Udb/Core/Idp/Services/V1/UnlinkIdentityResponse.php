@@ -56,4 +56,3 @@ class UnlinkIdentityResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

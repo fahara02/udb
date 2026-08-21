@@ -112,7 +112,7 @@ public interface MutationOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.VectorPointMutation vector_points = 9 [json_name = "vectorPoints"];</code>
    */
-  java.util.List<com.udb.entity.v1.VectorPointMutation> 
+  java.util.List<com.udb.entity.v1.VectorPointMutation>
       getVectorPointsList();
   /**
    * <code>repeated .udb.entity.v1.VectorPointMutation vector_points = 9 [json_name = "vectorPoints"];</code>
@@ -125,7 +125,7 @@ public interface MutationOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.VectorPointMutation vector_points = 9 [json_name = "vectorPoints"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder>
       getVectorPointsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.VectorPointMutation vector_points = 9 [json_name = "vectorPoints"];</code>
@@ -238,7 +238,7 @@ public interface MutationOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
    */
-  java.util.List<com.udb.entity.v1.UpdateRequest.Increment> 
+  java.util.List<com.udb.entity.v1.UpdateRequest.Increment>
       getIncrementsList();
   /**
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
@@ -251,7 +251,7 @@ public interface MutationOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
       getIncrementsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>

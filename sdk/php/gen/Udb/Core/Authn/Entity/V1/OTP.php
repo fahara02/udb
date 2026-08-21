@@ -13,11 +13,9 @@ use Google\Protobuf\RepeatedField;
  * ---------------------------------------------------------------------------
  * OTP — One-time password record for email 2FA, account verification,
  * password reset, and sensitive operation approval.
- *
  * Migration order 3.  OTPs are never updated — a new row is inserted on each
  * send (including resend, which sets superseded_by_id on the previous row).
  * ---------------------------------------------------------------------------
- *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.OTP</code>
  */
 class OTP extends \Google\Protobuf\Internal\Message
@@ -473,4 +471,3 @@ class OTP extends \Google\Protobuf\Internal\Message
     }
 
 }
-

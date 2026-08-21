@@ -110,4 +110,3 @@ class ScimGetUserRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

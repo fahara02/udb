@@ -230,7 +230,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       groupBy_ = s;
@@ -246,7 +246,7 @@ private static final long serialVersionUID = 0L;
       getGroupByBytes() {
     java.lang.Object ref = groupBy_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       groupBy_ = b;
@@ -269,7 +269,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       aggregate_ = s;
@@ -285,7 +285,7 @@ private static final long serialVersionUID = 0L;
       getAggregateBytes() {
     java.lang.Object ref = aggregate_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       aggregate_ = b;
@@ -308,7 +308,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       window_ = s;
@@ -324,7 +324,7 @@ private static final long serialVersionUID = 0L;
       getWindowBytes() {
     java.lang.Object ref = window_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       window_ = b;
@@ -358,7 +358,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       pageToken_ = s;
@@ -374,7 +374,7 @@ private static final long serialVersionUID = 0L;
       getPageTokenBytes() {
     java.lang.Object ref = pageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       pageToken_ = b;
@@ -1117,7 +1117,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.RequestContext context = 1 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder> 
+        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder>
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1238,7 +1238,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.StoreResource resource = 2 [json_name = "resource"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.StoreResource, com.udb.entity.v1.StoreResource.Builder, com.udb.entity.v1.StoreResourceOrBuilder> 
+        com.udb.entity.v1.StoreResource, com.udb.entity.v1.StoreResource.Builder, com.udb.entity.v1.StoreResourceOrBuilder>
         internalGetResourceFieldBuilder() {
       if (resourceBuilder_ == null) {
         resourceBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1359,7 +1359,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp from = 3 [json_name = "from"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetFromFieldBuilder() {
       if (fromBuilder_ == null) {
         fromBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1480,7 +1480,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp to = 4 [json_name = "to"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetToFieldBuilder() {
       if (toBuilder_ == null) {
         toBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1601,7 +1601,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct filter = 5 [json_name = "filter"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
         internalGetFilterFieldBuilder() {
       if (filterBuilder_ == null) {
         filterBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1750,7 +1750,7 @@ private static final long serialVersionUID = 0L;
         getGroupByBytes() {
       java.lang.Object ref = groupBy_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         groupBy_ = b;
@@ -1822,7 +1822,7 @@ private static final long serialVersionUID = 0L;
         getAggregateBytes() {
       java.lang.Object ref = aggregate_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         aggregate_ = b;
@@ -1894,7 +1894,7 @@ private static final long serialVersionUID = 0L;
         getWindowBytes() {
       java.lang.Object ref = window_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         window_ = b;
@@ -1998,7 +1998,7 @@ private static final long serialVersionUID = 0L;
         getPageTokenBytes() {
       java.lang.Object ref = pageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         pageToken_ = b;
@@ -2095,4 +2095,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

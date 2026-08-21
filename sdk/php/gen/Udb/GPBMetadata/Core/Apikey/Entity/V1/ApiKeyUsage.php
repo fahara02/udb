@@ -25,4 +25,3 @@ class ApiKeyUsage
         static::$is_initialized = true;
     }
 }
-

@@ -154,4 +154,3 @@ class DeleteNamespaceResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

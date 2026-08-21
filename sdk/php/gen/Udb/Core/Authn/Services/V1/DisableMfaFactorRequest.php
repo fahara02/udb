@@ -120,4 +120,3 @@ class DisableMfaFactorRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

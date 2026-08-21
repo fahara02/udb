@@ -183,4 +183,3 @@ export type AccessDecisionAudit = Message<"udb.core.authz.entity.v1.AccessDecisi
  */
 export const AccessDecisionAuditSchema: GenMessage<AccessDecisionAudit> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_entity_v1_access_decision_audit, 0);
-

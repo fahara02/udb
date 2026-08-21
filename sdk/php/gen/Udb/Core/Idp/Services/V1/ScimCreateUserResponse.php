@@ -66,4 +66,3 @@ class ScimCreateUserResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

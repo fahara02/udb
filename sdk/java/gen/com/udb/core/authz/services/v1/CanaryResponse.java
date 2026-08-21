@@ -621,7 +621,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyCanary canary = 1 [json_name = "canary"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyCanary, com.udb.core.authz.entity.v1.PolicyCanary.Builder, com.udb.core.authz.entity.v1.PolicyCanaryOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicyCanary, com.udb.core.authz.entity.v1.PolicyCanary.Builder, com.udb.core.authz.entity.v1.PolicyCanaryOrBuilder>
         internalGetCanaryFieldBuilder() {
       if (canaryBuilder_ == null) {
         canaryBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -742,7 +742,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyVersion version = 2 [json_name = "version"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyVersion, com.udb.core.authz.entity.v1.PolicyVersion.Builder, com.udb.core.authz.entity.v1.PolicyVersionOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicyVersion, com.udb.core.authz.entity.v1.PolicyVersion.Builder, com.udb.core.authz.entity.v1.PolicyVersionOrBuilder>
         internalGetVersionFieldBuilder() {
       if (versionBuilder_ == null) {
         versionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -863,7 +863,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicySet policy_set = 3 [json_name = "policySet"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicySet, com.udb.core.authz.entity.v1.PolicySet.Builder, com.udb.core.authz.entity.v1.PolicySetOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicySet, com.udb.core.authz.entity.v1.PolicySet.Builder, com.udb.core.authz.entity.v1.PolicySetOrBuilder>
         internalGetPolicySetFieldBuilder() {
       if (policySetBuilder_ == null) {
         policySetBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -926,4 +926,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

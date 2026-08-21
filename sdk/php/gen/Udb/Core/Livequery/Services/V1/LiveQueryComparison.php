@@ -75,4 +75,3 @@ class LiveQueryComparison
         return constant($const);
     }
 }
-

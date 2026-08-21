@@ -175,7 +175,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       missingCode_ = s;
@@ -191,7 +191,7 @@ private static final long serialVersionUID = 0L;
       getMissingCodeBytes() {
     java.lang.Object ref = missingCode_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       missingCode_ = b;
@@ -214,7 +214,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       wrongStateCode_ = s;
@@ -230,7 +230,7 @@ private static final long serialVersionUID = 0L;
       getWrongStateCodeBytes() {
     java.lang.Object ref = wrongStateCode_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       wrongStateCode_ = b;
@@ -1033,7 +1033,7 @@ private static final long serialVersionUID = 0L;
         getMissingCodeBytes() {
       java.lang.Object ref = missingCode_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         missingCode_ = b;
@@ -1105,7 +1105,7 @@ private static final long serialVersionUID = 0L;
         getWrongStateCodeBytes() {
       java.lang.Object ref = wrongStateCode_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         wrongStateCode_ = b;
@@ -1202,4 +1202,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

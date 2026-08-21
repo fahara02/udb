@@ -107,4 +107,3 @@ export type TenantStatusChangedEvent = Message<"udb.core.tenant.events.v1.Tenant
  */
 export const TenantStatusChangedEventSchema: GenMessage<TenantStatusChangedEvent> = /*@__PURE__*/
   messageDesc(file_udb_core_tenant_events_v1_tenant_events, 1);
-

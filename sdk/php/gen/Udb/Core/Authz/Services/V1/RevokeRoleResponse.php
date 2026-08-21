@@ -56,4 +56,3 @@ class RevokeRoleResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

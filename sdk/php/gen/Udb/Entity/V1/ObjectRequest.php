@@ -120,4 +120,3 @@ class ObjectRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

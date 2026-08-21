@@ -201,4 +201,3 @@ class GetSecretResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

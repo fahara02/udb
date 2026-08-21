@@ -117,4 +117,3 @@ class CreateTransitKeyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -296,4 +296,3 @@ class PutFlagRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

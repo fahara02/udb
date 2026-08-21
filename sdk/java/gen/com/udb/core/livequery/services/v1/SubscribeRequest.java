@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -84,7 +84,7 @@ private static final long serialVersionUID = 0L;
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -112,7 +112,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       messageType_ = s;
@@ -133,7 +133,7 @@ private static final long serialVersionUID = 0L;
       getMessageTypeBytes() {
     java.lang.Object ref = messageType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       messageType_ = b;
@@ -167,7 +167,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.livequery.services.v1.LiveQueryPredicate filters = 3 [json_name = "filters"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.livequery.services.v1.LiveQueryPredicateOrBuilder> 
+  public java.util.List<? extends com.udb.core.livequery.services.v1.LiveQueryPredicateOrBuilder>
       getFiltersOrBuilderList() {
     return filters_;
   }
@@ -226,7 +226,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       projectId_ = s;
@@ -246,7 +246,7 @@ private static final long serialVersionUID = 0L;
       getProjectIdBytes() {
     java.lang.Object ref = projectId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       projectId_ = b;
@@ -616,7 +616,7 @@ private static final long serialVersionUID = 0L;
             filtersBuilder_ = null;
             filters_ = other.filters_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            filtersBuilder_ = 
+            filtersBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetFiltersFieldBuilder() : null;
           } else {
@@ -741,7 +741,7 @@ private static final long serialVersionUID = 0L;
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -835,7 +835,7 @@ private static final long serialVersionUID = 0L;
         getMessageTypeBytes() {
       java.lang.Object ref = messageType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         messageType_ = b;
@@ -1167,7 +1167,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.livequery.services.v1.LiveQueryPredicate filters = 3 [json_name = "filters"];</code>
      */
-    public java.util.List<? extends com.udb.core.livequery.services.v1.LiveQueryPredicateOrBuilder> 
+    public java.util.List<? extends com.udb.core.livequery.services.v1.LiveQueryPredicateOrBuilder>
          getFiltersOrBuilderList() {
       if (filtersBuilder_ != null) {
         return filtersBuilder_.getMessageOrBuilderList();
@@ -1208,12 +1208,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.livequery.services.v1.LiveQueryPredicate filters = 3 [json_name = "filters"];</code>
      */
-    public java.util.List<com.udb.core.livequery.services.v1.LiveQueryPredicate.Builder> 
+    public java.util.List<com.udb.core.livequery.services.v1.LiveQueryPredicate.Builder>
          getFiltersBuilderList() {
       return internalGetFiltersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.livequery.services.v1.LiveQueryPredicate, com.udb.core.livequery.services.v1.LiveQueryPredicate.Builder, com.udb.core.livequery.services.v1.LiveQueryPredicateOrBuilder> 
+        com.udb.core.livequery.services.v1.LiveQueryPredicate, com.udb.core.livequery.services.v1.LiveQueryPredicate.Builder, com.udb.core.livequery.services.v1.LiveQueryPredicateOrBuilder>
         internalGetFiltersFieldBuilder() {
       if (filtersBuilder_ == null) {
         filtersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1260,7 +1260,7 @@ private static final long serialVersionUID = 0L;
         getProjectIdBytes() {
       java.lang.Object ref = projectId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         projectId_ = b;
@@ -1413,4 +1413,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

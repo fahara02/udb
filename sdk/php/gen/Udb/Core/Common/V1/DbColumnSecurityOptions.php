@@ -353,4 +353,3 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

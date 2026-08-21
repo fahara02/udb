@@ -271,4 +271,3 @@ class PasswordChangedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-
