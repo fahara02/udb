@@ -13,7 +13,7 @@ public interface ListNodeStatesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.control.services.v1.NodeAckState node_states = 1 [json_name = "nodeStates"];</code>
    */
-  java.util.List<com.udb.core.control.services.v1.NodeAckState>
+  java.util.List<com.udb.core.control.services.v1.NodeAckState> 
       getNodeStatesList();
   /**
    * <code>repeated .udb.core.control.services.v1.NodeAckState node_states = 1 [json_name = "nodeStates"];</code>
@@ -26,7 +26,7 @@ public interface ListNodeStatesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.control.services.v1.NodeAckState node_states = 1 [json_name = "nodeStates"];</code>
    */
-  java.util.List<? extends com.udb.core.control.services.v1.NodeAckStateOrBuilder>
+  java.util.List<? extends com.udb.core.control.services.v1.NodeAckStateOrBuilder> 
       getNodeStatesOrBuilderList();
   /**
    * <code>repeated .udb.core.control.services.v1.NodeAckState node_states = 1 [json_name = "nodeStates"];</code>

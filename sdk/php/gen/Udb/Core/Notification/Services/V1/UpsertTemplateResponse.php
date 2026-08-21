@@ -66,3 +66,4 @@ class UpsertTemplateResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

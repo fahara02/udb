@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.analytics.entity.v1.PipelineMetricSnapshot snapshots = 1 [json_name = "snapshots"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.analytics.entity.v1.PipelineMetricSnapshotOrBuilder>
+  public java.util.List<? extends com.udb.core.analytics.entity.v1.PipelineMetricSnapshotOrBuilder> 
       getSnapshotsOrBuilderList() {
     return snapshots_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             snapshotsBuilder_ = null;
             snapshots_ = other.snapshots_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            snapshotsBuilder_ =
+            snapshotsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetSnapshotsFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.analytics.entity.v1.PipelineMetricSnapshot snapshots = 1 [json_name = "snapshots"];</code>
      */
-    public java.util.List<? extends com.udb.core.analytics.entity.v1.PipelineMetricSnapshotOrBuilder>
+    public java.util.List<? extends com.udb.core.analytics.entity.v1.PipelineMetricSnapshotOrBuilder> 
          getSnapshotsOrBuilderList() {
       if (snapshotsBuilder_ != null) {
         return snapshotsBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.analytics.entity.v1.PipelineMetricSnapshot snapshots = 1 [json_name = "snapshots"];</code>
      */
-    public java.util.List<com.udb.core.analytics.entity.v1.PipelineMetricSnapshot.Builder>
+    public java.util.List<com.udb.core.analytics.entity.v1.PipelineMetricSnapshot.Builder> 
          getSnapshotsBuilderList() {
       return internalGetSnapshotsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.analytics.entity.v1.PipelineMetricSnapshot, com.udb.core.analytics.entity.v1.PipelineMetricSnapshot.Builder, com.udb.core.analytics.entity.v1.PipelineMetricSnapshotOrBuilder>
+        com.udb.core.analytics.entity.v1.PipelineMetricSnapshot, com.udb.core.analytics.entity.v1.PipelineMetricSnapshot.Builder, com.udb.core.analytics.entity.v1.PipelineMetricSnapshotOrBuilder> 
         internalGetSnapshotsFieldBuilder() {
       if (snapshotsBuilder_ == null) {
         snapshotsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,3 +911,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

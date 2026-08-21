@@ -187,3 +187,4 @@ class StartRoomCompositeRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

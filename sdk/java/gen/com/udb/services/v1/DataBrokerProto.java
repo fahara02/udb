@@ -28,12 +28,12 @@ public final class DataBrokerProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_services_v1_EnsureBaselineRequest_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_services_v1_EnsureBaselineRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_services_v1_EnsureBaselineResponse_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_services_v1_EnsureBaselineResponse_fieldAccessorTable;
 

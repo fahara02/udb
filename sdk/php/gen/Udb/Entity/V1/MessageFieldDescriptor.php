@@ -218,3 +218,4 @@ class MessageFieldDescriptor extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -13,7 +13,7 @@ public interface DocumentSetOrBuilder extends
   /**
    * <code>repeated .google.protobuf.Struct documents = 1 [json_name = "documents"];</code>
    */
-  java.util.List<com.google.protobuf.Struct>
+  java.util.List<com.google.protobuf.Struct> 
       getDocumentsList();
   /**
    * <code>repeated .google.protobuf.Struct documents = 1 [json_name = "documents"];</code>
@@ -26,7 +26,7 @@ public interface DocumentSetOrBuilder extends
   /**
    * <code>repeated .google.protobuf.Struct documents = 1 [json_name = "documents"];</code>
    */
-  java.util.List<? extends com.google.protobuf.StructOrBuilder>
+  java.util.List<? extends com.google.protobuf.StructOrBuilder> 
       getDocumentsOrBuilderList();
   /**
    * <code>repeated .google.protobuf.Struct documents = 1 [json_name = "documents"];</code>

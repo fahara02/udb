@@ -95,3 +95,4 @@ class AdminResetPasswordRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

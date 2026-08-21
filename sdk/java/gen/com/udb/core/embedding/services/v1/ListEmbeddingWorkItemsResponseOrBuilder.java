@@ -13,7 +13,7 @@ public interface ListEmbeddingWorkItemsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingWorkItemSummary work_items = 1 [json_name = "workItems"];</code>
    */
-  java.util.List<com.udb.core.embedding.services.v1.EmbeddingWorkItemSummary>
+  java.util.List<com.udb.core.embedding.services.v1.EmbeddingWorkItemSummary> 
       getWorkItemsList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingWorkItemSummary work_items = 1 [json_name = "workItems"];</code>
@@ -26,7 +26,7 @@ public interface ListEmbeddingWorkItemsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingWorkItemSummary work_items = 1 [json_name = "workItems"];</code>
    */
-  java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingWorkItemSummaryOrBuilder>
+  java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingWorkItemSummaryOrBuilder> 
       getWorkItemsOrBuilderList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingWorkItemSummary work_items = 1 [json_name = "workItems"];</code>

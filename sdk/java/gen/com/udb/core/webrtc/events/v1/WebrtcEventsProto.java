@@ -28,42 +28,42 @@ public final class WebrtcEventsProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_events_v1_RoomCreated_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_events_v1_RoomCreated_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_events_v1_RoomClosed_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_events_v1_RoomClosed_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_events_v1_PeerJoined_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_events_v1_PeerJoined_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_events_v1_PeerLeft_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_events_v1_PeerLeft_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_events_v1_EgressStarted_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_events_v1_EgressStarted_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_events_v1_EgressStopped_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_events_v1_EgressStopped_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_events_v1_EgressFailed_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_events_v1_EgressFailed_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_events_v1_TrackPublished_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_events_v1_TrackPublished_fieldAccessorTable;
 

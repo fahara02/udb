@@ -128,3 +128,4 @@ export enum TenantStatus {
  */
 export const TenantStatusSchema: GenEnum<TenantStatus> = /*@__PURE__*/
   enumDesc(file_udb_core_tenant_entity_v1_enums, 2);
+

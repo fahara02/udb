@@ -62,7 +62,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       userId_ = s;
@@ -78,7 +78,7 @@ private static final long serialVersionUID = 0L;
       getUserIdBytes() {
     java.lang.Object ref = userId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       userId_ = b;
@@ -137,7 +137,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       deviceFingerprint_ = s;
@@ -153,7 +153,7 @@ private static final long serialVersionUID = 0L;
       getDeviceFingerprintBytes() {
     java.lang.Object ref = deviceFingerprint_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       deviceFingerprint_ = b;
@@ -176,7 +176,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       ipAddress_ = s;
@@ -192,7 +192,7 @@ private static final long serialVersionUID = 0L;
       getIpAddressBytes() {
     java.lang.Object ref = ipAddress_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       ipAddress_ = b;
@@ -684,7 +684,7 @@ private static final long serialVersionUID = 0L;
         getUserIdBytes() {
       java.lang.Object ref = userId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         userId_ = b;
@@ -858,7 +858,7 @@ private static final long serialVersionUID = 0L;
         getDeviceFingerprintBytes() {
       java.lang.Object ref = deviceFingerprint_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         deviceFingerprint_ = b;
@@ -930,7 +930,7 @@ private static final long serialVersionUID = 0L;
         getIpAddressBytes() {
       java.lang.Object ref = ipAddress_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         ipAddress_ = b;
@@ -1085,7 +1085,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.RequestContext context = 6 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.RequestContext, com.udb.core.common.v1.RequestContext.Builder, com.udb.core.common.v1.RequestContextOrBuilder>
+        com.udb.core.common.v1.RequestContext, com.udb.core.common.v1.RequestContext.Builder, com.udb.core.common.v1.RequestContextOrBuilder> 
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1148,3 +1148,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

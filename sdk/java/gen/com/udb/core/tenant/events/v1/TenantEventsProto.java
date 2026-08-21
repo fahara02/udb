@@ -28,12 +28,12 @@ public final class TenantEventsProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_events_v1_TenantCreatedEvent_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_events_v1_TenantCreatedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_events_v1_TenantStatusChangedEvent_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_events_v1_TenantStatusChangedEvent_fieldAccessorTable;
 

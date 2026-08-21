@@ -136,3 +136,4 @@ export enum ConsistencyMode {
  */
 export const ConsistencyModeSchema: GenEnum<ConsistencyMode> = /*@__PURE__*/
   enumDesc(file_udb_entity_v1_consistency, 0);
+

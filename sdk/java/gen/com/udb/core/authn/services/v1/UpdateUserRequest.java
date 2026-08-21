@@ -77,7 +77,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       userId_ = s;
@@ -93,7 +93,7 @@ private static final long serialVersionUID = 0L;
       getUserIdBytes() {
     java.lang.Object ref = userId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       userId_ = b;
@@ -116,7 +116,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       fullName_ = s;
@@ -132,7 +132,7 @@ private static final long serialVersionUID = 0L;
       getFullNameBytes() {
     java.lang.Object ref = fullName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       fullName_ = b;
@@ -155,7 +155,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       email_ = s;
@@ -171,7 +171,7 @@ private static final long serialVersionUID = 0L;
       getEmailBytes() {
     java.lang.Object ref = email_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       email_ = b;
@@ -194,7 +194,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -210,7 +210,7 @@ private static final long serialVersionUID = 0L;
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -277,7 +277,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       projectId_ = s;
@@ -293,7 +293,7 @@ private static final long serialVersionUID = 0L;
       getProjectIdBytes() {
     java.lang.Object ref = projectId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       projectId_ = b;
@@ -309,7 +309,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.udb.core.authn.services.v1.CoreProto.internal_static_udb_core_authn_services_v1_UpdateUserRequest_ProfileAttributesEntry_descriptor,
+                com.udb.core.authn.services.v1.CoreProto.internal_static_udb_core_authn_services_v1_UpdateUserRequest_ProfileAttributesEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -395,7 +395,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       externalProviderId_ = s;
@@ -411,7 +411,7 @@ java.lang.String defaultValue) {
       getExternalProviderIdBytes() {
     java.lang.Object ref = externalProviderId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       externalProviderId_ = b;
@@ -434,7 +434,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       externalSubject_ = s;
@@ -450,7 +450,7 @@ java.lang.String defaultValue) {
       getExternalSubjectBytes() {
     java.lang.Object ref = externalSubject_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       externalSubject_ = b;
@@ -1130,7 +1130,7 @@ java.lang.String defaultValue) {
         getUserIdBytes() {
       java.lang.Object ref = userId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         userId_ = b;
@@ -1202,7 +1202,7 @@ java.lang.String defaultValue) {
         getFullNameBytes() {
       java.lang.Object ref = fullName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         fullName_ = b;
@@ -1274,7 +1274,7 @@ java.lang.String defaultValue) {
         getEmailBytes() {
       java.lang.Object ref = email_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         email_ = b;
@@ -1346,7 +1346,7 @@ java.lang.String defaultValue) {
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -1501,7 +1501,7 @@ java.lang.String defaultValue) {
      * <code>.udb.core.common.v1.RequestContext context = 5 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.RequestContext, com.udb.core.common.v1.RequestContext.Builder, com.udb.core.common.v1.RequestContextOrBuilder>
+        com.udb.core.common.v1.RequestContext, com.udb.core.common.v1.RequestContext.Builder, com.udb.core.common.v1.RequestContextOrBuilder> 
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1590,7 +1590,7 @@ java.lang.String defaultValue) {
         getProjectIdBytes() {
       java.lang.Object ref = projectId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         projectId_ = b;
@@ -1789,7 +1789,7 @@ java.lang.String defaultValue) {
         getExternalProviderIdBytes() {
       java.lang.Object ref = externalProviderId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         externalProviderId_ = b;
@@ -1861,7 +1861,7 @@ java.lang.String defaultValue) {
         getExternalSubjectBytes() {
       java.lang.Object ref = externalSubject_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         externalSubject_ = b;
@@ -2061,7 +2061,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder>
+        com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder> 
         internalGetUpdateMaskFieldBuilder() {
       if (updateMaskBuilder_ == null) {
         updateMaskBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2124,3 +2124,4 @@ java.lang.String defaultValue) {
   }
 
 }
+

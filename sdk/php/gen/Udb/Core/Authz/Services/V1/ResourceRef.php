@@ -461,3 +461,4 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
     }
 
 }
+

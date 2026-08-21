@@ -218,3 +218,4 @@ class SearchIndexSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
+

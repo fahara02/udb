@@ -58,7 +58,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -74,7 +74,7 @@ private static final long serialVersionUID = 0L;
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -98,7 +98,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.embedding.services.v1.IngestDocumentRequest documents = 2 [json_name = "documents"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.embedding.services.v1.IngestDocumentRequestOrBuilder>
+  public java.util.List<? extends com.udb.core.embedding.services.v1.IngestDocumentRequestOrBuilder> 
       getDocumentsOrBuilderList() {
     return documents_;
   }
@@ -422,7 +422,7 @@ private static final long serialVersionUID = 0L;
             documentsBuilder_ = null;
             documents_ = other.documents_;
             bitField0_ = (bitField0_ & ~0x00000002);
-            documentsBuilder_ =
+            documentsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetDocumentsFieldBuilder() : null;
           } else {
@@ -516,7 +516,7 @@ private static final long serialVersionUID = 0L;
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -758,7 +758,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.embedding.services.v1.IngestDocumentRequest documents = 2 [json_name = "documents"];</code>
      */
-    public java.util.List<? extends com.udb.core.embedding.services.v1.IngestDocumentRequestOrBuilder>
+    public java.util.List<? extends com.udb.core.embedding.services.v1.IngestDocumentRequestOrBuilder> 
          getDocumentsOrBuilderList() {
       if (documentsBuilder_ != null) {
         return documentsBuilder_.getMessageOrBuilderList();
@@ -784,12 +784,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.embedding.services.v1.IngestDocumentRequest documents = 2 [json_name = "documents"];</code>
      */
-    public java.util.List<com.udb.core.embedding.services.v1.IngestDocumentRequest.Builder>
+    public java.util.List<com.udb.core.embedding.services.v1.IngestDocumentRequest.Builder> 
          getDocumentsBuilderList() {
       return internalGetDocumentsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.embedding.services.v1.IngestDocumentRequest, com.udb.core.embedding.services.v1.IngestDocumentRequest.Builder, com.udb.core.embedding.services.v1.IngestDocumentRequestOrBuilder>
+        com.udb.core.embedding.services.v1.IngestDocumentRequest, com.udb.core.embedding.services.v1.IngestDocumentRequest.Builder, com.udb.core.embedding.services.v1.IngestDocumentRequestOrBuilder> 
         internalGetDocumentsFieldBuilder() {
       if (documentsBuilder_ == null) {
         documentsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -853,3 +853,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

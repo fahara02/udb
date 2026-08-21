@@ -27,3 +27,4 @@ class File
         static::$is_initialized = true;
     }
 }
+

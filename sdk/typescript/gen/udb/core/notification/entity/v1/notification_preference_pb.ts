@@ -84,3 +84,4 @@ export type NotificationPreference = Message<"udb.core.notification.entity.v1.No
  */
 export const NotificationPreferenceSchema: GenMessage<NotificationPreference> = /*@__PURE__*/
   messageDesc(file_udb_core_notification_entity_v1_notification_preference, 0);
+

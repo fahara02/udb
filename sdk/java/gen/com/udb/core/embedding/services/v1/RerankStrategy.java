@@ -131,3 +131,4 @@ public enum RerankStrategy
 
   // @@protoc_insertion_point(enum_scope:udb.core.embedding.services.v1.RerankStrategy)
 }
+

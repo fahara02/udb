@@ -140,3 +140,4 @@ public enum VectorFusionStrategy
 
   // @@protoc_insertion_point(enum_scope:udb.entity.v1.VectorFusionStrategy)
 }
+

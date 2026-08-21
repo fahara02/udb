@@ -201,3 +201,4 @@ class EmittedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

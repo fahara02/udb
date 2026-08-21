@@ -51,3 +51,4 @@ class PolicyEffect
         return constant($const);
     }
 }
+

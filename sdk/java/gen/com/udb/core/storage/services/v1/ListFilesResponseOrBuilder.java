@@ -13,7 +13,7 @@ public interface ListFilesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.storage.entity.v1.File files = 1 [json_name = "files"];</code>
    */
-  java.util.List<com.udb.core.storage.entity.v1.File>
+  java.util.List<com.udb.core.storage.entity.v1.File> 
       getFilesList();
   /**
    * <code>repeated .udb.core.storage.entity.v1.File files = 1 [json_name = "files"];</code>
@@ -26,7 +26,7 @@ public interface ListFilesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.storage.entity.v1.File files = 1 [json_name = "files"];</code>
    */
-  java.util.List<? extends com.udb.core.storage.entity.v1.FileOrBuilder>
+  java.util.List<? extends com.udb.core.storage.entity.v1.FileOrBuilder> 
       getFilesOrBuilderList();
   /**
    * <code>repeated .udb.core.storage.entity.v1.File files = 1 [json_name = "files"];</code>

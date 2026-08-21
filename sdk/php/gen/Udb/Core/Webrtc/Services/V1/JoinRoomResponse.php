@@ -137,3 +137,4 @@ class JoinRoomResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

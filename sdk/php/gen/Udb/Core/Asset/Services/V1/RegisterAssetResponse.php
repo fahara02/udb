@@ -127,3 +127,4 @@ class RegisterAssetResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

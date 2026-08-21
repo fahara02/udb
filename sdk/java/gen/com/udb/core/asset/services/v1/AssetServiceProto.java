@@ -28,82 +28,82 @@ public final class AssetServiceProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_CreatePipelineDefinitionRequest_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_CreatePipelineDefinitionRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_CreatePipelineDefinitionResponse_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_CreatePipelineDefinitionResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_GetPipelineDefinitionRequest_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_GetPipelineDefinitionRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_GetPipelineDefinitionResponse_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_GetPipelineDefinitionResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_RegisterAssetRequest_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_RegisterAssetRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_RegisterAssetResponse_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_RegisterAssetResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_StartPipelineRequest_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_StartPipelineRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_StartPipelineResponse_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_StartPipelineResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_GetPipelineRequest_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_GetPipelineRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_GetPipelineResponse_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_GetPipelineResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_CompleteStepRequest_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_CompleteStepRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_CompleteStepResponse_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_CompleteStepResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_ListAssetsRequest_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_ListAssetsRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_ListAssetsResponse_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_ListAssetsResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_GetAssetRequest_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_GetAssetRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_services_v1_GetAssetResponse_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_services_v1_GetAssetResponse_fieldAccessorTable;
 

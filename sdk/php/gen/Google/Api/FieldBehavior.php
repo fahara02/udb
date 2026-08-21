@@ -131,3 +131,4 @@ class FieldBehavior
         return constant($const);
     }
 }
+

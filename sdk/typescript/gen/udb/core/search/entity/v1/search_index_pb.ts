@@ -126,3 +126,4 @@ export type SearchIndex = Message<"udb.core.search.entity.v1.SearchIndex"> & {
  */
 export const SearchIndexSchema: GenMessage<SearchIndex> = /*@__PURE__*/
   messageDesc(file_udb_core_search_entity_v1_search_index, 0);
+

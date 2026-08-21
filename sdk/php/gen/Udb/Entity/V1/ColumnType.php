@@ -84,3 +84,4 @@ class ColumnType
         return constant($const);
     }
 }
+

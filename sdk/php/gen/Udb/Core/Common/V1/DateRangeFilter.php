@@ -83,3 +83,4 @@ class DateRangeFilter extends \Google\Protobuf\Internal\Message
     }
 
 }
+

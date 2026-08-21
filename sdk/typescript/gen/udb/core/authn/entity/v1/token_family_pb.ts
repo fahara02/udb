@@ -113,3 +113,4 @@ export type TokenFamily = Message<"udb.core.authn.entity.v1.TokenFamily"> & {
  */
 export const TokenFamilySchema: GenMessage<TokenFamily> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_token_family, 0);
+

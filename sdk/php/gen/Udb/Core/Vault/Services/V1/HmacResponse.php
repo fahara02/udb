@@ -147,3 +147,4 @@ class HmacResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

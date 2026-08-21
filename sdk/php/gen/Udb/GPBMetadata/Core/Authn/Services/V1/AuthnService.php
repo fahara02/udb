@@ -29,3 +29,4 @@ class AuthnService
         static::$is_initialized = true;
     }
 }
+

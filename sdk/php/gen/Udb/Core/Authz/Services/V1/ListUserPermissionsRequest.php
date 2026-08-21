@@ -151,3 +151,4 @@ class ListUserPermissionsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

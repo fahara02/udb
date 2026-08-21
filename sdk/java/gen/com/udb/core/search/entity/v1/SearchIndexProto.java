@@ -28,7 +28,7 @@ public final class SearchIndexProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_search_entity_v1_SearchIndex_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_search_entity_v1_SearchIndex_fieldAccessorTable;
 

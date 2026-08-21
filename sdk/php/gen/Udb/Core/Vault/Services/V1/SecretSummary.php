@@ -119,3 +119,4 @@ class SecretSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
+

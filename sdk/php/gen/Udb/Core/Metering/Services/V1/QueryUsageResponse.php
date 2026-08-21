@@ -228,3 +228,4 @@ class QueryUsageResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -13,7 +13,7 @@ public interface ReportEmbeddingBatchResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingBatchItemResult results = 1 [json_name = "results"];</code>
    */
-  java.util.List<com.udb.core.embedding.services.v1.ReportEmbeddingBatchItemResult>
+  java.util.List<com.udb.core.embedding.services.v1.ReportEmbeddingBatchItemResult> 
       getResultsList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingBatchItemResult results = 1 [json_name = "results"];</code>
@@ -26,7 +26,7 @@ public interface ReportEmbeddingBatchResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingBatchItemResult results = 1 [json_name = "results"];</code>
    */
-  java.util.List<? extends com.udb.core.embedding.services.v1.ReportEmbeddingBatchItemResultOrBuilder>
+  java.util.List<? extends com.udb.core.embedding.services.v1.ReportEmbeddingBatchItemResultOrBuilder> 
       getResultsOrBuilderList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingBatchItemResult results = 1 [json_name = "results"];</code>

@@ -149,3 +149,4 @@ public enum ConfigType
 
   // @@protoc_insertion_point(enum_scope:udb.core.tenant.entity.v1.ConfigType)
 }
+

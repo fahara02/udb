@@ -127,3 +127,4 @@ class GenerateRecoveryCodesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

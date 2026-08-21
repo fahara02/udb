@@ -73,7 +73,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       scaffoldPackage_ = s;
@@ -89,7 +89,7 @@ private static final long serialVersionUID = 0L;
       getScaffoldPackageBytes() {
     java.lang.Object ref = scaffoldPackage_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       scaffoldPackage_ = b;
@@ -112,7 +112,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       importPath_ = s;
@@ -128,7 +128,7 @@ private static final long serialVersionUID = 0L;
       getImportPathBytes() {
     java.lang.Object ref = importPath_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       importPath_ = b;
@@ -225,7 +225,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       routeName_ = s;
@@ -241,7 +241,7 @@ private static final long serialVersionUID = 0L;
       getRouteNameBytes() {
     java.lang.Object ref = routeName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       routeName_ = b;
@@ -264,7 +264,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       middlewareName_ = s;
@@ -280,7 +280,7 @@ private static final long serialVersionUID = 0L;
       getMiddlewareNameBytes() {
     java.lang.Object ref = middlewareName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       middlewareName_ = b;
@@ -451,7 +451,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       smokeTestCommand_ = s;
@@ -467,7 +467,7 @@ private static final long serialVersionUID = 0L;
       getSmokeTestCommandBytes() {
     java.lang.Object ref = smokeTestCommand_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       smokeTestCommand_ = b;
@@ -1126,7 +1126,7 @@ private static final long serialVersionUID = 0L;
         getScaffoldPackageBytes() {
       java.lang.Object ref = scaffoldPackage_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         scaffoldPackage_ = b;
@@ -1198,7 +1198,7 @@ private static final long serialVersionUID = 0L;
         getImportPathBytes() {
       java.lang.Object ref = importPath_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         importPath_ = b;
@@ -1492,7 +1492,7 @@ private static final long serialVersionUID = 0L;
         getRouteNameBytes() {
       java.lang.Object ref = routeName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         routeName_ = b;
@@ -1564,7 +1564,7 @@ private static final long serialVersionUID = 0L;
         getMiddlewareNameBytes() {
       java.lang.Object ref = middlewareName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         middlewareName_ = b;
@@ -2080,7 +2080,7 @@ private static final long serialVersionUID = 0L;
         getSmokeTestCommandBytes() {
       java.lang.Object ref = smokeTestCommand_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         smokeTestCommand_ = b;
@@ -2177,3 +2177,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

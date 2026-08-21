@@ -137,3 +137,4 @@ class SignalWorkflowRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

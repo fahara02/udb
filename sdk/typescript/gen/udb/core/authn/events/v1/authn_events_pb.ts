@@ -1041,3 +1041,4 @@ export type WebauthnRegisteredEvent = Message<"udb.core.authn.events.v1.Webauthn
  */
 export const WebauthnRegisteredEventSchema: GenMessage<WebauthnRegisteredEvent> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_events_v1_authn_events, 17);
+

@@ -282,3 +282,4 @@ class ActivateCanaryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

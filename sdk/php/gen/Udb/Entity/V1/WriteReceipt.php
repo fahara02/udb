@@ -167,3 +167,4 @@ class WriteReceipt extends \Google\Protobuf\Internal\Message
     }
 
 }
+

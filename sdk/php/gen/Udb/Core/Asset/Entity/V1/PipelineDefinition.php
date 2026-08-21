@@ -397,3 +397,4 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
     }
 
 }
+

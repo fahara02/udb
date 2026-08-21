@@ -60,7 +60,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -76,7 +76,7 @@ private static final long serialVersionUID = 0L;
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -99,7 +99,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       workflowId_ = s;
@@ -115,7 +115,7 @@ private static final long serialVersionUID = 0L;
       getWorkflowIdBytes() {
     java.lang.Object ref = workflowId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       workflowId_ = b;
@@ -138,7 +138,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       signalName_ = s;
@@ -154,7 +154,7 @@ private static final long serialVersionUID = 0L;
       getSignalNameBytes() {
     java.lang.Object ref = signalName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       signalName_ = b;
@@ -177,7 +177,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       signalPayload_ = s;
@@ -193,7 +193,7 @@ private static final long serialVersionUID = 0L;
       getSignalPayloadBytes() {
     java.lang.Object ref = signalPayload_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       signalPayload_ = b;
@@ -594,7 +594,7 @@ private static final long serialVersionUID = 0L;
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -666,7 +666,7 @@ private static final long serialVersionUID = 0L;
         getWorkflowIdBytes() {
       java.lang.Object ref = workflowId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         workflowId_ = b;
@@ -738,7 +738,7 @@ private static final long serialVersionUID = 0L;
         getSignalNameBytes() {
       java.lang.Object ref = signalName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         signalName_ = b;
@@ -810,7 +810,7 @@ private static final long serialVersionUID = 0L;
         getSignalPayloadBytes() {
       java.lang.Object ref = signalPayload_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         signalPayload_ = b;
@@ -907,3 +907,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

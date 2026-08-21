@@ -25,3 +25,4 @@ class PipelineMetricSnapshot
         static::$is_initialized = true;
     }
 }
+

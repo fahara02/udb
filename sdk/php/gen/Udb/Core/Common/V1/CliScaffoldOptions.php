@@ -326,3 +326,4 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
+

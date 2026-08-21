@@ -282,3 +282,4 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

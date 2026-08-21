@@ -61,7 +61,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingModelSummary models = 1 [json_name = "models"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingModelSummaryOrBuilder>
+  public java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingModelSummaryOrBuilder> 
       getModelsOrBuilderList() {
     return models_;
   }
@@ -101,7 +101,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -117,7 +117,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -140,7 +140,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       message_ = s;
@@ -156,7 +156,7 @@ private static final long serialVersionUID = 0L;
       getMessageBytes() {
     java.lang.Object ref = message_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       message_ = b;
@@ -534,7 +534,7 @@ private static final long serialVersionUID = 0L;
             modelsBuilder_ = null;
             models_ = other.models_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            modelsBuilder_ =
+            modelsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetModelsFieldBuilder() : null;
           } else {
@@ -823,7 +823,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.embedding.services.v1.EmbeddingModelSummary models = 1 [json_name = "models"];</code>
      */
-    public java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingModelSummaryOrBuilder>
+    public java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingModelSummaryOrBuilder> 
          getModelsOrBuilderList() {
       if (modelsBuilder_ != null) {
         return modelsBuilder_.getMessageOrBuilderList();
@@ -849,12 +849,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.embedding.services.v1.EmbeddingModelSummary models = 1 [json_name = "models"];</code>
      */
-    public java.util.List<com.udb.core.embedding.services.v1.EmbeddingModelSummary.Builder>
+    public java.util.List<com.udb.core.embedding.services.v1.EmbeddingModelSummary.Builder> 
          getModelsBuilderList() {
       return internalGetModelsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.embedding.services.v1.EmbeddingModelSummary, com.udb.core.embedding.services.v1.EmbeddingModelSummary.Builder, com.udb.core.embedding.services.v1.EmbeddingModelSummaryOrBuilder>
+        com.udb.core.embedding.services.v1.EmbeddingModelSummary, com.udb.core.embedding.services.v1.EmbeddingModelSummary.Builder, com.udb.core.embedding.services.v1.EmbeddingModelSummaryOrBuilder> 
         internalGetModelsFieldBuilder() {
       if (modelsBuilder_ == null) {
         modelsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -893,7 +893,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -965,7 +965,7 @@ private static final long serialVersionUID = 0L;
         getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         message_ = b;
@@ -1120,7 +1120,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 4 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1183,3 +1183,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

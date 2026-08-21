@@ -191,3 +191,4 @@ class LifecycleContract extends \Google\Protobuf\Internal\Message
     }
 
 }
+

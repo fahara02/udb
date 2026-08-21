@@ -56,3 +56,4 @@ class TimeSeriesBackendType
         return constant($const);
     }
 }
+

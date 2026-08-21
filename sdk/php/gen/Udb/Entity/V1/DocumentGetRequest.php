@@ -157,3 +157,4 @@ class DocumentGetRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

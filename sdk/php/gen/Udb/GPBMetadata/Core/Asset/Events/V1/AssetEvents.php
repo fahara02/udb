@@ -24,3 +24,4 @@ class AssetEvents
         static::$is_initialized = true;
     }
 }
+

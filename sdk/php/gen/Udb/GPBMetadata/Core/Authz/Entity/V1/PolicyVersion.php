@@ -26,3 +26,4 @@ class PolicyVersion
         static::$is_initialized = true;
     }
 }
+

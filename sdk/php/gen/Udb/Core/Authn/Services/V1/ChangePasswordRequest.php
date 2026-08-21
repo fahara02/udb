@@ -181,3 +181,4 @@ class ChangePasswordRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

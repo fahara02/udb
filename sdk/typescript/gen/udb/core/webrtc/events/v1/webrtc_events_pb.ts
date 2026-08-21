@@ -342,3 +342,4 @@ export type TrackPublished = Message<"udb.core.webrtc.events.v1.TrackPublished">
  */
 export const TrackPublishedSchema: GenMessage<TrackPublished> = /*@__PURE__*/
   messageDesc(file_udb_core_webrtc_events_v1_webrtc_events, 7);
+

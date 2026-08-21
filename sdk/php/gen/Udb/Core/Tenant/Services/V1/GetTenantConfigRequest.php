@@ -56,3 +56,4 @@ class GetTenantConfigRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

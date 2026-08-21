@@ -139,3 +139,4 @@ class PurgedTableCount extends \Google\Protobuf\Internal\Message
     }
 
 }
+

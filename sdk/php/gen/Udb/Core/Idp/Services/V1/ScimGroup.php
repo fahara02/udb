@@ -144,3 +144,4 @@ class ScimGroup extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -25,3 +25,4 @@ class ExecutorPerformanceSummary
         static::$is_initialized = true;
     }
 }
+

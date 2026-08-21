@@ -27,3 +27,4 @@ class PipelineInstance
         static::$is_initialized = true;
     }
 }
+

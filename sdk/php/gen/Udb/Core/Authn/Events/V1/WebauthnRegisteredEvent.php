@@ -210,3 +210,4 @@ class WebauthnRegisteredEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

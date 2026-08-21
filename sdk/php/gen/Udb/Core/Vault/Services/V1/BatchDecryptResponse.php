@@ -120,3 +120,4 @@ class BatchDecryptResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -22,7 +22,7 @@ export const file_udb_core_authn_entity_v1_user: GenFile = /*@__PURE__*/
  * ---------------------------------------------------------------------------
  * User — a human, service, workload, or externally-mapped account that can be
  * authenticated by UDB and authorized by the UDB policy engine.
- *
+ * 
  * Migration order 1 in schema udb_authn.
  * The password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.
  * All PII fields are masked in application logs via (pii) + (log_masked).
@@ -189,3 +189,4 @@ export type User = Message<"udb.core.authn.entity.v1.User"> & {
  */
 export const UserSchema: GenMessage<User> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_user, 0);
+

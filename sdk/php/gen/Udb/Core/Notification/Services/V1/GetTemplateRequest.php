@@ -110,3 +110,4 @@ class GetTemplateRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

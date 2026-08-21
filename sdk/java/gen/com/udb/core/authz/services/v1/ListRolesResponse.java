@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.entity.v1.Role roles = 1 [json_name = "roles"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.entity.v1.RoleOrBuilder>
+  public java.util.List<? extends com.udb.core.authz.entity.v1.RoleOrBuilder> 
       getRolesOrBuilderList() {
     return roles_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             rolesBuilder_ = null;
             roles_ = other.roles_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            rolesBuilder_ =
+            rolesBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetRolesFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.Role roles = 1 [json_name = "roles"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.entity.v1.RoleOrBuilder>
+    public java.util.List<? extends com.udb.core.authz.entity.v1.RoleOrBuilder> 
          getRolesOrBuilderList() {
       if (rolesBuilder_ != null) {
         return rolesBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.Role roles = 1 [json_name = "roles"];</code>
      */
-    public java.util.List<com.udb.core.authz.entity.v1.Role.Builder>
+    public java.util.List<com.udb.core.authz.entity.v1.Role.Builder> 
          getRolesBuilderList() {
       return internalGetRolesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.entity.v1.Role, com.udb.core.authz.entity.v1.Role.Builder, com.udb.core.authz.entity.v1.RoleOrBuilder>
+        com.udb.core.authz.entity.v1.Role, com.udb.core.authz.entity.v1.Role.Builder, com.udb.core.authz.entity.v1.RoleOrBuilder> 
         internalGetRolesFieldBuilder() {
       if (rolesBuilder_ == null) {
         rolesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,3 +911,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

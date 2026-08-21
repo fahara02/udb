@@ -245,3 +245,4 @@ class Address extends \Google\Protobuf\Internal\Message
     }
 
 }
+

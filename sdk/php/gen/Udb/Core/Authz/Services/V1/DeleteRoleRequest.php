@@ -83,3 +83,4 @@ class DeleteRoleRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

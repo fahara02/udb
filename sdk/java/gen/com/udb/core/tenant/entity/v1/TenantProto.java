@@ -28,7 +28,7 @@ public final class TenantProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_entity_v1_Tenant_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_entity_v1_Tenant_fieldAccessorTable;
 

@@ -26,3 +26,4 @@ class Session
         static::$is_initialized = true;
     }
 }
+

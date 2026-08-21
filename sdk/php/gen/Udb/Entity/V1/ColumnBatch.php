@@ -305,3 +305,4 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
     }
 
 }
+

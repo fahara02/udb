@@ -192,3 +192,4 @@ export type DailySummaryGeneratedEvent = Message<"udb.core.analytics.events.v1.D
  */
 export const DailySummaryGeneratedEventSchema: GenMessage<DailySummaryGeneratedEvent> = /*@__PURE__*/
   messageDesc(file_udb_core_analytics_events_v1_analytics_events, 2);
+

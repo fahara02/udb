@@ -560,3 +560,4 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

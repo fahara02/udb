@@ -137,3 +137,4 @@ class IdempotencyContract extends \Google\Protobuf\Internal\Message
     }
 
 }
+

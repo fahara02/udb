@@ -93,3 +93,4 @@ class UpdateEndpointResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

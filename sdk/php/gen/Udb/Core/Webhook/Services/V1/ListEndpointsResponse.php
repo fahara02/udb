@@ -154,3 +154,4 @@ class ListEndpointsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

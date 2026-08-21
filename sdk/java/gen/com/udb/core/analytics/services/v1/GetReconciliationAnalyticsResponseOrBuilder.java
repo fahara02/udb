@@ -13,7 +13,7 @@ public interface GetReconciliationAnalyticsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary summaries = 1 [json_name = "summaries"];</code>
    */
-  java.util.List<com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary>
+  java.util.List<com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary> 
       getSummariesList();
   /**
    * <code>repeated .udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary summaries = 1 [json_name = "summaries"];</code>
@@ -26,7 +26,7 @@ public interface GetReconciliationAnalyticsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary summaries = 1 [json_name = "summaries"];</code>
    */
-  java.util.List<? extends com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryOrBuilder>
+  java.util.List<? extends com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryOrBuilder> 
       getSummariesOrBuilderList();
   /**
    * <code>repeated .udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary summaries = 1 [json_name = "summaries"];</code>

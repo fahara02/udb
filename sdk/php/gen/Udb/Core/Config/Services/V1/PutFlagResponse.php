@@ -174,3 +174,4 @@ class PutFlagResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

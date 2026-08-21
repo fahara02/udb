@@ -13,7 +13,7 @@ public interface ListEndpointsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webhook.entity.v1.WebhookEndpoint endpoints = 1 [json_name = "endpoints"];</code>
    */
-  java.util.List<com.udb.core.webhook.entity.v1.WebhookEndpoint>
+  java.util.List<com.udb.core.webhook.entity.v1.WebhookEndpoint> 
       getEndpointsList();
   /**
    * <code>repeated .udb.core.webhook.entity.v1.WebhookEndpoint endpoints = 1 [json_name = "endpoints"];</code>
@@ -26,7 +26,7 @@ public interface ListEndpointsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webhook.entity.v1.WebhookEndpoint endpoints = 1 [json_name = "endpoints"];</code>
    */
-  java.util.List<? extends com.udb.core.webhook.entity.v1.WebhookEndpointOrBuilder>
+  java.util.List<? extends com.udb.core.webhook.entity.v1.WebhookEndpointOrBuilder> 
       getEndpointsOrBuilderList();
   /**
    * <code>repeated .udb.core.webhook.entity.v1.WebhookEndpoint endpoints = 1 [json_name = "endpoints"];</code>

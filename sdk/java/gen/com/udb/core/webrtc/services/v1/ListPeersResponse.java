@@ -60,7 +60,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.webrtc.entity.v1.Peer peers = 1 [json_name = "peers"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder>
+  public java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
       getPeersOrBuilderList() {
     return peers_;
   }
@@ -142,7 +142,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -162,7 +162,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -500,7 +500,7 @@ private static final long serialVersionUID = 0L;
             peersBuilder_ = null;
             peers_ = other.peers_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            peersBuilder_ =
+            peersBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetPeersFieldBuilder() : null;
           } else {
@@ -779,7 +779,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.entity.v1.Peer peers = 1 [json_name = "peers"];</code>
      */
-    public java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder>
+    public java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
          getPeersOrBuilderList() {
       if (peersBuilder_ != null) {
         return peersBuilder_.getMessageOrBuilderList();
@@ -805,12 +805,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.entity.v1.Peer peers = 1 [json_name = "peers"];</code>
      */
-    public java.util.List<com.udb.core.webrtc.entity.v1.Peer.Builder>
+    public java.util.List<com.udb.core.webrtc.entity.v1.Peer.Builder> 
          getPeersBuilderList() {
       return internalGetPeersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.webrtc.entity.v1.Peer, com.udb.core.webrtc.entity.v1.Peer.Builder, com.udb.core.webrtc.entity.v1.PeerOrBuilder>
+        com.udb.core.webrtc.entity.v1.Peer, com.udb.core.webrtc.entity.v1.Peer.Builder, com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
         internalGetPeersFieldBuilder() {
       if (peersBuilder_ == null) {
         peersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -968,7 +968,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 2 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1014,7 +1014,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -1123,3 +1123,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

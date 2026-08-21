@@ -110,3 +110,4 @@ class HmacRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

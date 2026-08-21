@@ -134,3 +134,4 @@ class SetScanVerdictResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -331,3 +331,4 @@ export type ErrorInfo = Message<"udb.core.common.v1.ErrorInfo"> & {
  */
 export const ErrorInfoSchema: GenMessage<ErrorInfo> = /*@__PURE__*/
   messageDesc(file_udb_core_common_v1_dto, 8);
+

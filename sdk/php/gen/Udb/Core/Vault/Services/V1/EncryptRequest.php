@@ -110,3 +110,4 @@ class EncryptRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

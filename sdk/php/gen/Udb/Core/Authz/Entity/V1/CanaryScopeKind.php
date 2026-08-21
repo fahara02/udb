@@ -68,3 +68,4 @@ class CanaryScopeKind
         return constant($const);
     }
 }
+

@@ -13,7 +13,7 @@ public interface ListDevicesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.Device devices = 1 [json_name = "devices"];</code>
    */
-  java.util.List<com.udb.core.authn.entity.v1.Device>
+  java.util.List<com.udb.core.authn.entity.v1.Device> 
       getDevicesList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.Device devices = 1 [json_name = "devices"];</code>
@@ -26,7 +26,7 @@ public interface ListDevicesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.Device devices = 1 [json_name = "devices"];</code>
    */
-  java.util.List<? extends com.udb.core.authn.entity.v1.DeviceOrBuilder>
+  java.util.List<? extends com.udb.core.authn.entity.v1.DeviceOrBuilder> 
       getDevicesOrBuilderList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.Device devices = 1 [json_name = "devices"];</code>

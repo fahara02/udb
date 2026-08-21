@@ -407,3 +407,4 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
     }
 
 }
+

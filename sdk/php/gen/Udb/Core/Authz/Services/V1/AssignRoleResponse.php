@@ -66,3 +66,4 @@ class AssignRoleResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

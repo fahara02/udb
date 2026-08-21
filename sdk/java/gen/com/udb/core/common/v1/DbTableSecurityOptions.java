@@ -67,7 +67,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantIsolationMode_ = s;
@@ -83,7 +83,7 @@ private static final long serialVersionUID = 0L;
       getTenantIsolationModeBytes() {
     java.lang.Object ref = tenantIsolationMode_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantIsolationMode_ = b;
@@ -106,7 +106,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       projectIsolationMode_ = s;
@@ -122,7 +122,7 @@ private static final long serialVersionUID = 0L;
       getProjectIsolationModeBytes() {
     java.lang.Object ref = projectIsolationMode_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       projectIsolationMode_ = b;
@@ -145,7 +145,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantColumn_ = s;
@@ -161,7 +161,7 @@ private static final long serialVersionUID = 0L;
       getTenantColumnBytes() {
     java.lang.Object ref = tenantColumn_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantColumn_ = b;
@@ -184,7 +184,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       projectColumn_ = s;
@@ -200,7 +200,7 @@ private static final long serialVersionUID = 0L;
       getProjectColumnBytes() {
     java.lang.Object ref = projectColumn_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       projectColumn_ = b;
@@ -223,7 +223,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       rlsPolicyTemplate_ = s;
@@ -239,7 +239,7 @@ private static final long serialVersionUID = 0L;
       getRlsPolicyTemplateBytes() {
     java.lang.Object ref = rlsPolicyTemplate_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       rlsPolicyTemplate_ = b;
@@ -262,7 +262,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       softDeleteMode_ = s;
@@ -278,7 +278,7 @@ private static final long serialVersionUID = 0L;
       getSoftDeleteModeBytes() {
     java.lang.Object ref = softDeleteMode_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       softDeleteMode_ = b;
@@ -301,7 +301,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       retentionClass_ = s;
@@ -317,7 +317,7 @@ private static final long serialVersionUID = 0L;
       getRetentionClassBytes() {
     java.lang.Object ref = retentionClass_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       retentionClass_ = b;
@@ -369,7 +369,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       encryptionProfile_ = s;
@@ -385,7 +385,7 @@ private static final long serialVersionUID = 0L;
       getEncryptionProfileBytes() {
     java.lang.Object ref = encryptionProfile_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       encryptionProfile_ = b;
@@ -408,7 +408,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       piiProfile_ = s;
@@ -424,7 +424,7 @@ private static final long serialVersionUID = 0L;
       getPiiProfileBytes() {
     java.lang.Object ref = piiProfile_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       piiProfile_ = b;
@@ -469,7 +469,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       dataResidencyPolicyRef_ = s;
@@ -485,7 +485,7 @@ private static final long serialVersionUID = 0L;
       getDataResidencyPolicyRefBytes() {
     java.lang.Object ref = dataResidencyPolicyRef_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       dataResidencyPolicyRef_ = b;
@@ -1123,7 +1123,7 @@ private static final long serialVersionUID = 0L;
         getTenantIsolationModeBytes() {
       java.lang.Object ref = tenantIsolationMode_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantIsolationMode_ = b;
@@ -1195,7 +1195,7 @@ private static final long serialVersionUID = 0L;
         getProjectIsolationModeBytes() {
       java.lang.Object ref = projectIsolationMode_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         projectIsolationMode_ = b;
@@ -1267,7 +1267,7 @@ private static final long serialVersionUID = 0L;
         getTenantColumnBytes() {
       java.lang.Object ref = tenantColumn_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantColumn_ = b;
@@ -1339,7 +1339,7 @@ private static final long serialVersionUID = 0L;
         getProjectColumnBytes() {
       java.lang.Object ref = projectColumn_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         projectColumn_ = b;
@@ -1411,7 +1411,7 @@ private static final long serialVersionUID = 0L;
         getRlsPolicyTemplateBytes() {
       java.lang.Object ref = rlsPolicyTemplate_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         rlsPolicyTemplate_ = b;
@@ -1483,7 +1483,7 @@ private static final long serialVersionUID = 0L;
         getSoftDeleteModeBytes() {
       java.lang.Object ref = softDeleteMode_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         softDeleteMode_ = b;
@@ -1555,7 +1555,7 @@ private static final long serialVersionUID = 0L;
         getRetentionClassBytes() {
       java.lang.Object ref = retentionClass_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         retentionClass_ = b;
@@ -1710,7 +1710,7 @@ private static final long serialVersionUID = 0L;
         getEncryptionProfileBytes() {
       java.lang.Object ref = encryptionProfile_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         encryptionProfile_ = b;
@@ -1782,7 +1782,7 @@ private static final long serialVersionUID = 0L;
         getPiiProfileBytes() {
       java.lang.Object ref = piiProfile_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         piiProfile_ = b;
@@ -1918,7 +1918,7 @@ private static final long serialVersionUID = 0L;
         getDataResidencyPolicyRefBytes() {
       java.lang.Object ref = dataResidencyPolicyRef_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         dataResidencyPolicyRef_ = b;
@@ -2015,3 +2015,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

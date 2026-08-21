@@ -136,7 +136,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       contentHash_ = s;
@@ -152,7 +152,7 @@ private static final long serialVersionUID = 0L;
       getContentHashBytes() {
     java.lang.Object ref = contentHash_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       contentHash_ = b;
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyVersion version = 1 [json_name = "version"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyVersion, com.udb.core.authz.entity.v1.PolicyVersion.Builder, com.udb.core.authz.entity.v1.PolicyVersionOrBuilder>
+        com.udb.core.authz.entity.v1.PolicyVersion, com.udb.core.authz.entity.v1.PolicyVersion.Builder, com.udb.core.authz.entity.v1.PolicyVersionOrBuilder> 
         internalGetVersionFieldBuilder() {
       if (versionBuilder_ == null) {
         versionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -816,7 +816,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicySet policy_set = 2 [json_name = "policySet"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicySet, com.udb.core.authz.entity.v1.PolicySet.Builder, com.udb.core.authz.entity.v1.PolicySetOrBuilder>
+        com.udb.core.authz.entity.v1.PolicySet, com.udb.core.authz.entity.v1.PolicySet.Builder, com.udb.core.authz.entity.v1.PolicySetOrBuilder> 
         internalGetPolicySetFieldBuilder() {
       if (policySetBuilder_ == null) {
         policySetBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -930,7 +930,7 @@ private static final long serialVersionUID = 0L;
         getContentHashBytes() {
       java.lang.Object ref = contentHash_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         contentHash_ = b;
@@ -1027,3 +1027,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

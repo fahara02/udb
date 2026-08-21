@@ -13,10 +13,12 @@ use Google\Protobuf\RepeatedField;
  * ---------------------------------------------------------------------------
  * User — a human, service, workload, or externally-mapped account that can be
  * authenticated by UDB and authorized by the UDB policy engine.
+ *
  * Migration order 1 in schema udb_authn.
  * The password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.
  * All PII fields are masked in application logs via (pii) + (log_masked).
  * ---------------------------------------------------------------------------
+ *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.User</code>
  */
 class User extends \Google\Protobuf\Internal\Message
@@ -903,3 +905,4 @@ class User extends \Google\Protobuf\Internal\Message
     }
 
 }
+

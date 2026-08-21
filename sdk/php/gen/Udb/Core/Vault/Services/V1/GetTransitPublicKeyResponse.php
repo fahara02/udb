@@ -174,3 +174,4 @@ class GetTransitPublicKeyResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

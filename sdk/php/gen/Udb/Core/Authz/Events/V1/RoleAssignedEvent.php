@@ -338,3 +338,4 @@ class RoleAssignedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

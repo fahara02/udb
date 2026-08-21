@@ -347,3 +347,4 @@ class NotificationSentEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

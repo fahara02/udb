@@ -147,3 +147,4 @@ class DeleteFlagResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

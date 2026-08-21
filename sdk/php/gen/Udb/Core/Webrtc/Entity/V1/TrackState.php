@@ -56,3 +56,4 @@ class TrackState
         return constant($const);
     }
 }
+

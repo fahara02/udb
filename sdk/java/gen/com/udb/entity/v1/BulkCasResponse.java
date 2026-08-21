@@ -95,7 +95,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       writeReceiptJson_ = s;
@@ -115,7 +115,7 @@ private static final long serialVersionUID = 0L;
       getWriteReceiptJsonBytes() {
     java.lang.Object ref = writeReceiptJson_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       writeReceiptJson_ = b;
@@ -147,7 +147,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.BulkCasItemResult results = 5 [json_name = "results"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.BulkCasItemResultOrBuilder>
+  public java.util.List<? extends com.udb.entity.v1.BulkCasItemResultOrBuilder> 
       getResultsOrBuilderList() {
     return results_;
   }
@@ -537,7 +537,7 @@ private static final long serialVersionUID = 0L;
             resultsBuilder_ = null;
             results_ = other.results_;
             bitField0_ = (bitField0_ & ~0x00000010);
-            resultsBuilder_ =
+            resultsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetResultsFieldBuilder() : null;
           } else {
@@ -750,7 +750,7 @@ private static final long serialVersionUID = 0L;
         getWriteReceiptJsonBytes() {
       java.lang.Object ref = writeReceiptJson_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         writeReceiptJson_ = b;
@@ -1064,7 +1064,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.BulkCasItemResult results = 5 [json_name = "results"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.BulkCasItemResultOrBuilder>
+    public java.util.List<? extends com.udb.entity.v1.BulkCasItemResultOrBuilder> 
          getResultsOrBuilderList() {
       if (resultsBuilder_ != null) {
         return resultsBuilder_.getMessageOrBuilderList();
@@ -1102,12 +1102,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.BulkCasItemResult results = 5 [json_name = "results"];</code>
      */
-    public java.util.List<com.udb.entity.v1.BulkCasItemResult.Builder>
+    public java.util.List<com.udb.entity.v1.BulkCasItemResult.Builder> 
          getResultsBuilderList() {
       return internalGetResultsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.BulkCasItemResult, com.udb.entity.v1.BulkCasItemResult.Builder, com.udb.entity.v1.BulkCasItemResultOrBuilder>
+        com.udb.entity.v1.BulkCasItemResult, com.udb.entity.v1.BulkCasItemResult.Builder, com.udb.entity.v1.BulkCasItemResultOrBuilder> 
         internalGetResultsFieldBuilder() {
       if (resultsBuilder_ == null) {
         resultsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1171,3 +1171,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

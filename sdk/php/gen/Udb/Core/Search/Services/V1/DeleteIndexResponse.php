@@ -127,3 +127,4 @@ class DeleteIndexResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

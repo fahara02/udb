@@ -106,3 +106,4 @@ export type Tenant = Message<"udb.core.tenant.entity.v1.Tenant"> & {
  */
 export const TenantSchema: GenMessage<Tenant> = /*@__PURE__*/
   messageDesc(file_udb_core_tenant_entity_v1_tenant, 0);
+

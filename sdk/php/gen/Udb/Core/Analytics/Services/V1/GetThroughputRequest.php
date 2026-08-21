@@ -110,3 +110,4 @@ class GetThroughputRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

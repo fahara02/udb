@@ -26,3 +26,4 @@ class Otp
         static::$is_initialized = true;
     }
 }
+

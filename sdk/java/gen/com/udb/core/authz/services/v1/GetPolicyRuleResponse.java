@@ -493,7 +493,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyRule policy = 1 [json_name = "policy"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyRule, com.udb.core.authz.entity.v1.PolicyRule.Builder, com.udb.core.authz.entity.v1.PolicyRuleOrBuilder>
+        com.udb.core.authz.entity.v1.PolicyRule, com.udb.core.authz.entity.v1.PolicyRule.Builder, com.udb.core.authz.entity.v1.PolicyRuleOrBuilder> 
         internalGetPolicyFieldBuilder() {
       if (policyBuilder_ == null) {
         policyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -556,3 +556,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

@@ -137,3 +137,4 @@ class IssueCredentialsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

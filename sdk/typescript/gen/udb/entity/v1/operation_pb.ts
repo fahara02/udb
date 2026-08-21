@@ -140,3 +140,4 @@ export type OperationStats = Message<"udb.entity.v1.OperationStats"> & {
  */
 export const OperationStatsSchema: GenMessage<OperationStats> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_operation, 2);
+

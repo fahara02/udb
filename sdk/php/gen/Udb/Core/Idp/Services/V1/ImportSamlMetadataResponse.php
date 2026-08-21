@@ -147,3 +147,4 @@ class ImportSamlMetadataResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -71,3 +71,4 @@ class PeerState
         return constant($const);
     }
 }
+

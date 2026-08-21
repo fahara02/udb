@@ -185,3 +185,4 @@ public enum JobStatus
 
   // @@protoc_insertion_point(enum_scope:udb.core.scheduler.entity.v1.JobStatus)
 }
+

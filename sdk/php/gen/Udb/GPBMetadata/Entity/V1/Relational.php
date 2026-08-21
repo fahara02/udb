@@ -24,3 +24,4 @@ class Relational
         static::$is_initialized = true;
     }
 }
+

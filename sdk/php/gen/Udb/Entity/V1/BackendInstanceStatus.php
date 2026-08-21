@@ -380,3 +380,4 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
     }
 
 }
+

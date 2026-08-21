@@ -181,3 +181,4 @@ public enum NotificationType
 
   // @@protoc_insertion_point(enum_scope:udb.core.notification.entity.v1.NotificationType)
 }
+

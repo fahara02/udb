@@ -161,3 +161,4 @@ export type VaultDbCredentialLease = Message<"udb.core.vault.entity.v1.VaultDbCr
  */
 export const VaultDbCredentialLeaseSchema: GenMessage<VaultDbCredentialLease> = /*@__PURE__*/
   messageDesc(file_udb_core_vault_entity_v1_vault_db_credential_lease, 0);
+

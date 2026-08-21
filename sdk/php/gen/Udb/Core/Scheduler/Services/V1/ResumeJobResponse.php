@@ -93,3 +93,4 @@ class ResumeJobResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

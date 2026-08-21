@@ -24,3 +24,4 @@ class VaultSecret
         static::$is_initialized = true;
     }
 }
+

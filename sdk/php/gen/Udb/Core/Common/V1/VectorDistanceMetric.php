@@ -61,3 +61,4 @@ class VectorDistanceMetric
         return constant($const);
     }
 }
+

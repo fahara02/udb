@@ -795,3 +795,4 @@ export type ListPreferencesResponse = Message<"udb.core.notification.services.v1
  */
 export const ListPreferencesResponseSchema: GenMessage<ListPreferencesResponse> = /*@__PURE__*/
   messageDesc(file_udb_core_notification_services_v1_core, 24);
+

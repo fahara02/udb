@@ -8,10 +8,10 @@ from udb.core.apikey.services.v1 import core_pb2 as udb_dot_core_dot_apikey_dot_
 class ApiKeyServiceStub(object):
     """---------------------------------------------------------------------------
     ApiKeyService — Machine-to-machine key lifecycle and validation.
-
+    
     HTTP prefix: /v1/api-keys
     URL conventions: kebab-case paths, :lowerCamel custom method suffix, kebab-case query params.
-
+    
     The gateway calls ValidateApiKey on every inbound API request to:
     1. Verify key hash
     2. Check scope grants
@@ -76,10 +76,10 @@ class ApiKeyServiceStub(object):
 class ApiKeyServiceServicer(object):
     """---------------------------------------------------------------------------
     ApiKeyService — Machine-to-machine key lifecycle and validation.
-
+    
     HTTP prefix: /v1/api-keys
     URL conventions: kebab-case paths, :lowerCamel custom method suffix, kebab-case query params.
-
+    
     The gateway calls ValidateApiKey on every inbound API request to:
     1. Verify key hash
     2. Check scope grants
@@ -208,10 +208,10 @@ def add_ApiKeyServiceServicer_to_server(servicer, server):
 class ApiKeyService(object):
     """---------------------------------------------------------------------------
     ApiKeyService — Machine-to-machine key lifecycle and validation.
-
+    
     HTTP prefix: /v1/api-keys
     URL conventions: kebab-case paths, :lowerCamel custom method suffix, kebab-case query params.
-
+    
     The gateway calls ValidateApiKey on every inbound API request to:
     1. Verify key hash
     2. Check scope grants

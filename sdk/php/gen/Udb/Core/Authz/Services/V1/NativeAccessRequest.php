@@ -17,6 +17,7 @@ use Google\Protobuf\RepeatedField;
  * `app.current_*` session variables the SDK must `SET LOCAL` so the
  * broker-generated RLS policies still apply. UDB stays the source of the
  * authorization decision; the native grant only carries it forward.
+ *
  * Generated from protobuf message <code>udb.core.authz.services.v1.NativeAccessRequest</code>
  */
 class NativeAccessRequest extends \Google\Protobuf\Internal\Message
@@ -370,3 +371,4 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -261,3 +261,4 @@ class GovernanceActor extends \Google\Protobuf\Internal\Message
     }
 
 }
+

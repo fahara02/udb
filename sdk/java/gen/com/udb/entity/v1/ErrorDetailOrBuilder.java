@@ -169,7 +169,7 @@ public interface ErrorDetailOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
    */
-  java.util.List<com.udb.entity.v1.ErrorFieldViolation>
+  java.util.List<com.udb.entity.v1.ErrorFieldViolation> 
       getFieldViolationsList();
   /**
    * <pre>
@@ -197,7 +197,7 @@ public interface ErrorDetailOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.ErrorFieldViolationOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.ErrorFieldViolationOrBuilder> 
       getFieldViolationsOrBuilderList();
   /**
    * <pre>

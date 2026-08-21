@@ -83,3 +83,4 @@ class GetNamespaceStatsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

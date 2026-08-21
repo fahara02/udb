@@ -13,7 +13,7 @@ public interface DlqListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.DlqEventRecord events = 1 [json_name = "events"];</code>
    */
-  java.util.List<com.udb.entity.v1.DlqEventRecord>
+  java.util.List<com.udb.entity.v1.DlqEventRecord> 
       getEventsList();
   /**
    * <code>repeated .udb.entity.v1.DlqEventRecord events = 1 [json_name = "events"];</code>
@@ -26,7 +26,7 @@ public interface DlqListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.DlqEventRecord events = 1 [json_name = "events"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.DlqEventRecordOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.DlqEventRecordOrBuilder> 
       getEventsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.DlqEventRecord events = 1 [json_name = "events"];</code>

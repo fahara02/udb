@@ -110,3 +110,4 @@ class FinishWebAuthnRegistrationResponse extends \Google\Protobuf\Internal\Messa
     }
 
 }
+

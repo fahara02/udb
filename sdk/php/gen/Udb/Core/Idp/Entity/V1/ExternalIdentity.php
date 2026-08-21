@@ -343,3 +343,4 @@ class ExternalIdentity extends \Google\Protobuf\Internal\Message
     }
 
 }
+

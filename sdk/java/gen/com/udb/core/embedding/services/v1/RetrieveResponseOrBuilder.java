@@ -13,7 +13,7 @@ public interface RetrieveResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.RetrieveHit hits = 1 [json_name = "hits"];</code>
    */
-  java.util.List<com.udb.core.embedding.services.v1.RetrieveHit>
+  java.util.List<com.udb.core.embedding.services.v1.RetrieveHit> 
       getHitsList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.RetrieveHit hits = 1 [json_name = "hits"];</code>
@@ -26,7 +26,7 @@ public interface RetrieveResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.RetrieveHit hits = 1 [json_name = "hits"];</code>
    */
-  java.util.List<? extends com.udb.core.embedding.services.v1.RetrieveHitOrBuilder>
+  java.util.List<? extends com.udb.core.embedding.services.v1.RetrieveHitOrBuilder> 
       getHitsOrBuilderList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.RetrieveHit hits = 1 [json_name = "hits"];</code>

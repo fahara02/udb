@@ -137,3 +137,4 @@ export type PolicyVersion = Message<"udb.core.authz.entity.v1.PolicyVersion"> & 
  */
 export const PolicyVersionSchema: GenMessage<PolicyVersion> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_entity_v1_policy_version, 0);
+

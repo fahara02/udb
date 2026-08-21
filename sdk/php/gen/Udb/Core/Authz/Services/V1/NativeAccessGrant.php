@@ -273,3 +273,4 @@ class NativeAccessGrant extends \Google\Protobuf\Internal\Message
     }
 
 }
+

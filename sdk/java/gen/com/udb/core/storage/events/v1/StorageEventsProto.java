@@ -28,27 +28,27 @@ public final class StorageEventsProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_storage_events_v1_FileUploadUrlIssued_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_storage_events_v1_FileUploadUrlIssued_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_storage_events_v1_FileUploaded_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_storage_events_v1_FileUploaded_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_storage_events_v1_FileFinalized_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_storage_events_v1_FileFinalized_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_storage_events_v1_FileMetadataUpdated_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_storage_events_v1_FileMetadataUpdated_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_storage_events_v1_FileDeleted_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_storage_events_v1_FileDeleted_fieldAccessorTable;
 

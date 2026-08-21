@@ -56,3 +56,4 @@ class EmbeddingModelStatus
         return constant($const);
     }
 }
+

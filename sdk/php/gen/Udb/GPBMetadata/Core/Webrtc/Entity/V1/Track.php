@@ -26,3 +26,4 @@ class Track
         static::$is_initialized = true;
     }
 }
+

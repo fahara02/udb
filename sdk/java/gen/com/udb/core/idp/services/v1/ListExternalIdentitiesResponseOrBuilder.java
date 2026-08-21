@@ -13,7 +13,7 @@ public interface ListExternalIdentitiesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.entity.v1.ExternalIdentity identities = 1 [json_name = "identities"];</code>
    */
-  java.util.List<com.udb.core.idp.entity.v1.ExternalIdentity>
+  java.util.List<com.udb.core.idp.entity.v1.ExternalIdentity> 
       getIdentitiesList();
   /**
    * <code>repeated .udb.core.idp.entity.v1.ExternalIdentity identities = 1 [json_name = "identities"];</code>
@@ -26,7 +26,7 @@ public interface ListExternalIdentitiesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.entity.v1.ExternalIdentity identities = 1 [json_name = "identities"];</code>
    */
-  java.util.List<? extends com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder>
+  java.util.List<? extends com.udb.core.idp.entity.v1.ExternalIdentityOrBuilder> 
       getIdentitiesOrBuilderList();
   /**
    * <code>repeated .udb.core.idp.entity.v1.ExternalIdentity identities = 1 [json_name = "identities"];</code>

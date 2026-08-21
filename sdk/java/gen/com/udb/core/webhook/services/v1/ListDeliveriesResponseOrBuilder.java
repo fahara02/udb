@@ -13,7 +13,7 @@ public interface ListDeliveriesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webhook.entity.v1.WebhookDelivery deliveries = 1 [json_name = "deliveries"];</code>
    */
-  java.util.List<com.udb.core.webhook.entity.v1.WebhookDelivery>
+  java.util.List<com.udb.core.webhook.entity.v1.WebhookDelivery> 
       getDeliveriesList();
   /**
    * <code>repeated .udb.core.webhook.entity.v1.WebhookDelivery deliveries = 1 [json_name = "deliveries"];</code>
@@ -26,7 +26,7 @@ public interface ListDeliveriesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webhook.entity.v1.WebhookDelivery deliveries = 1 [json_name = "deliveries"];</code>
    */
-  java.util.List<? extends com.udb.core.webhook.entity.v1.WebhookDeliveryOrBuilder>
+  java.util.List<? extends com.udb.core.webhook.entity.v1.WebhookDeliveryOrBuilder> 
       getDeliveriesOrBuilderList();
   /**
    * <code>repeated .udb.core.webhook.entity.v1.WebhookDelivery deliveries = 1 [json_name = "deliveries"];</code>

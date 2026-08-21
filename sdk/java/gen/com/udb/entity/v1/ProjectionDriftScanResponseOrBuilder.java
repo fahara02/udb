@@ -55,7 +55,7 @@ public interface ProjectionDriftScanResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.ProjectionDriftTargetReport reports = 5 [json_name = "reports"];</code>
    */
-  java.util.List<com.udb.entity.v1.ProjectionDriftTargetReport>
+  java.util.List<com.udb.entity.v1.ProjectionDriftTargetReport> 
       getReportsList();
   /**
    * <code>repeated .udb.entity.v1.ProjectionDriftTargetReport reports = 5 [json_name = "reports"];</code>
@@ -68,7 +68,7 @@ public interface ProjectionDriftScanResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.ProjectionDriftTargetReport reports = 5 [json_name = "reports"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.ProjectionDriftTargetReportOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.ProjectionDriftTargetReportOrBuilder> 
       getReportsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.ProjectionDriftTargetReport reports = 5 [json_name = "reports"];</code>

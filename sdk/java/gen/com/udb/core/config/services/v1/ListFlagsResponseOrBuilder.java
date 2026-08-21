@@ -13,7 +13,7 @@ public interface ListFlagsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.config.services.v1.FlagState flags = 1 [json_name = "flags"];</code>
    */
-  java.util.List<com.udb.core.config.services.v1.FlagState>
+  java.util.List<com.udb.core.config.services.v1.FlagState> 
       getFlagsList();
   /**
    * <code>repeated .udb.core.config.services.v1.FlagState flags = 1 [json_name = "flags"];</code>
@@ -26,7 +26,7 @@ public interface ListFlagsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.config.services.v1.FlagState flags = 1 [json_name = "flags"];</code>
    */
-  java.util.List<? extends com.udb.core.config.services.v1.FlagStateOrBuilder>
+  java.util.List<? extends com.udb.core.config.services.v1.FlagStateOrBuilder> 
       getFlagsOrBuilderList();
   /**
    * <code>repeated .udb.core.config.services.v1.FlagState flags = 1 [json_name = "flags"];</code>

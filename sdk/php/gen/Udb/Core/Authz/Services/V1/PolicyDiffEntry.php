@@ -178,3 +178,4 @@ class PolicyDiffEntry extends \Google\Protobuf\Internal\Message
     }
 
 }
+

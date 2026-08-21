@@ -140,3 +140,4 @@ public enum RoomState
 
   // @@protoc_insertion_point(enum_scope:udb.core.webrtc.entity.v1.RoomState)
 }
+

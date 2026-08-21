@@ -74,3 +74,4 @@ class AccountKind
         return constant($const);
     }
 }
+

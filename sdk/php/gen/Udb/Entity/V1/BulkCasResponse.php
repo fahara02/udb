@@ -178,3 +178,4 @@ class BulkCasResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

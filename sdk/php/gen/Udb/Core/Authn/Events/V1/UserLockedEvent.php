@@ -274,3 +274,4 @@ class UserLockedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -117,3 +117,4 @@ class QueryUsageRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

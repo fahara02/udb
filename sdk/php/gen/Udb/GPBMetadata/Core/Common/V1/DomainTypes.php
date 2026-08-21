@@ -23,3 +23,4 @@ class DomainTypes
         static::$is_initialized = true;
     }
 }
+

@@ -25,3 +25,4 @@ class LivequeryService
         static::$is_initialized = true;
     }
 }
+

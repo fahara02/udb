@@ -32,7 +32,7 @@ class File extends \Google\Protobuf\Internal\Message
      * Optional owning project. An OPAQUE identifier, the same value the control
      * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
      * Stored as bounded text rather than UUID so a registered project such as
-     * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+     * `billing` is accepted. A UUID's text form remains a valid opaque id, so
      * existing rows migrate losslessly via the USING cast.
      *
      * Generated from protobuf field <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
@@ -193,7 +193,7 @@ class File extends \Google\Protobuf\Internal\Message
      *           Optional owning project. An OPAQUE identifier, the same value the control
      *           plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
      *           Stored as bounded text rather than UUID so a registered project such as
-     *           `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+     *           `billing` is accepted. A UUID's text form remains a valid opaque id, so
      *           existing rows migrate losslessly via the USING cast.
      *     @type string $filename
      *           \@inject_tag: gorm:"column:filename;not null"
@@ -308,7 +308,7 @@ class File extends \Google\Protobuf\Internal\Message
      * Optional owning project. An OPAQUE identifier, the same value the control
      * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
      * Stored as bounded text rather than UUID so a registered project such as
-     * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+     * `billing` is accepted. A UUID's text form remains a valid opaque id, so
      * existing rows migrate losslessly via the USING cast.
      *
      * Generated from protobuf field <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
@@ -323,7 +323,7 @@ class File extends \Google\Protobuf\Internal\Message
      * Optional owning project. An OPAQUE identifier, the same value the control
      * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
      * Stored as bounded text rather than UUID so a registered project such as
-     * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+     * `billing` is accepted. A UUID's text form remains a valid opaque id, so
      * existing rows migrate losslessly via the USING cast.
      *
      * Generated from protobuf field <code>string project_id = 3 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
@@ -981,3 +981,4 @@ class File extends \Google\Protobuf\Internal\Message
     }
 
 }
+

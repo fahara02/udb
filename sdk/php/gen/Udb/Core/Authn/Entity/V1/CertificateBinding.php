@@ -613,3 +613,4 @@ class CertificateBinding extends \Google\Protobuf\Internal\Message
     }
 
 }
+

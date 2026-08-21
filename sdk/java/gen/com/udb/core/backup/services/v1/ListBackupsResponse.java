@@ -60,7 +60,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.backup.services.v1.BackupRunSummary backups = 1 [json_name = "backups"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder>
+  public java.util.List<? extends com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder> 
       getBackupsOrBuilderList() {
     return backups_;
   }
@@ -100,7 +100,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -116,7 +116,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -480,7 +480,7 @@ private static final long serialVersionUID = 0L;
             backupsBuilder_ = null;
             backups_ = other.backups_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            backupsBuilder_ =
+            backupsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetBackupsFieldBuilder() : null;
           } else {
@@ -759,7 +759,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupRunSummary backups = 1 [json_name = "backups"];</code>
      */
-    public java.util.List<? extends com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder>
+    public java.util.List<? extends com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder> 
          getBackupsOrBuilderList() {
       if (backupsBuilder_ != null) {
         return backupsBuilder_.getMessageOrBuilderList();
@@ -785,12 +785,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.backup.services.v1.BackupRunSummary backups = 1 [json_name = "backups"];</code>
      */
-    public java.util.List<com.udb.core.backup.services.v1.BackupRunSummary.Builder>
+    public java.util.List<com.udb.core.backup.services.v1.BackupRunSummary.Builder> 
          getBackupsBuilderList() {
       return internalGetBackupsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.backup.services.v1.BackupRunSummary, com.udb.core.backup.services.v1.BackupRunSummary.Builder, com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder>
+        com.udb.core.backup.services.v1.BackupRunSummary, com.udb.core.backup.services.v1.BackupRunSummary.Builder, com.udb.core.backup.services.v1.BackupRunSummaryOrBuilder> 
         internalGetBackupsFieldBuilder() {
       if (backupsBuilder_ == null) {
         backupsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -829,7 +829,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -984,7 +984,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1047,3 +1047,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

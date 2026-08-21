@@ -252,3 +252,4 @@ export const IdentityProviderService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_idp_services_v1_identity_provider_service, 0);
+

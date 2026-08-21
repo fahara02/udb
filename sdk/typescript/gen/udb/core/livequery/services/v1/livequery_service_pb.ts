@@ -307,3 +307,4 @@ export const LiveQueryService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_livequery_services_v1_livequery_service, 0);
+

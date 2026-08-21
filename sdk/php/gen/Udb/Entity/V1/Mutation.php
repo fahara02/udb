@@ -712,3 +712,4 @@ class Mutation extends \Google\Protobuf\Internal\Message
     }
 
 }
+

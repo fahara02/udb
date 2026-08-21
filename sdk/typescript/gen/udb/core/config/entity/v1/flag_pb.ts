@@ -124,3 +124,4 @@ export type Flag = Message<"udb.core.config.entity.v1.Flag"> & {
  */
 export const FlagSchema: GenMessage<Flag> = /*@__PURE__*/
   messageDesc(file_udb_core_config_entity_v1_flag, 0);
+

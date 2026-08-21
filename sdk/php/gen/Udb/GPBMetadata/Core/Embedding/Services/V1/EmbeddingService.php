@@ -25,3 +25,4 @@ class EmbeddingService
         static::$is_initialized = true;
     }
 }
+

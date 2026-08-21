@@ -86,3 +86,4 @@ class StopEgressRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

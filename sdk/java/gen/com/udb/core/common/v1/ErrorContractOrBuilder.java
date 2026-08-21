@@ -13,7 +13,7 @@ public interface ErrorContractOrBuilder extends
   /**
    * <code>repeated .udb.core.common.v1.ErrorContract.ErrorCase cases = 1 [json_name = "cases"];</code>
    */
-  java.util.List<com.udb.core.common.v1.ErrorContract.ErrorCase>
+  java.util.List<com.udb.core.common.v1.ErrorContract.ErrorCase> 
       getCasesList();
   /**
    * <code>repeated .udb.core.common.v1.ErrorContract.ErrorCase cases = 1 [json_name = "cases"];</code>
@@ -26,7 +26,7 @@ public interface ErrorContractOrBuilder extends
   /**
    * <code>repeated .udb.core.common.v1.ErrorContract.ErrorCase cases = 1 [json_name = "cases"];</code>
    */
-  java.util.List<? extends com.udb.core.common.v1.ErrorContract.ErrorCaseOrBuilder>
+  java.util.List<? extends com.udb.core.common.v1.ErrorContract.ErrorCaseOrBuilder> 
       getCasesOrBuilderList();
   /**
    * <code>repeated .udb.core.common.v1.ErrorContract.ErrorCase cases = 1 [json_name = "cases"];</code>

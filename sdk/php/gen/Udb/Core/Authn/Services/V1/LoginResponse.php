@@ -360,3 +360,4 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

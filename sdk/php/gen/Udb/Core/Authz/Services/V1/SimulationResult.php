@@ -191,3 +191,4 @@ class SimulationResult extends \Google\Protobuf\Internal\Message
     }
 
 }
+

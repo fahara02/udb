@@ -117,3 +117,4 @@ class GetRoleRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

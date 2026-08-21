@@ -25,3 +25,4 @@ class RolePermission
         static::$is_initialized = true;
     }
 }
+

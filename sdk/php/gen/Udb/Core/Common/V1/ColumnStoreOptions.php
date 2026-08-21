@@ -245,3 +245,4 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -71,7 +71,7 @@ const MAX_STORAGE_PROJECT_ID_LEN: usize = 120;
 /// The project id is an OPAQUE non-empty string everywhere else in UDB — the
 /// control plane (`udb_projects.project_id` is TEXT), AuthN principals, policy
 /// documents and the DataBroker all treat it that way. Storage alone parsed it
-/// as a UUID, so a registered project such as `ambulife` was rejected here
+/// as a UUID, so a registered project such as `billing` was rejected here
 /// before any object or metadata write, even though the same authenticated
 /// identity had already completed broker-mediated CRUD. The value is now
 /// preserved EXACTLY (never hashed or remapped, which would create a second

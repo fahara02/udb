@@ -135,3 +135,4 @@ class RollbackResourcesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

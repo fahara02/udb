@@ -144,3 +144,4 @@ class EmergencyRevokeDatabaseCredentialsRequest extends \Google\Protobuf\Interna
     }
 
 }
+

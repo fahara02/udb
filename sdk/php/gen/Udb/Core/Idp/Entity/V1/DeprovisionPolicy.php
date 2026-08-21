@@ -64,3 +64,4 @@ class DeprovisionPolicy
         return constant($const);
     }
 }
+

@@ -265,3 +265,4 @@ class TokenRevocation extends \Google\Protobuf\Internal\Message
     }
 
 }
+

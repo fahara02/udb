@@ -61,3 +61,4 @@ class SecurityClassification
         return constant($const);
     }
 }
+

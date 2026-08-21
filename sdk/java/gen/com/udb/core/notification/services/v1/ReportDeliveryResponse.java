@@ -493,7 +493,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.notification.entity.v1.NotificationDeliveryAttempt attempt = 1 [json_name = "attempt"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.notification.entity.v1.NotificationDeliveryAttempt, com.udb.core.notification.entity.v1.NotificationDeliveryAttempt.Builder, com.udb.core.notification.entity.v1.NotificationDeliveryAttemptOrBuilder>
+        com.udb.core.notification.entity.v1.NotificationDeliveryAttempt, com.udb.core.notification.entity.v1.NotificationDeliveryAttempt.Builder, com.udb.core.notification.entity.v1.NotificationDeliveryAttemptOrBuilder> 
         internalGetAttemptFieldBuilder() {
       if (attemptBuilder_ == null) {
         attemptBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -556,3 +556,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

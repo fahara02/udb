@@ -19,7 +19,7 @@ export const file_udb_core_authn_entity_v1_recovery_code: GenFile = /*@__PURE__*
 /**
  * ---------------------------------------------------------------------------
  * RecoveryCode — single-use MFA recovery/backup code.
- *
+ * 
  * Migration order 6. A set of codes is generated at MFA enrollment (or
  * regeneration); each is stored only as a keyed hash and consumed at most once
  * as an alternative MFA second factor when the user has lost their authenticator.
@@ -69,3 +69,4 @@ export type RecoveryCode = Message<"udb.core.authn.entity.v1.RecoveryCode"> & {
  */
 export const RecoveryCodeSchema: GenMessage<RecoveryCode> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_recovery_code, 0);
+

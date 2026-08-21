@@ -28,3 +28,4 @@ class Core
         static::$is_initialized = true;
     }
 }
+

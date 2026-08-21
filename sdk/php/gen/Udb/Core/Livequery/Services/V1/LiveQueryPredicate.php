@@ -121,3 +121,4 @@ class LiveQueryPredicate extends \Google\Protobuf\Internal\Message
     }
 
 }
+

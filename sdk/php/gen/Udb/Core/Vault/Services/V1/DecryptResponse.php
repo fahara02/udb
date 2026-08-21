@@ -147,3 +147,4 @@ class DecryptResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

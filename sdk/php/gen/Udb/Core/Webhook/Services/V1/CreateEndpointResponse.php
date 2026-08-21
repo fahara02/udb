@@ -154,3 +154,4 @@ class CreateEndpointResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

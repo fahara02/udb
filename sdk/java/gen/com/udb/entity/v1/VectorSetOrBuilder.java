@@ -13,7 +13,7 @@ public interface VectorSetOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.VectorPoint points = 1 [json_name = "points"];</code>
    */
-  java.util.List<com.udb.entity.v1.VectorPoint>
+  java.util.List<com.udb.entity.v1.VectorPoint> 
       getPointsList();
   /**
    * <code>repeated .udb.entity.v1.VectorPoint points = 1 [json_name = "points"];</code>
@@ -26,7 +26,7 @@ public interface VectorSetOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.VectorPoint points = 1 [json_name = "points"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.VectorPointOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.VectorPointOrBuilder> 
       getPointsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.VectorPoint points = 1 [json_name = "points"];</code>

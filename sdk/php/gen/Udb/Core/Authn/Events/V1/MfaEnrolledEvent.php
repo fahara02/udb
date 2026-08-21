@@ -237,3 +237,4 @@ class MfaEnrolledEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

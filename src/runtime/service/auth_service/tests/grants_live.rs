@@ -727,7 +727,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
     sqlx::query("DROP SCHEMA IF EXISTS fix_acme_authn CASCADE")
         .execute(&pool)
         .await
-        .expect("drop prior AmbuLife acceptance schema");
+        .expect("drop prior a downstream acceptance schema");
     sqlx::query("DROP SCHEMA IF EXISTS fix_udb_authn CASCADE")
         .execute(&pool)
         .await
@@ -1032,7 +1032,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
     sqlx::query("DROP SCHEMA IF EXISTS fix_acme_authn CASCADE")
         .execute(&pool)
         .await
-        .expect("drop AmbuLife acceptance schema");
+        .expect("drop a downstream acceptance schema");
     sqlx::query("DROP SCHEMA IF EXISTS fix_udb_authn CASCADE")
         .execute(&pool)
         .await

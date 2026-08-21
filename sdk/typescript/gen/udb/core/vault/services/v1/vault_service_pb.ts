@@ -1736,3 +1736,4 @@ export const VaultService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_vault_services_v1_vault_service, 0);
+

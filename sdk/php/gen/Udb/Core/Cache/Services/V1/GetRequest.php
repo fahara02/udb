@@ -117,3 +117,4 @@ class GetRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

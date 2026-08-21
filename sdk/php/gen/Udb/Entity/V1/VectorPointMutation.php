@@ -147,3 +147,4 @@ class VectorPointMutation extends \Google\Protobuf\Internal\Message
     }
 
 }
+

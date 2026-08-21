@@ -76,3 +76,4 @@ class FileType
         return constant($const);
     }
 }
+

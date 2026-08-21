@@ -168,3 +168,4 @@ class MessageSchemaLookupRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

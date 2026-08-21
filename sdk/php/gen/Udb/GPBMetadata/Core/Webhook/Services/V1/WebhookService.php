@@ -28,3 +28,4 @@ class WebhookService
         static::$is_initialized = true;
     }
 }
+

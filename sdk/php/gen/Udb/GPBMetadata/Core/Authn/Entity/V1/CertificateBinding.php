@@ -25,3 +25,4 @@ class CertificateBinding
         static::$is_initialized = true;
     }
 }
+

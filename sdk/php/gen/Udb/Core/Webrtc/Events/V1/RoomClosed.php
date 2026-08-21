@@ -149,3 +149,4 @@ class RoomClosed extends \Google\Protobuf\Internal\Message
     }
 
 }
+

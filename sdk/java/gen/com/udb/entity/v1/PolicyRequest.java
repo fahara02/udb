@@ -528,7 +528,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.RequestContext context = 1 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder>
+        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder> 
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -623,3 +623,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

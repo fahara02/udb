@@ -83,3 +83,4 @@ class PermissionCheck extends \Google\Protobuf\Internal\Message
     }
 
 }
+

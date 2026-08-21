@@ -115,7 +115,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       requestId_ = s;
@@ -131,7 +131,7 @@ private static final long serialVersionUID = 0L;
       getRequestIdBytes() {
     java.lang.Object ref = requestId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       requestId_ = b;
@@ -154,7 +154,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       correlationId_ = s;
@@ -170,7 +170,7 @@ private static final long serialVersionUID = 0L;
       getCorrelationIdBytes() {
     java.lang.Object ref = correlationId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       correlationId_ = b;
@@ -193,7 +193,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       userId_ = s;
@@ -209,7 +209,7 @@ private static final long serialVersionUID = 0L;
       getUserIdBytes() {
     java.lang.Object ref = userId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       userId_ = b;
@@ -225,7 +225,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.udb.core.common.v1.TypesProto.internal_static_udb_core_common_v1_RequestContext_HeadersEntry_descriptor,
+                com.udb.core.common.v1.TypesProto.internal_static_udb_core_common_v1_RequestContext_HeadersEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -311,7 +311,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       traceId_ = s;
@@ -327,7 +327,7 @@ java.lang.String defaultValue) {
       getTraceIdBytes() {
     java.lang.Object ref = traceId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       traceId_ = b;
@@ -350,7 +350,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       spanId_ = s;
@@ -366,7 +366,7 @@ java.lang.String defaultValue) {
       getSpanIdBytes() {
     java.lang.Object ref = spanId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       spanId_ = b;
@@ -389,7 +389,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       ipAddress_ = s;
@@ -405,7 +405,7 @@ java.lang.String defaultValue) {
       getIpAddressBytes() {
     java.lang.Object ref = ipAddress_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       ipAddress_ = b;
@@ -428,7 +428,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       userAgent_ = s;
@@ -444,7 +444,7 @@ java.lang.String defaultValue) {
       getUserAgentBytes() {
     java.lang.Object ref = userAgent_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       userAgent_ = b;
@@ -493,7 +493,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       principalId_ = s;
@@ -509,7 +509,7 @@ java.lang.String defaultValue) {
       getPrincipalIdBytes() {
     java.lang.Object ref = principalId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       principalId_ = b;
@@ -532,7 +532,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       serviceIdentity_ = s;
@@ -548,7 +548,7 @@ java.lang.String defaultValue) {
       getServiceIdentityBytes() {
     java.lang.Object ref = serviceIdentity_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       serviceIdentity_ = b;
@@ -645,7 +645,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       purpose_ = s;
@@ -661,7 +661,7 @@ java.lang.String defaultValue) {
       getPurposeBytes() {
     java.lang.Object ref = purpose_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       purpose_ = b;
@@ -684,7 +684,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       idempotencyKey_ = s;
@@ -700,7 +700,7 @@ java.lang.String defaultValue) {
       getIdempotencyKeyBytes() {
     java.lang.Object ref = idempotencyKey_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       idempotencyKey_ = b;
@@ -723,7 +723,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       clientCatalogVersion_ = s;
@@ -739,7 +739,7 @@ java.lang.String defaultValue) {
       getClientCatalogVersionBytes() {
     java.lang.Object ref = clientCatalogVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       clientCatalogVersion_ = b;
@@ -762,7 +762,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       consistency_ = s;
@@ -778,7 +778,7 @@ java.lang.String defaultValue) {
       getConsistencyBytes() {
     java.lang.Object ref = consistency_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       consistency_ = b;
@@ -794,7 +794,7 @@ java.lang.String defaultValue) {
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.udb.core.common.v1.TypesProto.internal_static_udb_core_common_v1_RequestContext_AttributesEntry_descriptor,
+                com.udb.core.common.v1.TypesProto.internal_static_udb_core_common_v1_RequestContext_AttributesEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -880,7 +880,7 @@ java.lang.String defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       traceparent_ = s;
@@ -896,7 +896,7 @@ java.lang.String defaultValue) {
       getTraceparentBytes() {
     java.lang.Object ref = traceparent_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       traceparent_ = b;
@@ -1885,7 +1885,7 @@ java.lang.String defaultValue) {
      * <code>.udb.core.common.v1.TenantContext tenant = 1 [json_name = "tenant"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.TenantContext, com.udb.core.common.v1.TenantContext.Builder, com.udb.core.common.v1.TenantContextOrBuilder>
+        com.udb.core.common.v1.TenantContext, com.udb.core.common.v1.TenantContext.Builder, com.udb.core.common.v1.TenantContextOrBuilder> 
         internalGetTenantFieldBuilder() {
       if (tenantBuilder_ == null) {
         tenantBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1923,7 +1923,7 @@ java.lang.String defaultValue) {
         getRequestIdBytes() {
       java.lang.Object ref = requestId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         requestId_ = b;
@@ -1995,7 +1995,7 @@ java.lang.String defaultValue) {
         getCorrelationIdBytes() {
       java.lang.Object ref = correlationId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         correlationId_ = b;
@@ -2067,7 +2067,7 @@ java.lang.String defaultValue) {
         getUserIdBytes() {
       java.lang.Object ref = userId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         userId_ = b;
@@ -2266,7 +2266,7 @@ java.lang.String defaultValue) {
         getTraceIdBytes() {
       java.lang.Object ref = traceId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         traceId_ = b;
@@ -2338,7 +2338,7 @@ java.lang.String defaultValue) {
         getSpanIdBytes() {
       java.lang.Object ref = spanId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         spanId_ = b;
@@ -2410,7 +2410,7 @@ java.lang.String defaultValue) {
         getIpAddressBytes() {
       java.lang.Object ref = ipAddress_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         ipAddress_ = b;
@@ -2482,7 +2482,7 @@ java.lang.String defaultValue) {
         getUserAgentBytes() {
       java.lang.Object ref = userAgent_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         userAgent_ = b;
@@ -2637,7 +2637,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.Timestamp timestamp = 10 [json_name = "timestamp"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
         internalGetTimestampFieldBuilder() {
       if (timestampBuilder_ == null) {
         timestampBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2675,7 +2675,7 @@ java.lang.String defaultValue) {
         getPrincipalIdBytes() {
       java.lang.Object ref = principalId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         principalId_ = b;
@@ -2747,7 +2747,7 @@ java.lang.String defaultValue) {
         getServiceIdentityBytes() {
       java.lang.Object ref = serviceIdentity_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         serviceIdentity_ = b;
@@ -3041,7 +3041,7 @@ java.lang.String defaultValue) {
         getPurposeBytes() {
       java.lang.Object ref = purpose_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         purpose_ = b;
@@ -3113,7 +3113,7 @@ java.lang.String defaultValue) {
         getIdempotencyKeyBytes() {
       java.lang.Object ref = idempotencyKey_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         idempotencyKey_ = b;
@@ -3185,7 +3185,7 @@ java.lang.String defaultValue) {
         getClientCatalogVersionBytes() {
       java.lang.Object ref = clientCatalogVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         clientCatalogVersion_ = b;
@@ -3257,7 +3257,7 @@ java.lang.String defaultValue) {
         getConsistencyBytes() {
       java.lang.Object ref = consistency_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         consistency_ = b;
@@ -3456,7 +3456,7 @@ java.lang.String defaultValue) {
         getTraceparentBytes() {
       java.lang.Object ref = traceparent_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         traceparent_ = b;
@@ -3553,3 +3553,4 @@ java.lang.String defaultValue) {
   }
 
 }
+

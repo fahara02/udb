@@ -137,3 +137,4 @@ class WebAuthnCredentialSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
+

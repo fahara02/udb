@@ -244,9 +244,9 @@ async fn live_postgres_storage_project_ownership_isolation() {
     let svc = storage_service(pool.clone()).await;
     let tenant_id = Uuid::new_v4().to_string();
     // Project ids are opaque control-plane identities, not UUIDs. Keep the
-    // real AmbuLife-shaped value on the served path so RegisterUpload and the
+    // real a downstream-shaped value on the served path so RegisterUpload and the
     // HARD-delete GC ledger cannot silently regress to UUID-only SQL binds.
-    let project_a = "ambulife".to_string();
+    let project_a = "billing".to_string();
     let project_b = Uuid::new_v4().to_string();
 
     let file_a = svc

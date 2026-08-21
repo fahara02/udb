@@ -147,3 +147,4 @@ class AnalyticalQueryResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

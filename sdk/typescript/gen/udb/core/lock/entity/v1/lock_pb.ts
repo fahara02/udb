@@ -102,3 +102,4 @@ export type Lock = Message<"udb.core.lock.entity.v1.Lock"> & {
  */
 export const LockSchema: GenMessage<Lock> = /*@__PURE__*/
   messageDesc(file_udb_core_lock_entity_v1_lock, 0);
+

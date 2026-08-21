@@ -13,7 +13,7 @@ public interface ListUsersResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.User users = 1 [json_name = "users"];</code>
    */
-  java.util.List<com.udb.core.authn.entity.v1.User>
+  java.util.List<com.udb.core.authn.entity.v1.User> 
       getUsersList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.User users = 1 [json_name = "users"];</code>
@@ -26,7 +26,7 @@ public interface ListUsersResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.entity.v1.User users = 1 [json_name = "users"];</code>
    */
-  java.util.List<? extends com.udb.core.authn.entity.v1.UserOrBuilder>
+  java.util.List<? extends com.udb.core.authn.entity.v1.UserOrBuilder> 
       getUsersOrBuilderList();
   /**
    * <code>repeated .udb.core.authn.entity.v1.User users = 1 [json_name = "users"];</code>

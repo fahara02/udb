@@ -64,3 +64,4 @@ class SearchMode
         return constant($const);
     }
 }
+

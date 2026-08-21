@@ -248,3 +248,4 @@ class StoreResource extends \Google\Protobuf\Internal\Message
     }
 
 }
+

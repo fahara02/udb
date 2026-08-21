@@ -13,7 +13,7 @@ public interface ListPeersResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer peers = 1 [json_name = "peers"];</code>
    */
-  java.util.List<com.udb.core.webrtc.entity.v1.Peer>
+  java.util.List<com.udb.core.webrtc.entity.v1.Peer> 
       getPeersList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer peers = 1 [json_name = "peers"];</code>
@@ -26,7 +26,7 @@ public interface ListPeersResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer peers = 1 [json_name = "peers"];</code>
    */
-  java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder>
+  java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
       getPeersOrBuilderList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer peers = 1 [json_name = "peers"];</code>

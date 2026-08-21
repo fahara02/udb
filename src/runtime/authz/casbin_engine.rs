@@ -628,9 +628,9 @@ mod tests {
             effect: Effect::Allow,
             subject: "ambucore.authn".to_string(),
             tenant: "tenant-1".to_string(),
-            project: "ambulife".to_string(),
+            project: "billing".to_string(),
             action: "Upsert".to_string(),
-            resource: "ambulife.authn.entity.v1.User".to_string(),
+            resource: "acme.authn.entity.v1.User".to_string(),
             required_scopes: vec!["udb:write".to_string()],
             ..Default::default()
         });
@@ -643,12 +643,12 @@ mod tests {
             user_id: "user-uuid".to_string(),
             service_identity: "ambucore.authn".to_string(),
             tenant_id: "tenant-1".to_string(),
-            project_id: "ambulife".to_string(),
+            project_id: "billing".to_string(),
             scopes: vec!["udb:write".to_string()],
             ..Default::default()
         };
         let attrs = BTreeMap::new();
-        let resource = ResourceRef::message("ambulife.authn.entity.v1.User");
+        let resource = ResourceRef::message("acme.authn.entity.v1.User");
 
         let decision = snap
             .casbin_authorize(&query(&service_account, &resource, "Upsert", &attrs))

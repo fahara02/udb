@@ -493,7 +493,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authn.entity.v1.User user = 1 [json_name = "user"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authn.entity.v1.User, com.udb.core.authn.entity.v1.User.Builder, com.udb.core.authn.entity.v1.UserOrBuilder>
+        com.udb.core.authn.entity.v1.User, com.udb.core.authn.entity.v1.User.Builder, com.udb.core.authn.entity.v1.UserOrBuilder> 
         internalGetUserFieldBuilder() {
       if (userBuilder_ == null) {
         userBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -556,3 +556,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

@@ -66,3 +66,4 @@ class PartitionStrategy
         return constant($const);
     }
 }
+

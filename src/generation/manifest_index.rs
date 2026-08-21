@@ -212,7 +212,10 @@ impl fmt::Display for TableLookupError {
                 let checksum = catalog_checksum.get(..12).unwrap_or(catalog_checksum);
                 write!(
                     formatter,
-                    "unknown message_type {message_type}: this broker serves {known_entities}                      entities from catalog {checksum}. If you just added this entity, the running broker image predates it — rebuild and redeploy the broker, then retry"
+                    "unknown message_type {message_type}: this broker serves {known_entities} \
+                     entities from catalog {checksum}. If you just added this entity, the \
+                     running broker image predates it — rebuild and redeploy the broker, \
+                     then retry"
                 )
             }
             Self::Ambiguous {

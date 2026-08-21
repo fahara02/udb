@@ -188,3 +188,4 @@ class GetPipelineSummaryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

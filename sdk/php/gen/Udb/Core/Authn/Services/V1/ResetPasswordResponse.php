@@ -83,3 +83,4 @@ class ResetPasswordResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

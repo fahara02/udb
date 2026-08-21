@@ -228,3 +228,4 @@ class Chunk extends \Google\Protobuf\Internal\Message
     }
 
 }
+

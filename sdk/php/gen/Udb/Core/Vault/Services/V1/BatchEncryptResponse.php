@@ -147,3 +147,4 @@ class BatchEncryptResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

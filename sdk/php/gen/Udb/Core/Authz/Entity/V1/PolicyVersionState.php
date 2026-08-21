@@ -78,3 +78,4 @@ class PolicyVersionState
         return constant($const);
     }
 }
+

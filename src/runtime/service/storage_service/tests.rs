@@ -554,7 +554,7 @@ fn register_is_public_defaults_to_private_when_absent() {
 /// UDB's project id is an OPAQUE non-empty string everywhere — control plane
 /// (`udb_projects.project_id` is TEXT), AuthN principals, policy documents and
 /// the DataBroker. Storage alone parsed it as a UUID, so a registered project
-/// such as `ambulife` was rejected at `RegisterUpload` before any object or
+/// such as `billing` was rejected at `RegisterUpload` before any object or
 /// metadata write, even though that same authenticated identity had already
 /// completed broker-mediated CRUD.
 ///
@@ -570,8 +570,8 @@ fn storage_project_scope_accepts_opaque_and_uuid_projects() {
 
     // The reported failure: a valid opaque project.
     assert_eq!(
-        resolve("ambulife").expect("opaque project must be accepted"),
-        "ambulife"
+        resolve("billing").expect("opaque project must be accepted"),
+        "billing"
     );
 
     // Preserved byte-for-byte, not normalized into another namespace.

@@ -66,3 +66,4 @@ class TokenType
         return constant($const);
     }
 }
+

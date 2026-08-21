@@ -79,7 +79,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       indexName_ = s;
@@ -95,7 +95,7 @@ private static final long serialVersionUID = 0L;
       getIndexNameBytes() {
     java.lang.Object ref = indexName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       indexName_ = b;
@@ -122,7 +122,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       indexType_ = s;
@@ -142,7 +142,7 @@ private static final long serialVersionUID = 0L;
       getIndexTypeBytes() {
     java.lang.Object ref = indexType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       indexType_ = b;
@@ -254,7 +254,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       indexMethod_ = s;
@@ -274,7 +274,7 @@ private static final long serialVersionUID = 0L;
       getIndexMethodBytes() {
     java.lang.Object ref = indexMethod_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       indexMethod_ = b;
@@ -301,7 +301,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       whereClause_ = s;
@@ -321,7 +321,7 @@ private static final long serialVersionUID = 0L;
       getWhereClauseBytes() {
     java.lang.Object ref = whereClause_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       whereClause_ = b;
@@ -348,7 +348,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       operatorClass_ = s;
@@ -368,7 +368,7 @@ private static final long serialVersionUID = 0L;
       getOperatorClassBytes() {
     java.lang.Object ref = operatorClass_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       operatorClass_ = b;
@@ -384,7 +384,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.udb.core.common.v1.DbProto.internal_static_udb_core_common_v1_IndexOptions_IndexParamsEntry_descriptor,
+                com.udb.core.common.v1.DbProto.internal_static_udb_core_common_v1_IndexOptions_IndexParamsEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -1186,7 +1186,7 @@ java.lang.String defaultValue) {
         getIndexNameBytes() {
       java.lang.Object ref = indexName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         indexName_ = b;
@@ -1266,7 +1266,7 @@ java.lang.String defaultValue) {
         getIndexTypeBytes() {
       java.lang.Object ref = indexType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         indexType_ = b;
@@ -1612,7 +1612,7 @@ java.lang.String defaultValue) {
         getIndexMethodBytes() {
       java.lang.Object ref = indexMethod_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         indexMethod_ = b;
@@ -1704,7 +1704,7 @@ java.lang.String defaultValue) {
         getWhereClauseBytes() {
       java.lang.Object ref = whereClause_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         whereClause_ = b;
@@ -1796,7 +1796,7 @@ java.lang.String defaultValue) {
         getOperatorClassBytes() {
       java.lang.Object ref = operatorClass_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         operatorClass_ = b;
@@ -2258,3 +2258,4 @@ java.lang.String defaultValue) {
   }
 
 }
+

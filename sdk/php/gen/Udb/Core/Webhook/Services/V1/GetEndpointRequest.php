@@ -83,3 +83,4 @@ class GetEndpointRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

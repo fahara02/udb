@@ -230,3 +230,4 @@ class TenantCreatedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -86,7 +86,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       topic_ = s;
@@ -102,7 +102,7 @@ private static final long serialVersionUID = 0L;
       getTopicBytes() {
     java.lang.Object ref = topic_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       topic_ = b;
@@ -129,7 +129,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       statusFilter_ = s;
@@ -149,7 +149,7 @@ private static final long serialVersionUID = 0L;
       getStatusFilterBytes() {
     java.lang.Object ref = statusFilter_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       statusFilter_ = b;
@@ -183,7 +183,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       pageToken_ = s;
@@ -199,7 +199,7 @@ private static final long serialVersionUID = 0L;
       getPageTokenBytes() {
     java.lang.Object ref = pageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       pageToken_ = b;
@@ -727,7 +727,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.RequestContext context = 1 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder>
+        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder> 
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -765,7 +765,7 @@ private static final long serialVersionUID = 0L;
         getTopicBytes() {
       java.lang.Object ref = topic_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         topic_ = b;
@@ -845,7 +845,7 @@ private static final long serialVersionUID = 0L;
         getStatusFilterBytes() {
       java.lang.Object ref = statusFilter_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         statusFilter_ = b;
@@ -961,7 +961,7 @@ private static final long serialVersionUID = 0L;
         getPageTokenBytes() {
       java.lang.Object ref = pageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         pageToken_ = b;
@@ -1058,3 +1058,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

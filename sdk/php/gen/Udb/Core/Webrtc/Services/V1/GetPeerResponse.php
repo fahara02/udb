@@ -110,3 +110,4 @@ class GetPeerResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

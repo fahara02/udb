@@ -63,7 +63,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, com.udb.core.config.services.v1.FlagValue> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, com.udb.core.config.services.v1.FlagValue>newDefaultInstance(
-                com.udb.core.config.services.v1.ConfigServiceProto.internal_static_udb_core_config_services_v1_EvaluateFlagsResponse_ValuesEntry_descriptor,
+                com.udb.core.config.services.v1.ConfigServiceProto.internal_static_udb_core_config_services_v1_EvaluateFlagsResponse_ValuesEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.MESSAGE,
@@ -196,7 +196,7 @@ com.udb.core.config.services.v1.FlagValue defaultValue) {
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       message_ = s;
@@ -212,7 +212,7 @@ com.udb.core.config.services.v1.FlagValue defaultValue) {
       getMessageBytes() {
     java.lang.Object ref = message_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       message_ = b;
@@ -998,7 +998,7 @@ com.udb.core.config.services.v1.FlagValue defaultValue) {
         getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         message_ = b;
@@ -1153,7 +1153,7 @@ com.udb.core.config.services.v1.FlagValue defaultValue) {
      * <code>.udb.core.common.v1.ApiError error = 5 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1216,3 +1216,4 @@ com.udb.core.config.services.v1.FlagValue defaultValue) {
   }
 
 }
+

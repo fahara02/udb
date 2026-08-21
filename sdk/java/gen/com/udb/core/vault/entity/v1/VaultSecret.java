@@ -81,7 +81,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       secretId_ = s;
@@ -97,7 +97,7 @@ private static final long serialVersionUID = 0L;
       getSecretIdBytes() {
     java.lang.Object ref = secretId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       secretId_ = b;
@@ -120,7 +120,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -136,7 +136,7 @@ private static final long serialVersionUID = 0L;
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -164,7 +164,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       secretPath_ = s;
@@ -185,7 +185,7 @@ private static final long serialVersionUID = 0L;
       getSecretPathBytes() {
     java.lang.Object ref = secretPath_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       secretPath_ = b;
@@ -229,7 +229,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       ciphertext_ = s;
@@ -250,7 +250,7 @@ private static final long serialVersionUID = 0L;
       getCiphertextBytes() {
     java.lang.Object ref = ciphertext_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       ciphertext_ = b;
@@ -278,7 +278,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       dataKeyWrapped_ = s;
@@ -299,7 +299,7 @@ private static final long serialVersionUID = 0L;
       getDataKeyWrappedBytes() {
     java.lang.Object ref = dataKeyWrapped_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       dataKeyWrapped_ = b;
@@ -326,7 +326,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       state_ = s;
@@ -346,7 +346,7 @@ private static final long serialVersionUID = 0L;
       getStateBytes() {
     java.lang.Object ref = state_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       state_ = b;
@@ -369,7 +369,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       metadataJson_ = s;
@@ -385,7 +385,7 @@ private static final long serialVersionUID = 0L;
       getMetadataJsonBytes() {
     java.lang.Object ref = metadataJson_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       metadataJson_ = b;
@@ -899,7 +899,7 @@ private static final long serialVersionUID = 0L;
         getSecretIdBytes() {
       java.lang.Object ref = secretId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         secretId_ = b;
@@ -971,7 +971,7 @@ private static final long serialVersionUID = 0L;
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -1053,7 +1053,7 @@ private static final long serialVersionUID = 0L;
         getSecretPathBytes() {
       java.lang.Object ref = secretPath_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         secretPath_ = b;
@@ -1197,7 +1197,7 @@ private static final long serialVersionUID = 0L;
         getCiphertextBytes() {
       java.lang.Object ref = ciphertext_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         ciphertext_ = b;
@@ -1294,7 +1294,7 @@ private static final long serialVersionUID = 0L;
         getDataKeyWrappedBytes() {
       java.lang.Object ref = dataKeyWrapped_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         dataKeyWrapped_ = b;
@@ -1389,7 +1389,7 @@ private static final long serialVersionUID = 0L;
         getStateBytes() {
       java.lang.Object ref = state_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         state_ = b;
@@ -1473,7 +1473,7 @@ private static final long serialVersionUID = 0L;
         getMetadataJsonBytes() {
       java.lang.Object ref = metadataJson_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         metadataJson_ = b;
@@ -1570,3 +1570,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

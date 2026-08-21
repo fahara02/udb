@@ -120,3 +120,4 @@ class StartWorkflowResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -103,3 +103,4 @@ class GetWorkflowResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

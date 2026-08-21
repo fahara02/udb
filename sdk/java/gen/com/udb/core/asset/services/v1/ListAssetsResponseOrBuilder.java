@@ -13,7 +13,7 @@ public interface ListAssetsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.asset.entity.v1.Asset assets = 1 [json_name = "assets"];</code>
    */
-  java.util.List<com.udb.core.asset.entity.v1.Asset>
+  java.util.List<com.udb.core.asset.entity.v1.Asset> 
       getAssetsList();
   /**
    * <code>repeated .udb.core.asset.entity.v1.Asset assets = 1 [json_name = "assets"];</code>
@@ -26,7 +26,7 @@ public interface ListAssetsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.asset.entity.v1.Asset assets = 1 [json_name = "assets"];</code>
    */
-  java.util.List<? extends com.udb.core.asset.entity.v1.AssetOrBuilder>
+  java.util.List<? extends com.udb.core.asset.entity.v1.AssetOrBuilder> 
       getAssetsOrBuilderList();
   /**
    * <code>repeated .udb.core.asset.entity.v1.Asset assets = 1 [json_name = "assets"];</code>

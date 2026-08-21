@@ -260,3 +260,4 @@ class CreateIndexRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

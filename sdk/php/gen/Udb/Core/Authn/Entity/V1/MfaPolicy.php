@@ -12,9 +12,11 @@ use Google\Protobuf\RepeatedField;
 /**
  * ---------------------------------------------------------------------------
  * MfaPolicy — per-tenant MFA enforcement.
+ *
  * Migration order 7. One row per tenant. When require_mfa is true, password-only
  * login is rejected for that tenant's users until they enrol a second factor.
  * ---------------------------------------------------------------------------
+ *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.MfaPolicy</code>
  */
 class MfaPolicy extends \Google\Protobuf\Internal\Message
@@ -189,3 +191,4 @@ class MfaPolicy extends \Google\Protobuf\Internal\Message
     }
 
 }
+

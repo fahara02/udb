@@ -224,3 +224,4 @@ export enum CanaryState {
  */
 export const CanaryStateSchema: GenEnum<CanaryState> = /*@__PURE__*/
   enumDesc(file_udb_core_authz_entity_v1_policy_canary, 1);
+

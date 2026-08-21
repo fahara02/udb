@@ -93,3 +93,4 @@ class GetPipelineSummaryResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

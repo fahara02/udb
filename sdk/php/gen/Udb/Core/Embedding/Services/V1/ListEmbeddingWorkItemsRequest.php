@@ -178,3 +178,4 @@ class ListEmbeddingWorkItemsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

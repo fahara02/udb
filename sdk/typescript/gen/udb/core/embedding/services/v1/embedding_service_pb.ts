@@ -2260,3 +2260,4 @@ export const EmbeddingService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_embedding_services_v1_embedding_service, 0);
+

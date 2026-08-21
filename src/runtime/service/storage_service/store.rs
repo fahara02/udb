@@ -497,7 +497,7 @@ const GC_INTENTS_DDL: &[&str] = &[
         WHERE status = 'PENDING'",
     // Migrate a ledger created before project ids were opaque. `CREATE TABLE IF
     // NOT EXISTS` above only fixes NEW deployments, so an existing table would
-    // keep its UUID column and keep rejecting a project such as `ambulife`.
+    // keep its UUID column and keep rejecting a project such as `billing`.
     // Guarded on the current column type so it is a no-op after the first run
     // rather than rewriting the table on every startup, and rollback-safe: a
     // UUID's text form is a valid opaque project id, so no value changes

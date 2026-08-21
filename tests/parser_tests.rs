@@ -902,6 +902,14 @@ fn deep_store_option_diff_classifies_cache_safe_and_vector_review() {
 fn broker_query_planner_routes_allowlists_and_masks_fields() {
     let mut schema = table_schema("processing", "jobs", 1);
     schema.message_name = "ProcessingJob".to_string();
+    // The request below addresses the entity by its protobuf FQN. A DOTTED
+    // message_type names an exact identity and is deliberately NOT degraded to
+    // its leaf (manifest_index HIGH-5): silently misrouting `a.b.User` to some
+    // other package's `User` is worse than a fail-closed miss. So the fixture
+    // must declare the package it is addressed by - without this the lookup
+    // correctly refuses, which is what this test used to assert against before
+    // that rule existed.
+    schema.proto_package = "example.processing".to_string();
     schema.columns.push(pk_col("job_id"));
     schema.columns.push(ProtoColumn {
         field_name: "tenant_id".to_string(),
@@ -1121,7 +1129,18 @@ fn broker_runtime_contracts_plan_sql_cache_vector_object_and_dispatch() {
         },
     );
     assert!(delete.passed(), "{:?}", delete.errors);
-    assert_eq!(delete.parameter_columns, vec!["tenant_id", "job_id"]);
+    // `tenant_id` binds TWICE on purpose, and that is the security property:
+    // the caller's own filter supplies the first, then
+    // `append_verified_scope_predicates` appends the tenant VERIFIED from the
+    // request context. The bridged neutral-IR emitter declines soft-delete
+    // tables and the BeginTx apply loop never consults it, so both land on this
+    // SQL - which would otherwise trust the caller's tenant value. Do not
+    // "optimise" the duplicate away; it is the guard.
+    assert_eq!(
+        delete.parameter_columns,
+        vec!["tenant_id", "job_id", "tenant_id"],
+        "the trailing tenant_id is the verified-scope predicate, not a redundant bind"
+    );
     assert!(
         delete
             .sql

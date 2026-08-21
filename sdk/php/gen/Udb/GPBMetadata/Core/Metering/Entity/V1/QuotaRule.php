@@ -24,3 +24,4 @@ class QuotaRule
         static::$is_initialized = true;
     }
 }
+

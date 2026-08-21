@@ -100,3 +100,4 @@ class CatalogManifestRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -28,7 +28,7 @@ public final class BackupPolicyProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_backup_entity_v1_BackupPolicy_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_backup_entity_v1_BackupPolicy_fieldAccessorTable;
 

@@ -113,3 +113,4 @@ class ReadFence extends \Google\Protobuf\Internal\Message
     }
 
 }
+

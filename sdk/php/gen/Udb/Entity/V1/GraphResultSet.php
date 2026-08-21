@@ -120,3 +120,4 @@ class GraphResultSet extends \Google\Protobuf\Internal\Message
     }
 
 }
+

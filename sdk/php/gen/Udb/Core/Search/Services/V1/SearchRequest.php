@@ -266,3 +266,4 @@ class SearchRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

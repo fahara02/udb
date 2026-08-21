@@ -37,7 +37,7 @@ public interface GetDeliveryStatsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.notification.services.v1.ChannelStats by_channel = 5 [json_name = "byChannel"];</code>
    */
-  java.util.List<com.udb.core.notification.services.v1.ChannelStats>
+  java.util.List<com.udb.core.notification.services.v1.ChannelStats> 
       getByChannelList();
   /**
    * <code>repeated .udb.core.notification.services.v1.ChannelStats by_channel = 5 [json_name = "byChannel"];</code>
@@ -50,7 +50,7 @@ public interface GetDeliveryStatsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.notification.services.v1.ChannelStats by_channel = 5 [json_name = "byChannel"];</code>
    */
-  java.util.List<? extends com.udb.core.notification.services.v1.ChannelStatsOrBuilder>
+  java.util.List<? extends com.udb.core.notification.services.v1.ChannelStatsOrBuilder> 
       getByChannelOrBuilderList();
   /**
    * <code>repeated .udb.core.notification.services.v1.ChannelStats by_channel = 5 [json_name = "byChannel"];</code>

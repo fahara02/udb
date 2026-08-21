@@ -239,3 +239,4 @@ class RecordUsageRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

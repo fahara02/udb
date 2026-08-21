@@ -109,3 +109,4 @@ export type Peer = Message<"udb.core.webrtc.entity.v1.Peer"> & {
  */
 export const PeerSchema: GenMessage<Peer> = /*@__PURE__*/
   messageDesc(file_udb_core_webrtc_entity_v1_peer, 0);
+

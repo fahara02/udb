@@ -65,3 +65,4 @@ class CacheBackendType
         return constant($const);
     }
 }
+

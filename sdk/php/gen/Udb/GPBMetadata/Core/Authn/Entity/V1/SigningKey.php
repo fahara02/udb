@@ -26,3 +26,4 @@ class SigningKey
         static::$is_initialized = true;
     }
 }
+

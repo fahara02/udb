@@ -25,3 +25,4 @@ class AuthnEvents
         static::$is_initialized = true;
     }
 }
+

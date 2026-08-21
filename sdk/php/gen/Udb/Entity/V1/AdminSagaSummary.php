@@ -164,3 +164,4 @@ class AdminSagaSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
+

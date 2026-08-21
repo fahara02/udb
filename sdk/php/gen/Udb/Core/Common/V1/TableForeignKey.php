@@ -299,3 +299,4 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
     }
 
 }
+

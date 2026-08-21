@@ -12,10 +12,12 @@ use Google\Protobuf\RepeatedField;
 /**
  * ---------------------------------------------------------------------------
  * RecoveryCode — single-use MFA recovery/backup code.
+ *
  * Migration order 6. A set of codes is generated at MFA enrollment (or
  * regeneration); each is stored only as a keyed hash and consumed at most once
  * as an alternative MFA second factor when the user has lost their authenticator.
  * ---------------------------------------------------------------------------
+ *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.RecoveryCode</code>
  */
 class RecoveryCode extends \Google\Protobuf\Internal\Message
@@ -231,3 +233,4 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
     }
 
 }
+

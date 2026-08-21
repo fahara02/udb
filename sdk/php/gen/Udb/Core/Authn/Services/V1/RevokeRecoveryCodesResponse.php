@@ -56,3 +56,4 @@ class RevokeRecoveryCodesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

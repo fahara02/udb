@@ -244,3 +244,4 @@ class SdkLiveRecord extends \Google\Protobuf\Internal\Message
     }
 
 }
+

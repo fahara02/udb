@@ -81,7 +81,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       contentType_ = s;
@@ -97,7 +97,7 @@ private static final long serialVersionUID = 0L;
       getContentTypeBytes() {
     java.lang.Object ref = contentType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       contentType_ = b;
@@ -643,7 +643,7 @@ private static final long serialVersionUID = 0L;
         getContentTypeBytes() {
       java.lang.Object ref = contentType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         contentType_ = b;
@@ -830,7 +830,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct metadata = 5 [json_name = "metadata"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
         internalGetMetadataFieldBuilder() {
       if (metadataBuilder_ == null) {
         metadataBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -893,3 +893,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

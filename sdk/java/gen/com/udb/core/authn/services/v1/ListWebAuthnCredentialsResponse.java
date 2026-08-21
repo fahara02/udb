@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authn.services.v1.WebAuthnCredentialSummary credentials = 1 [json_name = "credentials"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authn.services.v1.WebAuthnCredentialSummaryOrBuilder>
+  public java.util.List<? extends com.udb.core.authn.services.v1.WebAuthnCredentialSummaryOrBuilder> 
       getCredentialsOrBuilderList() {
     return credentials_;
   }
@@ -103,7 +103,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -425,7 +425,7 @@ private static final long serialVersionUID = 0L;
             credentialsBuilder_ = null;
             credentials_ = other.credentials_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            credentialsBuilder_ =
+            credentialsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetCredentialsFieldBuilder() : null;
           } else {
@@ -694,7 +694,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authn.services.v1.WebAuthnCredentialSummary credentials = 1 [json_name = "credentials"];</code>
      */
-    public java.util.List<? extends com.udb.core.authn.services.v1.WebAuthnCredentialSummaryOrBuilder>
+    public java.util.List<? extends com.udb.core.authn.services.v1.WebAuthnCredentialSummaryOrBuilder> 
          getCredentialsOrBuilderList() {
       if (credentialsBuilder_ != null) {
         return credentialsBuilder_.getMessageOrBuilderList();
@@ -720,12 +720,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authn.services.v1.WebAuthnCredentialSummary credentials = 1 [json_name = "credentials"];</code>
      */
-    public java.util.List<com.udb.core.authn.services.v1.WebAuthnCredentialSummary.Builder>
+    public java.util.List<com.udb.core.authn.services.v1.WebAuthnCredentialSummary.Builder> 
          getCredentialsBuilderList() {
       return internalGetCredentialsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authn.services.v1.WebAuthnCredentialSummary, com.udb.core.authn.services.v1.WebAuthnCredentialSummary.Builder, com.udb.core.authn.services.v1.WebAuthnCredentialSummaryOrBuilder>
+        com.udb.core.authn.services.v1.WebAuthnCredentialSummary, com.udb.core.authn.services.v1.WebAuthnCredentialSummary.Builder, com.udb.core.authn.services.v1.WebAuthnCredentialSummaryOrBuilder> 
         internalGetCredentialsFieldBuilder() {
       if (credentialsBuilder_ == null) {
         credentialsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -772,7 +772,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -881,3 +881,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

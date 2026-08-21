@@ -736,7 +736,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.livequery.services.v1.LiveQuerySnapshot snapshot = 1 [json_name = "snapshot"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.livequery.services.v1.LiveQuerySnapshot, com.udb.core.livequery.services.v1.LiveQuerySnapshot.Builder, com.udb.core.livequery.services.v1.LiveQuerySnapshotOrBuilder>
+        com.udb.core.livequery.services.v1.LiveQuerySnapshot, com.udb.core.livequery.services.v1.LiveQuerySnapshot.Builder, com.udb.core.livequery.services.v1.LiveQuerySnapshotOrBuilder> 
         internalGetSnapshotFieldBuilder() {
       if (snapshotBuilder_ == null) {
         if (!(payloadCase_ == 1)) {
@@ -878,7 +878,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.livequery.services.v1.LiveQueryChange change = 2 [json_name = "change"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.livequery.services.v1.LiveQueryChange, com.udb.core.livequery.services.v1.LiveQueryChange.Builder, com.udb.core.livequery.services.v1.LiveQueryChangeOrBuilder>
+        com.udb.core.livequery.services.v1.LiveQueryChange, com.udb.core.livequery.services.v1.LiveQueryChange.Builder, com.udb.core.livequery.services.v1.LiveQueryChangeOrBuilder> 
         internalGetChangeFieldBuilder() {
       if (changeBuilder_ == null) {
         if (!(payloadCase_ == 2)) {
@@ -1040,7 +1040,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1103,3 +1103,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

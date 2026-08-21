@@ -105,3 +105,4 @@ export type PipelineDefinition = Message<"udb.core.asset.entity.v1.PipelineDefin
  */
 export const PipelineDefinitionSchema: GenMessage<PipelineDefinition> = /*@__PURE__*/
   messageDesc(file_udb_core_asset_entity_v1_pipeline_definition, 0);
+

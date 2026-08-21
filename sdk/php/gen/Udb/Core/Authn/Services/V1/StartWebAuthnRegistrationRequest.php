@@ -174,3 +174,4 @@ class StartWebAuthnRegistrationRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

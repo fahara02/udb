@@ -32,7 +32,7 @@ type File struct {
 	// plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
 	//
 	// Stored as bounded text rather than UUID so a registered project such as
-	// `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+	// `billing` is accepted. A UUID's text form remains a valid opaque id, so
 	// existing rows migrate losslessly via the USING cast.
 	ProjectId     string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`                                         // @inject_tag: gorm:"column:project_id"
 	Filename      string                 `protobuf:"bytes,4,opt,name=filename,proto3" json:"filename,omitempty"`                                                            // @inject_tag: gorm:"column:filename;not null"

@@ -13,7 +13,7 @@ public interface ListTracksResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Track tracks = 1 [json_name = "tracks"];</code>
    */
-  java.util.List<com.udb.core.webrtc.entity.v1.Track>
+  java.util.List<com.udb.core.webrtc.entity.v1.Track> 
       getTracksList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Track tracks = 1 [json_name = "tracks"];</code>
@@ -26,7 +26,7 @@ public interface ListTracksResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Track tracks = 1 [json_name = "tracks"];</code>
    */
-  java.util.List<? extends com.udb.core.webrtc.entity.v1.TrackOrBuilder>
+  java.util.List<? extends com.udb.core.webrtc.entity.v1.TrackOrBuilder> 
       getTracksOrBuilderList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Track tracks = 1 [json_name = "tracks"];</code>

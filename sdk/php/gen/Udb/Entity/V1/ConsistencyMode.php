@@ -80,3 +80,4 @@ class ConsistencyMode
         return constant($const);
     }
 }
+

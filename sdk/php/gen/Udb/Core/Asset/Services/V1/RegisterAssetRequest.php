@@ -205,3 +205,4 @@ class RegisterAssetRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

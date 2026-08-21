@@ -23,3 +23,4 @@ class Annotations
         static::$is_initialized = true;
     }
 }
+

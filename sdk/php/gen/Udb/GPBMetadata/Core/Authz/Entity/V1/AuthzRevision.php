@@ -26,3 +26,4 @@ class AuthzRevision
         static::$is_initialized = true;
     }
 }
+

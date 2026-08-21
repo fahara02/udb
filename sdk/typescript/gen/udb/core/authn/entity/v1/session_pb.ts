@@ -22,11 +22,11 @@ export const file_udb_core_authn_entity_v1_session: GenFile = /*@__PURE__*/
  * ---------------------------------------------------------------------------
  * Session — Authenticated session for a user, service account, workload, or
  * external identity mapped into UDB.
- *
+ * 
  * Hybrid model:
  *   SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify
  *   JWT:         access_token_jti + refresh_token_jti tracked for revocation
- *
+ * 
  * Migration order 2. RLS scopes rows to the current tenant.
  * ---------------------------------------------------------------------------
  *
@@ -177,3 +177,4 @@ export type Session = Message<"udb.core.authn.entity.v1.Session"> & {
  */
 export const SessionSchema: GenMessage<Session> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_session, 0);
+

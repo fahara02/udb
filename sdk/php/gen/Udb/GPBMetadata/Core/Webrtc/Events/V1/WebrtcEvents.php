@@ -24,3 +24,4 @@ class WebrtcEvents
         static::$is_initialized = true;
     }
 }
+

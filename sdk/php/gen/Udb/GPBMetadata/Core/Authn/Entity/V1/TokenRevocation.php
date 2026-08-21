@@ -26,3 +26,4 @@ class TokenRevocation
         static::$is_initialized = true;
     }
 }
+

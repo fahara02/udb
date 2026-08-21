@@ -13,7 +13,7 @@ public interface ScanResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.cache.services.v1.CacheItem items = 1 [json_name = "items"];</code>
    */
-  java.util.List<com.udb.core.cache.services.v1.CacheItem>
+  java.util.List<com.udb.core.cache.services.v1.CacheItem> 
       getItemsList();
   /**
    * <code>repeated .udb.core.cache.services.v1.CacheItem items = 1 [json_name = "items"];</code>
@@ -26,7 +26,7 @@ public interface ScanResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.cache.services.v1.CacheItem items = 1 [json_name = "items"];</code>
    */
-  java.util.List<? extends com.udb.core.cache.services.v1.CacheItemOrBuilder>
+  java.util.List<? extends com.udb.core.cache.services.v1.CacheItemOrBuilder> 
       getItemsOrBuilderList();
   /**
    * <code>repeated .udb.core.cache.services.v1.CacheItem items = 1 [json_name = "items"];</code>

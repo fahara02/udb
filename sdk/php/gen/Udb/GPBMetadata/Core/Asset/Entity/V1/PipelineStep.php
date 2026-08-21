@@ -27,3 +27,4 @@ class PipelineStep
         static::$is_initialized = true;
     }
 }
+

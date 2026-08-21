@@ -245,3 +245,4 @@ class DocumentStoreOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
+

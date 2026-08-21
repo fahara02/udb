@@ -218,3 +218,4 @@ class ActorReference extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -203,3 +203,4 @@ class EmergencyRevokeRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

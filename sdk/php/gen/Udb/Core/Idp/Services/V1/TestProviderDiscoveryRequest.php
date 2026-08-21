@@ -85,3 +85,4 @@ class TestProviderDiscoveryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

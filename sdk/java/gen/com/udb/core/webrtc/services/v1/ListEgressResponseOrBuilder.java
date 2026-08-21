@@ -13,7 +13,7 @@ public interface ListEgressResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.services.v1.EgressInfo egresses = 1 [json_name = "egresses"];</code>
    */
-  java.util.List<com.udb.core.webrtc.services.v1.EgressInfo>
+  java.util.List<com.udb.core.webrtc.services.v1.EgressInfo> 
       getEgressesList();
   /**
    * <code>repeated .udb.core.webrtc.services.v1.EgressInfo egresses = 1 [json_name = "egresses"];</code>
@@ -26,7 +26,7 @@ public interface ListEgressResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.services.v1.EgressInfo egresses = 1 [json_name = "egresses"];</code>
    */
-  java.util.List<? extends com.udb.core.webrtc.services.v1.EgressInfoOrBuilder>
+  java.util.List<? extends com.udb.core.webrtc.services.v1.EgressInfoOrBuilder> 
       getEgressesOrBuilderList();
   /**
    * <code>repeated .udb.core.webrtc.services.v1.EgressInfo egresses = 1 [json_name = "egresses"];</code>

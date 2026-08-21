@@ -688,3 +688,4 @@ export type BulkCasResponse = Message<"udb.entity.v1.BulkCasResponse"> & {
  */
 export const BulkCasResponseSchema: GenMessage<BulkCasResponse> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_relational, 12);
+

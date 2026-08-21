@@ -110,3 +110,4 @@ class OperationWarning extends \Google\Protobuf\Internal\Message
     }
 
 }
+

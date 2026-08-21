@@ -56,7 +56,7 @@ public interface FileOrBuilder extends
    * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
    *
    * Stored as bounded text rather than UUID so a registered project such as
-   * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+   * `billing` is accepted. A UUID's text form remains a valid opaque id, so
    * existing rows migrate losslessly via the USING cast.
    * </pre>
    *
@@ -70,7 +70,7 @@ public interface FileOrBuilder extends
    * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
    *
    * Stored as bounded text rather than UUID so a registered project such as
-   * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+   * `billing` is accepted. A UUID's text form remains a valid opaque id, so
    * existing rows migrate losslessly via the USING cast.
    * </pre>
    *

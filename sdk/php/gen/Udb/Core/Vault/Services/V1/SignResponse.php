@@ -147,3 +147,4 @@ class SignResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

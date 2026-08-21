@@ -206,7 +206,7 @@ private static final long serialVersionUID = 0L;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         topic_ = s;
@@ -226,7 +226,7 @@ private static final long serialVersionUID = 0L;
         getTopicBytes() {
       java.lang.Object ref = topic_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         topic_ = b;
@@ -253,7 +253,7 @@ private static final long serialVersionUID = 0L;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         partitionKeyField_ = s;
@@ -273,7 +273,7 @@ private static final long serialVersionUID = 0L;
         getPartitionKeyFieldBytes() {
       java.lang.Object ref = partitionKeyField_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         partitionKeyField_ = b;
@@ -300,7 +300,7 @@ private static final long serialVersionUID = 0L;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         deliveryGuarantee_ = s;
@@ -320,7 +320,7 @@ private static final long serialVersionUID = 0L;
         getDeliveryGuaranteeBytes() {
       java.lang.Object ref = deliveryGuarantee_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         deliveryGuarantee_ = b;
@@ -347,7 +347,7 @@ private static final long serialVersionUID = 0L;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
+        com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         payloadRedactionProfile_ = s;
@@ -367,7 +367,7 @@ private static final long serialVersionUID = 0L;
         getPayloadRedactionProfileBytes() {
       java.lang.Object ref = payloadRedactionProfile_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         payloadRedactionProfile_ = b;
@@ -819,7 +819,7 @@ private static final long serialVersionUID = 0L;
           getTopicBytes() {
         java.lang.Object ref = topic_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           topic_ = b;
@@ -911,7 +911,7 @@ private static final long serialVersionUID = 0L;
           getPartitionKeyFieldBytes() {
         java.lang.Object ref = partitionKeyField_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           partitionKeyField_ = b;
@@ -1003,7 +1003,7 @@ private static final long serialVersionUID = 0L;
           getDeliveryGuaranteeBytes() {
         java.lang.Object ref = deliveryGuarantee_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           deliveryGuarantee_ = b;
@@ -1095,7 +1095,7 @@ private static final long serialVersionUID = 0L;
           getPayloadRedactionProfileBytes() {
         java.lang.Object ref = payloadRedactionProfile_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           payloadRedactionProfile_ = b;
@@ -1262,7 +1262,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       eventType_ = s;
@@ -1278,7 +1278,7 @@ private static final long serialVersionUID = 0L;
       getEventTypeBytes() {
     java.lang.Object ref = eventType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       eventType_ = b;
@@ -1301,7 +1301,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       outboxTopic_ = s;
@@ -1317,7 +1317,7 @@ private static final long serialVersionUID = 0L;
       getOutboxTopicBytes() {
     java.lang.Object ref = outboxTopic_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       outboxTopic_ = b;
@@ -1340,7 +1340,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       partitionKeyField_ = s;
@@ -1356,7 +1356,7 @@ private static final long serialVersionUID = 0L;
       getPartitionKeyFieldBytes() {
     java.lang.Object ref = partitionKeyField_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       partitionKeyField_ = b;
@@ -1379,7 +1379,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       payloadRedactionProfile_ = s;
@@ -1395,7 +1395,7 @@ private static final long serialVersionUID = 0L;
       getPayloadRedactionProfileBytes() {
     java.lang.Object ref = payloadRedactionProfile_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       payloadRedactionProfile_ = b;
@@ -1418,7 +1418,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       deliveryGuarantee_ = s;
@@ -1434,7 +1434,7 @@ private static final long serialVersionUID = 0L;
       getDeliveryGuaranteeBytes() {
     java.lang.Object ref = deliveryGuarantee_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       deliveryGuarantee_ = b;
@@ -1457,7 +1457,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       replayCompatibility_ = s;
@@ -1473,7 +1473,7 @@ private static final long serialVersionUID = 0L;
       getReplayCompatibilityBytes() {
     java.lang.Object ref = replayCompatibility_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       replayCompatibility_ = b;
@@ -1511,7 +1511,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder>
+  public java.util.List<? extends com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder> 
       getEmitsOrBuilderList() {
     return emits_;
   }
@@ -1951,7 +1951,7 @@ private static final long serialVersionUID = 0L;
             emitsBuilder_ = null;
             emits_ = other.emits_;
             bitField0_ = (bitField0_ & ~0x00000040);
-            emitsBuilder_ =
+            emitsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetEmitsFieldBuilder() : null;
           } else {
@@ -2070,7 +2070,7 @@ private static final long serialVersionUID = 0L;
         getEventTypeBytes() {
       java.lang.Object ref = eventType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         eventType_ = b;
@@ -2142,7 +2142,7 @@ private static final long serialVersionUID = 0L;
         getOutboxTopicBytes() {
       java.lang.Object ref = outboxTopic_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         outboxTopic_ = b;
@@ -2214,7 +2214,7 @@ private static final long serialVersionUID = 0L;
         getPartitionKeyFieldBytes() {
       java.lang.Object ref = partitionKeyField_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         partitionKeyField_ = b;
@@ -2286,7 +2286,7 @@ private static final long serialVersionUID = 0L;
         getPayloadRedactionProfileBytes() {
       java.lang.Object ref = payloadRedactionProfile_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         payloadRedactionProfile_ = b;
@@ -2358,7 +2358,7 @@ private static final long serialVersionUID = 0L;
         getDeliveryGuaranteeBytes() {
       java.lang.Object ref = deliveryGuarantee_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         deliveryGuarantee_ = b;
@@ -2430,7 +2430,7 @@ private static final long serialVersionUID = 0L;
         getReplayCompatibilityBytes() {
       java.lang.Object ref = replayCompatibility_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         replayCompatibility_ = b;
@@ -2777,7 +2777,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder>
+    public java.util.List<? extends com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder> 
          getEmitsOrBuilderList() {
       if (emitsBuilder_ != null) {
         return emitsBuilder_.getMessageOrBuilderList();
@@ -2824,12 +2824,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder>
+    public java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder> 
          getEmitsBuilderList() {
       return internalGetEmitsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.EventContractOptions.EmittedEvent, com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder, com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder>
+        com.udb.core.common.v1.EventContractOptions.EmittedEvent, com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder, com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder> 
         internalGetEmitsFieldBuilder() {
       if (emitsBuilder_ == null) {
         emitsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -2893,3 +2893,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

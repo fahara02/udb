@@ -333,3 +333,4 @@ class RetrieveHit extends \Google\Protobuf\Internal\Message
     }
 
 }
+

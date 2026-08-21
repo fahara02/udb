@@ -25,3 +25,4 @@ class MfaPolicy
         static::$is_initialized = true;
     }
 }
+

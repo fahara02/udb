@@ -93,3 +93,4 @@ class SignalWorkflowResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

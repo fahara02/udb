@@ -287,3 +287,4 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
+

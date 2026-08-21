@@ -144,3 +144,4 @@ class GetDeliveryStatsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

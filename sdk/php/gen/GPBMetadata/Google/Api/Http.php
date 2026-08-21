@@ -22,3 +22,4 @@ class Http
         static::$is_initialized = true;
     }
 }
+

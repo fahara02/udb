@@ -26,3 +26,4 @@ class PolicyRule
         static::$is_initialized = true;
     }
 }
+

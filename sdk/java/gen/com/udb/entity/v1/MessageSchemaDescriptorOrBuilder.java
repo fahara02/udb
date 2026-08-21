@@ -110,7 +110,7 @@ public interface MessageSchemaDescriptorOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.MessageFieldDescriptor fields = 8 [json_name = "fields"];</code>
    */
-  java.util.List<com.udb.entity.v1.MessageFieldDescriptor>
+  java.util.List<com.udb.entity.v1.MessageFieldDescriptor> 
       getFieldsList();
   /**
    * <code>repeated .udb.entity.v1.MessageFieldDescriptor fields = 8 [json_name = "fields"];</code>
@@ -123,7 +123,7 @@ public interface MessageSchemaDescriptorOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.MessageFieldDescriptor fields = 8 [json_name = "fields"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.MessageFieldDescriptorOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.MessageFieldDescriptorOrBuilder> 
       getFieldsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.MessageFieldDescriptor fields = 8 [json_name = "fields"];</code>

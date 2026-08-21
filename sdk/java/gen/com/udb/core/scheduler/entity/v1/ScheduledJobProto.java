@@ -28,7 +28,7 @@ public final class ScheduledJobProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_scheduler_entity_v1_ScheduledJob_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_scheduler_entity_v1_ScheduledJob_fieldAccessorTable;
 

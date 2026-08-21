@@ -71,3 +71,4 @@ class ContentType
         return constant($const);
     }
 }
+

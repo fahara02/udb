@@ -13,7 +13,7 @@ public interface AdminAuditLogResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.AdminAuditLogRecord logs = 1 [json_name = "logs"];</code>
    */
-  java.util.List<com.udb.entity.v1.AdminAuditLogRecord>
+  java.util.List<com.udb.entity.v1.AdminAuditLogRecord> 
       getLogsList();
   /**
    * <code>repeated .udb.entity.v1.AdminAuditLogRecord logs = 1 [json_name = "logs"];</code>
@@ -26,7 +26,7 @@ public interface AdminAuditLogResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.AdminAuditLogRecord logs = 1 [json_name = "logs"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.AdminAuditLogRecordOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.AdminAuditLogRecordOrBuilder> 
       getLogsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.AdminAuditLogRecord logs = 1 [json_name = "logs"];</code>

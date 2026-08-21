@@ -113,3 +113,4 @@ class ForgotPasswordResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

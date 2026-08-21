@@ -147,3 +147,4 @@ class UndeleteSecretResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

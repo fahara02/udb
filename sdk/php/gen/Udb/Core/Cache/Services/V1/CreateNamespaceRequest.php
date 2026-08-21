@@ -155,3 +155,4 @@ class CreateNamespaceRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

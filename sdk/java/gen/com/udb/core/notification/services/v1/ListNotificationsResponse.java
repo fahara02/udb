@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.notification.entity.v1.NotificationLog logs = 1 [json_name = "logs"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationLogOrBuilder>
+  public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationLogOrBuilder> 
       getLogsOrBuilderList() {
     return logs_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             logsBuilder_ = null;
             logs_ = other.logs_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            logsBuilder_ =
+            logsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetLogsFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.notification.entity.v1.NotificationLog logs = 1 [json_name = "logs"];</code>
      */
-    public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationLogOrBuilder>
+    public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationLogOrBuilder> 
          getLogsOrBuilderList() {
       if (logsBuilder_ != null) {
         return logsBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.notification.entity.v1.NotificationLog logs = 1 [json_name = "logs"];</code>
      */
-    public java.util.List<com.udb.core.notification.entity.v1.NotificationLog.Builder>
+    public java.util.List<com.udb.core.notification.entity.v1.NotificationLog.Builder> 
          getLogsBuilderList() {
       return internalGetLogsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.notification.entity.v1.NotificationLog, com.udb.core.notification.entity.v1.NotificationLog.Builder, com.udb.core.notification.entity.v1.NotificationLogOrBuilder>
+        com.udb.core.notification.entity.v1.NotificationLog, com.udb.core.notification.entity.v1.NotificationLog.Builder, com.udb.core.notification.entity.v1.NotificationLogOrBuilder> 
         internalGetLogsFieldBuilder() {
       if (logsBuilder_ == null) {
         logsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,3 +911,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

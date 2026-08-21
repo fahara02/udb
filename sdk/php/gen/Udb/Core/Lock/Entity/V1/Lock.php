@@ -385,3 +385,4 @@ class Lock extends \Google\Protobuf\Internal\Message
     }
 
 }
+

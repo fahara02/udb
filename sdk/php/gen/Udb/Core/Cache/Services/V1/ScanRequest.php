@@ -182,3 +182,4 @@ class ScanRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

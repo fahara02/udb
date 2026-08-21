@@ -572,7 +572,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyCanary canary = 1 [json_name = "canary"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyCanary, com.udb.core.authz.entity.v1.PolicyCanary.Builder, com.udb.core.authz.entity.v1.PolicyCanaryOrBuilder>
+        com.udb.core.authz.entity.v1.PolicyCanary, com.udb.core.authz.entity.v1.PolicyCanary.Builder, com.udb.core.authz.entity.v1.PolicyCanaryOrBuilder> 
         internalGetCanaryFieldBuilder() {
       if (canaryBuilder_ == null) {
         canaryBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -726,3 +726,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

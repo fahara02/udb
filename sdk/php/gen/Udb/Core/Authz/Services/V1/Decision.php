@@ -299,3 +299,4 @@ class Decision extends \Google\Protobuf\Internal\Message
     }
 
 }
+

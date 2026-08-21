@@ -83,3 +83,4 @@ class CloseRoomRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

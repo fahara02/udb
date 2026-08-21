@@ -77,7 +77,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tableName_ = s;
@@ -93,7 +93,7 @@ private static final long serialVersionUID = 0L;
       getTableNameBytes() {
     java.lang.Object ref = tableName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tableName_ = b;
@@ -116,7 +116,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       schemaName_ = s;
@@ -132,7 +132,7 @@ private static final long serialVersionUID = 0L;
       getSchemaNameBytes() {
     java.lang.Object ref = schemaName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       schemaName_ = b;
@@ -177,7 +177,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       comment_ = s;
@@ -193,7 +193,7 @@ private static final long serialVersionUID = 0L;
       getCommentBytes() {
     java.lang.Object ref = comment_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       comment_ = b;
@@ -275,7 +275,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       partitionColumn_ = s;
@@ -291,7 +291,7 @@ private static final long serialVersionUID = 0L;
       getPartitionColumnBytes() {
     java.lang.Object ref = partitionColumn_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       partitionColumn_ = b;
@@ -334,7 +334,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.RlsPolicy rls_policies = 12 [json_name = "rlsPolicies"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.RlsPolicyOrBuilder>
+  public java.util.List<? extends com.udb.core.common.v1.RlsPolicyOrBuilder> 
       getRlsPoliciesOrBuilderList() {
     return rlsPolicies_;
   }
@@ -405,7 +405,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       softDeleteColumn_ = s;
@@ -425,7 +425,7 @@ private static final long serialVersionUID = 0L;
       getSoftDeleteColumnBytes() {
     java.lang.Object ref = softDeleteColumn_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       softDeleteColumn_ = b;
@@ -467,7 +467,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tablespace_ = s;
@@ -487,7 +487,7 @@ private static final long serialVersionUID = 0L;
       getTablespaceBytes() {
     java.lang.Object ref = tablespace_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tablespace_ = b;
@@ -521,7 +521,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.IndexOptions indexes = 17 [json_name = "indexes"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.IndexOptionsOrBuilder>
+  public java.util.List<? extends com.udb.core.common.v1.IndexOptionsOrBuilder> 
       getIndexesOrBuilderList() {
     return indexes_;
   }
@@ -585,7 +585,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.TableForeignKey foreign_keys = 18 [json_name = "foreignKeys"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.TableForeignKeyOrBuilder>
+  public java.util.List<? extends com.udb.core.common.v1.TableForeignKeyOrBuilder> 
       getForeignKeysOrBuilderList() {
     return foreignKeys_;
   }
@@ -646,7 +646,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.DbExtension extensions = 19 [json_name = "extensions"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.DbExtensionOrBuilder>
+  public java.util.List<? extends com.udb.core.common.v1.DbExtensionOrBuilder> 
       getExtensionsOrBuilderList() {
     return extensions_;
   }
@@ -707,7 +707,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.MaterializedView materialized_views = 20 [json_name = "materializedViews"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.MaterializedViewOrBuilder>
+  public java.util.List<? extends com.udb.core.common.v1.MaterializedViewOrBuilder> 
       getMaterializedViewsOrBuilderList() {
     return materializedViews_;
   }
@@ -770,7 +770,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.DbTrigger triggers = 21 [json_name = "triggers"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.DbTriggerOrBuilder>
+  public java.util.List<? extends com.udb.core.common.v1.DbTriggerOrBuilder> 
       getTriggersOrBuilderList() {
     return triggers_;
   }
@@ -829,7 +829,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       previousTableName_ = s;
@@ -849,7 +849,7 @@ private static final long serialVersionUID = 0L;
       getPreviousTableNameBytes() {
     java.lang.Object ref = previousTableName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       previousTableName_ = b;
@@ -894,7 +894,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.common.v1.SqlArtifact sql_artifacts = 24 [json_name = "sqlArtifacts"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.common.v1.SqlArtifactOrBuilder>
+  public java.util.List<? extends com.udb.core.common.v1.SqlArtifactOrBuilder> 
       getSqlArtifactsOrBuilderList() {
     return sqlArtifacts_;
   }
@@ -954,7 +954,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       partitionInterval_ = s;
@@ -975,7 +975,7 @@ private static final long serialVersionUID = 0L;
       getPartitionIntervalBytes() {
     java.lang.Object ref = partitionInterval_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       partitionInterval_ = b;
@@ -1047,7 +1047,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       replicaHint_ = s;
@@ -1067,7 +1067,7 @@ private static final long serialVersionUID = 0L;
       getReplicaHintBytes() {
     java.lang.Object ref = replicaHint_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       replicaHint_ = b;
@@ -1094,7 +1094,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       cdcTopic_ = s;
@@ -1114,7 +1114,7 @@ private static final long serialVersionUID = 0L;
       getCdcTopicBytes() {
     java.lang.Object ref = cdcTopic_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       cdcTopic_ = b;
@@ -1141,7 +1141,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       requiredScope_ = s;
@@ -1161,7 +1161,7 @@ private static final long serialVersionUID = 0L;
       getRequiredScopeBytes() {
     java.lang.Object ref = requiredScope_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       requiredScope_ = b;
@@ -1226,7 +1226,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nativeServiceId_ = s;
@@ -1246,7 +1246,7 @@ private static final long serialVersionUID = 0L;
       getNativeServiceIdBytes() {
     java.lang.Object ref = nativeServiceId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nativeServiceId_ = b;
@@ -2167,7 +2167,7 @@ private static final long serialVersionUID = 0L;
             rlsPoliciesBuilder_ = null;
             rlsPolicies_ = other.rlsPolicies_;
             bitField0_ = (bitField0_ & ~0x00000800);
-            rlsPoliciesBuilder_ =
+            rlsPoliciesBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetRlsPoliciesFieldBuilder() : null;
           } else {
@@ -2209,7 +2209,7 @@ private static final long serialVersionUID = 0L;
             indexesBuilder_ = null;
             indexes_ = other.indexes_;
             bitField0_ = (bitField0_ & ~0x00010000);
-            indexesBuilder_ =
+            indexesBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetIndexesFieldBuilder() : null;
           } else {
@@ -2235,7 +2235,7 @@ private static final long serialVersionUID = 0L;
             foreignKeysBuilder_ = null;
             foreignKeys_ = other.foreignKeys_;
             bitField0_ = (bitField0_ & ~0x00020000);
-            foreignKeysBuilder_ =
+            foreignKeysBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetForeignKeysFieldBuilder() : null;
           } else {
@@ -2261,7 +2261,7 @@ private static final long serialVersionUID = 0L;
             extensionsBuilder_ = null;
             extensions_ = other.extensions_;
             bitField0_ = (bitField0_ & ~0x00040000);
-            extensionsBuilder_ =
+            extensionsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetExtensionsFieldBuilder() : null;
           } else {
@@ -2287,7 +2287,7 @@ private static final long serialVersionUID = 0L;
             materializedViewsBuilder_ = null;
             materializedViews_ = other.materializedViews_;
             bitField0_ = (bitField0_ & ~0x00080000);
-            materializedViewsBuilder_ =
+            materializedViewsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetMaterializedViewsFieldBuilder() : null;
           } else {
@@ -2313,7 +2313,7 @@ private static final long serialVersionUID = 0L;
             triggersBuilder_ = null;
             triggers_ = other.triggers_;
             bitField0_ = (bitField0_ & ~0x00100000);
-            triggersBuilder_ =
+            triggersBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetTriggersFieldBuilder() : null;
           } else {
@@ -2347,7 +2347,7 @@ private static final long serialVersionUID = 0L;
             sqlArtifactsBuilder_ = null;
             sqlArtifacts_ = other.sqlArtifacts_;
             bitField0_ = (bitField0_ & ~0x00800000);
-            sqlArtifactsBuilder_ =
+            sqlArtifactsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetSqlArtifactsFieldBuilder() : null;
           } else {
@@ -2684,7 +2684,7 @@ private static final long serialVersionUID = 0L;
         getTableNameBytes() {
       java.lang.Object ref = tableName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tableName_ = b;
@@ -2756,7 +2756,7 @@ private static final long serialVersionUID = 0L;
         getSchemaNameBytes() {
       java.lang.Object ref = schemaName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         schemaName_ = b;
@@ -2892,7 +2892,7 @@ private static final long serialVersionUID = 0L;
         getCommentBytes() {
       java.lang.Object ref = comment_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         comment_ = b;
@@ -3135,7 +3135,7 @@ private static final long serialVersionUID = 0L;
         getPartitionColumnBytes() {
       java.lang.Object ref = partitionColumn_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         partitionColumn_ = b;
@@ -3469,7 +3469,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.RlsPolicy rls_policies = 12 [json_name = "rlsPolicies"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.RlsPolicyOrBuilder>
+    public java.util.List<? extends com.udb.core.common.v1.RlsPolicyOrBuilder> 
          getRlsPoliciesOrBuilderList() {
       if (rlsPoliciesBuilder_ != null) {
         return rlsPoliciesBuilder_.getMessageOrBuilderList();
@@ -3507,12 +3507,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.RlsPolicy rls_policies = 12 [json_name = "rlsPolicies"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.RlsPolicy.Builder>
+    public java.util.List<com.udb.core.common.v1.RlsPolicy.Builder> 
          getRlsPoliciesBuilderList() {
       return internalGetRlsPoliciesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.RlsPolicy, com.udb.core.common.v1.RlsPolicy.Builder, com.udb.core.common.v1.RlsPolicyOrBuilder>
+        com.udb.core.common.v1.RlsPolicy, com.udb.core.common.v1.RlsPolicy.Builder, com.udb.core.common.v1.RlsPolicyOrBuilder> 
         internalGetRlsPoliciesFieldBuilder() {
       if (rlsPoliciesBuilder_ == null) {
         rlsPoliciesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -3603,7 +3603,7 @@ private static final long serialVersionUID = 0L;
         getSoftDeleteColumnBytes() {
       java.lang.Object ref = softDeleteColumn_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         softDeleteColumn_ = b;
@@ -3739,7 +3739,7 @@ private static final long serialVersionUID = 0L;
         getTablespaceBytes() {
       java.lang.Object ref = tablespace_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tablespace_ = b;
@@ -4068,7 +4068,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.IndexOptions indexes = 17 [json_name = "indexes"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.IndexOptionsOrBuilder>
+    public java.util.List<? extends com.udb.core.common.v1.IndexOptionsOrBuilder> 
          getIndexesOrBuilderList() {
       if (indexesBuilder_ != null) {
         return indexesBuilder_.getMessageOrBuilderList();
@@ -4109,12 +4109,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.IndexOptions indexes = 17 [json_name = "indexes"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.IndexOptions.Builder>
+    public java.util.List<com.udb.core.common.v1.IndexOptions.Builder> 
          getIndexesBuilderList() {
       return internalGetIndexesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.IndexOptions, com.udb.core.common.v1.IndexOptions.Builder, com.udb.core.common.v1.IndexOptionsOrBuilder>
+        com.udb.core.common.v1.IndexOptions, com.udb.core.common.v1.IndexOptions.Builder, com.udb.core.common.v1.IndexOptionsOrBuilder> 
         internalGetIndexesFieldBuilder() {
       if (indexesBuilder_ == null) {
         indexesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -4383,7 +4383,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.TableForeignKey foreign_keys = 18 [json_name = "foreignKeys"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.TableForeignKeyOrBuilder>
+    public java.util.List<? extends com.udb.core.common.v1.TableForeignKeyOrBuilder> 
          getForeignKeysOrBuilderList() {
       if (foreignKeysBuilder_ != null) {
         return foreignKeysBuilder_.getMessageOrBuilderList();
@@ -4421,12 +4421,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.TableForeignKey foreign_keys = 18 [json_name = "foreignKeys"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.TableForeignKey.Builder>
+    public java.util.List<com.udb.core.common.v1.TableForeignKey.Builder> 
          getForeignKeysBuilderList() {
       return internalGetForeignKeysFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.TableForeignKey, com.udb.core.common.v1.TableForeignKey.Builder, com.udb.core.common.v1.TableForeignKeyOrBuilder>
+        com.udb.core.common.v1.TableForeignKey, com.udb.core.common.v1.TableForeignKey.Builder, com.udb.core.common.v1.TableForeignKeyOrBuilder> 
         internalGetForeignKeysFieldBuilder() {
       if (foreignKeysBuilder_ == null) {
         foreignKeysBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -4695,7 +4695,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.DbExtension extensions = 19 [json_name = "extensions"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.DbExtensionOrBuilder>
+    public java.util.List<? extends com.udb.core.common.v1.DbExtensionOrBuilder> 
          getExtensionsOrBuilderList() {
       if (extensionsBuilder_ != null) {
         return extensionsBuilder_.getMessageOrBuilderList();
@@ -4733,12 +4733,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.DbExtension extensions = 19 [json_name = "extensions"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.DbExtension.Builder>
+    public java.util.List<com.udb.core.common.v1.DbExtension.Builder> 
          getExtensionsBuilderList() {
       return internalGetExtensionsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.DbExtension, com.udb.core.common.v1.DbExtension.Builder, com.udb.core.common.v1.DbExtensionOrBuilder>
+        com.udb.core.common.v1.DbExtension, com.udb.core.common.v1.DbExtension.Builder, com.udb.core.common.v1.DbExtensionOrBuilder> 
         internalGetExtensionsFieldBuilder() {
       if (extensionsBuilder_ == null) {
         extensionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -5007,7 +5007,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.MaterializedView materialized_views = 20 [json_name = "materializedViews"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.MaterializedViewOrBuilder>
+    public java.util.List<? extends com.udb.core.common.v1.MaterializedViewOrBuilder> 
          getMaterializedViewsOrBuilderList() {
       if (materializedViewsBuilder_ != null) {
         return materializedViewsBuilder_.getMessageOrBuilderList();
@@ -5045,12 +5045,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.MaterializedView materialized_views = 20 [json_name = "materializedViews"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.MaterializedView.Builder>
+    public java.util.List<com.udb.core.common.v1.MaterializedView.Builder> 
          getMaterializedViewsBuilderList() {
       return internalGetMaterializedViewsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.MaterializedView, com.udb.core.common.v1.MaterializedView.Builder, com.udb.core.common.v1.MaterializedViewOrBuilder>
+        com.udb.core.common.v1.MaterializedView, com.udb.core.common.v1.MaterializedView.Builder, com.udb.core.common.v1.MaterializedViewOrBuilder> 
         internalGetMaterializedViewsFieldBuilder() {
       if (materializedViewsBuilder_ == null) {
         materializedViewsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -5334,7 +5334,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.DbTrigger triggers = 21 [json_name = "triggers"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.DbTriggerOrBuilder>
+    public java.util.List<? extends com.udb.core.common.v1.DbTriggerOrBuilder> 
          getTriggersOrBuilderList() {
       if (triggersBuilder_ != null) {
         return triggersBuilder_.getMessageOrBuilderList();
@@ -5375,12 +5375,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.DbTrigger triggers = 21 [json_name = "triggers"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.DbTrigger.Builder>
+    public java.util.List<com.udb.core.common.v1.DbTrigger.Builder> 
          getTriggersBuilderList() {
       return internalGetTriggersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.DbTrigger, com.udb.core.common.v1.DbTrigger.Builder, com.udb.core.common.v1.DbTriggerOrBuilder>
+        com.udb.core.common.v1.DbTrigger, com.udb.core.common.v1.DbTrigger.Builder, com.udb.core.common.v1.DbTriggerOrBuilder> 
         internalGetTriggersFieldBuilder() {
       if (triggersBuilder_ == null) {
         triggersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -5427,7 +5427,7 @@ private static final long serialVersionUID = 0L;
         getPreviousTableNameBytes() {
       java.lang.Object ref = previousTableName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         previousTableName_ = b;
@@ -5788,7 +5788,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.SqlArtifact sql_artifacts = 24 [json_name = "sqlArtifacts"];</code>
      */
-    public java.util.List<? extends com.udb.core.common.v1.SqlArtifactOrBuilder>
+    public java.util.List<? extends com.udb.core.common.v1.SqlArtifactOrBuilder> 
          getSqlArtifactsOrBuilderList() {
       if (sqlArtifactsBuilder_ != null) {
         return sqlArtifactsBuilder_.getMessageOrBuilderList();
@@ -5829,12 +5829,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.common.v1.SqlArtifact sql_artifacts = 24 [json_name = "sqlArtifacts"];</code>
      */
-    public java.util.List<com.udb.core.common.v1.SqlArtifact.Builder>
+    public java.util.List<com.udb.core.common.v1.SqlArtifact.Builder> 
          getSqlArtifactsBuilderList() {
       return internalGetSqlArtifactsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.common.v1.SqlArtifact, com.udb.core.common.v1.SqlArtifact.Builder, com.udb.core.common.v1.SqlArtifactOrBuilder>
+        com.udb.core.common.v1.SqlArtifact, com.udb.core.common.v1.SqlArtifact.Builder, com.udb.core.common.v1.SqlArtifactOrBuilder> 
         internalGetSqlArtifactsFieldBuilder() {
       if (sqlArtifactsBuilder_ == null) {
         sqlArtifactsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -5883,7 +5883,7 @@ private static final long serialVersionUID = 0L;
         getPartitionIntervalBytes() {
       java.lang.Object ref = partitionInterval_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         partitionInterval_ = b;
@@ -6110,7 +6110,7 @@ private static final long serialVersionUID = 0L;
         getReplicaHintBytes() {
       java.lang.Object ref = replicaHint_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         replicaHint_ = b;
@@ -6202,7 +6202,7 @@ private static final long serialVersionUID = 0L;
         getCdcTopicBytes() {
       java.lang.Object ref = cdcTopic_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         cdcTopic_ = b;
@@ -6294,7 +6294,7 @@ private static final long serialVersionUID = 0L;
         getRequiredScopeBytes() {
       java.lang.Object ref = requiredScope_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         requiredScope_ = b;
@@ -6497,7 +6497,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.VectorStoreOptions vector_store = 32 [json_name = "vectorStore"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.VectorStoreOptions, com.udb.core.common.v1.VectorStoreOptions.Builder, com.udb.core.common.v1.VectorStoreOptionsOrBuilder>
+        com.udb.core.common.v1.VectorStoreOptions, com.udb.core.common.v1.VectorStoreOptions.Builder, com.udb.core.common.v1.VectorStoreOptionsOrBuilder> 
         internalGetVectorStoreFieldBuilder() {
       if (vectorStoreBuilder_ == null) {
         vectorStoreBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -6543,7 +6543,7 @@ private static final long serialVersionUID = 0L;
         getNativeServiceIdBytes() {
       java.lang.Object ref = nativeServiceId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nativeServiceId_ = b;
@@ -6652,3 +6652,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

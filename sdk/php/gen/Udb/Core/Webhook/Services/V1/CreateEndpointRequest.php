@@ -243,3 +243,4 @@ class CreateEndpointRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

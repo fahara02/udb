@@ -23,3 +23,4 @@ class Dto
         static::$is_initialized = true;
     }
 }
+

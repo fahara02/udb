@@ -29,3 +29,4 @@ class AssetService
         static::$is_initialized = true;
     }
 }
+

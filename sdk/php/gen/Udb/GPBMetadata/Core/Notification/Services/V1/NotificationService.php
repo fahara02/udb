@@ -25,3 +25,4 @@ class NotificationService
         static::$is_initialized = true;
     }
 }
+

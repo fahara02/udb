@@ -356,3 +356,4 @@ class AuthzRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

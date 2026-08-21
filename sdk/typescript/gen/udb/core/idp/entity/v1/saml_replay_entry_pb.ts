@@ -66,3 +66,4 @@ export type SamlReplayEntry = Message<"udb.core.idp.entity.v1.SamlReplayEntry"> 
  */
 export const SamlReplayEntrySchema: GenMessage<SamlReplayEntry> = /*@__PURE__*/
   messageDesc(file_udb_core_idp_entity_v1_saml_replay_entry, 0);
+

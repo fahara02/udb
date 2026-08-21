@@ -188,3 +188,4 @@ class StageCatalogRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

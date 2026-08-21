@@ -25,3 +25,4 @@ class ControlPlaneService
         static::$is_initialized = true;
     }
 }
+

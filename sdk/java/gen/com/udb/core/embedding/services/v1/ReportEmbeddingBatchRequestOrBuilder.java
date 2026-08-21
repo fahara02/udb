@@ -25,7 +25,7 @@ public interface ReportEmbeddingBatchRequestOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingRequest items = 2 [json_name = "items"];</code>
    */
-  java.util.List<com.udb.core.embedding.services.v1.ReportEmbeddingRequest>
+  java.util.List<com.udb.core.embedding.services.v1.ReportEmbeddingRequest> 
       getItemsList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingRequest items = 2 [json_name = "items"];</code>
@@ -38,7 +38,7 @@ public interface ReportEmbeddingBatchRequestOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingRequest items = 2 [json_name = "items"];</code>
    */
-  java.util.List<? extends com.udb.core.embedding.services.v1.ReportEmbeddingRequestOrBuilder>
+  java.util.List<? extends com.udb.core.embedding.services.v1.ReportEmbeddingRequestOrBuilder> 
       getItemsOrBuilderList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.ReportEmbeddingRequest items = 2 [json_name = "items"];</code>

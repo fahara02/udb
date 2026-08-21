@@ -56,3 +56,4 @@ class FusionStrategy
         return constant($const);
     }
 }
+

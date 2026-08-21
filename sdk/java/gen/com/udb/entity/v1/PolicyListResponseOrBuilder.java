@@ -13,7 +13,7 @@ public interface PolicyListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.PolicyRecord policies = 1 [json_name = "policies"];</code>
    */
-  java.util.List<com.udb.entity.v1.PolicyRecord>
+  java.util.List<com.udb.entity.v1.PolicyRecord> 
       getPoliciesList();
   /**
    * <code>repeated .udb.entity.v1.PolicyRecord policies = 1 [json_name = "policies"];</code>
@@ -26,7 +26,7 @@ public interface PolicyListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.PolicyRecord policies = 1 [json_name = "policies"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.PolicyRecordOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.PolicyRecordOrBuilder> 
       getPoliciesOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.PolicyRecord policies = 1 [json_name = "policies"];</code>

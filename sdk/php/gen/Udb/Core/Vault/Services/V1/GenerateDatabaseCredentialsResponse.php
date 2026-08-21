@@ -255,3 +255,4 @@ class GenerateDatabaseCredentialsResponse extends \Google\Protobuf\Internal\Mess
     }
 
 }
+

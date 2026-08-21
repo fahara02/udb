@@ -292,3 +292,4 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

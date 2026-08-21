@@ -368,3 +368,4 @@ class ProtocolSupport extends \Google\Protobuf\Internal\Message
     }
 
 }
+

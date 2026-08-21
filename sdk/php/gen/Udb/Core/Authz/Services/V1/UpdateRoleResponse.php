@@ -66,3 +66,4 @@ class UpdateRoleResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

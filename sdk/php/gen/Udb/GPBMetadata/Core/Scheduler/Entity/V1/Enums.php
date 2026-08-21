@@ -22,3 +22,4 @@ class Enums
         static::$is_initialized = true;
     }
 }
+

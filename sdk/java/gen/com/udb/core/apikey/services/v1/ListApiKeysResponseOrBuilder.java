@@ -13,7 +13,7 @@ public interface ListApiKeysResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.apikey.entity.v1.ApiKey keys = 1 [json_name = "keys"];</code>
    */
-  java.util.List<com.udb.core.apikey.entity.v1.ApiKey>
+  java.util.List<com.udb.core.apikey.entity.v1.ApiKey> 
       getKeysList();
   /**
    * <code>repeated .udb.core.apikey.entity.v1.ApiKey keys = 1 [json_name = "keys"];</code>
@@ -26,7 +26,7 @@ public interface ListApiKeysResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.apikey.entity.v1.ApiKey keys = 1 [json_name = "keys"];</code>
    */
-  java.util.List<? extends com.udb.core.apikey.entity.v1.ApiKeyOrBuilder>
+  java.util.List<? extends com.udb.core.apikey.entity.v1.ApiKeyOrBuilder> 
       getKeysOrBuilderList();
   /**
    * <code>repeated .udb.core.apikey.entity.v1.ApiKey keys = 1 [json_name = "keys"];</code>

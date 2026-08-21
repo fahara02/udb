@@ -79,3 +79,4 @@ export type WebAuthnPolicy = Message<"udb.core.authn.entity.v1.WebAuthnPolicy"> 
  */
 export const WebAuthnPolicySchema: GenMessage<WebAuthnPolicy> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_webauthn_policy, 0);
+

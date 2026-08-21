@@ -104,3 +104,4 @@ class ScimPatchGroupResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

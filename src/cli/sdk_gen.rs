@@ -3823,7 +3823,7 @@ mod tests {
     // errors per entity, and the generated package does not compile.
     #[test]
     fn message_typed_json_column_does_not_emit_uncompilable_go() {
-        let mut col = column("audit_info", "ambulife.common.v1.AuditInfo");
+        let mut col = column("audit_info", "acme.common.v1.AuditInfo");
         col.is_json = true;
         col.is_jsonb = true;
 
@@ -3886,7 +3886,7 @@ mod tests {
             columns: Vec::new(),
         };
         let err = validate_repository_entities(&[
-            mk("MfaChallenge", "ambulife.authn.entity.v1"),
+            mk("MfaChallenge", "acme.authn.entity.v1"),
             mk("MfaChallenge", "udb.core.authn.entity.v1"),
         ])
         .expect_err("a short-name collision must be refused, not emitted");
@@ -3895,7 +3895,7 @@ mod tests {
             "name the symbol: {err}"
         );
         assert!(
-            err.contains("ambulife.authn.entity.v1.MfaChallenge"),
+            err.contains("acme.authn.entity.v1.MfaChallenge"),
             "name both: {err}"
         );
         assert!(
@@ -3903,7 +3903,7 @@ mod tests {
             "name both: {err}"
         );
         // Distinct short names still pass.
-        assert!(validate_repository_entities(&[mk("Trip", "ambulife.trip.entity.v1")]).is_ok());
+        assert!(validate_repository_entities(&[mk("Trip", "acme.trip.entity.v1")]).is_ok());
     }
 
     #[test]

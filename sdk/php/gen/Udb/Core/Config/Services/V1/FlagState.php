@@ -311,3 +311,4 @@ class FlagState extends \Google\Protobuf\Internal\Message
     }
 
 }
+

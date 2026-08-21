@@ -1325,3 +1325,4 @@ export type MigrateLegacyPoliciesResponse = Message<"udb.core.authz.services.v1.
  */
 export const MigrateLegacyPoliciesResponseSchema: GenMessage<MigrateLegacyPoliciesResponse> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_services_v1_governance, 35);
+

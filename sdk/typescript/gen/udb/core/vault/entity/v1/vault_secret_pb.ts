@@ -95,3 +95,4 @@ export type VaultSecret = Message<"udb.core.vault.entity.v1.VaultSecret"> & {
  */
 export const VaultSecretSchema: GenMessage<VaultSecret> = /*@__PURE__*/
   messageDesc(file_udb_core_vault_entity_v1_vault_secret, 0);
+

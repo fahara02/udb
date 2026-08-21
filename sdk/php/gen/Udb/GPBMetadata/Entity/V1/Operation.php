@@ -22,3 +22,4 @@ class Operation
         static::$is_initialized = true;
     }
 }
+

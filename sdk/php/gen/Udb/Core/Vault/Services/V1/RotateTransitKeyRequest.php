@@ -83,3 +83,4 @@ class RotateTransitKeyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

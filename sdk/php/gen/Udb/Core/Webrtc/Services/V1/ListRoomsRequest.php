@@ -171,3 +171,4 @@ class ListRoomsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

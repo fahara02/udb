@@ -649,3 +649,4 @@ class HttpRule extends \Google\Protobuf\Internal\Message
     }
 
 }
+

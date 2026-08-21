@@ -472,3 +472,4 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

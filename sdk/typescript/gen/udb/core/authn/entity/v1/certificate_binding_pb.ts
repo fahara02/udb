@@ -144,3 +144,4 @@ export type CertificateBinding = Message<"udb.core.authn.entity.v1.CertificateBi
  */
 export const CertificateBindingSchema: GenMessage<CertificateBinding> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_certificate_binding, 0);
+

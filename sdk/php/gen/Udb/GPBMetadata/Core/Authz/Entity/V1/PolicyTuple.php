@@ -24,3 +24,4 @@ class PolicyTuple
         static::$is_initialized = true;
     }
 }
+

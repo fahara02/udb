@@ -821,3 +821,4 @@ export type AnalyticalQueryResponse = Message<"udb.entity.v1.AnalyticalQueryResp
  */
 export const AnalyticalQueryResponseSchema: GenMessage<AnalyticalQueryResponse> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_stores, 20);
+

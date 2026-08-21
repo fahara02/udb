@@ -28,3 +28,4 @@ class TenantService
         static::$is_initialized = true;
     }
 }
+

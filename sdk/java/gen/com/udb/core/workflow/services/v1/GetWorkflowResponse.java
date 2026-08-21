@@ -557,7 +557,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.workflow.entity.v1.WorkflowInstance workflow = 1 [json_name = "workflow"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.workflow.entity.v1.WorkflowInstance, com.udb.core.workflow.entity.v1.WorkflowInstance.Builder, com.udb.core.workflow.entity.v1.WorkflowInstanceOrBuilder>
+        com.udb.core.workflow.entity.v1.WorkflowInstance, com.udb.core.workflow.entity.v1.WorkflowInstance.Builder, com.udb.core.workflow.entity.v1.WorkflowInstanceOrBuilder> 
         internalGetWorkflowFieldBuilder() {
       if (workflowBuilder_ == null) {
         workflowBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -678,7 +678,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 2 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -741,3 +741,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

@@ -154,3 +154,4 @@ class ReindexResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

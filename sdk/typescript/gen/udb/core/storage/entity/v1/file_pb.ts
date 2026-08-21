@@ -45,7 +45,7 @@ export type File = Message<"udb.core.storage.entity.v1.File"> & {
    * plane, AuthN, policy and the DataBroker use; empty means tenant-wide.
    *
    * Stored as bounded text rather than UUID so a registered project such as
-   * `ambulife` is accepted. A UUID's text form remains a valid opaque id, so
+   * `billing` is accepted. A UUID's text form remains a valid opaque id, so
    * existing rows migrate losslessly via the USING cast.
    *
    * @inject_tag: gorm:"column:project_id"
@@ -231,3 +231,4 @@ export type File = Message<"udb.core.storage.entity.v1.File"> & {
  */
 export const FileSchema: GenMessage<File> = /*@__PURE__*/
   messageDesc(file_udb_core_storage_entity_v1_file, 0);
+

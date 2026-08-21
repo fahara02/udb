@@ -140,3 +140,4 @@ class CanaryResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

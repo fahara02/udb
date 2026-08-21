@@ -101,3 +101,4 @@ export type Track = Message<"udb.core.webrtc.entity.v1.Track"> & {
  */
 export const TrackSchema: GenMessage<Track> = /*@__PURE__*/
   messageDesc(file_udb_core_webrtc_entity_v1_track, 0);
+

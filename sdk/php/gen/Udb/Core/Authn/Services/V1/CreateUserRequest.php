@@ -354,3 +354,4 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

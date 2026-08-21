@@ -55,7 +55,7 @@ public interface BulkCasResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.BulkCasItemResult results = 5 [json_name = "results"];</code>
    */
-  java.util.List<com.udb.entity.v1.BulkCasItemResult>
+  java.util.List<com.udb.entity.v1.BulkCasItemResult> 
       getResultsList();
   /**
    * <pre>
@@ -80,7 +80,7 @@ public interface BulkCasResponseOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.BulkCasItemResult results = 5 [json_name = "results"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.BulkCasItemResultOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.BulkCasItemResultOrBuilder> 
       getResultsOrBuilderList();
   /**
    * <pre>

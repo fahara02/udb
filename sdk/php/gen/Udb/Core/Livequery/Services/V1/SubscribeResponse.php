@@ -140,3 +140,4 @@ class SubscribeResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

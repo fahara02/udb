@@ -22,3 +22,4 @@ class Consistency
         static::$is_initialized = true;
     }
 }
+

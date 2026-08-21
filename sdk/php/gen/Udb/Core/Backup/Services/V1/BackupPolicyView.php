@@ -362,3 +362,4 @@ class BackupPolicyView extends \Google\Protobuf\Internal\Message
     }
 
 }
+

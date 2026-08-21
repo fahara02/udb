@@ -201,3 +201,4 @@ class JoinSessionResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

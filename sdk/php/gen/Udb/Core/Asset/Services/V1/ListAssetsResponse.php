@@ -161,3 +161,4 @@ class ListAssetsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -76,3 +76,4 @@ class TenantType
         return constant($const);
     }
 }
+

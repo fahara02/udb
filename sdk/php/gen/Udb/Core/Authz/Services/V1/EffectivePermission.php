@@ -175,3 +175,4 @@ class EffectivePermission extends \Google\Protobuf\Internal\Message
     }
 
 }
+

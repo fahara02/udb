@@ -83,3 +83,4 @@ class GetAssetRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -147,3 +147,4 @@ class BatchCheckPermissionsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

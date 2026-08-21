@@ -24,3 +24,4 @@ class AuthzEvents
         static::$is_initialized = true;
     }
 }
+

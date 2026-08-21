@@ -26,3 +26,4 @@ class NotificationTemplate
         static::$is_initialized = true;
     }
 }
+

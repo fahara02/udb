@@ -93,7 +93,7 @@ public interface MigrationStatusResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.MigrationOperationStatus operations = 7 [json_name = "operations"];</code>
    */
-  java.util.List<com.udb.entity.v1.MigrationOperationStatus>
+  java.util.List<com.udb.entity.v1.MigrationOperationStatus> 
       getOperationsList();
   /**
    * <code>repeated .udb.entity.v1.MigrationOperationStatus operations = 7 [json_name = "operations"];</code>
@@ -106,7 +106,7 @@ public interface MigrationStatusResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.MigrationOperationStatus operations = 7 [json_name = "operations"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.MigrationOperationStatusOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.MigrationOperationStatusOrBuilder> 
       getOperationsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.MigrationOperationStatus operations = 7 [json_name = "operations"];</code>

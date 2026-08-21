@@ -506,3 +506,4 @@ class SigningKey extends \Google\Protobuf\Internal\Message
     }
 
 }
+

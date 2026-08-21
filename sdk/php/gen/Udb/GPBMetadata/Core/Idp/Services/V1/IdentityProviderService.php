@@ -25,3 +25,4 @@ class IdentityProviderService
         static::$is_initialized = true;
     }
 }
+

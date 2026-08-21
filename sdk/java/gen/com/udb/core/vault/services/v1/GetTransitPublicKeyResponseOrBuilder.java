@@ -37,7 +37,7 @@ public interface GetTransitPublicKeyResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.vault.services.v1.TransitPublicKey public_keys = 3 [json_name = "publicKeys"];</code>
    */
-  java.util.List<com.udb.core.vault.services.v1.TransitPublicKey>
+  java.util.List<com.udb.core.vault.services.v1.TransitPublicKey> 
       getPublicKeysList();
   /**
    * <code>repeated .udb.core.vault.services.v1.TransitPublicKey public_keys = 3 [json_name = "publicKeys"];</code>
@@ -50,7 +50,7 @@ public interface GetTransitPublicKeyResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.vault.services.v1.TransitPublicKey public_keys = 3 [json_name = "publicKeys"];</code>
    */
-  java.util.List<? extends com.udb.core.vault.services.v1.TransitPublicKeyOrBuilder>
+  java.util.List<? extends com.udb.core.vault.services.v1.TransitPublicKeyOrBuilder> 
       getPublicKeysOrBuilderList();
   /**
    * <code>repeated .udb.core.vault.services.v1.TransitPublicKey public_keys = 3 [json_name = "publicKeys"];</code>

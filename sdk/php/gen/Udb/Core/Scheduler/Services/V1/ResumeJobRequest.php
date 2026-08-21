@@ -83,3 +83,4 @@ class ResumeJobRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

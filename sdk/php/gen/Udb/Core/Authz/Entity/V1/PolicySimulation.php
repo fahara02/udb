@@ -369,3 +369,4 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
     }
 
 }
+

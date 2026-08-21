@@ -147,3 +147,4 @@ class StartWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Messa
     }
 
 }
+

@@ -147,3 +147,4 @@ class RenamePasskeyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -174,3 +174,4 @@ class IngestDocumentBatchResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -244,3 +244,4 @@ class ScimUser extends \Google\Protobuf\Internal\Message
     }
 
 }
+

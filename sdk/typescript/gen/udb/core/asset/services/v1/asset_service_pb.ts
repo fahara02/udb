@@ -619,3 +619,4 @@ export const AssetService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_asset_services_v1_asset_service, 0);
+

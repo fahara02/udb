@@ -126,3 +126,4 @@ export type Notification = Message<"udb.core.notification.entity.v1.Notification
  */
 export const NotificationSchema: GenMessage<Notification> = /*@__PURE__*/
   messageDesc(file_udb_core_notification_entity_v1_notification, 0);
+

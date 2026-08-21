@@ -61,3 +61,4 @@ class ConfidenceLevel
         return constant($const);
     }
 }
+

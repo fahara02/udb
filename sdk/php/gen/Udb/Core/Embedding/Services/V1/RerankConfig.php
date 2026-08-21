@@ -164,3 +164,4 @@ class RerankConfig extends \Google\Protobuf\Internal\Message
     }
 
 }
+

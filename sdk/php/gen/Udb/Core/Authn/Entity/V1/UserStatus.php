@@ -74,3 +74,4 @@ class UserStatus
         return constant($const);
     }
 }
+

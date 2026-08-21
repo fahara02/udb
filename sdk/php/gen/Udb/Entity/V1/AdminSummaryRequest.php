@@ -168,3 +168,4 @@ class AdminSummaryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -27,3 +27,4 @@ class Room
         static::$is_initialized = true;
     }
 }
+

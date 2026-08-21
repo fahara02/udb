@@ -28,7 +28,7 @@ public final class ControlPlaneNodeStateProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_control_entity_v1_ControlPlaneNodeState_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_control_entity_v1_ControlPlaneNodeState_fieldAccessorTable;
 

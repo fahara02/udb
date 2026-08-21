@@ -56,3 +56,4 @@ class ColumnBackendType
         return constant($const);
     }
 }
+

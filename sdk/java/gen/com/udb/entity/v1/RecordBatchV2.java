@@ -67,7 +67,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.ColumnBatch columns = 1 [json_name = "columns"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.ColumnBatchOrBuilder>
+  public java.util.List<? extends com.udb.entity.v1.ColumnBatchOrBuilder> 
       getColumnsOrBuilderList() {
     return columns_;
   }
@@ -122,7 +122,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       schemaVersion_ = s;
@@ -142,7 +142,7 @@ private static final long serialVersionUID = 0L;
       getSchemaVersionBytes() {
     java.lang.Object ref = schemaVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       schemaVersion_ = b;
@@ -226,7 +226,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -246,7 +246,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -631,7 +631,7 @@ private static final long serialVersionUID = 0L;
             columnsBuilder_ = null;
             columns_ = other.columns_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            columnsBuilder_ =
+            columnsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetColumnsFieldBuilder() : null;
           } else {
@@ -942,7 +942,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.ColumnBatch columns = 1 [json_name = "columns"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.ColumnBatchOrBuilder>
+    public java.util.List<? extends com.udb.entity.v1.ColumnBatchOrBuilder> 
          getColumnsOrBuilderList() {
       if (columnsBuilder_ != null) {
         return columnsBuilder_.getMessageOrBuilderList();
@@ -968,12 +968,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.ColumnBatch columns = 1 [json_name = "columns"];</code>
      */
-    public java.util.List<com.udb.entity.v1.ColumnBatch.Builder>
+    public java.util.List<com.udb.entity.v1.ColumnBatch.Builder> 
          getColumnsBuilderList() {
       return internalGetColumnsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.ColumnBatch, com.udb.entity.v1.ColumnBatch.Builder, com.udb.entity.v1.ColumnBatchOrBuilder>
+        com.udb.entity.v1.ColumnBatch, com.udb.entity.v1.ColumnBatch.Builder, com.udb.entity.v1.ColumnBatchOrBuilder> 
         internalGetColumnsFieldBuilder() {
       if (columnsBuilder_ == null) {
         columnsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1052,7 +1052,7 @@ private static final long serialVersionUID = 0L;
         getSchemaVersionBytes() {
       java.lang.Object ref = schemaVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         schemaVersion_ = b;
@@ -1300,7 +1300,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -1441,3 +1441,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

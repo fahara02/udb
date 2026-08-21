@@ -71,3 +71,4 @@ class PrincipalKind
         return constant($const);
     }
 }
+

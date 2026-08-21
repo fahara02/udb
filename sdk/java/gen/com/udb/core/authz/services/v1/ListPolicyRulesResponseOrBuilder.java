@@ -13,7 +13,7 @@ public interface ListPolicyRulesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.entity.v1.PolicyRule policies = 1 [json_name = "policies"];</code>
    */
-  java.util.List<com.udb.core.authz.entity.v1.PolicyRule>
+  java.util.List<com.udb.core.authz.entity.v1.PolicyRule> 
       getPoliciesList();
   /**
    * <code>repeated .udb.core.authz.entity.v1.PolicyRule policies = 1 [json_name = "policies"];</code>
@@ -26,7 +26,7 @@ public interface ListPolicyRulesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.entity.v1.PolicyRule policies = 1 [json_name = "policies"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.entity.v1.PolicyRuleOrBuilder>
+  java.util.List<? extends com.udb.core.authz.entity.v1.PolicyRuleOrBuilder> 
       getPoliciesOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.entity.v1.PolicyRule policies = 1 [json_name = "policies"];</code>

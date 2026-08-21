@@ -28,12 +28,12 @@ public final class WebauthnProto {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_authn_entity_v1_WebAuthnCredential_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_authn_entity_v1_WebAuthnCredential_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_authn_entity_v1_WebAuthnChallenge_descriptor;
-  static final
+  static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_authn_entity_v1_WebAuthnChallenge_fieldAccessorTable;
 

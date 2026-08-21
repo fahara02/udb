@@ -25,3 +25,4 @@ class Webauthn
         static::$is_initialized = true;
     }
 }
+

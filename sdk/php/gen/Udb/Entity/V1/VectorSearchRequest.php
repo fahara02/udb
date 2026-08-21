@@ -319,3 +319,4 @@ class VectorSearchRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -64,7 +64,7 @@ public interface DiscoveryResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.control.services.v1.Resource resources = 4 [json_name = "resources"];</code>
    */
-  java.util.List<com.udb.core.control.services.v1.Resource>
+  java.util.List<com.udb.core.control.services.v1.Resource> 
       getResourcesList();
   /**
    * <code>repeated .udb.core.control.services.v1.Resource resources = 4 [json_name = "resources"];</code>
@@ -77,7 +77,7 @@ public interface DiscoveryResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.control.services.v1.Resource resources = 4 [json_name = "resources"];</code>
    */
-  java.util.List<? extends com.udb.core.control.services.v1.ResourceOrBuilder>
+  java.util.List<? extends com.udb.core.control.services.v1.ResourceOrBuilder> 
       getResourcesOrBuilderList();
   /**
    * <code>repeated .udb.core.control.services.v1.Resource resources = 4 [json_name = "resources"];</code>

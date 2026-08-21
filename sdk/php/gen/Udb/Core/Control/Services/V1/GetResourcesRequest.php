@@ -202,3 +202,4 @@ class GetResourcesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

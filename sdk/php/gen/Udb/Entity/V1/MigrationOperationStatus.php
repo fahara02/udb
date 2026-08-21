@@ -198,3 +198,4 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
     }
 
 }
+

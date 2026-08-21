@@ -26,3 +26,4 @@ class ControlPlaneResource
         static::$is_initialized = true;
     }
 }
+

@@ -110,3 +110,4 @@ class StartWebAuthnRegistrationResponse extends \Google\Protobuf\Internal\Messag
     }
 
 }
+

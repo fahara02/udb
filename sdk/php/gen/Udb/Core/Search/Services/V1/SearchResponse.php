@@ -161,3 +161,4 @@ class SearchResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -78,3 +78,4 @@ class ModelBackendType
         return constant($const);
     }
 }
+

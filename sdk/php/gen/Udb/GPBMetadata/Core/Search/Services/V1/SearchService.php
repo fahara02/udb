@@ -25,3 +25,4 @@ class SearchService
         static::$is_initialized = true;
     }
 }
+

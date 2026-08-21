@@ -137,3 +137,4 @@ class RevokeRoleRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -471,3 +471,4 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
     }
 
 }
+

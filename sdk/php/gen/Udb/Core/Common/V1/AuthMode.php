@@ -61,3 +61,4 @@ class AuthMode
         return constant($const);
     }
 }
+

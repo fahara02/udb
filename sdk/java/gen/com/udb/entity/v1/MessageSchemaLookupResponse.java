@@ -493,7 +493,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.MessageSchemaDescriptor, com.udb.entity.v1.MessageSchemaDescriptor.Builder, com.udb.entity.v1.MessageSchemaDescriptorOrBuilder>
+        com.udb.entity.v1.MessageSchemaDescriptor, com.udb.entity.v1.MessageSchemaDescriptor.Builder, com.udb.entity.v1.MessageSchemaDescriptorOrBuilder> 
         internalGetSchemaFieldBuilder() {
       if (schemaBuilder_ == null) {
         schemaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -556,3 +556,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

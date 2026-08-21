@@ -357,3 +357,4 @@ class UpdateUserRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -279,3 +279,4 @@ class TenantConfig extends \Google\Protobuf\Internal\Message
     }
 
 }
+

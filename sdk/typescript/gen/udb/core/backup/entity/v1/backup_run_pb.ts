@@ -137,3 +137,4 @@ export type BackupRun = Message<"udb.core.backup.entity.v1.BackupRun"> & {
  */
 export const BackupRunSchema: GenMessage<BackupRun> = /*@__PURE__*/
   messageDesc(file_udb_core_backup_entity_v1_backup_run, 0);
+

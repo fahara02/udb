@@ -63,3 +63,4 @@ class AdminResetPasswordResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

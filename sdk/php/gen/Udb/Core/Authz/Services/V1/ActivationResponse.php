@@ -191,3 +191,4 @@ class ActivationResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

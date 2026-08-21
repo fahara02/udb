@@ -85,3 +85,4 @@ export type UserRole = Message<"udb.core.authz.entity.v1.UserRole"> & {
  */
 export const UserRoleSchema: GenMessage<UserRole> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_entity_v1_user_role, 0);
+

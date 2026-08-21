@@ -102,3 +102,4 @@ export type EmbeddingDocument = Message<"udb.core.embedding.entity.v1.EmbeddingD
  */
 export const EmbeddingDocumentSchema: GenMessage<EmbeddingDocument> = /*@__PURE__*/
   messageDesc(file_udb_core_embedding_entity_v1_embedding_document, 0);
+

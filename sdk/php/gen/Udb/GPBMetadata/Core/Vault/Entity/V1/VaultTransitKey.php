@@ -24,3 +24,4 @@ class VaultTransitKey
         static::$is_initialized = true;
     }
 }
+

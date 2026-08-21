@@ -78,3 +78,4 @@ export type PolicyTuple = Message<"udb.core.authz.entity.v1.PolicyTuple"> & {
  */
 export const PolicyTupleSchema: GenMessage<PolicyTuple> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_entity_v1_policy_tuple, 0);
+

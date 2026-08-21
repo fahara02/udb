@@ -26,3 +26,4 @@ class AccessDecisionAudit
         static::$is_initialized = true;
     }
 }
+

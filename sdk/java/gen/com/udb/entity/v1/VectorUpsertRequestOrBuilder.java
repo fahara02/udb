@@ -40,7 +40,7 @@ public interface VectorUpsertRequestOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.VectorPointMutation points = 3 [json_name = "points"];</code>
    */
-  java.util.List<com.udb.entity.v1.VectorPointMutation>
+  java.util.List<com.udb.entity.v1.VectorPointMutation> 
       getPointsList();
   /**
    * <code>repeated .udb.entity.v1.VectorPointMutation points = 3 [json_name = "points"];</code>
@@ -53,7 +53,7 @@ public interface VectorUpsertRequestOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.VectorPointMutation points = 3 [json_name = "points"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder> 
       getPointsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.VectorPointMutation points = 3 [json_name = "points"];</code>

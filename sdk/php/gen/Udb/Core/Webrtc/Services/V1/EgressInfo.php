@@ -322,3 +322,4 @@ class EgressInfo extends \Google\Protobuf\Internal\Message
     }
 
 }
+

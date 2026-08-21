@@ -69,3 +69,4 @@ class NotificationType
         return constant($const);
     }
 }
+

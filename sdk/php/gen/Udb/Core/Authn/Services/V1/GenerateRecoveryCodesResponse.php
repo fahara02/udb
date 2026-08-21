@@ -94,3 +94,4 @@ class GenerateRecoveryCodesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

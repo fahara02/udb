@@ -304,3 +304,4 @@ class DeltaDiscoveryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

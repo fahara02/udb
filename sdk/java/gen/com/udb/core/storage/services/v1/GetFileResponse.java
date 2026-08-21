@@ -569,7 +569,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.storage.entity.v1.File file = 1 [json_name = "file"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.storage.entity.v1.File, com.udb.core.storage.entity.v1.File.Builder, com.udb.core.storage.entity.v1.FileOrBuilder>
+        com.udb.core.storage.entity.v1.File, com.udb.core.storage.entity.v1.File.Builder, com.udb.core.storage.entity.v1.FileOrBuilder> 
         internalGetFileFieldBuilder() {
       if (fileBuilder_ == null) {
         fileBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -726,7 +726,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 2 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -789,3 +789,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

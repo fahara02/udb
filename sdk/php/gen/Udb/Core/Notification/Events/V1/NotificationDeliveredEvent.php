@@ -238,3 +238,4 @@ class NotificationDeliveredEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

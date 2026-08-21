@@ -61,7 +61,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.search.services.v1.SearchHit hits = 1 [json_name = "hits"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.search.services.v1.SearchHitOrBuilder>
+  public java.util.List<? extends com.udb.core.search.services.v1.SearchHitOrBuilder> 
       getHitsOrBuilderList() {
     return hits_;
   }
@@ -101,7 +101,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       message_ = s;
@@ -117,7 +117,7 @@ private static final long serialVersionUID = 0L;
       getMessageBytes() {
     java.lang.Object ref = message_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       message_ = b;
@@ -182,7 +182,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -202,7 +202,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -554,7 +554,7 @@ private static final long serialVersionUID = 0L;
             hitsBuilder_ = null;
             hits_ = other.hits_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            hitsBuilder_ =
+            hitsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetHitsFieldBuilder() : null;
           } else {
@@ -843,7 +843,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.search.services.v1.SearchHit hits = 1 [json_name = "hits"];</code>
      */
-    public java.util.List<? extends com.udb.core.search.services.v1.SearchHitOrBuilder>
+    public java.util.List<? extends com.udb.core.search.services.v1.SearchHitOrBuilder> 
          getHitsOrBuilderList() {
       if (hitsBuilder_ != null) {
         return hitsBuilder_.getMessageOrBuilderList();
@@ -869,12 +869,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.search.services.v1.SearchHit hits = 1 [json_name = "hits"];</code>
      */
-    public java.util.List<com.udb.core.search.services.v1.SearchHit.Builder>
+    public java.util.List<com.udb.core.search.services.v1.SearchHit.Builder> 
          getHitsBuilderList() {
       return internalGetHitsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.search.services.v1.SearchHit, com.udb.core.search.services.v1.SearchHit.Builder, com.udb.core.search.services.v1.SearchHitOrBuilder>
+        com.udb.core.search.services.v1.SearchHit, com.udb.core.search.services.v1.SearchHit.Builder, com.udb.core.search.services.v1.SearchHitOrBuilder> 
         internalGetHitsFieldBuilder() {
       if (hitsBuilder_ == null) {
         hitsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -913,7 +913,7 @@ private static final long serialVersionUID = 0L;
         getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         message_ = b;
@@ -1104,7 +1104,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1150,7 +1150,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -1259,3 +1259,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

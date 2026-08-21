@@ -133,3 +133,4 @@ class ScimPatchOp extends \Google\Protobuf\Internal\Message
     }
 
 }
+

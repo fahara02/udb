@@ -13,7 +13,7 @@ public interface CacheScanResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.CacheEntry entries = 1 [json_name = "entries"];</code>
    */
-  java.util.List<com.udb.entity.v1.CacheEntry>
+  java.util.List<com.udb.entity.v1.CacheEntry> 
       getEntriesList();
   /**
    * <code>repeated .udb.entity.v1.CacheEntry entries = 1 [json_name = "entries"];</code>
@@ -26,7 +26,7 @@ public interface CacheScanResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.CacheEntry entries = 1 [json_name = "entries"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.CacheEntryOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.CacheEntryOrBuilder> 
       getEntriesOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.CacheEntry entries = 1 [json_name = "entries"];</code>

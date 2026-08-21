@@ -66,3 +66,4 @@ class ScimPatchUserResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

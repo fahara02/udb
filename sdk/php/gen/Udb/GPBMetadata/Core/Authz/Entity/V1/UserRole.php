@@ -25,3 +25,4 @@ class UserRole
         static::$is_initialized = true;
     }
 }
+

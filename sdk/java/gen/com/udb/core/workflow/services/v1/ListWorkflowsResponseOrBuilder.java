@@ -13,7 +13,7 @@ public interface ListWorkflowsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.workflow.entity.v1.WorkflowInstance workflows = 1 [json_name = "workflows"];</code>
    */
-  java.util.List<com.udb.core.workflow.entity.v1.WorkflowInstance>
+  java.util.List<com.udb.core.workflow.entity.v1.WorkflowInstance> 
       getWorkflowsList();
   /**
    * <code>repeated .udb.core.workflow.entity.v1.WorkflowInstance workflows = 1 [json_name = "workflows"];</code>
@@ -26,7 +26,7 @@ public interface ListWorkflowsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.workflow.entity.v1.WorkflowInstance workflows = 1 [json_name = "workflows"];</code>
    */
-  java.util.List<? extends com.udb.core.workflow.entity.v1.WorkflowInstanceOrBuilder>
+  java.util.List<? extends com.udb.core.workflow.entity.v1.WorkflowInstanceOrBuilder> 
       getWorkflowsOrBuilderList();
   /**
    * <code>repeated .udb.core.workflow.entity.v1.WorkflowInstance workflows = 1 [json_name = "workflows"];</code>

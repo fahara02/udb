@@ -493,7 +493,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.apikey.entity.v1.ApiKey key = 1 [json_name = "key"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.apikey.entity.v1.ApiKey, com.udb.core.apikey.entity.v1.ApiKey.Builder, com.udb.core.apikey.entity.v1.ApiKeyOrBuilder>
+        com.udb.core.apikey.entity.v1.ApiKey, com.udb.core.apikey.entity.v1.ApiKey.Builder, com.udb.core.apikey.entity.v1.ApiKeyOrBuilder> 
         internalGetKeyFieldBuilder() {
       if (keyBuilder_ == null) {
         keyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -556,3 +556,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

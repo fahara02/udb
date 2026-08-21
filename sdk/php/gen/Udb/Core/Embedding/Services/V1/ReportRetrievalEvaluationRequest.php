@@ -218,3 +218,4 @@ class ReportRetrievalEvaluationRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

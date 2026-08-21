@@ -218,3 +218,4 @@ class SimulationCase extends \Google\Protobuf\Internal\Message
     }
 
 }
+

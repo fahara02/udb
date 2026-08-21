@@ -124,3 +124,4 @@ class LiveQueryChange extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -95,7 +95,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       message_ = s;
@@ -111,7 +111,7 @@ private static final long serialVersionUID = 0L;
       getMessageBytes() {
     java.lang.Object ref = message_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       message_ = b;
@@ -688,7 +688,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.config.services.v1.FlagState flag = 2 [json_name = "flag"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.config.services.v1.FlagState, com.udb.core.config.services.v1.FlagState.Builder, com.udb.core.config.services.v1.FlagStateOrBuilder>
+        com.udb.core.config.services.v1.FlagState, com.udb.core.config.services.v1.FlagState.Builder, com.udb.core.config.services.v1.FlagStateOrBuilder> 
         internalGetFlagFieldBuilder() {
       if (flagBuilder_ == null) {
         flagBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -726,7 +726,7 @@ private static final long serialVersionUID = 0L;
         getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         message_ = b;
@@ -881,7 +881,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 4 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -944,3 +944,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

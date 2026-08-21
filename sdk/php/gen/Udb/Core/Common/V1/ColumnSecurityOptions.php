@@ -218,3 +218,4 @@ class ColumnSecurityOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
+

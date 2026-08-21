@@ -86,7 +86,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       messageType_ = s;
@@ -102,7 +102,7 @@ private static final long serialVersionUID = 0L;
       getMessageTypeBytes() {
     java.lang.Object ref = messageType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       messageType_ = b;
@@ -126,7 +126,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.BulkCasItem items = 3 [json_name = "items"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.BulkCasItemOrBuilder>
+  public java.util.List<? extends com.udb.entity.v1.BulkCasItemOrBuilder> 
       getItemsOrBuilderList() {
     return items_;
   }
@@ -171,7 +171,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       idempotencyKey_ = s;
@@ -192,7 +192,7 @@ private static final long serialVersionUID = 0L;
       getIdempotencyKeyBytes() {
     java.lang.Object ref = idempotencyKey_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       idempotencyKey_ = b;
@@ -583,7 +583,7 @@ private static final long serialVersionUID = 0L;
             itemsBuilder_ = null;
             items_ = other.items_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            itemsBuilder_ =
+            itemsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetItemsFieldBuilder() : null;
           } else {
@@ -785,7 +785,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.RequestContext context = 1 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder>
+        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder> 
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -823,7 +823,7 @@ private static final long serialVersionUID = 0L;
         getMessageTypeBytes() {
       java.lang.Object ref = messageType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         messageType_ = b;
@@ -1065,7 +1065,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.BulkCasItem items = 3 [json_name = "items"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.BulkCasItemOrBuilder>
+    public java.util.List<? extends com.udb.entity.v1.BulkCasItemOrBuilder> 
          getItemsOrBuilderList() {
       if (itemsBuilder_ != null) {
         return itemsBuilder_.getMessageOrBuilderList();
@@ -1091,12 +1091,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.BulkCasItem items = 3 [json_name = "items"];</code>
      */
-    public java.util.List<com.udb.entity.v1.BulkCasItem.Builder>
+    public java.util.List<com.udb.entity.v1.BulkCasItem.Builder> 
          getItemsBuilderList() {
       return internalGetItemsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.BulkCasItem, com.udb.entity.v1.BulkCasItem.Builder, com.udb.entity.v1.BulkCasItemOrBuilder>
+        com.udb.entity.v1.BulkCasItem, com.udb.entity.v1.BulkCasItem.Builder, com.udb.entity.v1.BulkCasItemOrBuilder> 
         internalGetItemsFieldBuilder() {
       if (itemsBuilder_ == null) {
         itemsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1145,7 +1145,7 @@ private static final long serialVersionUID = 0L;
         getIdempotencyKeyBytes() {
       java.lang.Object ref = idempotencyKey_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         idempotencyKey_ = b;
@@ -1304,3 +1304,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

@@ -549,7 +549,7 @@ that still contradicted it.
   turned a valid hard delete into `INTERNAL`:
 
   ```text
-  storage GC-intent insert failed: invalid input syntax for type uuid: "ambulife"
+  storage GC-intent insert failed: invalid input syntax for type uuid: "billing"
   ```
 
   The bind is `varchar(120)` now. Tenant, file and intent identities stay
@@ -1891,7 +1891,7 @@ surface with per-language service-account seeding.
 
 ## [0.4.23] - 2026-07-24
 
-The consumption-seam wave: every improvement from the AmbuLife consumer
+The consumption-seam wave: every improvement from the a downstream consumer
 deep-dive, in one release.
 
 ### Breaking / wire changes

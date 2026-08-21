@@ -66,3 +66,4 @@ class GetPolicyRuleResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -191,3 +191,4 @@ class EmbeddingSourceSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
+

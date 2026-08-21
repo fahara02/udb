@@ -133,7 +133,7 @@ java.lang.String defaultValue);
   /**
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 10 [json_name = "warnings"];</code>
    */
-  java.util.List<com.udb.entity.v1.OperationWarning>
+  java.util.List<com.udb.entity.v1.OperationWarning> 
       getWarningsList();
   /**
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 10 [json_name = "warnings"];</code>
@@ -146,7 +146,7 @@ java.lang.String defaultValue);
   /**
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 10 [json_name = "warnings"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder> 
       getWarningsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 10 [json_name = "warnings"];</code>

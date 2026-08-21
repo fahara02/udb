@@ -27,3 +27,4 @@ class Peer
         static::$is_initialized = true;
     }
 }
+

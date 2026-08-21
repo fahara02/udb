@@ -13,7 +13,7 @@ public interface DiffPolicyDraftResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.PolicyDiffEntry entries = 1 [json_name = "entries"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.PolicyDiffEntry>
+  java.util.List<com.udb.core.authz.services.v1.PolicyDiffEntry> 
       getEntriesList();
   /**
    * <code>repeated .udb.core.authz.services.v1.PolicyDiffEntry entries = 1 [json_name = "entries"];</code>
@@ -26,7 +26,7 @@ public interface DiffPolicyDraftResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.PolicyDiffEntry entries = 1 [json_name = "entries"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder>
+  java.util.List<? extends com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder> 
       getEntriesOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.services.v1.PolicyDiffEntry entries = 1 [json_name = "entries"];</code>

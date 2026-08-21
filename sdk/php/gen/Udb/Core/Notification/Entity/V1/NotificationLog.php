@@ -626,3 +626,4 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
     }
 
 }
+

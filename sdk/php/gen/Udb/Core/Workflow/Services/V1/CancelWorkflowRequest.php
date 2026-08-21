@@ -110,3 +110,4 @@ class CancelWorkflowRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

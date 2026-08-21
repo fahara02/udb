@@ -237,3 +237,4 @@ class SessionRefreshedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

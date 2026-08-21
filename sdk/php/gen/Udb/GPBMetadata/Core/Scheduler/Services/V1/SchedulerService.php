@@ -26,3 +26,4 @@ class SchedulerService
         static::$is_initialized = true;
     }
 }
+

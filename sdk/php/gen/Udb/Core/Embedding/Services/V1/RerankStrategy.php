@@ -51,3 +51,4 @@ class RerankStrategy
         return constant($const);
     }
 }
+

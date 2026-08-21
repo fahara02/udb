@@ -292,3 +292,4 @@ class NotificationTemplateChangedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

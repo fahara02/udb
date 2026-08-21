@@ -300,3 +300,4 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
     }
 
 }
+

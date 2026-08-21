@@ -95,7 +95,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       txId_ = s;
@@ -111,7 +111,7 @@ private static final long serialVersionUID = 0L;
       getTxIdBytes() {
     java.lang.Object ref = txId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       txId_ = b;
@@ -134,7 +134,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       operation_ = s;
@@ -150,7 +150,7 @@ private static final long serialVersionUID = 0L;
       getOperationBytes() {
     java.lang.Object ref = operation_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       operation_ = b;
@@ -173,7 +173,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       messageType_ = s;
@@ -189,7 +189,7 @@ private static final long serialVersionUID = 0L;
       getMessageTypeBytes() {
     java.lang.Object ref = messageType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       messageType_ = b;
@@ -275,7 +275,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       collection_ = s;
@@ -291,7 +291,7 @@ private static final long serialVersionUID = 0L;
       getCollectionBytes() {
     java.lang.Object ref = collection_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       collection_ = b;
@@ -315,7 +315,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.VectorPointMutation vector_points = 9 [json_name = "vectorPoints"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder>
+  public java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder> 
       getVectorPointsOrBuilderList() {
     return vectorPoints_;
   }
@@ -377,7 +377,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       bucket_ = s;
@@ -393,7 +393,7 @@ private static final long serialVersionUID = 0L;
       getBucketBytes() {
     java.lang.Object ref = bucket_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       bucket_ = b;
@@ -416,7 +416,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       objectKey_ = s;
@@ -432,7 +432,7 @@ private static final long serialVersionUID = 0L;
       getObjectKeyBytes() {
     java.lang.Object ref = objectKey_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       objectKey_ = b;
@@ -466,7 +466,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       contentType_ = s;
@@ -482,7 +482,7 @@ private static final long serialVersionUID = 0L;
       getContentTypeBytes() {
     java.lang.Object ref = contentType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       contentType_ = b;
@@ -505,7 +505,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       idempotencyKey_ = s;
@@ -521,7 +521,7 @@ private static final long serialVersionUID = 0L;
       getIdempotencyKeyBytes() {
     java.lang.Object ref = idempotencyKey_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       idempotencyKey_ = b;
@@ -592,7 +592,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
+  public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> 
       getIncrementsOrBuilderList() {
     return increments_;
   }
@@ -1383,7 +1383,7 @@ private static final long serialVersionUID = 0L;
             vectorPointsBuilder_ = null;
             vectorPoints_ = other.vectorPoints_;
             bitField0_ = (bitField0_ & ~0x00000100);
-            vectorPointsBuilder_ =
+            vectorPointsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetVectorPointsFieldBuilder() : null;
           } else {
@@ -1441,7 +1441,7 @@ private static final long serialVersionUID = 0L;
             incrementsBuilder_ = null;
             increments_ = other.increments_;
             bitField0_ = (bitField0_ & ~0x00020000);
-            incrementsBuilder_ =
+            incrementsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetIncrementsFieldBuilder() : null;
           } else {
@@ -1732,7 +1732,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.RequestContext context = 1 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder>
+        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder> 
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1770,7 +1770,7 @@ private static final long serialVersionUID = 0L;
         getTxIdBytes() {
       java.lang.Object ref = txId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         txId_ = b;
@@ -1842,7 +1842,7 @@ private static final long serialVersionUID = 0L;
         getOperationBytes() {
       java.lang.Object ref = operation_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         operation_ = b;
@@ -1914,7 +1914,7 @@ private static final long serialVersionUID = 0L;
         getMessageTypeBytes() {
       java.lang.Object ref = messageType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         messageType_ = b;
@@ -2101,7 +2101,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct payload = 6 [json_name = "payload"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
         internalGetPayloadFieldBuilder() {
       if (payloadBuilder_ == null) {
         payloadBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2222,7 +2222,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct filter = 7 [json_name = "filter"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
         internalGetFilterFieldBuilder() {
       if (filterBuilder_ == null) {
         filterBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2260,7 +2260,7 @@ private static final long serialVersionUID = 0L;
         getCollectionBytes() {
       java.lang.Object ref = collection_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         collection_ = b;
@@ -2502,7 +2502,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.VectorPointMutation vector_points = 9 [json_name = "vectorPoints"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder>
+    public java.util.List<? extends com.udb.entity.v1.VectorPointMutationOrBuilder> 
          getVectorPointsOrBuilderList() {
       if (vectorPointsBuilder_ != null) {
         return vectorPointsBuilder_.getMessageOrBuilderList();
@@ -2528,12 +2528,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.VectorPointMutation vector_points = 9 [json_name = "vectorPoints"];</code>
      */
-    public java.util.List<com.udb.entity.v1.VectorPointMutation.Builder>
+    public java.util.List<com.udb.entity.v1.VectorPointMutation.Builder> 
          getVectorPointsBuilderList() {
       return internalGetVectorPointsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.VectorPointMutation, com.udb.entity.v1.VectorPointMutation.Builder, com.udb.entity.v1.VectorPointMutationOrBuilder>
+        com.udb.entity.v1.VectorPointMutation, com.udb.entity.v1.VectorPointMutation.Builder, com.udb.entity.v1.VectorPointMutationOrBuilder> 
         internalGetVectorPointsFieldBuilder() {
       if (vectorPointsBuilder_ == null) {
         vectorPointsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -2636,7 +2636,7 @@ private static final long serialVersionUID = 0L;
         getBucketBytes() {
       java.lang.Object ref = bucket_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         bucket_ = b;
@@ -2708,7 +2708,7 @@ private static final long serialVersionUID = 0L;
         getObjectKeyBytes() {
       java.lang.Object ref = objectKey_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         objectKey_ = b;
@@ -2812,7 +2812,7 @@ private static final long serialVersionUID = 0L;
         getContentTypeBytes() {
       java.lang.Object ref = contentType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         contentType_ = b;
@@ -2884,7 +2884,7 @@ private static final long serialVersionUID = 0L;
         getIdempotencyKeyBytes() {
       java.lang.Object ref = idempotencyKey_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         idempotencyKey_ = b;
@@ -3102,7 +3102,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
         internalGetChangesFieldBuilder() {
       if (changesBuilder_ == null) {
         changesBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -3310,7 +3310,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
+    public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> 
          getIncrementsOrBuilderList() {
       if (incrementsBuilder_ != null) {
         return incrementsBuilder_.getMessageOrBuilderList();
@@ -3336,12 +3336,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
      */
-    public java.util.List<com.udb.entity.v1.UpdateRequest.Increment.Builder>
+    public java.util.List<com.udb.entity.v1.UpdateRequest.Increment.Builder> 
          getIncrementsBuilderList() {
       return internalGetIncrementsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.UpdateRequest.Increment, com.udb.entity.v1.UpdateRequest.Increment.Builder, com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
+        com.udb.entity.v1.UpdateRequest.Increment, com.udb.entity.v1.UpdateRequest.Increment.Builder, com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> 
         internalGetIncrementsFieldBuilder() {
       if (incrementsBuilder_ == null) {
         incrementsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -3580,7 +3580,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct expected = 19 [json_name = "expected"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
         internalGetExpectedFieldBuilder() {
       if (expectedBuilder_ == null) {
         expectedBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -3705,3 +3705,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

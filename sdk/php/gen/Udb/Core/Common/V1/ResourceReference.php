@@ -272,3 +272,4 @@ class ResourceReference extends \Google\Protobuf\Internal\Message
     }
 
 }
+

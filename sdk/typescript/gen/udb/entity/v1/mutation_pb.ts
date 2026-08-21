@@ -100,3 +100,4 @@ export type MutationResponse = Message<"udb.entity.v1.MutationResponse"> & {
  */
 export const MutationResponseSchema: GenMessage<MutationResponse> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_mutation, 0);
+

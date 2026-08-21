@@ -100,7 +100,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.udb.core.common.v1.DomainTypesProto.internal_static_udb_core_common_v1_TagSet_AttributesEntry_descriptor,
+                com.udb.core.common.v1.DomainTypesProto.internal_static_udb_core_common_v1_TagSet_AttributesEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -831,3 +831,4 @@ java.lang.String defaultValue) {
   }
 
 }
+

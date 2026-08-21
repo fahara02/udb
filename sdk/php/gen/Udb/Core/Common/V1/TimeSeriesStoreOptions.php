@@ -272,3 +272,4 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
+

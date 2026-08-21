@@ -121,7 +121,7 @@ public interface BulkCasItemOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 5 [json_name = "increments"];</code>
    */
-  java.util.List<com.udb.entity.v1.UpdateRequest.Increment>
+  java.util.List<com.udb.entity.v1.UpdateRequest.Increment> 
       getIncrementsList();
   /**
    * <pre>
@@ -146,7 +146,7 @@ public interface BulkCasItemOrBuilder extends
    *
    * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 5 [json_name = "increments"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> 
       getIncrementsOrBuilderList();
   /**
    * <pre>

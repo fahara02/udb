@@ -106,3 +106,4 @@ export type MfaChallenge = Message<"udb.core.authn.entity.v1.MfaChallenge"> & {
  */
 export const MfaChallengeSchema: GenMessage<MfaChallenge> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_mfa_challenge, 0);
+

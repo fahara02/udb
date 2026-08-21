@@ -144,3 +144,4 @@ class SearchHit extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -26,3 +26,4 @@ class WebhookDelivery
         static::$is_initialized = true;
     }
 }
+

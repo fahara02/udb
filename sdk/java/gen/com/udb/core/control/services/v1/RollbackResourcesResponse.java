@@ -62,7 +62,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       rolledBackToVersion_ = s;
@@ -82,7 +82,7 @@ private static final long serialVersionUID = 0L;
       getRolledBackToVersionBytes() {
     java.lang.Object ref = rolledBackToVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       rolledBackToVersion_ = b;
@@ -110,7 +110,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       currentVersion_ = s;
@@ -131,7 +131,7 @@ private static final long serialVersionUID = 0L;
       getCurrentVersionBytes() {
     java.lang.Object ref = currentVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       currentVersion_ = b;
@@ -530,7 +530,7 @@ private static final long serialVersionUID = 0L;
         getRolledBackToVersionBytes() {
       java.lang.Object ref = rolledBackToVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         rolledBackToVersion_ = b;
@@ -624,7 +624,7 @@ private static final long serialVersionUID = 0L;
         getCurrentVersionBytes() {
       java.lang.Object ref = currentVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         currentVersion_ = b;
@@ -780,3 +780,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

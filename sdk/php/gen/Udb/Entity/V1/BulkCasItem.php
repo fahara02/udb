@@ -244,3 +244,4 @@ class BulkCasItem extends \Google\Protobuf\Internal\Message
     }
 
 }
+

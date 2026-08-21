@@ -62,3 +62,4 @@ class AdminPurgeMode
         return constant($const);
     }
 }
+

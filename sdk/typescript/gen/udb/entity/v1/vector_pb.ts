@@ -302,3 +302,4 @@ export enum VectorFusionStrategy {
  */
 export const VectorFusionStrategySchema: GenEnum<VectorFusionStrategy> = /*@__PURE__*/
   enumDesc(file_udb_entity_v1_vector, 0);
+

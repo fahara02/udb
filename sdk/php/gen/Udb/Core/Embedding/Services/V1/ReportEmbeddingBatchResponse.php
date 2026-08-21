@@ -174,3 +174,4 @@ class ReportEmbeddingBatchResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

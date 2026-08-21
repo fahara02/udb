@@ -58,7 +58,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       keyId_ = s;
@@ -74,7 +74,7 @@ private static final long serialVersionUID = 0L;
       getKeyIdBytes() {
     java.lang.Object ref = keyId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       keyId_ = b;
@@ -538,7 +538,7 @@ private static final long serialVersionUID = 0L;
         getKeyIdBytes() {
       java.lang.Object ref = keyId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         keyId_ = b;
@@ -693,7 +693,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp from = 2 [json_name = "from"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
         internalGetFromFieldBuilder() {
       if (fromBuilder_ == null) {
         fromBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -814,7 +814,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp to = 3 [json_name = "to"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
         internalGetToFieldBuilder() {
       if (toBuilder_ == null) {
         toBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -877,3 +877,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

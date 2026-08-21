@@ -380,3 +380,4 @@ class EmbeddingModelSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
+

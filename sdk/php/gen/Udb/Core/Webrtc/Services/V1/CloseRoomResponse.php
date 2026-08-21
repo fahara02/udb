@@ -100,3 +100,4 @@ class CloseRoomResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

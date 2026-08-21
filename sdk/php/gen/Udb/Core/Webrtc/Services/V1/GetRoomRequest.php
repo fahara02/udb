@@ -83,3 +83,4 @@ class GetRoomRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

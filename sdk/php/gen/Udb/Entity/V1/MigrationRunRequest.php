@@ -147,3 +147,4 @@ class MigrationRunRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

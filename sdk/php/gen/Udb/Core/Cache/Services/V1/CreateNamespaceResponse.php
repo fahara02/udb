@@ -181,3 +181,4 @@ class CreateNamespaceResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

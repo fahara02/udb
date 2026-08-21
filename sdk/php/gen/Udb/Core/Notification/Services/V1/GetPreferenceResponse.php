@@ -66,3 +66,4 @@ class GetPreferenceResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -71,3 +71,4 @@ class IngestionSource
         return constant($const);
     }
 }
+

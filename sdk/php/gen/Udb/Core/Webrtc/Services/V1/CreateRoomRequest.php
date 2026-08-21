@@ -171,3 +171,4 @@ class CreateRoomRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

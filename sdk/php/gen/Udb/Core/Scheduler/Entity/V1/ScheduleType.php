@@ -57,3 +57,4 @@ class ScheduleType
         return constant($const);
     }
 }
+

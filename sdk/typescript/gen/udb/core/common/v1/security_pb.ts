@@ -1516,3 +1516,4 @@ export const service_cli_scaffold: GenExtension<ServiceOptions, CliScaffoldOptio
  */
 export const service_dependency_contract: GenExtension<ServiceOptions, DependencyContractOptions> = /*@__PURE__*/
   extDesc(file_udb_core_common_v1_security, 31);
+

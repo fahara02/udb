@@ -13,7 +13,7 @@ public interface ListUserPermissionsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.EffectivePermission permissions = 1 [json_name = "permissions"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.EffectivePermission>
+  java.util.List<com.udb.core.authz.services.v1.EffectivePermission> 
       getPermissionsList();
   /**
    * <code>repeated .udb.core.authz.services.v1.EffectivePermission permissions = 1 [json_name = "permissions"];</code>
@@ -26,7 +26,7 @@ public interface ListUserPermissionsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.services.v1.EffectivePermission permissions = 1 [json_name = "permissions"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.EffectivePermissionOrBuilder>
+  java.util.List<? extends com.udb.core.authz.services.v1.EffectivePermissionOrBuilder> 
       getPermissionsOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.services.v1.EffectivePermission permissions = 1 [json_name = "permissions"];</code>

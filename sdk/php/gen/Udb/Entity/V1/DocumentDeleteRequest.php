@@ -194,3 +194,4 @@ class DocumentDeleteRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

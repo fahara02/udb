@@ -25,3 +25,4 @@ class ServiceAccountGrant
         static::$is_initialized = true;
     }
 }
+

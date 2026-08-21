@@ -230,3 +230,4 @@ class NativeAccessGrantDeniedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

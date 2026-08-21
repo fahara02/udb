@@ -208,3 +208,4 @@ class AcquireLockResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

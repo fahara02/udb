@@ -88,7 +88,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       messageType_ = s;
@@ -104,7 +104,7 @@ private static final long serialVersionUID = 0L;
       getMessageTypeBytes() {
     java.lang.Object ref = messageType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       messageType_ = b;
@@ -201,7 +201,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       pageToken_ = s;
@@ -217,7 +217,7 @@ private static final long serialVersionUID = 0L;
       getPageTokenBytes() {
     java.lang.Object ref = pageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       pageToken_ = b;
@@ -241,7 +241,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.Sort sort = 7 [json_name = "sort"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.SortOrBuilder>
+  public java.util.List<? extends com.udb.entity.v1.SortOrBuilder> 
       getSortOrBuilderList() {
     return sort_;
   }
@@ -792,7 +792,7 @@ private static final long serialVersionUID = 0L;
             sortBuilder_ = null;
             sort_ = other.sort_;
             bitField0_ = (bitField0_ & ~0x00000040);
-            sortBuilder_ =
+            sortBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetSortFieldBuilder() : null;
           } else {
@@ -1017,7 +1017,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.RequestContext context = 1 [json_name = "context"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder>
+        com.udb.entity.v1.RequestContext, com.udb.entity.v1.RequestContext.Builder, com.udb.entity.v1.RequestContextOrBuilder> 
         internalGetContextFieldBuilder() {
       if (contextBuilder_ == null) {
         contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1055,7 +1055,7 @@ private static final long serialVersionUID = 0L;
         getMessageTypeBytes() {
       java.lang.Object ref = messageType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         messageType_ = b;
@@ -1210,7 +1210,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Struct filter = 3 [json_name = "filter"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
         internalGetFilterFieldBuilder() {
       if (filterBuilder_ == null) {
         filterBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1391,7 +1391,7 @@ private static final long serialVersionUID = 0L;
         getPageTokenBytes() {
       java.lang.Object ref = pageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         pageToken_ = b;
@@ -1633,7 +1633,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.Sort sort = 7 [json_name = "sort"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.SortOrBuilder>
+    public java.util.List<? extends com.udb.entity.v1.SortOrBuilder> 
          getSortOrBuilderList() {
       if (sortBuilder_ != null) {
         return sortBuilder_.getMessageOrBuilderList();
@@ -1659,12 +1659,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.Sort sort = 7 [json_name = "sort"];</code>
      */
-    public java.util.List<com.udb.entity.v1.Sort.Builder>
+    public java.util.List<com.udb.entity.v1.Sort.Builder> 
          getSortBuilderList() {
       return internalGetSortFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.Sort, com.udb.entity.v1.Sort.Builder, com.udb.entity.v1.SortOrBuilder>
+        com.udb.entity.v1.Sort, com.udb.entity.v1.Sort.Builder, com.udb.entity.v1.SortOrBuilder> 
         internalGetSortFieldBuilder() {
       if (sortBuilder_ == null) {
         sortBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1786,7 +1786,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.CacheOptions cache = 8 [json_name = "cache"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.CacheOptions, com.udb.entity.v1.CacheOptions.Builder, com.udb.entity.v1.CacheOptionsOrBuilder>
+        com.udb.entity.v1.CacheOptions, com.udb.entity.v1.CacheOptions.Builder, com.udb.entity.v1.CacheOptionsOrBuilder> 
         internalGetCacheFieldBuilder() {
       if (cacheBuilder_ == null) {
         cacheBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1899,3 +1899,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

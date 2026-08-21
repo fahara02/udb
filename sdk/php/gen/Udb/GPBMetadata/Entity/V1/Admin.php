@@ -23,3 +23,4 @@ class Admin
         static::$is_initialized = true;
     }
 }
+

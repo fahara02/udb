@@ -198,3 +198,4 @@ class ListAssetsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

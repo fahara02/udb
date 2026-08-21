@@ -13,7 +13,7 @@ public interface GetExecutorPerformanceResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.analytics.entity.v1.ExecutorPerformanceSummary summaries = 1 [json_name = "summaries"];</code>
    */
-  java.util.List<com.udb.core.analytics.entity.v1.ExecutorPerformanceSummary>
+  java.util.List<com.udb.core.analytics.entity.v1.ExecutorPerformanceSummary> 
       getSummariesList();
   /**
    * <code>repeated .udb.core.analytics.entity.v1.ExecutorPerformanceSummary summaries = 1 [json_name = "summaries"];</code>
@@ -26,7 +26,7 @@ public interface GetExecutorPerformanceResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.analytics.entity.v1.ExecutorPerformanceSummary summaries = 1 [json_name = "summaries"];</code>
    */
-  java.util.List<? extends com.udb.core.analytics.entity.v1.ExecutorPerformanceSummaryOrBuilder>
+  java.util.List<? extends com.udb.core.analytics.entity.v1.ExecutorPerformanceSummaryOrBuilder> 
       getSummariesOrBuilderList();
   /**
    * <code>repeated .udb.core.analytics.entity.v1.ExecutorPerformanceSummary summaries = 1 [json_name = "summaries"];</code>

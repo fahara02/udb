@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.idp.services.v1.ScimGroup groups = 1 [json_name = "groups"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.idp.services.v1.ScimGroupOrBuilder>
+  public java.util.List<? extends com.udb.core.idp.services.v1.ScimGroupOrBuilder> 
       getGroupsOrBuilderList() {
     return groups_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             groupsBuilder_ = null;
             groups_ = other.groups_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            groupsBuilder_ =
+            groupsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetGroupsFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.idp.services.v1.ScimGroup groups = 1 [json_name = "groups"];</code>
      */
-    public java.util.List<? extends com.udb.core.idp.services.v1.ScimGroupOrBuilder>
+    public java.util.List<? extends com.udb.core.idp.services.v1.ScimGroupOrBuilder> 
          getGroupsOrBuilderList() {
       if (groupsBuilder_ != null) {
         return groupsBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.idp.services.v1.ScimGroup groups = 1 [json_name = "groups"];</code>
      */
-    public java.util.List<com.udb.core.idp.services.v1.ScimGroup.Builder>
+    public java.util.List<com.udb.core.idp.services.v1.ScimGroup.Builder> 
          getGroupsBuilderList() {
       return internalGetGroupsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.idp.services.v1.ScimGroup, com.udb.core.idp.services.v1.ScimGroup.Builder, com.udb.core.idp.services.v1.ScimGroupOrBuilder>
+        com.udb.core.idp.services.v1.ScimGroup, com.udb.core.idp.services.v1.ScimGroup.Builder, com.udb.core.idp.services.v1.ScimGroupOrBuilder> 
         internalGetGroupsFieldBuilder() {
       if (groupsBuilder_ == null) {
         groupsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,3 +911,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

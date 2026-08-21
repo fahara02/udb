@@ -13,7 +13,7 @@ public interface IssueCredentialsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 1 [json_name = "iceServers"];</code>
    */
-  java.util.List<com.udb.core.webrtc.services.v1.IceServer>
+  java.util.List<com.udb.core.webrtc.services.v1.IceServer> 
       getIceServersList();
   /**
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 1 [json_name = "iceServers"];</code>
@@ -26,7 +26,7 @@ public interface IssueCredentialsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 1 [json_name = "iceServers"];</code>
    */
-  java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder>
+  java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder> 
       getIceServersOrBuilderList();
   /**
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 1 [json_name = "iceServers"];</code>

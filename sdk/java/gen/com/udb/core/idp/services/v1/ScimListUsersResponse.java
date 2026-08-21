@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.idp.services.v1.ScimUser users = 1 [json_name = "users"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.idp.services.v1.ScimUserOrBuilder>
+  public java.util.List<? extends com.udb.core.idp.services.v1.ScimUserOrBuilder> 
       getUsersOrBuilderList() {
     return users_;
   }
@@ -426,7 +426,7 @@ private static final long serialVersionUID = 0L;
             usersBuilder_ = null;
             users_ = other.users_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            usersBuilder_ =
+            usersBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetUsersFieldBuilder() : null;
           } else {
@@ -695,7 +695,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.idp.services.v1.ScimUser users = 1 [json_name = "users"];</code>
      */
-    public java.util.List<? extends com.udb.core.idp.services.v1.ScimUserOrBuilder>
+    public java.util.List<? extends com.udb.core.idp.services.v1.ScimUserOrBuilder> 
          getUsersOrBuilderList() {
       if (usersBuilder_ != null) {
         return usersBuilder_.getMessageOrBuilderList();
@@ -721,12 +721,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.idp.services.v1.ScimUser users = 1 [json_name = "users"];</code>
      */
-    public java.util.List<com.udb.core.idp.services.v1.ScimUser.Builder>
+    public java.util.List<com.udb.core.idp.services.v1.ScimUser.Builder> 
          getUsersBuilderList() {
       return internalGetUsersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.idp.services.v1.ScimUser, com.udb.core.idp.services.v1.ScimUser.Builder, com.udb.core.idp.services.v1.ScimUserOrBuilder>
+        com.udb.core.idp.services.v1.ScimUser, com.udb.core.idp.services.v1.ScimUser.Builder, com.udb.core.idp.services.v1.ScimUserOrBuilder> 
         internalGetUsersFieldBuilder() {
       if (usersBuilder_ == null) {
         usersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -848,7 +848,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -911,3 +911,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

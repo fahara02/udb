@@ -18,10 +18,10 @@ export const file_udb_core_apikey_services_v1_apikey_service: GenFile = /*@__PUR
 /**
  * ---------------------------------------------------------------------------
  * ApiKeyService — Machine-to-machine key lifecycle and validation.
- *
+ * 
  * HTTP prefix: /v1/api-keys
  * URL conventions: kebab-case paths, :lowerCamel custom method suffix, kebab-case query params.
- *
+ * 
  * The gateway calls ValidateApiKey on every inbound API request to:
  *   1. Verify key hash
  *   2. Check scope grants
@@ -118,3 +118,4 @@ export const ApiKeyService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_apikey_services_v1_apikey_service, 0);
+

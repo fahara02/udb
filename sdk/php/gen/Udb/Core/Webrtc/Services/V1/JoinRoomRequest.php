@@ -171,3 +171,4 @@ class JoinRoomRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -199,3 +199,4 @@ class EvaluateFlagsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

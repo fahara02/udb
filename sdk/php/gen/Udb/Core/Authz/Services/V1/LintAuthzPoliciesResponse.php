@@ -56,3 +56,4 @@ class LintAuthzPoliciesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

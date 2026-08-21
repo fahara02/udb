@@ -27,3 +27,4 @@ class Asset
         static::$is_initialized = true;
     }
 }
+

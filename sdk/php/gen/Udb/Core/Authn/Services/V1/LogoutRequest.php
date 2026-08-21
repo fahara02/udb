@@ -154,3 +154,4 @@ class LogoutRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

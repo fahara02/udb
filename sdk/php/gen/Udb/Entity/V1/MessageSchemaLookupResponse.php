@@ -66,3 +66,4 @@ class MessageSchemaLookupResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

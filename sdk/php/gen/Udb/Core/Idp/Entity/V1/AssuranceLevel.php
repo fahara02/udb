@@ -81,3 +81,4 @@ class AssuranceLevel
         return constant($const);
     }
 }
+

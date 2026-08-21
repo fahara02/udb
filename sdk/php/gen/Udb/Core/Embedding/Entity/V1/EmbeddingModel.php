@@ -926,3 +926,4 @@ class EmbeddingModel extends \Google\Protobuf\Internal\Message
     }
 
 }
+

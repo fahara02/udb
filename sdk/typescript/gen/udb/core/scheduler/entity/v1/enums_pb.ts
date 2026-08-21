@@ -88,3 +88,4 @@ export enum JobStatus {
  */
 export const JobStatusSchema: GenEnum<JobStatus> = /*@__PURE__*/
   enumDesc(file_udb_core_scheduler_entity_v1_enums, 1);
+

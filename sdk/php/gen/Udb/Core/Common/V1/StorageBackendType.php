@@ -76,3 +76,4 @@ class StorageBackendType
         return constant($const);
     }
 }
+

@@ -26,3 +26,4 @@ class NotificationLog
         static::$is_initialized = true;
     }
 }
+

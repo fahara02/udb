@@ -58,7 +58,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.analytics.services.v1.SlaComplianceEntry entries = 1 [json_name = "entries"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.analytics.services.v1.SlaComplianceEntryOrBuilder>
+  public java.util.List<? extends com.udb.core.analytics.services.v1.SlaComplianceEntryOrBuilder> 
       getEntriesOrBuilderList() {
     return entries_;
   }
@@ -419,7 +419,7 @@ private static final long serialVersionUID = 0L;
             entriesBuilder_ = null;
             entries_ = other.entries_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            entriesBuilder_ =
+            entriesBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetEntriesFieldBuilder() : null;
           } else {
@@ -694,7 +694,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.analytics.services.v1.SlaComplianceEntry entries = 1 [json_name = "entries"];</code>
      */
-    public java.util.List<? extends com.udb.core.analytics.services.v1.SlaComplianceEntryOrBuilder>
+    public java.util.List<? extends com.udb.core.analytics.services.v1.SlaComplianceEntryOrBuilder> 
          getEntriesOrBuilderList() {
       if (entriesBuilder_ != null) {
         return entriesBuilder_.getMessageOrBuilderList();
@@ -720,12 +720,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.analytics.services.v1.SlaComplianceEntry entries = 1 [json_name = "entries"];</code>
      */
-    public java.util.List<com.udb.core.analytics.services.v1.SlaComplianceEntry.Builder>
+    public java.util.List<com.udb.core.analytics.services.v1.SlaComplianceEntry.Builder> 
          getEntriesBuilderList() {
       return internalGetEntriesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.analytics.services.v1.SlaComplianceEntry, com.udb.core.analytics.services.v1.SlaComplianceEntry.Builder, com.udb.core.analytics.services.v1.SlaComplianceEntryOrBuilder>
+        com.udb.core.analytics.services.v1.SlaComplianceEntry, com.udb.core.analytics.services.v1.SlaComplianceEntry.Builder, com.udb.core.analytics.services.v1.SlaComplianceEntryOrBuilder> 
         internalGetEntriesFieldBuilder() {
       if (entriesBuilder_ == null) {
         entriesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -853,3 +853,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

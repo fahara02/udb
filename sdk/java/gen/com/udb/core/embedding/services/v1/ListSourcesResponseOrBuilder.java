@@ -13,7 +13,7 @@ public interface ListSourcesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingSourceSummary sources = 1 [json_name = "sources"];</code>
    */
-  java.util.List<com.udb.core.embedding.services.v1.EmbeddingSourceSummary>
+  java.util.List<com.udb.core.embedding.services.v1.EmbeddingSourceSummary> 
       getSourcesList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingSourceSummary sources = 1 [json_name = "sources"];</code>
@@ -26,7 +26,7 @@ public interface ListSourcesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingSourceSummary sources = 1 [json_name = "sources"];</code>
    */
-  java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingSourceSummaryOrBuilder>
+  java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingSourceSummaryOrBuilder> 
       getSourcesOrBuilderList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingSourceSummary sources = 1 [json_name = "sources"];</code>

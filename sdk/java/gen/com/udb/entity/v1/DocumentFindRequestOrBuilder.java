@@ -101,7 +101,7 @@ public interface DocumentFindRequestOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.Sort sort = 7 [json_name = "sort"];</code>
    */
-  java.util.List<com.udb.entity.v1.Sort>
+  java.util.List<com.udb.entity.v1.Sort> 
       getSortList();
   /**
    * <code>repeated .udb.entity.v1.Sort sort = 7 [json_name = "sort"];</code>
@@ -114,7 +114,7 @@ public interface DocumentFindRequestOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.Sort sort = 7 [json_name = "sort"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.SortOrBuilder>
+  java.util.List<? extends com.udb.entity.v1.SortOrBuilder> 
       getSortOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.Sort sort = 7 [json_name = "sort"];</code>

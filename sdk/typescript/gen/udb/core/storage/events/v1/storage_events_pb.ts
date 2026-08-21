@@ -239,3 +239,4 @@ export type FileDeleted = Message<"udb.core.storage.events.v1.FileDeleted"> & {
  */
 export const FileDeletedSchema: GenMessage<FileDeleted> = /*@__PURE__*/
   messageDesc(file_udb_core_storage_events_v1_storage_events, 4);
+

@@ -66,3 +66,4 @@ class RetryNotificationResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

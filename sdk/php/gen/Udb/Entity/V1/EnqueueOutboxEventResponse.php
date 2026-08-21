@@ -131,3 +131,4 @@ class EnqueueOutboxEventResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

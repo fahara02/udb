@@ -90,3 +90,4 @@ class ValidateCSRFRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

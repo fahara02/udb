@@ -13,7 +13,7 @@ public interface SendNotificationResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationLog logs = 1 [json_name = "logs"];</code>
    */
-  java.util.List<com.udb.core.notification.entity.v1.NotificationLog>
+  java.util.List<com.udb.core.notification.entity.v1.NotificationLog> 
       getLogsList();
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationLog logs = 1 [json_name = "logs"];</code>
@@ -26,7 +26,7 @@ public interface SendNotificationResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationLog logs = 1 [json_name = "logs"];</code>
    */
-  java.util.List<? extends com.udb.core.notification.entity.v1.NotificationLogOrBuilder>
+  java.util.List<? extends com.udb.core.notification.entity.v1.NotificationLogOrBuilder> 
       getLogsOrBuilderList();
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationLog logs = 1 [json_name = "logs"];</code>

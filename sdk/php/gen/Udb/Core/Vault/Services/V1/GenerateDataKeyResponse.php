@@ -192,3 +192,4 @@ class GenerateDataKeyResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

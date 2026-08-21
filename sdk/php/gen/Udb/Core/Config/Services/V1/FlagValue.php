@@ -158,3 +158,4 @@ class FlagValue extends \Google\Protobuf\Internal\Message
     }
 
 }
+

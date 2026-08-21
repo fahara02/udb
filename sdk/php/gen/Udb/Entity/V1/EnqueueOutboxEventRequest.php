@@ -262,3 +262,4 @@ class EnqueueOutboxEventRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

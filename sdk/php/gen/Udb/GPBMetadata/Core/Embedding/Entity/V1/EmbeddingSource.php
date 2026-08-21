@@ -25,3 +25,4 @@ class EmbeddingSource
         static::$is_initialized = true;
     }
 }
+

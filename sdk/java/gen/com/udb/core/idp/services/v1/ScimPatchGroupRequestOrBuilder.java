@@ -49,7 +49,7 @@ public interface ScimPatchGroupRequestOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimPatchOp operations = 4 [json_name = "operations"];</code>
    */
-  java.util.List<com.udb.core.idp.services.v1.ScimPatchOp>
+  java.util.List<com.udb.core.idp.services.v1.ScimPatchOp> 
       getOperationsList();
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimPatchOp operations = 4 [json_name = "operations"];</code>
@@ -62,7 +62,7 @@ public interface ScimPatchGroupRequestOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimPatchOp operations = 4 [json_name = "operations"];</code>
    */
-  java.util.List<? extends com.udb.core.idp.services.v1.ScimPatchOpOrBuilder>
+  java.util.List<? extends com.udb.core.idp.services.v1.ScimPatchOpOrBuilder> 
       getOperationsOrBuilderList();
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimPatchOp operations = 4 [json_name = "operations"];</code>

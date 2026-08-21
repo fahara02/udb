@@ -56,3 +56,4 @@ class VectorFusionStrategy
         return constant($const);
     }
 }
+

@@ -25,3 +25,4 @@ class Lock
         static::$is_initialized = true;
     }
 }
+

@@ -71,3 +71,4 @@ class AuthFactorKind
         return constant($const);
     }
 }
+

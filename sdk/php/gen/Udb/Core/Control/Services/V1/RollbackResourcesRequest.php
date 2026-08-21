@@ -172,3 +172,4 @@ class RollbackResourcesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

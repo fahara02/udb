@@ -90,7 +90,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.udb.entity.v1.StoresProto.internal_static_udb_entity_v1_TimeSeriesPoint_TagsEntry_descriptor,
+                com.udb.entity.v1.StoresProto.internal_static_udb_entity_v1_TimeSeriesPoint_TagsEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -169,7 +169,7 @@ java.lang.String defaultValue) {
         java.lang.String, java.lang.Double> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.Double>newDefaultInstance(
-                com.udb.entity.v1.StoresProto.internal_static_udb_entity_v1_TimeSeriesPoint_ValuesEntry_descriptor,
+                com.udb.entity.v1.StoresProto.internal_static_udb_entity_v1_TimeSeriesPoint_ValuesEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.DOUBLE,
@@ -831,7 +831,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.Timestamp timestamp = 1 [json_name = "timestamp"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
         internalGetTimestampFieldBuilder() {
       if (timestampBuilder_ == null) {
         timestampBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1204,7 +1204,7 @@ java.lang.String defaultValue) {
      * <code>.google.protobuf.Struct fields = 4 [json_name = "fields"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> 
         internalGetFieldsFieldBuilder() {
       if (fieldsBuilder_ == null) {
         fieldsBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1267,3 +1267,4 @@ java.lang.String defaultValue) {
   }
 
 }
+

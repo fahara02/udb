@@ -76,3 +76,4 @@ class OTPType
         return constant($const);
     }
 }
+

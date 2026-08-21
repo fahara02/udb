@@ -56,3 +56,4 @@ class RecordPipelineMetricResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

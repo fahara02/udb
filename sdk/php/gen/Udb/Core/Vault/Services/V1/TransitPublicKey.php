@@ -112,3 +112,4 @@ class TransitPublicKey extends \Google\Protobuf\Internal\Message
     }
 
 }
+

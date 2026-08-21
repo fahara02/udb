@@ -83,3 +83,4 @@ class GetPeerRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -13,7 +13,7 @@ public interface ListModelsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingModelSummary models = 1 [json_name = "models"];</code>
    */
-  java.util.List<com.udb.core.embedding.services.v1.EmbeddingModelSummary>
+  java.util.List<com.udb.core.embedding.services.v1.EmbeddingModelSummary> 
       getModelsList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingModelSummary models = 1 [json_name = "models"];</code>
@@ -26,7 +26,7 @@ public interface ListModelsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingModelSummary models = 1 [json_name = "models"];</code>
    */
-  java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingModelSummaryOrBuilder>
+  java.util.List<? extends com.udb.core.embedding.services.v1.EmbeddingModelSummaryOrBuilder> 
       getModelsOrBuilderList();
   /**
    * <code>repeated .udb.core.embedding.services.v1.EmbeddingModelSummary models = 1 [json_name = "models"];</code>

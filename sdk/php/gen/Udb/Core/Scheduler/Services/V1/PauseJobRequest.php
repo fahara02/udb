@@ -83,3 +83,4 @@ class PauseJobRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

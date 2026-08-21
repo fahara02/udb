@@ -27,3 +27,4 @@ class Stores
         static::$is_initialized = true;
     }
 }
+

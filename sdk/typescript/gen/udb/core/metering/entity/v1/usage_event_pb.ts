@@ -99,3 +99,4 @@ export type UsageEvent = Message<"udb.core.metering.entity.v1.UsageEvent"> & {
  */
 export const UsageEventSchema: GenMessage<UsageEvent> = /*@__PURE__*/
   messageDesc(file_udb_core_metering_entity_v1_usage_event, 0);
+

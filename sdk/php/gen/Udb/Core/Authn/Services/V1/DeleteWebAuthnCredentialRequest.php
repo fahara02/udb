@@ -120,3 +120,4 @@ class DeleteWebAuthnCredentialRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

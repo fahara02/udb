@@ -103,3 +103,4 @@ class GetJobResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

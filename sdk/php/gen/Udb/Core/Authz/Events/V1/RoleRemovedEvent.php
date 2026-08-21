@@ -284,3 +284,4 @@ class RoleRemovedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
+

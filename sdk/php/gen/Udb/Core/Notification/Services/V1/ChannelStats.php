@@ -191,3 +191,4 @@ class ChannelStats extends \Google\Protobuf\Internal\Message
     }
 
 }
+

@@ -438,3 +438,4 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

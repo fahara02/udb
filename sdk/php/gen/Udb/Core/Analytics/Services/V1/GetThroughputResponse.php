@@ -137,3 +137,4 @@ class GetThroughputResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
+

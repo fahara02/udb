@@ -117,3 +117,4 @@ export type EmbeddingJob = Message<"udb.core.embedding.entity.v1.EmbeddingJob"> 
  */
 export const EmbeddingJobSchema: GenMessage<EmbeddingJob> = /*@__PURE__*/
   messageDesc(file_udb_core_embedding_entity_v1_embedding_job, 0);
+

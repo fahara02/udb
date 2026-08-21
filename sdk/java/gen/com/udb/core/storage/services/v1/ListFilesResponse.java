@@ -60,7 +60,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.storage.entity.v1.File files = 1 [json_name = "files"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.storage.entity.v1.FileOrBuilder>
+  public java.util.List<? extends com.udb.core.storage.entity.v1.FileOrBuilder> 
       getFilesOrBuilderList() {
     return files_;
   }
@@ -153,7 +153,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -173,7 +173,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -526,7 +526,7 @@ private static final long serialVersionUID = 0L;
             filesBuilder_ = null;
             files_ = other.files_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            filesBuilder_ =
+            filesBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetFilesFieldBuilder() : null;
           } else {
@@ -813,7 +813,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.storage.entity.v1.File files = 1 [json_name = "files"];</code>
      */
-    public java.util.List<? extends com.udb.core.storage.entity.v1.FileOrBuilder>
+    public java.util.List<? extends com.udb.core.storage.entity.v1.FileOrBuilder> 
          getFilesOrBuilderList() {
       if (filesBuilder_ != null) {
         return filesBuilder_.getMessageOrBuilderList();
@@ -839,12 +839,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.storage.entity.v1.File files = 1 [json_name = "files"];</code>
      */
-    public java.util.List<com.udb.core.storage.entity.v1.File.Builder>
+    public java.util.List<com.udb.core.storage.entity.v1.File.Builder> 
          getFilesBuilderList() {
       return internalGetFilesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.storage.entity.v1.File, com.udb.core.storage.entity.v1.File.Builder, com.udb.core.storage.entity.v1.FileOrBuilder>
+        com.udb.core.storage.entity.v1.File, com.udb.core.storage.entity.v1.File.Builder, com.udb.core.storage.entity.v1.FileOrBuilder> 
         internalGetFilesFieldBuilder() {
       if (filesBuilder_ == null) {
         filesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1034,7 +1034,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1080,7 +1080,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -1189,3 +1189,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

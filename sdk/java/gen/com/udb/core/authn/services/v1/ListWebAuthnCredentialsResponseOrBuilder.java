@@ -13,7 +13,7 @@ public interface ListWebAuthnCredentialsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.services.v1.WebAuthnCredentialSummary credentials = 1 [json_name = "credentials"];</code>
    */
-  java.util.List<com.udb.core.authn.services.v1.WebAuthnCredentialSummary>
+  java.util.List<com.udb.core.authn.services.v1.WebAuthnCredentialSummary> 
       getCredentialsList();
   /**
    * <code>repeated .udb.core.authn.services.v1.WebAuthnCredentialSummary credentials = 1 [json_name = "credentials"];</code>
@@ -26,7 +26,7 @@ public interface ListWebAuthnCredentialsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authn.services.v1.WebAuthnCredentialSummary credentials = 1 [json_name = "credentials"];</code>
    */
-  java.util.List<? extends com.udb.core.authn.services.v1.WebAuthnCredentialSummaryOrBuilder>
+  java.util.List<? extends com.udb.core.authn.services.v1.WebAuthnCredentialSummaryOrBuilder> 
       getCredentialsOrBuilderList();
   /**
    * <code>repeated .udb.core.authn.services.v1.WebAuthnCredentialSummary credentials = 1 [json_name = "credentials"];</code>

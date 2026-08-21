@@ -376,3 +376,4 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

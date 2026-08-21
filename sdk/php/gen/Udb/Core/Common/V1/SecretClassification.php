@@ -94,3 +94,4 @@ class SecretClassification
         return constant($const);
     }
 }
+

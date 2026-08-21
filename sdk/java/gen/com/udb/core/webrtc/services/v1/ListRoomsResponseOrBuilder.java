@@ -13,7 +13,7 @@ public interface ListRoomsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Room rooms = 1 [json_name = "rooms"];</code>
    */
-  java.util.List<com.udb.core.webrtc.entity.v1.Room>
+  java.util.List<com.udb.core.webrtc.entity.v1.Room> 
       getRoomsList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Room rooms = 1 [json_name = "rooms"];</code>
@@ -26,7 +26,7 @@ public interface ListRoomsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Room rooms = 1 [json_name = "rooms"];</code>
    */
-  java.util.List<? extends com.udb.core.webrtc.entity.v1.RoomOrBuilder>
+  java.util.List<? extends com.udb.core.webrtc.entity.v1.RoomOrBuilder> 
       getRoomsOrBuilderList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Room rooms = 1 [json_name = "rooms"];</code>

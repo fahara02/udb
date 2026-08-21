@@ -120,3 +120,4 @@ class EnrollMFARequest extends \Google\Protobuf\Internal\Message
     }
 
 }
+

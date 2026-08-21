@@ -137,3 +137,4 @@ class ErrorCase extends \Google\Protobuf\Internal\Message
     }
 
 }
+

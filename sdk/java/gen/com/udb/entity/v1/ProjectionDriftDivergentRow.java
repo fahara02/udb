@@ -71,7 +71,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       sourceChecksum_ = s;
@@ -87,7 +87,7 @@ private static final long serialVersionUID = 0L;
       getSourceChecksumBytes() {
     java.lang.Object ref = sourceChecksum_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       sourceChecksum_ = b;
@@ -110,7 +110,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       targetChecksum_ = s;
@@ -126,7 +126,7 @@ private static final long serialVersionUID = 0L;
       getTargetChecksumBytes() {
     java.lang.Object ref = targetChecksum_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       targetChecksum_ = b;
@@ -149,7 +149,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       kind_ = s;
@@ -165,7 +165,7 @@ private static final long serialVersionUID = 0L;
       getKindBytes() {
     java.lang.Object ref = kind_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       kind_ = b;
@@ -597,7 +597,7 @@ private static final long serialVersionUID = 0L;
         getSourceChecksumBytes() {
       java.lang.Object ref = sourceChecksum_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         sourceChecksum_ = b;
@@ -669,7 +669,7 @@ private static final long serialVersionUID = 0L;
         getTargetChecksumBytes() {
       java.lang.Object ref = targetChecksum_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         targetChecksum_ = b;
@@ -741,7 +741,7 @@ private static final long serialVersionUID = 0L;
         getKindBytes() {
       java.lang.Object ref = kind_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         kind_ = b;
@@ -838,3 +838,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

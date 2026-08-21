@@ -194,3 +194,4 @@ public enum ScanVerdict
 
   // @@protoc_insertion_point(enum_scope:udb.core.storage.entity.v1.ScanVerdict)
 }
+

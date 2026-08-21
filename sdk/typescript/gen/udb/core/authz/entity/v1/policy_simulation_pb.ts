@@ -93,3 +93,4 @@ export type PolicySimulation = Message<"udb.core.authz.entity.v1.PolicySimulatio
  */
 export const PolicySimulationSchema: GenMessage<PolicySimulation> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_entity_v1_policy_simulation, 0);
+

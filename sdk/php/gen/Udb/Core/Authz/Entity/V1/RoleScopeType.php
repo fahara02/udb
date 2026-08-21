@@ -66,3 +66,4 @@ class RoleScopeType
         return constant($const);
     }
 }
+

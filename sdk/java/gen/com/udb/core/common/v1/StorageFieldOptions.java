@@ -91,7 +91,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       bucketEnvKey_ = s;
@@ -111,7 +111,7 @@ private static final long serialVersionUID = 0L;
       getBucketEnvKeyBytes() {
     java.lang.Object ref = bucketEnvKey_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       bucketEnvKey_ = b;
@@ -138,7 +138,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       keyPrefix_ = s;
@@ -158,7 +158,7 @@ private static final long serialVersionUID = 0L;
       getKeyPrefixBytes() {
     java.lang.Object ref = keyPrefix_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       keyPrefix_ = b;
@@ -245,7 +245,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       kmsKeyId_ = s;
@@ -265,7 +265,7 @@ private static final long serialVersionUID = 0L;
       getKmsKeyIdBytes() {
     java.lang.Object ref = kmsKeyId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       kmsKeyId_ = b;
@@ -292,7 +292,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs =
+      com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       acl_ = s;
@@ -312,7 +312,7 @@ private static final long serialVersionUID = 0L;
       getAclBytes() {
     java.lang.Object ref = acl_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b =
+      com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       acl_ = b;
@@ -909,7 +909,7 @@ private static final long serialVersionUID = 0L;
         getBucketEnvKeyBytes() {
       java.lang.Object ref = bucketEnvKey_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         bucketEnvKey_ = b;
@@ -1001,7 +1001,7 @@ private static final long serialVersionUID = 0L;
         getKeyPrefixBytes() {
       java.lang.Object ref = keyPrefix_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         keyPrefix_ = b;
@@ -1269,7 +1269,7 @@ private static final long serialVersionUID = 0L;
         getKmsKeyIdBytes() {
       java.lang.Object ref = kmsKeyId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         kmsKeyId_ = b;
@@ -1361,7 +1361,7 @@ private static final long serialVersionUID = 0L;
         getAclBytes() {
       java.lang.Object ref = acl_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b =
+        com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         acl_ = b;
@@ -1470,3 +1470,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

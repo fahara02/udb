@@ -701,7 +701,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -822,7 +822,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ResponseMeta meta = 4 [json_name = "meta"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ResponseMeta, com.udb.core.common.v1.ResponseMeta.Builder, com.udb.core.common.v1.ResponseMetaOrBuilder>
+        com.udb.core.common.v1.ResponseMeta, com.udb.core.common.v1.ResponseMeta.Builder, com.udb.core.common.v1.ResponseMetaOrBuilder> 
         internalGetMetaFieldBuilder() {
       if (metaBuilder_ == null) {
         metaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -885,3 +885,4 @@ private static final long serialVersionUID = 0L;
   }
 
 }
+

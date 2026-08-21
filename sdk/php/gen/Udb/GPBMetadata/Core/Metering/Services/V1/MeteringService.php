@@ -25,3 +25,4 @@ class MeteringService
         static::$is_initialized = true;
     }
 }
+

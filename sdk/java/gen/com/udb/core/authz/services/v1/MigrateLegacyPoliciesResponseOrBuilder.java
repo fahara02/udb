@@ -44,7 +44,7 @@ public interface MigrateLegacyPoliciesResponseOrBuilder extends
    *
    * <code>repeated .udb.core.authz.services.v1.PolicyDiffEntry diff = 2 [json_name = "diff"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.PolicyDiffEntry>
+  java.util.List<com.udb.core.authz.services.v1.PolicyDiffEntry> 
       getDiffList();
   /**
    * <pre>
@@ -69,7 +69,7 @@ public interface MigrateLegacyPoliciesResponseOrBuilder extends
    *
    * <code>repeated .udb.core.authz.services.v1.PolicyDiffEntry diff = 2 [json_name = "diff"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder>
+  java.util.List<? extends com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder> 
       getDiffOrBuilderList();
   /**
    * <pre>
@@ -88,7 +88,7 @@ public interface MigrateLegacyPoliciesResponseOrBuilder extends
    *
    * <code>repeated .udb.core.authz.services.v1.SimulationResult simulation = 3 [json_name = "simulation"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.SimulationResult>
+  java.util.List<com.udb.core.authz.services.v1.SimulationResult> 
       getSimulationList();
   /**
    * <pre>
@@ -113,7 +113,7 @@ public interface MigrateLegacyPoliciesResponseOrBuilder extends
    *
    * <code>repeated .udb.core.authz.services.v1.SimulationResult simulation = 3 [json_name = "simulation"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder>
+  java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder> 
       getSimulationOrBuilderList();
   /**
    * <pre>

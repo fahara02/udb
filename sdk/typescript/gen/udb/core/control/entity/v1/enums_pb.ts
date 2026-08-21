@@ -69,3 +69,4 @@ export enum ResourceType {
  */
 export const ResourceTypeSchema: GenEnum<ResourceType> = /*@__PURE__*/
   enumDesc(file_udb_core_control_entity_v1_enums, 0);
+

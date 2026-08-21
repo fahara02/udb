@@ -85,3 +85,4 @@ class IdpKind
         return constant($const);
     }
 }
+
