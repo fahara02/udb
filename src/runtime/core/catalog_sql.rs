@@ -1100,11 +1100,21 @@ impl DataBrokerRuntime {
                  row_index = -1, \
                  updated_at = NOW()"
         );
-        let _ = sqlx::query(&sql)
+        if let Err(err) = sqlx::query(&sql)
             .bind(artifact_path)
             .bind(stmt_idx as i32)
             .execute(pool)
-            .await;
+            .await
+        {
+            // Swallowing this made the checkpoint silent exactly when it matters:
+            // the row exists to stop a resumed seed replaying committed rows, so a
+            // lost write means the next run re-applies statement `stmt_idx`.
+            tracing::warn!(
+                artifact = %artifact_path, statement = stmt_idx, error = %err,
+                "seed checkpoint write failed; an interrupted run will REPLAY this \
+                 statement on resume rather than skipping it"
+            );
+        }
     }
 
     /// Persist a **partial** checkpoint: every row up to and including `row_idx`
@@ -1128,12 +1138,19 @@ impl DataBrokerRuntime {
                  row_index = EXCLUDED.row_index, \
                  updated_at = NOW()"
         );
-        let _ = sqlx::query(&sql)
+        if let Err(err) = sqlx::query(&sql)
             .bind(artifact_path)
             .bind(stmt_idx as i32)
             .bind(row_idx as i32)
             .execute(pool)
-            .await;
+            .await
+        {
+            tracing::warn!(
+                artifact = %artifact_path, statement = stmt_idx, row = row_idx, error = %err,
+                "seed row checkpoint write failed; an interrupted run will REPLAY rows \
+                 already committed in this statement on resume"
+            );
+        }
     }
 
     /// Remove the checkpoint for `artifact_path` after it has been fully
@@ -1145,7 +1162,16 @@ impl DataBrokerRuntime {
     ) {
         let seed_progress = ledger_relation(ledger_schema, "udb_seed_progress");
         let sql = format!("DELETE FROM {seed_progress} WHERE artifact_path = $1");
-        let _ = sqlx::query(&sql).bind(artifact_path).execute(pool).await;
+        if let Err(err) = sqlx::query(&sql).bind(artifact_path).execute(pool).await {
+            // A stale checkpoint is not lost data, but it makes the NEXT run of
+            // this artifact resume from a position that no longer reflects
+            // reality - which is the failure this function exists to prevent.
+            tracing::warn!(
+                artifact = %artifact_path, error = %err,
+                "seed checkpoint could not be cleared after a successful apply; a stale \
+                 checkpoint may mis-position the next run of this artifact"
+            );
+        }
     }
 
     /// Returns `true` when the sqlx error represents dirty MySQL export data
