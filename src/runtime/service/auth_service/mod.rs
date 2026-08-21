@@ -129,9 +129,21 @@ impl DataBrokerService {
         // Native-service persistence resolves through the discovery seam (extend_udb.md):
         // the backend is read from this service's proto `native_service` binding, then a
         // health/weight-routed instance is chosen — not the process-global pool.
-        let pg_pool = runtime
-            .native_store_pool_for_service("authn", true, "")
-            .ok();
+        // Keep the resolve error: discarding it with `.ok()` meant a failure here
+        // silently swapped the auth event sink for a no-op (below), and NOTHING
+        // said so — every login, MFA, revocation, policy and admin event would
+        // stop reaching the outbox with no log and no metric.
+        let pg_pool = match runtime.native_store_pool_for_service("authn", true, "") {
+            Ok(pool) => Some(pool),
+            Err(err) => {
+                tracing::warn!(
+                    error = %err,
+                    "authn Postgres pool could not be resolved; auth persistence and the \
+                     durable auth event trail are unavailable"
+                );
+                None
+            }
+        };
         let authn_config = AuthnConfig::from_env();
         let security = SecurityConfig::current();
         // Wire the outbox-backed event sink so native auth mutations publish
@@ -150,7 +162,17 @@ impl DataBrokerService {
                 .with_exports(audit_export::export_sinks_from_env(Some(&pool)))
                 .with_metrics(self.metrics.clone()),
             ),
-            None => events::noop_sink(),
+            None => {
+                // The no-op sink DISCARDS every auth event and returns Ok, so this
+                // is the only place an operator can learn that the auth trail has
+                // gone dark. Say it plainly rather than falling back in silence.
+                tracing::error!(
+                    "no Postgres pool for authn: auth domain events (login, MFA, revocation, \
+                     policy and admin changes) are being DISCARDED, not published to the \
+                     outbox. This is an audit-trail gap"
+                );
+                events::noop_sink()
+            }
         };
         let (authn_service, api_key_service) = if let Some(pool) = pg_pool.clone() {
             // Short-TTL cluster jti denylist (Tier-1 #13): an acceleration layer

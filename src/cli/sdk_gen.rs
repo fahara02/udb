@@ -282,6 +282,37 @@ fn select_entities(
 }
 
 fn validate_repository_entities(entities: &[EntityDescriptor]) -> Result<(), String> {
+    // Two entities with the same SHORT name collide in the emitted Go: every
+    // helper is named from it (`<Short>ToUDBRecord`, `<Short>FromUDBRow`), as is
+    // the per-package import alias. Emitting both produced a file with duplicate
+    // declarations that gofmt accepts and `go build` rejects — the generator
+    // silently producing uncompilable output, which is the failure mode this
+    // whole surface keeps having.
+    //
+    // Reachable in practice: a consumer whose `--project-proto` root vendors
+    // UDB's own protos alongside their own has two `MfaChallenge`, two `OTP` and
+    // two `Session`. Refuse with both fully-qualified names so the fix (narrow
+    // the proto root, or rename) is obvious.
+    let mut by_short: std::collections::BTreeMap<&str, Vec<&str>> =
+        std::collections::BTreeMap::new();
+    for entity in entities {
+        by_short
+            .entry(entity.short_name.as_str())
+            .or_default()
+            .push(if entity.message_type.trim().is_empty() {
+                entity.short_name.as_str()
+            } else {
+                entity.message_type.as_str()
+            });
+    }
+    if let Some((short, fqns)) = by_short.iter().find(|(_, fqns)| fqns.len() > 1) {
+        return Err(format!(
+            "two entities share the short name `{short}` ({}), so the generated Go would \
+             declare `{short}ToUDBRecord` twice and fail to compile. Narrow --project-proto to \
+             one of them, or rename the message",
+            fqns.join(", ")
+        ));
+    }
     for entity in entities {
         if entity.primary_keys.is_empty() {
             let name = if entity.message_type.trim().is_empty() {
@@ -3833,6 +3864,48 @@ mod tests {
     /// not either, because its proto has no message-in-JSON column so the block was
     /// never emitted. Assert on the emitted helpers themselves, and assert the
     /// whole file parses as Go below.
+    /// Found against a real consumer proto root that vendors UDB's own protos
+    /// beside its own: two `MfaChallenge`, two `OTP`, two `Session`. The emitter
+    /// names every helper from the SHORT name, so it produced a file with
+    /// duplicate declarations - gofmt-clean and uncompilable.
+    #[test]
+    fn duplicate_short_names_are_refused_before_emitting() {
+        let mk = |message: &str, pkg: &str| EntityDescriptor {
+            message_type: format!("{pkg}.{message}"),
+            short_name: message.to_string(),
+            table: message.to_lowercase(),
+            primary_keys: vec!["id".to_string()],
+            tenant_field: String::new(),
+            project_field: String::new(),
+            soft_delete_field: String::new(),
+            version_field: String::new(),
+            proto_package: pkg.to_string(),
+            language_classes: std::collections::BTreeMap::new(),
+            json_field_names: vec!["id".to_string()],
+            relations: Vec::new(),
+            columns: Vec::new(),
+        };
+        let err = validate_repository_entities(&[
+            mk("MfaChallenge", "ambulife.authn.entity.v1"),
+            mk("MfaChallenge", "udb.core.authn.entity.v1"),
+        ])
+        .expect_err("a short-name collision must be refused, not emitted");
+        assert!(
+            err.contains("MfaChallengeToUDBRecord"),
+            "name the symbol: {err}"
+        );
+        assert!(
+            err.contains("ambulife.authn.entity.v1.MfaChallenge"),
+            "name both: {err}"
+        );
+        assert!(
+            err.contains("udb.core.authn.entity.v1.MfaChallenge"),
+            "name both: {err}"
+        );
+        // Distinct short names still pass.
+        assert!(validate_repository_entities(&[mk("Trip", "ambulife.trip.entity.v1")]).is_ok());
+    }
+
     #[test]
     fn json_message_helpers_emit_single_braces() {
         let helpers = go_coercion_helpers(false, true);

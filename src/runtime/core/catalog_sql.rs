@@ -1036,14 +1036,29 @@ impl DataBrokerRuntime {
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
                 )"
         );
-        let _ = pool.execute(create_sql.as_str()).await;
+        if let Err(err) = pool.execute(create_sql.as_str()).await {
+            tracing::warn!(
+                relation = %seed_progress, error = %err,
+                "seed checkpoint table could not be created; an interrupted seed will restart \
+                 from the beginning instead of resuming"
+            );
+        }
         // Backfill row_index for checkpoint tables created before row-level
         // resume existed. -1 means "statement fully applied" (no partial rows).
         let alter_sql = format!(
             "ALTER TABLE {seed_progress} \
              ADD COLUMN IF NOT EXISTS row_index INTEGER NOT NULL DEFAULT -1"
         );
-        let _ = pool.execute(alter_sql.as_str()).await;
+        if let Err(err) = pool.execute(alter_sql.as_str()).await {
+            // Swallowing this left a pre-existing checkpoint table without
+            // `row_index`, so ROW-level resume silently stopped working while
+            // statement-level resume kept appearing to function.
+            tracing::warn!(
+                relation = %seed_progress, error = %err,
+                "seed checkpoint table is missing the row_index backfill; row-level resume is \
+                 unavailable and an interrupted statement will replay from its first row"
+            );
+        }
     }
 
     /// Load the resume position for `artifact_path` as `(stmt_idx, row_idx)`:

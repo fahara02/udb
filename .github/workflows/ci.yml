@@ -281,16 +281,30 @@ jobs:
         run: cargo build --locked --all-targets
       - name: Compile tests and benches
         run: cargo test --locked --no-run --all-targets
-      - name: Test UDB library
-        run: cargo test --locked --lib
-      - name: Test UDB binary targets (src/cli/**)
-        # `--lib` does NOT reach `src/cli/**`: `mod cli` is declared in main.rs,
-        # so those tests live in the BINARY target. "Compile tests and benches"
-        # above passes `--no-run`, so for a long time 178 CLI tests were compiled
-        # on every push and executed on none of them - including all 56 in
-        # sdk_gen.rs, which exist specifically to stop the Go entity emitter
-        # shipping uncompilable adapters. It shipped them anyway, four times.
-        run: cargo test --locked --bins
+      - name: Test UDB (lib + bins + every integration target)
+        # ALL THREE selectors are required, and the reason is worth recording so
+        # nobody trims this back to `--lib`:
+        #
+        #   --lib    the library target.
+        #   --bins   `mod cli` is declared in main.rs, so everything under
+        #            `src/cli/**` lives in the BINARY target and `--lib` cannot
+        #            see it. 178 CLI tests were compiled on every push and
+        #            executed on none of them - including all 56 in sdk_gen.rs,
+        #            which exist specifically to stop the Go entity emitter
+        #            shipping uncompilable adapters. It shipped them anyway,
+        #            four times.
+        #   --tests  every `tests/*.rs` integration target, discovered
+        #            automatically. CI used to name targets one at a time
+        #            (`--test integration_tests --test runtime_live_backends`),
+        #            so `parser_tests` (50 tests), `phase10_tests`,
+        #            `neutrality_tests` and `ha` were never run by anything.
+        #            Naming targets individually is what let them be orphaned;
+        #            `--tests` means a new tests/*.rs is covered on the day it
+        #            lands, without an edit here.
+        #
+        # "Compile tests and benches" above only passes `--no-run`, so it proves
+        # these compile and nothing more.
+        run: cargo test --locked --lib --bins --tests
       - name: Operator CLI smoke (the commands an upgrade actually needs)
         # These are the commands an operator reaches for when a schema change or
         # an upgrade goes wrong. They were documented before they were exercised,
