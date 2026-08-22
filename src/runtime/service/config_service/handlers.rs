@@ -21,7 +21,7 @@ use super::codec::{flag_val_to_proto, flag_val_to_stored, proto_to_flag_val};
 use super::config::{CONFIG_MSG, DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT, eval_ttl_seconds};
 use super::errors::{ensure_evaluate_key_limit, require_flag_key};
 use super::eval::{EvalContext, EvalFlag, bump_revision, evaluate_flag, resolve_flag};
-use super::events::{emit_flag_changed, event_actor};
+use super::events::{emit_flag_changed, event_actor, flag_changed_transaction_op};
 use super::store::{
     eval_flag_from_json, flag_candidates_batch_read, flag_conflict, flag_filter, flag_list_read,
     flag_read_exact, flag_record, flag_state_from_json,
@@ -75,8 +75,15 @@ pub(crate) async fn put_flag(
         .unwrap_or_else(|| Uuid::new_v4().to_string());
     let revision = bump_revision(existing.as_ref().map(|f| f.revision).unwrap_or(0));
 
-    runtime
-        .native_entity_write_for_service(
+    // The flag row and its change event commit together: a flag that flipped
+    // durably while its event was lost leaves every evaluator on the old value
+    // with nothing to re-derive the change from.
+    let actor = event_actor();
+    let event_op =
+        flag_changed_transaction_op(svc, &tenant_id, &project_id, &flag_key, &actor, revision);
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "config",
             &context,
             CONFIG_MSG,
@@ -95,11 +102,14 @@ pub(crate) async fn put_flag(
                 &metadata_json,
             ),
             flag_conflict(),
+            event_op,
         )
         .await?;
 
-    let actor = event_actor();
-    emit_flag_changed(svc, &tenant_id, &project_id, &flag_key, &actor, revision).await;
+    if had_event && !co_committed {
+        // Target is not Postgres; keep the best-effort emit for that backend.
+        emit_flag_changed(svc, &tenant_id, &project_id, &flag_key, &actor, revision).await;
+    }
 
     Ok(Response::new(config_pb::PutFlagResponse {
         stored: true,
@@ -258,8 +268,15 @@ pub(crate) async fn delete_flag(
         }));
     };
 
-    runtime
-        .native_entity_delete_for_service(
+    // A delete is a config change: bump the revision in the emitted event. Built
+    // before the delete so a Postgres target commits both together.
+    let revision = bump_revision(existing.revision);
+    let actor = event_actor();
+    let event_op =
+        flag_changed_transaction_op(svc, &tenant_id, &project_id, &flag_key, &actor, revision);
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_delete_co_commit_for_service(
             "config",
             &context,
             LogicalDelete {
@@ -272,13 +289,14 @@ pub(crate) async fn delete_flag(
                 ),
                 return_fields: Vec::new(),
             },
+            event_op,
         )
         .await?;
 
-    // A delete is a config change: bump the revision in the emitted event.
-    let revision = bump_revision(existing.revision);
-    let actor = event_actor();
-    emit_flag_changed(svc, &tenant_id, &project_id, &flag_key, &actor, revision).await;
+    if had_event && !co_committed {
+        // Target is not Postgres; keep the best-effort emit for that backend.
+        emit_flag_changed(svc, &tenant_id, &project_id, &flag_key, &actor, revision).await;
+    }
 
     Ok(Response::new(config_pb::DeleteFlagResponse {
         deleted: true,

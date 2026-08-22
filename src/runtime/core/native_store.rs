@@ -608,6 +608,38 @@ impl DataBrokerRuntime {
         Ok(true)
     }
 
+    /// [`Self::native_entity_write_co_commit_for_service`] for a typed DELETE.
+    ///
+    /// Same dual path and the same meaning for the returned flag: `true` when the
+    /// event committed with the delete, `false` when the caller must fall back to
+    /// its best-effort emit (no event, or a non-Postgres target).
+    pub(crate) async fn native_entity_delete_co_commit_for_service(
+        &self,
+        service_id: &str,
+        context: &crate::RequestContext,
+        op: crate::ir::LogicalDelete,
+        event_op: Option<NativeEntityTransactionOp>,
+    ) -> Result<bool, tonic::Status> {
+        let Some(event_op) = event_op else {
+            self.native_entity_delete_for_service(service_id, context, op)
+                .await?;
+            return Ok(false);
+        };
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
+        if kind != crate::backend::BackendKind::Postgres || target.backend != "postgres" {
+            self.native_entity_delete_for_service(service_id, context, op)
+                .await?;
+            return Ok(false);
+        }
+        self.native_entity_transaction_for_service(
+            service_id,
+            context,
+            vec![NativeEntityTransactionOp::Delete(op), event_op],
+        )
+        .await?;
+        Ok(true)
+    }
+
     /// Execute a typed native-entity write and parse `RETURNING`/row-returning
     /// mutation output. Callers must set `return_fields` deliberately; empty return
     /// fields still execute the write but generally return no rows.

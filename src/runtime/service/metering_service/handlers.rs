@@ -89,6 +89,49 @@ pub(crate) async fn windowed_usage(
 }
 
 /// Emit the per-mutation versioned dot-topic outbox event (best-effort).
+/// Build the quota-changed event as a transaction step so it commits with the
+/// quota write that caused it.
+///
+/// `None` means nothing to co-commit; the caller falls back to
+/// [`emit_quota_changed`].
+pub(crate) fn quota_changed_transaction_op(
+    svc: &MeteringServiceImpl,
+    tenant_id: &str,
+    project_id: &str,
+    metric: &str,
+    revision: i64,
+) -> Option<crate::runtime::core::native_store::NativeEntityTransactionOp> {
+    match crate::runtime::service::native_helpers::native_transaction_outbox_op(
+        svc.outbox_relation.as_deref(),
+        TOPIC_QUOTA_CHANGED,
+        metric,
+        tenant_id,
+        project_id,
+        serde_json::json!({
+            "tenant_id": tenant_id,
+            "project_id": project_id,
+            "metric": metric,
+            "revision": revision,
+        }),
+        NativeEventContext {
+            target_resource: metric.to_string(),
+            ..NativeEventContext::default()
+        },
+    ) {
+        Ok(op) => op,
+        Err(reject) => {
+            tracing::warn!(
+                topic = TOPIC_QUOTA_CHANGED,
+                metric,
+                error = %reject,
+                "refusing to enqueue non-compliant quota event; the quota write still stands"
+            );
+            svc.metrics.inc_outbox_enqueue_failures_total("native");
+            None
+        }
+    }
+}
+
 pub(crate) async fn emit_quota_changed(
     svc: &MeteringServiceImpl,
     tenant_id: &str,
@@ -312,8 +355,13 @@ pub(crate) async fn put_quota(
         .unwrap_or_else(|| Uuid::new_v4().to_string());
     let revision = bump_revision(existing.as_ref().map(|q| q.revision).unwrap_or(0));
 
-    runtime
-        .native_entity_write_for_service(
+    // The quota row and its change event commit together: a new limit that became
+    // durable while its event was lost leaves enforcement consumers on the old
+    // value with nothing to re-derive the change from.
+    let event_op = quota_changed_transaction_op(svc, &tenant_id, &project_id, &metric, revision);
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "metering",
             &context,
             QUOTA_RULE_MSG,
@@ -329,10 +377,14 @@ pub(crate) async fn put_quota(
                 &metadata_json,
             ),
             quota_conflict(),
+            event_op,
         )
         .await?;
 
-    emit_quota_changed(svc, &tenant_id, &project_id, &metric, revision).await;
+    if had_event && !co_committed {
+        // Target is not Postgres; keep the best-effort emit for that backend.
+        emit_quota_changed(svc, &tenant_id, &project_id, &metric, revision).await;
+    }
 
     Ok(Response::new(metering_pb::PutQuotaResponse {
         stored: true,

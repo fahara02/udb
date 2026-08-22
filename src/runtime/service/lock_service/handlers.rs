@@ -28,7 +28,7 @@ use super::errors::{
     ensure_fencing_token_fresh, lock_already_held_status, lock_held_by_different_owner_status,
     lock_lease_lost_status, lock_not_held_status, validate_lock_identity,
 };
-use super::events::emit_lock_event;
+use super::events::{emit_lock_event, lock_event_transaction_op};
 use super::model::{lease_lapsed, lease_name, lock_dto_from_json, now_unix, stored_lock_from_json};
 use super::store::{
     held_locks_read, lock_conflict, lock_inventory_read, lock_read_by_name, lock_record,
@@ -144,8 +144,22 @@ pub(crate) async fn acquire_lock(
     let expires_at = acquired_at + chrono::Duration::seconds(ttl_seconds);
     let metadata_json = non_empty_json(&req.metadata_json);
 
-    runtime
-        .native_entity_write_for_service(
+    // The lock row and its event commit together: a held/renewed/released state
+    // that became durable while its event was lost leaves every fencing-token
+    // consumer reasoning from a stale view, with nothing to re-derive it.
+    let event_op = lock_event_transaction_op(
+        svc,
+        TOPIC_ACQUIRED,
+        &lease,
+        &tenant_id,
+        &context.project_id,
+        &lock_name,
+        &owner_id,
+        fencing_token,
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "lock",
             &context,
             LOCK_MSG,
@@ -162,21 +176,25 @@ pub(crate) async fn acquire_lock(
                 &metadata_json,
             ),
             lock_conflict(),
+            event_op,
         )
         .await?;
-
-    emit_lock_event(
-        svc,
-        TOPIC_ACQUIRED,
-        &lease,
-        &tenant_id,
-        &context.project_id,
-        &lock_id,
-        &lock_name,
-        &owner_id,
-        fencing_token,
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the write's
+        // transaction. Keep the best-effort emit for that backend.
+        emit_lock_event(
+            svc,
+            TOPIC_ACQUIRED,
+            &lease,
+            &tenant_id,
+            &context.project_id,
+            &lock_id,
+            &lock_name,
+            &owner_id,
+            fencing_token,
+        )
+        .await;
+    }
 
     Ok(Response::new(lock_pb::AcquireLockResponse {
         acquired: true,
@@ -247,8 +265,22 @@ pub(crate) async fn renew_lock(
 
     let acquired_at = Utc::now();
     let expires_at = acquired_at + chrono::Duration::seconds(ttl_seconds);
-    runtime
-        .native_entity_write_for_service(
+    // The lock row and its event commit together: a held/renewed/released state
+    // that became durable while its event was lost leaves every fencing-token
+    // consumer reasoning from a stale view, with nothing to re-derive it.
+    let event_op = lock_event_transaction_op(
+        svc,
+        TOPIC_RENEWED,
+        &lease,
+        &tenant_id,
+        &context.project_id,
+        &lock_name,
+        &owner_id,
+        fencing_token,
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "lock",
             &context,
             LOCK_MSG,
@@ -265,21 +297,25 @@ pub(crate) async fn renew_lock(
                 "{}",
             ),
             lock_conflict(),
+            event_op,
         )
         .await?;
-
-    emit_lock_event(
-        svc,
-        TOPIC_RENEWED,
-        &lease,
-        &tenant_id,
-        &context.project_id,
-        &stored.lock_id,
-        &lock_name,
-        &owner_id,
-        fencing_token,
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the write's
+        // transaction. Keep the best-effort emit for that backend.
+        emit_lock_event(
+            svc,
+            TOPIC_RENEWED,
+            &lease,
+            &tenant_id,
+            &context.project_id,
+            &stored.lock_id,
+            &lock_name,
+            &owner_id,
+            fencing_token,
+        )
+        .await;
+    }
 
     Ok(Response::new(lock_pb::RenewLockResponse {
         renewed: true,
@@ -333,8 +369,22 @@ pub(crate) async fn release_lock(
     runtime.release_native_lease(&lease, &owner_id).await;
 
     let now = Utc::now();
-    runtime
-        .native_entity_write_for_service(
+    // The lock row and its event commit together: a held/renewed/released state
+    // that became durable while its event was lost leaves every fencing-token
+    // consumer reasoning from a stale view, with nothing to re-derive it.
+    let event_op = lock_event_transaction_op(
+        svc,
+        TOPIC_RELEASED,
+        &lease,
+        &tenant_id,
+        &context.project_id,
+        &lock_name,
+        &owner_id,
+        stored.fencing_token,
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "lock",
             &context,
             LOCK_MSG,
@@ -351,21 +401,25 @@ pub(crate) async fn release_lock(
                 "{}",
             ),
             lock_conflict(),
+            event_op,
         )
         .await?;
-
-    emit_lock_event(
-        svc,
-        TOPIC_RELEASED,
-        &lease,
-        &tenant_id,
-        &context.project_id,
-        &stored.lock_id,
-        &lock_name,
-        &owner_id,
-        stored.fencing_token,
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the write's
+        // transaction. Keep the best-effort emit for that backend.
+        emit_lock_event(
+            svc,
+            TOPIC_RELEASED,
+            &lease,
+            &tenant_id,
+            &context.project_id,
+            &stored.lock_id,
+            &lock_name,
+            &owner_id,
+            stored.fencing_token,
+        )
+        .await;
+    }
 
     Ok(Response::new(lock_pb::ReleaseLockResponse {
         released: true,

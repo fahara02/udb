@@ -23,7 +23,7 @@ use super::errors::{
     backup_internal_status, backup_not_found_status, backup_run_location_missing_status,
     required_backup_field, restore_manifest_integrity_status,
 };
-use super::events::emit_event;
+use super::events::{emit_event, event_transaction_op};
 use super::model::{
     json_str, policy_view_from_json, row_object, run_location_from_json, run_summary_from_json,
     sha256_hex,
@@ -303,33 +303,49 @@ pub(crate) async fn put_backup_policy(
         logical_string(non_empty_json(&req.metadata_json)),
     );
 
-    runtime
-        .native_entity_write_for_service(
-            "backup",
-            &context,
-            BACKUP_POLICY_MSG,
-            record,
-            policy_conflict(),
-        )
-        .await?;
-
-    emit_event(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra = serde_json::json!({
+        "tenant_id": tenant_id,
+        "project_id": binding.project_id,
+        "policy_id": policy_id,
+        "policy_name": policy_name,
+        "enabled": req.enabled,
+        "retention_days": req.retention_days,
+    });
+    let event_op = event_transaction_op(
         svc,
         TOPIC_POLICY_UPSERTED,
         &tenant_id,
         &tenant_id,
         &context.project_id,
         &policy_name,
-        serde_json::json!({
-            "tenant_id": tenant_id,
-            "project_id": binding.project_id,
-            "policy_id": policy_id,
-            "policy_name": policy_name,
-            "enabled": req.enabled,
-            "retention_days": req.retention_days,
-        }),
-    )
-    .await;
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
+            "backup",
+            &context,
+            BACKUP_POLICY_MSG,
+            record,
+            policy_conflict(),
+            event_op,
+        )
+        .await?;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        emit_event(
+            svc,
+            TOPIC_POLICY_UPSERTED,
+            &tenant_id,
+            &tenant_id,
+            &context.project_id,
+            &policy_name,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(backup_pb::PutBackupPolicyResponse {
         policy_id,
@@ -452,8 +468,24 @@ pub(crate) async fn delete_backup_policy(
     let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
     let binding = svc.resolve_project_snapshot(&context.project_id)?;
     context.project_id = binding.project_id.clone();
-    runtime
-        .native_entity_delete_for_service(
+    // Built before the delete so a Postgres target commits both together.
+    let event_extra = serde_json::json!({
+        "tenant_id": tenant_id,
+        "project_id": binding.project_id,
+        "policy_name": policy_name
+    });
+    let event_op = event_transaction_op(
+        svc,
+        TOPIC_POLICY_DELETED,
+        &tenant_id,
+        &tenant_id,
+        &context.project_id,
+        &policy_name,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_delete_co_commit_for_service(
             "backup",
             &context,
             LogicalDelete {
@@ -477,23 +509,23 @@ pub(crate) async fn delete_backup_policy(
                 ]),
                 return_fields: Vec::new(),
             },
+            event_op,
         )
         .await?;
 
-    emit_event(
-        svc,
-        TOPIC_POLICY_DELETED,
-        &tenant_id,
-        &tenant_id,
-        &context.project_id,
-        &policy_name,
-        serde_json::json!({
-            "tenant_id": tenant_id,
-            "project_id": binding.project_id,
-            "policy_name": policy_name
-        }),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres; keep the best-effort emit for that backend.
+        emit_event(
+            svc,
+            TOPIC_POLICY_DELETED,
+            &tenant_id,
+            &tenant_id,
+            &context.project_id,
+            &policy_name,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(backup_pb::DeleteBackupPolicyResponse {
         deleted: true,

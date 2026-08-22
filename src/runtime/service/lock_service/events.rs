@@ -36,6 +36,51 @@ pub(crate) fn lock_event_payload(
 /// surface a `Result` to this call site). A true transactional outbox for
 /// mediated entity writes is follow-up 16.12.4.
 #[allow(clippy::too_many_arguments)]
+/// Build the lock event as a transaction step, so the lock-row write and its
+/// event commit together via
+/// [`crate::runtime::core::DataBrokerRuntime::native_entity_write_co_commit_for_service`].
+///
+/// `None` means nothing to co-commit. Unlike [`emit_lock_event`], a missing pool
+/// or relation is NOT logged as a dropped event here: the caller falls back to
+/// that function, which does the logging and metrics.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn lock_event_transaction_op(
+    svc: &LockServiceImpl,
+    topic: &str,
+    partition_key: &str,
+    tenant_id: &str,
+    project_id: &str,
+    lock_name: &str,
+    owner_id: &str,
+    fencing_token: i64,
+) -> Option<crate::runtime::core::native_store::NativeEntityTransactionOp> {
+    match super::super::native_helpers::native_transaction_outbox_op(
+        svc.outbox_relation.as_deref(),
+        topic,
+        partition_key,
+        tenant_id,
+        project_id,
+        lock_event_payload(tenant_id, project_id, lock_name, owner_id, fencing_token),
+        NativeEventContext {
+            target_resource: lock_name.to_string(),
+            ..NativeEventContext::default()
+        },
+    ) {
+        Ok(op) => op,
+        Err(reject) => {
+            tracing::error!(
+                topic,
+                lock_name,
+                tenant_id,
+                error = %reject,
+                "lock event dropped: envelope rejected"
+            );
+            svc.metrics.inc_outbox_enqueue_failures_total("native");
+            None
+        }
+    }
+}
+
 pub(crate) async fn emit_lock_event(
     svc: &LockServiceImpl,
     topic: &str,

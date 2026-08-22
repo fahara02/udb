@@ -11,6 +11,62 @@ use super::config::TOPIC_ANALYTICS_EVENTS;
 /// partition key = tenant (the contract's `partition_key_field`), actor = the
 /// verified claim subject (auto-filled from the method-security principal when
 /// no claim context is installed).
+/// Insert the analytics event through the CALLER'S transaction, so the metric row
+/// and its event commit together.
+///
+/// `record_pipeline_metric` writes raw SQL against the same pool the outbox lives
+/// in, so it can be atomic and now is. An envelope rejection keeps the
+/// best-effort posture (warn, count, let the write stand); an infrastructure
+/// failure propagates so the caller's transaction rolls the metric row back.
+pub(crate) async fn enqueue_analytics_event_in_tx(
+    svc: &AnalyticsServiceImpl,
+    executor: &mut sqlx::PgConnection,
+    event_type: &'static str,
+    tenant_id: &str,
+    project_id: &str,
+    stage_name: &str,
+    payload: serde_json::Value,
+) -> Result<(), String> {
+    let Some(relation) = svc.outbox_relation.as_deref() else {
+        return Ok(());
+    };
+    let context = NativeEventContext {
+        operation: event_type.to_string(),
+        target_resource: stage_name.to_string(),
+        ..NativeEventContext::default()
+    };
+    let (event_id, envelope) =
+        match crate::runtime::service::native_helpers::build_enriched_outbox_envelope(
+            TOPIC_ANALYTICS_EVENTS,
+            tenant_id,
+            tenant_id,
+            project_id,
+            context,
+            payload,
+        ) {
+            Ok(built) => built,
+            Err(reject) => {
+                tracing::warn!(
+                    topic = TOPIC_ANALYTICS_EVENTS,
+                    error = %reject,
+                    "refusing to enqueue non-compliant analytics event; the metric write still stands"
+                );
+                svc.metrics.inc_outbox_enqueue_failures_total("native");
+                return Ok(());
+            }
+        };
+    crate::runtime::cdc::insert_outbox_row(
+        &mut *executor,
+        relation,
+        event_id,
+        TOPIC_ANALYTICS_EVENTS,
+        tenant_id,
+        &envelope,
+    )
+    .await
+    .map_err(|err| format!("outbox insert failed: {err}"))
+}
+
 pub(crate) async fn emit_analytics_event(
     svc: &AnalyticsServiceImpl,
     event_type: &'static str,

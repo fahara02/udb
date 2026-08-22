@@ -66,6 +66,79 @@ pub(crate) fn build_work_event_payload(
 
 impl EmbeddingServiceImpl {
     /// Emit a per-mutation versioned dot-topic control event (best-effort).
+    /// The base identifiers every source event carries, merged with the caller's
+    /// extra fields. Shared by both emit postures so the payload is byte-identical
+    /// whichever one a call site takes.
+    fn source_event_payload(
+        tenant_id: &str,
+        project_id: &str,
+        source_name: &str,
+        extra: serde_json::Value,
+    ) -> serde_json::Value {
+        let mut payload = serde_json::json!({
+            "tenant_id": tenant_id,
+            "project_id": project_id,
+            "source": source_name,
+        });
+        if let (Some(object), Some(extra)) = (payload.as_object_mut(), extra.as_object()) {
+            for (key, value) in extra {
+                object.insert(key.clone(), value.clone());
+            }
+        }
+        payload
+    }
+
+    /// Build the source event as a transaction step so it commits with the write
+    /// that caused it.
+    ///
+    /// `None` means nothing to co-commit; the caller falls back to
+    /// [`Self::emit_source_event`].
+    pub(crate) fn source_event_transaction_op(
+        &self,
+        topic: &str,
+        tenant_id: &str,
+        project_id: &str,
+        source_name: &str,
+        extra: serde_json::Value,
+    ) -> Option<crate::runtime::core::native_store::NativeEntityTransactionOp> {
+        match crate::runtime::service::native_helpers::native_transaction_outbox_op(
+            self.outbox_relation.as_deref(),
+            topic,
+            source_name,
+            tenant_id,
+            project_id,
+            Self::source_event_payload(tenant_id, project_id, source_name, extra),
+            NativeEventContext {
+                target_resource: source_name.to_string(),
+                ..NativeEventContext::default()
+            },
+        ) {
+            Ok(op) => op,
+            Err(reject) => {
+                tracing::warn!(
+                    topic,
+                    error = %reject,
+                    "refusing to enqueue non-compliant embedding source event; the write still stands"
+                );
+                self.metrics.inc_outbox_enqueue_failures_total("native");
+                None
+            }
+        }
+    }
+
+    /// Best-effort source event.
+    ///
+    /// The callers left on this path cannot do better, so do not convert them to
+    /// [`Self::source_event_transaction_op`]:
+    ///
+    /// - the non-Postgres fallback of a co-committed site;
+    /// - passes whose durable effect is a VECTOR ENGINE write rather than a
+    ///   Postgres one, where no transaction exists for the event to join;
+    /// - `ingest_one`'s document events, which announce the end of a MULTI-STEP
+    ///   ingest (document row, then the chunk work batch, then job bookkeeping).
+    ///   No single transaction spans that, and binding the event to the document
+    ///   write would announce an ingest whose chunks are not persisted yet —
+    ///   trading a lost event for a lying one.
     pub(crate) async fn emit_source_event(
         &self,
         topic: &str,
@@ -77,16 +150,7 @@ impl EmbeddingServiceImpl {
         let Some(pool) = self.pg_pool.as_ref() else {
             return;
         };
-        let mut payload = serde_json::json!({
-            "tenant_id": tenant_id,
-            "project_id": project_id,
-            "source": source_name,
-        });
-        if let (Some(object), Some(extra)) = (payload.as_object_mut(), extra.as_object()) {
-            for (key, value) in extra {
-                object.insert(key.clone(), value.clone());
-            }
-        }
+        let payload = Self::source_event_payload(tenant_id, project_id, source_name, extra);
         enqueue_outbox_event_with_context(
             pool,
             self.outbox_relation.as_deref(),

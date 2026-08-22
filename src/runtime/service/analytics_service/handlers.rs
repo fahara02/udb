@@ -83,6 +83,12 @@ pub(crate) async fn record_pipeline_metric(
     // row's pre-update values (all SET RHS see the old row), and EXCLUDED.* is
     // the would-be-inserted row — so the running mean / rate / rps below are
     // computed consistently against the old totals.
+    // The metric row and its event commit together: the proto declares one
+    // outbox event per durable mutation, and emitting after the write had already
+    // committed could satisfy the write while silently dropping the event.
+    let mut tx = pool.begin().await.map_err(|err| {
+        crate::runtime::executor_utils::sqlx_error_to_status("record pipeline metric failed", &err)
+    })?;
     sqlx::query(&format!(
         "INSERT INTO {rel} AS existing \
            ({hour}, {stage}, {tenant}, {total}, {succ_c}, {fail_c}, {avg}, {err}, {rps}) \
@@ -116,15 +122,16 @@ pub(crate) async fn record_pipeline_metric(
     .bind(succ)
     .bind(fail)
     .bind(req.latency_ms)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|err| {
         crate::runtime::executor_utils::sqlx_error_to_status("record pipeline metric failed", &err)
     })?;
     // Fulfil the proto-declared `method_event_contract`: one outbox event per
     // durable mutation (topic `analytics.events`, at-least-once via CDC).
-    emit_analytics_event(
+    enqueue_analytics_event_in_tx(
         svc,
+        &mut tx,
         EVENT_TYPE_PIPELINE_METRIC_RECORDED,
         &req.tenant_id,
         &metadata_project_id(&metadata).unwrap_or_default(),
@@ -136,7 +143,20 @@ pub(crate) async fn record_pipeline_metric(
             None,
         ),
     )
-    .await;
+    .await
+    .map_err(|err| {
+        crate::runtime::executor_utils::internal_status(
+            "analytics",
+            "record_pipeline_metric_event",
+            format!("record pipeline metric event enqueue failed: {err}"),
+        )
+    })?;
+    tx.commit().await.map_err(|err| {
+        crate::runtime::executor_utils::sqlx_error_to_status(
+            "record pipeline metric commit failed",
+            &err,
+        )
+    })?;
     Ok(Response::new(ana_pb::RecordPipelineMetricResponse {
         accepted: true,
     }))

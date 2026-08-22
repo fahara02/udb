@@ -408,8 +408,19 @@ pub(crate) async fn register_model(
             .swap_alias(&collection_alias, req.active_collection.trim())
             .await?;
     }
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra = serde_json::json!({"model_id": model_id, "provider": req.provider, "model_name": req.model_name,
+            "version": req.version, "dimensions": req.dimensions, "active_collection": req.active_collection});
+    let event_op = svc.source_event_transaction_op(
+        TOPIC_MODEL_REGISTERED,
+        &tenant_id,
+        &context.project_id,
+        &model_id,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "embedding",
             &context,
             EMBEDDING_MODEL_MSG,
@@ -446,13 +457,21 @@ pub(crate) async fn register_model(
                 &non_empty_json(&req.metadata_json),
             ),
             model_conflict(),
+            event_op,
         )
         .await?;
-    svc.emit_source_event(
-        TOPIC_MODEL_REGISTERED, &tenant_id, &context.project_id, &model_id,
-        serde_json::json!({"model_id": model_id, "provider": req.provider, "model_name": req.model_name,
-            "version": req.version, "dimensions": req.dimensions, "active_collection": req.active_collection}),
-    ).await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit_source_event(
+            TOPIC_MODEL_REGISTERED,
+            &tenant_id,
+            &context.project_id,
+            &model_id,
+            event_extra,
+        )
+        .await;
+    }
     Ok(Response::new(embedding_pb::RegisterModelResponse {
         model_id,
         active_collection: req.active_collection,
@@ -684,8 +703,18 @@ pub(crate) async fn set_model_status(
     } else {
         model.retire_after_unix_ms
     };
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra = serde_json::json!({"model_id": model.model_id, "status": status, "tenant_state": tenant_state, "replacement_model_id": replacement_model_id, "retire_after_unix_ms": retire_after_unix_ms});
+    let event_op = svc.source_event_transaction_op(
+        TOPIC_MODEL_STATUS_CHANGED,
+        &tenant_id,
+        &context.project_id,
+        &model.model_id,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "embedding",
             &context,
             EMBEDDING_MODEL_MSG,
@@ -722,10 +751,21 @@ pub(crate) async fn set_model_status(
                 &model.metadata_json,
             ),
             model_conflict(),
+            event_op,
         )
         .await?;
-    svc.emit_source_event(TOPIC_MODEL_STATUS_CHANGED, &tenant_id, &context.project_id, &model.model_id,
-        serde_json::json!({"model_id": model.model_id, "status": status, "tenant_state": tenant_state, "replacement_model_id": replacement_model_id, "retire_after_unix_ms": retire_after_unix_ms})).await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit_source_event(
+            TOPIC_MODEL_STATUS_CHANGED,
+            &tenant_id,
+            &context.project_id,
+            &model.model_id,
+            event_extra,
+        )
+        .await;
+    }
     Ok(Response::new(embedding_pb::SetModelStatusResponse {
         updated: true,
         message: "embedding model status updated".to_string(),

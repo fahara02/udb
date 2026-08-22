@@ -221,8 +221,23 @@ pub(crate) async fn register_source(
     }
     let metadata_json = non_empty_json(&req.metadata_json);
 
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra = serde_json::json!({
+        "source_message_type": source_message_type,
+        "target_collection": target_collection,
+        "model_id": model_id,
+        "tenant_column": tenant_column,
+    });
+    let event_op = svc.source_event_transaction_op(
+        TOPIC_SOURCE_REGISTERED,
+        &tenant_id,
+        &context.project_id,
+        &source_name,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "embedding",
             &context,
             EMBEDDING_SOURCE_MSG,
@@ -240,22 +255,21 @@ pub(crate) async fn register_source(
                 &metadata_json,
             ),
             source_conflict(),
+            event_op,
         )
         .await?;
-
-    svc.emit_source_event(
-        TOPIC_SOURCE_REGISTERED,
-        &tenant_id,
-        &context.project_id,
-        &source_name,
-        serde_json::json!({
-            "source_message_type": source_message_type,
-            "target_collection": target_collection,
-            "model_id": model_id,
-            "tenant_column": tenant_column,
-        }),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit_source_event(
+            TOPIC_SOURCE_REGISTERED,
+            &tenant_id,
+            &context.project_id,
+            &source_name,
+            event_extra,
+        )
+        .await;
+    }
 
     // Reindex-on-model-change guard (Part B.1.3): a re-register that switches
     // the model or the target collection would otherwise leave the collection
@@ -270,8 +284,27 @@ pub(crate) async fn register_source(
         let collection_changed = prev.target_collection.trim() != target_collection;
         if model_changed || collection_changed {
             let reindex_id = Uuid::new_v4().to_string();
-            runtime
-                .native_entity_write_for_service(
+            // Built before the write so a Postgres target commits both together.
+            let event_extra = serde_json::json!({
+                "backfill_id": reindex_id,
+                "source_message_type": source_message_type,
+                "target_collection": target_collection,
+                "model_id": model_id,
+                "reason": "model_or_collection_changed",
+                "previous_model_id": prev.model_id,
+                "previous_collection": prev.target_collection,
+                "mode": "FULL",
+            });
+            let event_op = svc.source_event_transaction_op(
+                TOPIC_BACKFILL_REQUESTED,
+                &tenant_id,
+                &context.project_id,
+                &source_name,
+                event_extra.clone(),
+            );
+            let had_event = event_op.is_some();
+            let co_committed = runtime
+                .native_entity_write_co_commit_for_service(
                     "embedding",
                     &context,
                     EMBEDDING_JOB_MSG,
@@ -286,25 +319,21 @@ pub(crate) async fn register_source(
                         JOB_PENDING,
                     ),
                     job_conflict(),
+                    event_op,
                 )
                 .await?;
-            svc.emit_source_event(
-                TOPIC_BACKFILL_REQUESTED,
-                &tenant_id,
-                &context.project_id,
-                &source_name,
-                serde_json::json!({
-                    "backfill_id": reindex_id,
-                    "source_message_type": source_message_type,
-                    "target_collection": target_collection,
-                    "model_id": model_id,
-                    "reason": "model_or_collection_changed",
-                    "previous_model_id": prev.model_id,
-                    "previous_collection": prev.target_collection,
-                    "mode": "FULL",
-                }),
-            )
-            .await;
+            if had_event && !co_committed {
+                // Target is not Postgres, so the outbox row cannot join the
+                // write's transaction. Keep the best-effort emit for that backend.
+                svc.emit_source_event(
+                    TOPIC_BACKFILL_REQUESTED,
+                    &tenant_id,
+                    &context.project_id,
+                    &source_name,
+                    event_extra,
+                )
+                .await;
+            }
         }
     }
 
@@ -441,8 +470,28 @@ pub(crate) async fn delete_source(
             )
         })?;
 
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    // Vector teardown runs on the leader work-emitter pass: it consumes this
+    // source-deleted event from the durable journal, enumerates the source's
+    // emitted work-event point ids, and deletes them per collection through
+    // the shared vector seam, then marks the event done with a
+    // `teardown.completed` marker (see `process_embedding_teardown_job`).
+    let event_extra = serde_json::json!({
+        "target_collection": stored.target_collection,
+        "model_id": model.model_id,
+        "vector_backend": model.vector_backend,
+        "vector_instance": model.vector_instance,
+    });
+    let event_op = svc.source_event_transaction_op(
+        TOPIC_SOURCE_DELETED,
+        &tenant_id,
+        &context.project_id,
+        &source_name,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "embedding",
             &context,
             EMBEDDING_SOURCE_MSG,
@@ -460,27 +509,21 @@ pub(crate) async fn delete_source(
                 "{}",
             ),
             source_conflict(),
+            event_op,
         )
         .await?;
-
-    // Vector teardown runs on the leader work-emitter pass: it consumes this
-    // source-deleted event from the durable journal, enumerates the source's
-    // emitted work-event point ids, and deletes them per collection through
-    // the shared vector seam, then marks the event done with a
-    // `teardown.completed` marker (see `process_embedding_teardown_job`).
-    svc.emit_source_event(
-        TOPIC_SOURCE_DELETED,
-        &tenant_id,
-        &context.project_id,
-        &source_name,
-        serde_json::json!({
-            "target_collection": stored.target_collection,
-            "model_id": model.model_id,
-            "vector_backend": model.vector_backend,
-            "vector_instance": model.vector_instance,
-        }),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit_source_event(
+            TOPIC_SOURCE_DELETED,
+            &tenant_id,
+            &context.project_id,
+            &source_name,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(embedding_pb::DeleteSourceResponse {
         deleted: true,
@@ -538,8 +581,24 @@ pub(crate) async fn backfill(
     } else {
         "INCREMENTAL"
     };
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra = serde_json::json!({
+        "backfill_id": backfill_id,
+        "source_message_type": stored.source_message_type,
+        "target_collection": stored.target_collection,
+        "model_id": stored.model_id,
+        "mode": mode,
+    });
+    let event_op = svc.source_event_transaction_op(
+        TOPIC_BACKFILL_REQUESTED,
+        &tenant_id,
+        &context.project_id,
+        &source_name,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "embedding",
             &context,
             EMBEDDING_JOB_MSG,
@@ -554,22 +613,21 @@ pub(crate) async fn backfill(
                 JOB_PENDING,
             ),
             job_conflict(),
+            event_op,
         )
         .await?;
-    svc.emit_source_event(
-        TOPIC_BACKFILL_REQUESTED,
-        &tenant_id,
-        &context.project_id,
-        &source_name,
-        serde_json::json!({
-            "backfill_id": backfill_id,
-            "source_message_type": stored.source_message_type,
-            "target_collection": stored.target_collection,
-            "model_id": stored.model_id,
-            "mode": mode,
-        }),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit_source_event(
+            TOPIC_BACKFILL_REQUESTED,
+            &tenant_id,
+            &context.project_id,
+            &source_name,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(embedding_pb::BackfillResponse {
         backfill_id,
