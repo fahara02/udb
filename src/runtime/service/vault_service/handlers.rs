@@ -118,8 +118,23 @@ pub(crate) async fn put_secret(
     // committed `new_version` collides at the database, and map that typed
     // `AlreadyExists` to the `ABORTED` the proto promises (retryable) rather than
     // leaking a raw Postgres `23505`.
-    if let Err(status) = runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra = serde_json::json!({
+        "tenant_id": tenant_id,
+        "secret_path": secret_path,
+        "version": new_version,
+    });
+    let event_op = svc.emit_transaction_op(
+        &context,
+        TOPIC_SECRET_PUT,
+        &secret_path,
+        "put",
+        &secret_path,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = match runtime
+        .native_entity_write_co_commit_for_service(
             "vault",
             &context,
             VAULT_SECRET_MSG,
@@ -134,28 +149,31 @@ pub(crate) async fn put_secret(
                 &metadata_json,
             ),
             ConflictStrategy::Error,
+            event_op,
         )
         .await
     {
-        if is_duplicate_conflict(&status) {
-            return Err(vault_secret_cas_conflict_status(new_version));
+        Ok(co_committed) => co_committed,
+        Err(status) => {
+            if is_duplicate_conflict(&status) {
+                return Err(vault_secret_cas_conflict_status(new_version));
+            }
+            return Err(status);
         }
-        return Err(status);
+    };
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the write's
+        // transaction. Keep the best-effort emit for that backend.
+        svc.emit(
+            &context,
+            TOPIC_SECRET_PUT,
+            &secret_path,
+            "put",
+            &secret_path,
+            event_extra,
+        )
+        .await;
     }
-
-    svc.emit(
-        &context,
-        TOPIC_SECRET_PUT,
-        &secret_path,
-        "put",
-        &secret_path,
-        serde_json::json!({
-            "tenant_id": tenant_id,
-            "secret_path": secret_path,
-            "version": new_version,
-        }),
-    )
-    .await;
 
     Ok(Response::new(vault_pb::PutSecretResponse {
         secret_path,
@@ -390,8 +408,23 @@ pub(crate) async fn delete_secret(
         }));
     };
     // Soft delete: keep the ciphertext, flip the state on the same row.
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra = serde_json::json!({
+        "tenant_id": tenant_id,
+        "secret_path": secret_path,
+        "version": latest.version,
+    });
+    let event_op = svc.emit_transaction_op(
+        &context,
+        TOPIC_SECRET_DELETED,
+        &secret_path,
+        "delete",
+        &secret_path,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "vault",
             &context,
             VAULT_SECRET_MSG,
@@ -406,22 +439,22 @@ pub(crate) async fn delete_secret(
                 &latest.metadata_json,
             ),
             secret_conflict(),
+            event_op,
         )
         .await?;
-
-    svc.emit(
-        &context,
-        TOPIC_SECRET_DELETED,
-        &secret_path,
-        "delete",
-        &secret_path,
-        serde_json::json!({
-            "tenant_id": tenant_id,
-            "secret_path": secret_path,
-            "version": latest.version,
-        }),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit(
+            &context,
+            TOPIC_SECRET_DELETED,
+            &secret_path,
+            "delete",
+            &secret_path,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(vault_pb::DeleteSecretResponse {
         message: "secret soft-deleted".to_string(),
@@ -474,8 +507,23 @@ pub(crate) async fn undelete_secret(
     };
     // The soft delete kept the ciphertext + wrapped DEK, so flip the same row back
     // to ACTIVE for an exact recovery.
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra = serde_json::json!({
+        "tenant_id": tenant_id,
+        "secret_path": secret_path,
+        "version": deleted.version,
+    });
+    let event_op = svc.emit_transaction_op(
+        &context,
+        TOPIC_SECRET_RESTORED,
+        &secret_path,
+        "undelete",
+        &secret_path,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "vault",
             &context,
             VAULT_SECRET_MSG,
@@ -490,22 +538,22 @@ pub(crate) async fn undelete_secret(
                 &deleted.metadata_json,
             ),
             secret_conflict(),
+            event_op,
         )
         .await?;
-
-    svc.emit(
-        &context,
-        TOPIC_SECRET_RESTORED,
-        &secret_path,
-        "undelete",
-        &secret_path,
-        serde_json::json!({
-            "tenant_id": tenant_id,
-            "secret_path": secret_path,
-            "version": deleted.version,
-        }),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit(
+            &context,
+            TOPIC_SECRET_RESTORED,
+            &secret_path,
+            "undelete",
+            &secret_path,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(vault_pb::UndeleteSecretResponse {
         secret_path,
@@ -642,8 +690,20 @@ pub(crate) async fn create_transit_key(
 
     let dek = DataKey::generate();
     let wrapped = wrap_dek(runtime, &dek)?;
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra =
+        serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "version": 1});
+    let event_op = svc.emit_transaction_op(
+        &context,
+        TOPIC_KEY_CREATED,
+        &key_name,
+        "create_key",
+        &key_name,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "vault",
             &context,
             VAULT_TRANSIT_KEY_MSG,
@@ -657,18 +717,22 @@ pub(crate) async fn create_transit_key(
                 KEY_STATE_ACTIVE,
             ),
             transit_key_conflict(),
+            event_op,
         )
         .await?;
-
-    svc.emit(
-        &context,
-        TOPIC_KEY_CREATED,
-        &key_name,
-        "create_key",
-        &key_name,
-        serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "version": 1}),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit(
+            &context,
+            TOPIC_KEY_CREATED,
+            &key_name,
+            "create_key",
+            &key_name,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(vault_pb::CreateTransitKeyResponse {
         key_name,
@@ -749,19 +813,25 @@ pub(crate) async fn rotate_transit_key(
         .fetch_one(&mut *tx)
         .await
         .map_err(|err| vault_internal_status("rotate_insert_active", err.to_string()))?;
-    tx.commit()
-        .await
-        .map_err(|err| vault_internal_status("rotate_commit_tx", err.to_string()))?;
-
-    svc.emit(
-        &context,
+    // The rotation and its audit commit together. A key rotation that became
+    // durable while its `key.rotated` event was lost leaves consumers still
+    // treating the demoted version as active, with nothing to re-derive from.
+    super::events::enqueue_vault_event_in_tx(
+        &mut *tx,
+        svc.outbox_relation.as_deref(),
         TOPIC_KEY_ROTATED,
         &key_name,
+        &context.tenant_id,
+        &context.project_id,
         "rotate_key",
         &key_name,
         serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "version": new_version}),
     )
-    .await;
+    .await
+    .map_err(|err| vault_internal_status("rotate_key_event", err))?;
+    tx.commit()
+        .await
+        .map_err(|err| vault_internal_status("rotate_commit_tx", err.to_string()))?;
 
     Ok(Response::new(vault_pb::RotateTransitKeyResponse {
         key_name,

@@ -21,7 +21,7 @@ use super::config::{
 use super::errors::{
     webhook_endpoint_not_found_status, webhook_internal_status, webhook_required_field,
 };
-use super::events::emit_event;
+use super::events::emit_event_in_tx;
 use super::model::{
     delivery_from_row, delivery_model, delivery_select_projection, endpoint_from_row,
     endpoint_model, endpoint_select_projection,
@@ -93,6 +93,15 @@ pub(crate) async fn create_endpoint(
     let max_attempts = clamp_max_attempts(req.max_attempts);
     let metadata_json = non_empty_json(&req.metadata_json);
 
+    // The endpoint row and its event commit together: emitting after the write
+    // had committed left a subscription that nothing downstream was ever told
+    // about, with nothing to re-derive it.
+    let mut tx = pool.begin().await.map_err(|err| {
+        webhook_internal_status(
+            "create_webhook_endpoint",
+            format!("create webhook endpoint failed: {{err}}"),
+        )
+    })?;
     sqlx::query(&format!(
         "INSERT INTO {rel} \
          ({endpoint_id}, {tenant_id}, {url}, {topic_pattern}, {signing_secret}, {active}, {description}, {max_attempts}, {metadata_json}) \
@@ -115,7 +124,7 @@ pub(crate) async fn create_endpoint(
     .bind(req.description.trim())
     .bind(max_attempts)
     .bind(&metadata_json)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|err| {
         webhook_internal_status(
@@ -124,8 +133,9 @@ pub(crate) async fn create_endpoint(
         )
     })?;
 
-    emit_event(
+    emit_event_in_tx(
         svc,
+        &mut tx,
         TOPIC_ENDPOINT_CREATED,
         &endpoint_id,
         &tenant_id,
@@ -135,7 +145,19 @@ pub(crate) async fn create_endpoint(
             "topic_pattern": topic_pattern,
         }),
     )
-    .await;
+    .await
+    .map_err(|err| {
+        webhook_internal_status(
+            "create_webhook_endpoint_event",
+            format!("create webhook endpoint event enqueue failed: {err}"),
+        )
+    })?;
+    tx.commit().await.map_err(|err| {
+        webhook_internal_status(
+            "create_webhook_endpoint",
+            format!("create webhook endpoint commit failed: {err}"),
+        )
+    })?;
 
     Ok(Response::new(webhook_pb::CreateEndpointResponse {
         endpoint_id,
@@ -324,6 +346,15 @@ pub(crate) async fn update_endpoint(
     } else {
         0
     };
+    // The endpoint row and its event commit together: emitting after the write
+    // had committed left a subscription that nothing downstream was ever told
+    // about, with nothing to re-derive it.
+    let mut tx = pool.begin().await.map_err(|err| {
+        webhook_internal_status(
+            "update_webhook_endpoint",
+            format!("update webhook endpoint failed: {{err}}"),
+        )
+    })?;
     let result = sqlx::query(&format!(
         "UPDATE {rel} SET \
            {url} = CASE WHEN $2 THEN $3 ELSE {url} END, \
@@ -353,7 +384,7 @@ pub(crate) async fn update_endpoint(
     .bind(update_max_attempts)
     .bind(max_attempts)
     .bind(&tenant_id)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|err| {
         webhook_internal_status(
@@ -362,16 +393,35 @@ pub(crate) async fn update_endpoint(
         )
     })?;
     if result.rows_affected() == 0 {
+        tx.rollback().await.map_err(|err| {
+            webhook_internal_status(
+                "update_webhook_endpoint",
+                format!("update webhook endpoint miss rollback failed: {err}"),
+            )
+        })?;
         return Err(webhook_endpoint_not_found_status("update_endpoint"));
     }
-    emit_event(
+    emit_event_in_tx(
         svc,
+        &mut tx,
         TOPIC_ENDPOINT_UPDATED,
         &endpoint_id,
         &tenant_id,
         serde_json::json!({ "tenant_id": tenant_id, "endpoint_id": endpoint_id }),
     )
-    .await;
+    .await
+    .map_err(|err| {
+        webhook_internal_status(
+            "update_webhook_endpoint_event",
+            format!("update webhook endpoint event enqueue failed: {err}"),
+        )
+    })?;
+    tx.commit().await.map_err(|err| {
+        webhook_internal_status(
+            "update_webhook_endpoint",
+            format!("update webhook endpoint commit failed: {err}"),
+        )
+    })?;
     Ok(Response::new(webhook_pb::UpdateEndpointResponse {
         message: "webhook endpoint updated".to_string(),
         error: None,
@@ -400,6 +450,15 @@ pub(crate) async fn delete_endpoint(
     let m = endpoint_model();
     let rel = m.relation.clone();
     // Soft delete: stop delivering to the endpoint, keep the audit row.
+    // The endpoint row and its event commit together: emitting after the write
+    // had committed left a subscription that nothing downstream was ever told
+    // about, with nothing to re-derive it.
+    let mut tx = pool.begin().await.map_err(|err| {
+        webhook_internal_status(
+            "delete_webhook_endpoint",
+            format!("delete webhook endpoint failed: {{err}}"),
+        )
+    })?;
     let result = sqlx::query(&format!(
         "UPDATE {rel} SET {deleted} = now(), {active} = false \
          WHERE {endpoint_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
@@ -410,7 +469,7 @@ pub(crate) async fn delete_endpoint(
     ))
     .bind(&endpoint_id)
     .bind(&tenant_id)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|err| {
         webhook_internal_status(
@@ -419,16 +478,35 @@ pub(crate) async fn delete_endpoint(
         )
     })?;
     if result.rows_affected() == 0 {
+        tx.rollback().await.map_err(|err| {
+            webhook_internal_status(
+                "delete_webhook_endpoint",
+                format!("delete webhook endpoint miss rollback failed: {err}"),
+            )
+        })?;
         return Err(webhook_endpoint_not_found_status("delete_endpoint"));
     }
-    emit_event(
+    emit_event_in_tx(
         svc,
+        &mut tx,
         TOPIC_ENDPOINT_DELETED,
         &endpoint_id,
         &tenant_id,
         serde_json::json!({ "tenant_id": tenant_id, "endpoint_id": endpoint_id }),
     )
-    .await;
+    .await
+    .map_err(|err| {
+        webhook_internal_status(
+            "delete_webhook_endpoint_event",
+            format!("delete webhook endpoint event enqueue failed: {err}"),
+        )
+    })?;
+    tx.commit().await.map_err(|err| {
+        webhook_internal_status(
+            "delete_webhook_endpoint",
+            format!("delete webhook endpoint commit failed: {err}"),
+        )
+    })?;
     Ok(Response::new(webhook_pb::DeleteEndpointResponse {
         message: "webhook endpoint deleted".to_string(),
         error: None,
