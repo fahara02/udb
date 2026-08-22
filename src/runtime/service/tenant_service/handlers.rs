@@ -24,17 +24,18 @@ use super::super::native_helpers::{
 };
 use super::TenantServiceImpl;
 use super::config::{
-    DEFAULT_TENANT_LIST_PAGE_SIZE, DEFAULT_TENANT_TYPE_DB, EVENT_OP_TENANT_PURGE,
-    EVENT_TYPE_TENANT_CONFIG_UPDATED, EVENT_TYPE_TENANT_CREATED, EVENT_TYPE_TENANT_UPDATED,
-    TENANT_CONFIG_MSG, TENANT_STATUS_ACTIVE_DB, TOPIC_TENANT_CONFIG_UPDATED, TOPIC_TENANT_CREATED,
-    TOPIC_TENANT_PURGED, TOPIC_TENANT_UPDATED,
+    DEFAULT_TENANT_LIST_PAGE_SIZE, DEFAULT_TENANT_TYPE_DB, EVENT_TYPE_TENANT_CONFIG_UPDATED,
+    EVENT_TYPE_TENANT_CREATED, EVENT_TYPE_TENANT_UPDATED, TENANT_CONFIG_MSG,
+    TENANT_STATUS_ACTIVE_DB, TOPIC_TENANT_CONFIG_UPDATED, TOPIC_TENANT_CREATED,
+    TOPIC_TENANT_UPDATED,
 };
 use super::errors::{
     tenant_already_exists_status, tenant_field_violation, tenant_internal_status,
     tenant_not_found_status, tenant_required_field, validate_create_tenant_required_fields,
 };
 use super::events::{
-    emit_event, emit_event_in_tx, tenant_config_event_payload, tenant_lifecycle_event_payload,
+    config_event_transaction_op, emit_event, emit_event_in_tx, purge_event_outbox_write,
+    tenant_config_event_payload, tenant_lifecycle_event_payload,
 };
 use super::gate;
 use super::model::{
@@ -322,6 +323,54 @@ pub(crate) async fn purge_tenant(
     // makes validation's persisted-state checks reject their tokens; when
     // Redis is wired, the tenant cutoff denylist accelerates that cluster-wide
     // before each node reaches the durable read.
+    // The `tenant.purged` event is committed INSIDE the purge transaction. A purge
+    // is destructive and irreversible, so a purge that committed while its event
+    // was lost leaves downstream systems serving a tenant this broker has erased,
+    // with nothing to re-derive that from — the worst instance of this whole class.
+    //
+    // The payload is built here, from the counts the transaction has assembled, at
+    // the last point before commit. It carries the durable facts only. The
+    // denylist outcomes stay OUT of it because they are produced by the
+    // best-effort token revocation that runs AFTER this commit: including them
+    // would mean either emitting the event late (reopening the loss window) or
+    // reporting `false` for a revocation that later succeeds. They remain in the
+    // RPC response, which is unchanged.
+    let build_event =
+        |purged: &[crate::runtime::core::PurgedTableCount],
+         excluded: &[crate::runtime::core::ExcludedPurgeTable]| {
+            let purged_payload = purged
+                .iter()
+                .map(|p| {
+                    serde_json::json!({
+                        "schema": &p.schema,
+                        "table": &p.table,
+                        "tenant_column": &p.tenant_column,
+                        "deleted": p.deleted,
+                    })
+                })
+                .collect::<Vec<_>>();
+            let excluded_payload = excluded
+                .iter()
+                .map(|e| {
+                    serde_json::json!({
+                        "schema": &e.schema,
+                        "table": &e.table,
+                        "reason": &e.reason,
+                    })
+                })
+                .collect::<Vec<_>>();
+            let total_deleted: u64 = purged.iter().map(|p| p.deleted).sum();
+            purge_event_outbox_write(
+                svc,
+                &tenant_id,
+                serde_json::json!({
+                    "tenant_id": &tenant_id,
+                    "purged": purged_payload,
+                    "excluded": excluded_payload,
+                    "total_deleted": total_deleted,
+                }),
+            )
+        };
     let report = {
         #[cfg(feature = "redis")]
         {
@@ -332,53 +381,23 @@ pub(crate) async fn purge_tenant(
                 &[],
                 svc.jti_denylist.as_ref(),
                 now_unix,
+                Some(&build_event),
             )
             .await?
         }
         #[cfg(not(feature = "redis"))]
         {
-            crate::runtime::core::purge_tenant(pool, manifest, &tenant_id, &[], now_unix).await?
+            crate::runtime::core::purge_tenant(
+                pool,
+                manifest,
+                &tenant_id,
+                &[],
+                now_unix,
+                Some(&build_event),
+            )
+            .await?
         }
     };
-    let purged_payload = report
-        .purged
-        .iter()
-        .map(|p| {
-            serde_json::json!({
-                "schema": &p.schema,
-                "table": &p.table,
-                "tenant_column": &p.tenant_column,
-                "deleted": p.deleted,
-            })
-        })
-        .collect::<Vec<_>>();
-    let excluded_payload = report
-        .excluded
-        .iter()
-        .map(|e| {
-            serde_json::json!({
-                "schema": &e.schema,
-                "table": &e.table,
-                "reason": &e.reason,
-            })
-        })
-        .collect::<Vec<_>>();
-    emit_event(
-        svc,
-        TOPIC_TENANT_PURGED,
-        EVENT_OP_TENANT_PURGE,
-        &tenant_id,
-        &tenant_id,
-        serde_json::json!({
-            "tenant_id": &tenant_id,
-            "purged": purged_payload,
-            "excluded": excluded_payload,
-            "total_deleted": report.total_deleted,
-            "tenant_denylisted": report.tenant_denylisted,
-            "principals_denylisted": report.principals_denylisted,
-        }),
-    )
-    .await;
     Ok(Response::new(tenant_pb::PurgeTenantResponse {
         tenant_id: report.tenant_id,
         purged: report
@@ -749,8 +768,14 @@ pub(crate) async fn update_tenant_config(
         .map(|row| tenant_config_from_json(row, &tenant_id).id)
         .filter(|id| !id.trim().is_empty())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
-    runtime
-        .native_entity_write_for_service(
+    // Contract-declared tenant event (tenant_service.proto UpdateTenantConfig
+    // method_event_contract, partition key = tenant_id). Payload carries the
+    // config KEY only — the value may hold secrets and never reaches the outbox.
+    // Built BEFORE the write so a Postgres target can commit both together.
+    let event_op = config_event_transaction_op(svc, &tenant_id, req.config_key.trim());
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "tenant",
             &context,
             TENANT_CONFIG_MSG,
@@ -762,20 +787,23 @@ pub(crate) async fn update_tenant_config(
                 "type".to_string(),
                 "description".to_string(),
             ]),
+            event_op,
         )
         .await?;
-    // Contract-declared tenant event (tenant_service.proto UpdateTenantConfig
-    // method_event_contract, partition key = tenant_id). Payload carries the
-    // config KEY only — the value may hold secrets and never reaches the outbox.
-    emit_event(
-        svc,
-        TOPIC_TENANT_CONFIG_UPDATED,
-        EVENT_TYPE_TENANT_CONFIG_UPDATED,
-        &tenant_id,
-        &tenant_id,
-        tenant_config_event_payload(&tenant_id, req.config_key.trim()),
-    )
-    .await;
+    if had_event && !co_committed {
+        // The resolved native target is not Postgres, so the outbox row cannot
+        // join the write's transaction. Keep the pre-existing best-effort emit
+        // for that backend rather than narrowing this RPC to Postgres.
+        emit_event(
+            svc,
+            TOPIC_TENANT_CONFIG_UPDATED,
+            EVENT_TYPE_TENANT_CONFIG_UPDATED,
+            &tenant_id,
+            &tenant_id,
+            tenant_config_event_payload(&tenant_id, req.config_key.trim()),
+        )
+        .await;
+    }
     Ok(Response::new(tenant_pb::UpdateTenantConfigResponse {
         message: "tenant config updated".to_string(),
         error: None,

@@ -10,7 +10,7 @@
 
 use super::super::native_helpers::{
     NativeEventContext, OutboxEnvelopeReject, build_enriched_outbox_envelope,
-    enqueue_outbox_event_with_context,
+    enqueue_outbox_event_with_context, native_transaction_outbox_op,
 };
 use super::TenantServiceImpl;
 
@@ -117,27 +117,118 @@ pub(crate) async fn emit_event_in_tx(
     .map_err(|err| format!("outbox insert failed: {err}"))
 }
 
-/// Immutable audit emit for the PRIVILEGED cross-tenant admin purge (Bug #2).
-/// Unlike [`emit_event`] this threads the VERIFIED caller (`actor`) and the
-/// per-action authorization `decision_id` into the compliance envelope so the
-/// durable audit row attributes the destructive cross-tenant action to a real,
-/// authorized identity — never a spoofable body value. Best-effort (same posture
-/// as the other tenant emits); the durable ledger row is the authoritative
-/// outcome record even when no outbox relation is configured. The payload carries
-/// identifiers, per-table counts, the human reason, and the outcome id — no
-/// tenant config/branding bodies or secrets.
-pub(crate) async fn emit_admin_purge_audit(
+/// Build the `tenant.config.updated` step so it can be committed in the same
+/// transaction as the config write itself.
+///
+/// `None` means there is nothing to co-commit — either no outbox relation is
+/// configured, or the envelope was rejected. A rejection is warned and counted
+/// here rather than returned, which is the same posture [`emit_event`] has and
+/// is deliberate: `udb.tenant.` is a security-sensitive prefix, so enterprise
+/// audit mode validates the full compliance envelope, and failing the RPC on a
+/// rejected envelope would turn a long-standing silent event drop into a hard
+/// UpdateTenantConfig outage on exactly those deployments.
+pub(crate) fn config_event_transaction_op(
+    svc: &TenantServiceImpl,
+    tenant_id: &str,
+    config_key: &str,
+) -> Option<crate::runtime::core::native_store::NativeEntityTransactionOp> {
+    match native_transaction_outbox_op(
+        svc.outbox_relation.as_deref(),
+        super::config::TOPIC_TENANT_CONFIG_UPDATED,
+        tenant_id,
+        tenant_id,
+        "",
+        tenant_config_event_payload(tenant_id, config_key),
+        NativeEventContext {
+            operation: super::config::EVENT_TYPE_TENANT_CONFIG_UPDATED.to_string(),
+            target_resource: tenant_id.to_string(),
+            ..NativeEventContext::default()
+        },
+    ) {
+        Ok(op) => op,
+        Err(reject) => {
+            tracing::warn!(
+                topic = super::config::TOPIC_TENANT_CONFIG_UPDATED,
+                error = %reject,
+                "refusing to enqueue non-compliant tenant config event; the config write still stands"
+            );
+            svc.metrics
+                .inc_outbox_enqueue_failures_total("native_compliance");
+            None
+        }
+    }
+}
+
+/// Build the `tenant.purged` outbox row so it can be committed inside the purge
+/// transaction itself.
+///
+/// Returns the raw outbox write rather than a transaction op because
+/// [`crate::runtime::core::purge_tenant`] owns its transaction and inserts the
+/// row directly before committing.
+///
+/// A rejected envelope is warned and counted here, not returned: `udb.tenant.` is
+/// a security-sensitive prefix, so refusing the RPC on a rejection would turn a
+/// silent event drop into a failed purge under enterprise audit mode.
+pub(crate) fn purge_event_outbox_write(
+    svc: &TenantServiceImpl,
+    tenant_id: &str,
+    payload: serde_json::Value,
+) -> Option<crate::runtime::core::native_store::NativeOutboxTransactionWrite> {
+    match native_transaction_outbox_op(
+        svc.outbox_relation.as_deref(),
+        super::config::TOPIC_TENANT_PURGED,
+        tenant_id,
+        tenant_id,
+        "",
+        payload,
+        NativeEventContext {
+            operation: super::config::EVENT_OP_TENANT_PURGE.to_string(),
+            target_resource: tenant_id.to_string(),
+            ..NativeEventContext::default()
+        },
+    ) {
+        Ok(Some(crate::runtime::core::native_store::NativeEntityTransactionOp::Outbox(write))) => {
+            Some(write)
+        }
+        // No outbox relation configured.
+        Ok(_) => None,
+        Err(reject) => {
+            tracing::warn!(
+                topic = super::config::TOPIC_TENANT_PURGED,
+                error = %reject,
+                "refusing to enqueue non-compliant tenant purge event; the purge still stands"
+            );
+            svc.metrics
+                .inc_outbox_enqueue_failures_total("native_compliance");
+            None
+        }
+    }
+}
+
+/// Build the immutable audit row for the PRIVILEGED cross-tenant admin purge
+/// (Bug #2), so it can be committed in the SAME transaction as the ledger row it
+/// describes.
+///
+/// This threads the VERIFIED caller (`actor`) and the per-action authorization
+/// `decision_id` into the compliance envelope, so the durable audit attributes a
+/// destructive cross-tenant action to a real, authorized identity — never a
+/// spoofable body value.
+///
+/// Co-committing matters less here than elsewhere in this module, because the
+/// ledger row is itself the authoritative outcome record and could re-derive a
+/// lost event. It is still strictly better: the audit and the outcome it
+/// describes can no longer disagree.
+///
+/// A rejected envelope is warned and counted, not returned — same reasoning as
+/// the other tenant emits.
+pub(crate) fn admin_purge_audit_outbox_write(
     svc: &TenantServiceImpl,
     target_tenant_id: &str,
     verified_actor: &str,
     decision_id: &str,
     payload: serde_json::Value,
-) {
-    let Some(pool) = svc.pg_pool.as_ref() else {
-        return;
-    };
-    enqueue_outbox_event_with_context(
-        pool,
+) -> Option<crate::runtime::core::native_store::NativeOutboxTransactionWrite> {
+    match native_transaction_outbox_op(
         svc.outbox_relation.as_deref(),
         super::config::TOPIC_TENANT_ADMIN_PURGED,
         target_tenant_id,
@@ -152,14 +243,24 @@ pub(crate) async fn emit_admin_purge_audit(
             target_resource: target_tenant_id.to_string(),
             ..NativeEventContext::default()
         },
-        Some(&svc.metrics),
-    )
-    .await;
+    ) {
+        Ok(Some(crate::runtime::core::native_store::NativeEntityTransactionOp::Outbox(write))) => {
+            Some(write)
+        }
+        Ok(_) => None,
+        Err(reject) => {
+            tracing::warn!(
+                topic = super::config::TOPIC_TENANT_ADMIN_PURGED,
+                error = %reject,
+                "refusing to enqueue non-compliant admin purge audit; the ledger row still stands"
+            );
+            svc.metrics
+                .inc_outbox_enqueue_failures_total("native_compliance");
+            None
+        }
+    }
 }
 
-/// Lifecycle event payload for tenant create/update: identifiers + status ONLY.
-/// Deliberately excludes `config`/`branding` bodies and any credential material —
-/// the outbox payload must never carry tenant secrets.
 pub(crate) fn tenant_lifecycle_event_payload(
     tenant_id: &str,
     code: &str,

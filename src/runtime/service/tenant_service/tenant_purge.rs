@@ -302,8 +302,6 @@ pub(crate) async fn admin_purge_tenant(
         "verified_actor": verified_actor,
         "reason": reason,
     });
-    finalize_admin_purge(pool, &relation, &idempotency_key, &outcome_json).await?;
-
     let mut audit_payload = outcome_json.clone();
     if let Some(obj) = audit_payload.as_object_mut() {
         obj.insert(
@@ -311,14 +309,18 @@ pub(crate) async fn admin_purge_tenant(
             serde_json::Value::String(target.clone()),
         );
     }
-    super::events::emit_admin_purge_audit(
+    // The audit row rides the SAME transaction as the ledger finalization it
+    // describes, so the immutable outcome record and the event announcing it can
+    // no longer disagree about whether this privileged cross-tenant purge
+    // happened.
+    let audit = super::events::admin_purge_audit_outbox_write(
         svc,
         &target,
         &verified_actor,
         &decision_id,
         audit_payload,
-    )
-    .await;
+    );
+    finalize_admin_purge(pool, &relation, &idempotency_key, &outcome_json, audit).await?;
 
     Ok(Response::new(response_from_outcome_json(
         &target,
@@ -522,15 +524,23 @@ async fn finalize_admin_purge(
     relation: &str,
     key: &str,
     outcome_json: &serde_json::Value,
+    // Committed with the ledger row, never after it.
+    outbox: Option<crate::runtime::core::native_store::NativeOutboxTransactionWrite>,
 ) -> Result<(), Status> {
     let sql = format!(
         "UPDATE {relation} SET status = 'COMPLETED', outcome_json = $2::jsonb, \
          completed_at = NOW() WHERE idempotency_key = $1 AND status = 'PENDING'"
     );
+    let mut tx = pool.begin().await.map_err(|err| {
+        tenant_internal_status(
+            "admin_purge_finalize",
+            format!("admin purge outcome finalize failed: {err}"),
+        )
+    })?;
     sqlx::query(&sql)
         .bind(key)
         .bind(outcome_json.to_string())
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|err| {
             tenant_internal_status(
@@ -538,6 +548,29 @@ async fn finalize_admin_purge(
                 format!("admin purge outcome finalize failed: {err}"),
             )
         })?;
+    if let Some(outbox) = outbox {
+        crate::runtime::cdc::insert_outbox_row(
+            &mut *tx,
+            &outbox.relation,
+            outbox.event_id,
+            &outbox.topic,
+            &outbox.partition_key,
+            &outbox.envelope,
+        )
+        .await
+        .map_err(|err| {
+            tenant_internal_status(
+                "admin_purge_audit_outbox",
+                format!("admin purge audit enqueue failed: {err}"),
+            )
+        })?;
+    }
+    tx.commit().await.map_err(|err| {
+        tenant_internal_status(
+            "admin_purge_finalize",
+            format!("admin purge outcome commit failed: {err}"),
+        )
+    })?;
     Ok(())
 }
 

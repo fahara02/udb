@@ -230,6 +230,18 @@ fn tenant_purge_internal_status(
 /// instead of at TTL. Denylisting is best-effort (Redis is an accelerator over
 /// the durable Postgres revocation source of truth) and NEVER fails the committed
 /// purge.
+/// Builds the tenant-purge outbox row from the per-table deleted counts and the
+/// excluded tables, both of which only exist once the deletes have run inside the
+/// purge transaction. Returning `None` means there is nothing to enqueue.
+pub(crate) type TenantPurgeEventBuilder<'a> = &'a (
+        dyn Fn(
+    &[PurgedTableCount],
+    &[ExcludedPurgeTable],
+) -> Option<crate::runtime::core::native_store::NativeOutboxTransactionWrite>
+            + Send
+            + Sync
+    );
+
 pub(crate) async fn purge_tenant(
     pool: &sqlx::PgPool,
     manifest: &CatalogManifest,
@@ -239,6 +251,17 @@ pub(crate) async fn purge_tenant(
     // so the slim build (no Redis) still compiles this module.
     #[cfg(feature = "redis")] denylist: Option<&crate::runtime::authn::revocation::JtiDenylist>,
     now_unix: u64,
+    // Builds the purge event, which is then committed INSIDE the purge
+    // transaction below. A tenant purge is destructive and irreversible, so a
+    // committed purge whose event was lost leaves downstream systems serving a
+    // tenant this broker has erased, with nothing to re-derive the fact from.
+    //
+    // A CLOSURE rather than a prebuilt row because the event payload reports the
+    // per-table deleted counts, which do not exist until the deletes have run —
+    // and they only run inside this transaction. It is handed the counts and the
+    // excluded tables at the last point before commit. Returning `None` (no
+    // outbox relation configured, or a rejected envelope) is a no-op.
+    outbox: Option<TenantPurgeEventBuilder<'_>>,
 ) -> Result<TenantPurgeReport, tonic::Status> {
     let tenant_id = validate_purge_tenant_id(tenant_id)?;
 
@@ -280,6 +303,27 @@ pub(crate) async fn purge_tenant(
             tenant_column: target.tenant_column.clone(),
             deleted,
         });
+    }
+
+    // Inside the transaction, so the purge and its event are one atomic unit: the
+    // event cannot be lost after the rows are gone, and a failed enqueue aborts
+    // the purge rather than erasing a tenant silently.
+    if let Some(outbox) = outbox.and_then(|build| build(&purged, &plan.excluded)) {
+        crate::runtime::cdc::insert_outbox_row(
+            &mut *tx,
+            &outbox.relation,
+            outbox.event_id,
+            &outbox.topic,
+            &outbox.partition_key,
+            &outbox.envelope,
+        )
+        .await
+        .map_err(|err| {
+            tenant_purge_internal_status(
+                "tenant_purge_outbox",
+                format!("failed to enqueue tenant-purge event: {err}"),
+            )
+        })?;
     }
 
     tx.commit().await.map_err(|err| {

@@ -552,6 +552,62 @@ impl DataBrokerRuntime {
         .await
     }
 
+    /// Write a typed native entity and, when the resolved target is Postgres,
+    /// commit `event_op` in the SAME transaction as the write.
+    ///
+    /// Returns whether the event was co-committed. `false` means one of two
+    /// things, and in both the caller must fall back to its own best-effort emit
+    /// to preserve existing behaviour:
+    ///
+    /// - there was no event to write (`event_op` is `None`), or
+    /// - the resolved target is not Postgres. The outbox table IS Postgres, so
+    ///   the entity write and the outbox row would land in different databases;
+    ///   that is a 2PC problem, not a transaction one.
+    ///
+    /// This exists because [`Self::native_entity_transaction_for_service`] REFUSES
+    /// a non-Postgres target with a capability error, while
+    /// [`Self::native_entity_write_for_service`] serves every backend. Swapping a
+    /// multi-backend handler straight onto the transaction API would therefore
+    /// silently narrow that RPC to Postgres — trading an event-loss window for a
+    /// capability regression. Routing through here keeps every backend working
+    /// and upgrades only the deployments that can actually be atomic.
+    pub(crate) async fn native_entity_write_co_commit_for_service(
+        &self,
+        service_id: &str,
+        context: &crate::RequestContext,
+        message_type: &str,
+        record: LogicalRecord,
+        conflict: crate::ir::ConflictStrategy,
+        event_op: Option<NativeEntityTransactionOp>,
+    ) -> Result<bool, tonic::Status> {
+        let op = LogicalWrite {
+            message_type: message_type.to_string(),
+            records: vec![record],
+            conflict,
+            return_fields: Vec::new(),
+        };
+        let Some(event_op) = event_op else {
+            self.native_entity_write_op_for_service(service_id, context, op)
+                .await?;
+            return Ok(false);
+        };
+        // Resolved WITHOUT mutating anything, so a non-Postgres deployment takes
+        // exactly the path it took before this method existed.
+        let (target, kind) = self.native_entity_dispatch_target(service_id, context, true)?;
+        if kind != crate::backend::BackendKind::Postgres || target.backend != "postgres" {
+            self.native_entity_write_op_for_service(service_id, context, op)
+                .await?;
+            return Ok(false);
+        }
+        self.native_entity_transaction_for_service(
+            service_id,
+            context,
+            vec![NativeEntityTransactionOp::Write(op), event_op],
+        )
+        .await?;
+        Ok(true)
+    }
+
     /// Execute a typed native-entity write and parse `RETURNING`/row-returning
     /// mutation output. Callers must set `return_fields` deliberately; empty return
     /// fields still execute the write but generally return no rows.
