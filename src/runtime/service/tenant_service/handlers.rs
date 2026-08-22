@@ -575,6 +575,10 @@ pub(crate) async fn update_tenant(
     // update with `WHERE tenant_id = ? AND deleted_at IS NULL`.
     // RETURNING the post-update code/status feeds the contract-declared event
     // below with the row's REAL values (no extra roundtrip, no guessed status).
+    // Same transaction carries the UPDATE and its `tenant.updated` event.
+    let mut tx = pool.begin().await.map_err(|err| {
+        tenant_internal_status("update_tenant", format!("update tenant failed: {err}"))
+    })?;
     let updated = sqlx::query(&format!(
         "UPDATE {rel} SET \
            {name} = CASE WHEN $2 THEN $3 ELSE {name} END, \
@@ -600,12 +604,18 @@ pub(crate) async fn update_tenant(
     .bind(req.config.trim())
     .bind(update_branding)
     .bind(req.branding.trim())
-    .fetch_optional(pool)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|err| {
         tenant_internal_status("update_tenant", format!("update tenant failed: {err}"))
     })?;
     let Some(updated) = updated else {
+        tx.rollback().await.map_err(|err| {
+            tenant_internal_status(
+                "update_tenant",
+                format!("update tenant miss rollback failed: {err}"),
+            )
+        })?;
         return Err(tenant_not_found_status("update_tenant"));
     };
     let decode = |e: sqlx::Error| {
@@ -622,19 +632,41 @@ pub(crate) async fn update_tenant(
     // bearer tokens at the request gate immediately, instead of letting them run
     // for their full TTL. The shared method-security layer consults this via
     // `gate::tenant_status_gate` before dispatch (see its `TODO(leader-wire)`).
-    gate::mark_tenant_status(&tenant_id, &stored_status);
     // Contract-declared tenant event (tenant_service.proto UpdateTenant
     // method_event_contract, partition key = tenant_id). Identifiers + status
-    // only — never the config/branding bodies.
-    emit_event(
+    // only — never the config/branding bodies. Enqueued through the same
+    // transaction as the UPDATE, so a status transition cannot become durable
+    // with no event to carry it downstream.
+    emit_event_in_tx(
         svc,
+        &mut tx,
         TOPIC_TENANT_UPDATED,
         EVENT_TYPE_TENANT_UPDATED,
         &tenant_id,
         &tenant_id,
         tenant_lifecycle_event_payload(&tenant_id, &code, &stored_status),
     )
-    .await;
+    .await
+    .map_err(|err| {
+        tenant_internal_status(
+            "update_tenant_event",
+            format!("update tenant event enqueue failed: {err}"),
+        )
+    })?;
+    tx.commit().await.map_err(|err| {
+        tenant_internal_status(
+            "update_tenant",
+            format!("update tenant commit failed: {err}"),
+        )
+    })?;
+    // H10 — record the tenant's NEW durable status in the process suspension
+    // signal so a transition to SUSPENDED/INACTIVE revokes this tenant's LIVE
+    // bearer tokens at the request gate immediately, instead of letting them run
+    // for their full TTL. The shared method-security layer consults this via
+    // `gate::tenant_status_gate` before dispatch (see its `TODO(leader-wire)`).
+    // Set only after commit: the gate must not reflect a status the transaction
+    // rolled back.
+    gate::mark_tenant_status(&tenant_id, &stored_status);
     Ok(Response::new(tenant_pb::UpdateTenantResponse {
         message: "tenant updated".to_string(),
         error: None,
