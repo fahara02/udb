@@ -1,6 +1,12 @@
-//! Best-effort tenant lifecycle event emission into the shared transactional
-//! outbox, plus the two no-secrets event payload builders. Extracted verbatim;
-//! `emit_event` takes `svc` where the trait method took `&self`.
+//! Tenant lifecycle event emission into the shared transactional outbox, plus
+//! the two no-secrets event payload builders.
+//!
+//! Two emit postures, and the difference is whether the caller can offer a
+//! transaction. `emit_event_in_tx` inserts through the caller's transaction, so
+//! the tenant row and its event are all-or-nothing; `emit_event` runs after the
+//! write has already committed and stays best-effort, which leaves the event
+//! loss window it documents. Prefer the transactional one whenever the write is
+//! raw SQL on the same pool.
 
 use super::super::native_helpers::{
     NativeEventContext, OutboxEnvelopeReject, build_enriched_outbox_envelope,
