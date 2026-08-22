@@ -338,8 +338,22 @@ pub(crate) async fn create_index(
         .unwrap_or_else(|| Uuid::new_v4().to_string());
     let metadata_json = non_empty_json(&req.metadata_json);
 
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    let event_extra = serde_json::json!({
+        "source_message_type": source_message_type,
+        "backend": backend,
+        "tenant_column": tenant_column,
+    });
+    let event_op = svc.index_event_transaction_op(
+        TOPIC_CREATED,
+        &tenant_id,
+        &context.project_id,
+        &index_name,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "search",
             &context,
             SEARCH_INDEX_MSG,
@@ -357,21 +371,21 @@ pub(crate) async fn create_index(
                 &metadata_json,
             ),
             index_conflict(),
+            event_op,
         )
         .await?;
-
-    svc.emit_index_event(
-        TOPIC_CREATED,
-        &tenant_id,
-        &context.project_id,
-        &index_name,
-        serde_json::json!({
-            "source_message_type": source_message_type,
-            "backend": backend,
-            "tenant_column": tenant_column,
-        }),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit_index_event(
+            TOPIC_CREATED,
+            &tenant_id,
+            &context.project_id,
+            &index_name,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(search_pb::CreateIndexResponse {
         index_id,
@@ -428,8 +442,26 @@ pub(crate) async fn delete_index(
         }));
     };
 
-    runtime
-        .native_entity_write_for_service(
+    // Built before the write so a Postgres target commits both together.
+    // Tear down on delete: this deleted-event IS the teardown job — the
+    // leader-owned `run_search_reindex_once` pass consumes it, purges the
+    // index's tenant-scoped engine points through the existing per-point
+    // vector delete seam, and emits `TOPIC_TEARDOWN_COMPLETED` when done.
+    let event_extra = serde_json::json!({
+        "backend": stored.backend,
+        "resource_name": stored.resource_name,
+        "source_message_type": stored.source_message_type,
+    });
+    let event_op = svc.index_event_transaction_op(
+        TOPIC_DELETED,
+        &tenant_id,
+        &context.project_id,
+        &index_name,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "search",
             &context,
             SEARCH_INDEX_MSG,
@@ -447,25 +479,21 @@ pub(crate) async fn delete_index(
                 "{}",
             ),
             index_conflict(),
+            event_op,
         )
         .await?;
-
-    // Tear down on delete: this deleted-event IS the teardown job — the
-    // leader-owned `run_search_reindex_once` pass consumes it, purges the
-    // index's tenant-scoped engine points through the existing per-point
-    // vector delete seam, and emits `TOPIC_TEARDOWN_COMPLETED` when done.
-    svc.emit_index_event(
-        TOPIC_DELETED,
-        &tenant_id,
-        &context.project_id,
-        &index_name,
-        serde_json::json!({
-            "backend": stored.backend,
-            "resource_name": stored.resource_name,
-            "source_message_type": stored.source_message_type,
-        }),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the
+        // write's transaction. Keep the best-effort emit for that backend.
+        svc.emit_index_event(
+            TOPIC_DELETED,
+            &tenant_id,
+            &context.project_id,
+            &index_name,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(search_pb::DeleteIndexResponse {
         deleted: true,
@@ -830,8 +858,23 @@ pub(crate) async fn reindex(
     // source rows ONLY through the mediated IR path) runs in the leader-owned
     // `run_search_reindex_once` pass, which restores ACTIVE and emits
     // `TOPIC_REINDEX_COMPLETED`; this RPC just admits the request idempotently.
-    runtime
-        .native_entity_write_for_service(
+    // The reindex id is minted before the write so the event announcing it can be
+    // built and committed in the same transaction.
+    let reindex_id = Uuid::new_v4().to_string();
+    let event_extra = serde_json::json!({
+        "reindex_id": reindex_id,
+        "source_message_type": stored.source_message_type,
+    });
+    let event_op = svc.index_event_transaction_op(
+        TOPIC_REINDEX,
+        &tenant_id,
+        &context.project_id,
+        &index_name,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "search",
             &context,
             SEARCH_INDEX_MSG,
@@ -849,21 +892,22 @@ pub(crate) async fn reindex(
                 "{}",
             ),
             index_conflict(),
+            event_op,
         )
         .await?;
 
-    let reindex_id = Uuid::new_v4().to_string();
-    svc.emit_index_event(
-        TOPIC_REINDEX,
-        &tenant_id,
-        &context.project_id,
-        &index_name,
-        serde_json::json!({
-            "reindex_id": reindex_id,
-            "source_message_type": stored.source_message_type,
-        }),
-    )
-    .await;
+    if had_event && !co_committed {
+        // Target is not Postgres, so the outbox row cannot join the write's
+        // transaction. Keep the best-effort emit for that backend.
+        svc.emit_index_event(
+            TOPIC_REINDEX,
+            &tenant_id,
+            &context.project_id,
+            &index_name,
+            event_extra,
+        )
+        .await;
+    }
 
     Ok(Response::new(search_pb::ReindexResponse {
         reindex_id,

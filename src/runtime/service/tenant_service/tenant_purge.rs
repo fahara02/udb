@@ -660,13 +660,18 @@ async fn execute_hard_purge(
                 &[],
                 svc.jti_denylist.as_ref(),
                 now_unix,
+                // No event from the purge itself on the ADMIN path: this purge is
+                // announced by the admin audit row, which co-commits with the
+                // ledger finalization in `finalize_admin_purge`. Emitting here as
+                // well would double-announce one operation.
+                None,
             )
             .await?
         }
         #[cfg(not(feature = "redis"))]
         {
             let _ = svc;
-            crate::runtime::core::purge_tenant(pool, manifest, target, &[], now_unix).await?
+            crate::runtime::core::purge_tenant(pool, manifest, target, &[], now_unix, None).await?
         }
     };
     let purged: Vec<serde_json::Value> = report

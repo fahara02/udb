@@ -747,8 +747,25 @@ async fn process_search_reindex_job(
     };
     let (status, metadata_json) = reindex_writeback(error);
     let context = search_worker_context(&job.tenant_id, &job.project_id, "search_reindex");
-    runtime
-        .native_entity_write_for_service(
+    // The status writeback and the completion event commit together, so a reindex
+    // cannot be recorded as finished while the event saying so is lost.
+    let event_extra = serde_json::json!({
+        "reindex_event_id": job.event_id,
+        "reindex_id": job.reindex_id,
+        "upserted": upserted,
+        "success": error.is_none(),
+        "error": error.unwrap_or_default(),
+    });
+    let event_op = service.index_event_transaction_op(
+        TOPIC_REINDEX_COMPLETED,
+        &job.tenant_id,
+        &job.project_id,
+        &job.index.index_name,
+        event_extra.clone(),
+    );
+    let had_event = event_op.is_some();
+    let co_committed = runtime
+        .native_entity_write_co_commit_for_service(
             "search",
             &context,
             SEARCH_INDEX_MSG,
@@ -766,24 +783,22 @@ async fn process_search_reindex_job(
                 &metadata_json,
             ),
             index_conflict(),
+            event_op,
         )
         .await
         .map_err(|err| format!("search reindex status writeback failed: {err}"))?;
-    service
-        .emit_index_event(
-            TOPIC_REINDEX_COMPLETED,
-            &job.tenant_id,
-            &job.project_id,
-            &job.index.index_name,
-            serde_json::json!({
-                "reindex_event_id": job.event_id,
-                "reindex_id": job.reindex_id,
-                "upserted": upserted,
-                "success": error.is_none(),
-                "error": error.unwrap_or_default(),
-            }),
-        )
-        .await;
+    if had_event && !co_committed {
+        // Target is not Postgres; keep the best-effort emit for that backend.
+        service
+            .emit_index_event(
+                TOPIC_REINDEX_COMPLETED,
+                &job.tenant_id,
+                &job.project_id,
+                &job.index.index_name,
+                event_extra,
+            )
+            .await;
+    }
     Ok(i64::try_from(upserted).unwrap_or(i64::MAX))
 }
 
