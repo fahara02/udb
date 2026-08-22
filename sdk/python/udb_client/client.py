@@ -159,9 +159,16 @@ class UdbClient:
         conflict_fields: Sequence[str] = (),
         return_record: bool = False,
         idempotency_key: str = "",
+        expected: JsonMapping | Struct | None = None,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.MutationResponse:
+        # `expected` is the broker's optimistic CAS precondition
+        # (UpsertRequest.expected, enforced while holding the target row lock).
+        # It was reachable only by hand-building an UpsertRequest, so the
+        # convenience method could not express a compare-and-swap at all — the
+        # operation acknowledgement and workflow state transitions need. An unset
+        # or empty value behaves exactly as before.
         req = request or types_pb2.UpsertRequest(
             message_type=message_type,
             record_json=to_record_json(record or {}),
@@ -169,6 +176,7 @@ class UdbClient:
             conflict_fields=list(conflict_fields),
             return_record=return_record,
             idempotency_key=idempotency_key,
+            expected=to_struct(expected),
         )
         return self.call("Upsert", req, metadata=metadata, timeout=timeout)
 
@@ -499,16 +507,24 @@ class _BoundEntity:
         *,
         return_record: bool = False,
         idempotency_key: str = "",
+        expected: JsonMapping | Struct | None = None,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.MutationResponse:
-        """One ``Upsert`` with ``conflict_fields`` from the bound key."""
+        """One ``Upsert`` with ``conflict_fields`` from the bound key.
+
+        ``expected`` is passed through as the broker's optimistic CAS
+        precondition; a key-bound handle is exactly where a caller reaches for
+        compare-and-swap, so dropping it here would leave the capability
+        unreachable through the ergonomic surface.
+        """
         return self._client.upsert(
             message_type=self._message_type,
             record=record,
             conflict_fields=self._key,
             return_record=return_record,
             idempotency_key=idempotency_key,
+            expected=expected,
             metadata=metadata,
             timeout=timeout,
         )
@@ -629,9 +645,16 @@ class UdbAsyncClient:
         conflict_fields: Sequence[str] = (),
         return_record: bool = False,
         idempotency_key: str = "",
+        expected: JsonMapping | Struct | None = None,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.MutationResponse:
+        # `expected` is the broker's optimistic CAS precondition
+        # (UpsertRequest.expected, enforced while holding the target row lock).
+        # It was reachable only by hand-building an UpsertRequest, so the
+        # convenience method could not express a compare-and-swap at all — the
+        # operation acknowledgement and workflow state transitions need. An unset
+        # or empty value behaves exactly as before.
         req = request or types_pb2.UpsertRequest(
             message_type=message_type,
             record_json=to_record_json(record or {}),
@@ -639,6 +662,7 @@ class UdbAsyncClient:
             conflict_fields=list(conflict_fields),
             return_record=return_record,
             idempotency_key=idempotency_key,
+            expected=to_struct(expected),
         )
         return await self.call("Upsert", req, metadata=metadata, timeout=timeout)
 

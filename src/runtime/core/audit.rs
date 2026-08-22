@@ -624,59 +624,6 @@ mod tests {
         assert!(audit_relation_schema("audit_log").is_none());
     }
 
-    /// EMPIRICAL end-to-end repro against a live Postgres (gated on `RUN_AUDIT_REPRO`).
-    /// Exercises the REAL `UdbConfig::from_env()` merge (does it populate
-    /// `audit_sink.pg_table`?) and the REAL `emit_audit` — the exact call the
-    /// data-plane upsert makes — and asserts a row PERSISTS rather than going to
-    /// stdout. Run with:
-    ///   RUN_AUDIT_REPRO=1 REPRO_DSN=postgres://udb:udb@127.0.0.1:55999/udb \
-    ///     cargo test --lib runtime::core::audit::tests::repro_real_config_and_emit_persists -- --nocapture
-    #[tokio::test]
-    async fn repro_real_config_and_emit_persists() {
-        if std::env::var("RUN_AUDIT_REPRO").is_err() {
-            return;
-        }
-        // SAFETY: gated single-run repro; edition-2024 requires unsafe env mutation.
-        unsafe {
-            std::env::set_var("UDB_AUDIT_SINK", "postgres");
-            std::env::set_var("UDB_AUDIT_PG_TABLE", "udb_system.data_audit_repro2");
-        }
-        // The REAL config path used by serve()/live_native_config().
-        let cfg = crate::runtime::config::UdbConfig::from_env();
-        eprintln!(
-            "REAL from_env audit_sink: kind={:?} pg_table={:?}",
-            cfg.audit_sink.kind, cfg.audit_sink.pg_table
-        );
-        assert_eq!(
-            cfg.audit_sink.kind,
-            AuditSinkKind::Postgres,
-            "from_env must set kind=Postgres"
-        );
-        assert_eq!(
-            cfg.audit_sink.pg_table.as_deref(),
-            Some("udb_system.data_audit_repro2"),
-            "from_env must populate pg_table from UDB_AUDIT_PG_TABLE"
-        );
-        let dsn = std::env::var("REPRO_DSN").expect("set REPRO_DSN");
-        let pool = sqlx::PgPool::connect(&dsn).await.expect("connect repro pg");
-        sqlx::query("DROP TABLE IF EXISTS udb_system.data_audit_repro2")
-            .execute(&pool)
-            .await
-            .ok();
-        // EXACT call shape the data-plane upsert makes.
-        emit_audit(&cfg.audit_sink, &sample(), Some(&pool));
-        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
-        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM udb_system.data_audit_repro2")
-            .fetch_one(&pool)
-            .await
-            .unwrap_or(-1);
-        eprintln!("REAL EMIT persisted rows = {count} (expected 1)");
-        assert_eq!(
-            count, 1,
-            "real config + emit must persist to Postgres, not stdout"
-        );
-    }
-
     /// The INSERT is now built from `PG_AUDIT_BOUND_COLUMNS` rather than written
     /// out longhand. Pin the exact SQL so that refactor cannot have changed what
     /// goes on the wire, and so adding a column to the const without teaching the

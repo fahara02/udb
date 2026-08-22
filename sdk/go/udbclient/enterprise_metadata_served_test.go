@@ -234,4 +234,22 @@ func TestConnectEnterpriseEmitsCanonicalSingletonMetadata(t *testing.T) {
 	if hits == 0 {
 		t.Error("expected at least one RefreshToken RPC to be served")
 	}
+
+	// The ROTATED refresh token must be persisted. The broker mints a new one on
+	// every successful refresh and invalidates the presented one atomically, so
+	// keeping "refresh1" here means the NEXT refresh submits a revoked credential
+	// and a long-running service dies with `Unauthenticated: invalid credential`
+	// at its second refresh boundary — authenticating fine, refreshing once, then
+	// failing. `doRefresh` used to copy only AccessToken and ExpiresAt.
+	stored, err := sess.tm.store.Load(ctx)
+	if err != nil {
+		t.Fatalf("load token after refresh: %v", err)
+	}
+	if stored.RefreshToken != "refresh2" {
+		t.Errorf(
+			"after refresh: stored RefreshToken = %q, want %q (rotated token dropped; "+
+				"the next refresh would present a single-use credential the broker already revoked)",
+			stored.RefreshToken, "refresh2",
+		)
+	}
 }

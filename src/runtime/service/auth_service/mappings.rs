@@ -42,9 +42,61 @@ pub(super) fn authn_principal_to_pb(
         // authz domain string — the runtime Principal scopes via tenant/project,
         // so no separate domain is carried.
         domain: String::new(),
-        // No free-form principal attributes are tracked at runtime yet.
+        // Paths without a user record (service-account tokens, external-IdP
+        // mapping, JWT-claims validation) carry no profile document, so there is
+        // nothing to project. A path that HAS the record should call
+        // `authn_principal_to_pb_with_attributes` instead.
         attributes: std::collections::HashMap::new(),
     }
+}
+
+/// `authn_principal_to_pb`, plus the caller's profile attributes.
+///
+/// `Principal.attributes` is a declared proto field (14) that was hardcoded to an
+/// empty map on EVERY path, while user records carry a
+/// `profile_attributes_json` document. Downstream services could therefore not
+/// bind an authenticated human to a reviewed display or professional identity
+/// attribute without standing up a second identity registry — the field
+/// advertised a capability the broker never supplied.
+///
+/// The document is redacted before projection, so a sensitive value stored in the
+/// profile does not reach a principal that gets logged or forwarded. Only
+/// scalar leaves are projected; nested objects and arrays have no
+/// `map<string, string>` representation and are skipped rather than stringified
+/// into something a caller would have to parse a second time.
+pub(super) fn authn_principal_to_pb_with_attributes(
+    p: &Principal,
+    expires_at_unix: i64,
+    account_kind: i32,
+    profile_attributes_json: &str,
+) -> authn_pb::Principal {
+    let mut pb = authn_principal_to_pb(p, expires_at_unix, account_kind);
+    pb.attributes = profile_attributes_to_map(profile_attributes_json);
+    pb
+}
+
+/// Flatten a redacted profile-attributes JSON object into `map<string, string>`.
+fn profile_attributes_to_map(raw: &str) -> std::collections::HashMap<String, String> {
+    let mut out = std::collections::HashMap::new();
+    if raw.trim().is_empty() {
+        return out;
+    }
+    let redacted = crate::runtime::authn::profile::redact_profile_attributes_json(raw);
+    let Ok(serde_json::Value::Object(map)) = serde_json::from_str(&redacted) else {
+        return out;
+    };
+    for (key, value) in map {
+        let flat = match value {
+            serde_json::Value::String(s) => s,
+            serde_json::Value::Number(n) => n.to_string(),
+            serde_json::Value::Bool(b) => b.to_string(),
+            // No faithful map<string,string> form; skipping beats emitting JSON
+            // a caller would have to parse again.
+            _ => continue,
+        };
+        out.insert(key, flat);
+    }
+    out
 }
 
 pub(super) fn authz_principal_to_runtime(p: &authz_pb::Principal) -> Principal {

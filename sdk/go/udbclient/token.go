@@ -240,5 +240,18 @@ func (m *TokenManager) doRefresh(ctx context.Context, prev Token) error {
 	if secs := resp.GetAccessTokenExpiresIn(); secs > 0 {
 		next.ExpiresAt = m.now().Add(time.Duration(secs) * time.Second)
 	}
+	// Persist the ROTATED refresh token. The broker mints a new one on every
+	// successful refresh and invalidates the presented one atomically — it is
+	// single-use. Keeping `prev.RefreshToken` meant the second refresh submitted
+	// a credential the broker had already revoked, so a long-running service
+	// authenticated, refreshed once, and then failed with
+	// `Unauthenticated: invalid credential` at the next boundary.
+	//
+	// Guarded on non-empty: the response omits it when the caller refreshed with
+	// a legacy server-side session id rather than a token-family credential, and
+	// blindly assigning would erase a working credential.
+	if rotated := resp.GetRefreshToken(); rotated != "" {
+		next.RefreshToken = rotated
+	}
 	return m.store.Save(ctx, next)
 }

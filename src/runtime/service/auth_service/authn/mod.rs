@@ -26,9 +26,9 @@ use crate::runtime::security::{SecurityConfig, validate_bearer_token};
 
 use super::events::{self, AuthEvent, AuthEventSink, ComplianceEnvelope, topics};
 use super::mappings::{
-    authn_principal_to_pb, bounded_page_response, bounded_page_window, principal_from_api_key,
-    principal_from_session, public_session_handle_from_hash, session_record_to_pb,
-    timestamp_from_unix,
+    authn_principal_to_pb_with_attributes, bounded_page_response, bounded_page_window,
+    principal_from_api_key, principal_from_session, public_session_handle_from_hash,
+    session_record_to_pb, timestamp_from_unix,
 };
 use super::now_unix;
 use crate::ir::{
@@ -3737,10 +3737,13 @@ impl AuthnServiceImpl {
         )
         .await;
         Ok(authn_pb::FinishWebAuthnAuthenticationResponse {
-            principal: Some(authn_principal_to_pb(
+            // The passkey path HAS the user record, so project its profile
+            // attributes rather than returning the empty map every path used to.
+            principal: Some(authn_principal_to_pb_with_attributes(
                 &principal,
                 expires_at,
                 account_kind_to_proto(user.account_kind),
+                &user.profile_attributes_json,
             )),
             session_id,
             access_token,

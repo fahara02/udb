@@ -190,6 +190,41 @@ async fn live_audit_sink_persists_to_its_own_table() {
         .await
         .ok();
 
+    // Inherited from the old `RUN_AUDIT_REPRO` repro, which was gated on an env
+    // var nothing set and so never ran anywhere: prove the REAL
+    // `AuditSinkConfig::from_env()` merge populates `pg_table`. That merge failing
+    // is what made 0.4.34 look broken — the sink was configured and the config
+    // never reached it, so every event went to stdout.
+    //
+    // `from_env` reads process env with no injectable seam, so this mutates it.
+    // Safe HERE and only here: these tests are `#[ignore]`d, so they never run in
+    // the parallel `cargo test --lib` pass — only in the live job, which passes
+    // `--test-threads=1`. Restored immediately either way.
+    {
+        // SAFETY: serial (`--test-threads=1`) live-job execution; edition-2024
+        // requires unsafe for env mutation.
+        unsafe {
+            std::env::set_var("UDB_AUDIT_SINK", "postgres");
+            std::env::set_var("UDB_AUDIT_PG_TABLE", table);
+        }
+        let from_env = crate::runtime::config::AuditSinkConfig::from_env();
+        let restored = (from_env.kind, from_env.pg_table.clone());
+        unsafe {
+            std::env::remove_var("UDB_AUDIT_SINK");
+            std::env::remove_var("UDB_AUDIT_PG_TABLE");
+        }
+        assert_eq!(
+            restored.0,
+            AuditSinkKind::Postgres,
+            "from_env must read UDB_AUDIT_SINK=postgres"
+        );
+        assert_eq!(
+            restored.1.as_deref(),
+            Some(table),
+            "from_env must populate pg_table from UDB_AUDIT_PG_TABLE"
+        );
+    }
+
     let cfg = pg_sink(table);
     ensure_pg_audit_sink_ready(&cfg, Some(&pool))
         .await

@@ -1293,6 +1293,13 @@ jobs:
           UDB_MINIO_ENDPOINT: http://localhost:59000
           UDB_MINIO_ACCESS_KEY: minio
           UDB_MINIO_SECRET_KEY: minio123
+          # Turns on s3_object_stream_roundtrip_all_sizes_live. The test was
+          # already #[ignore]d, so this job DID invoke it - and it returned
+          # immediately because nothing set this var, in any workflow. It
+          # therefore verified nothing anywhere while looking like coverage.
+          # s3_executor_from_env defaults to 127.0.0.1:59000 / minio / minio123,
+          # which is the MinIO service above.
+          UDB_LIVE_OBJECT_TESTS: "1"
           UDB_QDRANT_URL: http://localhost:56333
           UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
           UDB_VAULT_DB_ROLES_JSON: '[{"role_name":"authority-test-read","tenant_id":"tenant-a","project_id":"default","target_instance":"primary","database_name":"udb","policy_revision":"ci-v1","relations":[{"schema":"udb_vault_authority_test","table":"records","tenant_column":"tenant_id","project_column":"project_id","privileges":["SELECT"]}],"ttl_seconds_max":600}]'
