@@ -88,7 +88,6 @@ pub(crate) async fn windowed_usage(
     Ok(total)
 }
 
-/// Emit the per-mutation versioned dot-topic outbox event (best-effort).
 /// Build the quota-changed event as a transaction step so it commits with the
 /// quota write that caused it.
 ///
@@ -132,6 +131,7 @@ pub(crate) fn quota_changed_transaction_op(
     }
 }
 
+/// Emit the per-mutation versioned dot-topic outbox event (best-effort).
 pub(crate) async fn emit_quota_changed(
     svc: &MeteringServiceImpl,
     tenant_id: &str,

@@ -6,11 +6,6 @@ use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with
 use super::AnalyticsServiceImpl;
 use super::config::TOPIC_ANALYTICS_EVENTS;
 
-/// Emit one proto-declared `analytics.events` outbox event (best-effort; the
-/// durable write already succeeded). Mirrors `config_service::emit_flag_changed`:
-/// partition key = tenant (the contract's `partition_key_field`), actor = the
-/// verified claim subject (auto-filled from the method-security principal when
-/// no claim context is installed).
 /// Insert the analytics event through the CALLER'S transaction, so the metric row
 /// and its event commit together.
 ///
@@ -67,6 +62,11 @@ pub(crate) async fn enqueue_analytics_event_in_tx(
     .map_err(|err| format!("outbox insert failed: {err}"))
 }
 
+/// Emit one proto-declared `analytics.events` outbox event (best-effort; the
+/// durable write already succeeded). Mirrors `config_service::emit_flag_changed`:
+/// partition key = tenant (the contract's `partition_key_field`), actor = the
+/// verified claim subject (auto-filled from the method-security principal when
+/// no claim context is installed).
 pub(crate) async fn emit_analytics_event(
     svc: &AnalyticsServiceImpl,
     event_type: &'static str,

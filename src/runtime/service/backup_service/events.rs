@@ -5,7 +5,6 @@
 use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with_context};
 use super::BackupServiceImpl;
 
-/// Emit a per-mutation versioned dot-topic outbox event (best-effort).
 /// Build the backup event as a transaction step so it commits with the policy
 /// write or delete that caused it.
 ///
@@ -45,6 +44,7 @@ pub(crate) fn event_transaction_op(
     }
 }
 
+/// Emit a per-mutation versioned dot-topic outbox event (best-effort).
 pub(crate) async fn emit_event(
     svc: &BackupServiceImpl,
     topic: &str,

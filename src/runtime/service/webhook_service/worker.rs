@@ -206,14 +206,12 @@ async fn load_webhook_delivery_jobs(
 #[cfg(feature = "http-client")]
 const JOURNAL_INSERT_MAX_ATTEMPTS: u32 = 3;
 
-/// Insert one terminal delivery-journal row (best-effort; logged on failure).
-#[cfg(feature = "http-client")]
-#[allow(clippy::too_many_arguments)]
 /// One attempt at recording a completed delivery: the journal row and, when the
 /// caller supplied one, the delivery event — in a single transaction.
 ///
 /// Split out so the first attempt and every retry run the identical statement
 /// pair, and so the two records can never diverge.
+#[cfg(feature = "http-client")]
 async fn write_delivery_record(
     pool: &PgPool,
     sql: &str,
@@ -253,6 +251,7 @@ async fn write_delivery_record(
 }
 
 /// The bound values of one delivery-journal row.
+#[cfg(feature = "http-client")]
 struct DeliveryJournalRow<'a> {
     delivery_id: &'a str,
     tenant_id: &'a str,
@@ -267,6 +266,9 @@ struct DeliveryJournalRow<'a> {
     payload_text: &'a str,
 }
 
+/// Insert one terminal delivery-journal row plus its delivery event, in one
+/// transaction (best-effort; logged on failure).
+#[cfg(feature = "http-client")]
 #[allow(clippy::too_many_arguments)]
 async fn insert_delivery_journal(
     pool: &PgPool,

@@ -24,18 +24,6 @@ pub(crate) fn lock_event_payload(
     })
 }
 
-/// Emit a per-mutation versioned dot-topic outbox event.
-///
-/// Delivery contract — at-least-once-minus (16.5.3): the durable lock row has
-/// already committed when this runs and the outbox insert is a SEPARATE
-/// statement, so a crash (or a missing pool/relation) between the two loses
-/// the event while keeping the state change. Drops are never silent: both
-/// local drop paths log at error level with the lock id/topic and count in
-/// `udb_outbox_enqueue_failures_total{path="native"}`; an insert failure
-/// inside the shared enqueue helper records the same counter (it does not
-/// surface a `Result` to this call site). A true transactional outbox for
-/// mediated entity writes is follow-up 16.12.4.
-#[allow(clippy::too_many_arguments)]
 /// Build the lock event as a transaction step, so the lock-row write and its
 /// event commit together via
 /// [`crate::runtime::core::DataBrokerRuntime::native_entity_write_co_commit_for_service`].
@@ -81,6 +69,24 @@ pub(crate) fn lock_event_transaction_op(
     }
 }
 
+/// Emit a per-mutation versioned dot-topic outbox event (best-effort fallback).
+///
+/// The at-least-once-minus window this used to document is CLOSED on Postgres:
+/// acquire/renew/release now build the event with
+/// [`lock_event_transaction_op`] and commit it with the lock row through
+/// `native_entity_write_co_commit_for_service`.
+///
+/// This path remains for the target that cannot be atomic — the outbox table is
+/// Postgres, so a lock whose native store resolves elsewhere has its row and its
+/// event in different databases. There, the lock row has already committed when
+/// this runs and the outbox insert is a SEPARATE statement, so a crash (or a
+/// missing pool/relation) between the two loses the event while keeping the state
+/// change. Drops are never silent: both local drop paths log at error level with
+/// the lock id/topic and count in
+/// `udb_outbox_enqueue_failures_total{path="native"}`; an insert failure inside
+/// the shared enqueue helper records the same counter (it does not surface a
+/// `Result` to this call site).
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn emit_lock_event(
     svc: &LockServiceImpl,
     topic: &str,

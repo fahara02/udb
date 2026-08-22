@@ -19,8 +19,6 @@ pub(crate) fn event_actor() -> String {
     }
 }
 
-/// Emit the per-mutation `udb.config.flag.changed.v1` event `{key, actor,
-/// revision}` (best-effort; the durable write already succeeded).
 /// Build the flag-changed event as a transaction step so it commits with the
 /// write or delete that caused it.
 ///
@@ -67,6 +65,8 @@ pub(crate) fn flag_changed_transaction_op(
     }
 }
 
+/// Emit the per-mutation `udb.config.flag.changed.v1` event `{key, actor,
+/// revision}` (best-effort; the durable write already succeeded).
 pub(crate) async fn emit_flag_changed(
     svc: &ConfigServiceImpl,
     tenant_id: &str,

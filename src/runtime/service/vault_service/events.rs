@@ -10,9 +10,6 @@ use super::super::native_helpers::{
 use super::VaultServiceImpl;
 
 impl VaultServiceImpl {
-    /// Emit a per-operation versioned dot-topic outbox event (best-effort). The
-    /// payload NEVER carries plaintext — only tenant/path/version metadata.
-    #[allow(clippy::too_many_arguments)]
     /// Build the audit event as a transaction step, so a call site whose write
     /// goes through the dispatch layer can commit both together via
     /// [`crate::runtime::core::DataBrokerRuntime::native_entity_write_co_commit_for_service`].
@@ -75,6 +72,8 @@ impl VaultServiceImpl {
     /// Every Vault call site that DOES have a durable Postgres write now commits
     /// its audit with that write, via `emit_transaction_op` or
     /// [`enqueue_vault_event_in_tx`].
+    /// The payload NEVER carries plaintext — only tenant/path/version metadata.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn emit(
         &self,
         context: &crate::RequestContext,

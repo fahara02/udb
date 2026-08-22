@@ -65,7 +65,6 @@ pub(crate) fn build_work_event_payload(
 }
 
 impl EmbeddingServiceImpl {
-    /// Emit a per-mutation versioned dot-topic control event (best-effort).
     /// The base identifiers every source event carries, merged with the caller's
     /// extra fields. Shared by both emit postures so the payload is byte-identical
     /// whichever one a call site takes.
@@ -126,6 +125,7 @@ impl EmbeddingServiceImpl {
         }
     }
 
+    /// Emit a per-mutation versioned dot-topic control event (best-effort).
     /// Best-effort source event.
     ///
     /// The callers left on this path cannot do better, so do not convert them to

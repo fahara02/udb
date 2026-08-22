@@ -220,16 +220,6 @@ fn tenant_purge_internal_status(
     crate::runtime::executor_utils::internal_status("tenant_purge", operation, message)
 }
 
-/// Execute the tenant hard-delete ripple.
-///
-/// In ONE transaction it issues `DELETE FROM "<schema>"."<table>" WHERE
-/// "<tenant_col>"::text = $1` for every planned table (children→parents) and
-/// commits — so there is no half-purge: either every tenant-owned row is gone or
-/// nothing is. After the commit it records the tenant-level and per-principal
-/// cluster denylist cutoffs so pre-delete tokens fail validation immediately
-/// instead of at TTL. Denylisting is best-effort (Redis is an accelerator over
-/// the durable Postgres revocation source of truth) and NEVER fails the committed
-/// purge.
 /// Builds the tenant-purge outbox row from the per-table deleted counts and the
 /// excluded tables, both of which only exist once the deletes have run inside the
 /// purge transaction. Returning `None` means there is nothing to enqueue.
@@ -242,6 +232,20 @@ pub(crate) type TenantPurgeEventBuilder<'a> = &'a (
             + Sync
     );
 
+/// Execute the tenant hard-delete ripple.
+///
+/// In ONE transaction it issues `DELETE FROM "<schema>"."<table>" WHERE
+/// "<tenant_col>"::text = $1` for every planned table (children→parents) and
+/// commits — so there is no half-purge: either every tenant-owned row is gone or
+/// nothing is. After the commit it records the tenant-level and per-principal
+/// cluster denylist cutoffs so pre-delete tokens fail validation immediately
+/// instead of at TTL. Denylisting is best-effort (Redis is an accelerator over
+/// the durable Postgres revocation source of truth) and NEVER fails the committed
+/// purge.
+///
+/// The `outbox` builder, when supplied, is invoked just before the commit and its
+/// row is written INSIDE the same transaction, so the purge and the event
+/// announcing it are one atomic unit.
 pub(crate) async fn purge_tenant(
     pool: &sqlx::PgPool,
     manifest: &CatalogManifest,
