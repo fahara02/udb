@@ -88,9 +88,14 @@ either a failure that could not previously be seen, or a gap in what CI checked.
   message-in-JSONB column and a `map<string, string>` column.
 
 - Docs, the docs site, the architecture SVG and the bench-body pages now agree
-  with the descriptor: 27 services, 303 native RPCs, 79 data-plane, 382 total. The
-  README had understated the surface by five and did not match the sum of its own
-  rows. `upgrading.md` gained the 0.5.18 and 0.5.19 notes it was missing.
+  with the embedded descriptor. The README had understated the native RPC surface
+  and did not even match the sum of its own per-service rows; `authn`, `tenant`,
+  `vault` and `storage` were each stale, as were two bench-body pages and the
+  authn/authz inventory's pinned total. The live figures live in
+  `docs/generated/native-services.md` and the README's generated block, which are
+  the only places allowed to carry them — the `Doc service-count drift guard`
+  rejects a hand-written count anywhere else, this entry included.
+  `upgrading.md` gained the 0.5.18 and 0.5.19 notes it was missing.
 
 ## [0.5.19] - 2026-08-21
 
