@@ -26,9 +26,9 @@ use crate::runtime::security::{SecurityConfig, validate_bearer_token};
 
 use super::events::{self, AuthEvent, AuthEventSink, ComplianceEnvelope, topics};
 use super::mappings::{
-    authn_principal_to_pb_with_attributes, bounded_page_response, bounded_page_window,
-    principal_from_api_key, principal_from_session, public_session_handle_from_hash,
-    session_record_to_pb, timestamp_from_unix,
+    authn_principal_to_pb, authn_principal_to_pb_with_attributes, bounded_page_response,
+    bounded_page_window, principal_from_api_key, principal_from_session,
+    public_session_handle_from_hash, session_record_to_pb, timestamp_from_unix,
 };
 use super::now_unix;
 use crate::ir::{

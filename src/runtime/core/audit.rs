@@ -268,7 +268,7 @@ fn pg_audit_writer(pool: &PgPool, table: &str) -> Option<&'static PgAuditWriter>
                                 // counting and throttling.
                                 tracing::warn!(
                                     error = %err, table = %relation,
-                                    "durable Postgres audit table is unusable. If this names                                      missing columns it is a configuration error that will NOT                                      heal on its own - fix UDB_AUDIT_PG_TABLE"
+                                    "durable Postgres audit table is unusable. If this names missing columns it is a configuration error that will NOT heal on its own - fix UDB_AUDIT_PG_TABLE"
                                 );
                                 note_audit_degraded("pg_ensure_table_failed", &event);
                                 continue;

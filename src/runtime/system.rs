@@ -1946,7 +1946,7 @@ mod tests {
                 // Only non-CREATE-TABLE statements (CREATE SCHEMA, indexes) may decline.
                 assert!(
                     !stmt.trim_start().starts_with("CREATE TABLE IF NOT EXISTS "),
-                    "a real CREATE TABLE statement failed to parse, so its shape would go                      unverified: {stmt}"
+                    "a real CREATE TABLE statement failed to parse, so its shape would go unverified: {stmt}"
                 );
                 continue;
             };

@@ -298,7 +298,7 @@ async fn insert_delivery_journal(
             endpoint_id,
             event_id,
             error = %err,
-            "webhook delivery journal insert failed after retries; this event has ALREADY been              delivered but is not recorded, so the worker will redeliver it on every subsequent              pass until the row can be written"
+            "webhook delivery journal insert failed after retries; this event has ALREADY been delivered but is not recorded, so the worker will redeliver it on every subsequent pass until the row can be written"
         );
     }
 }

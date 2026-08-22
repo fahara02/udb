@@ -858,10 +858,20 @@ pub(crate) async fn enqueue_outbox_event_with_context(
         // already built and idempotent by event_id - then report at ERROR naming
         // the consequence, so the gap is alertable rather than a warn in a log.
         //
-        // This narrows the window; it does not close it. Emitting the event
-        // atomically with the entity write requires the dispatch layer to accept a
-        // caller-supplied transaction (as `enqueue_outbox_event_in_tx` already
-        // does for the raw-SQL metering path).
+        // This narrows the window; it does not close it FOR THIS CALLER. Closing
+        // it is per-call-site, and both routes already exist:
+        //   - a caller whose entity write is raw SQL on this same pool opens a
+        //     transaction and emits through `enqueue_outbox_event_in_tx`
+        //     (tenant CreateTenant, vault, scheduler, embedding metering);
+        //   - a caller writing through the dispatch layer appends a
+        //     `native_transaction_outbox_op` step to
+        //     `native_entity_transaction_for_service`, which co-commits the typed
+        //     write and the outbox row (notification).
+        // What remains genuinely open is the non-Postgres case: the outbox table
+        // is Postgres, so when a service's resolved dispatch target is another
+        // backend the two writes are in different databases and atomicity is a
+        // 2PC problem, not a transaction one. Callers still on this best-effort
+        // path are the ones not yet converted.
         let mut enqueued = false;
         for attempt in 1..=OUTBOX_ENQUEUE_MAX_ATTEMPTS {
             tokio::time::sleep(std::time::Duration::from_millis(100 * attempt as u64)).await;
@@ -885,7 +895,7 @@ pub(crate) async fn enqueue_outbox_event_with_context(
             tracing::error!(
                 topic,
                 error = %err,
-                "native outbox enqueue failed after retries; the entity write is COMMITTED but its \n                 event was never emitted, and nothing will re-derive it - downstream CDC \n                 consumers will not see this change"
+                "native outbox enqueue failed after retries; the entity write is COMMITTED but its event was never emitted, and nothing will re-derive it - downstream CDC consumers will not see this change"
             );
             if let Some(m) = metrics {
                 m.inc_outbox_enqueue_failures_total("native");

@@ -1902,7 +1902,7 @@ async fn run_startup_lifecycle_core(
                 // exact findings to the repair planner instead of fail-closing, and it
                 // is otherwise discoverable only by reading this file.
                 report.errors.push(
-                    "remedy: run `udb verify --live --dsn <dsn>` to review these findings against the database before applying anything, or set migration.emergency_auto_alter=true                      (UDB_MIGRATION_EMERGENCY_AUTO_ALTER=true) to let startup feed them to the repair planner and apply the safe repairs"
+                    "remedy: run `udb verify --live --dsn <dsn>` to review these findings against the database before applying anything, or set migration.emergency_auto_alter=true (UDB_MIGRATION_EMERGENCY_AUTO_ALTER=true) to let startup feed them to the repair planner and apply the safe repairs"
                         .to_string(),
                 );
                 return Err(report_failure_json(

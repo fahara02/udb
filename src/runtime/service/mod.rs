@@ -624,7 +624,7 @@ impl DataBrokerService {
                 operation,
                 "catalog_project_not_active",
                 format!(
-                    "project '{project}' has no ACTIVE catalog, and falling back to the default project is refused because it would serve another project's schema.                      Run `udb catalog bootstrap --project {project}` (or CatalogService StageCatalog then ActivateCatalog). A deployment created before projects had catalogs has no rows in the catalog-version or project-binding tables and needs this once per project."
+                    "project '{project}' has no ACTIVE catalog, and falling back to the default project is refused because it would serve another project's schema. Run `udb catalog bootstrap --project {project}` (or CatalogService StageCatalog then ActivateCatalog). A deployment created before projects had catalogs has no rows in the catalog-version or project-binding tables and needs this once per project."
                 ),
             ));
         }

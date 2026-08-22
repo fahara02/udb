@@ -401,7 +401,7 @@ impl DataBrokerService {
                         "GetCatalogManifest",
                         "catalog_project_not_active",
                         format!(
-                            "project '{}' has no ACTIVE catalog, and falling back to the default project is refused because it would return another project's manifest.                              Stage and activate a catalog for it (StageCatalog then ActivateCatalog).",
+                            "project '{}' has no ACTIVE catalog, and falling back to the default project is refused because it would return another project's manifest. Stage and activate a catalog for it (StageCatalog then ActivateCatalog).",
                             security.project_id.trim()
                         ),
                     )),

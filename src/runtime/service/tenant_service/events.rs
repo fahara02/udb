@@ -2,7 +2,10 @@
 //! outbox, plus the two no-secrets event payload builders. Extracted verbatim;
 //! `emit_event` takes `svc` where the trait method took `&self`.
 
-use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with_context};
+use super::super::native_helpers::{
+    NativeEventContext, OutboxEnvelopeReject, build_enriched_outbox_envelope,
+    enqueue_outbox_event_with_context,
+};
 use super::TenantServiceImpl;
 
 /// Best-effort tenant-event emission into the shared transactional outbox
@@ -38,6 +41,74 @@ pub(crate) async fn emit_event(
         Some(&svc.metrics),
     )
     .await;
+}
+
+/// [`emit_event`], but the outbox row is inserted through the CALLER'S
+/// transaction so the tenant row and its lifecycle event commit together.
+///
+/// `emit_event` runs after the write has already committed, which leaves a
+/// window: if the insert fails, the tenant exists with no event, and — unlike
+/// the webhook journal — nothing re-derives it, so a downstream provisioning
+/// consumer silently never learns the tenant was created.
+///
+/// The two failure classes are deliberately NOT treated alike, because only one
+/// of them is that window:
+///
+/// - An INFRASTRUCTURE failure (the insert itself) is propagated, so the
+///   caller's transaction rolls the tenant row back too. Row and event are then
+///   all-or-nothing and the window is closed.
+/// - An ENVELOPE REJECTION (`udb.tenant.*` is a security-sensitive prefix, so
+///   enterprise audit mode demands a fully populated compliance envelope) keeps
+///   the pre-existing best-effort posture: warn, count, and let the write stand.
+///   Failing the RPC here would convert a long-standing silent event drop into
+///   a hard CreateTenant outage on exactly the deployments running enterprise
+///   audit mode. That is a policy gap to close on its own terms, not a
+///   side-effect of making the write atomic.
+pub(crate) async fn emit_event_in_tx(
+    svc: &TenantServiceImpl,
+    executor: &mut sqlx::PgConnection,
+    topic: &str,
+    operation: &str,
+    partition_key: &str,
+    tenant_id: &str,
+    payload: serde_json::Value,
+) -> Result<(), String> {
+    let Some(relation) = svc.outbox_relation.as_deref() else {
+        return Ok(());
+    };
+    let context = NativeEventContext {
+        operation: operation.to_string(),
+        target_resource: tenant_id.to_string(),
+        ..NativeEventContext::default()
+    };
+    let (event_id, envelope) =
+        match build_enriched_outbox_envelope(topic, partition_key, tenant_id, "", context, payload)
+        {
+            Ok(built) => built,
+            Err(reject) => {
+                let bucket = match reject {
+                    OutboxEnvelopeReject::TenantScopeMissing => "native_tenant_scope",
+                    OutboxEnvelopeReject::Compliance(_) => "native_compliance",
+                };
+                tracing::warn!(
+                    topic,
+                    error = %reject,
+                    "refusing to enqueue non-compliant tenant event; the tenant write still stands"
+                );
+                svc.metrics.inc_outbox_enqueue_failures_total(bucket);
+                return Ok(());
+            }
+        };
+    crate::runtime::cdc::insert_outbox_row(
+        &mut *executor,
+        relation,
+        event_id,
+        topic,
+        partition_key,
+        &envelope,
+    )
+    .await
+    .map_err(|err| format!("outbox insert failed: {err}"))
 }
 
 /// Immutable audit emit for the PRIVILEGED cross-tenant admin purge (Bug #2).

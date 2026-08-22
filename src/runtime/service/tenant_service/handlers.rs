@@ -33,7 +33,9 @@ use super::errors::{
     tenant_already_exists_status, tenant_field_violation, tenant_internal_status,
     tenant_not_found_status, tenant_required_field, validate_create_tenant_required_fields,
 };
-use super::events::{emit_event, tenant_config_event_payload, tenant_lifecycle_event_payload};
+use super::events::{
+    emit_event, emit_event_in_tx, tenant_config_event_payload, tenant_lifecycle_event_payload,
+};
 use super::gate;
 use super::model::{
     config_type_to_db, tenant_config_from_json, tenant_from_json, tenant_from_row, tenant_model,
@@ -132,6 +134,14 @@ pub(crate) async fn create_tenant(
     // Keep this bespoke insert until alternate-conflict/upsert-by-code is
     // expressible in the IR; falling back to primary-key conflict would break
     // CreateTenant idempotency.
+    // The tenant row and its `tenant.created` event commit TOGETHER. Emitting
+    // after the insert had already committed left a window where the tenant
+    // existed with no event ever enqueued and nothing to re-derive it, so a
+    // downstream provisioning consumer silently never learned about it. The
+    // outbox insert below runs through this same transaction.
+    let mut tx = pool.begin().await.map_err(|err| {
+        tenant_internal_status("create_tenant", format!("create tenant failed: {err}"))
+    })?;
     let inserted_id: Option<String> = sqlx::query_scalar(&format!(
         "INSERT INTO {rel} \
          ({tenant_id}, {code}, {name}, {type_col}, {status}, {parent}, {config}, {branding}) \
@@ -155,7 +165,7 @@ pub(crate) async fn create_tenant(
     .bind(&req.parent_tenant_id)
     .bind(&config)
     .bind(&branding)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|err| {
         tenant_internal_status("create_tenant", format!("create tenant failed: {err}"))
@@ -167,22 +177,46 @@ pub(crate) async fn create_tenant(
         // its tokens) and emit the contract-declared `tenant.created` event ONLY
         // now (never on the conflict no-op path). Payload carries identifiers +
         // status only (no secrets), same shape as PurgeTenant.
-        gate::mark_tenant_status(&created_id, TENANT_STATUS_ACTIVE_DB);
-        emit_event(
+        emit_event_in_tx(
             svc,
+            &mut tx,
             TOPIC_TENANT_CREATED,
             EVENT_TYPE_TENANT_CREATED,
             &created_id,
             &created_id,
             tenant_lifecycle_event_payload(&created_id, &req.code, TENANT_STATUS_ACTIVE_DB),
         )
-        .await;
+        .await
+        .map_err(|err| {
+            tenant_internal_status(
+                "create_tenant_event",
+                format!("create tenant event enqueue failed: {err}"),
+            )
+        })?;
+        tx.commit().await.map_err(|err| {
+            tenant_internal_status(
+                "create_tenant",
+                format!("create tenant commit failed: {err}"),
+            )
+        })?;
+        // Primed only once the row is durable: the in-memory suspension signal
+        // must not claim a tenant that a rolled-back transaction never created.
+        gate::mark_tenant_status(&created_id, TENANT_STATUS_ACTIVE_DB);
         return Ok(Response::new(tenant_pb::CreateTenantResponse {
             tenant_id: created_id,
             message: "tenant created".to_string(),
             error: None,
         }));
     }
+
+    // Nothing was inserted, so the transaction holds no work; close it before the
+    // read-only disclosure path below, which runs on the pool.
+    tx.rollback().await.map_err(|err| {
+        tenant_internal_status(
+            "create_tenant",
+            format!("create tenant conflict rollback failed: {err}"),
+        )
+    })?;
 
     // M22 — the code already exists and nothing was created. Do NOT emit a
     // spurious event. Idempotent disclosure of the surviving row's canonical id
