@@ -8,6 +8,12 @@ use super::super::native_helpers::{
 use super::CacheServiceImpl;
 
 /// Best-effort versioned dot-topic outbox event (mirrors `lock_service`).
+/// Best-effort cache event.
+///
+/// Every CacheService mutation lands in the cache backend (Redis/memcached), not
+/// in Postgres, so there is no database transaction for these events to join.
+/// That makes them best-effort by nature rather than by omission — do not
+/// "convert" them the way the Postgres-backed services were converted.
 pub(crate) async fn emit_event(
     svc: &CacheServiceImpl,
     metadata: &tonic::metadata::MetadataMap,

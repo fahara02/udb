@@ -13,7 +13,7 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 #[cfg(feature = "http-client")]
-use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with_context};
+use super::super::native_helpers::NativeEventContext;
 #[cfg(feature = "http-client")]
 use futures::StreamExt as _;
 
@@ -209,6 +209,65 @@ const JOURNAL_INSERT_MAX_ATTEMPTS: u32 = 3;
 /// Insert one terminal delivery-journal row (best-effort; logged on failure).
 #[cfg(feature = "http-client")]
 #[allow(clippy::too_many_arguments)]
+/// One attempt at recording a completed delivery: the journal row and, when the
+/// caller supplied one, the delivery event — in a single transaction.
+///
+/// Split out so the first attempt and every retry run the identical statement
+/// pair, and so the two records can never diverge.
+async fn write_delivery_record(
+    pool: &PgPool,
+    sql: &str,
+    row: &DeliveryJournalRow<'_>,
+    outbox: Option<&(
+        String,
+        crate::runtime::core::native_store::NativeOutboxTransactionWrite,
+    )>,
+) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    sqlx::query(sql)
+        .bind(row.delivery_id)
+        .bind(row.tenant_id)
+        .bind(row.endpoint_id)
+        .bind(row.event_id)
+        .bind(row.topic)
+        .bind(row.status)
+        .bind(row.attempt_count)
+        .bind(row.response_status)
+        .bind(row.signature)
+        .bind(row.last_error)
+        .bind(row.payload_text)
+        .execute(&mut *tx)
+        .await?;
+    if let Some((relation, event)) = outbox {
+        crate::runtime::cdc::insert_outbox_row(
+            &mut *tx,
+            relation,
+            event.event_id,
+            &event.topic,
+            &event.partition_key,
+            &event.envelope,
+        )
+        .await?;
+    }
+    tx.commit().await
+}
+
+/// The bound values of one delivery-journal row.
+struct DeliveryJournalRow<'a> {
+    delivery_id: &'a str,
+    tenant_id: &'a str,
+    endpoint_id: &'a str,
+    event_id: &'a str,
+    topic: &'a str,
+    status: &'a str,
+    attempt_count: i32,
+    response_status: i32,
+    signature: &'a str,
+    last_error: &'a str,
+    payload_text: &'a str,
+}
+
+#[allow(clippy::too_many_arguments)]
 async fn insert_delivery_journal(
     pool: &PgPool,
     tenant_id: &str,
@@ -221,6 +280,14 @@ async fn insert_delivery_journal(
     signature: &str,
     last_error: &str,
     payload: &serde_json::Value,
+    // The delivery event, committed WITH the journal row. Both describe the same
+    // completed POST, so writing them separately allowed the journal to land while
+    // the event was lost — consumers then never hear about a delivery this broker
+    // has recorded, and nothing re-derives it.
+    outbox: Option<(
+        String,
+        crate::runtime::core::native_store::NativeOutboxTransactionWrite,
+    )>,
 ) {
     let m = delivery_model();
     let rel = m.relation.clone();
@@ -244,20 +311,20 @@ async fn insert_delivery_journal(
         payload_json = m.q("payload_json"),
         delivered_at = m.q("delivered_at"),
     );
-    let result = sqlx::query(&sql)
-        .bind(&delivery_id)
-        .bind(tenant_id)
-        .bind(endpoint_id)
-        .bind(event_id)
-        .bind(topic)
-        .bind(status)
-        .bind(attempt_count)
-        .bind(response_status)
-        .bind(signature)
-        .bind(last_error)
-        .bind(&payload_text)
-        .execute(pool)
-        .await;
+    let row = DeliveryJournalRow {
+        delivery_id: &delivery_id,
+        tenant_id,
+        endpoint_id,
+        event_id,
+        topic,
+        status,
+        attempt_count,
+        response_status,
+        signature,
+        last_error,
+        payload_text: &payload_text,
+    };
+    let result = write_delivery_record(pool, &sql, &row, outbox.as_ref()).await;
     if let Err(err) = result {
         // This is NOT a cosmetic logging failure. The loader selects outbox events
         // that have no DELIVERED/DEAD delivery row, so an unwritten journal entry
@@ -270,21 +337,10 @@ async fn insert_delivery_journal(
         // happen if we still cannot.
         for attempt in 1..=JOURNAL_INSERT_MAX_ATTEMPTS {
             tokio::time::sleep(std::time::Duration::from_millis(100 * attempt as u64)).await;
-            let retry = sqlx::query(&sql)
-                .bind(&delivery_id)
-                .bind(tenant_id)
-                .bind(endpoint_id)
-                .bind(event_id)
-                .bind(topic)
-                .bind(status)
-                .bind(attempt_count)
-                .bind(response_status)
-                .bind(signature)
-                .bind(last_error)
-                .bind(&payload_text)
-                .execute(pool)
-                .await;
-            if retry.is_ok() {
+            if write_delivery_record(pool, &sql, &row, outbox.as_ref())
+                .await
+                .is_ok()
+            {
                 tracing::warn!(
                     endpoint_id,
                     event_id,
@@ -430,30 +486,13 @@ pub(crate) async fn run_webhook_delivery_once(
 
             let status = if ok { STATUS_DELIVERED } else { STATUS_DEAD };
             let attempts = attempts_observed.max(1);
-            insert_delivery_journal(
-                pool,
-                &endpoint.tenant_id,
-                &endpoint.endpoint_id,
-                &event.event_id,
-                &event.topic,
-                status,
-                attempts,
-                last_status,
-                &signature,
-                &last_error,
-                &event.payload,
-            )
-            .await;
-
-            if ok {
+            // Build the delivery event BEFORE the journal write so both records of
+            // this completed POST commit in one transaction. Dead-lettering after
+            // max attempts stays fail-closed and durably recorded.
+            let (event_topic, event_payload, event_context) = if ok {
                 delivered = delivered.saturating_add(1);
-                enqueue_outbox_event_with_context(
-                    pool,
-                    outbox_relation,
+                (
                     TOPIC_DELIVERY_SUCCEEDED,
-                    &endpoint.endpoint_id,
-                    &endpoint.tenant_id,
-                    "",
                     serde_json::json!({
                         "tenant_id": endpoint.tenant_id,
                         "endpoint_id": endpoint.endpoint_id,
@@ -466,18 +505,10 @@ pub(crate) async fn run_webhook_delivery_once(
                         target_resource: endpoint.endpoint_id.clone(),
                         ..NativeEventContext::default()
                     },
-                    metrics,
                 )
-                .await;
             } else {
-                // Dead-letter after max attempts (fail closed, durably recorded).
-                enqueue_outbox_event_with_context(
-                    pool,
-                    outbox_relation,
+                (
                     TOPIC_DELIVERY_DEAD,
-                    &endpoint.endpoint_id,
-                    &endpoint.tenant_id,
-                    "",
                     serde_json::json!({
                         "tenant_id": endpoint.tenant_id,
                         "endpoint_id": endpoint.endpoint_id,
@@ -492,10 +523,52 @@ pub(crate) async fn run_webhook_delivery_once(
                         target_resource: endpoint.endpoint_id.clone(),
                         ..NativeEventContext::default()
                     },
-                    metrics,
                 )
-                .await;
-            }
+            };
+            let delivery_event = outbox_relation.and_then(|relation| {
+                match crate::runtime::service::native_helpers::native_transaction_outbox_op(
+                    Some(relation),
+                    event_topic,
+                    &endpoint.endpoint_id,
+                    &endpoint.tenant_id,
+                    "",
+                    event_payload,
+                    event_context,
+                ) {
+                    Ok(Some(
+                        crate::runtime::core::native_store::NativeEntityTransactionOp::Outbox(
+                            write,
+                        ),
+                    )) => Some((relation.to_string(), write)),
+                    Ok(_) => None,
+                    Err(reject) => {
+                        tracing::warn!(
+                            topic = event_topic,
+                            error = %reject,
+                            "refusing to enqueue non-compliant webhook delivery event; the journal row still stands"
+                        );
+                        if let Some(metrics) = metrics {
+                            metrics.inc_outbox_enqueue_failures_total("native_compliance");
+                        }
+                        None
+                    }
+                }
+            });
+            insert_delivery_journal(
+                pool,
+                &endpoint.tenant_id,
+                &endpoint.endpoint_id,
+                &event.event_id,
+                &event.topic,
+                status,
+                attempts,
+                last_status,
+                &signature,
+                &last_error,
+                &event.payload,
+                delivery_event,
+            )
+            .await;
         }
     }
     Ok(delivered)

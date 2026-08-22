@@ -21,7 +21,7 @@ use super::config::{
     PIPELINE_SUMMARY_PAGE_SIZE, PMS_MSG, SECONDS_PER_HOUR,
 };
 use super::errors::{analytics_internal_status, analytics_required_field, require_platform_admin};
-use super::events::{analytics_event_payload, emit_analytics_event};
+use super::events::{analytics_event_payload, emit_analytics_event, enqueue_analytics_event_in_tx};
 use super::model::{
     eps_from_json, eps_from_row, eps_model, pms_from_json, pms_from_row, pms_model, ras_from_json,
     ras_from_row, ras_model, timestamp_hour_period,

@@ -175,6 +175,9 @@ pub(crate) async fn run_cache_invalidation_once(
         total = total.saturating_add(deleted);
         // Emit the invalidation event so downstream consumers (and live-query/
         // read-fence machinery) observe the namespace turn over.
+        // Best-effort by nature: the durable effect of this pass is the cache
+        // sweep itself (Redis/memcached), not a Postgres write, so there is no
+        // transaction for the event to join.
         enqueue_outbox_event_with_context(
             outbox_pool,
             outbox_relation,

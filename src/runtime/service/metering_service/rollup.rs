@@ -172,6 +172,10 @@ pub(crate) async fn run_metering_rollup_once(
             "event_count": rollup.event_count,
             "window_seconds": rollup.window_end_unix.saturating_sub(rollup.window_start_unix),
         });
+        // Best-effort by nature, not by omission: a rollup is DERIVED from the
+        // usage journal by the read above, so there is no durable write here for
+        // the event to be atomic with. A lost rollup event is recomputed from the
+        // journal on a later pass; it is not unrecoverable state.
         enqueue_outbox_event_with_context(
             pool,
             Some(outbox_relation),
