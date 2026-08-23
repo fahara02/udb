@@ -1,6 +1,6 @@
 [package]
 name = "udb-client"
-version = "0.5.20"
+version = "0.5.21"
 edition = "2021"
 rust-version = "1.88"
 description = "Rust client for UDB — a proto-driven gRPC broker over multiple databases. Typed tonic clients plus the tenant/project metadata and token lifecycle the broker expects."
@@ -16,8 +16,15 @@ categories = ["database", "api-bindings"]
 # this crate cannot drift from the wire contract it ships with. `proto/` and
 # `third_party/` are packaged so `cargo publish` produces a crate that builds
 # standalone off the registry, with no repo checkout.
+#
+# Those two are gitignored (the release workflow vendors them; the repo keeps one
+# copy under /proto). Cargo lists package files through git, so an ignored path is
+# skipped even when `include` names it — the release workflow force-adds them, and
+# `Verify the packaged crate builds standalone` fails the release if that ever
+# stops working.
 include = [
     "src/**",
+    "examples/**",
     "build.rs",
     "README.md",
     "proto/**",

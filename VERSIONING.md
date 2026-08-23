@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.20 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.21 | protocol v1.0.0</sub>
 </p>
 
 This page explains how UDB numbers its releases, and it's the reference to reach
@@ -19,19 +19,19 @@ separate wire-protocol version that only moves when the network contract changes
 
 | Item | Version |
 |---|---:|
-| UDB crate and CLI | `0.5.20` |
-| SDK packages | `0.5.20` |
+| UDB crate and CLI | `0.5.21` |
+| SDK packages | `0.5.21` |
 | Wire protocol | `1.0.0` |
-| Release tag | `v0.5.20` |
+| Release tag | `v0.5.21` |
 
 The single source of truth for all of these numbers is
 [versions.json](versions.json). Everything else — package manifests and SDK
 protocol constants — is checked against that file in CI, so you edit it in one
 place and the checks keep the rest honest.
 
-## 0.5.20 Release Gate Assumptions
+## 0.5.21 Release Gate Assumptions
 
-Before you tag 0.5.20, the staged tree needs to pass the gates that tripped up
+Before you tag 0.5.21, the staged tree needs to pass the gates that tripped up
 the last two release attempts:
 
 - `node scripts/check-versions.mjs` must agree with [versions.json](versions.json).
@@ -121,7 +121,8 @@ Each artifact publishes to its language's usual home:
 
 | Component | Target |
 |---|---|
-| Rust crate | crates.io |
+| Rust broker crate | crates.io package `udb` |
+| Rust SDK | crates.io package `udb-client` |
 | Binaries | GitHub Releases |
 | Docker image | GitHub Container Registry |
 | Python SDK | PyPI package `udb-client` |

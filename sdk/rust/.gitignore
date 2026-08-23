@@ -1,2 +1,8 @@
 /target
 Cargo.lock
+
+# Vendored at RELEASE time by .github/workflows/release-rust-sdk.yml so the
+# published crate builds without a repo checkout. Never committed: the repo keeps
+# exactly one copy of the contract, under /proto.
+/proto
+/third_party

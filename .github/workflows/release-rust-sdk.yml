@@ -1,0 +1,144 @@
+name: Release · Rust SDK (crates.io)
+
+# Reusable publisher invoked by `release.yml` (the tag-driven orchestrator).
+# Publishes the CLIENT crate `udb-client`, which is a different crate from the
+# broker `udb` published by `release-crates.yml` — same registry, different
+# package, different job so a failure in one does not mask the other.
+#
+# Required `production` environment secret:
+#   CARGO_REGISTRY_TOKEN   (https://crates.io/settings/tokens)
+#
+# Rollback: crates.io versions are IMMUTABLE. The only undo is
+# `cargo yank --version <ver>` (hides from new resolves, does NOT delete).
+
+on:
+  workflow_call:
+    secrets:
+      CARGO_REGISTRY_TOKEN:
+        description: crates.io API token used by `cargo publish`.
+        required: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: cargo publish (udb-client)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+      url: https://crates.io/crates/udb-client
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-rust
+
+      # version-guard runs check-versions.mjs and needs Node present first.
+      - uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          node: 'true'
+      - uses: ./.github/actions/version-guard
+        with:
+          component: sdk-rust
+
+      - name: Check crates.io version availability
+        id: crate_version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF#refs/tags/v}"
+          if curl -fsS "https://crates.io/api/v1/crates/udb-client/${version}" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "udb-client ${version} already exists on crates.io; publish steps will be skipped."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # `cargo publish` packages ONLY the crate directory, so the build script's
+      # repo-relative `../../proto` is unreachable from the published crate. The
+      # crate's build.rs falls back to a vendored `./proto`, which is what this
+      # step provides. Vendored at release time rather than committed so the repo
+      # holds exactly one copy of the contract and the two can never disagree.
+      - name: Vendor the protos into the crate
+        if: steps.crate_version.outputs.exists != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf sdk/rust/proto sdk/rust/third_party
+          mkdir -p sdk/rust/third_party
+          cp -R proto sdk/rust/proto
+          cp -R third_party/googleapis sdk/rust/third_party/googleapis
+          test -f sdk/rust/proto/udb/services/v1/data_broker.proto
+          test -f sdk/rust/third_party/googleapis/google/api/annotations.proto
+          # Cargo lists package files through git, so a gitignored path is skipped
+          # even when `include` names it — and these ARE gitignored, deliberately,
+          # so a local packaging test cannot leave a second copy of the contract
+          # staged for commit. Force-add makes cargo see them. Verified locally:
+          # without this the crate packages with ZERO protos, and every downstream
+          # build then fails in build.rs.
+          git add -f sdk/rust/proto sdk/rust/third_party
+          echo "vendored $(find sdk/rust/proto -name '*.proto' | wc -l) proto file(s)"
+
+      # Build against the VENDORED copy exactly as a downstream consumer would,
+      # by moving the repo tree out of build.rs's reach. Without this the crate
+      # would still resolve `../../proto` here and a broken vendored copy would
+      # sail through both the dry run and the publish, failing only for the first
+      # person who depends on it.
+      - name: Verify the packaged crate builds standalone
+        if: steps.crate_version.outputs.exists != 'true'
+        shell: bash
+        working-directory: sdk/rust
+        run: |
+          set -euo pipefail
+          cargo package --allow-dirty --no-verify
+          version="${GITHUB_REF#refs/tags/v}"
+          crate="target/package/udb-client-${version}.crate"
+          test -f "$crate" || { echo "::error::packaged crate not found at $crate"; exit 1; }
+          # Extract the ARCHIVE rather than trusting target/package/<name>/: with
+          # --no-verify cargo writes the .crate without extracting, so that
+          # directory can be a stale leftover from an earlier run. Inspecting it
+          # proves nothing about what would actually be published — this exact
+          # mistake reported "protos missing" against a correct package during
+          # local validation.
+          out="$(mktemp -d)"
+          tar xzf "$crate" -C "$out"
+          root="$out/udb-client-${version}"
+          test -f "$root/proto/udb/services/v1/data_broker.proto" \
+            || { echo "::error::vendored protos missing from the published archive"; exit 1; }
+          # Built OUTSIDE the repo, so build.rs cannot fall back to ../../proto and
+          # mask a broken vendored copy.
+          cargo build --manifest-path "$root/Cargo.toml"
+          echo "packaged crate builds with no repo checkout in reach"
+
+      # --allow-dirty: the vendored protos above are untracked by design.
+      - name: cargo publish --dry-run
+        if: steps.crate_version.outputs.exists != 'true'
+        working-directory: sdk/rust
+        run: cargo publish --dry-run --allow-dirty
+
+      - name: cargo publish
+        if: steps.crate_version.outputs.exists != 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        working-directory: sdk/rust
+        shell: bash
+        run: |
+          set +e
+          cargo publish --allow-dirty 2>&1 | tee /tmp/cargo-publish-client.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          # A concurrent release run winning the upload is success, not failure.
+          if grep -Eq 'crate udb-client@.+ already exists on crates\.io index|crate version .+ is already uploaded' /tmp/cargo-publish-client.log; then
+            echo "udb-client ${GITHUB_REF#refs/tags/v} was published by another release run; treating as success."
+            exit 0
+          fi
+          exit "$status"

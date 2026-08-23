@@ -5,7 +5,13 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## [Unreleased]
+## [0.5.21] - 2026-08-24
+
+The release that made the repository fetchable again, closed the event-loss window
+across the native services, and added a Rust client.
+
+Two things here need a decision before you upgrade: the C# namespaces changed
+(breaking, see **Changed**), and the tenant purge event dropped two fields.
 
 ### Fixed
 
@@ -15,42 +21,121 @@ release line was tagged.
   `option csharp_namespace`, and that option was split across two casings in the
   proto tree. `golang.org/x/mod/zip` refuses to build a module zip whose file set
   cannot be extracted on a case-insensitive filesystem, so every
-  `go install github.com/fahara02/udb@vX` failed at zip creation. The
-  `github.com/fahara02/udb/sdk/go` submodule was never affected, and the CLI's
-  supported channel is the release binary, so this blocked exactly one thing:
-  fetching the repo root as a Go module.
+  `go install github.com/fahara02/udb@vX` failed at zip creation.
+
+  `github.com/fahara02/udb/sdk/go` was never affected, and the CLI's supported
+  channel is the release binary, so this blocked exactly one thing: fetching the
+  repo root as a Go module.
 
   The defect was invisible to anyone developing on Windows or macOS — those
   filesystems collapse both index paths into one physical directory and report a
   clean working tree — and invisible to CI, which checks out on Linux where both
   directories coexist happily and never fetches the root module.
 
-  Published tags cannot be repaired; the module proxy caches immutably. Every
-  0.5.x tag stays broken and the fix necessarily ships as a new version.
+  **Earlier tags cannot be repaired.** The Go module proxy caches immutably, so
+  every 0.5.x tag before this one stays broken permanently. This release is the
+  fix.
+
+- **Native events could be lost after the write they announce had committed.**
+  Across tenant, search, webhook, vault, lock, config, backup, metering,
+  analytics and embedding, an entity write and its outbox event were separate
+  statements: the row committed, the event insert failed, and nothing re-derived
+  it. Downstream consumers never learned about state this broker had made
+  durable.
+
+  Every call site with a durable Postgres write now commits the write and its
+  event in one transaction. Where the write goes through the dispatch layer, a
+  dual path co-commits on Postgres and keeps the previous behaviour on every
+  other backend, so no RPC was narrowed to Postgres to get this.
+
+  Worst case closed: `PurgeTenant` could erase a tenant while the announcement of
+  it vanished. `UpdateTenant` could make a SUSPENDED transition durable while
+  consumers kept treating the tenant as ACTIVE.
+
+  Sites that cannot be atomic are documented as such in the code rather than left
+  looking like oversights: audits of reads and of pure crypto operations have no
+  durable write to join, cache and vector-engine writes are not Postgres, metering
+  rollups are derived and recomputable, and the multi-step document ingest has no
+  single transaction spanning it.
+
+- **The Go SDK discarded rotated refresh tokens.** `TokenManager.doRefresh`
+  copied the access token and expiry but never `resp.GetRefreshToken()`. The
+  broker's refresh token is single-use and rotated atomically on every success,
+  so a long-running service authenticated, refreshed once, then failed with
+  `Unauthenticated: invalid credential` at its second refresh boundary — often a
+  day later, far from the cause.
+
+- **The Python SDK could not express a compare-and-swap.** `UpsertRequest` has an
+  `expected` precondition the broker enforces under the row lock, but neither the
+  sync nor the async `upsert()` accepted or sent it; it was reachable only by
+  hand-building the request. All three entry points now accept and forward it.
+
+- **`Principal.attributes` was always empty.** A declared proto field returned an
+  empty map on every authentication path while user records carried a profile
+  document, so a downstream service could not bind an authenticated human to a
+  reviewed identity attribute without a second registry. The passkey path — the
+  one that has the user record — now projects those attributes, redacted, with
+  only scalar leaves. Paths with no user record (service-account tokens,
+  external-IdP mapping, JWT claims) legitimately have nothing to project.
+
+- **A live object-storage test verified nothing, anywhere.** It was gated on an
+  environment variable no workflow set, so it returned immediately while looking
+  like coverage. It now exercises empty, single-part, boundary and multi-part
+  uploads against the live MinIO service.
+
+- **Operator-facing failure messages had wrapped lines collapse into whitespace
+  gaps.** Eight messages an operator reads during an outage carried a
+  twenty-to-forty space gap mid-sentence, and one split a single log event across
+  three lines. Includes the catalog refusals, the audit-sink degradation warning,
+  the outbox and webhook-journal loss errors, and the emergency-auto-alter remedy.
 
 ### Changed
 
 - **BREAKING (C# SDK): generated namespaces are now PascalCase throughout.**
   Namespaces that began `udb.core.…` are now `Udb.Core.…`, so the whole SDK sits
-  under one `Udb.*` root. C# `using` statements referencing the old lowercase
-  form must be updated — for example
-  `using AuthnV1 = udb.core.Authn.Services.V1;` becomes
-  `using AuthnV1 = Udb.Core.Authn.Services.V1;`. The lowercase form was also
-  non-idiomatic for .NET and mixed casing within a single namespace. Wire
-  compatibility is unaffected: gRPC method paths derive from the proto `package`,
-  which is unchanged, so old and new clients interoperate.
+  under one `Udb.*` root. `using` statements referencing the old lowercase form
+  must be updated — for example `using AuthnV1 = udb.core.Authn.Services.V1;`
+  becomes `using AuthnV1 = Udb.Core.Authn.Services.V1;`. The lowercase form was
+  also non-idiomatic for .NET and mixed casings within a single name.
+
+  Wire compatibility is unaffected: gRPC method paths derive from the proto
+  `package`, which is unchanged, so old and new clients interoperate.
+
+- **The `tenant.purged` event no longer carries `tenant_denylisted` or
+  `principals_denylisted`.** Those are produced by the best-effort token
+  revocation that runs after the purge commits, so including them meant either
+  emitting the event late — reopening the loss window this release closes — or
+  reporting `false` for a revocation that then succeeded. The `PurgeTenant` RPC
+  response still reports all three fields and is unchanged; only the event
+  dropped them.
 
 ### Added
 
-- **A path case-collision guard** (`scripts/check-path-case-collisions.py`, run
-  in CI). It compares every tracked path PREFIX, not whole paths: the naive
-  whole-path check reported nothing while the repository was broken, because the
-  colliding directories contained no colliding filenames. It reads the git index
-  rather than the filesystem, because the working tree cannot represent the
-  collision on the platforms most contributors use. Verified to catch the defect
-  as shipped.
-- The SDK codegen gate now fails on **untracked** generated files as well as
-  modified ones, and removes the C# tree before regenerating so output from a
+- **A Rust SDK, `udb-client`, published to crates.io.** UDB is written in Rust and
+  had clients for six other languages. The `udb` crate is the broker — its default
+  features pull in every backend driver — so a Rust consumer previously either
+  compiled a database engine to make a gRPC call, or hand-rolled tonic against the
+  protos.
+
+  Identity is fixed per connection and audit context varies per request, matching
+  the other SDKs. Tokens rotate correctly. Failures decode the broker's typed
+  error trailer, so a caller reads the declared `retryable` flag, the missing
+  capability, the correlation id and per-field violations instead of matching on
+  message strings. Retry policy is read from the descriptor's `operation_kind` and
+  idempotency contract rather than guessed from method names.
+
+  Stubs are generated at build time from the protos, so the crate cannot drift
+  from the contract it ships with, and protoc is vendored — no system install
+  required.
+
+- **A path case-collision guard**, run in CI. It compares every tracked path
+  PREFIX against the git index, because the naive whole-path check reported
+  nothing while the repository was broken (the colliding directories contained no
+  colliding filenames) and because the working tree cannot represent the collision
+  at all on Windows or macOS. Verified to catch the defect as shipped.
+
+- Both SDK codegen gates now fail on **untracked** generated files as well as
+  modified ones, and CI removes the C# tree before regenerating so output from a
   previous generator configuration cannot accumulate unnoticed.
 
 ## [0.5.20] - 2026-08-21

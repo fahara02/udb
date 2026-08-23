@@ -135,6 +135,17 @@ jobs:
     uses: ./.github/workflows/release-crates.yml
     secrets: inherit
 
+  # The CLIENT crate `udb-client`, separate from the broker crate `udb` above:
+  # same registry, different package, its own job so one failing does not mask
+  # the other.
+  publish-rust-sdk:
+    name: publish-rust-sdk
+    needs: build-binaries
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-rust-sdk.yml
+    secrets: inherit
+
   publish-docker:
     name: publish-docker
     needs: build-binaries

@@ -7914,7 +7914,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "udb"
-version = "0.5.20"
+version = "0.5.21"
 dependencies = [
  "aead 0.5.2",
  "aes-gcm-siv",

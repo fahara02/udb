@@ -73,6 +73,12 @@ processTriple(
   /(\[\[package\]\]\s*\nname = "udb-client"\s*\nversion = ")([^"]*)(")/,
 );
 processTriple("sdk-typescript", "sdk/typescript/package.json", C["sdk-typescript"].version, /("version":\s*")([^"]*)(")/);
+processTriple(
+  "sdk-rust",
+  "sdk/rust/Cargo.toml",
+  C["sdk-rust"].version,
+  /(\[package\][\s\S]*?\nversion = ")([^"]*)(")/,
+);
 processTriple("sdk-csharp", "sdk/csharp/Udb.Client/Udb.Client.csproj", C["sdk-csharp"].version, /(<Version>)([^<]*)(<\/Version>)/);
 processTriple("sdk-java", "sdk/java/pom.xml", C["sdk-java"].version, /(<version>)([^<]*)(<\/version>)/, { snapshotOk: true });
 processTriple(
