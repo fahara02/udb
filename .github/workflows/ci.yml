@@ -378,8 +378,15 @@ jobs:
         run: |
           target/debug/udb sdk generate --lang all --out sdk
           node scripts/gen-sdk-benchmark-docs.mjs
+          # Mark new generated files intent-to-add so `git diff` SEES them. Without
+          # this, a template that emits a file nobody has committed yet leaves an
+          # untracked file and this gate passes in silence — the generated client
+          # simply would not exist for consumers. `-N` also makes the file appear
+          # in the repair patch below, so the fix is one `git apply` rather than a
+          # hunt for what is missing.
+          git add -AN -- sdk
           if ! git diff --quiet -- sdk; then
-            echo "::error::Generated SDK robustness clients or benchmark docs are stale. Apply the CI repair artifact and commit."
+            echo "::error::Generated SDK robustness clients or benchmark docs are stale or missing. Apply the CI repair artifact and commit."
             git diff --stat -- sdk
             exit 1
           fi
@@ -461,6 +468,11 @@ jobs:
           target/debug/udb native docs > docs/generated/native-services.md
           target/debug/udb native contract-baseline \
             --baseline docs/generated/contract-baseline.bin
+          # Intent-to-add so a NEWLY generated file (a template whose output has
+          # never been committed) appears in the patch. `git diff` ignores
+          # untracked files, so without this the repair artifact would silently
+          # omit exactly the file the developer is missing.
+          git add -AN -- sdk
           git diff --binary -- \
             sdk \
             docs/generated/codebase-map.md \

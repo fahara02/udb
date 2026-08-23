@@ -1,0 +1,151 @@
+//! {{GENERATED_NOTE}}
+//!
+//! The RPC registry, derived from the proto descriptor set.
+//!
+//! Its reason for existing is [`RpcSpec::replay_safe`]. Whether an RPC may be
+//! retried is a property the PROTO declares (`operation_kind`), not something a
+//! client should infer from a method name — "update" is not reliably a mutation
+//! and "get" is not reliably a read across every service. Guessing from names is
+//! how a retry ends up replaying a charge.
+//!
+//! Generated from the same descriptor the broker serves, so the table cannot
+//! drift from the contract: adding an RPC upstream adds a row here.
+
+/// One RPC, as the contract declares it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RpcSpec {
+    /// Full gRPC method path, e.g. `/udb.services.v1.DataBroker/Select`.
+    pub path: &'static str,
+    /// Service short name, e.g. `DataBroker`.
+    pub service: &'static str,
+    /// Fully-qualified service name, e.g. `udb.services.v1.DataBroker`.
+    pub service_full: &'static str,
+    /// Method name as it appears on the wire, e.g. `Select`.
+    pub method: &'static str,
+    /// Snake-case alias used by the SDK surfaces.
+    pub alias: &'static str,
+    /// Declared operation kind: `read_only`, `mutation`, or `destructive`.
+    pub operation_kind: &'static str,
+    /// True when the RPC performs no mutation.
+    pub read_only: bool,
+    /// True when repeating the call is safe. THE field to consult before
+    /// retrying — do not substitute a guess based on the gRPC status code or the
+    /// method name.
+    pub replay_safe: bool,
+    pub client_streaming: bool,
+    pub server_streaming: bool,
+    /// REST verb and path from the `google.api.http` annotation, when annotated.
+    pub http_method: &'static str,
+    pub http_path: &'static str,
+}
+
+impl RpcSpec {
+    /// Whether this RPC streams in either direction.
+    pub fn is_streaming(&self) -> bool {
+        self.client_streaming || self.server_streaming
+    }
+}
+
+/// Every RPC the broker serves, sorted as the descriptor emits them.
+pub static RPCS: &[RpcSpec] = &[
+    // @@UDB_RPC_BEGIN
+    RpcSpec {
+        path: "{{RPC_PATH}}",
+        service: "{{SERVICE_NAME}}",
+        service_full: "{{SERVICE_FULL}}",
+        method: "{{RPC_WIRE_NAME}}",
+        alias: "{{RPC_ALIAS_SNAKE}}",
+        operation_kind: "{{RPC_OPERATION_KIND}}",
+        read_only: {{RPC_READ_ONLY}},
+        replay_safe: {{RPC_REPLAY_SAFE}},
+        client_streaming: {{RPC_CLIENT_STREAMING}},
+        server_streaming: {{RPC_SERVER_STREAMING}},
+        http_method: "{{RPC_HTTP_METHOD}}",
+        http_path: "{{RPC_HTTP_PATH}}",
+    },
+    // @@UDB_RPC_END
+];
+
+/// Look up an RPC by its full gRPC method path.
+///
+/// Linear scan: the table is small, lookups happen once per call at most, and a
+/// map would cost a lazy static plus an allocation to save nanoseconds nobody is
+/// waiting on.
+pub fn spec_for_path(path: &str) -> Option<&'static RpcSpec> {
+    RPCS.iter().find(|spec| spec.path == path)
+}
+
+/// Whether the contract declares this RPC safe to repeat.
+///
+/// Unknown paths return `false`: an RPC this build has never heard of is the
+/// last thing that should be retried blindly.
+pub fn is_replay_safe(path: &str) -> bool {
+    spec_for_path(path).is_some_and(|spec| spec.replay_safe)
+}
+
+/// Whether the contract declares this RPC free of mutations.
+///
+/// Unknown paths return `false`, for the same reason as [`is_replay_safe`].
+pub fn is_read_only(path: &str) -> bool {
+    spec_for_path(path).is_some_and(|spec| spec.read_only)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn registry_is_populated() {
+        assert!(!RPCS.is_empty(), "descriptor produced no RPCs");
+    }
+
+    #[test]
+    fn paths_are_unique_and_well_formed() {
+        let mut seen = std::collections::HashSet::new();
+        for spec in RPCS {
+            assert!(
+                spec.path.starts_with('/') && spec.path.contains('/'),
+                "malformed gRPC path: {}",
+                spec.path
+            );
+            assert!(seen.insert(spec.path), "duplicate RPC path: {}", spec.path);
+        }
+    }
+
+    #[test]
+    fn every_rpc_declares_an_operation_kind() {
+        for spec in RPCS {
+            assert!(
+                !spec.operation_kind.is_empty(),
+                "{} has no operation_kind; the proto annotation is missing",
+                spec.path
+            );
+        }
+    }
+
+    #[test]
+    fn read_only_rpcs_are_replay_safe() {
+        for spec in RPCS {
+            if spec.read_only {
+                assert!(
+                    spec.replay_safe,
+                    "{} is read-only but not replay-safe, which is contradictory",
+                    spec.path
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn unknown_paths_are_not_assumed_safe() {
+        assert!(!is_replay_safe("/not.a.real.Service/Method"));
+        assert!(!is_read_only("/not.a.real.Service/Method"));
+        assert!(spec_for_path("/not.a.real.Service/Method").is_none());
+    }
+
+    #[test]
+    fn lookup_round_trips() {
+        let first = RPCS.first().expect("non-empty");
+        assert_eq!(spec_for_path(first.path), Some(first));
+    }
+}
