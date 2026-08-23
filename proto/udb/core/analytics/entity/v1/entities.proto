@@ -6,7 +6,7 @@ import public "udb/core/analytics/entity/v1/executor_performance_summary.proto";
 import public "udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto";
 import public "udb/core/analytics/entity/v1/reconciliation_analytics_summary.proto";
 
-option csharp_namespace = "udb.core.Analytics.Entity.V1";
+option csharp_namespace = "Udb.Core.Analytics.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/analytics/entity/v1;analyticsv1";
 option java_package = "com.udb.core.analytics.entity.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1";

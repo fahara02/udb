@@ -264,7 +264,7 @@ const file_udb_core_scheduler_entity_v1_scheduled_job_proto_rawDesc = "" +
 	"\x19idx_scheduled_jobs_tenant\x12\x05BTREEZ\ttenant_id\x8a\x015\n" +
 	"\x16idx_scheduled_jobs_due\x12\x05BTREEZ\x06statusZ\fnext_fire_at\xf2\x01 udb.scheduler.scheduled_jobs.cdc\xfa\x01\x0escheduler:read\x8a\xb2\x19\x9b\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x15scheduler.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x94\x02\n" +
-	" com.udb.core.scheduler.entity.v1B\x11ScheduledJobProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/scheduler/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1cudb.core.Scheduler.Entity.V1\xca\x02\x1cUdb\\Core\\Scheduler\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Scheduler\\Entity\\V1\xea\x02 Udb::Core::Scheduler::Entity::V1b\x06proto3"
+	" com.udb.core.scheduler.entity.v1B\x11ScheduledJobProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/scheduler/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1cUdb.Core.Scheduler.Entity.V1\xca\x02\x1cUdb\\Core\\Scheduler\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Scheduler\\Entity\\V1\xea\x02 Udb::Core::Scheduler::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_scheduler_entity_v1_scheduled_job_proto_rawDescOnce sync.Once

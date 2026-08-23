@@ -1,6 +1,6 @@
 using Xunit;
-using AuthnV1 = udb.core.Authn.Services.V1;
-using AuthzV1 = udb.core.Authz.Services.V1;
+using AuthnV1 = Udb.Core.Authn.Services.V1;
+using AuthzV1 = Udb.Core.Authz.Services.V1;
 
 namespace Udb.Client.Tests;
 

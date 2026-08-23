@@ -1024,7 +1024,7 @@ const file_udb_core_analytics_services_v1_core_proto_rawDesc = "" +
 	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"h\n" +
 	"\x17TriggerSnapshotResponse\x12+\n" +
 	"\x11snapshots_written\x18\x01 \x01(\x05R\x10snapshotsWritten: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01B\x9a\x02\n" +
-	"\"com.udb.core.analytics.services.v1B\tCoreProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1eudb.core.Analytics.Services.V1\xca\x02\x1eUdb\\Core\\Analytics\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1\xea\x02\"Udb::Core::Analytics::Services::V1b\x06proto3"
+	"\"com.udb.core.analytics.services.v1B\tCoreProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1eUdb.Core.Analytics.Services.V1\xca\x02\x1eUdb\\Core\\Analytics\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1\xea\x02\"Udb::Core::Analytics::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_analytics_services_v1_core_proto_rawDescOnce sync.Once

@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Storage.Services.V1 {
+namespace Udb.Core.Storage.Services.V1 {
   public static partial class StorageService
   {
     static readonly string __ServiceName = "udb.core.storage.services.v1.StorageService";
@@ -46,48 +46,48 @@ namespace udb.core.Storage.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.RegisterUploadRequest> __Marshaller_udb_core_storage_services_v1_RegisterUploadRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.RegisterUploadRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.RegisterUploadRequest> __Marshaller_udb_core_storage_services_v1_RegisterUploadRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.RegisterUploadRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.RegisterUploadResponse> __Marshaller_udb_core_storage_services_v1_RegisterUploadResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.RegisterUploadResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.RegisterUploadResponse> __Marshaller_udb_core_storage_services_v1_RegisterUploadResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.RegisterUploadResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.FinalizeUploadRequest> __Marshaller_udb_core_storage_services_v1_FinalizeUploadRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.FinalizeUploadRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest> __Marshaller_udb_core_storage_services_v1_FinalizeUploadRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.FinalizeUploadResponse> __Marshaller_udb_core_storage_services_v1_FinalizeUploadResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.FinalizeUploadResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse> __Marshaller_udb_core_storage_services_v1_FinalizeUploadResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.GetDownloadUrlRequest> __Marshaller_udb_core_storage_services_v1_GetDownloadUrlRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.GetDownloadUrlRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest> __Marshaller_udb_core_storage_services_v1_GetDownloadUrlRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.GetDownloadUrlResponse> __Marshaller_udb_core_storage_services_v1_GetDownloadUrlResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.GetDownloadUrlResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse> __Marshaller_udb_core_storage_services_v1_GetDownloadUrlResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest> __Marshaller_udb_core_storage_services_v1_ReissueUploadUrlRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest> __Marshaller_udb_core_storage_services_v1_ReissueUploadUrlRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> __Marshaller_udb_core_storage_services_v1_ReissueUploadUrlResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse> __Marshaller_udb_core_storage_services_v1_ReissueUploadUrlResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.DownloadFileRequest> __Marshaller_udb_core_storage_services_v1_DownloadFileRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.DownloadFileRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.DownloadFileRequest> __Marshaller_udb_core_storage_services_v1_DownloadFileRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.DownloadFileRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.DownloadFileChunk> __Marshaller_udb_core_storage_services_v1_DownloadFileChunk = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.DownloadFileChunk.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.DownloadFileChunk> __Marshaller_udb_core_storage_services_v1_DownloadFileChunk = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.DownloadFileChunk.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.GetFileRequest> __Marshaller_udb_core_storage_services_v1_GetFileRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.GetFileRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.GetFileRequest> __Marshaller_udb_core_storage_services_v1_GetFileRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.GetFileRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.GetFileResponse> __Marshaller_udb_core_storage_services_v1_GetFileResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.GetFileResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.GetFileResponse> __Marshaller_udb_core_storage_services_v1_GetFileResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.GetFileResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.UpdateFileRequest> __Marshaller_udb_core_storage_services_v1_UpdateFileRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.UpdateFileRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.UpdateFileRequest> __Marshaller_udb_core_storage_services_v1_UpdateFileRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.UpdateFileRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.UpdateFileResponse> __Marshaller_udb_core_storage_services_v1_UpdateFileResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.UpdateFileResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.UpdateFileResponse> __Marshaller_udb_core_storage_services_v1_UpdateFileResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.UpdateFileResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.DeleteFileRequest> __Marshaller_udb_core_storage_services_v1_DeleteFileRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.DeleteFileRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.DeleteFileRequest> __Marshaller_udb_core_storage_services_v1_DeleteFileRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.DeleteFileRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.DeleteFileResponse> __Marshaller_udb_core_storage_services_v1_DeleteFileResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.DeleteFileResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.DeleteFileResponse> __Marshaller_udb_core_storage_services_v1_DeleteFileResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.DeleteFileResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.ListFilesRequest> __Marshaller_udb_core_storage_services_v1_ListFilesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.ListFilesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.ListFilesRequest> __Marshaller_udb_core_storage_services_v1_ListFilesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.ListFilesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.ListFilesResponse> __Marshaller_udb_core_storage_services_v1_ListFilesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.ListFilesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.ListFilesResponse> __Marshaller_udb_core_storage_services_v1_ListFilesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.ListFilesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.SetScanVerdictRequest> __Marshaller_udb_core_storage_services_v1_SetScanVerdictRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.SetScanVerdictRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest> __Marshaller_udb_core_storage_services_v1_SetScanVerdictRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.SetScanVerdictResponse> __Marshaller_udb_core_storage_services_v1_SetScanVerdictResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.SetScanVerdictResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse> __Marshaller_udb_core_storage_services_v1_SetScanVerdictResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.RegisterUploadRequest, global::udb.core.Storage.Services.V1.RegisterUploadResponse> __Method_RegisterUpload = new grpc::Method<global::udb.core.Storage.Services.V1.RegisterUploadRequest, global::udb.core.Storage.Services.V1.RegisterUploadResponse>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.RegisterUploadRequest, global::Udb.Core.Storage.Services.V1.RegisterUploadResponse> __Method_RegisterUpload = new grpc::Method<global::Udb.Core.Storage.Services.V1.RegisterUploadRequest, global::Udb.Core.Storage.Services.V1.RegisterUploadResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RegisterUpload",
@@ -95,7 +95,7 @@ namespace udb.core.Storage.Services.V1 {
         __Marshaller_udb_core_storage_services_v1_RegisterUploadResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.FinalizeUploadRequest, global::udb.core.Storage.Services.V1.FinalizeUploadResponse> __Method_FinalizeUpload = new grpc::Method<global::udb.core.Storage.Services.V1.FinalizeUploadRequest, global::udb.core.Storage.Services.V1.FinalizeUploadResponse>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest, global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse> __Method_FinalizeUpload = new grpc::Method<global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest, global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "FinalizeUpload",
@@ -103,7 +103,7 @@ namespace udb.core.Storage.Services.V1 {
         __Marshaller_udb_core_storage_services_v1_FinalizeUploadResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.GetDownloadUrlRequest, global::udb.core.Storage.Services.V1.GetDownloadUrlResponse> __Method_GetDownloadUrl = new grpc::Method<global::udb.core.Storage.Services.V1.GetDownloadUrlRequest, global::udb.core.Storage.Services.V1.GetDownloadUrlResponse>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest, global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse> __Method_GetDownloadUrl = new grpc::Method<global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest, global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetDownloadUrl",
@@ -111,7 +111,7 @@ namespace udb.core.Storage.Services.V1 {
         __Marshaller_udb_core_storage_services_v1_GetDownloadUrlResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest, global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> __Method_ReissueUploadUrl = new grpc::Method<global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest, global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest, global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse> __Method_ReissueUploadUrl = new grpc::Method<global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest, global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ReissueUploadUrl",
@@ -119,7 +119,7 @@ namespace udb.core.Storage.Services.V1 {
         __Marshaller_udb_core_storage_services_v1_ReissueUploadUrlResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.DownloadFileRequest, global::udb.core.Storage.Services.V1.DownloadFileChunk> __Method_DownloadFile = new grpc::Method<global::udb.core.Storage.Services.V1.DownloadFileRequest, global::udb.core.Storage.Services.V1.DownloadFileChunk>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.DownloadFileRequest, global::Udb.Core.Storage.Services.V1.DownloadFileChunk> __Method_DownloadFile = new grpc::Method<global::Udb.Core.Storage.Services.V1.DownloadFileRequest, global::Udb.Core.Storage.Services.V1.DownloadFileChunk>(
         grpc::MethodType.ServerStreaming,
         __ServiceName,
         "DownloadFile",
@@ -127,7 +127,7 @@ namespace udb.core.Storage.Services.V1 {
         __Marshaller_udb_core_storage_services_v1_DownloadFileChunk);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.GetFileRequest, global::udb.core.Storage.Services.V1.GetFileResponse> __Method_GetFile = new grpc::Method<global::udb.core.Storage.Services.V1.GetFileRequest, global::udb.core.Storage.Services.V1.GetFileResponse>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.GetFileRequest, global::Udb.Core.Storage.Services.V1.GetFileResponse> __Method_GetFile = new grpc::Method<global::Udb.Core.Storage.Services.V1.GetFileRequest, global::Udb.Core.Storage.Services.V1.GetFileResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetFile",
@@ -135,7 +135,7 @@ namespace udb.core.Storage.Services.V1 {
         __Marshaller_udb_core_storage_services_v1_GetFileResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.UpdateFileRequest, global::udb.core.Storage.Services.V1.UpdateFileResponse> __Method_UpdateFile = new grpc::Method<global::udb.core.Storage.Services.V1.UpdateFileRequest, global::udb.core.Storage.Services.V1.UpdateFileResponse>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.UpdateFileRequest, global::Udb.Core.Storage.Services.V1.UpdateFileResponse> __Method_UpdateFile = new grpc::Method<global::Udb.Core.Storage.Services.V1.UpdateFileRequest, global::Udb.Core.Storage.Services.V1.UpdateFileResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UpdateFile",
@@ -143,7 +143,7 @@ namespace udb.core.Storage.Services.V1 {
         __Marshaller_udb_core_storage_services_v1_UpdateFileResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.DeleteFileRequest, global::udb.core.Storage.Services.V1.DeleteFileResponse> __Method_DeleteFile = new grpc::Method<global::udb.core.Storage.Services.V1.DeleteFileRequest, global::udb.core.Storage.Services.V1.DeleteFileResponse>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.DeleteFileRequest, global::Udb.Core.Storage.Services.V1.DeleteFileResponse> __Method_DeleteFile = new grpc::Method<global::Udb.Core.Storage.Services.V1.DeleteFileRequest, global::Udb.Core.Storage.Services.V1.DeleteFileResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DeleteFile",
@@ -151,7 +151,7 @@ namespace udb.core.Storage.Services.V1 {
         __Marshaller_udb_core_storage_services_v1_DeleteFileResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.ListFilesRequest, global::udb.core.Storage.Services.V1.ListFilesResponse> __Method_ListFiles = new grpc::Method<global::udb.core.Storage.Services.V1.ListFilesRequest, global::udb.core.Storage.Services.V1.ListFilesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.ListFilesRequest, global::Udb.Core.Storage.Services.V1.ListFilesResponse> __Method_ListFiles = new grpc::Method<global::Udb.Core.Storage.Services.V1.ListFilesRequest, global::Udb.Core.Storage.Services.V1.ListFilesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListFiles",
@@ -159,7 +159,7 @@ namespace udb.core.Storage.Services.V1 {
         __Marshaller_udb_core_storage_services_v1_ListFilesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Storage.Services.V1.SetScanVerdictRequest, global::udb.core.Storage.Services.V1.SetScanVerdictResponse> __Method_SetScanVerdict = new grpc::Method<global::udb.core.Storage.Services.V1.SetScanVerdictRequest, global::udb.core.Storage.Services.V1.SetScanVerdictResponse>(
+    static readonly grpc::Method<global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest, global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse> __Method_SetScanVerdict = new grpc::Method<global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest, global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "SetScanVerdict",
@@ -169,7 +169,7 @@ namespace udb.core.Storage.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Storage.Services.V1.StorageServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of StorageService</summary>
@@ -183,7 +183,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.RegisterUploadResponse> RegisterUpload(global::udb.core.Storage.Services.V1.RegisterUploadRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Storage.Services.V1.RegisterUploadResponse> RegisterUpload(global::Udb.Core.Storage.Services.V1.RegisterUploadRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -195,7 +195,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.FinalizeUploadResponse> FinalizeUpload(global::udb.core.Storage.Services.V1.FinalizeUploadRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse> FinalizeUpload(global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -207,7 +207,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.GetDownloadUrlResponse> GetDownloadUrl(global::udb.core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse> GetDownloadUrl(global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -223,7 +223,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> ReissueUploadUrl(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse> ReissueUploadUrl(global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -239,7 +239,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>A task indicating completion of the handler.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task DownloadFile(global::udb.core.Storage.Services.V1.DownloadFileRequest request, grpc::IServerStreamWriter<global::udb.core.Storage.Services.V1.DownloadFileChunk> responseStream, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task DownloadFile(global::Udb.Core.Storage.Services.V1.DownloadFileRequest request, grpc::IServerStreamWriter<global::Udb.Core.Storage.Services.V1.DownloadFileChunk> responseStream, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -251,7 +251,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.GetFileResponse> GetFile(global::udb.core.Storage.Services.V1.GetFileRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Storage.Services.V1.GetFileResponse> GetFile(global::Udb.Core.Storage.Services.V1.GetFileRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -263,7 +263,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.UpdateFileResponse> UpdateFile(global::udb.core.Storage.Services.V1.UpdateFileRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Storage.Services.V1.UpdateFileResponse> UpdateFile(global::Udb.Core.Storage.Services.V1.UpdateFileRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -278,7 +278,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.DeleteFileResponse> DeleteFile(global::udb.core.Storage.Services.V1.DeleteFileRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Storage.Services.V1.DeleteFileResponse> DeleteFile(global::Udb.Core.Storage.Services.V1.DeleteFileRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -290,7 +290,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.ListFilesResponse> ListFiles(global::udb.core.Storage.Services.V1.ListFilesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Storage.Services.V1.ListFilesResponse> ListFiles(global::Udb.Core.Storage.Services.V1.ListFilesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -308,7 +308,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.SetScanVerdictResponse> SetScanVerdict(global::udb.core.Storage.Services.V1.SetScanVerdictRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse> SetScanVerdict(global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -351,7 +351,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.RegisterUploadResponse RegisterUpload(global::udb.core.Storage.Services.V1.RegisterUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Storage.Services.V1.RegisterUploadResponse RegisterUpload(global::Udb.Core.Storage.Services.V1.RegisterUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RegisterUpload(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -362,7 +362,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.RegisterUploadResponse RegisterUpload(global::udb.core.Storage.Services.V1.RegisterUploadRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Storage.Services.V1.RegisterUploadResponse RegisterUpload(global::Udb.Core.Storage.Services.V1.RegisterUploadRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RegisterUpload, null, options, request);
       }
@@ -375,7 +375,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.RegisterUploadResponse> RegisterUploadAsync(global::udb.core.Storage.Services.V1.RegisterUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.RegisterUploadResponse> RegisterUploadAsync(global::Udb.Core.Storage.Services.V1.RegisterUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RegisterUploadAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -386,7 +386,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.RegisterUploadResponse> RegisterUploadAsync(global::udb.core.Storage.Services.V1.RegisterUploadRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.RegisterUploadResponse> RegisterUploadAsync(global::Udb.Core.Storage.Services.V1.RegisterUploadRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RegisterUpload, null, options, request);
       }
@@ -399,7 +399,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.FinalizeUploadResponse FinalizeUpload(global::udb.core.Storage.Services.V1.FinalizeUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse FinalizeUpload(global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return FinalizeUpload(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -410,7 +410,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.FinalizeUploadResponse FinalizeUpload(global::udb.core.Storage.Services.V1.FinalizeUploadRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse FinalizeUpload(global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_FinalizeUpload, null, options, request);
       }
@@ -423,7 +423,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.FinalizeUploadResponse> FinalizeUploadAsync(global::udb.core.Storage.Services.V1.FinalizeUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse> FinalizeUploadAsync(global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return FinalizeUploadAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -434,7 +434,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.FinalizeUploadResponse> FinalizeUploadAsync(global::udb.core.Storage.Services.V1.FinalizeUploadRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse> FinalizeUploadAsync(global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_FinalizeUpload, null, options, request);
       }
@@ -447,7 +447,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.GetDownloadUrlResponse GetDownloadUrl(global::udb.core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse GetDownloadUrl(global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetDownloadUrl(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -458,7 +458,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.GetDownloadUrlResponse GetDownloadUrl(global::udb.core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse GetDownloadUrl(global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetDownloadUrl, null, options, request);
       }
@@ -471,7 +471,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.GetDownloadUrlResponse> GetDownloadUrlAsync(global::udb.core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse> GetDownloadUrlAsync(global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetDownloadUrlAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -482,7 +482,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.GetDownloadUrlResponse> GetDownloadUrlAsync(global::udb.core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse> GetDownloadUrlAsync(global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetDownloadUrl, null, options, request);
       }
@@ -499,7 +499,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse ReissueUploadUrl(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse ReissueUploadUrl(global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ReissueUploadUrl(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -514,7 +514,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse ReissueUploadUrl(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse ReissueUploadUrl(global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ReissueUploadUrl, null, options, request);
       }
@@ -531,7 +531,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> ReissueUploadUrlAsync(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse> ReissueUploadUrlAsync(global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ReissueUploadUrlAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -546,7 +546,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> ReissueUploadUrlAsync(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse> ReissueUploadUrlAsync(global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ReissueUploadUrl, null, options, request);
       }
@@ -562,7 +562,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncServerStreamingCall<global::udb.core.Storage.Services.V1.DownloadFileChunk> DownloadFile(global::udb.core.Storage.Services.V1.DownloadFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncServerStreamingCall<global::Udb.Core.Storage.Services.V1.DownloadFileChunk> DownloadFile(global::Udb.Core.Storage.Services.V1.DownloadFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DownloadFile(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -576,7 +576,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncServerStreamingCall<global::udb.core.Storage.Services.V1.DownloadFileChunk> DownloadFile(global::udb.core.Storage.Services.V1.DownloadFileRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncServerStreamingCall<global::Udb.Core.Storage.Services.V1.DownloadFileChunk> DownloadFile(global::Udb.Core.Storage.Services.V1.DownloadFileRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncServerStreamingCall(__Method_DownloadFile, null, options, request);
       }
@@ -589,7 +589,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.GetFileResponse GetFile(global::udb.core.Storage.Services.V1.GetFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Storage.Services.V1.GetFileResponse GetFile(global::Udb.Core.Storage.Services.V1.GetFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetFile(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -600,7 +600,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.GetFileResponse GetFile(global::udb.core.Storage.Services.V1.GetFileRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Storage.Services.V1.GetFileResponse GetFile(global::Udb.Core.Storage.Services.V1.GetFileRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetFile, null, options, request);
       }
@@ -613,7 +613,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.GetFileResponse> GetFileAsync(global::udb.core.Storage.Services.V1.GetFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.GetFileResponse> GetFileAsync(global::Udb.Core.Storage.Services.V1.GetFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetFileAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -624,7 +624,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.GetFileResponse> GetFileAsync(global::udb.core.Storage.Services.V1.GetFileRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.GetFileResponse> GetFileAsync(global::Udb.Core.Storage.Services.V1.GetFileRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetFile, null, options, request);
       }
@@ -637,7 +637,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.UpdateFileResponse UpdateFile(global::udb.core.Storage.Services.V1.UpdateFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Storage.Services.V1.UpdateFileResponse UpdateFile(global::Udb.Core.Storage.Services.V1.UpdateFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateFile(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -648,7 +648,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.UpdateFileResponse UpdateFile(global::udb.core.Storage.Services.V1.UpdateFileRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Storage.Services.V1.UpdateFileResponse UpdateFile(global::Udb.Core.Storage.Services.V1.UpdateFileRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UpdateFile, null, options, request);
       }
@@ -661,7 +661,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.UpdateFileResponse> UpdateFileAsync(global::udb.core.Storage.Services.V1.UpdateFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.UpdateFileResponse> UpdateFileAsync(global::Udb.Core.Storage.Services.V1.UpdateFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateFileAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -672,7 +672,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.UpdateFileResponse> UpdateFileAsync(global::udb.core.Storage.Services.V1.UpdateFileRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.UpdateFileResponse> UpdateFileAsync(global::Udb.Core.Storage.Services.V1.UpdateFileRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UpdateFile, null, options, request);
       }
@@ -688,7 +688,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.DeleteFileResponse DeleteFile(global::udb.core.Storage.Services.V1.DeleteFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Storage.Services.V1.DeleteFileResponse DeleteFile(global::Udb.Core.Storage.Services.V1.DeleteFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteFile(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -702,7 +702,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.DeleteFileResponse DeleteFile(global::udb.core.Storage.Services.V1.DeleteFileRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Storage.Services.V1.DeleteFileResponse DeleteFile(global::Udb.Core.Storage.Services.V1.DeleteFileRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeleteFile, null, options, request);
       }
@@ -718,7 +718,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.DeleteFileResponse> DeleteFileAsync(global::udb.core.Storage.Services.V1.DeleteFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.DeleteFileResponse> DeleteFileAsync(global::Udb.Core.Storage.Services.V1.DeleteFileRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteFileAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -732,7 +732,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.DeleteFileResponse> DeleteFileAsync(global::udb.core.Storage.Services.V1.DeleteFileRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.DeleteFileResponse> DeleteFileAsync(global::Udb.Core.Storage.Services.V1.DeleteFileRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteFile, null, options, request);
       }
@@ -745,7 +745,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.ListFilesResponse ListFiles(global::udb.core.Storage.Services.V1.ListFilesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Storage.Services.V1.ListFilesResponse ListFiles(global::Udb.Core.Storage.Services.V1.ListFilesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListFiles(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -756,7 +756,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.ListFilesResponse ListFiles(global::udb.core.Storage.Services.V1.ListFilesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Storage.Services.V1.ListFilesResponse ListFiles(global::Udb.Core.Storage.Services.V1.ListFilesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListFiles, null, options, request);
       }
@@ -769,7 +769,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.ListFilesResponse> ListFilesAsync(global::udb.core.Storage.Services.V1.ListFilesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.ListFilesResponse> ListFilesAsync(global::Udb.Core.Storage.Services.V1.ListFilesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListFilesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -780,7 +780,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.ListFilesResponse> ListFilesAsync(global::udb.core.Storage.Services.V1.ListFilesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.ListFilesResponse> ListFilesAsync(global::Udb.Core.Storage.Services.V1.ListFilesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListFiles, null, options, request);
       }
@@ -799,7 +799,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.SetScanVerdictResponse SetScanVerdict(global::udb.core.Storage.Services.V1.SetScanVerdictRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse SetScanVerdict(global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SetScanVerdict(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -816,7 +816,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Storage.Services.V1.SetScanVerdictResponse SetScanVerdict(global::udb.core.Storage.Services.V1.SetScanVerdictRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse SetScanVerdict(global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_SetScanVerdict, null, options, request);
       }
@@ -835,7 +835,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.SetScanVerdictResponse> SetScanVerdictAsync(global::udb.core.Storage.Services.V1.SetScanVerdictRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse> SetScanVerdictAsync(global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SetScanVerdictAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -852,7 +852,7 @@ namespace udb.core.Storage.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.SetScanVerdictResponse> SetScanVerdictAsync(global::udb.core.Storage.Services.V1.SetScanVerdictRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse> SetScanVerdictAsync(global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_SetScanVerdict, null, options, request);
       }
@@ -889,16 +889,16 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, StorageServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_RegisterUpload, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.RegisterUploadRequest, global::udb.core.Storage.Services.V1.RegisterUploadResponse>(serviceImpl.RegisterUpload));
-      serviceBinder.AddMethod(__Method_FinalizeUpload, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.FinalizeUploadRequest, global::udb.core.Storage.Services.V1.FinalizeUploadResponse>(serviceImpl.FinalizeUpload));
-      serviceBinder.AddMethod(__Method_GetDownloadUrl, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.GetDownloadUrlRequest, global::udb.core.Storage.Services.V1.GetDownloadUrlResponse>(serviceImpl.GetDownloadUrl));
-      serviceBinder.AddMethod(__Method_ReissueUploadUrl, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest, global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse>(serviceImpl.ReissueUploadUrl));
-      serviceBinder.AddMethod(__Method_DownloadFile, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::udb.core.Storage.Services.V1.DownloadFileRequest, global::udb.core.Storage.Services.V1.DownloadFileChunk>(serviceImpl.DownloadFile));
-      serviceBinder.AddMethod(__Method_GetFile, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.GetFileRequest, global::udb.core.Storage.Services.V1.GetFileResponse>(serviceImpl.GetFile));
-      serviceBinder.AddMethod(__Method_UpdateFile, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.UpdateFileRequest, global::udb.core.Storage.Services.V1.UpdateFileResponse>(serviceImpl.UpdateFile));
-      serviceBinder.AddMethod(__Method_DeleteFile, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.DeleteFileRequest, global::udb.core.Storage.Services.V1.DeleteFileResponse>(serviceImpl.DeleteFile));
-      serviceBinder.AddMethod(__Method_ListFiles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.ListFilesRequest, global::udb.core.Storage.Services.V1.ListFilesResponse>(serviceImpl.ListFiles));
-      serviceBinder.AddMethod(__Method_SetScanVerdict, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.SetScanVerdictRequest, global::udb.core.Storage.Services.V1.SetScanVerdictResponse>(serviceImpl.SetScanVerdict));
+      serviceBinder.AddMethod(__Method_RegisterUpload, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Storage.Services.V1.RegisterUploadRequest, global::Udb.Core.Storage.Services.V1.RegisterUploadResponse>(serviceImpl.RegisterUpload));
+      serviceBinder.AddMethod(__Method_FinalizeUpload, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Storage.Services.V1.FinalizeUploadRequest, global::Udb.Core.Storage.Services.V1.FinalizeUploadResponse>(serviceImpl.FinalizeUpload));
+      serviceBinder.AddMethod(__Method_GetDownloadUrl, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Storage.Services.V1.GetDownloadUrlRequest, global::Udb.Core.Storage.Services.V1.GetDownloadUrlResponse>(serviceImpl.GetDownloadUrl));
+      serviceBinder.AddMethod(__Method_ReissueUploadUrl, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Storage.Services.V1.ReissueUploadUrlRequest, global::Udb.Core.Storage.Services.V1.ReissueUploadUrlResponse>(serviceImpl.ReissueUploadUrl));
+      serviceBinder.AddMethod(__Method_DownloadFile, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Udb.Core.Storage.Services.V1.DownloadFileRequest, global::Udb.Core.Storage.Services.V1.DownloadFileChunk>(serviceImpl.DownloadFile));
+      serviceBinder.AddMethod(__Method_GetFile, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Storage.Services.V1.GetFileRequest, global::Udb.Core.Storage.Services.V1.GetFileResponse>(serviceImpl.GetFile));
+      serviceBinder.AddMethod(__Method_UpdateFile, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Storage.Services.V1.UpdateFileRequest, global::Udb.Core.Storage.Services.V1.UpdateFileResponse>(serviceImpl.UpdateFile));
+      serviceBinder.AddMethod(__Method_DeleteFile, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Storage.Services.V1.DeleteFileRequest, global::Udb.Core.Storage.Services.V1.DeleteFileResponse>(serviceImpl.DeleteFile));
+      serviceBinder.AddMethod(__Method_ListFiles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Storage.Services.V1.ListFilesRequest, global::Udb.Core.Storage.Services.V1.ListFilesResponse>(serviceImpl.ListFiles));
+      serviceBinder.AddMethod(__Method_SetScanVerdict, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Storage.Services.V1.SetScanVerdictRequest, global::Udb.Core.Storage.Services.V1.SetScanVerdictResponse>(serviceImpl.SetScanVerdict));
     }
 
   }

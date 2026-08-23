@@ -1208,7 +1208,7 @@ const file_udb_core_asset_services_v1_asset_service_proto_rawDesc = "" +
 	"\x05asset\x12\x05asset\x1a\x05asset\"\x06Assets*\astorage0\x018\x01H\x01h\x01z\x05asset\x82\x01\x05asset\x8a\x01\x05asset\x92\x01\fnative.asset\xd2\xf0\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\xda\xf0\x19\x8a\x01\n" +
 	"\x05asset\x12\x10udb/native/asset\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1cudb.native.asset.config.json:\x05assetJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19[\n" +
 	"\x05asset\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET:\fobject_storeB\x8a\x02\n" +
-	"\x1ecom.udb.core.asset.services.v1B\x11AssetServiceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1audb.core.Asset.Services.V1\xca\x02\x1aUdb\\Core\\Asset\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Asset\\Services\\V1\xea\x02\x1eUdb::Core::Asset::Services::V1b\x06proto3"
+	"\x1ecom.udb.core.asset.services.v1B\x11AssetServiceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1aUdb.Core.Asset.Services.V1\xca\x02\x1aUdb\\Core\\Asset\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Asset\\Services\\V1\xea\x02\x1eUdb::Core::Asset::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_asset_services_v1_asset_service_proto_rawDescOnce sync.Once

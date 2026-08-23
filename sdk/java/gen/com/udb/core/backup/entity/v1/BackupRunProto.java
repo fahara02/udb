@@ -101,8 +101,8 @@ public final class BackupRunProto {
       "rdr\025tenant.data_residencyB\377\001\n\035com.udb.co" +
       "re.backup.entity.v1B\016BackupRunProtoP\001ZEg" +
       "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
-      "re/backup/entity/v1;entityv1\242\002\004UCBE\252\002\031ud" +
-      "b.core.Backup.Entity.V1\312\002\031Udb\\Core\\Backu" +
+      "re/backup/entity/v1;entityv1\242\002\004UCBE\252\002\031Ud" +
+      "b.Core.Backup.Entity.V1\312\002\031Udb\\Core\\Backu" +
       "p\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Backu" +
       "p\\Entity\\V1\352\002\035Udb::Core::Backup::Entity:" +
       ":V1b\006proto3"

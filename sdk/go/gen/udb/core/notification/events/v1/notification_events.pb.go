@@ -875,7 +875,7 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\rresource_type\x18\x0e \x01(\tR\fresourceType\x12#\n" +
 	"\rresource_name\x18\x0f \x01(\tR\fresourceName:\x98\x01\x92\xb2\x19\x93\x01\n" +
 	"9udb.core.notification.events.v1.ResourceIngestStatusEvent\x12*udb.notification.resource.ingest.status.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xac\x02\n" +
-	"#com.udb.core.notification.events.v1B\x17NotificationEventsProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/events/v1;eventsv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Events.V1\xca\x02\x1fUdb\\Core\\Notification\\Events\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Events\\V1\xea\x02#Udb::Core::Notification::Events::V1b\x06proto3"
+	"#com.udb.core.notification.events.v1B\x17NotificationEventsProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/events/v1;eventsv1\xa2\x02\x04UCNE\xaa\x02\x1fUdb.Core.Notification.Events.V1\xca\x02\x1fUdb\\Core\\Notification\\Events\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Events\\V1\xea\x02#Udb::Core::Notification::Events::V1b\x06proto3"
 
 var (
 	file_udb_core_notification_events_v1_notification_events_proto_rawDescOnce sync.Once

@@ -59,7 +59,7 @@ const file_udb_core_analytics_services_v1_analytics_service_proto_rawDesc = "" +
 	"\tanalytics\x12\tanalytics\x1a\tanalytics\"\tAnalytics*\tanalytics0\x018\x01h\x01z\tanalytics\x82\x01\tanalytics\x8a\x01\tanalytics\x92\x01\x10native.analytics\xd2\xf0\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\xda\xf0\x19\x9a\x01\n" +
 	"\tanalytics\x12\x14udb/native/analytics\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\" udb.native.analytics.config.json:\tanalyticsJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19C\n" +
 	"\tanalytics\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\xa6\x02\n" +
-	"\"com.udb.core.analytics.services.v1B\x15AnalyticsServiceProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1eudb.core.Analytics.Services.V1\xca\x02\x1eUdb\\Core\\Analytics\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1\xea\x02\"Udb::Core::Analytics::Services::V1b\x06proto3"
+	"\"com.udb.core.analytics.services.v1B\x15AnalyticsServiceProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1eUdb.Core.Analytics.Services.V1\xca\x02\x1eUdb\\Core\\Analytics\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1\xea\x02\"Udb::Core::Analytics::Services::V1b\x06proto3"
 
 var file_udb_core_analytics_services_v1_analytics_service_proto_goTypes = []any{
 	(*RecordPipelineMetricRequest)(nil),        // 0: udb.core.analytics.services.v1.RecordPipelineMetricRequest

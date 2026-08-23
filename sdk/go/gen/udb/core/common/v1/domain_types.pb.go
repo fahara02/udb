@@ -944,7 +944,7 @@ const file_udb_core_common_v1_domain_types_proto_rawDesc = "" +
 	"\x1cPAYMENT_METHOD_MOBILE_WALLET\x10\x04\x12!\n" +
 	"\x1dPAYMENT_METHOD_ACCOUNT_CREDIT\x10\x05\x12\x18\n" +
 	"\x14PAYMENT_METHOD_OTHER\x10\x06B\xd5\x01\n" +
-	"\x16com.udb.core.common.v1B\x10DomainTypesProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12udb.core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1b\x06proto3"
+	"\x16com.udb.core.common.v1B\x10DomainTypesProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12Udb.Core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1b\x06proto3"
 
 var (
 	file_udb_core_common_v1_domain_types_proto_rawDescOnce sync.Once

@@ -108,7 +108,7 @@ public final class AccessDecisionAuditProto {
       "core.authz.entity.v1B\030AccessDecisionAudi" +
       "tProtoP\001ZDgithub.com/fahara02/udb/sdk/go" +
       "/gen/udb/core/authz/entity/v1;entityv1\242\002" +
-      "\004UCAE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\C" +
+      "\004UCAE\252\002\030Udb.Core.Authz.Entity.V1\312\002\030Udb\\C" +
       "ore\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Co" +
       "re\\Authz\\Entity\\V1\352\002\034Udb::Core::Authz::E" +
       "ntity::V1b\006proto3"

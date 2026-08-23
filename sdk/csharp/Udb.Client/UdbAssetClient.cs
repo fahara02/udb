@@ -1,5 +1,5 @@
 using Grpc.Core;
-using AssetV1 = udb.core.Asset.Services.V1;
+using AssetV1 = Udb.Core.Asset.Services.V1;
 
 namespace Udb.Client;
 

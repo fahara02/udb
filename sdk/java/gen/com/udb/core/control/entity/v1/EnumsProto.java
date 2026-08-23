@@ -46,7 +46,7 @@ public final class EnumsProto {
       "\201\002\n\036com.udb.core.control.entity.v1B\nEnum" +
       "sProtoP\001ZFgithub.com/fahara02/udb/sdk/go" +
       "/gen/udb/core/control/entity/v1;entityv1" +
-      "\242\002\004UCCE\252\002\032udb.core.Control.Entity.V1\312\002\032U" +
+      "\242\002\004UCCE\252\002\032Udb.Core.Control.Entity.V1\312\002\032U" +
       "db\\Core\\Control\\Entity\\V1\342\002&Udb\\GPBMetad" +
       "ata\\Core\\Control\\Entity\\V1\352\002\036Udb::Core::" +
       "Control::Entity::V1b\006proto3"

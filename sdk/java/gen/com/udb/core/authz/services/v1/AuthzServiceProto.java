@@ -561,7 +561,7 @@ public final class AuthzServiceProto {
       "com.udb.core.authz.services.v1B\021AuthzSer" +
       "viceProtoP\001ZHgithub.com/fahara02/udb/sdk" +
       "/go/gen/udb/core/authz/services/v1;servi" +
-      "cesv1\242\002\004UCAS\252\002\032udb.core.Authz.Services.V" +
+      "cesv1\242\002\004UCAS\252\002\032Udb.Core.Authz.Services.V" +
       "1\312\002\032Udb\\Core\\Authz\\Services\\V1\342\002&Udb\\GPB" +
       "Metadata\\Core\\Authz\\Services\\V1\352\002\036Udb::C" +
       "ore::Authz::Services::V1b\006proto3"

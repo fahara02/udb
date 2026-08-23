@@ -43,7 +43,7 @@ public final class EntitiesProto {
       "com.udb.core.tenant.entity.v1B\rEntitiesP" +
       "rotoP\001ZEgithub.com/fahara02/udb/sdk/go/g" +
       "en/udb/core/tenant/entity/v1;entityv1\242\002\004" +
-      "UCTE\252\002\031udb.core.Tenant.Entity.V1\312\002\031Udb\\C" +
+      "UCTE\252\002\031Udb.Core.Tenant.Entity.V1\312\002\031Udb\\C" +
       "ore\\Tenant\\Entity\\V1\342\002%Udb\\GPBMetadata\\C" +
       "ore\\Tenant\\Entity\\V1\352\002\035Udb::Core::Tenant" +
       "::Entity::V1P\000P\001P\002b\006proto3"

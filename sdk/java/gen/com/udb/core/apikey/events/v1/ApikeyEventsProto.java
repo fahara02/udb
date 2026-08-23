@@ -125,7 +125,7 @@ public final class ApikeyEventsProto {
       "re.apikey.events.v1B\021ApikeyEventsProtoP\001" +
       "ZEgithub.com/fahara02/udb/sdk/go/gen/udb" +
       "/core/apikey/events/v1;eventsv1\242\002\004UCAE\252\002" +
-      "\031udb.core.Apikey.Events.V1\312\002\031Udb\\Core\\Ap" +
+      "\031Udb.Core.Apikey.Events.V1\312\002\031Udb\\Core\\Ap" +
       "ikey\\Events\\V1\342\002%Udb\\GPBMetadata\\Core\\Ap" +
       "ikey\\Events\\V1\352\002\035Udb::Core::Apikey::Even" +
       "ts::V1b\006proto3"

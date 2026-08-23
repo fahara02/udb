@@ -94,7 +94,7 @@ public final class ControlPlaneNodeStateProto {
       ".core.control.entity.v1B\032ControlPlaneNod" +
       "eStateProtoP\001ZFgithub.com/fahara02/udb/s" +
       "dk/go/gen/udb/core/control/entity/v1;ent" +
-      "ityv1\242\002\004UCCE\252\002\032udb.core.Control.Entity.V" +
+      "ityv1\242\002\004UCCE\252\002\032Udb.Core.Control.Entity.V" +
       "1\312\002\032Udb\\Core\\Control\\Entity\\V1\342\002&Udb\\GPB" +
       "Metadata\\Core\\Control\\Entity\\V1\352\002\036Udb::C" +
       "ore::Control::Entity::V1b\006proto3"

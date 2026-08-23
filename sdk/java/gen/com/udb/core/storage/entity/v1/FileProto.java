@@ -121,7 +121,7 @@ public final class FileProto {
       "\025tenant.data_residencyB\200\002\n\036com.udb.core." +
       "storage.entity.v1B\tFileProtoP\001ZFgithub.c" +
       "om/fahara02/udb/sdk/go/gen/udb/core/stor" +
-      "age/entity/v1;entityv1\242\002\004UCSE\252\002\032udb.core" +
+      "age/entity/v1;entityv1\242\002\004UCSE\252\002\032Udb.Core" +
       ".Storage.Entity.V1\312\002\032Udb\\Core\\Storage\\En" +
       "tity\\V1\342\002&Udb\\GPBMetadata\\Core\\Storage\\E" +
       "ntity\\V1\352\002\036Udb::Core::Storage::Entity::V" +

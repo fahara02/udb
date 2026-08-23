@@ -182,7 +182,7 @@ public final class ApikeyServiceProto {
       "com.udb.core.apikey.services.v1B\022ApikeyS" +
       "erviceProtoP\001ZIgithub.com/fahara02/udb/s" +
       "dk/go/gen/udb/core/apikey/services/v1;se" +
-      "rvicesv1\242\002\004UCAS\252\002\033udb.core.Apikey.Servic" +
+      "rvicesv1\242\002\004UCAS\252\002\033Udb.Core.Apikey.Servic" +
       "es.V1\312\002\033Udb\\Core\\Apikey\\Services\\V1\342\002\'Ud" +
       "b\\GPBMetadata\\Core\\Apikey\\Services\\V1\352\002\037" +
       "Udb::Core::Apikey::Services::V1b\006proto3"

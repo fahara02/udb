@@ -183,7 +183,7 @@ public final class AnalyticsServiceProto {
       "TB\246\002\n\"com.udb.core.analytics.services.v1" +
       "B\025AnalyticsServiceProtoP\001ZLgithub.com/fa" +
       "hara02/udb/sdk/go/gen/udb/core/analytics" +
-      "/services/v1;servicesv1\242\002\004UCAS\252\002\036udb.cor" +
+      "/services/v1;servicesv1\242\002\004UCAS\252\002\036Udb.Cor" +
       "e.Analytics.Services.V1\312\002\036Udb\\Core\\Analy" +
       "tics\\Services\\V1\342\002*Udb\\GPBMetadata\\Core\\" +
       "Analytics\\Services\\V1\352\002\"Udb::Core::Analy" +

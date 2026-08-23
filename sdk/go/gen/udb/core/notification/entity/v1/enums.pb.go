@@ -279,7 +279,7 @@ const file_udb_core_notification_entity_v1_enums_proto_rawDesc = "" +
 	"\x1aNOTIFICATION_PRIORITY_HIGH\x10\x03\x12\"\n" +
 	"\x1eNOTIFICATION_PRIORITY_CRITICAL\x10\x04B\x9f\x02\n" +
 	"#com.udb.core.notification.entity.v1B\n" +
-	"EnumsProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fUdb.Core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_notification_entity_v1_enums_proto_rawDescOnce sync.Once

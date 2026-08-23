@@ -938,7 +938,7 @@ const file_udb_core_lock_services_v1_lock_service_proto_rawDesc = "" +
 	"\x04lock\x12\x04lock\x1a\x04lock\"\x05Locks*\x04lock0\x018\x01h\x01z\x04lock\x82\x01\x04lock\x8a\x01\x04lock\x92\x01\vnative.lock\xd2\xf0\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01\xda\xf0\x19\x81\x01\n" +
 	"\x04lock\x12\x0fudb/native/lock\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x16udb.native.lock.config:\x04lockJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19>\n" +
 	"\x04lock\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x83\x02\n" +
-	"\x1dcom.udb.core.lock.services.v1B\x10LockServiceProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/lock/services/v1;servicesv1\xa2\x02\x04UCLS\xaa\x02\x19udb.core.Lock.Services.V1\xca\x02\x19Udb\\Core\\Lock\\Services\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Lock\\Services\\V1\xea\x02\x1dUdb::Core::Lock::Services::V1b\x06proto3"
+	"\x1dcom.udb.core.lock.services.v1B\x10LockServiceProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/lock/services/v1;servicesv1\xa2\x02\x04UCLS\xaa\x02\x19Udb.Core.Lock.Services.V1\xca\x02\x19Udb\\Core\\Lock\\Services\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Lock\\Services\\V1\xea\x02\x1dUdb::Core::Lock::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_lock_services_v1_lock_service_proto_rawDescOnce sync.Once

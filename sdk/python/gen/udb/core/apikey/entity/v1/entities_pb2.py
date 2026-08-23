@@ -30,12 +30,12 @@ from udb.core.apikey.entity.v1.api_key_pb2 import *
 from udb.core.apikey.entity.v1.api_key_usage_pb2 import *
 from udb.core.apikey.entity.v1.enums_pb2 import *
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n(udb/core/apikey/entity/v1/entities.proto\x12\x19udb.core.apikey.entity.v1\x1a\'udb/core/apikey/entity/v1/api_key.proto\x1a-udb/core/apikey/entity/v1/api_key_usage.proto\x1a%udb/core/apikey/entity/v1/enums.protoB\xfe\x01\n\x1d\x63om.udb.core.apikey.entity.v1B\rEntitiesProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1P\x00P\x01P\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n(udb/core/apikey/entity/v1/entities.proto\x12\x19udb.core.apikey.entity.v1\x1a\'udb/core/apikey/entity/v1/api_key.proto\x1a-udb/core/apikey/entity/v1/api_key_usage.proto\x1a%udb/core/apikey/entity/v1/enums.protoB\xfe\x01\n\x1d\x63om.udb.core.apikey.entity.v1B\rEntitiesProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19Udb.Core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1P\x00P\x01P\x02\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'udb.core.apikey.entity.v1.entities_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'\n\035com.udb.core.apikey.entity.v1B\rEntitiesProtoP\001ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\242\002\004UCAE\252\002\031udb.core.Apikey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\352\002\035Udb::Core::Apikey::Entity::V1'
+  _globals['DESCRIPTOR']._serialized_options = b'\n\035com.udb.core.apikey.entity.v1B\rEntitiesProtoP\001ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\242\002\004UCAE\252\002\031Udb.Core.Apikey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\352\002\035Udb::Core::Apikey::Entity::V1'
 # @@protoc_insertion_point(module_scope)

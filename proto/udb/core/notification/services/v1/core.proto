@@ -10,7 +10,7 @@ import "udb/core/notification/entity/v1/notification_preference.proto";
 import "udb/core/notification/entity/v1/notification_template.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Notification.Services.V1";
+option csharp_namespace = "Udb.Core.Notification.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/services/v1;notificationservicev1";
 option java_package = "com.udb.core.notification.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Services\\V1";

@@ -122,7 +122,7 @@ public final class PolicyRuleProto {
       "db.core.authz.entity.v1B\017PolicyRuleProto" +
       "P\001ZDgithub.com/fahara02/udb/sdk/go/gen/u" +
       "db/core/authz/entity/v1;entityv1\242\002\004UCAE\252" +
-      "\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core\\Au" +
+      "\002\030Udb.Core.Authz.Entity.V1\312\002\030Udb\\Core\\Au" +
       "thz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Aut" +
       "hz\\Entity\\V1\352\002\034Udb::Core::Authz::Entity:" +
       ":V1b\006proto3"

@@ -142,7 +142,7 @@ const file_udb_core_authn_entity_v1_recovery_code_proto_rawDesc = "" +
 	"\x0erecovery_codes\x12\tudb_authn\x18\x06 \x01*+Hashed single-use MFA recovery/backup codes@\x01bs\n" +
 	"\x10tenant_isolation\x1a](tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +
-	"\x1ccom.udb.core.authn.entity.v1B\x11RecoveryCodeProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authn.entity.v1B\x11RecoveryCodeProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_entity_v1_recovery_code_proto_rawDescOnce sync.Once

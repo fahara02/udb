@@ -96,7 +96,7 @@ public final class TenantProto {
       "cyB\374\001\n\035com.udb.core.tenant.entity.v1B\013Te" +
       "nantProtoP\001ZEgithub.com/fahara02/udb/sdk" +
       "/go/gen/udb/core/tenant/entity/v1;entity" +
-      "v1\242\002\004UCTE\252\002\031udb.core.Tenant.Entity.V1\312\002\031" +
+      "v1\242\002\004UCTE\252\002\031Udb.Core.Tenant.Entity.V1\312\002\031" +
       "Udb\\Core\\Tenant\\Entity\\V1\342\002%Udb\\GPBMetad" +
       "ata\\Core\\Tenant\\Entity\\V1\352\002\035Udb::Core::T" +
       "enant::Entity::V1b\006proto3"

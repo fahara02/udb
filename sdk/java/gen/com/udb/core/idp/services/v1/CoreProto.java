@@ -578,7 +578,7 @@ public final class CoreProto {
       "\n\007deleted\030\001 \001(\010R\007deletedB\366\001\n\034com.udb.cor" +
       "e.idp.services.v1B\tCoreProtoP\001ZFgithub.c" +
       "om/fahara02/udb/sdk/go/gen/udb/core/idp/" +
-      "services/v1;servicesv1\242\002\004UCIS\252\002\030udb.core" +
+      "services/v1;servicesv1\242\002\004UCIS\252\002\030Udb.Core" +
       ".Idp.Services.V1\312\002\030Udb\\Core\\Idp\\Services" +
       "\\V1\342\002$Udb\\GPBMetadata\\Core\\Idp\\Services\\" +
       "V1\352\002\034Udb::Core::Idp::Services::V1b\006proto" +

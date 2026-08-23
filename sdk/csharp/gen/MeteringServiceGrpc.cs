@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Metering.Services.V1 {
+namespace Udb.Core.Metering.Services.V1 {
   /// <summary>
   /// MeteringService (master-plan 9.9) — usage metering and quotas. Usage is an
   /// append-only, durable stream of `UsageEvent` rows (written by a cheap admission
@@ -57,32 +57,32 @@ namespace udb.core.Metering.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.RecordUsageRequest> __Marshaller_udb_core_metering_services_v1_RecordUsageRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.RecordUsageRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.RecordUsageRequest> __Marshaller_udb_core_metering_services_v1_RecordUsageRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.RecordUsageRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.RecordUsageResponse> __Marshaller_udb_core_metering_services_v1_RecordUsageResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.RecordUsageResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.RecordUsageResponse> __Marshaller_udb_core_metering_services_v1_RecordUsageResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.RecordUsageResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.QueryUsageRequest> __Marshaller_udb_core_metering_services_v1_QueryUsageRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.QueryUsageRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.QueryUsageRequest> __Marshaller_udb_core_metering_services_v1_QueryUsageRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.QueryUsageRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.QueryUsageResponse> __Marshaller_udb_core_metering_services_v1_QueryUsageResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.QueryUsageResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.QueryUsageResponse> __Marshaller_udb_core_metering_services_v1_QueryUsageResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.QueryUsageResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.PutQuotaRequest> __Marshaller_udb_core_metering_services_v1_PutQuotaRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.PutQuotaRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.PutQuotaRequest> __Marshaller_udb_core_metering_services_v1_PutQuotaRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.PutQuotaRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.PutQuotaResponse> __Marshaller_udb_core_metering_services_v1_PutQuotaResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.PutQuotaResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.PutQuotaResponse> __Marshaller_udb_core_metering_services_v1_PutQuotaResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.PutQuotaResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.GetQuotaRequest> __Marshaller_udb_core_metering_services_v1_GetQuotaRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.GetQuotaRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.GetQuotaRequest> __Marshaller_udb_core_metering_services_v1_GetQuotaRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.GetQuotaRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.GetQuotaResponse> __Marshaller_udb_core_metering_services_v1_GetQuotaResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.GetQuotaResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.GetQuotaResponse> __Marshaller_udb_core_metering_services_v1_GetQuotaResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.GetQuotaResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.ListQuotasRequest> __Marshaller_udb_core_metering_services_v1_ListQuotasRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.ListQuotasRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.ListQuotasRequest> __Marshaller_udb_core_metering_services_v1_ListQuotasRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.ListQuotasRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.ListQuotasResponse> __Marshaller_udb_core_metering_services_v1_ListQuotasResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.ListQuotasResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.ListQuotasResponse> __Marshaller_udb_core_metering_services_v1_ListQuotasResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.ListQuotasResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.CheckQuotaRequest> __Marshaller_udb_core_metering_services_v1_CheckQuotaRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.CheckQuotaRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.CheckQuotaRequest> __Marshaller_udb_core_metering_services_v1_CheckQuotaRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.CheckQuotaRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Metering.Services.V1.CheckQuotaResponse> __Marshaller_udb_core_metering_services_v1_CheckQuotaResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Metering.Services.V1.CheckQuotaResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Metering.Services.V1.CheckQuotaResponse> __Marshaller_udb_core_metering_services_v1_CheckQuotaResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Metering.Services.V1.CheckQuotaResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Metering.Services.V1.RecordUsageRequest, global::udb.core.Metering.Services.V1.RecordUsageResponse> __Method_RecordUsage = new grpc::Method<global::udb.core.Metering.Services.V1.RecordUsageRequest, global::udb.core.Metering.Services.V1.RecordUsageResponse>(
+    static readonly grpc::Method<global::Udb.Core.Metering.Services.V1.RecordUsageRequest, global::Udb.Core.Metering.Services.V1.RecordUsageResponse> __Method_RecordUsage = new grpc::Method<global::Udb.Core.Metering.Services.V1.RecordUsageRequest, global::Udb.Core.Metering.Services.V1.RecordUsageResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RecordUsage",
@@ -90,7 +90,7 @@ namespace udb.core.Metering.Services.V1 {
         __Marshaller_udb_core_metering_services_v1_RecordUsageResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Metering.Services.V1.QueryUsageRequest, global::udb.core.Metering.Services.V1.QueryUsageResponse> __Method_QueryUsage = new grpc::Method<global::udb.core.Metering.Services.V1.QueryUsageRequest, global::udb.core.Metering.Services.V1.QueryUsageResponse>(
+    static readonly grpc::Method<global::Udb.Core.Metering.Services.V1.QueryUsageRequest, global::Udb.Core.Metering.Services.V1.QueryUsageResponse> __Method_QueryUsage = new grpc::Method<global::Udb.Core.Metering.Services.V1.QueryUsageRequest, global::Udb.Core.Metering.Services.V1.QueryUsageResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "QueryUsage",
@@ -98,7 +98,7 @@ namespace udb.core.Metering.Services.V1 {
         __Marshaller_udb_core_metering_services_v1_QueryUsageResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Metering.Services.V1.PutQuotaRequest, global::udb.core.Metering.Services.V1.PutQuotaResponse> __Method_PutQuota = new grpc::Method<global::udb.core.Metering.Services.V1.PutQuotaRequest, global::udb.core.Metering.Services.V1.PutQuotaResponse>(
+    static readonly grpc::Method<global::Udb.Core.Metering.Services.V1.PutQuotaRequest, global::Udb.Core.Metering.Services.V1.PutQuotaResponse> __Method_PutQuota = new grpc::Method<global::Udb.Core.Metering.Services.V1.PutQuotaRequest, global::Udb.Core.Metering.Services.V1.PutQuotaResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PutQuota",
@@ -106,7 +106,7 @@ namespace udb.core.Metering.Services.V1 {
         __Marshaller_udb_core_metering_services_v1_PutQuotaResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Metering.Services.V1.GetQuotaRequest, global::udb.core.Metering.Services.V1.GetQuotaResponse> __Method_GetQuota = new grpc::Method<global::udb.core.Metering.Services.V1.GetQuotaRequest, global::udb.core.Metering.Services.V1.GetQuotaResponse>(
+    static readonly grpc::Method<global::Udb.Core.Metering.Services.V1.GetQuotaRequest, global::Udb.Core.Metering.Services.V1.GetQuotaResponse> __Method_GetQuota = new grpc::Method<global::Udb.Core.Metering.Services.V1.GetQuotaRequest, global::Udb.Core.Metering.Services.V1.GetQuotaResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetQuota",
@@ -114,7 +114,7 @@ namespace udb.core.Metering.Services.V1 {
         __Marshaller_udb_core_metering_services_v1_GetQuotaResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Metering.Services.V1.ListQuotasRequest, global::udb.core.Metering.Services.V1.ListQuotasResponse> __Method_ListQuotas = new grpc::Method<global::udb.core.Metering.Services.V1.ListQuotasRequest, global::udb.core.Metering.Services.V1.ListQuotasResponse>(
+    static readonly grpc::Method<global::Udb.Core.Metering.Services.V1.ListQuotasRequest, global::Udb.Core.Metering.Services.V1.ListQuotasResponse> __Method_ListQuotas = new grpc::Method<global::Udb.Core.Metering.Services.V1.ListQuotasRequest, global::Udb.Core.Metering.Services.V1.ListQuotasResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListQuotas",
@@ -122,7 +122,7 @@ namespace udb.core.Metering.Services.V1 {
         __Marshaller_udb_core_metering_services_v1_ListQuotasResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Metering.Services.V1.CheckQuotaRequest, global::udb.core.Metering.Services.V1.CheckQuotaResponse> __Method_CheckQuota = new grpc::Method<global::udb.core.Metering.Services.V1.CheckQuotaRequest, global::udb.core.Metering.Services.V1.CheckQuotaResponse>(
+    static readonly grpc::Method<global::Udb.Core.Metering.Services.V1.CheckQuotaRequest, global::Udb.Core.Metering.Services.V1.CheckQuotaResponse> __Method_CheckQuota = new grpc::Method<global::Udb.Core.Metering.Services.V1.CheckQuotaRequest, global::Udb.Core.Metering.Services.V1.CheckQuotaResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CheckQuota",
@@ -132,7 +132,7 @@ namespace udb.core.Metering.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Metering.Services.V1.MeteringServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Metering.Services.V1.MeteringServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of MeteringService</summary>
@@ -147,7 +147,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Metering.Services.V1.RecordUsageResponse> RecordUsage(global::udb.core.Metering.Services.V1.RecordUsageRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Metering.Services.V1.RecordUsageResponse> RecordUsage(global::Udb.Core.Metering.Services.V1.RecordUsageRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -159,7 +159,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Metering.Services.V1.QueryUsageResponse> QueryUsage(global::udb.core.Metering.Services.V1.QueryUsageRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Metering.Services.V1.QueryUsageResponse> QueryUsage(global::Udb.Core.Metering.Services.V1.QueryUsageRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -172,7 +172,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Metering.Services.V1.PutQuotaResponse> PutQuota(global::udb.core.Metering.Services.V1.PutQuotaRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Metering.Services.V1.PutQuotaResponse> PutQuota(global::Udb.Core.Metering.Services.V1.PutQuotaRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -184,7 +184,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Metering.Services.V1.GetQuotaResponse> GetQuota(global::udb.core.Metering.Services.V1.GetQuotaRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Metering.Services.V1.GetQuotaResponse> GetQuota(global::Udb.Core.Metering.Services.V1.GetQuotaRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -196,7 +196,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Metering.Services.V1.ListQuotasResponse> ListQuotas(global::udb.core.Metering.Services.V1.ListQuotasRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Metering.Services.V1.ListQuotasResponse> ListQuotas(global::Udb.Core.Metering.Services.V1.ListQuotasRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -211,7 +211,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Metering.Services.V1.CheckQuotaResponse> CheckQuota(global::udb.core.Metering.Services.V1.CheckQuotaRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Metering.Services.V1.CheckQuotaResponse> CheckQuota(global::Udb.Core.Metering.Services.V1.CheckQuotaRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -255,7 +255,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.RecordUsageResponse RecordUsage(global::udb.core.Metering.Services.V1.RecordUsageRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Metering.Services.V1.RecordUsageResponse RecordUsage(global::Udb.Core.Metering.Services.V1.RecordUsageRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RecordUsage(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -267,7 +267,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.RecordUsageResponse RecordUsage(global::udb.core.Metering.Services.V1.RecordUsageRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Metering.Services.V1.RecordUsageResponse RecordUsage(global::Udb.Core.Metering.Services.V1.RecordUsageRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RecordUsage, null, options, request);
       }
@@ -281,7 +281,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.RecordUsageResponse> RecordUsageAsync(global::udb.core.Metering.Services.V1.RecordUsageRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.RecordUsageResponse> RecordUsageAsync(global::Udb.Core.Metering.Services.V1.RecordUsageRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RecordUsageAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -293,7 +293,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.RecordUsageResponse> RecordUsageAsync(global::udb.core.Metering.Services.V1.RecordUsageRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.RecordUsageResponse> RecordUsageAsync(global::Udb.Core.Metering.Services.V1.RecordUsageRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RecordUsage, null, options, request);
       }
@@ -306,7 +306,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.QueryUsageResponse QueryUsage(global::udb.core.Metering.Services.V1.QueryUsageRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Metering.Services.V1.QueryUsageResponse QueryUsage(global::Udb.Core.Metering.Services.V1.QueryUsageRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return QueryUsage(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -317,7 +317,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.QueryUsageResponse QueryUsage(global::udb.core.Metering.Services.V1.QueryUsageRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Metering.Services.V1.QueryUsageResponse QueryUsage(global::Udb.Core.Metering.Services.V1.QueryUsageRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_QueryUsage, null, options, request);
       }
@@ -330,7 +330,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.QueryUsageResponse> QueryUsageAsync(global::udb.core.Metering.Services.V1.QueryUsageRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.QueryUsageResponse> QueryUsageAsync(global::Udb.Core.Metering.Services.V1.QueryUsageRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return QueryUsageAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -341,7 +341,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.QueryUsageResponse> QueryUsageAsync(global::udb.core.Metering.Services.V1.QueryUsageRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.QueryUsageResponse> QueryUsageAsync(global::Udb.Core.Metering.Services.V1.QueryUsageRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_QueryUsage, null, options, request);
       }
@@ -355,7 +355,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.PutQuotaResponse PutQuota(global::udb.core.Metering.Services.V1.PutQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Metering.Services.V1.PutQuotaResponse PutQuota(global::Udb.Core.Metering.Services.V1.PutQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutQuota(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -367,7 +367,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.PutQuotaResponse PutQuota(global::udb.core.Metering.Services.V1.PutQuotaRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Metering.Services.V1.PutQuotaResponse PutQuota(global::Udb.Core.Metering.Services.V1.PutQuotaRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PutQuota, null, options, request);
       }
@@ -381,7 +381,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.PutQuotaResponse> PutQuotaAsync(global::udb.core.Metering.Services.V1.PutQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.PutQuotaResponse> PutQuotaAsync(global::Udb.Core.Metering.Services.V1.PutQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutQuotaAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -393,7 +393,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.PutQuotaResponse> PutQuotaAsync(global::udb.core.Metering.Services.V1.PutQuotaRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.PutQuotaResponse> PutQuotaAsync(global::Udb.Core.Metering.Services.V1.PutQuotaRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PutQuota, null, options, request);
       }
@@ -406,7 +406,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.GetQuotaResponse GetQuota(global::udb.core.Metering.Services.V1.GetQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Metering.Services.V1.GetQuotaResponse GetQuota(global::Udb.Core.Metering.Services.V1.GetQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetQuota(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -417,7 +417,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.GetQuotaResponse GetQuota(global::udb.core.Metering.Services.V1.GetQuotaRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Metering.Services.V1.GetQuotaResponse GetQuota(global::Udb.Core.Metering.Services.V1.GetQuotaRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetQuota, null, options, request);
       }
@@ -430,7 +430,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.GetQuotaResponse> GetQuotaAsync(global::udb.core.Metering.Services.V1.GetQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.GetQuotaResponse> GetQuotaAsync(global::Udb.Core.Metering.Services.V1.GetQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetQuotaAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -441,7 +441,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.GetQuotaResponse> GetQuotaAsync(global::udb.core.Metering.Services.V1.GetQuotaRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.GetQuotaResponse> GetQuotaAsync(global::Udb.Core.Metering.Services.V1.GetQuotaRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetQuota, null, options, request);
       }
@@ -454,7 +454,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.ListQuotasResponse ListQuotas(global::udb.core.Metering.Services.V1.ListQuotasRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Metering.Services.V1.ListQuotasResponse ListQuotas(global::Udb.Core.Metering.Services.V1.ListQuotasRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListQuotas(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -465,7 +465,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.ListQuotasResponse ListQuotas(global::udb.core.Metering.Services.V1.ListQuotasRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Metering.Services.V1.ListQuotasResponse ListQuotas(global::Udb.Core.Metering.Services.V1.ListQuotasRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListQuotas, null, options, request);
       }
@@ -478,7 +478,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.ListQuotasResponse> ListQuotasAsync(global::udb.core.Metering.Services.V1.ListQuotasRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.ListQuotasResponse> ListQuotasAsync(global::Udb.Core.Metering.Services.V1.ListQuotasRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListQuotasAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -489,7 +489,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.ListQuotasResponse> ListQuotasAsync(global::udb.core.Metering.Services.V1.ListQuotasRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.ListQuotasResponse> ListQuotasAsync(global::Udb.Core.Metering.Services.V1.ListQuotasRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListQuotas, null, options, request);
       }
@@ -505,7 +505,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.CheckQuotaResponse CheckQuota(global::udb.core.Metering.Services.V1.CheckQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Metering.Services.V1.CheckQuotaResponse CheckQuota(global::Udb.Core.Metering.Services.V1.CheckQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CheckQuota(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -519,7 +519,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Metering.Services.V1.CheckQuotaResponse CheckQuota(global::udb.core.Metering.Services.V1.CheckQuotaRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Metering.Services.V1.CheckQuotaResponse CheckQuota(global::Udb.Core.Metering.Services.V1.CheckQuotaRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CheckQuota, null, options, request);
       }
@@ -535,7 +535,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.CheckQuotaResponse> CheckQuotaAsync(global::udb.core.Metering.Services.V1.CheckQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.CheckQuotaResponse> CheckQuotaAsync(global::Udb.Core.Metering.Services.V1.CheckQuotaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CheckQuotaAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -549,7 +549,7 @@ namespace udb.core.Metering.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Metering.Services.V1.CheckQuotaResponse> CheckQuotaAsync(global::udb.core.Metering.Services.V1.CheckQuotaRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Metering.Services.V1.CheckQuotaResponse> CheckQuotaAsync(global::Udb.Core.Metering.Services.V1.CheckQuotaRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CheckQuota, null, options, request);
       }
@@ -582,12 +582,12 @@ namespace udb.core.Metering.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, MeteringServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_RecordUsage, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Metering.Services.V1.RecordUsageRequest, global::udb.core.Metering.Services.V1.RecordUsageResponse>(serviceImpl.RecordUsage));
-      serviceBinder.AddMethod(__Method_QueryUsage, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Metering.Services.V1.QueryUsageRequest, global::udb.core.Metering.Services.V1.QueryUsageResponse>(serviceImpl.QueryUsage));
-      serviceBinder.AddMethod(__Method_PutQuota, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Metering.Services.V1.PutQuotaRequest, global::udb.core.Metering.Services.V1.PutQuotaResponse>(serviceImpl.PutQuota));
-      serviceBinder.AddMethod(__Method_GetQuota, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Metering.Services.V1.GetQuotaRequest, global::udb.core.Metering.Services.V1.GetQuotaResponse>(serviceImpl.GetQuota));
-      serviceBinder.AddMethod(__Method_ListQuotas, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Metering.Services.V1.ListQuotasRequest, global::udb.core.Metering.Services.V1.ListQuotasResponse>(serviceImpl.ListQuotas));
-      serviceBinder.AddMethod(__Method_CheckQuota, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Metering.Services.V1.CheckQuotaRequest, global::udb.core.Metering.Services.V1.CheckQuotaResponse>(serviceImpl.CheckQuota));
+      serviceBinder.AddMethod(__Method_RecordUsage, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Metering.Services.V1.RecordUsageRequest, global::Udb.Core.Metering.Services.V1.RecordUsageResponse>(serviceImpl.RecordUsage));
+      serviceBinder.AddMethod(__Method_QueryUsage, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Metering.Services.V1.QueryUsageRequest, global::Udb.Core.Metering.Services.V1.QueryUsageResponse>(serviceImpl.QueryUsage));
+      serviceBinder.AddMethod(__Method_PutQuota, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Metering.Services.V1.PutQuotaRequest, global::Udb.Core.Metering.Services.V1.PutQuotaResponse>(serviceImpl.PutQuota));
+      serviceBinder.AddMethod(__Method_GetQuota, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Metering.Services.V1.GetQuotaRequest, global::Udb.Core.Metering.Services.V1.GetQuotaResponse>(serviceImpl.GetQuota));
+      serviceBinder.AddMethod(__Method_ListQuotas, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Metering.Services.V1.ListQuotasRequest, global::Udb.Core.Metering.Services.V1.ListQuotasResponse>(serviceImpl.ListQuotas));
+      serviceBinder.AddMethod(__Method_CheckQuota, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Metering.Services.V1.CheckQuotaRequest, global::Udb.Core.Metering.Services.V1.CheckQuotaResponse>(serviceImpl.CheckQuota));
     }
 
   }

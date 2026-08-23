@@ -90,7 +90,7 @@ public final class WebhookEndpointProto {
       "\213\002\n\036com.udb.core.webhook.entity.v1B\024Webh" +
       "ookEndpointProtoP\001ZFgithub.com/fahara02/" +
       "udb/sdk/go/gen/udb/core/webhook/entity/v" +
-      "1;entityv1\242\002\004UCWE\252\002\032udb.core.Webhook.Ent" +
+      "1;entityv1\242\002\004UCWE\252\002\032Udb.Core.Webhook.Ent" +
       "ity.V1\312\002\032Udb\\Core\\Webhook\\Entity\\V1\342\002&Ud" +
       "b\\GPBMetadata\\Core\\Webhook\\Entity\\V1\352\002\036U" +
       "db::Core::Webhook::Entity::V1b\006proto3"

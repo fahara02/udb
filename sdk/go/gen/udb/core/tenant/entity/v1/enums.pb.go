@@ -220,7 +220,7 @@ const file_udb_core_tenant_entity_v1_enums_proto_rawDesc = "" +
 	"\x17TENANT_STATUS_SUSPENDED\x10\x02\x12\x1a\n" +
 	"\x16TENANT_STATUS_INACTIVE\x10\x03B\xfb\x01\n" +
 	"\x1dcom.udb.core.tenant.entity.v1B\n" +
-	"EnumsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/entity/v1;entityv1\xa2\x02\x04UCTE\xaa\x02\x19udb.core.Tenant.Entity.V1\xca\x02\x19Udb\\Core\\Tenant\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1\xea\x02\x1dUdb::Core::Tenant::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/entity/v1;entityv1\xa2\x02\x04UCTE\xaa\x02\x19Udb.Core.Tenant.Entity.V1\xca\x02\x19Udb\\Core\\Tenant\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1\xea\x02\x1dUdb::Core::Tenant::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_tenant_entity_v1_enums_proto_rawDescOnce sync.Once

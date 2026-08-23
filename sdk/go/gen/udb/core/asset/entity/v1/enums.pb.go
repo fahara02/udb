@@ -280,7 +280,7 @@ const file_udb_core_asset_entity_v1_enums_proto_rawDesc = "" +
 	"\x12ASSET_STATUS_READY\x10\x02\x12\x17\n" +
 	"\x13ASSET_STATUS_FAILED\x10\x03B\xf5\x01\n" +
 	"\x1ccom.udb.core.asset.entity.v1B\n" +
-	"EnumsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Asset.Entity.V1\xca\x02\x18Udb\\Core\\Asset\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\xea\x02\x1cUdb::Core::Asset::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Asset.Entity.V1\xca\x02\x18Udb\\Core\\Asset\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\xea\x02\x1cUdb::Core::Asset::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_asset_entity_v1_enums_proto_rawDescOnce sync.Once

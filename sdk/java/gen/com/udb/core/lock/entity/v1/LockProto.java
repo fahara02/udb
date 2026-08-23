@@ -83,7 +83,7 @@ public final class LockProto {
       "sidencyB\356\001\n\033com.udb.core.lock.entity.v1B" +
       "\tLockProtoP\001ZCgithub.com/fahara02/udb/sd" +
       "k/go/gen/udb/core/lock/entity/v1;entityv" +
-      "1\242\002\004UCLE\252\002\027udb.core.Lock.Entity.V1\312\002\027Udb" +
+      "1\242\002\004UCLE\252\002\027Udb.Core.Lock.Entity.V1\312\002\027Udb" +
       "\\Core\\Lock\\Entity\\V1\342\002#Udb\\GPBMetadata\\C" +
       "ore\\Lock\\Entity\\V1\352\002\033Udb::Core::Lock::En" +
       "tity::V1b\006proto3"

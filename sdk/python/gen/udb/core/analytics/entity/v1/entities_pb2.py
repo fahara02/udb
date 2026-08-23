@@ -30,12 +30,12 @@ from udb.core.analytics.entity.v1.executor_performance_summary_pb2 import *
 from udb.core.analytics.entity.v1.pipeline_metric_snapshot_pb2 import *
 from udb.core.analytics.entity.v1.reconciliation_analytics_summary_pb2 import *
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n+udb/core/analytics/entity/v1/entities.proto\x12\x1cudb.core.analytics.entity.v1\x1a?udb/core/analytics/entity/v1/executor_performance_summary.proto\x1a;udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x1a\x43udb/core/analytics/entity/v1/reconciliation_analytics_summary.protoB\x90\x02\n com.udb.core.analytics.entity.v1B\rEntitiesProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x1cudb.core.Analytics.Entity.V1\xca\x02\x1cUdb\\Core\\Analytics\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\xea\x02 Udb::Core::Analytics::Entity::V1P\x00P\x01P\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n+udb/core/analytics/entity/v1/entities.proto\x12\x1cudb.core.analytics.entity.v1\x1a?udb/core/analytics/entity/v1/executor_performance_summary.proto\x1a;udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x1a\x43udb/core/analytics/entity/v1/reconciliation_analytics_summary.protoB\x90\x02\n com.udb.core.analytics.entity.v1B\rEntitiesProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x1cUdb.Core.Analytics.Entity.V1\xca\x02\x1cUdb\\Core\\Analytics\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\xea\x02 Udb::Core::Analytics::Entity::V1P\x00P\x01P\x02\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'udb.core.analytics.entity.v1.entities_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'\n com.udb.core.analytics.entity.v1B\rEntitiesProtoP\001ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\242\002\004UCAE\252\002\034udb.core.Analytics.Entity.V1\312\002\034Udb\\Core\\Analytics\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\352\002 Udb::Core::Analytics::Entity::V1'
+  _globals['DESCRIPTOR']._serialized_options = b'\n com.udb.core.analytics.entity.v1B\rEntitiesProtoP\001ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\242\002\004UCAE\252\002\034Udb.Core.Analytics.Entity.V1\312\002\034Udb\\Core\\Analytics\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\352\002 Udb::Core::Analytics::Entity::V1'
 # @@protoc_insertion_point(module_scope)

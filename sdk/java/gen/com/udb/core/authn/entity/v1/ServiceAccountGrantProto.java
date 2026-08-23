@@ -87,7 +87,7 @@ public final class ServiceAccountGrantProto {
       ".udb.core.authn.entity.v1B\030ServiceAccoun" +
       "tGrantProtoP\001ZDgithub.com/fahara02/udb/s" +
       "dk/go/gen/udb/core/authn/entity/v1;entit" +
-      "yv1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030" +
+      "yv1\242\002\004UCAE\252\002\030Udb.Core.Authn.Entity.V1\312\002\030" +
       "Udb\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetada" +
       "ta\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Aut" +
       "hn::Entity::V1b\006proto3"

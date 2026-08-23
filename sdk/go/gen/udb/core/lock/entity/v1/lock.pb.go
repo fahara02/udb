@@ -196,7 +196,7 @@ const file_udb_core_lock_entity_v1_lock_proto_rawDesc = "" +
 	"\x1cidx_locks_tenant_name_unique\x12\x05BTREE\x18\x01Z\ttenant_idZ\tlock_name\x8a\x013\n" +
 	"\x17idx_locks_tenant_status\x12\x05BTREEZ\ttenant_idZ\x06status\xf2\x01\x12udb.lock.locks.cdc\xfa\x01\tlock:read\x8a\xb2\x19\x8e\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x10lock.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xee\x01\n" +
-	"\x1bcom.udb.core.lock.entity.v1B\tLockProtoP\x01ZCgithub.com/fahara02/udb/sdk/go/gen/udb/core/lock/entity/v1;entityv1\xa2\x02\x04UCLE\xaa\x02\x17udb.core.Lock.Entity.V1\xca\x02\x17Udb\\Core\\Lock\\Entity\\V1\xe2\x02#Udb\\GPBMetadata\\Core\\Lock\\Entity\\V1\xea\x02\x1bUdb::Core::Lock::Entity::V1b\x06proto3"
+	"\x1bcom.udb.core.lock.entity.v1B\tLockProtoP\x01ZCgithub.com/fahara02/udb/sdk/go/gen/udb/core/lock/entity/v1;entityv1\xa2\x02\x04UCLE\xaa\x02\x17Udb.Core.Lock.Entity.V1\xca\x02\x17Udb\\Core\\Lock\\Entity\\V1\xe2\x02#Udb\\GPBMetadata\\Core\\Lock\\Entity\\V1\xea\x02\x1bUdb::Core::Lock::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_lock_entity_v1_lock_proto_rawDescOnce sync.Once

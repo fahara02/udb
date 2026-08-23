@@ -117,7 +117,7 @@ public final class VaultDbCredentialLeaseProto {
       "entity.v1B\033VaultDbCredentialLeaseProtoP\001" +
       "ZDgithub.com/fahara02/udb/sdk/go/gen/udb" +
       "/core/vault/entity/v1;entityv1\242\002\004UCVE\252\002\030" +
-      "udb.core.Vault.Entity.V1\312\002\030Udb\\Core\\Vaul" +
+      "Udb.Core.Vault.Entity.V1\312\002\030Udb\\Core\\Vaul" +
       "t\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Vault" +
       "\\Entity\\V1\352\002\034Udb::Core::Vault::Entity::V" +
       "1b\006proto3"

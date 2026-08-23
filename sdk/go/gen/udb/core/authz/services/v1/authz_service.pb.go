@@ -154,7 +154,7 @@ const file_udb_core_authz_services_v1_authz_service_proto_rawDesc = "" +
 	"governance0\x018\x01h\x01z\x05authz\x82\x01\x05authz\x8a\x01\x05authz\x92\x01\fnative.authz\xd2\xf0\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\xda\xf0\x19\x85\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x17udb.native.authz.config:\x05authzJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19?\n" +
 	"\x05authz\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x8a\x02\n" +
-	"\x1ecom.udb.core.authz.services.v1B\x11AuthzServiceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1audb.core.Authz.Services.V1\xca\x02\x1aUdb\\Core\\Authz\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authz\\Services\\V1\xea\x02\x1eUdb::Core::Authz::Services::V1b\x06proto3"
+	"\x1ecom.udb.core.authz.services.v1B\x11AuthzServiceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1aUdb.Core.Authz.Services.V1\xca\x02\x1aUdb\\Core\\Authz\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authz\\Services\\V1\xea\x02\x1eUdb::Core::Authz::Services::V1b\x06proto3"
 
 var file_udb_core_authz_services_v1_authz_service_proto_goTypes = []any{
 	(*AuthzRequest)(nil),                     // 0: udb.core.authz.services.v1.AuthzRequest

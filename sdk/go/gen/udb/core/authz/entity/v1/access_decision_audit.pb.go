@@ -356,7 +356,7 @@ const file_udb_core_authz_entity_v1_access_decision_audit_proto_rawDesc = "" +
 	"decided_atX\xfb\x13b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x83\x02\n" +
-	"\x1ccom.udb.core.authz.entity.v1B\x18AccessDecisionAuditProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authz.entity.v1B\x18AccessDecisionAuditProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authz_entity_v1_access_decision_audit_proto_rawDescOnce sync.Once

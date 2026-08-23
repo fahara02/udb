@@ -175,6 +175,15 @@ jobs:
         run: |
           python3 scripts/check-python-php-sdk-posture.py --selftest
           python3 scripts/check-python-php-sdk-posture.py
+      - name: Path case-collision guard
+        # Two tracked directories differing only in case make the repo root
+        # un-packageable as a Go module, and the module proxy caches immutably —
+        # so a tag shipped with one can never be repaired. Runs against the git
+        # INDEX because Windows/macOS working trees cannot represent the
+        # collision at all and report clean.
+        run: |
+          python3 scripts/check-path-case-collisions.py --selftest
+          python3 scripts/check-path-case-collisions.py
       - name: Java/C# SDK audit guard
         run: |
           python3 scripts/check-java-csharp-sdk-audit.py --selftest
@@ -868,6 +877,13 @@ jobs:
         # The committed stubs MUST match this output exactly — drift is a
         # hard failure: regenerate locally with the same command and commit.
         run: |
+          # Remove the C# tree before regenerating. protoc derives the C# output
+          # DIRECTORY from `option csharp_namespace`, so changing that option
+          # leaves the old directory behind rather than replacing it — which is
+          # how `gen/Udb` and `gen/udb` coexisted for seven weeks and made the
+          # repo root un-packageable as a Go module. Deleting first makes the
+          # drift check below authoritative: committed == exactly what buf emits.
+          rm -rf sdk/csharp/gen
           for attempt in 1 2 3; do
             if buf generate --include-imports; then
               break
@@ -885,6 +901,16 @@ jobs:
           node scripts/check-openapi-api-rules.mjs --selftest
           node scripts/check-openapi-api-rules.mjs
           node scripts/sdk-codegen-postprocess.mjs
+          # `git diff` alone misses UNTRACKED files, so a brand-new generated
+          # directory could appear and this gate would stay silent — which is how
+          # a second C# output tree went unnoticed. Count untracked files under
+          # the generated paths as drift too.
+          UNTRACKED=$(git ls-files --others --exclude-standard -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api)
+          if [ -n "$UNTRACKED" ]; then
+            echo "::error::buf generate produced files that are not committed:"
+            echo "$UNTRACKED"
+            exit 1
+          fi
           if ! git diff --quiet -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api; then
             echo "::error::Committed SDK stubs are stale. Run 'buf generate --include-imports' and commit the result."
             git diff -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api | sed -n '1,200p'

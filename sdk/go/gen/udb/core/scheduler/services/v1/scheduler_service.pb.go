@@ -861,7 +861,7 @@ const file_udb_core_scheduler_services_v1_scheduler_service_proto_rawDesc = "" +
 	"\tscheduler\x12\tscheduler\x1a\tscheduler\"\tScheduler*\tscheduler0\x018\x01h\x01z\tscheduler\x82\x01\tscheduler\x8a\x01\tscheduler\x92\x01\x10native.scheduler\xd2\xf0\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01\xda\xf0\x19\x95\x01\n" +
 	"\tscheduler\x12\x14udb/native/scheduler\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1budb.native.scheduler.config:\tschedulerJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19C\n" +
 	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\xa6\x02\n" +
-	"\"com.udb.core.scheduler.services.v1B\x15SchedulerServiceProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/scheduler/services/v1;servicesv1\xa2\x02\x04UCSS\xaa\x02\x1eudb.core.Scheduler.Services.V1\xca\x02\x1eUdb\\Core\\Scheduler\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Scheduler\\Services\\V1\xea\x02\"Udb::Core::Scheduler::Services::V1b\x06proto3"
+	"\"com.udb.core.scheduler.services.v1B\x15SchedulerServiceProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/scheduler/services/v1;servicesv1\xa2\x02\x04UCSS\xaa\x02\x1eUdb.Core.Scheduler.Services.V1\xca\x02\x1eUdb\\Core\\Scheduler\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Scheduler\\Services\\V1\xea\x02\"Udb::Core::Scheduler::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_scheduler_services_v1_scheduler_service_proto_rawDescOnce sync.Once

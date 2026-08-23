@@ -4,7 +4,7 @@ package udb.core.common.v1;
 
 import "google/protobuf/timestamp.proto";
 
-option csharp_namespace = "udb.core.Common.V1";
+option csharp_namespace = "Udb.Core.Common.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/common/v1;commonv1";
 option java_package = "com.udb.core.common.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Common\\V1";

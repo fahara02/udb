@@ -24,14 +24,14 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n&udb/core/control/entity/v1/enums.proto\x12\x1audb.core.control.entity.v1*\xf8\x01\n\x0cResourceType\x12\x1d\n\x19RESOURCE_TYPE_UNSPECIFIED\x10\x00\x12 \n\x1cRESOURCE_TYPE_ROUTING_POLICY\x10\x01\x12(\n$RESOURCE_TYPE_METHOD_SECURITY_POLICY\x10\x02\x12#\n\x1fRESOURCE_TYPE_RLS_TENANT_POLICY\x10\x03\x12+\n\'RESOURCE_TYPE_NATIVE_SERVICE_ENABLEMENT\x10\x04\x12+\n\'RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\x10\x05\x42\x81\x02\n\x1e\x63om.udb.core.control.entity.v1B\nEnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x1audb.core.Control.Entity.V1\xca\x02\x1aUdb\\Core\\Control\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xea\x02\x1eUdb::Core::Control::Entity::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n&udb/core/control/entity/v1/enums.proto\x12\x1audb.core.control.entity.v1*\xf8\x01\n\x0cResourceType\x12\x1d\n\x19RESOURCE_TYPE_UNSPECIFIED\x10\x00\x12 \n\x1cRESOURCE_TYPE_ROUTING_POLICY\x10\x01\x12(\n$RESOURCE_TYPE_METHOD_SECURITY_POLICY\x10\x02\x12#\n\x1fRESOURCE_TYPE_RLS_TENANT_POLICY\x10\x03\x12+\n\'RESOURCE_TYPE_NATIVE_SERVICE_ENABLEMENT\x10\x04\x12+\n\'RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\x10\x05\x42\x81\x02\n\x1e\x63om.udb.core.control.entity.v1B\nEnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x1aUdb.Core.Control.Entity.V1\xca\x02\x1aUdb\\Core\\Control\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xea\x02\x1eUdb::Core::Control::Entity::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'udb.core.control.entity.v1.enums_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'\n\036com.udb.core.control.entity.v1B\nEnumsProtoP\001ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\242\002\004UCCE\252\002\032udb.core.Control.Entity.V1\312\002\032Udb\\Core\\Control\\Entity\\V1\342\002&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\352\002\036Udb::Core::Control::Entity::V1'
+  _globals['DESCRIPTOR']._serialized_options = b'\n\036com.udb.core.control.entity.v1B\nEnumsProtoP\001ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\242\002\004UCCE\252\002\032Udb.Core.Control.Entity.V1\312\002\032Udb\\Core\\Control\\Entity\\V1\342\002&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\352\002\036Udb::Core::Control::Entity::V1'
   _globals['_RESOURCETYPE']._serialized_start=71
   _globals['_RESOURCETYPE']._serialized_end=319
 # @@protoc_insertion_point(module_scope)

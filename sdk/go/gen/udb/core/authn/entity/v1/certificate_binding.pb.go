@@ -272,7 +272,7 @@ const file_udb_core_authn_entity_v1_certificate_binding_proto_rawDesc = "" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01D\n" +
 	"!idx_certificate_bindings_selector\x18\x01Z\rselector_kindZ\x0eselector_value\xea\x01\aprimary\xf2\x01\"udb.authn.certificate_bindings.cdc\xfa\x01\x11authn:grants:read\x8a\xb2\x19\x88\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\fauthn.policyH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x82\x02\n" +
-	"\x1ccom.udb.core.authn.entity.v1B\x17CertificateBindingProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authn.entity.v1B\x17CertificateBindingProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_entity_v1_certificate_binding_proto_rawDescOnce sync.Once

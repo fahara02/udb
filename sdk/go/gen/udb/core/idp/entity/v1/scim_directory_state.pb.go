@@ -191,7 +191,7 @@ const file_udb_core_idp_entity_v1_scim_directory_state_proto_rawDesc = "" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01J\n" +
 	"'uq_scim_directory_state_tenant_provider\x12\x05BTREE\x18\x01Z\ttenant_idZ\vprovider_id\xea\x01\aprimary\xf2\x01\x16udb.idp.scim_state.cdc\xfa\x01\ridp:scim:read\x8a\xb2\x19\x8e\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x0fidp.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf6\x01\n" +
-	"\x1acom.udb.core.idp.entity.v1B\x17ScimDirectoryStateProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16udb.core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
+	"\x1acom.udb.core.idp.entity.v1B\x17ScimDirectoryStateProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16Udb.Core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_idp_entity_v1_scim_directory_state_proto_rawDescOnce sync.Once

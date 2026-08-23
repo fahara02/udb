@@ -85,7 +85,7 @@ public final class FlagProto {
       "\n\035com.udb.core.config.entity.v1B\tFlagPro" +
       "toP\001ZEgithub.com/fahara02/udb/sdk/go/gen" +
       "/udb/core/config/entity/v1;entityv1\242\002\004UC" +
-      "CE\252\002\031udb.core.Config.Entity.V1\312\002\031Udb\\Cor" +
+      "CE\252\002\031Udb.Core.Config.Entity.V1\312\002\031Udb\\Cor" +
       "e\\Config\\Entity\\V1\342\002%Udb\\GPBMetadata\\Cor" +
       "e\\Config\\Entity\\V1\352\002\035Udb::Core::Config::" +
       "Entity::V1b\006proto3"

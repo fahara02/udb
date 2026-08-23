@@ -263,7 +263,7 @@ public final class CacheServiceProto {
       "\002\n\036com.udb.core.cache.services.v1B\021Cache" +
       "ServiceProtoP\001ZHgithub.com/fahara02/udb/" +
       "sdk/go/gen/udb/core/cache/services/v1;se" +
-      "rvicesv1\242\002\004UCCS\252\002\032udb.core.Cache.Service" +
+      "rvicesv1\242\002\004UCCS\252\002\032Udb.Core.Cache.Service" +
       "s.V1\312\002\032Udb\\Core\\Cache\\Services\\V1\342\002&Udb\\" +
       "GPBMetadata\\Core\\Cache\\Services\\V1\352\002\036Udb" +
       "::Core::Cache::Services::V1b\006proto3"

@@ -251,7 +251,7 @@ public final class CoreProto {
       "@\001J\006apikeyP\001B\210\002\n\037com.udb.core.apikey.ser" +
       "vices.v1B\tCoreProtoP\001ZIgithub.com/fahara" +
       "02/udb/sdk/go/gen/udb/core/apikey/servic" +
-      "es/v1;servicesv1\242\002\004UCAS\252\002\033udb.core.Apike" +
+      "es/v1;servicesv1\242\002\004UCAS\252\002\033Udb.Core.Apike" +
       "y.Services.V1\312\002\033Udb\\Core\\Apikey\\Services" +
       "\\V1\342\002\'Udb\\GPBMetadata\\Core\\Apikey\\Servic" +
       "es\\V1\352\002\037Udb::Core::Apikey::Services::V1b" +

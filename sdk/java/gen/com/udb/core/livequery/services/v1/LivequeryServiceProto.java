@@ -119,8 +119,8 @@ public final class LivequeryServiceProto {
       "_TARGETB\246\002\n\"com.udb.core.livequery.servi" +
       "ces.v1B\025LivequeryServiceProtoP\001ZLgithub." +
       "com/fahara02/udb/sdk/go/gen/udb/core/liv" +
-      "equery/services/v1;servicesv1\242\002\004UCLS\252\002\036u" +
-      "db.core.LiveQuery.Services.V1\312\002\036Udb\\Core" +
+      "equery/services/v1;servicesv1\242\002\004UCLS\252\002\036U" +
+      "db.Core.LiveQuery.Services.V1\312\002\036Udb\\Core" +
       "\\Livequery\\Services\\V1\342\002*Udb\\GPBMetadata" +
       "\\Core\\Livequery\\Services\\V1\352\002\"Udb::Core:" +
       ":Livequery::Services::V1b\006proto3"

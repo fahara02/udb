@@ -759,7 +759,7 @@ public final class WebrtcServiceProto {
       "RGETB\221\002\n\037com.udb.core.webrtc.services.v1" +
       "B\022WebrtcServiceProtoP\001ZIgithub.com/fahar" +
       "a02/udb/sdk/go/gen/udb/core/webrtc/servi" +
-      "ces/v1;servicesv1\242\002\004UCWS\252\002\033udb.core.Webr" +
+      "ces/v1;servicesv1\242\002\004UCWS\252\002\033Udb.Core.Webr" +
       "tc.Services.V1\312\002\033Udb\\Core\\Webrtc\\Service" +
       "s\\V1\342\002\'Udb\\GPBMetadata\\Core\\Webrtc\\Servi" +
       "ces\\V1\352\002\037Udb::Core::Webrtc::Services::V1" +

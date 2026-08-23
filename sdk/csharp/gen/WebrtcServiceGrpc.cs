@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Webrtc.Services.V1 {
+namespace Udb.Core.Webrtc.Services.V1 {
   public static partial class RoomService
   {
     static readonly string __ServiceName = "udb.core.webrtc.services.v1.RoomService";
@@ -46,44 +46,44 @@ namespace udb.core.Webrtc.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.CreateRoomRequest> __Marshaller_udb_core_webrtc_services_v1_CreateRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.CreateRoomRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest> __Marshaller_udb_core_webrtc_services_v1_CreateRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.CreateRoomResponse> __Marshaller_udb_core_webrtc_services_v1_CreateRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.CreateRoomResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse> __Marshaller_udb_core_webrtc_services_v1_CreateRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.GetRoomRequest> __Marshaller_udb_core_webrtc_services_v1_GetRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.GetRoomRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.GetRoomRequest> __Marshaller_udb_core_webrtc_services_v1_GetRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.GetRoomRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.GetRoomResponse> __Marshaller_udb_core_webrtc_services_v1_GetRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.GetRoomResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.GetRoomResponse> __Marshaller_udb_core_webrtc_services_v1_GetRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.GetRoomResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.UpdateRoomRequest> __Marshaller_udb_core_webrtc_services_v1_UpdateRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.UpdateRoomRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest> __Marshaller_udb_core_webrtc_services_v1_UpdateRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.UpdateRoomResponse> __Marshaller_udb_core_webrtc_services_v1_UpdateRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.UpdateRoomResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse> __Marshaller_udb_core_webrtc_services_v1_UpdateRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.CloseRoomRequest> __Marshaller_udb_core_webrtc_services_v1_CloseRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.CloseRoomRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest> __Marshaller_udb_core_webrtc_services_v1_CloseRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.CloseRoomResponse> __Marshaller_udb_core_webrtc_services_v1_CloseRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.CloseRoomResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse> __Marshaller_udb_core_webrtc_services_v1_CloseRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListRoomsRequest> __Marshaller_udb_core_webrtc_services_v1_ListRoomsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListRoomsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest> __Marshaller_udb_core_webrtc_services_v1_ListRoomsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListRoomsResponse> __Marshaller_udb_core_webrtc_services_v1_ListRoomsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListRoomsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse> __Marshaller_udb_core_webrtc_services_v1_ListRoomsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest> __Marshaller_udb_core_webrtc_services_v1_StartRoomCompositeRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest> __Marshaller_udb_core_webrtc_services_v1_StartRoomCompositeRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> __Marshaller_udb_core_webrtc_services_v1_StartRoomCompositeResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse> __Marshaller_udb_core_webrtc_services_v1_StartRoomCompositeResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest> __Marshaller_udb_core_webrtc_services_v1_StartTrackEgressRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest> __Marshaller_udb_core_webrtc_services_v1_StartTrackEgressRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> __Marshaller_udb_core_webrtc_services_v1_StartTrackEgressResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse> __Marshaller_udb_core_webrtc_services_v1_StartTrackEgressResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StopEgressRequest> __Marshaller_udb_core_webrtc_services_v1_StopEgressRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StopEgressRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.StopEgressRequest> __Marshaller_udb_core_webrtc_services_v1_StopEgressRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.StopEgressRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StopEgressResponse> __Marshaller_udb_core_webrtc_services_v1_StopEgressResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StopEgressResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.StopEgressResponse> __Marshaller_udb_core_webrtc_services_v1_StopEgressResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.StopEgressResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListEgressRequest> __Marshaller_udb_core_webrtc_services_v1_ListEgressRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListEgressRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.ListEgressRequest> __Marshaller_udb_core_webrtc_services_v1_ListEgressRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.ListEgressRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListEgressResponse> __Marshaller_udb_core_webrtc_services_v1_ListEgressResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListEgressResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.ListEgressResponse> __Marshaller_udb_core_webrtc_services_v1_ListEgressResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.ListEgressResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.CreateRoomRequest, global::udb.core.Webrtc.Services.V1.CreateRoomResponse> __Method_CreateRoom = new grpc::Method<global::udb.core.Webrtc.Services.V1.CreateRoomRequest, global::udb.core.Webrtc.Services.V1.CreateRoomResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest, global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse> __Method_CreateRoom = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest, global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreateRoom",
@@ -91,7 +91,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_CreateRoomResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.GetRoomRequest, global::udb.core.Webrtc.Services.V1.GetRoomResponse> __Method_GetRoom = new grpc::Method<global::udb.core.Webrtc.Services.V1.GetRoomRequest, global::udb.core.Webrtc.Services.V1.GetRoomResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.GetRoomRequest, global::Udb.Core.Webrtc.Services.V1.GetRoomResponse> __Method_GetRoom = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.GetRoomRequest, global::Udb.Core.Webrtc.Services.V1.GetRoomResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetRoom",
@@ -99,7 +99,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_GetRoomResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.UpdateRoomRequest, global::udb.core.Webrtc.Services.V1.UpdateRoomResponse> __Method_UpdateRoom = new grpc::Method<global::udb.core.Webrtc.Services.V1.UpdateRoomRequest, global::udb.core.Webrtc.Services.V1.UpdateRoomResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest, global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse> __Method_UpdateRoom = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest, global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UpdateRoom",
@@ -107,7 +107,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_UpdateRoomResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.CloseRoomRequest, global::udb.core.Webrtc.Services.V1.CloseRoomResponse> __Method_CloseRoom = new grpc::Method<global::udb.core.Webrtc.Services.V1.CloseRoomRequest, global::udb.core.Webrtc.Services.V1.CloseRoomResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest, global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse> __Method_CloseRoom = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest, global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CloseRoom",
@@ -115,7 +115,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_CloseRoomResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.ListRoomsRequest, global::udb.core.Webrtc.Services.V1.ListRoomsResponse> __Method_ListRooms = new grpc::Method<global::udb.core.Webrtc.Services.V1.ListRoomsRequest, global::udb.core.Webrtc.Services.V1.ListRoomsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest, global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse> __Method_ListRooms = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest, global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListRooms",
@@ -123,7 +123,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_ListRoomsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest, global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> __Method_StartRoomComposite = new grpc::Method<global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest, global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest, global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse> __Method_StartRoomComposite = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest, global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "StartRoomComposite",
@@ -131,7 +131,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_StartRoomCompositeResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest, global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> __Method_StartTrackEgress = new grpc::Method<global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest, global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest, global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse> __Method_StartTrackEgress = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest, global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "StartTrackEgress",
@@ -139,7 +139,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_StartTrackEgressResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.StopEgressRequest, global::udb.core.Webrtc.Services.V1.StopEgressResponse> __Method_StopEgress = new grpc::Method<global::udb.core.Webrtc.Services.V1.StopEgressRequest, global::udb.core.Webrtc.Services.V1.StopEgressResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.StopEgressRequest, global::Udb.Core.Webrtc.Services.V1.StopEgressResponse> __Method_StopEgress = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.StopEgressRequest, global::Udb.Core.Webrtc.Services.V1.StopEgressResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "StopEgress",
@@ -147,7 +147,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_StopEgressResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.ListEgressRequest, global::udb.core.Webrtc.Services.V1.ListEgressResponse> __Method_ListEgress = new grpc::Method<global::udb.core.Webrtc.Services.V1.ListEgressRequest, global::udb.core.Webrtc.Services.V1.ListEgressResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.ListEgressRequest, global::Udb.Core.Webrtc.Services.V1.ListEgressResponse> __Method_ListEgress = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.ListEgressRequest, global::Udb.Core.Webrtc.Services.V1.ListEgressResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListEgress",
@@ -157,7 +157,7 @@ namespace udb.core.Webrtc.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of RoomService</summary>
@@ -171,7 +171,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.CreateRoomResponse> CreateRoom(global::udb.core.Webrtc.Services.V1.CreateRoomRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse> CreateRoom(global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -183,7 +183,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.GetRoomResponse> GetRoom(global::udb.core.Webrtc.Services.V1.GetRoomRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.GetRoomResponse> GetRoom(global::Udb.Core.Webrtc.Services.V1.GetRoomRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -195,7 +195,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.UpdateRoomResponse> UpdateRoom(global::udb.core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse> UpdateRoom(global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -207,7 +207,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.CloseRoomResponse> CloseRoom(global::udb.core.Webrtc.Services.V1.CloseRoomRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse> CloseRoom(global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -219,7 +219,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.ListRoomsResponse> ListRooms(global::udb.core.Webrtc.Services.V1.ListRoomsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse> ListRooms(global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -231,7 +231,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> StartRoomComposite(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse> StartRoomComposite(global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -243,7 +243,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> StartTrackEgress(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse> StartTrackEgress(global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -255,7 +255,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.StopEgressResponse> StopEgress(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.StopEgressResponse> StopEgress(global::Udb.Core.Webrtc.Services.V1.StopEgressRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -267,7 +267,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.ListEgressResponse> ListEgress(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.ListEgressResponse> ListEgress(global::Udb.Core.Webrtc.Services.V1.ListEgressRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -310,7 +310,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.CreateRoomResponse CreateRoom(global::udb.core.Webrtc.Services.V1.CreateRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse CreateRoom(global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateRoom(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -321,7 +321,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.CreateRoomResponse CreateRoom(global::udb.core.Webrtc.Services.V1.CreateRoomRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse CreateRoom(global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreateRoom, null, options, request);
       }
@@ -334,7 +334,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.CreateRoomResponse> CreateRoomAsync(global::udb.core.Webrtc.Services.V1.CreateRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse> CreateRoomAsync(global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateRoomAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -345,7 +345,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.CreateRoomResponse> CreateRoomAsync(global::udb.core.Webrtc.Services.V1.CreateRoomRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse> CreateRoomAsync(global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreateRoom, null, options, request);
       }
@@ -358,7 +358,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.GetRoomResponse GetRoom(global::udb.core.Webrtc.Services.V1.GetRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.GetRoomResponse GetRoom(global::Udb.Core.Webrtc.Services.V1.GetRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetRoom(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -369,7 +369,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.GetRoomResponse GetRoom(global::udb.core.Webrtc.Services.V1.GetRoomRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.GetRoomResponse GetRoom(global::Udb.Core.Webrtc.Services.V1.GetRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetRoom, null, options, request);
       }
@@ -382,7 +382,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.GetRoomResponse> GetRoomAsync(global::udb.core.Webrtc.Services.V1.GetRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.GetRoomResponse> GetRoomAsync(global::Udb.Core.Webrtc.Services.V1.GetRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetRoomAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -393,7 +393,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.GetRoomResponse> GetRoomAsync(global::udb.core.Webrtc.Services.V1.GetRoomRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.GetRoomResponse> GetRoomAsync(global::Udb.Core.Webrtc.Services.V1.GetRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetRoom, null, options, request);
       }
@@ -406,7 +406,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.UpdateRoomResponse UpdateRoom(global::udb.core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse UpdateRoom(global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateRoom(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -417,7 +417,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.UpdateRoomResponse UpdateRoom(global::udb.core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse UpdateRoom(global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UpdateRoom, null, options, request);
       }
@@ -430,7 +430,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.UpdateRoomResponse> UpdateRoomAsync(global::udb.core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse> UpdateRoomAsync(global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateRoomAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -441,7 +441,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.UpdateRoomResponse> UpdateRoomAsync(global::udb.core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse> UpdateRoomAsync(global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UpdateRoom, null, options, request);
       }
@@ -454,7 +454,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.CloseRoomResponse CloseRoom(global::udb.core.Webrtc.Services.V1.CloseRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse CloseRoom(global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CloseRoom(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -465,7 +465,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.CloseRoomResponse CloseRoom(global::udb.core.Webrtc.Services.V1.CloseRoomRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse CloseRoom(global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CloseRoom, null, options, request);
       }
@@ -478,7 +478,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.CloseRoomResponse> CloseRoomAsync(global::udb.core.Webrtc.Services.V1.CloseRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse> CloseRoomAsync(global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CloseRoomAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -489,7 +489,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.CloseRoomResponse> CloseRoomAsync(global::udb.core.Webrtc.Services.V1.CloseRoomRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse> CloseRoomAsync(global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CloseRoom, null, options, request);
       }
@@ -502,7 +502,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.ListRoomsResponse ListRooms(global::udb.core.Webrtc.Services.V1.ListRoomsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse ListRooms(global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListRooms(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -513,7 +513,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.ListRoomsResponse ListRooms(global::udb.core.Webrtc.Services.V1.ListRoomsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse ListRooms(global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListRooms, null, options, request);
       }
@@ -526,7 +526,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListRoomsResponse> ListRoomsAsync(global::udb.core.Webrtc.Services.V1.ListRoomsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse> ListRoomsAsync(global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListRoomsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -537,7 +537,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListRoomsResponse> ListRoomsAsync(global::udb.core.Webrtc.Services.V1.ListRoomsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse> ListRoomsAsync(global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListRooms, null, options, request);
       }
@@ -550,7 +550,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse StartRoomComposite(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse StartRoomComposite(global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartRoomComposite(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -561,7 +561,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse StartRoomComposite(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse StartRoomComposite(global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_StartRoomComposite, null, options, request);
       }
@@ -574,7 +574,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> StartRoomCompositeAsync(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse> StartRoomCompositeAsync(global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartRoomCompositeAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -585,7 +585,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> StartRoomCompositeAsync(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse> StartRoomCompositeAsync(global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_StartRoomComposite, null, options, request);
       }
@@ -598,7 +598,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse StartTrackEgress(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse StartTrackEgress(global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartTrackEgress(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -609,7 +609,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse StartTrackEgress(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse StartTrackEgress(global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_StartTrackEgress, null, options, request);
       }
@@ -622,7 +622,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> StartTrackEgressAsync(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse> StartTrackEgressAsync(global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartTrackEgressAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -633,7 +633,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> StartTrackEgressAsync(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse> StartTrackEgressAsync(global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_StartTrackEgress, null, options, request);
       }
@@ -646,7 +646,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.StopEgressResponse StopEgress(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.StopEgressResponse StopEgress(global::Udb.Core.Webrtc.Services.V1.StopEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StopEgress(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -657,7 +657,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.StopEgressResponse StopEgress(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.StopEgressResponse StopEgress(global::Udb.Core.Webrtc.Services.V1.StopEgressRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_StopEgress, null, options, request);
       }
@@ -670,7 +670,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StopEgressResponse> StopEgressAsync(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.StopEgressResponse> StopEgressAsync(global::Udb.Core.Webrtc.Services.V1.StopEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StopEgressAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -681,7 +681,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StopEgressResponse> StopEgressAsync(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.StopEgressResponse> StopEgressAsync(global::Udb.Core.Webrtc.Services.V1.StopEgressRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_StopEgress, null, options, request);
       }
@@ -694,7 +694,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.ListEgressResponse ListEgress(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.ListEgressResponse ListEgress(global::Udb.Core.Webrtc.Services.V1.ListEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListEgress(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -705,7 +705,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.ListEgressResponse ListEgress(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.ListEgressResponse ListEgress(global::Udb.Core.Webrtc.Services.V1.ListEgressRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListEgress, null, options, request);
       }
@@ -718,7 +718,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListEgressResponse> ListEgressAsync(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.ListEgressResponse> ListEgressAsync(global::Udb.Core.Webrtc.Services.V1.ListEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListEgressAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -729,7 +729,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListEgressResponse> ListEgressAsync(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.ListEgressResponse> ListEgressAsync(global::Udb.Core.Webrtc.Services.V1.ListEgressRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListEgress, null, options, request);
       }
@@ -765,15 +765,15 @@ namespace udb.core.Webrtc.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, RoomServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_CreateRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.CreateRoomRequest, global::udb.core.Webrtc.Services.V1.CreateRoomResponse>(serviceImpl.CreateRoom));
-      serviceBinder.AddMethod(__Method_GetRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.GetRoomRequest, global::udb.core.Webrtc.Services.V1.GetRoomResponse>(serviceImpl.GetRoom));
-      serviceBinder.AddMethod(__Method_UpdateRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.UpdateRoomRequest, global::udb.core.Webrtc.Services.V1.UpdateRoomResponse>(serviceImpl.UpdateRoom));
-      serviceBinder.AddMethod(__Method_CloseRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.CloseRoomRequest, global::udb.core.Webrtc.Services.V1.CloseRoomResponse>(serviceImpl.CloseRoom));
-      serviceBinder.AddMethod(__Method_ListRooms, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.ListRoomsRequest, global::udb.core.Webrtc.Services.V1.ListRoomsResponse>(serviceImpl.ListRooms));
-      serviceBinder.AddMethod(__Method_StartRoomComposite, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest, global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse>(serviceImpl.StartRoomComposite));
-      serviceBinder.AddMethod(__Method_StartTrackEgress, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest, global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse>(serviceImpl.StartTrackEgress));
-      serviceBinder.AddMethod(__Method_StopEgress, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.StopEgressRequest, global::udb.core.Webrtc.Services.V1.StopEgressResponse>(serviceImpl.StopEgress));
-      serviceBinder.AddMethod(__Method_ListEgress, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.ListEgressRequest, global::udb.core.Webrtc.Services.V1.ListEgressResponse>(serviceImpl.ListEgress));
+      serviceBinder.AddMethod(__Method_CreateRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.CreateRoomRequest, global::Udb.Core.Webrtc.Services.V1.CreateRoomResponse>(serviceImpl.CreateRoom));
+      serviceBinder.AddMethod(__Method_GetRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.GetRoomRequest, global::Udb.Core.Webrtc.Services.V1.GetRoomResponse>(serviceImpl.GetRoom));
+      serviceBinder.AddMethod(__Method_UpdateRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.UpdateRoomRequest, global::Udb.Core.Webrtc.Services.V1.UpdateRoomResponse>(serviceImpl.UpdateRoom));
+      serviceBinder.AddMethod(__Method_CloseRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.CloseRoomRequest, global::Udb.Core.Webrtc.Services.V1.CloseRoomResponse>(serviceImpl.CloseRoom));
+      serviceBinder.AddMethod(__Method_ListRooms, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.ListRoomsRequest, global::Udb.Core.Webrtc.Services.V1.ListRoomsResponse>(serviceImpl.ListRooms));
+      serviceBinder.AddMethod(__Method_StartRoomComposite, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeRequest, global::Udb.Core.Webrtc.Services.V1.StartRoomCompositeResponse>(serviceImpl.StartRoomComposite));
+      serviceBinder.AddMethod(__Method_StartTrackEgress, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.StartTrackEgressRequest, global::Udb.Core.Webrtc.Services.V1.StartTrackEgressResponse>(serviceImpl.StartTrackEgress));
+      serviceBinder.AddMethod(__Method_StopEgress, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.StopEgressRequest, global::Udb.Core.Webrtc.Services.V1.StopEgressResponse>(serviceImpl.StopEgress));
+      serviceBinder.AddMethod(__Method_ListEgress, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.ListEgressRequest, global::Udb.Core.Webrtc.Services.V1.ListEgressResponse>(serviceImpl.ListEgress));
     }
 
   }
@@ -815,28 +815,28 @@ namespace udb.core.Webrtc.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.JoinRoomRequest> __Marshaller_udb_core_webrtc_services_v1_JoinRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.JoinRoomRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest> __Marshaller_udb_core_webrtc_services_v1_JoinRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.JoinRoomResponse> __Marshaller_udb_core_webrtc_services_v1_JoinRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.JoinRoomResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse> __Marshaller_udb_core_webrtc_services_v1_JoinRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.JoinSessionRequest> __Marshaller_udb_core_webrtc_services_v1_JoinSessionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.JoinSessionRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest> __Marshaller_udb_core_webrtc_services_v1_JoinSessionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.JoinSessionResponse> __Marshaller_udb_core_webrtc_services_v1_JoinSessionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.JoinSessionResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse> __Marshaller_udb_core_webrtc_services_v1_JoinSessionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.LeaveRoomRequest> __Marshaller_udb_core_webrtc_services_v1_LeaveRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.LeaveRoomRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest> __Marshaller_udb_core_webrtc_services_v1_LeaveRoomRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.LeaveRoomResponse> __Marshaller_udb_core_webrtc_services_v1_LeaveRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.LeaveRoomResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse> __Marshaller_udb_core_webrtc_services_v1_LeaveRoomResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.GetPeerRequest> __Marshaller_udb_core_webrtc_services_v1_GetPeerRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.GetPeerRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.GetPeerRequest> __Marshaller_udb_core_webrtc_services_v1_GetPeerRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.GetPeerRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.GetPeerResponse> __Marshaller_udb_core_webrtc_services_v1_GetPeerResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.GetPeerResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.GetPeerResponse> __Marshaller_udb_core_webrtc_services_v1_GetPeerResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.GetPeerResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListPeersRequest> __Marshaller_udb_core_webrtc_services_v1_ListPeersRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListPeersRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.ListPeersRequest> __Marshaller_udb_core_webrtc_services_v1_ListPeersRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.ListPeersRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListPeersResponse> __Marshaller_udb_core_webrtc_services_v1_ListPeersResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListPeersResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.ListPeersResponse> __Marshaller_udb_core_webrtc_services_v1_ListPeersResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.ListPeersResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.JoinRoomRequest, global::udb.core.Webrtc.Services.V1.JoinRoomResponse> __Method_JoinRoom = new grpc::Method<global::udb.core.Webrtc.Services.V1.JoinRoomRequest, global::udb.core.Webrtc.Services.V1.JoinRoomResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest, global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse> __Method_JoinRoom = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest, global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "JoinRoom",
@@ -844,7 +844,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_JoinRoomResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.JoinSessionRequest, global::udb.core.Webrtc.Services.V1.JoinSessionResponse> __Method_JoinSession = new grpc::Method<global::udb.core.Webrtc.Services.V1.JoinSessionRequest, global::udb.core.Webrtc.Services.V1.JoinSessionResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest, global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse> __Method_JoinSession = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest, global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "JoinSession",
@@ -852,7 +852,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_JoinSessionResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.LeaveRoomRequest, global::udb.core.Webrtc.Services.V1.LeaveRoomResponse> __Method_LeaveRoom = new grpc::Method<global::udb.core.Webrtc.Services.V1.LeaveRoomRequest, global::udb.core.Webrtc.Services.V1.LeaveRoomResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest, global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse> __Method_LeaveRoom = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest, global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "LeaveRoom",
@@ -860,7 +860,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_LeaveRoomResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.GetPeerRequest, global::udb.core.Webrtc.Services.V1.GetPeerResponse> __Method_GetPeer = new grpc::Method<global::udb.core.Webrtc.Services.V1.GetPeerRequest, global::udb.core.Webrtc.Services.V1.GetPeerResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.GetPeerRequest, global::Udb.Core.Webrtc.Services.V1.GetPeerResponse> __Method_GetPeer = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.GetPeerRequest, global::Udb.Core.Webrtc.Services.V1.GetPeerResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetPeer",
@@ -868,7 +868,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_GetPeerResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.ListPeersRequest, global::udb.core.Webrtc.Services.V1.ListPeersResponse> __Method_ListPeers = new grpc::Method<global::udb.core.Webrtc.Services.V1.ListPeersRequest, global::udb.core.Webrtc.Services.V1.ListPeersResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.ListPeersRequest, global::Udb.Core.Webrtc.Services.V1.ListPeersResponse> __Method_ListPeers = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.ListPeersRequest, global::Udb.Core.Webrtc.Services.V1.ListPeersResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListPeers",
@@ -878,7 +878,7 @@ namespace udb.core.Webrtc.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[1]; }
+      get { return global::Udb.Core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[1]; }
     }
 
     /// <summary>Base class for server-side implementations of PeerService</summary>
@@ -892,7 +892,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.JoinRoomResponse> JoinRoom(global::udb.core.Webrtc.Services.V1.JoinRoomRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse> JoinRoom(global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -904,7 +904,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.JoinSessionResponse> JoinSession(global::udb.core.Webrtc.Services.V1.JoinSessionRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse> JoinSession(global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -916,7 +916,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.LeaveRoomResponse> LeaveRoom(global::udb.core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse> LeaveRoom(global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -928,7 +928,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.GetPeerResponse> GetPeer(global::udb.core.Webrtc.Services.V1.GetPeerRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.GetPeerResponse> GetPeer(global::Udb.Core.Webrtc.Services.V1.GetPeerRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -940,7 +940,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.ListPeersResponse> ListPeers(global::udb.core.Webrtc.Services.V1.ListPeersRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.ListPeersResponse> ListPeers(global::Udb.Core.Webrtc.Services.V1.ListPeersRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -983,7 +983,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.JoinRoomResponse JoinRoom(global::udb.core.Webrtc.Services.V1.JoinRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse JoinRoom(global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return JoinRoom(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -994,7 +994,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.JoinRoomResponse JoinRoom(global::udb.core.Webrtc.Services.V1.JoinRoomRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse JoinRoom(global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_JoinRoom, null, options, request);
       }
@@ -1007,7 +1007,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.JoinRoomResponse> JoinRoomAsync(global::udb.core.Webrtc.Services.V1.JoinRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse> JoinRoomAsync(global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return JoinRoomAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1018,7 +1018,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.JoinRoomResponse> JoinRoomAsync(global::udb.core.Webrtc.Services.V1.JoinRoomRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse> JoinRoomAsync(global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_JoinRoom, null, options, request);
       }
@@ -1031,7 +1031,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.JoinSessionResponse JoinSession(global::udb.core.Webrtc.Services.V1.JoinSessionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse JoinSession(global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return JoinSession(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1042,7 +1042,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.JoinSessionResponse JoinSession(global::udb.core.Webrtc.Services.V1.JoinSessionRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse JoinSession(global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_JoinSession, null, options, request);
       }
@@ -1055,7 +1055,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.JoinSessionResponse> JoinSessionAsync(global::udb.core.Webrtc.Services.V1.JoinSessionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse> JoinSessionAsync(global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return JoinSessionAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1066,7 +1066,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.JoinSessionResponse> JoinSessionAsync(global::udb.core.Webrtc.Services.V1.JoinSessionRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse> JoinSessionAsync(global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_JoinSession, null, options, request);
       }
@@ -1079,7 +1079,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.LeaveRoomResponse LeaveRoom(global::udb.core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse LeaveRoom(global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return LeaveRoom(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1090,7 +1090,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.LeaveRoomResponse LeaveRoom(global::udb.core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse LeaveRoom(global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_LeaveRoom, null, options, request);
       }
@@ -1103,7 +1103,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.LeaveRoomResponse> LeaveRoomAsync(global::udb.core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse> LeaveRoomAsync(global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return LeaveRoomAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1114,7 +1114,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.LeaveRoomResponse> LeaveRoomAsync(global::udb.core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse> LeaveRoomAsync(global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_LeaveRoom, null, options, request);
       }
@@ -1127,7 +1127,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.GetPeerResponse GetPeer(global::udb.core.Webrtc.Services.V1.GetPeerRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.GetPeerResponse GetPeer(global::Udb.Core.Webrtc.Services.V1.GetPeerRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPeer(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1138,7 +1138,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.GetPeerResponse GetPeer(global::udb.core.Webrtc.Services.V1.GetPeerRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.GetPeerResponse GetPeer(global::Udb.Core.Webrtc.Services.V1.GetPeerRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetPeer, null, options, request);
       }
@@ -1151,7 +1151,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.GetPeerResponse> GetPeerAsync(global::udb.core.Webrtc.Services.V1.GetPeerRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.GetPeerResponse> GetPeerAsync(global::Udb.Core.Webrtc.Services.V1.GetPeerRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPeerAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1162,7 +1162,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.GetPeerResponse> GetPeerAsync(global::udb.core.Webrtc.Services.V1.GetPeerRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.GetPeerResponse> GetPeerAsync(global::Udb.Core.Webrtc.Services.V1.GetPeerRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetPeer, null, options, request);
       }
@@ -1175,7 +1175,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.ListPeersResponse ListPeers(global::udb.core.Webrtc.Services.V1.ListPeersRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.ListPeersResponse ListPeers(global::Udb.Core.Webrtc.Services.V1.ListPeersRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListPeers(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1186,7 +1186,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.ListPeersResponse ListPeers(global::udb.core.Webrtc.Services.V1.ListPeersRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.ListPeersResponse ListPeers(global::Udb.Core.Webrtc.Services.V1.ListPeersRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListPeers, null, options, request);
       }
@@ -1199,7 +1199,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListPeersResponse> ListPeersAsync(global::udb.core.Webrtc.Services.V1.ListPeersRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.ListPeersResponse> ListPeersAsync(global::Udb.Core.Webrtc.Services.V1.ListPeersRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListPeersAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1210,7 +1210,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListPeersResponse> ListPeersAsync(global::udb.core.Webrtc.Services.V1.ListPeersRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.ListPeersResponse> ListPeersAsync(global::Udb.Core.Webrtc.Services.V1.ListPeersRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListPeers, null, options, request);
       }
@@ -1242,11 +1242,11 @@ namespace udb.core.Webrtc.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, PeerServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_JoinRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.JoinRoomRequest, global::udb.core.Webrtc.Services.V1.JoinRoomResponse>(serviceImpl.JoinRoom));
-      serviceBinder.AddMethod(__Method_JoinSession, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.JoinSessionRequest, global::udb.core.Webrtc.Services.V1.JoinSessionResponse>(serviceImpl.JoinSession));
-      serviceBinder.AddMethod(__Method_LeaveRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.LeaveRoomRequest, global::udb.core.Webrtc.Services.V1.LeaveRoomResponse>(serviceImpl.LeaveRoom));
-      serviceBinder.AddMethod(__Method_GetPeer, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.GetPeerRequest, global::udb.core.Webrtc.Services.V1.GetPeerResponse>(serviceImpl.GetPeer));
-      serviceBinder.AddMethod(__Method_ListPeers, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.ListPeersRequest, global::udb.core.Webrtc.Services.V1.ListPeersResponse>(serviceImpl.ListPeers));
+      serviceBinder.AddMethod(__Method_JoinRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.JoinRoomRequest, global::Udb.Core.Webrtc.Services.V1.JoinRoomResponse>(serviceImpl.JoinRoom));
+      serviceBinder.AddMethod(__Method_JoinSession, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.JoinSessionRequest, global::Udb.Core.Webrtc.Services.V1.JoinSessionResponse>(serviceImpl.JoinSession));
+      serviceBinder.AddMethod(__Method_LeaveRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.LeaveRoomRequest, global::Udb.Core.Webrtc.Services.V1.LeaveRoomResponse>(serviceImpl.LeaveRoom));
+      serviceBinder.AddMethod(__Method_GetPeer, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.GetPeerRequest, global::Udb.Core.Webrtc.Services.V1.GetPeerResponse>(serviceImpl.GetPeer));
+      serviceBinder.AddMethod(__Method_ListPeers, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.ListPeersRequest, global::Udb.Core.Webrtc.Services.V1.ListPeersResponse>(serviceImpl.ListPeers));
     }
 
   }
@@ -1288,24 +1288,24 @@ namespace udb.core.Webrtc.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.PublishTrackRequest> __Marshaller_udb_core_webrtc_services_v1_PublishTrackRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.PublishTrackRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest> __Marshaller_udb_core_webrtc_services_v1_PublishTrackRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.PublishTrackResponse> __Marshaller_udb_core_webrtc_services_v1_PublishTrackResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.PublishTrackResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse> __Marshaller_udb_core_webrtc_services_v1_PublishTrackResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest> __Marshaller_udb_core_webrtc_services_v1_UnpublishTrackRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest> __Marshaller_udb_core_webrtc_services_v1_UnpublishTrackRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse> __Marshaller_udb_core_webrtc_services_v1_UnpublishTrackResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse> __Marshaller_udb_core_webrtc_services_v1_UnpublishTrackResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.MuteTrackRequest> __Marshaller_udb_core_webrtc_services_v1_MuteTrackRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.MuteTrackRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest> __Marshaller_udb_core_webrtc_services_v1_MuteTrackRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.MuteTrackResponse> __Marshaller_udb_core_webrtc_services_v1_MuteTrackResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.MuteTrackResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse> __Marshaller_udb_core_webrtc_services_v1_MuteTrackResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListTracksRequest> __Marshaller_udb_core_webrtc_services_v1_ListTracksRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListTracksRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.ListTracksRequest> __Marshaller_udb_core_webrtc_services_v1_ListTracksRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.ListTracksRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListTracksResponse> __Marshaller_udb_core_webrtc_services_v1_ListTracksResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListTracksResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.ListTracksResponse> __Marshaller_udb_core_webrtc_services_v1_ListTracksResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.ListTracksResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.PublishTrackRequest, global::udb.core.Webrtc.Services.V1.PublishTrackResponse> __Method_PublishTrack = new grpc::Method<global::udb.core.Webrtc.Services.V1.PublishTrackRequest, global::udb.core.Webrtc.Services.V1.PublishTrackResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest, global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse> __Method_PublishTrack = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest, global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PublishTrack",
@@ -1313,7 +1313,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_PublishTrackResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest, global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse> __Method_UnpublishTrack = new grpc::Method<global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest, global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest, global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse> __Method_UnpublishTrack = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest, global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UnpublishTrack",
@@ -1321,7 +1321,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_UnpublishTrackResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.MuteTrackRequest, global::udb.core.Webrtc.Services.V1.MuteTrackResponse> __Method_MuteTrack = new grpc::Method<global::udb.core.Webrtc.Services.V1.MuteTrackRequest, global::udb.core.Webrtc.Services.V1.MuteTrackResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest, global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse> __Method_MuteTrack = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest, global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "MuteTrack",
@@ -1329,7 +1329,7 @@ namespace udb.core.Webrtc.Services.V1 {
         __Marshaller_udb_core_webrtc_services_v1_MuteTrackResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.ListTracksRequest, global::udb.core.Webrtc.Services.V1.ListTracksResponse> __Method_ListTracks = new grpc::Method<global::udb.core.Webrtc.Services.V1.ListTracksRequest, global::udb.core.Webrtc.Services.V1.ListTracksResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.ListTracksRequest, global::Udb.Core.Webrtc.Services.V1.ListTracksResponse> __Method_ListTracks = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.ListTracksRequest, global::Udb.Core.Webrtc.Services.V1.ListTracksResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListTracks",
@@ -1339,7 +1339,7 @@ namespace udb.core.Webrtc.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[2]; }
+      get { return global::Udb.Core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[2]; }
     }
 
     /// <summary>Base class for server-side implementations of TrackService</summary>
@@ -1353,7 +1353,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.PublishTrackResponse> PublishTrack(global::udb.core.Webrtc.Services.V1.PublishTrackRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse> PublishTrack(global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1365,7 +1365,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse> UnpublishTrack(global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse> UnpublishTrack(global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1377,7 +1377,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.MuteTrackResponse> MuteTrack(global::udb.core.Webrtc.Services.V1.MuteTrackRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse> MuteTrack(global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1389,7 +1389,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.ListTracksResponse> ListTracks(global::udb.core.Webrtc.Services.V1.ListTracksRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.ListTracksResponse> ListTracks(global::Udb.Core.Webrtc.Services.V1.ListTracksRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1432,7 +1432,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.PublishTrackResponse PublishTrack(global::udb.core.Webrtc.Services.V1.PublishTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse PublishTrack(global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PublishTrack(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1443,7 +1443,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.PublishTrackResponse PublishTrack(global::udb.core.Webrtc.Services.V1.PublishTrackRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse PublishTrack(global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PublishTrack, null, options, request);
       }
@@ -1456,7 +1456,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.PublishTrackResponse> PublishTrackAsync(global::udb.core.Webrtc.Services.V1.PublishTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse> PublishTrackAsync(global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PublishTrackAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1467,7 +1467,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.PublishTrackResponse> PublishTrackAsync(global::udb.core.Webrtc.Services.V1.PublishTrackRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse> PublishTrackAsync(global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PublishTrack, null, options, request);
       }
@@ -1480,7 +1480,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse UnpublishTrack(global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse UnpublishTrack(global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UnpublishTrack(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1491,7 +1491,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse UnpublishTrack(global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse UnpublishTrack(global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UnpublishTrack, null, options, request);
       }
@@ -1504,7 +1504,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse> UnpublishTrackAsync(global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse> UnpublishTrackAsync(global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UnpublishTrackAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1515,7 +1515,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse> UnpublishTrackAsync(global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse> UnpublishTrackAsync(global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UnpublishTrack, null, options, request);
       }
@@ -1528,7 +1528,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.MuteTrackResponse MuteTrack(global::udb.core.Webrtc.Services.V1.MuteTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse MuteTrack(global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return MuteTrack(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1539,7 +1539,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.MuteTrackResponse MuteTrack(global::udb.core.Webrtc.Services.V1.MuteTrackRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse MuteTrack(global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_MuteTrack, null, options, request);
       }
@@ -1552,7 +1552,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.MuteTrackResponse> MuteTrackAsync(global::udb.core.Webrtc.Services.V1.MuteTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse> MuteTrackAsync(global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return MuteTrackAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1563,7 +1563,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.MuteTrackResponse> MuteTrackAsync(global::udb.core.Webrtc.Services.V1.MuteTrackRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse> MuteTrackAsync(global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_MuteTrack, null, options, request);
       }
@@ -1576,7 +1576,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.ListTracksResponse ListTracks(global::udb.core.Webrtc.Services.V1.ListTracksRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.ListTracksResponse ListTracks(global::Udb.Core.Webrtc.Services.V1.ListTracksRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListTracks(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1587,7 +1587,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.ListTracksResponse ListTracks(global::udb.core.Webrtc.Services.V1.ListTracksRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.ListTracksResponse ListTracks(global::Udb.Core.Webrtc.Services.V1.ListTracksRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListTracks, null, options, request);
       }
@@ -1600,7 +1600,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListTracksResponse> ListTracksAsync(global::udb.core.Webrtc.Services.V1.ListTracksRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.ListTracksResponse> ListTracksAsync(global::Udb.Core.Webrtc.Services.V1.ListTracksRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListTracksAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1611,7 +1611,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListTracksResponse> ListTracksAsync(global::udb.core.Webrtc.Services.V1.ListTracksRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.ListTracksResponse> ListTracksAsync(global::Udb.Core.Webrtc.Services.V1.ListTracksRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListTracks, null, options, request);
       }
@@ -1642,10 +1642,10 @@ namespace udb.core.Webrtc.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, TrackServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_PublishTrack, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.PublishTrackRequest, global::udb.core.Webrtc.Services.V1.PublishTrackResponse>(serviceImpl.PublishTrack));
-      serviceBinder.AddMethod(__Method_UnpublishTrack, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.UnpublishTrackRequest, global::udb.core.Webrtc.Services.V1.UnpublishTrackResponse>(serviceImpl.UnpublishTrack));
-      serviceBinder.AddMethod(__Method_MuteTrack, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.MuteTrackRequest, global::udb.core.Webrtc.Services.V1.MuteTrackResponse>(serviceImpl.MuteTrack));
-      serviceBinder.AddMethod(__Method_ListTracks, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.ListTracksRequest, global::udb.core.Webrtc.Services.V1.ListTracksResponse>(serviceImpl.ListTracks));
+      serviceBinder.AddMethod(__Method_PublishTrack, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.PublishTrackRequest, global::Udb.Core.Webrtc.Services.V1.PublishTrackResponse>(serviceImpl.PublishTrack));
+      serviceBinder.AddMethod(__Method_UnpublishTrack, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.UnpublishTrackRequest, global::Udb.Core.Webrtc.Services.V1.UnpublishTrackResponse>(serviceImpl.UnpublishTrack));
+      serviceBinder.AddMethod(__Method_MuteTrack, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.MuteTrackRequest, global::Udb.Core.Webrtc.Services.V1.MuteTrackResponse>(serviceImpl.MuteTrack));
+      serviceBinder.AddMethod(__Method_ListTracks, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.ListTracksRequest, global::Udb.Core.Webrtc.Services.V1.ListTracksResponse>(serviceImpl.ListTracks));
     }
 
   }
@@ -1687,12 +1687,12 @@ namespace udb.core.Webrtc.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest> __Marshaller_udb_core_webrtc_services_v1_IssueCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest> __Marshaller_udb_core_webrtc_services_v1_IssueCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse> __Marshaller_udb_core_webrtc_services_v1_IssueCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse> __Marshaller_udb_core_webrtc_services_v1_IssueCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest, global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse> __Method_IssueCredentials = new grpc::Method<global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest, global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest, global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse> __Method_IssueCredentials = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest, global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "IssueCredentials",
@@ -1702,7 +1702,7 @@ namespace udb.core.Webrtc.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[3]; }
+      get { return global::Udb.Core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[3]; }
     }
 
     /// <summary>Base class for server-side implementations of TurnService</summary>
@@ -1716,7 +1716,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse> IssueCredentials(global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse> IssueCredentials(global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1759,7 +1759,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse IssueCredentials(global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse IssueCredentials(global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return IssueCredentials(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1770,7 +1770,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse IssueCredentials(global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse IssueCredentials(global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_IssueCredentials, null, options, request);
       }
@@ -1783,7 +1783,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse> IssueCredentialsAsync(global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse> IssueCredentialsAsync(global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return IssueCredentialsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1794,7 +1794,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse> IssueCredentialsAsync(global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse> IssueCredentialsAsync(global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_IssueCredentials, null, options, request);
       }
@@ -1822,7 +1822,7 @@ namespace udb.core.Webrtc.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, TurnServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_IssueCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.IssueCredentialsRequest, global::udb.core.Webrtc.Services.V1.IssueCredentialsResponse>(serviceImpl.IssueCredentials));
+      serviceBinder.AddMethod(__Method_IssueCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webrtc.Services.V1.IssueCredentialsRequest, global::Udb.Core.Webrtc.Services.V1.IssueCredentialsResponse>(serviceImpl.IssueCredentials));
     }
 
   }
@@ -1864,12 +1864,12 @@ namespace udb.core.Webrtc.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.SignalRequest> __Marshaller_udb_core_webrtc_services_v1_SignalRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.SignalRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.SignalRequest> __Marshaller_udb_core_webrtc_services_v1_SignalRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.SignalRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.SignalResponse> __Marshaller_udb_core_webrtc_services_v1_SignalResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.SignalResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webrtc.Services.V1.SignalResponse> __Marshaller_udb_core_webrtc_services_v1_SignalResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webrtc.Services.V1.SignalResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.SignalRequest, global::udb.core.Webrtc.Services.V1.SignalResponse> __Method_Signal = new grpc::Method<global::udb.core.Webrtc.Services.V1.SignalRequest, global::udb.core.Webrtc.Services.V1.SignalResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webrtc.Services.V1.SignalRequest, global::Udb.Core.Webrtc.Services.V1.SignalResponse> __Method_Signal = new grpc::Method<global::Udb.Core.Webrtc.Services.V1.SignalRequest, global::Udb.Core.Webrtc.Services.V1.SignalResponse>(
         grpc::MethodType.DuplexStreaming,
         __ServiceName,
         "Signal",
@@ -1879,7 +1879,7 @@ namespace udb.core.Webrtc.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[4]; }
+      get { return global::Udb.Core.Webrtc.Services.V1.WebrtcServiceReflection.Descriptor.Services[4]; }
     }
 
     /// <summary>Base class for server-side implementations of SignalingService</summary>
@@ -1898,7 +1898,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>A task indicating completion of the handler.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task Signal(grpc::IAsyncStreamReader<global::udb.core.Webrtc.Services.V1.SignalRequest> requestStream, grpc::IServerStreamWriter<global::udb.core.Webrtc.Services.V1.SignalResponse> responseStream, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task Signal(grpc::IAsyncStreamReader<global::Udb.Core.Webrtc.Services.V1.SignalRequest> requestStream, grpc::IServerStreamWriter<global::Udb.Core.Webrtc.Services.V1.SignalResponse> responseStream, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1944,7 +1944,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncDuplexStreamingCall<global::udb.core.Webrtc.Services.V1.SignalRequest, global::udb.core.Webrtc.Services.V1.SignalResponse> Signal(grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncDuplexStreamingCall<global::Udb.Core.Webrtc.Services.V1.SignalRequest, global::Udb.Core.Webrtc.Services.V1.SignalResponse> Signal(grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Signal(new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1958,7 +1958,7 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncDuplexStreamingCall<global::udb.core.Webrtc.Services.V1.SignalRequest, global::udb.core.Webrtc.Services.V1.SignalResponse> Signal(grpc::CallOptions options)
+      public virtual grpc::AsyncDuplexStreamingCall<global::Udb.Core.Webrtc.Services.V1.SignalRequest, global::Udb.Core.Webrtc.Services.V1.SignalResponse> Signal(grpc::CallOptions options)
       {
         return CallInvoker.AsyncDuplexStreamingCall(__Method_Signal, null, options);
       }
@@ -1986,7 +1986,7 @@ namespace udb.core.Webrtc.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, SignalingServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_Signal, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::udb.core.Webrtc.Services.V1.SignalRequest, global::udb.core.Webrtc.Services.V1.SignalResponse>(serviceImpl.Signal));
+      serviceBinder.AddMethod(__Method_Signal, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Core.Webrtc.Services.V1.SignalRequest, global::Udb.Core.Webrtc.Services.V1.SignalResponse>(serviceImpl.Signal));
     }
 
   }

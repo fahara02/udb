@@ -129,7 +129,7 @@ const file_udb_core_authn_entity_v1_mfa_policy_proto_rawDesc = "" +
 	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tupdatedAt:\xe3\x01\xfa\xb6\x18J\n" +
 	"\fmfa_policies\x12\tudb_authn\x18\a \x01*!Per-tenant MFA enforcement policy\xea\x01\aprimary\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf9\x01\n" +
-	"\x1ccom.udb.core.authn.entity.v1B\x0eMfaPolicyProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authn.entity.v1B\x0eMfaPolicyProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_entity_v1_mfa_policy_proto_rawDescOnce sync.Once

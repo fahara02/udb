@@ -244,7 +244,7 @@ const file_udb_core_embedding_entity_v1_embedding_source_proto_rawDesc = "" +
 	"\bmodel_id\n" +
 	"\ttenant_id\x12\x10embedding_models\x1a\bmodel_id\x1a\ttenant_id\"\rudb_embedding(\x02:\x1afk_embedding_sources_model\xf2\x01#udb.embedding.embedding_sources.cdc\xfa\x01\x0eembedding:read\x8a\xb2\x19\x94\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x15embedding.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x97\x02\n" +
-	" com.udb.core.embedding.entity.v1B\x14EmbeddingSourceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/embedding/entity/v1;entityv1\xa2\x02\x04UCEE\xaa\x02\x1cudb.core.Embedding.Entity.V1\xca\x02\x1cUdb\\Core\\Embedding\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1\xea\x02 Udb::Core::Embedding::Entity::V1b\x06proto3"
+	" com.udb.core.embedding.entity.v1B\x14EmbeddingSourceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/embedding/entity/v1;entityv1\xa2\x02\x04UCEE\xaa\x02\x1cUdb.Core.Embedding.Entity.V1\xca\x02\x1cUdb\\Core\\Embedding\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1\xea\x02 Udb::Core::Embedding::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_embedding_entity_v1_embedding_source_proto_rawDescOnce sync.Once

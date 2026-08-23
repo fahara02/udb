@@ -228,7 +228,7 @@ const file_udb_core_config_entity_v1_flag_proto_rawDesc = "" +
 	"project_idZ\venvironmentZ\bflag_key\x8a\x012\n" +
 	"\x14idx_flags_tenant_key\x12\x05BTREEZ\ttenant_idZ\bflag_key\xf2\x01\x14udb.config.flags.cdc\xfa\x01\vconfig:read\x8a\xb2\x19\x91\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x12config.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfa\x01\n" +
-	"\x1dcom.udb.core.config.entity.v1B\tFlagProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/config/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x19udb.core.Config.Entity.V1\xca\x02\x19Udb\\Core\\Config\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Config\\Entity\\V1\xea\x02\x1dUdb::Core::Config::Entity::V1b\x06proto3"
+	"\x1dcom.udb.core.config.entity.v1B\tFlagProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/config/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x19Udb.Core.Config.Entity.V1\xca\x02\x19Udb\\Core\\Config\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Config\\Entity\\V1\xea\x02\x1dUdb::Core::Config::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_config_entity_v1_flag_proto_rawDescOnce sync.Once

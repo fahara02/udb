@@ -25,7 +25,7 @@ var File_udb_core_analytics_entity_v1_entities_proto protoreflect.FileDescriptor
 const file_udb_core_analytics_entity_v1_entities_proto_rawDesc = "" +
 	"\n" +
 	"+udb/core/analytics/entity/v1/entities.proto\x12\x1cudb.core.analytics.entity.v1\x1a?udb/core/analytics/entity/v1/executor_performance_summary.proto\x1a;udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x1aCudb/core/analytics/entity/v1/reconciliation_analytics_summary.protoB\x90\x02\n" +
-	" com.udb.core.analytics.entity.v1B\rEntitiesProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x1cudb.core.Analytics.Entity.V1\xca\x02\x1cUdb\\Core\\Analytics\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\xea\x02 Udb::Core::Analytics::Entity::V1P\x00P\x01P\x02b\x06proto3"
+	" com.udb.core.analytics.entity.v1B\rEntitiesProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x1cUdb.Core.Analytics.Entity.V1\xca\x02\x1cUdb\\Core\\Analytics\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\xea\x02 Udb::Core::Analytics::Entity::V1P\x00P\x01P\x02b\x06proto3"
 
 var file_udb_core_analytics_entity_v1_entities_proto_goTypes = []any{}
 var file_udb_core_analytics_entity_v1_entities_proto_depIdxs = []int32{

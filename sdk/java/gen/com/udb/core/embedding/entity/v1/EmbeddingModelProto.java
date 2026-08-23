@@ -135,8 +135,8 @@ public final class EmbeddingModelProto {
       "ta_residencyB\226\002\n com.udb.core.embedding." +
       "entity.v1B\023EmbeddingModelProtoP\001ZHgithub" +
       ".com/fahara02/udb/sdk/go/gen/udb/core/em" +
-      "bedding/entity/v1;entityv1\242\002\004UCEE\252\002\034udb." +
-      "core.Embedding.Entity.V1\312\002\034Udb\\Core\\Embe" +
+      "bedding/entity/v1;entityv1\242\002\004UCEE\252\002\034Udb." +
+      "Core.Embedding.Entity.V1\312\002\034Udb\\Core\\Embe" +
       "dding\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\E" +
       "mbedding\\Entity\\V1\352\002 Udb::Core::Embeddin" +
       "g::Entity::V1b\006proto3"

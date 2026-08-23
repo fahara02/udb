@@ -51,7 +51,7 @@ public final class EnumsProto {
       "D\020\004B\201\002\n\036com.udb.core.storage.entity.v1B\n" +
       "EnumsProtoP\001ZFgithub.com/fahara02/udb/sd" +
       "k/go/gen/udb/core/storage/entity/v1;enti" +
-      "tyv1\242\002\004UCSE\252\002\032udb.core.Storage.Entity.V1" +
+      "tyv1\242\002\004UCSE\252\002\032Udb.Core.Storage.Entity.V1" +
       "\312\002\032Udb\\Core\\Storage\\Entity\\V1\342\002&Udb\\GPBM" +
       "etadata\\Core\\Storage\\Entity\\V1\352\002\036Udb::Co" +
       "re::Storage::Entity::V1b\006proto3"

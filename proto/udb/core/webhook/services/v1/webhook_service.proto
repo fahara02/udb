@@ -9,7 +9,7 @@ import "udb/core/common/v1/security.proto";
 import "udb/core/webhook/entity/v1/webhook_endpoint.proto";
 import "udb/core/webhook/entity/v1/webhook_delivery.proto";
 
-option csharp_namespace = "udb.core.Webhook.Services.V1";
+option csharp_namespace = "Udb.Core.Webhook.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/webhook/services/v1;webhookservicev1";
 option java_package = "com.udb.core.webhook.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webhook\\Services\\V1";

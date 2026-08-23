@@ -46,8 +46,8 @@ public final class EntitiesProto {
       "thn/entity/v1/webauthn.protoB\370\001\n\034com.udb" +
       ".core.authn.entity.v1B\rEntitiesProtoP\001ZD" +
       "github.com/fahara02/udb/sdk/go/gen/udb/c" +
-      "ore/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030ud" +
-      "b.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\" +
+      "ore/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030Ud" +
+      "b.Core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\" +
       "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\E" +
       "ntity\\V1\352\002\034Udb::Core::Authn::Entity::V1P" +
       "\000P\001P\002P\003P\004P\005P\006b\006proto3"

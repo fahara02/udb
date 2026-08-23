@@ -1,5 +1,5 @@
 using Grpc.Core;
-using StorageV1 = udb.core.Storage.Services.V1;
+using StorageV1 = Udb.Core.Storage.Services.V1;
 
 namespace Udb.Client;
 

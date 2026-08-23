@@ -373,7 +373,7 @@ public final class TenantServiceProto {
       "udb.core.tenant.services.v1B\022TenantServi" +
       "ceProtoP\001ZIgithub.com/fahara02/udb/sdk/g" +
       "o/gen/udb/core/tenant/services/v1;servic" +
-      "esv1\242\002\004UCTS\252\002\033udb.core.Tenant.Services.V" +
+      "esv1\242\002\004UCTS\252\002\033Udb.Core.Tenant.Services.V" +
       "1\312\002\033Udb\\Core\\Tenant\\Services\\V1\342\002\'Udb\\GP" +
       "BMetadata\\Core\\Tenant\\Services\\V1\352\002\037Udb:" +
       ":Core::Tenant::Services::V1b\006proto3"

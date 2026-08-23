@@ -96,8 +96,8 @@ public final class TokenFamilyProto {
       "nal@\264\001H\002R\006tenantZ\010standardB\373\001\n\034com.udb.c" +
       "ore.authn.entity.v1B\020TokenFamilyProtoP\001Z" +
       "Dgithub.com/fahara02/udb/sdk/go/gen/udb/" +
-      "core/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030u" +
-      "db.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn" +
+      "core/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030U" +
+      "db.Core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn" +
       "\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\" +
       "Entity\\V1\352\002\034Udb::Core::Authn::Entity::V1" +
       "b\006proto3"

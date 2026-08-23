@@ -500,7 +500,7 @@ const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"project_idZ\x06status\xf2\x01\x1dudb.notification.delivery.cdc\x8a\xb2\x19\xe6\x01\n" +
 	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
 	"project_id*otenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')2\x04none:\x18notification.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xa9\x02\n" +
-	"#com.udb.core.notification.entity.v1B\x14NotificationLogProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
+	"#com.udb.core.notification.entity.v1B\x14NotificationLogProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fUdb.Core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_notification_entity_v1_notification_log_proto_rawDescOnce sync.Once

@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.LiveQuery.Services.V1 {
+namespace Udb.Core.LiveQuery.Services.V1 {
   /// <summary>
   /// LiveQueryService (master-plan 9.7) — query results that update themselves. A
   /// client subscribes to a tenant-scoped query over a source entity and receives
@@ -60,12 +60,12 @@ namespace udb.core.LiveQuery.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.LiveQuery.Services.V1.SubscribeRequest> __Marshaller_udb_core_livequery_services_v1_SubscribeRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.LiveQuery.Services.V1.SubscribeRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest> __Marshaller_udb_core_livequery_services_v1_SubscribeRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.LiveQuery.Services.V1.SubscribeResponse> __Marshaller_udb_core_livequery_services_v1_SubscribeResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.LiveQuery.Services.V1.SubscribeResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse> __Marshaller_udb_core_livequery_services_v1_SubscribeResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.LiveQuery.Services.V1.SubscribeRequest, global::udb.core.LiveQuery.Services.V1.SubscribeResponse> __Method_Subscribe = new grpc::Method<global::udb.core.LiveQuery.Services.V1.SubscribeRequest, global::udb.core.LiveQuery.Services.V1.SubscribeResponse>(
+    static readonly grpc::Method<global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest, global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse> __Method_Subscribe = new grpc::Method<global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest, global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse>(
         grpc::MethodType.ServerStreaming,
         __ServiceName,
         "Subscribe",
@@ -75,7 +75,7 @@ namespace udb.core.LiveQuery.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of LiveQueryService</summary>
@@ -94,7 +94,7 @@ namespace udb.core.LiveQuery.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>A task indicating completion of the handler.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task Subscribe(global::udb.core.LiveQuery.Services.V1.SubscribeRequest request, grpc::IServerStreamWriter<global::udb.core.LiveQuery.Services.V1.SubscribeResponse> responseStream, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task Subscribe(global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest request, grpc::IServerStreamWriter<global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse> responseStream, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -141,7 +141,7 @@ namespace udb.core.LiveQuery.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncServerStreamingCall<global::udb.core.LiveQuery.Services.V1.SubscribeResponse> Subscribe(global::udb.core.LiveQuery.Services.V1.SubscribeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncServerStreamingCall<global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse> Subscribe(global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Subscribe(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -156,7 +156,7 @@ namespace udb.core.LiveQuery.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncServerStreamingCall<global::udb.core.LiveQuery.Services.V1.SubscribeResponse> Subscribe(global::udb.core.LiveQuery.Services.V1.SubscribeRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncServerStreamingCall<global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse> Subscribe(global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncServerStreamingCall(__Method_Subscribe, null, options, request);
       }
@@ -184,7 +184,7 @@ namespace udb.core.LiveQuery.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, LiveQueryServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_Subscribe, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::udb.core.LiveQuery.Services.V1.SubscribeRequest, global::udb.core.LiveQuery.Services.V1.SubscribeResponse>(serviceImpl.Subscribe));
+      serviceBinder.AddMethod(__Method_Subscribe, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest, global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse>(serviceImpl.Subscribe));
     }
 
   }

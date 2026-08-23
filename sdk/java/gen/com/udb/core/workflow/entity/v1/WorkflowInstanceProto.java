@@ -108,7 +108,7 @@ public final class WorkflowInstanceProto {
       "encyB\222\002\n\037com.udb.core.workflow.entity.v1" +
       "B\025WorkflowInstanceProtoP\001ZGgithub.com/fa" +
       "hara02/udb/sdk/go/gen/udb/core/workflow/" +
-      "entity/v1;entityv1\242\002\004UCWE\252\002\033udb.core.Wor" +
+      "entity/v1;entityv1\242\002\004UCWE\252\002\033Udb.Core.Wor" +
       "kflow.Entity.V1\312\002\033Udb\\Core\\Workflow\\Enti" +
       "ty\\V1\342\002\'Udb\\GPBMetadata\\Core\\Workflow\\En" +
       "tity\\V1\352\002\037Udb::Core::Workflow::Entity::V" +

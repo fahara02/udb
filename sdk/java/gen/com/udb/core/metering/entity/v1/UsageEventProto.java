@@ -80,8 +80,8 @@ public final class UsageEventProto {
       "tenant.data_residencyB\214\002\n\037com.udb.core.m" +
       "etering.entity.v1B\017UsageEventProtoP\001ZGgi" +
       "thub.com/fahara02/udb/sdk/go/gen/udb/cor" +
-      "e/metering/entity/v1;entityv1\242\002\004UCME\252\002\033u" +
-      "db.core.Metering.Entity.V1\312\002\033Udb\\Core\\Me" +
+      "e/metering/entity/v1;entityv1\242\002\004UCME\252\002\033U" +
+      "db.Core.Metering.Entity.V1\312\002\033Udb\\Core\\Me" +
       "tering\\Entity\\V1\342\002\'Udb\\GPBMetadata\\Core\\" +
       "Metering\\Entity\\V1\352\002\037Udb::Core::Metering" +
       "::Entity::V1b\006proto3"

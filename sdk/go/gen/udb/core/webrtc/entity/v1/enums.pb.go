@@ -272,7 +272,7 @@ const file_udb_core_webrtc_entity_v1_enums_proto_rawDesc = "" +
 	"\x11TRACK_STATE_MUTED\x10\x02\x12\x15\n" +
 	"\x11TRACK_STATE_ENDED\x10\x03B\xfb\x01\n" +
 	"\x1dcom.udb.core.webrtc.entity.v1B\n" +
-	"EnumsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x19udb.core.Webrtc.Entity.V1\xca\x02\x19Udb\\Core\\Webrtc\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1\xea\x02\x1dUdb::Core::Webrtc::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x19Udb.Core.Webrtc.Entity.V1\xca\x02\x19Udb\\Core\\Webrtc\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1\xea\x02\x1dUdb::Core::Webrtc::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_webrtc_entity_v1_enums_proto_rawDescOnce sync.Once

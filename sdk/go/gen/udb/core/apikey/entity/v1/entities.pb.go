@@ -25,7 +25,7 @@ var File_udb_core_apikey_entity_v1_entities_proto protoreflect.FileDescriptor
 const file_udb_core_apikey_entity_v1_entities_proto_rawDesc = "" +
 	"\n" +
 	"(udb/core/apikey/entity/v1/entities.proto\x12\x19udb.core.apikey.entity.v1\x1a'udb/core/apikey/entity/v1/api_key.proto\x1a-udb/core/apikey/entity/v1/api_key_usage.proto\x1a%udb/core/apikey/entity/v1/enums.protoB\xfe\x01\n" +
-	"\x1dcom.udb.core.apikey.entity.v1B\rEntitiesProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1P\x00P\x01P\x02b\x06proto3"
+	"\x1dcom.udb.core.apikey.entity.v1B\rEntitiesProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19Udb.Core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1P\x00P\x01P\x02b\x06proto3"
 
 var file_udb_core_apikey_entity_v1_entities_proto_goTypes = []any{}
 var file_udb_core_apikey_entity_v1_entities_proto_depIdxs = []int32{

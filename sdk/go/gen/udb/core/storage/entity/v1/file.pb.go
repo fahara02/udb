@@ -372,7 +372,7 @@ const file_udb_core_storage_entity_v1_file_proto_rawDesc = "" +
 	"\x13idx_files_reference\x12\x05BTREEZ\freference_idZ\x0ereference_type\x8a\x01+\n" +
 	"\x15idx_files_uploaded_by\x12\x05BTREEZ\vuploaded_by\xf2\x01\x15udb.storage.files.cdc\xfa\x01\fstorage:read\x8a\xb2\x19\x99\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x13storage.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x80\x02\n" +
-	"\x1ecom.udb.core.storage.entity.v1B\tFileProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1audb.core.Storage.Entity.V1\xca\x02\x1aUdb\\Core\\Storage\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\xea\x02\x1eUdb::Core::Storage::Entity::V1b\x06proto3"
+	"\x1ecom.udb.core.storage.entity.v1B\tFileProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1aUdb.Core.Storage.Entity.V1\xca\x02\x1aUdb\\Core\\Storage\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\xea\x02\x1eUdb::Core::Storage::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_storage_entity_v1_file_proto_rawDescOnce sync.Once

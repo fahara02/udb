@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Cache.Services.V1 {
+namespace Udb.Core.Cache.Services.V1 {
   /// <summary>
   /// CacheService (master-plan 9.6) — a cache that invalidates itself.
   ///
@@ -61,36 +61,36 @@ namespace udb.core.Cache.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.GetRequest> __Marshaller_udb_core_cache_services_v1_GetRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.GetRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.GetRequest> __Marshaller_udb_core_cache_services_v1_GetRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.GetRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.GetResponse> __Marshaller_udb_core_cache_services_v1_GetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.GetResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.GetResponse> __Marshaller_udb_core_cache_services_v1_GetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.GetResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.SetRequest> __Marshaller_udb_core_cache_services_v1_SetRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.SetRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.SetRequest> __Marshaller_udb_core_cache_services_v1_SetRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.SetRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.SetResponse> __Marshaller_udb_core_cache_services_v1_SetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.SetResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.SetResponse> __Marshaller_udb_core_cache_services_v1_SetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.SetResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.DeleteRequest> __Marshaller_udb_core_cache_services_v1_DeleteRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.DeleteRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.DeleteRequest> __Marshaller_udb_core_cache_services_v1_DeleteRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.DeleteRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.DeleteResponse> __Marshaller_udb_core_cache_services_v1_DeleteResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.DeleteResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.DeleteResponse> __Marshaller_udb_core_cache_services_v1_DeleteResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.DeleteResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.ScanRequest> __Marshaller_udb_core_cache_services_v1_ScanRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.ScanRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.ScanRequest> __Marshaller_udb_core_cache_services_v1_ScanRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.ScanRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.ScanResponse> __Marshaller_udb_core_cache_services_v1_ScanResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.ScanResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.ScanResponse> __Marshaller_udb_core_cache_services_v1_ScanResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.ScanResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.CreateNamespaceRequest> __Marshaller_udb_core_cache_services_v1_CreateNamespaceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.CreateNamespaceRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest> __Marshaller_udb_core_cache_services_v1_CreateNamespaceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.CreateNamespaceResponse> __Marshaller_udb_core_cache_services_v1_CreateNamespaceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.CreateNamespaceResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse> __Marshaller_udb_core_cache_services_v1_CreateNamespaceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.DeleteNamespaceRequest> __Marshaller_udb_core_cache_services_v1_DeleteNamespaceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.DeleteNamespaceRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest> __Marshaller_udb_core_cache_services_v1_DeleteNamespaceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.DeleteNamespaceResponse> __Marshaller_udb_core_cache_services_v1_DeleteNamespaceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.DeleteNamespaceResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse> __Marshaller_udb_core_cache_services_v1_DeleteNamespaceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest> __Marshaller_udb_core_cache_services_v1_GetNamespaceStatsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest> __Marshaller_udb_core_cache_services_v1_GetNamespaceStatsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse> __Marshaller_udb_core_cache_services_v1_GetNamespaceStatsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse> __Marshaller_udb_core_cache_services_v1_GetNamespaceStatsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Cache.Services.V1.GetRequest, global::udb.core.Cache.Services.V1.GetResponse> __Method_Get = new grpc::Method<global::udb.core.Cache.Services.V1.GetRequest, global::udb.core.Cache.Services.V1.GetResponse>(
+    static readonly grpc::Method<global::Udb.Core.Cache.Services.V1.GetRequest, global::Udb.Core.Cache.Services.V1.GetResponse> __Method_Get = new grpc::Method<global::Udb.Core.Cache.Services.V1.GetRequest, global::Udb.Core.Cache.Services.V1.GetResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Get",
@@ -98,7 +98,7 @@ namespace udb.core.Cache.Services.V1 {
         __Marshaller_udb_core_cache_services_v1_GetResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Cache.Services.V1.SetRequest, global::udb.core.Cache.Services.V1.SetResponse> __Method_Set = new grpc::Method<global::udb.core.Cache.Services.V1.SetRequest, global::udb.core.Cache.Services.V1.SetResponse>(
+    static readonly grpc::Method<global::Udb.Core.Cache.Services.V1.SetRequest, global::Udb.Core.Cache.Services.V1.SetResponse> __Method_Set = new grpc::Method<global::Udb.Core.Cache.Services.V1.SetRequest, global::Udb.Core.Cache.Services.V1.SetResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Set",
@@ -106,7 +106,7 @@ namespace udb.core.Cache.Services.V1 {
         __Marshaller_udb_core_cache_services_v1_SetResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Cache.Services.V1.DeleteRequest, global::udb.core.Cache.Services.V1.DeleteResponse> __Method_Delete = new grpc::Method<global::udb.core.Cache.Services.V1.DeleteRequest, global::udb.core.Cache.Services.V1.DeleteResponse>(
+    static readonly grpc::Method<global::Udb.Core.Cache.Services.V1.DeleteRequest, global::Udb.Core.Cache.Services.V1.DeleteResponse> __Method_Delete = new grpc::Method<global::Udb.Core.Cache.Services.V1.DeleteRequest, global::Udb.Core.Cache.Services.V1.DeleteResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Delete",
@@ -114,7 +114,7 @@ namespace udb.core.Cache.Services.V1 {
         __Marshaller_udb_core_cache_services_v1_DeleteResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Cache.Services.V1.ScanRequest, global::udb.core.Cache.Services.V1.ScanResponse> __Method_Scan = new grpc::Method<global::udb.core.Cache.Services.V1.ScanRequest, global::udb.core.Cache.Services.V1.ScanResponse>(
+    static readonly grpc::Method<global::Udb.Core.Cache.Services.V1.ScanRequest, global::Udb.Core.Cache.Services.V1.ScanResponse> __Method_Scan = new grpc::Method<global::Udb.Core.Cache.Services.V1.ScanRequest, global::Udb.Core.Cache.Services.V1.ScanResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Scan",
@@ -122,7 +122,7 @@ namespace udb.core.Cache.Services.V1 {
         __Marshaller_udb_core_cache_services_v1_ScanResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Cache.Services.V1.CreateNamespaceRequest, global::udb.core.Cache.Services.V1.CreateNamespaceResponse> __Method_CreateNamespace = new grpc::Method<global::udb.core.Cache.Services.V1.CreateNamespaceRequest, global::udb.core.Cache.Services.V1.CreateNamespaceResponse>(
+    static readonly grpc::Method<global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest, global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse> __Method_CreateNamespace = new grpc::Method<global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest, global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreateNamespace",
@@ -130,7 +130,7 @@ namespace udb.core.Cache.Services.V1 {
         __Marshaller_udb_core_cache_services_v1_CreateNamespaceResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Cache.Services.V1.DeleteNamespaceRequest, global::udb.core.Cache.Services.V1.DeleteNamespaceResponse> __Method_DeleteNamespace = new grpc::Method<global::udb.core.Cache.Services.V1.DeleteNamespaceRequest, global::udb.core.Cache.Services.V1.DeleteNamespaceResponse>(
+    static readonly grpc::Method<global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest, global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse> __Method_DeleteNamespace = new grpc::Method<global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest, global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DeleteNamespace",
@@ -138,7 +138,7 @@ namespace udb.core.Cache.Services.V1 {
         __Marshaller_udb_core_cache_services_v1_DeleteNamespaceResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest, global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse> __Method_GetNamespaceStats = new grpc::Method<global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest, global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest, global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse> __Method_GetNamespaceStats = new grpc::Method<global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest, global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetNamespaceStats",
@@ -148,7 +148,7 @@ namespace udb.core.Cache.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Cache.Services.V1.CacheServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Cache.Services.V1.CacheServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of CacheService</summary>
@@ -164,7 +164,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Cache.Services.V1.GetResponse> Get(global::udb.core.Cache.Services.V1.GetRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Cache.Services.V1.GetResponse> Get(global::Udb.Core.Cache.Services.V1.GetRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -178,7 +178,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Cache.Services.V1.SetResponse> Set(global::udb.core.Cache.Services.V1.SetRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Cache.Services.V1.SetResponse> Set(global::Udb.Core.Cache.Services.V1.SetRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -190,7 +190,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Cache.Services.V1.DeleteResponse> Delete(global::udb.core.Cache.Services.V1.DeleteRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Cache.Services.V1.DeleteResponse> Delete(global::Udb.Core.Cache.Services.V1.DeleteRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -203,7 +203,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Cache.Services.V1.ScanResponse> Scan(global::udb.core.Cache.Services.V1.ScanRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Cache.Services.V1.ScanResponse> Scan(global::Udb.Core.Cache.Services.V1.ScanRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -215,7 +215,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Cache.Services.V1.CreateNamespaceResponse> CreateNamespace(global::udb.core.Cache.Services.V1.CreateNamespaceRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse> CreateNamespace(global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -228,7 +228,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Cache.Services.V1.DeleteNamespaceResponse> DeleteNamespace(global::udb.core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse> DeleteNamespace(global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -241,7 +241,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse> GetNamespaceStats(global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse> GetNamespaceStats(global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -286,7 +286,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.GetResponse Get(global::udb.core.Cache.Services.V1.GetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Cache.Services.V1.GetResponse Get(global::Udb.Core.Cache.Services.V1.GetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Get(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -299,7 +299,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.GetResponse Get(global::udb.core.Cache.Services.V1.GetRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Cache.Services.V1.GetResponse Get(global::Udb.Core.Cache.Services.V1.GetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Get, null, options, request);
       }
@@ -314,7 +314,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.GetResponse> GetAsync(global::udb.core.Cache.Services.V1.GetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.GetResponse> GetAsync(global::Udb.Core.Cache.Services.V1.GetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -327,7 +327,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.GetResponse> GetAsync(global::udb.core.Cache.Services.V1.GetRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.GetResponse> GetAsync(global::Udb.Core.Cache.Services.V1.GetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Get, null, options, request);
       }
@@ -342,7 +342,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.SetResponse Set(global::udb.core.Cache.Services.V1.SetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Cache.Services.V1.SetResponse Set(global::Udb.Core.Cache.Services.V1.SetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Set(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -355,7 +355,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.SetResponse Set(global::udb.core.Cache.Services.V1.SetRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Cache.Services.V1.SetResponse Set(global::Udb.Core.Cache.Services.V1.SetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Set, null, options, request);
       }
@@ -370,7 +370,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.SetResponse> SetAsync(global::udb.core.Cache.Services.V1.SetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.SetResponse> SetAsync(global::Udb.Core.Cache.Services.V1.SetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SetAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -383,7 +383,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.SetResponse> SetAsync(global::udb.core.Cache.Services.V1.SetRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.SetResponse> SetAsync(global::Udb.Core.Cache.Services.V1.SetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Set, null, options, request);
       }
@@ -396,7 +396,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.DeleteResponse Delete(global::udb.core.Cache.Services.V1.DeleteRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Cache.Services.V1.DeleteResponse Delete(global::Udb.Core.Cache.Services.V1.DeleteRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Delete(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -407,7 +407,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.DeleteResponse Delete(global::udb.core.Cache.Services.V1.DeleteRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Cache.Services.V1.DeleteResponse Delete(global::Udb.Core.Cache.Services.V1.DeleteRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Delete, null, options, request);
       }
@@ -420,7 +420,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.DeleteResponse> DeleteAsync(global::udb.core.Cache.Services.V1.DeleteRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.DeleteResponse> DeleteAsync(global::Udb.Core.Cache.Services.V1.DeleteRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -431,7 +431,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.DeleteResponse> DeleteAsync(global::udb.core.Cache.Services.V1.DeleteRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.DeleteResponse> DeleteAsync(global::Udb.Core.Cache.Services.V1.DeleteRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Delete, null, options, request);
       }
@@ -445,7 +445,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.ScanResponse Scan(global::udb.core.Cache.Services.V1.ScanRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Cache.Services.V1.ScanResponse Scan(global::Udb.Core.Cache.Services.V1.ScanRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Scan(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -457,7 +457,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.ScanResponse Scan(global::udb.core.Cache.Services.V1.ScanRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Cache.Services.V1.ScanResponse Scan(global::Udb.Core.Cache.Services.V1.ScanRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Scan, null, options, request);
       }
@@ -471,7 +471,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.ScanResponse> ScanAsync(global::udb.core.Cache.Services.V1.ScanRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.ScanResponse> ScanAsync(global::Udb.Core.Cache.Services.V1.ScanRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ScanAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -483,7 +483,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.ScanResponse> ScanAsync(global::udb.core.Cache.Services.V1.ScanRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.ScanResponse> ScanAsync(global::Udb.Core.Cache.Services.V1.ScanRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Scan, null, options, request);
       }
@@ -496,7 +496,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.CreateNamespaceResponse CreateNamespace(global::udb.core.Cache.Services.V1.CreateNamespaceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse CreateNamespace(global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateNamespace(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -507,7 +507,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.CreateNamespaceResponse CreateNamespace(global::udb.core.Cache.Services.V1.CreateNamespaceRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse CreateNamespace(global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreateNamespace, null, options, request);
       }
@@ -520,7 +520,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.CreateNamespaceResponse> CreateNamespaceAsync(global::udb.core.Cache.Services.V1.CreateNamespaceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse> CreateNamespaceAsync(global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateNamespaceAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -531,7 +531,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.CreateNamespaceResponse> CreateNamespaceAsync(global::udb.core.Cache.Services.V1.CreateNamespaceRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse> CreateNamespaceAsync(global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreateNamespace, null, options, request);
       }
@@ -545,7 +545,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.DeleteNamespaceResponse DeleteNamespace(global::udb.core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse DeleteNamespace(global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteNamespace(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -557,7 +557,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.DeleteNamespaceResponse DeleteNamespace(global::udb.core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse DeleteNamespace(global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeleteNamespace, null, options, request);
       }
@@ -571,7 +571,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.DeleteNamespaceResponse> DeleteNamespaceAsync(global::udb.core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse> DeleteNamespaceAsync(global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteNamespaceAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -583,7 +583,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.DeleteNamespaceResponse> DeleteNamespaceAsync(global::udb.core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse> DeleteNamespaceAsync(global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteNamespace, null, options, request);
       }
@@ -597,7 +597,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse GetNamespaceStats(global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse GetNamespaceStats(global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetNamespaceStats(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -609,7 +609,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse GetNamespaceStats(global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse GetNamespaceStats(global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetNamespaceStats, null, options, request);
       }
@@ -623,7 +623,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse> GetNamespaceStatsAsync(global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse> GetNamespaceStatsAsync(global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetNamespaceStatsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -635,7 +635,7 @@ namespace udb.core.Cache.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse> GetNamespaceStatsAsync(global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse> GetNamespaceStatsAsync(global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetNamespaceStats, null, options, request);
       }
@@ -669,13 +669,13 @@ namespace udb.core.Cache.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, CacheServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_Get, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Cache.Services.V1.GetRequest, global::udb.core.Cache.Services.V1.GetResponse>(serviceImpl.Get));
-      serviceBinder.AddMethod(__Method_Set, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Cache.Services.V1.SetRequest, global::udb.core.Cache.Services.V1.SetResponse>(serviceImpl.Set));
-      serviceBinder.AddMethod(__Method_Delete, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Cache.Services.V1.DeleteRequest, global::udb.core.Cache.Services.V1.DeleteResponse>(serviceImpl.Delete));
-      serviceBinder.AddMethod(__Method_Scan, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Cache.Services.V1.ScanRequest, global::udb.core.Cache.Services.V1.ScanResponse>(serviceImpl.Scan));
-      serviceBinder.AddMethod(__Method_CreateNamespace, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Cache.Services.V1.CreateNamespaceRequest, global::udb.core.Cache.Services.V1.CreateNamespaceResponse>(serviceImpl.CreateNamespace));
-      serviceBinder.AddMethod(__Method_DeleteNamespace, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Cache.Services.V1.DeleteNamespaceRequest, global::udb.core.Cache.Services.V1.DeleteNamespaceResponse>(serviceImpl.DeleteNamespace));
-      serviceBinder.AddMethod(__Method_GetNamespaceStats, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Cache.Services.V1.GetNamespaceStatsRequest, global::udb.core.Cache.Services.V1.GetNamespaceStatsResponse>(serviceImpl.GetNamespaceStats));
+      serviceBinder.AddMethod(__Method_Get, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.GetRequest, global::Udb.Core.Cache.Services.V1.GetResponse>(serviceImpl.Get));
+      serviceBinder.AddMethod(__Method_Set, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.SetRequest, global::Udb.Core.Cache.Services.V1.SetResponse>(serviceImpl.Set));
+      serviceBinder.AddMethod(__Method_Delete, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.DeleteRequest, global::Udb.Core.Cache.Services.V1.DeleteResponse>(serviceImpl.Delete));
+      serviceBinder.AddMethod(__Method_Scan, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.ScanRequest, global::Udb.Core.Cache.Services.V1.ScanResponse>(serviceImpl.Scan));
+      serviceBinder.AddMethod(__Method_CreateNamespace, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest, global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse>(serviceImpl.CreateNamespace));
+      serviceBinder.AddMethod(__Method_DeleteNamespace, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest, global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse>(serviceImpl.DeleteNamespace));
+      serviceBinder.AddMethod(__Method_GetNamespaceStats, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest, global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse>(serviceImpl.GetNamespaceStats));
     }
 
   }

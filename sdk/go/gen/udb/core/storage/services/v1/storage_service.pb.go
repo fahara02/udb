@@ -1795,7 +1795,7 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\astorage\x12\astorage\x1a\astorage\"\aStorage*\astorage0\x018\x01H\x01h\x01z\astorage\x82\x01\astorage\x8a\x01\astorage\x92\x01\x0enative.storage\x98\x01\x01\xd2\xf0\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xda\xf0\x19\x92\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1eudb.native.storage.config.json:\astorageJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19]\n" +
 	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET:\fobject_storeB\x98\x02\n" +
-	" com.udb.core.storage.services.v1B\x13StorageServiceProtoP\x01ZJgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/services/v1;servicesv1\xa2\x02\x04UCSS\xaa\x02\x1cudb.core.Storage.Services.V1\xca\x02\x1cUdb\\Core\\Storage\\Services\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Storage\\Services\\V1\xea\x02 Udb::Core::Storage::Services::V1b\x06proto3"
+	" com.udb.core.storage.services.v1B\x13StorageServiceProtoP\x01ZJgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/services/v1;servicesv1\xa2\x02\x04UCSS\xaa\x02\x1cUdb.Core.Storage.Services.V1\xca\x02\x1cUdb\\Core\\Storage\\Services\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Storage\\Services\\V1\xea\x02 Udb::Core::Storage::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_storage_services_v1_storage_service_proto_rawDescOnce sync.Once

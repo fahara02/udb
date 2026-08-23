@@ -1732,7 +1732,7 @@ const file_udb_core_authn_services_v1_authn_service_proto_rawDesc = "" +
 	"\x05authn\x12\x05authn\x1a\x05authn\"\x0eAuthentication*\x04auth0\x018\x01h\x01z\x04auth\x82\x01\x04auth\x8a\x01\x05authn\x92\x01\fnative.authn\xd2\xf0\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xda\xf0\x19\x83\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x17udb.native.authn.config:\x05authnJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19?\n" +
 	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x8a\x02\n" +
-	"\x1ecom.udb.core.authn.services.v1B\x11AuthnServiceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1audb.core.Authn.Services.V1\xca\x02\x1aUdb\\Core\\Authn\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authn\\Services\\V1\xea\x02\x1eUdb::Core::Authn::Services::V1b\x06proto3"
+	"\x1ecom.udb.core.authn.services.v1B\x11AuthnServiceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1aUdb.Core.Authn.Services.V1\xca\x02\x1aUdb\\Core\\Authn\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authn\\Services\\V1\xea\x02\x1eUdb::Core::Authn::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_services_v1_authn_service_proto_rawDescOnce sync.Once

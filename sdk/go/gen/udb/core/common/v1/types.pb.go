@@ -1069,7 +1069,7 @@ const file_udb_core_common_v1_types_proto_rawDesc = "" +
 	"\x12SORT_DIRECTION_ASC\x10\x01\x12\x17\n" +
 	"\x13SORT_DIRECTION_DESC\x10\x02B\xcf\x01\n" +
 	"\x16com.udb.core.common.v1B\n" +
-	"TypesProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12udb.core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1P\x01b\x06proto3"
+	"TypesProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12Udb.Core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1P\x01b\x06proto3"
 
 var (
 	file_udb_core_common_v1_types_proto_rawDescOnce sync.Once

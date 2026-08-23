@@ -80,7 +80,7 @@ public final class VaultTransitKeyProto {
       "dencyB\377\001\n\034com.udb.core.vault.entity.v1B\024" +
       "VaultTransitKeyProtoP\001ZDgithub.com/fahar" +
       "a02/udb/sdk/go/gen/udb/core/vault/entity" +
-      "/v1;entityv1\242\002\004UCVE\252\002\030udb.core.Vault.Ent" +
+      "/v1;entityv1\242\002\004UCVE\252\002\030Udb.Core.Vault.Ent" +
       "ity.V1\312\002\030Udb\\Core\\Vault\\Entity\\V1\342\002$Udb\\" +
       "GPBMetadata\\Core\\Vault\\Entity\\V1\352\002\034Udb::" +
       "Core::Vault::Entity::V1b\006proto3"

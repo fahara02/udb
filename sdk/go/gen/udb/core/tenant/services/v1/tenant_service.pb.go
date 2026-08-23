@@ -1532,7 +1532,7 @@ const file_udb_core_tenant_services_v1_tenant_service_proto_rawDesc = "" +
 	"\x06tenant\x12\x06tenant\x1a\x06tenant\"\aTenants*\x06tenant0\x018\x01h\x01z\x06tenant\x82\x01\x06tenant\x8a\x01\x06tenant\x92\x01\rnative.tenant\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\xda\xf0\x19\x89\x01\n" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x18udb.native.tenant.config:\x06tenantJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19@\n" +
 	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x91\x02\n" +
-	"\x1fcom.udb.core.tenant.services.v1B\x12TenantServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/services/v1;servicesv1\xa2\x02\x04UCTS\xaa\x02\x1budb.core.Tenant.Services.V1\xca\x02\x1bUdb\\Core\\Tenant\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Tenant\\Services\\V1\xea\x02\x1fUdb::Core::Tenant::Services::V1b\x06proto3"
+	"\x1fcom.udb.core.tenant.services.v1B\x12TenantServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/services/v1;servicesv1\xa2\x02\x04UCTS\xaa\x02\x1bUdb.Core.Tenant.Services.V1\xca\x02\x1bUdb\\Core\\Tenant\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Tenant\\Services\\V1\xea\x02\x1fUdb::Core::Tenant::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_tenant_services_v1_tenant_service_proto_rawDescOnce sync.Once

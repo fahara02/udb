@@ -143,7 +143,7 @@ public final class WebrtcEventsProto {
       "core.webrtc.events.v1B\021WebrtcEventsProto" +
       "P\001ZEgithub.com/fahara02/udb/sdk/go/gen/u" +
       "db/core/webrtc/events/v1;eventsv1\242\002\004UCWE" +
-      "\252\002\031udb.core.Webrtc.Events.V1\312\002\031Udb\\Core\\" +
+      "\252\002\031Udb.Core.Webrtc.Events.V1\312\002\031Udb\\Core\\" +
       "Webrtc\\Events\\V1\342\002%Udb\\GPBMetadata\\Core\\" +
       "Webrtc\\Events\\V1\352\002\035Udb::Core::Webrtc::Ev" +
       "ents::V1b\006proto3"

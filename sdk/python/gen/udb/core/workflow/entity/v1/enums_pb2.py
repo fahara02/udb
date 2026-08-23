@@ -24,14 +24,14 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'udb/core/workflow/entity/v1/enums.proto\x12\x1budb.core.workflow.entity.v1*\xac\x02\n\x0eWorkflowStatus\x12\x1f\n\x1bWORKFLOW_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17WORKFLOW_STATUS_PENDING\x10\x01\x12\x1b\n\x17WORKFLOW_STATUS_RUNNING\x10\x02\x12\"\n\x1eWORKFLOW_STATUS_WAITING_SIGNAL\x10\x03\x12\x1d\n\x19WORKFLOW_STATUS_COMPLETED\x10\x04\x12 \n\x1cWORKFLOW_STATUS_COMPENSATING\x10\x05\x12\x1f\n\x1bWORKFLOW_STATUS_COMPENSATED\x10\x06\x12\x1d\n\x19WORKFLOW_STATUS_CANCELLED\x10\x07\x12\x1a\n\x16WORKFLOW_STATUS_FAILED\x10\x08\x42\x87\x02\n\x1f\x63om.udb.core.workflow.entity.v1B\nEnumsProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1budb.core.Workflow.Entity.V1\xca\x02\x1bUdb\\Core\\Workflow\\Entity\\V1\xe2\x02\'Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1\xea\x02\x1fUdb::Core::Workflow::Entity::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'udb/core/workflow/entity/v1/enums.proto\x12\x1budb.core.workflow.entity.v1*\xac\x02\n\x0eWorkflowStatus\x12\x1f\n\x1bWORKFLOW_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17WORKFLOW_STATUS_PENDING\x10\x01\x12\x1b\n\x17WORKFLOW_STATUS_RUNNING\x10\x02\x12\"\n\x1eWORKFLOW_STATUS_WAITING_SIGNAL\x10\x03\x12\x1d\n\x19WORKFLOW_STATUS_COMPLETED\x10\x04\x12 \n\x1cWORKFLOW_STATUS_COMPENSATING\x10\x05\x12\x1f\n\x1bWORKFLOW_STATUS_COMPENSATED\x10\x06\x12\x1d\n\x19WORKFLOW_STATUS_CANCELLED\x10\x07\x12\x1a\n\x16WORKFLOW_STATUS_FAILED\x10\x08\x42\x87\x02\n\x1f\x63om.udb.core.workflow.entity.v1B\nEnumsProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1bUdb.Core.Workflow.Entity.V1\xca\x02\x1bUdb\\Core\\Workflow\\Entity\\V1\xe2\x02\'Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1\xea\x02\x1fUdb::Core::Workflow::Entity::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'udb.core.workflow.entity.v1.enums_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'\n\037com.udb.core.workflow.entity.v1B\nEnumsProtoP\001ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1;entityv1\242\002\004UCWE\252\002\033udb.core.Workflow.Entity.V1\312\002\033Udb\\Core\\Workflow\\Entity\\V1\342\002\'Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1\352\002\037Udb::Core::Workflow::Entity::V1'
+  _globals['DESCRIPTOR']._serialized_options = b'\n\037com.udb.core.workflow.entity.v1B\nEnumsProtoP\001ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1;entityv1\242\002\004UCWE\252\002\033Udb.Core.Workflow.Entity.V1\312\002\033Udb\\Core\\Workflow\\Entity\\V1\342\002\'Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1\352\002\037Udb::Core::Workflow::Entity::V1'
   _globals['_WORKFLOWSTATUS']._serialized_start=73
   _globals['_WORKFLOWSTATUS']._serialized_end=373
 # @@protoc_insertion_point(module_scope)

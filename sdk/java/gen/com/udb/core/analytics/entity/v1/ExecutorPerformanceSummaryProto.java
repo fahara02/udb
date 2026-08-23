@@ -86,7 +86,7 @@ public final class ExecutorPerformanceSummaryProto {
       "db.core.analytics.entity.v1B\037ExecutorPer" +
       "formanceSummaryProtoP\001ZHgithub.com/fahar" +
       "a02/udb/sdk/go/gen/udb/core/analytics/en" +
-      "tity/v1;entityv1\242\002\004UCAE\252\002\034udb.core.Analy" +
+      "tity/v1;entityv1\242\002\004UCAE\252\002\034Udb.Core.Analy" +
       "tics.Entity.V1\312\002\034Udb\\Core\\Analytics\\Enti" +
       "ty\\V1\342\002(Udb\\GPBMetadata\\Core\\Analytics\\E" +
       "ntity\\V1\352\002 Udb::Core::Analytics::Entity:" +

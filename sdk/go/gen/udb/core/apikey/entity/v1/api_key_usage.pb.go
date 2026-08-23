@@ -170,7 +170,7 @@ const file_udb_core_apikey_entity_v1_api_key_usage_proto_rawDesc = "" +
 	"\x0eapi_key_usages\x12\tudb_authn\x18\x05 \x01*9Per-request API key usage log for rate limiting and audit@\x01H\x03R\frequested_atX\xed\x02b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\xb2\x19\x91\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x12apikey.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x81\x02\n" +
-	"\x1dcom.udb.core.apikey.entity.v1B\x10ApiKeyUsageProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1b\x06proto3"
+	"\x1dcom.udb.core.apikey.entity.v1B\x10ApiKeyUsageProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19Udb.Core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_apikey_entity_v1_api_key_usage_proto_rawDescOnce sync.Once

@@ -231,7 +231,7 @@ const file_udb_core_storage_entity_v1_enums_proto_rawDesc = "" +
 	"\x15SCAN_VERDICT_INFECTED\x10\x03\x12\x17\n" +
 	"\x13SCAN_VERDICT_FAILED\x10\x04B\x81\x02\n" +
 	"\x1ecom.udb.core.storage.entity.v1B\n" +
-	"EnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1audb.core.Storage.Entity.V1\xca\x02\x1aUdb\\Core\\Storage\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\xea\x02\x1eUdb::Core::Storage::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1aUdb.Core.Storage.Entity.V1\xca\x02\x1aUdb\\Core\\Storage\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\xea\x02\x1eUdb::Core::Storage::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_storage_entity_v1_enums_proto_rawDescOnce sync.Once

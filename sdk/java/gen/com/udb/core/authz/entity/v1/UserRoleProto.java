@@ -97,7 +97,7 @@ public final class UserRoleProto {
       "udb.core.authz.entity.v1B\rUserRoleProtoP" +
       "\001ZDgithub.com/fahara02/udb/sdk/go/gen/ud" +
       "b/core/authz/entity/v1;entityv1\242\002\004UCAE\252\002" +
-      "\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core\\Aut" +
+      "\030Udb.Core.Authz.Entity.V1\312\002\030Udb\\Core\\Aut" +
       "hz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Auth" +
       "z\\Entity\\V1\352\002\034Udb::Core::Authz::Entity::" +
       "V1b\006proto3"

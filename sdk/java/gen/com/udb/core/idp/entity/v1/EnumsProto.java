@@ -56,7 +56,7 @@ public final class EnumsProto {
       "LICY_RETAIN\020\003B\351\001\n\032com.udb.core.idp.entit" +
       "y.v1B\nEnumsProtoP\001ZBgithub.com/fahara02/" +
       "udb/sdk/go/gen/udb/core/idp/entity/v1;en" +
-      "tityv1\242\002\004UCIE\252\002\026udb.core.Idp.Entity.V1\312\002" +
+      "tityv1\242\002\004UCIE\252\002\026Udb.Core.Idp.Entity.V1\312\002" +
       "\026Udb\\Core\\Idp\\Entity\\V1\342\002\"Udb\\GPBMetadat" +
       "a\\Core\\Idp\\Entity\\V1\352\002\032Udb::Core::Idp::E" +
       "ntity::V1b\006proto3"

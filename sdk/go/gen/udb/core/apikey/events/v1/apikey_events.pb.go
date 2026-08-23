@@ -640,7 +640,7 @@ const file_udb_core_apikey_events_v1_apikey_events_proto_rawDesc = "" +
 	"occurredAt\x12\x1b\n" +
 	"\ttenant_id\x18\b \x01(\tR\btenantId:\x80\x01\x92\xb2\x19|\n" +
 	"1udb.core.apikey.events.v1.ApiKeyAnomalousUseEvent\x12\x1budb.apikey.anomalous.use.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\x82\x02\n" +
-	"\x1dcom.udb.core.apikey.events.v1B\x11ApikeyEventsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Events.V1\xca\x02\x19Udb\\Core\\Apikey\\Events\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Events\\V1\xea\x02\x1dUdb::Core::Apikey::Events::V1b\x06proto3"
+	"\x1dcom.udb.core.apikey.events.v1B\x11ApikeyEventsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x19Udb.Core.Apikey.Events.V1\xca\x02\x19Udb\\Core\\Apikey\\Events\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Events\\V1\xea\x02\x1dUdb::Core::Apikey::Events::V1b\x06proto3"
 
 var (
 	file_udb_core_apikey_events_v1_apikey_events_proto_rawDescOnce sync.Once

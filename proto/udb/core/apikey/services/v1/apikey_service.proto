@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 import "udb/core/apikey/services/v1/core.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Apikey.Services.V1";
+option csharp_namespace = "Udb.Core.Apikey.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/services/v1;apikeyservicev1";
 option java_package = "com.udb.core.apikey.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Apikey\\Services\\V1";

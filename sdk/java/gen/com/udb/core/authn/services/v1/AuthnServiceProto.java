@@ -1157,7 +1157,7 @@ public final class AuthnServiceProto {
       "ARGETB\212\002\n\036com.udb.core.authn.services.v1" +
       "B\021AuthnServiceProtoP\001ZHgithub.com/fahara" +
       "02/udb/sdk/go/gen/udb/core/authn/service" +
-      "s/v1;servicesv1\242\002\004UCAS\252\002\032udb.core.Authn." +
+      "s/v1;servicesv1\242\002\004UCAS\252\002\032Udb.Core.Authn." +
       "Services.V1\312\002\032Udb\\Core\\Authn\\Services\\V1" +
       "\342\002&Udb\\GPBMetadata\\Core\\Authn\\Services\\V" +
       "1\352\002\036Udb::Core::Authn::Services::V1b\006prot" +

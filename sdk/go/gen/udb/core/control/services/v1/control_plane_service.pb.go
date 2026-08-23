@@ -37,7 +37,7 @@ const file_udb_core_control_services_v1_control_plane_service_proto_rawDesc = ""
 	"\x11RollbackResources\x126.udb.core.control.services.v1.RollbackResourcesRequest\x1a7.udb.core.control.services.v1.RollbackResourcesResponse\"\xb5\x01\xca\xf3\x18D\b\x02\x1a\x1eudb:control:rollback-resourcesJ\x02\x01\x04j\x19control.RollbackResources\x90\x01\x01\xda\xf3\x18'\x12\x12rollback_resourcesZ\x11rollbackResources\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x028:\x01*\"3/v1/control/node-states/{node_id}:rollbackResources\x1a\xe0\x01\xca\xf0\x19y\n" +
 	"\acontrol\x12\acontrol\x1a\acontrol\"\x1aControl Plane Distribution*\acontrol0\x018\x01h\x01z\fcontrolPlane\x82\x01\acontrol\x8a\x01\acontrol\x92\x01\x0enative.control\xd2\xf0\x19\x1a\b\x01\x1a\x03udb(\xe0\xd4\x030\x03@\x01J\acontrolP\x01\xe2\xf0\x19A\n" +
 	"\acontrol\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x9d\x02\n" +
-	" com.udb.core.control.services.v1B\x18ControlPlaneServiceProtoP\x01ZJgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/services/v1;servicesv1\xa2\x02\x04UCCS\xaa\x02\x1cudb.core.Control.Services.V1\xca\x02\x1cUdb\\Core\\Control\\Services\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Control\\Services\\V1\xea\x02 Udb::Core::Control::Services::V1b\x06proto3"
+	" com.udb.core.control.services.v1B\x18ControlPlaneServiceProtoP\x01ZJgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/services/v1;servicesv1\xa2\x02\x04UCCS\xaa\x02\x1cUdb.Core.Control.Services.V1\xca\x02\x1cUdb\\Core\\Control\\Services\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Control\\Services\\V1\xea\x02 Udb::Core::Control::Services::V1b\x06proto3"
 
 var file_udb_core_control_services_v1_control_plane_service_proto_goTypes = []any{
 	(*DiscoveryRequest)(nil),          // 0: udb.core.control.services.v1.DiscoveryRequest

@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Control.Services.V1 {
+namespace Udb.Core.Control.Services.V1 {
   /// <summary>
   /// ---------------------------------------------------------------------------
   /// ControlPlaneService — Versioned, ACK/NACK, nonce-paired, ordered control-plane
@@ -61,32 +61,32 @@ namespace udb.core.Control.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.DiscoveryRequest> __Marshaller_udb_core_control_services_v1_DiscoveryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.DiscoveryRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.DiscoveryRequest> __Marshaller_udb_core_control_services_v1_DiscoveryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.DiscoveryRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.DiscoveryResponse> __Marshaller_udb_core_control_services_v1_DiscoveryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.DiscoveryResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.DiscoveryResponse> __Marshaller_udb_core_control_services_v1_DiscoveryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.DiscoveryResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.DeltaDiscoveryRequest> __Marshaller_udb_core_control_services_v1_DeltaDiscoveryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.DeltaDiscoveryRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.DeltaDiscoveryRequest> __Marshaller_udb_core_control_services_v1_DeltaDiscoveryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.DeltaDiscoveryRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.DeltaDiscoveryResponse> __Marshaller_udb_core_control_services_v1_DeltaDiscoveryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.DeltaDiscoveryResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.DeltaDiscoveryResponse> __Marshaller_udb_core_control_services_v1_DeltaDiscoveryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.DeltaDiscoveryResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.GetResourcesRequest> __Marshaller_udb_core_control_services_v1_GetResourcesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.GetResourcesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.GetResourcesRequest> __Marshaller_udb_core_control_services_v1_GetResourcesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.GetResourcesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.GetResourcesResponse> __Marshaller_udb_core_control_services_v1_GetResourcesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.GetResourcesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.GetResourcesResponse> __Marshaller_udb_core_control_services_v1_GetResourcesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.GetResourcesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.ListNodeStatesRequest> __Marshaller_udb_core_control_services_v1_ListNodeStatesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.ListNodeStatesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.ListNodeStatesRequest> __Marshaller_udb_core_control_services_v1_ListNodeStatesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.ListNodeStatesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.ListNodeStatesResponse> __Marshaller_udb_core_control_services_v1_ListNodeStatesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.ListNodeStatesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.ListNodeStatesResponse> __Marshaller_udb_core_control_services_v1_ListNodeStatesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.ListNodeStatesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.AckStatusRequest> __Marshaller_udb_core_control_services_v1_AckStatusRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.AckStatusRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.AckStatusRequest> __Marshaller_udb_core_control_services_v1_AckStatusRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.AckStatusRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.AckStatusResponse> __Marshaller_udb_core_control_services_v1_AckStatusResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.AckStatusResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.AckStatusResponse> __Marshaller_udb_core_control_services_v1_AckStatusResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.AckStatusResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.RollbackResourcesRequest> __Marshaller_udb_core_control_services_v1_RollbackResourcesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.RollbackResourcesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.RollbackResourcesRequest> __Marshaller_udb_core_control_services_v1_RollbackResourcesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.RollbackResourcesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.RollbackResourcesResponse> __Marshaller_udb_core_control_services_v1_RollbackResourcesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.RollbackResourcesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Control.Services.V1.RollbackResourcesResponse> __Marshaller_udb_core_control_services_v1_RollbackResourcesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Control.Services.V1.RollbackResourcesResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Control.Services.V1.DiscoveryRequest, global::udb.core.Control.Services.V1.DiscoveryResponse> __Method_StreamResources = new grpc::Method<global::udb.core.Control.Services.V1.DiscoveryRequest, global::udb.core.Control.Services.V1.DiscoveryResponse>(
+    static readonly grpc::Method<global::Udb.Core.Control.Services.V1.DiscoveryRequest, global::Udb.Core.Control.Services.V1.DiscoveryResponse> __Method_StreamResources = new grpc::Method<global::Udb.Core.Control.Services.V1.DiscoveryRequest, global::Udb.Core.Control.Services.V1.DiscoveryResponse>(
         grpc::MethodType.DuplexStreaming,
         __ServiceName,
         "StreamResources",
@@ -94,7 +94,7 @@ namespace udb.core.Control.Services.V1 {
         __Marshaller_udb_core_control_services_v1_DiscoveryResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Control.Services.V1.DeltaDiscoveryRequest, global::udb.core.Control.Services.V1.DeltaDiscoveryResponse> __Method_DeltaResources = new grpc::Method<global::udb.core.Control.Services.V1.DeltaDiscoveryRequest, global::udb.core.Control.Services.V1.DeltaDiscoveryResponse>(
+    static readonly grpc::Method<global::Udb.Core.Control.Services.V1.DeltaDiscoveryRequest, global::Udb.Core.Control.Services.V1.DeltaDiscoveryResponse> __Method_DeltaResources = new grpc::Method<global::Udb.Core.Control.Services.V1.DeltaDiscoveryRequest, global::Udb.Core.Control.Services.V1.DeltaDiscoveryResponse>(
         grpc::MethodType.DuplexStreaming,
         __ServiceName,
         "DeltaResources",
@@ -102,7 +102,7 @@ namespace udb.core.Control.Services.V1 {
         __Marshaller_udb_core_control_services_v1_DeltaDiscoveryResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Control.Services.V1.GetResourcesRequest, global::udb.core.Control.Services.V1.GetResourcesResponse> __Method_GetResources = new grpc::Method<global::udb.core.Control.Services.V1.GetResourcesRequest, global::udb.core.Control.Services.V1.GetResourcesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Control.Services.V1.GetResourcesRequest, global::Udb.Core.Control.Services.V1.GetResourcesResponse> __Method_GetResources = new grpc::Method<global::Udb.Core.Control.Services.V1.GetResourcesRequest, global::Udb.Core.Control.Services.V1.GetResourcesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetResources",
@@ -110,7 +110,7 @@ namespace udb.core.Control.Services.V1 {
         __Marshaller_udb_core_control_services_v1_GetResourcesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Control.Services.V1.ListNodeStatesRequest, global::udb.core.Control.Services.V1.ListNodeStatesResponse> __Method_ListNodeStates = new grpc::Method<global::udb.core.Control.Services.V1.ListNodeStatesRequest, global::udb.core.Control.Services.V1.ListNodeStatesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Control.Services.V1.ListNodeStatesRequest, global::Udb.Core.Control.Services.V1.ListNodeStatesResponse> __Method_ListNodeStates = new grpc::Method<global::Udb.Core.Control.Services.V1.ListNodeStatesRequest, global::Udb.Core.Control.Services.V1.ListNodeStatesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListNodeStates",
@@ -118,7 +118,7 @@ namespace udb.core.Control.Services.V1 {
         __Marshaller_udb_core_control_services_v1_ListNodeStatesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Control.Services.V1.AckStatusRequest, global::udb.core.Control.Services.V1.AckStatusResponse> __Method_AckStatus = new grpc::Method<global::udb.core.Control.Services.V1.AckStatusRequest, global::udb.core.Control.Services.V1.AckStatusResponse>(
+    static readonly grpc::Method<global::Udb.Core.Control.Services.V1.AckStatusRequest, global::Udb.Core.Control.Services.V1.AckStatusResponse> __Method_AckStatus = new grpc::Method<global::Udb.Core.Control.Services.V1.AckStatusRequest, global::Udb.Core.Control.Services.V1.AckStatusResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "AckStatus",
@@ -126,7 +126,7 @@ namespace udb.core.Control.Services.V1 {
         __Marshaller_udb_core_control_services_v1_AckStatusResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Control.Services.V1.RollbackResourcesRequest, global::udb.core.Control.Services.V1.RollbackResourcesResponse> __Method_RollbackResources = new grpc::Method<global::udb.core.Control.Services.V1.RollbackResourcesRequest, global::udb.core.Control.Services.V1.RollbackResourcesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Control.Services.V1.RollbackResourcesRequest, global::Udb.Core.Control.Services.V1.RollbackResourcesResponse> __Method_RollbackResources = new grpc::Method<global::Udb.Core.Control.Services.V1.RollbackResourcesRequest, global::Udb.Core.Control.Services.V1.RollbackResourcesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RollbackResources",
@@ -136,7 +136,7 @@ namespace udb.core.Control.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Control.Services.V1.ControlPlaneServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Control.Services.V1.ControlPlaneServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of ControlPlaneService</summary>
@@ -156,7 +156,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>A task indicating completion of the handler.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task StreamResources(grpc::IAsyncStreamReader<global::udb.core.Control.Services.V1.DiscoveryRequest> requestStream, grpc::IServerStreamWriter<global::udb.core.Control.Services.V1.DiscoveryResponse> responseStream, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task StreamResources(grpc::IAsyncStreamReader<global::Udb.Core.Control.Services.V1.DiscoveryRequest> requestStream, grpc::IServerStreamWriter<global::Udb.Core.Control.Services.V1.DiscoveryResponse> responseStream, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -172,7 +172,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>A task indicating completion of the handler.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task DeltaResources(grpc::IAsyncStreamReader<global::udb.core.Control.Services.V1.DeltaDiscoveryRequest> requestStream, grpc::IServerStreamWriter<global::udb.core.Control.Services.V1.DeltaDiscoveryResponse> responseStream, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task DeltaResources(grpc::IAsyncStreamReader<global::Udb.Core.Control.Services.V1.DeltaDiscoveryRequest> requestStream, grpc::IServerStreamWriter<global::Udb.Core.Control.Services.V1.DeltaDiscoveryResponse> responseStream, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -184,7 +184,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Control.Services.V1.GetResourcesResponse> GetResources(global::udb.core.Control.Services.V1.GetResourcesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Control.Services.V1.GetResourcesResponse> GetResources(global::Udb.Core.Control.Services.V1.GetResourcesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -196,13 +196,13 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Control.Services.V1.ListNodeStatesResponse> ListNodeStates(global::udb.core.Control.Services.V1.ListNodeStatesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Control.Services.V1.ListNodeStatesResponse> ListNodeStates(global::Udb.Core.Control.Services.V1.ListNodeStatesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Control.Services.V1.AckStatusResponse> AckStatus(global::udb.core.Control.Services.V1.AckStatusRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Control.Services.V1.AckStatusResponse> AckStatus(global::Udb.Core.Control.Services.V1.AckStatusRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -214,7 +214,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Control.Services.V1.RollbackResourcesResponse> RollbackResources(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Control.Services.V1.RollbackResourcesResponse> RollbackResources(global::Udb.Core.Control.Services.V1.RollbackResourcesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -261,7 +261,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncDuplexStreamingCall<global::udb.core.Control.Services.V1.DiscoveryRequest, global::udb.core.Control.Services.V1.DiscoveryResponse> StreamResources(grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncDuplexStreamingCall<global::Udb.Core.Control.Services.V1.DiscoveryRequest, global::Udb.Core.Control.Services.V1.DiscoveryResponse> StreamResources(grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StreamResources(new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -276,7 +276,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncDuplexStreamingCall<global::udb.core.Control.Services.V1.DiscoveryRequest, global::udb.core.Control.Services.V1.DiscoveryResponse> StreamResources(grpc::CallOptions options)
+      public virtual grpc::AsyncDuplexStreamingCall<global::Udb.Core.Control.Services.V1.DiscoveryRequest, global::Udb.Core.Control.Services.V1.DiscoveryResponse> StreamResources(grpc::CallOptions options)
       {
         return CallInvoker.AsyncDuplexStreamingCall(__Method_StreamResources, null, options);
       }
@@ -291,7 +291,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncDuplexStreamingCall<global::udb.core.Control.Services.V1.DeltaDiscoveryRequest, global::udb.core.Control.Services.V1.DeltaDiscoveryResponse> DeltaResources(grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncDuplexStreamingCall<global::Udb.Core.Control.Services.V1.DeltaDiscoveryRequest, global::Udb.Core.Control.Services.V1.DeltaDiscoveryResponse> DeltaResources(grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeltaResources(new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -304,7 +304,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncDuplexStreamingCall<global::udb.core.Control.Services.V1.DeltaDiscoveryRequest, global::udb.core.Control.Services.V1.DeltaDiscoveryResponse> DeltaResources(grpc::CallOptions options)
+      public virtual grpc::AsyncDuplexStreamingCall<global::Udb.Core.Control.Services.V1.DeltaDiscoveryRequest, global::Udb.Core.Control.Services.V1.DeltaDiscoveryResponse> DeltaResources(grpc::CallOptions options)
       {
         return CallInvoker.AsyncDuplexStreamingCall(__Method_DeltaResources, null, options);
       }
@@ -317,7 +317,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Control.Services.V1.GetResourcesResponse GetResources(global::udb.core.Control.Services.V1.GetResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Control.Services.V1.GetResourcesResponse GetResources(global::Udb.Core.Control.Services.V1.GetResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetResources(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -328,7 +328,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Control.Services.V1.GetResourcesResponse GetResources(global::udb.core.Control.Services.V1.GetResourcesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Control.Services.V1.GetResourcesResponse GetResources(global::Udb.Core.Control.Services.V1.GetResourcesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetResources, null, options, request);
       }
@@ -341,7 +341,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.GetResourcesResponse> GetResourcesAsync(global::udb.core.Control.Services.V1.GetResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Control.Services.V1.GetResourcesResponse> GetResourcesAsync(global::Udb.Core.Control.Services.V1.GetResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetResourcesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -352,7 +352,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.GetResourcesResponse> GetResourcesAsync(global::udb.core.Control.Services.V1.GetResourcesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Control.Services.V1.GetResourcesResponse> GetResourcesAsync(global::Udb.Core.Control.Services.V1.GetResourcesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetResources, null, options, request);
       }
@@ -365,7 +365,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Control.Services.V1.ListNodeStatesResponse ListNodeStates(global::udb.core.Control.Services.V1.ListNodeStatesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Control.Services.V1.ListNodeStatesResponse ListNodeStates(global::Udb.Core.Control.Services.V1.ListNodeStatesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListNodeStates(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -376,7 +376,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Control.Services.V1.ListNodeStatesResponse ListNodeStates(global::udb.core.Control.Services.V1.ListNodeStatesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Control.Services.V1.ListNodeStatesResponse ListNodeStates(global::Udb.Core.Control.Services.V1.ListNodeStatesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListNodeStates, null, options, request);
       }
@@ -389,7 +389,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.ListNodeStatesResponse> ListNodeStatesAsync(global::udb.core.Control.Services.V1.ListNodeStatesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Control.Services.V1.ListNodeStatesResponse> ListNodeStatesAsync(global::Udb.Core.Control.Services.V1.ListNodeStatesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListNodeStatesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -400,27 +400,27 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.ListNodeStatesResponse> ListNodeStatesAsync(global::udb.core.Control.Services.V1.ListNodeStatesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Control.Services.V1.ListNodeStatesResponse> ListNodeStatesAsync(global::Udb.Core.Control.Services.V1.ListNodeStatesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListNodeStates, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Control.Services.V1.AckStatusResponse AckStatus(global::udb.core.Control.Services.V1.AckStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Control.Services.V1.AckStatusResponse AckStatus(global::Udb.Core.Control.Services.V1.AckStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return AckStatus(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Control.Services.V1.AckStatusResponse AckStatus(global::udb.core.Control.Services.V1.AckStatusRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Control.Services.V1.AckStatusResponse AckStatus(global::Udb.Core.Control.Services.V1.AckStatusRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_AckStatus, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.AckStatusResponse> AckStatusAsync(global::udb.core.Control.Services.V1.AckStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Control.Services.V1.AckStatusResponse> AckStatusAsync(global::Udb.Core.Control.Services.V1.AckStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return AckStatusAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.AckStatusResponse> AckStatusAsync(global::udb.core.Control.Services.V1.AckStatusRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Control.Services.V1.AckStatusResponse> AckStatusAsync(global::Udb.Core.Control.Services.V1.AckStatusRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_AckStatus, null, options, request);
       }
@@ -433,7 +433,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Control.Services.V1.RollbackResourcesResponse RollbackResources(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Control.Services.V1.RollbackResourcesResponse RollbackResources(global::Udb.Core.Control.Services.V1.RollbackResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RollbackResources(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -444,7 +444,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Control.Services.V1.RollbackResourcesResponse RollbackResources(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Control.Services.V1.RollbackResourcesResponse RollbackResources(global::Udb.Core.Control.Services.V1.RollbackResourcesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RollbackResources, null, options, request);
       }
@@ -457,7 +457,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.RollbackResourcesResponse> RollbackResourcesAsync(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Control.Services.V1.RollbackResourcesResponse> RollbackResourcesAsync(global::Udb.Core.Control.Services.V1.RollbackResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RollbackResourcesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -468,7 +468,7 @@ namespace udb.core.Control.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.RollbackResourcesResponse> RollbackResourcesAsync(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Control.Services.V1.RollbackResourcesResponse> RollbackResourcesAsync(global::Udb.Core.Control.Services.V1.RollbackResourcesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RollbackResources, null, options, request);
       }
@@ -501,12 +501,12 @@ namespace udb.core.Control.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, ControlPlaneServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_StreamResources, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::udb.core.Control.Services.V1.DiscoveryRequest, global::udb.core.Control.Services.V1.DiscoveryResponse>(serviceImpl.StreamResources));
-      serviceBinder.AddMethod(__Method_DeltaResources, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::udb.core.Control.Services.V1.DeltaDiscoveryRequest, global::udb.core.Control.Services.V1.DeltaDiscoveryResponse>(serviceImpl.DeltaResources));
-      serviceBinder.AddMethod(__Method_GetResources, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Control.Services.V1.GetResourcesRequest, global::udb.core.Control.Services.V1.GetResourcesResponse>(serviceImpl.GetResources));
-      serviceBinder.AddMethod(__Method_ListNodeStates, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Control.Services.V1.ListNodeStatesRequest, global::udb.core.Control.Services.V1.ListNodeStatesResponse>(serviceImpl.ListNodeStates));
-      serviceBinder.AddMethod(__Method_AckStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Control.Services.V1.AckStatusRequest, global::udb.core.Control.Services.V1.AckStatusResponse>(serviceImpl.AckStatus));
-      serviceBinder.AddMethod(__Method_RollbackResources, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Control.Services.V1.RollbackResourcesRequest, global::udb.core.Control.Services.V1.RollbackResourcesResponse>(serviceImpl.RollbackResources));
+      serviceBinder.AddMethod(__Method_StreamResources, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Core.Control.Services.V1.DiscoveryRequest, global::Udb.Core.Control.Services.V1.DiscoveryResponse>(serviceImpl.StreamResources));
+      serviceBinder.AddMethod(__Method_DeltaResources, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Core.Control.Services.V1.DeltaDiscoveryRequest, global::Udb.Core.Control.Services.V1.DeltaDiscoveryResponse>(serviceImpl.DeltaResources));
+      serviceBinder.AddMethod(__Method_GetResources, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Control.Services.V1.GetResourcesRequest, global::Udb.Core.Control.Services.V1.GetResourcesResponse>(serviceImpl.GetResources));
+      serviceBinder.AddMethod(__Method_ListNodeStates, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Control.Services.V1.ListNodeStatesRequest, global::Udb.Core.Control.Services.V1.ListNodeStatesResponse>(serviceImpl.ListNodeStates));
+      serviceBinder.AddMethod(__Method_AckStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Control.Services.V1.AckStatusRequest, global::Udb.Core.Control.Services.V1.AckStatusResponse>(serviceImpl.AckStatus));
+      serviceBinder.AddMethod(__Method_RollbackResources, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Control.Services.V1.RollbackResourcesRequest, global::Udb.Core.Control.Services.V1.RollbackResourcesResponse>(serviceImpl.RollbackResources));
     }
 
   }

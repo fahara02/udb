@@ -25,7 +25,7 @@ var File_udb_core_authz_entity_v1_entities_proto protoreflect.FileDescriptor
 const file_udb_core_authz_entity_v1_entities_proto_rawDesc = "" +
 	"\n" +
 	"'udb/core/authz/entity/v1/entities.proto\x12\x18udb.core.authz.entity.v1\x1a4udb/core/authz/entity/v1/access_decision_audit.proto\x1a-udb/core/authz/entity/v1/authz_revision.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a/udb/core/authz/entity/v1/governance_enums.proto\x1a.udb/core/authz/entity/v1/policy_approval.proto\x1a+udb/core/authz/entity/v1/policy_draft.proto\x1a*udb/core/authz/entity/v1/policy_rule.proto\x1a)udb/core/authz/entity/v1/policy_set.proto\x1a0udb/core/authz/entity/v1/policy_simulation.proto\x1a+udb/core/authz/entity/v1/policy_tuple.proto\x1a-udb/core/authz/entity/v1/policy_version.proto\x1a#udb/core/authz/entity/v1/role.proto\x1a.udb/core/authz/entity/v1/role_permission.proto\x1a(udb/core/authz/entity/v1/user_role.protoB\xf8\x01\n" +
-	"\x1ccom.udb.core.authz.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06P\aP\bP\tP\n" +
+	"\x1ccom.udb.core.authz.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06P\aP\bP\tP\n" +
 	"P\vP\fP\rb\x06proto3"
 
 var file_udb_core_authz_entity_v1_entities_proto_goTypes = []any{}

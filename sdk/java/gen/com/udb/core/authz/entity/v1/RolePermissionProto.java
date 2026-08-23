@@ -80,7 +80,7 @@ public final class RolePermissionProto {
       "db.core.authz.entity.v1B\023RolePermissionP" +
       "rotoP\001ZDgithub.com/fahara02/udb/sdk/go/g" +
       "en/udb/core/authz/entity/v1;entityv1\242\002\004U" +
-      "CAE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Cor" +
+      "CAE\252\002\030Udb.Core.Authz.Entity.V1\312\002\030Udb\\Cor" +
       "e\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core" +
       "\\Authz\\Entity\\V1\352\002\034Udb::Core::Authz::Ent" +
       "ity::V1b\006proto3"

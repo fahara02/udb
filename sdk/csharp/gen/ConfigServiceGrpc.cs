@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Config.Services.V1 {
+namespace Udb.Core.Config.Services.V1 {
   /// <summary>
   /// ConfigService (master-plan 9.8) — feature flags and runtime configuration.
   /// Flags are scoped to (tenant, project, environment); evaluation precedence is
@@ -55,28 +55,28 @@ namespace udb.core.Config.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.PutFlagRequest> __Marshaller_udb_core_config_services_v1_PutFlagRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.PutFlagRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.PutFlagRequest> __Marshaller_udb_core_config_services_v1_PutFlagRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.PutFlagRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.PutFlagResponse> __Marshaller_udb_core_config_services_v1_PutFlagResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.PutFlagResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.PutFlagResponse> __Marshaller_udb_core_config_services_v1_PutFlagResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.PutFlagResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.GetFlagRequest> __Marshaller_udb_core_config_services_v1_GetFlagRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.GetFlagRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.GetFlagRequest> __Marshaller_udb_core_config_services_v1_GetFlagRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.GetFlagRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.GetFlagResponse> __Marshaller_udb_core_config_services_v1_GetFlagResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.GetFlagResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.GetFlagResponse> __Marshaller_udb_core_config_services_v1_GetFlagResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.GetFlagResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.ListFlagsRequest> __Marshaller_udb_core_config_services_v1_ListFlagsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.ListFlagsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.ListFlagsRequest> __Marshaller_udb_core_config_services_v1_ListFlagsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.ListFlagsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.ListFlagsResponse> __Marshaller_udb_core_config_services_v1_ListFlagsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.ListFlagsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.ListFlagsResponse> __Marshaller_udb_core_config_services_v1_ListFlagsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.ListFlagsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.DeleteFlagRequest> __Marshaller_udb_core_config_services_v1_DeleteFlagRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.DeleteFlagRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.DeleteFlagRequest> __Marshaller_udb_core_config_services_v1_DeleteFlagRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.DeleteFlagRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.DeleteFlagResponse> __Marshaller_udb_core_config_services_v1_DeleteFlagResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.DeleteFlagResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.DeleteFlagResponse> __Marshaller_udb_core_config_services_v1_DeleteFlagResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.DeleteFlagResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.EvaluateFlagsRequest> __Marshaller_udb_core_config_services_v1_EvaluateFlagsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.EvaluateFlagsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest> __Marshaller_udb_core_config_services_v1_EvaluateFlagsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Config.Services.V1.EvaluateFlagsResponse> __Marshaller_udb_core_config_services_v1_EvaluateFlagsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Config.Services.V1.EvaluateFlagsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse> __Marshaller_udb_core_config_services_v1_EvaluateFlagsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Config.Services.V1.PutFlagRequest, global::udb.core.Config.Services.V1.PutFlagResponse> __Method_PutFlag = new grpc::Method<global::udb.core.Config.Services.V1.PutFlagRequest, global::udb.core.Config.Services.V1.PutFlagResponse>(
+    static readonly grpc::Method<global::Udb.Core.Config.Services.V1.PutFlagRequest, global::Udb.Core.Config.Services.V1.PutFlagResponse> __Method_PutFlag = new grpc::Method<global::Udb.Core.Config.Services.V1.PutFlagRequest, global::Udb.Core.Config.Services.V1.PutFlagResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PutFlag",
@@ -84,7 +84,7 @@ namespace udb.core.Config.Services.V1 {
         __Marshaller_udb_core_config_services_v1_PutFlagResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Config.Services.V1.GetFlagRequest, global::udb.core.Config.Services.V1.GetFlagResponse> __Method_GetFlag = new grpc::Method<global::udb.core.Config.Services.V1.GetFlagRequest, global::udb.core.Config.Services.V1.GetFlagResponse>(
+    static readonly grpc::Method<global::Udb.Core.Config.Services.V1.GetFlagRequest, global::Udb.Core.Config.Services.V1.GetFlagResponse> __Method_GetFlag = new grpc::Method<global::Udb.Core.Config.Services.V1.GetFlagRequest, global::Udb.Core.Config.Services.V1.GetFlagResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetFlag",
@@ -92,7 +92,7 @@ namespace udb.core.Config.Services.V1 {
         __Marshaller_udb_core_config_services_v1_GetFlagResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Config.Services.V1.ListFlagsRequest, global::udb.core.Config.Services.V1.ListFlagsResponse> __Method_ListFlags = new grpc::Method<global::udb.core.Config.Services.V1.ListFlagsRequest, global::udb.core.Config.Services.V1.ListFlagsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Config.Services.V1.ListFlagsRequest, global::Udb.Core.Config.Services.V1.ListFlagsResponse> __Method_ListFlags = new grpc::Method<global::Udb.Core.Config.Services.V1.ListFlagsRequest, global::Udb.Core.Config.Services.V1.ListFlagsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListFlags",
@@ -100,7 +100,7 @@ namespace udb.core.Config.Services.V1 {
         __Marshaller_udb_core_config_services_v1_ListFlagsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Config.Services.V1.DeleteFlagRequest, global::udb.core.Config.Services.V1.DeleteFlagResponse> __Method_DeleteFlag = new grpc::Method<global::udb.core.Config.Services.V1.DeleteFlagRequest, global::udb.core.Config.Services.V1.DeleteFlagResponse>(
+    static readonly grpc::Method<global::Udb.Core.Config.Services.V1.DeleteFlagRequest, global::Udb.Core.Config.Services.V1.DeleteFlagResponse> __Method_DeleteFlag = new grpc::Method<global::Udb.Core.Config.Services.V1.DeleteFlagRequest, global::Udb.Core.Config.Services.V1.DeleteFlagResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DeleteFlag",
@@ -108,7 +108,7 @@ namespace udb.core.Config.Services.V1 {
         __Marshaller_udb_core_config_services_v1_DeleteFlagResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Config.Services.V1.EvaluateFlagsRequest, global::udb.core.Config.Services.V1.EvaluateFlagsResponse> __Method_EvaluateFlags = new grpc::Method<global::udb.core.Config.Services.V1.EvaluateFlagsRequest, global::udb.core.Config.Services.V1.EvaluateFlagsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest, global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse> __Method_EvaluateFlags = new grpc::Method<global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest, global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "EvaluateFlags",
@@ -118,7 +118,7 @@ namespace udb.core.Config.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Config.Services.V1.ConfigServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Config.Services.V1.ConfigServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of ConfigService</summary>
@@ -133,7 +133,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Config.Services.V1.PutFlagResponse> PutFlag(global::udb.core.Config.Services.V1.PutFlagRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Config.Services.V1.PutFlagResponse> PutFlag(global::Udb.Core.Config.Services.V1.PutFlagRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -146,7 +146,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Config.Services.V1.GetFlagResponse> GetFlag(global::udb.core.Config.Services.V1.GetFlagRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Config.Services.V1.GetFlagResponse> GetFlag(global::Udb.Core.Config.Services.V1.GetFlagRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -158,7 +158,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Config.Services.V1.ListFlagsResponse> ListFlags(global::udb.core.Config.Services.V1.ListFlagsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Config.Services.V1.ListFlagsResponse> ListFlags(global::Udb.Core.Config.Services.V1.ListFlagsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -171,7 +171,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Config.Services.V1.DeleteFlagResponse> DeleteFlag(global::udb.core.Config.Services.V1.DeleteFlagRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Config.Services.V1.DeleteFlagResponse> DeleteFlag(global::Udb.Core.Config.Services.V1.DeleteFlagRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -186,7 +186,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Config.Services.V1.EvaluateFlagsResponse> EvaluateFlags(global::udb.core.Config.Services.V1.EvaluateFlagsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse> EvaluateFlags(global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -230,7 +230,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.PutFlagResponse PutFlag(global::udb.core.Config.Services.V1.PutFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Config.Services.V1.PutFlagResponse PutFlag(global::Udb.Core.Config.Services.V1.PutFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutFlag(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -242,7 +242,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.PutFlagResponse PutFlag(global::udb.core.Config.Services.V1.PutFlagRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Config.Services.V1.PutFlagResponse PutFlag(global::Udb.Core.Config.Services.V1.PutFlagRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PutFlag, null, options, request);
       }
@@ -256,7 +256,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.PutFlagResponse> PutFlagAsync(global::udb.core.Config.Services.V1.PutFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.PutFlagResponse> PutFlagAsync(global::Udb.Core.Config.Services.V1.PutFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutFlagAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -268,7 +268,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.PutFlagResponse> PutFlagAsync(global::udb.core.Config.Services.V1.PutFlagRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.PutFlagResponse> PutFlagAsync(global::Udb.Core.Config.Services.V1.PutFlagRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PutFlag, null, options, request);
       }
@@ -282,7 +282,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.GetFlagResponse GetFlag(global::udb.core.Config.Services.V1.GetFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Config.Services.V1.GetFlagResponse GetFlag(global::Udb.Core.Config.Services.V1.GetFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetFlag(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -294,7 +294,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.GetFlagResponse GetFlag(global::udb.core.Config.Services.V1.GetFlagRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Config.Services.V1.GetFlagResponse GetFlag(global::Udb.Core.Config.Services.V1.GetFlagRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetFlag, null, options, request);
       }
@@ -308,7 +308,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.GetFlagResponse> GetFlagAsync(global::udb.core.Config.Services.V1.GetFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.GetFlagResponse> GetFlagAsync(global::Udb.Core.Config.Services.V1.GetFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetFlagAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -320,7 +320,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.GetFlagResponse> GetFlagAsync(global::udb.core.Config.Services.V1.GetFlagRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.GetFlagResponse> GetFlagAsync(global::Udb.Core.Config.Services.V1.GetFlagRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetFlag, null, options, request);
       }
@@ -333,7 +333,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.ListFlagsResponse ListFlags(global::udb.core.Config.Services.V1.ListFlagsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Config.Services.V1.ListFlagsResponse ListFlags(global::Udb.Core.Config.Services.V1.ListFlagsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListFlags(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -344,7 +344,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.ListFlagsResponse ListFlags(global::udb.core.Config.Services.V1.ListFlagsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Config.Services.V1.ListFlagsResponse ListFlags(global::Udb.Core.Config.Services.V1.ListFlagsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListFlags, null, options, request);
       }
@@ -357,7 +357,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.ListFlagsResponse> ListFlagsAsync(global::udb.core.Config.Services.V1.ListFlagsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.ListFlagsResponse> ListFlagsAsync(global::Udb.Core.Config.Services.V1.ListFlagsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListFlagsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -368,7 +368,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.ListFlagsResponse> ListFlagsAsync(global::udb.core.Config.Services.V1.ListFlagsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.ListFlagsResponse> ListFlagsAsync(global::Udb.Core.Config.Services.V1.ListFlagsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListFlags, null, options, request);
       }
@@ -382,7 +382,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.DeleteFlagResponse DeleteFlag(global::udb.core.Config.Services.V1.DeleteFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Config.Services.V1.DeleteFlagResponse DeleteFlag(global::Udb.Core.Config.Services.V1.DeleteFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteFlag(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -394,7 +394,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.DeleteFlagResponse DeleteFlag(global::udb.core.Config.Services.V1.DeleteFlagRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Config.Services.V1.DeleteFlagResponse DeleteFlag(global::Udb.Core.Config.Services.V1.DeleteFlagRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeleteFlag, null, options, request);
       }
@@ -408,7 +408,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.DeleteFlagResponse> DeleteFlagAsync(global::udb.core.Config.Services.V1.DeleteFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.DeleteFlagResponse> DeleteFlagAsync(global::Udb.Core.Config.Services.V1.DeleteFlagRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteFlagAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -420,7 +420,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.DeleteFlagResponse> DeleteFlagAsync(global::udb.core.Config.Services.V1.DeleteFlagRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.DeleteFlagResponse> DeleteFlagAsync(global::Udb.Core.Config.Services.V1.DeleteFlagRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteFlag, null, options, request);
       }
@@ -436,7 +436,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.EvaluateFlagsResponse EvaluateFlags(global::udb.core.Config.Services.V1.EvaluateFlagsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse EvaluateFlags(global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return EvaluateFlags(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -450,7 +450,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Config.Services.V1.EvaluateFlagsResponse EvaluateFlags(global::udb.core.Config.Services.V1.EvaluateFlagsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse EvaluateFlags(global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_EvaluateFlags, null, options, request);
       }
@@ -466,7 +466,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.EvaluateFlagsResponse> EvaluateFlagsAsync(global::udb.core.Config.Services.V1.EvaluateFlagsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse> EvaluateFlagsAsync(global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return EvaluateFlagsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -480,7 +480,7 @@ namespace udb.core.Config.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Config.Services.V1.EvaluateFlagsResponse> EvaluateFlagsAsync(global::udb.core.Config.Services.V1.EvaluateFlagsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse> EvaluateFlagsAsync(global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_EvaluateFlags, null, options, request);
       }
@@ -512,11 +512,11 @@ namespace udb.core.Config.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, ConfigServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_PutFlag, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Config.Services.V1.PutFlagRequest, global::udb.core.Config.Services.V1.PutFlagResponse>(serviceImpl.PutFlag));
-      serviceBinder.AddMethod(__Method_GetFlag, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Config.Services.V1.GetFlagRequest, global::udb.core.Config.Services.V1.GetFlagResponse>(serviceImpl.GetFlag));
-      serviceBinder.AddMethod(__Method_ListFlags, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Config.Services.V1.ListFlagsRequest, global::udb.core.Config.Services.V1.ListFlagsResponse>(serviceImpl.ListFlags));
-      serviceBinder.AddMethod(__Method_DeleteFlag, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Config.Services.V1.DeleteFlagRequest, global::udb.core.Config.Services.V1.DeleteFlagResponse>(serviceImpl.DeleteFlag));
-      serviceBinder.AddMethod(__Method_EvaluateFlags, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Config.Services.V1.EvaluateFlagsRequest, global::udb.core.Config.Services.V1.EvaluateFlagsResponse>(serviceImpl.EvaluateFlags));
+      serviceBinder.AddMethod(__Method_PutFlag, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Config.Services.V1.PutFlagRequest, global::Udb.Core.Config.Services.V1.PutFlagResponse>(serviceImpl.PutFlag));
+      serviceBinder.AddMethod(__Method_GetFlag, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Config.Services.V1.GetFlagRequest, global::Udb.Core.Config.Services.V1.GetFlagResponse>(serviceImpl.GetFlag));
+      serviceBinder.AddMethod(__Method_ListFlags, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Config.Services.V1.ListFlagsRequest, global::Udb.Core.Config.Services.V1.ListFlagsResponse>(serviceImpl.ListFlags));
+      serviceBinder.AddMethod(__Method_DeleteFlag, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Config.Services.V1.DeleteFlagRequest, global::Udb.Core.Config.Services.V1.DeleteFlagResponse>(serviceImpl.DeleteFlag));
+      serviceBinder.AddMethod(__Method_EvaluateFlags, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Config.Services.V1.EvaluateFlagsRequest, global::Udb.Core.Config.Services.V1.EvaluateFlagsResponse>(serviceImpl.EvaluateFlags));
     }
 
   }

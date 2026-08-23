@@ -2855,7 +2855,7 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\x13service_sdk_surface\x12\x1f.google.protobuf.ServiceOptions\x18\x8a\x9e\x03 \x01(\v2%.udb.core.common.v1.SdkSurfaceOptionsR\x11serviceSdkSurface:{\n" +
 	"\x14service_cli_scaffold\x12\x1f.google.protobuf.ServiceOptions\x18\x8b\x9e\x03 \x01(\v2&.udb.core.common.v1.CliScaffoldOptionsR\x12serviceCliScaffold:\x90\x01\n" +
 	"\x1bservice_dependency_contract\x12\x1f.google.protobuf.ServiceOptions\x18\x8c\x9e\x03 \x01(\v2-.udb.core.common.v1.DependencyContractOptionsR\x19serviceDependencyContractB\xd2\x01\n" +
-	"\x16com.udb.core.common.v1B\rSecurityProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12udb.core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1b\x06proto3"
+	"\x16com.udb.core.common.v1B\rSecurityProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12Udb.Core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1b\x06proto3"
 
 var (
 	file_udb_core_common_v1_security_proto_rawDescOnce sync.Once

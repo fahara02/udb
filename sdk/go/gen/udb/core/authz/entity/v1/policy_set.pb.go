@@ -198,7 +198,7 @@ const file_udb_core_authz_entity_v1_policy_set_proto_rawDesc = "" +
 	"\"uq_policy_sets_tenant_project_name\x12\x05BTREE\x18\x01Z\ttenant_idZ\n" +
 	"project_idZ\x04name\x8a\xb2\x19\x96\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x10authz.governance@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf9\x01\n" +
-	"\x1ccom.udb.core.authz.entity.v1B\x0ePolicySetProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authz.entity.v1B\x0ePolicySetProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authz_entity_v1_policy_set_proto_rawDescOnce sync.Once

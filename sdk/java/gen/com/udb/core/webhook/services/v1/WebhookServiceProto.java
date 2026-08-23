@@ -242,7 +242,7 @@ public final class WebhookServiceProto {
       "com.udb.core.webhook.services.v1B\023Webhoo" +
       "kServiceProtoP\001ZJgithub.com/fahara02/udb" +
       "/sdk/go/gen/udb/core/webhook/services/v1" +
-      ";servicesv1\242\002\004UCWS\252\002\034udb.core.Webhook.Se" +
+      ";servicesv1\242\002\004UCWS\252\002\034Udb.Core.Webhook.Se" +
       "rvices.V1\312\002\034Udb\\Core\\Webhook\\Services\\V1" +
       "\342\002(Udb\\GPBMetadata\\Core\\Webhook\\Services" +
       "\\V1\352\002 Udb::Core::Webhook::Services::V1b\006" +

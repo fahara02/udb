@@ -380,7 +380,7 @@ const file_udb_core_analytics_events_v1_analytics_events_proto_rawDesc = "" +
 	"occurredAt\x12\x1b\n" +
 	"\ttenant_id\x18\a \x01(\tR\btenantId:\x8a\x01\x92\xb2\x19\x85\x01\n" +
 	"7udb.core.analytics.events.v1.DailySummaryGeneratedEvent\x12\x1eudb.analytics.daily.summary.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\x97\x02\n" +
-	" com.udb.core.analytics.events.v1B\x14AnalyticsEventsProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x1cudb.core.Analytics.Events.V1\xca\x02\x1cUdb\\Core\\Analytics\\Events\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Events\\V1\xea\x02 Udb::Core::Analytics::Events::V1b\x06proto3"
+	" com.udb.core.analytics.events.v1B\x14AnalyticsEventsProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x1cUdb.Core.Analytics.Events.V1\xca\x02\x1cUdb\\Core\\Analytics\\Events\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Events\\V1\xea\x02 Udb::Core::Analytics::Events::V1b\x06proto3"
 
 var (
 	file_udb_core_analytics_events_v1_analytics_events_proto_rawDescOnce sync.Once

@@ -87,7 +87,7 @@ public final class PeerProto {
       "dr\025tenant.data_residencyB\372\001\n\035com.udb.cor" +
       "e.webrtc.entity.v1B\tPeerProtoP\001ZEgithub." +
       "com/fahara02/udb/sdk/go/gen/udb/core/web" +
-      "rtc/entity/v1;entityv1\242\002\004UCWE\252\002\031udb.core" +
+      "rtc/entity/v1;entityv1\242\002\004UCWE\252\002\031Udb.Core" +
       ".Webrtc.Entity.V1\312\002\031Udb\\Core\\Webrtc\\Enti" +
       "ty\\V1\342\002%Udb\\GPBMetadata\\Core\\Webrtc\\Enti" +
       "ty\\V1\352\002\035Udb::Core::Webrtc::Entity::V1b\006p" +

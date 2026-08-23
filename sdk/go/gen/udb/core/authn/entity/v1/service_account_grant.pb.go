@@ -228,7 +228,7 @@ const file_udb_core_authn_entity_v1_service_account_grant_proto_rawDesc = "" +
 	"#idx_service_account_grants_identity\x18\x01Z\x10service_identity\x8a\x01,\n" +
 	"\x1fidx_service_account_grants_user\x18\x01Z\auser_id\xea\x01\aprimary\xf2\x01$udb.authn.service_account_grants.cdc\xfa\x01\x11authn:grants:read\x8a\xb2\x19\x88\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\fauthn.policyH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x83\x02\n" +
-	"\x1ccom.udb.core.authn.entity.v1B\x18ServiceAccountGrantProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authn.entity.v1B\x18ServiceAccountGrantProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_entity_v1_service_account_grant_proto_rawDescOnce sync.Once

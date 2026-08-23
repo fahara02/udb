@@ -182,7 +182,7 @@ const file_udb_core_vault_entity_v1_vault_secret_proto_rawDesc = "" +
 	"\x1didx_vault_secrets_tenant_path\x12\x05BTREEZ\ttenant_idZ\vsecret_path\xf2\x01\x1budb.vault.vault_secrets.cdc\xfa\x01\n" +
 	"vault:read\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11vault.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfb\x01\n" +
-	"\x1ccom.udb.core.vault.entity.v1B\x10VaultSecretProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/vault/entity/v1;entityv1\xa2\x02\x04UCVE\xaa\x02\x18udb.core.Vault.Entity.V1\xca\x02\x18Udb\\Core\\Vault\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Vault\\Entity\\V1\xea\x02\x1cUdb::Core::Vault::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.vault.entity.v1B\x10VaultSecretProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/vault/entity/v1;entityv1\xa2\x02\x04UCVE\xaa\x02\x18Udb.Core.Vault.Entity.V1\xca\x02\x18Udb\\Core\\Vault\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Vault\\Entity\\V1\xea\x02\x1cUdb::Core::Vault::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_vault_entity_v1_vault_secret_proto_rawDescOnce sync.Once

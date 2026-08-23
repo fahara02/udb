@@ -1101,7 +1101,7 @@ public final class CoreProto {
       "b.core.authn.services.v1B\tCoreProtoP\001ZHg" +
       "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
       "re/authn/services/v1;servicesv1\242\002\004UCAS\252\002" +
-      "\032udb.core.Authn.Services.V1\312\002\032Udb\\Core\\A" +
+      "\032Udb.Core.Authn.Services.V1\312\002\032Udb\\Core\\A" +
       "uthn\\Services\\V1\342\002&Udb\\GPBMetadata\\Core\\" +
       "Authn\\Services\\V1\352\002\036Udb::Core::Authn::Se" +
       "rvices::V1b\006proto3"

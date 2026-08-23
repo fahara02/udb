@@ -93,7 +93,7 @@ public final class EmbeddingDocumentProto {
       "ore.embedding.entity.v1B\026EmbeddingDocume" +
       "ntProtoP\001ZHgithub.com/fahara02/udb/sdk/g" +
       "o/gen/udb/core/embedding/entity/v1;entit" +
-      "yv1\242\002\004UCEE\252\002\034udb.core.Embedding.Entity.V" +
+      "yv1\242\002\004UCEE\252\002\034Udb.Core.Embedding.Entity.V" +
       "1\312\002\034Udb\\Core\\Embedding\\Entity\\V1\342\002(Udb\\G" +
       "PBMetadata\\Core\\Embedding\\Entity\\V1\352\002 Ud" +
       "b::Core::Embedding::Entity::V1b\006proto3"

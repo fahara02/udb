@@ -1505,7 +1505,7 @@ const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt:~\x92\xb2\x19z\n" +
 	"-udb.core.authz.events.v1.PolicySimulatedEvent\x12\x1dudb.authz.policy.simulated.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xfb\x01\n" +
-	"\x1ccom.udb.core.authz.events.v1B\x10AuthzEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Events.V1\xca\x02\x18Udb\\Core\\Authz\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Events\\V1\xea\x02\x1cUdb::Core::Authz::Events::V1b\x06proto3"
+	"\x1ccom.udb.core.authz.events.v1B\x10AuthzEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authz.Events.V1\xca\x02\x18Udb\\Core\\Authz\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Events\\V1\xea\x02\x1cUdb::Core::Authz::Events::V1b\x06proto3"
 
 var (
 	file_udb_core_authz_events_v1_authz_events_proto_rawDescOnce sync.Once

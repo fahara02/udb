@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Apikey.Services.V1 {
+namespace Udb.Core.Apikey.Services.V1 {
   /// <summary>
   /// ---------------------------------------------------------------------------
   /// ApiKeyService — Machine-to-machine key lifecycle and validation.
@@ -60,44 +60,44 @@ namespace udb.core.Apikey.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.CreateApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_CreateApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.CreateApiKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_CreateApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.CreateApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_CreateApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.CreateApiKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_CreateApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.GetApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_GetApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.GetApiKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_GetApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.GetApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_GetApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.GetApiKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_GetApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.ListApiKeysRequest> __Marshaller_udb_core_apikey_services_v1_ListApiKeysRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.ListApiKeysRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest> __Marshaller_udb_core_apikey_services_v1_ListApiKeysRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.ListApiKeysResponse> __Marshaller_udb_core_apikey_services_v1_ListApiKeysResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.ListApiKeysResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse> __Marshaller_udb_core_apikey_services_v1_ListApiKeysResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_UpdateApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_UpdateApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_UpdateApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_UpdateApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_RevokeApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_RevokeApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_RevokeApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_RevokeApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.RotateApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_RotateApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.RotateApiKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_RotateApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.RotateApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_RotateApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.RotateApiKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_RotateApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest> __Marshaller_udb_core_apikey_services_v1_EmergencyRevokeApiKeysRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest> __Marshaller_udb_core_apikey_services_v1_EmergencyRevokeApiKeysRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> __Marshaller_udb_core_apikey_services_v1_EmergencyRevokeApiKeysResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> __Marshaller_udb_core_apikey_services_v1_EmergencyRevokeApiKeysResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_ValidateApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest> __Marshaller_udb_core_apikey_services_v1_ValidateApiKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_ValidateApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse> __Marshaller_udb_core_apikey_services_v1_ValidateApiKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest> __Marshaller_udb_core_apikey_services_v1_GetApiKeyUsageStatsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest> __Marshaller_udb_core_apikey_services_v1_GetApiKeyUsageStatsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> __Marshaller_udb_core_apikey_services_v1_GetApiKeyUsageStatsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> __Marshaller_udb_core_apikey_services_v1_GetApiKeyUsageStatsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Apikey.Services.V1.CreateApiKeyRequest, global::udb.core.Apikey.Services.V1.CreateApiKeyResponse> __Method_CreateApiKey = new grpc::Method<global::udb.core.Apikey.Services.V1.CreateApiKeyRequest, global::udb.core.Apikey.Services.V1.CreateApiKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse> __Method_CreateApiKey = new grpc::Method<global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreateApiKey",
@@ -105,7 +105,7 @@ namespace udb.core.Apikey.Services.V1 {
         __Marshaller_udb_core_apikey_services_v1_CreateApiKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Apikey.Services.V1.GetApiKeyRequest, global::udb.core.Apikey.Services.V1.GetApiKeyResponse> __Method_GetApiKey = new grpc::Method<global::udb.core.Apikey.Services.V1.GetApiKeyRequest, global::udb.core.Apikey.Services.V1.GetApiKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest, global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse> __Method_GetApiKey = new grpc::Method<global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest, global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetApiKey",
@@ -113,7 +113,7 @@ namespace udb.core.Apikey.Services.V1 {
         __Marshaller_udb_core_apikey_services_v1_GetApiKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Apikey.Services.V1.ListApiKeysRequest, global::udb.core.Apikey.Services.V1.ListApiKeysResponse> __Method_ListApiKeys = new grpc::Method<global::udb.core.Apikey.Services.V1.ListApiKeysRequest, global::udb.core.Apikey.Services.V1.ListApiKeysResponse>(
+    static readonly grpc::Method<global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest, global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse> __Method_ListApiKeys = new grpc::Method<global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest, global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListApiKeys",
@@ -121,7 +121,7 @@ namespace udb.core.Apikey.Services.V1 {
         __Marshaller_udb_core_apikey_services_v1_ListApiKeysResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest, global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse> __Method_UpdateApiKey = new grpc::Method<global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest, global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse> __Method_UpdateApiKey = new grpc::Method<global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UpdateApiKey",
@@ -129,7 +129,7 @@ namespace udb.core.Apikey.Services.V1 {
         __Marshaller_udb_core_apikey_services_v1_UpdateApiKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest, global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse> __Method_RevokeApiKey = new grpc::Method<global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest, global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest, global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse> __Method_RevokeApiKey = new grpc::Method<global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest, global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RevokeApiKey",
@@ -137,7 +137,7 @@ namespace udb.core.Apikey.Services.V1 {
         __Marshaller_udb_core_apikey_services_v1_RevokeApiKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Apikey.Services.V1.RotateApiKeyRequest, global::udb.core.Apikey.Services.V1.RotateApiKeyResponse> __Method_RotateApiKey = new grpc::Method<global::udb.core.Apikey.Services.V1.RotateApiKeyRequest, global::udb.core.Apikey.Services.V1.RotateApiKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse> __Method_RotateApiKey = new grpc::Method<global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RotateApiKey",
@@ -145,7 +145,7 @@ namespace udb.core.Apikey.Services.V1 {
         __Marshaller_udb_core_apikey_services_v1_RotateApiKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest, global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> __Method_EmergencyRevokeApiKeys = new grpc::Method<global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest, global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse>(
+    static readonly grpc::Method<global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest, global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> __Method_EmergencyRevokeApiKeys = new grpc::Method<global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest, global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "EmergencyRevokeApiKeys",
@@ -153,7 +153,7 @@ namespace udb.core.Apikey.Services.V1 {
         __Marshaller_udb_core_apikey_services_v1_EmergencyRevokeApiKeysResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest, global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse> __Method_ValidateApiKey = new grpc::Method<global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest, global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse> __Method_ValidateApiKey = new grpc::Method<global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ValidateApiKey",
@@ -161,7 +161,7 @@ namespace udb.core.Apikey.Services.V1 {
         __Marshaller_udb_core_apikey_services_v1_ValidateApiKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest, global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> __Method_GetApiKeyUsageStats = new grpc::Method<global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest, global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest, global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> __Method_GetApiKeyUsageStats = new grpc::Method<global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest, global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetApiKeyUsageStats",
@@ -171,7 +171,7 @@ namespace udb.core.Apikey.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Apikey.Services.V1.ApikeyServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Apikey.Services.V1.ApikeyServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of ApiKeyService</summary>
@@ -186,31 +186,31 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Apikey.Services.V1.CreateApiKeyResponse> CreateApiKey(global::udb.core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse> CreateApiKey(global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Apikey.Services.V1.GetApiKeyResponse> GetApiKey(global::udb.core.Apikey.Services.V1.GetApiKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse> GetApiKey(global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Apikey.Services.V1.ListApiKeysResponse> ListApiKeys(global::udb.core.Apikey.Services.V1.ListApiKeysRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse> ListApiKeys(global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse> UpdateApiKey(global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse> UpdateApiKey(global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse> RevokeApiKey(global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse> RevokeApiKey(global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -223,7 +223,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Apikey.Services.V1.RotateApiKeyResponse> RotateApiKey(global::udb.core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse> RotateApiKey(global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -235,7 +235,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> EmergencyRevokeApiKeys(global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> EmergencyRevokeApiKeys(global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -247,7 +247,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse> ValidateApiKey(global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse> ValidateApiKey(global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -259,7 +259,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> GetApiKeyUsageStats(global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> GetApiKeyUsageStats(global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -303,7 +303,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.CreateApiKeyResponse CreateApiKey(global::udb.core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse CreateApiKey(global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateApiKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -315,7 +315,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.CreateApiKeyResponse CreateApiKey(global::udb.core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse CreateApiKey(global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreateApiKey, null, options, request);
       }
@@ -329,7 +329,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.CreateApiKeyResponse> CreateApiKeyAsync(global::udb.core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse> CreateApiKeyAsync(global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateApiKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -341,87 +341,87 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.CreateApiKeyResponse> CreateApiKeyAsync(global::udb.core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse> CreateApiKeyAsync(global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreateApiKey, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.GetApiKeyResponse GetApiKey(global::udb.core.Apikey.Services.V1.GetApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse GetApiKey(global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetApiKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.GetApiKeyResponse GetApiKey(global::udb.core.Apikey.Services.V1.GetApiKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse GetApiKey(global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetApiKey, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.GetApiKeyResponse> GetApiKeyAsync(global::udb.core.Apikey.Services.V1.GetApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse> GetApiKeyAsync(global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetApiKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.GetApiKeyResponse> GetApiKeyAsync(global::udb.core.Apikey.Services.V1.GetApiKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse> GetApiKeyAsync(global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetApiKey, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.ListApiKeysResponse ListApiKeys(global::udb.core.Apikey.Services.V1.ListApiKeysRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse ListApiKeys(global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListApiKeys(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.ListApiKeysResponse ListApiKeys(global::udb.core.Apikey.Services.V1.ListApiKeysRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse ListApiKeys(global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListApiKeys, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.ListApiKeysResponse> ListApiKeysAsync(global::udb.core.Apikey.Services.V1.ListApiKeysRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse> ListApiKeysAsync(global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListApiKeysAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.ListApiKeysResponse> ListApiKeysAsync(global::udb.core.Apikey.Services.V1.ListApiKeysRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse> ListApiKeysAsync(global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListApiKeys, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse UpdateApiKey(global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse UpdateApiKey(global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateApiKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse UpdateApiKey(global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse UpdateApiKey(global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UpdateApiKey, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse> UpdateApiKeyAsync(global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse> UpdateApiKeyAsync(global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateApiKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse> UpdateApiKeyAsync(global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse> UpdateApiKeyAsync(global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UpdateApiKey, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse RevokeApiKey(global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse RevokeApiKey(global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RevokeApiKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse RevokeApiKey(global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse RevokeApiKey(global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RevokeApiKey, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse> RevokeApiKeyAsync(global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse> RevokeApiKeyAsync(global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RevokeApiKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse> RevokeApiKeyAsync(global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse> RevokeApiKeyAsync(global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RevokeApiKey, null, options, request);
       }
@@ -435,7 +435,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.RotateApiKeyResponse RotateApiKey(global::udb.core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse RotateApiKey(global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RotateApiKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -447,7 +447,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.RotateApiKeyResponse RotateApiKey(global::udb.core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse RotateApiKey(global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RotateApiKey, null, options, request);
       }
@@ -461,7 +461,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.RotateApiKeyResponse> RotateApiKeyAsync(global::udb.core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse> RotateApiKeyAsync(global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RotateApiKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -473,7 +473,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.RotateApiKeyResponse> RotateApiKeyAsync(global::udb.core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse> RotateApiKeyAsync(global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RotateApiKey, null, options, request);
       }
@@ -486,7 +486,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse EmergencyRevokeApiKeys(global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse EmergencyRevokeApiKeys(global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return EmergencyRevokeApiKeys(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -497,7 +497,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse EmergencyRevokeApiKeys(global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse EmergencyRevokeApiKeys(global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_EmergencyRevokeApiKeys, null, options, request);
       }
@@ -510,7 +510,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> EmergencyRevokeApiKeysAsync(global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> EmergencyRevokeApiKeysAsync(global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return EmergencyRevokeApiKeysAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -521,7 +521,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> EmergencyRevokeApiKeysAsync(global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse> EmergencyRevokeApiKeysAsync(global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_EmergencyRevokeApiKeys, null, options, request);
       }
@@ -534,7 +534,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse ValidateApiKey(global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse ValidateApiKey(global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ValidateApiKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -545,7 +545,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse ValidateApiKey(global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse ValidateApiKey(global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ValidateApiKey, null, options, request);
       }
@@ -558,7 +558,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse> ValidateApiKeyAsync(global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse> ValidateApiKeyAsync(global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ValidateApiKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -569,7 +569,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse> ValidateApiKeyAsync(global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse> ValidateApiKeyAsync(global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ValidateApiKey, null, options, request);
       }
@@ -582,7 +582,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse GetApiKeyUsageStats(global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse GetApiKeyUsageStats(global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetApiKeyUsageStats(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -593,7 +593,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse GetApiKeyUsageStats(global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse GetApiKeyUsageStats(global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetApiKeyUsageStats, null, options, request);
       }
@@ -606,7 +606,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> GetApiKeyUsageStatsAsync(global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> GetApiKeyUsageStatsAsync(global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetApiKeyUsageStatsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -617,7 +617,7 @@ namespace udb.core.Apikey.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> GetApiKeyUsageStatsAsync(global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse> GetApiKeyUsageStatsAsync(global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetApiKeyUsageStats, null, options, request);
       }
@@ -653,15 +653,15 @@ namespace udb.core.Apikey.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, ApiKeyServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_CreateApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Apikey.Services.V1.CreateApiKeyRequest, global::udb.core.Apikey.Services.V1.CreateApiKeyResponse>(serviceImpl.CreateApiKey));
-      serviceBinder.AddMethod(__Method_GetApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Apikey.Services.V1.GetApiKeyRequest, global::udb.core.Apikey.Services.V1.GetApiKeyResponse>(serviceImpl.GetApiKey));
-      serviceBinder.AddMethod(__Method_ListApiKeys, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Apikey.Services.V1.ListApiKeysRequest, global::udb.core.Apikey.Services.V1.ListApiKeysResponse>(serviceImpl.ListApiKeys));
-      serviceBinder.AddMethod(__Method_UpdateApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Apikey.Services.V1.UpdateApiKeyRequest, global::udb.core.Apikey.Services.V1.UpdateApiKeyResponse>(serviceImpl.UpdateApiKey));
-      serviceBinder.AddMethod(__Method_RevokeApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Apikey.Services.V1.RevokeApiKeyRequest, global::udb.core.Apikey.Services.V1.RevokeApiKeyResponse>(serviceImpl.RevokeApiKey));
-      serviceBinder.AddMethod(__Method_RotateApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Apikey.Services.V1.RotateApiKeyRequest, global::udb.core.Apikey.Services.V1.RotateApiKeyResponse>(serviceImpl.RotateApiKey));
-      serviceBinder.AddMethod(__Method_EmergencyRevokeApiKeys, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest, global::udb.core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse>(serviceImpl.EmergencyRevokeApiKeys));
-      serviceBinder.AddMethod(__Method_ValidateApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Apikey.Services.V1.ValidateApiKeyRequest, global::udb.core.Apikey.Services.V1.ValidateApiKeyResponse>(serviceImpl.ValidateApiKey));
-      serviceBinder.AddMethod(__Method_GetApiKeyUsageStats, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsRequest, global::udb.core.Apikey.Services.V1.GetApiKeyUsageStatsResponse>(serviceImpl.GetApiKeyUsageStats));
+      serviceBinder.AddMethod(__Method_CreateApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Apikey.Services.V1.CreateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.CreateApiKeyResponse>(serviceImpl.CreateApiKey));
+      serviceBinder.AddMethod(__Method_GetApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Apikey.Services.V1.GetApiKeyRequest, global::Udb.Core.Apikey.Services.V1.GetApiKeyResponse>(serviceImpl.GetApiKey));
+      serviceBinder.AddMethod(__Method_ListApiKeys, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Apikey.Services.V1.ListApiKeysRequest, global::Udb.Core.Apikey.Services.V1.ListApiKeysResponse>(serviceImpl.ListApiKeys));
+      serviceBinder.AddMethod(__Method_UpdateApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Apikey.Services.V1.UpdateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.UpdateApiKeyResponse>(serviceImpl.UpdateApiKey));
+      serviceBinder.AddMethod(__Method_RevokeApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Apikey.Services.V1.RevokeApiKeyRequest, global::Udb.Core.Apikey.Services.V1.RevokeApiKeyResponse>(serviceImpl.RevokeApiKey));
+      serviceBinder.AddMethod(__Method_RotateApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Apikey.Services.V1.RotateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.RotateApiKeyResponse>(serviceImpl.RotateApiKey));
+      serviceBinder.AddMethod(__Method_EmergencyRevokeApiKeys, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysRequest, global::Udb.Core.Apikey.Services.V1.EmergencyRevokeApiKeysResponse>(serviceImpl.EmergencyRevokeApiKeys));
+      serviceBinder.AddMethod(__Method_ValidateApiKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Apikey.Services.V1.ValidateApiKeyRequest, global::Udb.Core.Apikey.Services.V1.ValidateApiKeyResponse>(serviceImpl.ValidateApiKey));
+      serviceBinder.AddMethod(__Method_GetApiKeyUsageStats, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsRequest, global::Udb.Core.Apikey.Services.V1.GetApiKeyUsageStatsResponse>(serviceImpl.GetApiKeyUsageStats));
     }
 
   }

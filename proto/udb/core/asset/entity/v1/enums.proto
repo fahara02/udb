@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package udb.core.asset.entity.v1;
 
-option csharp_namespace = "udb.core.Asset.Entity.V1";
+option csharp_namespace = "Udb.Core.Asset.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/asset/entity/v1;assetv1";
 option java_package = "com.udb.core.asset.entity.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1";

@@ -237,7 +237,7 @@ const file_udb_core_search_entity_v1_search_index_proto_rawDesc = "" +
 	"index_name\x8a\x01I\n" +
 	" idx_search_indexes_tenant_source\x12\x05BTREEZ\ttenant_idZ\x13source_message_type\xf2\x01\x1dudb.search.search_indexes.cdc\xfa\x01\vsearch:read\x8a\xb2\x19\x91\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x12search.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x81\x02\n" +
-	"\x1dcom.udb.core.search.entity.v1B\x10SearchIndexProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/search/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x19udb.core.Search.Entity.V1\xca\x02\x19Udb\\Core\\Search\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Search\\Entity\\V1\xea\x02\x1dUdb::Core::Search::Entity::V1b\x06proto3"
+	"\x1dcom.udb.core.search.entity.v1B\x10SearchIndexProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/search/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x19Udb.Core.Search.Entity.V1\xca\x02\x19Udb\\Core\\Search\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Search\\Entity\\V1\xea\x02\x1dUdb::Core::Search::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_search_entity_v1_search_index_proto_rawDescOnce sync.Once

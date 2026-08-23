@@ -64,8 +64,8 @@ public final class SdkLiveProto {
       "\0310\n\004none\022\004none2\004none:\016test.ephemeralH\001R\004" +
       "noneZ\004noneB\275\001\n\023com.udb.sdk.live.v1B\014SdkL" +
       "iveProtoP\001Z9github.com/fahara02/udb/sdk/" +
-      "go/gen/udb/sdk/live/v1;livev1\242\002\003USL\252\002\017ud" +
-      "b.sdk.Live.V1\312\002\017Udb\\Sdk\\Live\\V1\342\002\033Udb\\GP" +
+      "go/gen/udb/sdk/live/v1;livev1\242\002\003USL\252\002\017Ud" +
+      "b.Sdk.Live.V1\312\002\017Udb\\Sdk\\Live\\V1\342\002\033Udb\\GP" +
       "BMetadata\\Sdk\\Live\\V1\352\002\022Udb::Sdk::Live::" +
       "V1b\006proto3"
     };

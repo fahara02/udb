@@ -42,7 +42,7 @@ public final class EntitiesProto {
       "db.core.storage.entity.v1B\rEntitiesProto" +
       "P\001ZFgithub.com/fahara02/udb/sdk/go/gen/u" +
       "db/core/storage/entity/v1;entityv1\242\002\004UCS" +
-      "E\252\002\032udb.core.Storage.Entity.V1\312\002\032Udb\\Cor" +
+      "E\252\002\032Udb.Core.Storage.Entity.V1\312\002\032Udb\\Cor" +
       "e\\Storage\\Entity\\V1\342\002&Udb\\GPBMetadata\\Co" +
       "re\\Storage\\Entity\\V1\352\002\036Udb::Core::Storag" +
       "e::Entity::V1P\000P\001b\006proto3"

@@ -100,7 +100,7 @@ public final class NotificationPreferenceProto {
       "on.entity.v1B\033NotificationPreferenceProt" +
       "oP\001ZKgithub.com/fahara02/udb/sdk/go/gen/" +
       "udb/core/notification/entity/v1;entityv1" +
-      "\242\002\004UCNE\252\002\037udb.core.Notification.Entity.V" +
+      "\242\002\004UCNE\252\002\037Udb.Core.Notification.Entity.V" +
       "1\312\002\037Udb\\Core\\Notification\\Entity\\V1\342\002+Ud" +
       "b\\GPBMetadata\\Core\\Notification\\Entity\\V" +
       "1\352\002#Udb::Core::Notification::Entity::V1b" +

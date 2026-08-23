@@ -204,7 +204,7 @@ public final class WorkflowServiceProto {
       ".udb.core.workflow.services.v1B\024Workflow" +
       "ServiceProtoP\001ZKgithub.com/fahara02/udb/" +
       "sdk/go/gen/udb/core/workflow/services/v1" +
-      ";servicesv1\242\002\004UCWS\252\002\035udb.core.Workflow.S" +
+      ";servicesv1\242\002\004UCWS\252\002\035Udb.Core.Workflow.S" +
       "ervices.V1\312\002\035Udb\\Core\\Workflow\\Services\\" +
       "V1\342\002)Udb\\GPBMetadata\\Core\\Workflow\\Servi" +
       "ces\\V1\352\002!Udb::Core::Workflow::Services::" +

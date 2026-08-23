@@ -81,7 +81,7 @@ public final class VaultSecretProto {
       "db.core.vault.entity.v1B\020VaultSecretProt" +
       "oP\001ZDgithub.com/fahara02/udb/sdk/go/gen/" +
       "udb/core/vault/entity/v1;entityv1\242\002\004UCVE" +
-      "\252\002\030udb.core.Vault.Entity.V1\312\002\030Udb\\Core\\V" +
+      "\252\002\030Udb.Core.Vault.Entity.V1\312\002\030Udb\\Core\\V" +
       "ault\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Va" +
       "ult\\Entity\\V1\352\002\034Udb::Core::Vault::Entity" +
       "::V1b\006proto3"

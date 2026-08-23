@@ -93,7 +93,7 @@ public final class BackupPolicyProto {
       "db.core.backup.entity.v1B\021BackupPolicyPr" +
       "otoP\001ZEgithub.com/fahara02/udb/sdk/go/ge" +
       "n/udb/core/backup/entity/v1;entityv1\242\002\004U" +
-      "CBE\252\002\031udb.core.Backup.Entity.V1\312\002\031Udb\\Co" +
+      "CBE\252\002\031Udb.Core.Backup.Entity.V1\312\002\031Udb\\Co" +
       "re\\Backup\\Entity\\V1\342\002%Udb\\GPBMetadata\\Co" +
       "re\\Backup\\Entity\\V1\352\002\035Udb::Core::Backup:" +
       ":Entity::V1b\006proto3"

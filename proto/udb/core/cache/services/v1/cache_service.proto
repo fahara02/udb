@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Cache.Services.V1";
+option csharp_namespace = "Udb.Core.Cache.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/cache/services/v1;cacheservicev1";
 option java_package = "com.udb.core.cache.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Cache\\Services\\V1";

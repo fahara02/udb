@@ -177,7 +177,7 @@ const file_udb_core_webrtc_entity_v1_track_proto_rawDesc = "" +
 	"\x11idx_tracks_tenant\x12\x05BTREEZ\ttenant_id\xf2\x01\x15udb.webrtc.tracks.cdc\xfa\x01\vwebrtc:read\x8a\xb2\x19\x91\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x12webrtc.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfb\x01\n" +
 	"\x1dcom.udb.core.webrtc.entity.v1B\n" +
-	"TrackProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x19udb.core.Webrtc.Entity.V1\xca\x02\x19Udb\\Core\\Webrtc\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1\xea\x02\x1dUdb::Core::Webrtc::Entity::V1b\x06proto3"
+	"TrackProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x19Udb.Core.Webrtc.Entity.V1\xca\x02\x19Udb\\Core\\Webrtc\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1\xea\x02\x1dUdb::Core::Webrtc::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_webrtc_entity_v1_track_proto_rawDescOnce sync.Once

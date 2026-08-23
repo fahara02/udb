@@ -185,7 +185,7 @@ const file_udb_core_metering_entity_v1_usage_event_proto_rawDesc = "" +
 	"!idx_usage_events_tenant_method_ts\x12\x05BTREEZ\ttenant_idZ\x06methodZ\x10occurred_at_unix\x8a\x01@\n" +
 	"\x1aidx_usage_events_tenant_ts\x12\x05BTREEZ\ttenant_idZ\x10occurred_at_unix\xf2\x01\x1dudb.metering.usage_events.cdc\xfa\x01\rmetering:read\x8a\xb2\x19\x95\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x14metering.operational@\x90\x03H\x01R\x06tenantZ\bstandardh\x01r\x15tenant.data_residencyB\x8c\x02\n" +
-	"\x1fcom.udb.core.metering.entity.v1B\x0fUsageEventProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/metering/entity/v1;entityv1\xa2\x02\x04UCME\xaa\x02\x1budb.core.Metering.Entity.V1\xca\x02\x1bUdb\\Core\\Metering\\Entity\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Metering\\Entity\\V1\xea\x02\x1fUdb::Core::Metering::Entity::V1b\x06proto3"
+	"\x1fcom.udb.core.metering.entity.v1B\x0fUsageEventProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/metering/entity/v1;entityv1\xa2\x02\x04UCME\xaa\x02\x1bUdb.Core.Metering.Entity.V1\xca\x02\x1bUdb\\Core\\Metering\\Entity\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Metering\\Entity\\V1\xea\x02\x1fUdb::Core::Metering::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_metering_entity_v1_usage_event_proto_rawDescOnce sync.Once

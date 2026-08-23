@@ -43,7 +43,7 @@ public final class EntitiesProto {
       "\035com.udb.core.apikey.entity.v1B\rEntities" +
       "ProtoP\001ZEgithub.com/fahara02/udb/sdk/go/" +
       "gen/udb/core/apikey/entity/v1;entityv1\242\002" +
-      "\004UCAE\252\002\031udb.core.Apikey.Entity.V1\312\002\031Udb\\" +
+      "\004UCAE\252\002\031Udb.Core.Apikey.Entity.V1\312\002\031Udb\\" +
       "Core\\Apikey\\Entity\\V1\342\002%Udb\\GPBMetadata\\" +
       "Core\\Apikey\\Entity\\V1\352\002\035Udb::Core::Apike" +
       "y::Entity::V1P\000P\001P\002b\006proto3"

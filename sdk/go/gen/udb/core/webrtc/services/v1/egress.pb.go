@@ -850,7 +850,7 @@ const file_udb_core_webrtc_services_v1_egress_proto_rawDesc = "" +
 	"\x16EGRESS_STATUS_STOPPING\x10\x03\x12\x19\n" +
 	"\x15EGRESS_STATUS_STOPPED\x10\x04\x12\x18\n" +
 	"\x14EGRESS_STATUS_FAILED\x10\x05B\x8a\x02\n" +
-	"\x1fcom.udb.core.webrtc.services.v1B\vEgressProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/services/v1;servicesv1\xa2\x02\x04UCWS\xaa\x02\x1budb.core.Webrtc.Services.V1\xca\x02\x1bUdb\\Core\\Webrtc\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Webrtc\\Services\\V1\xea\x02\x1fUdb::Core::Webrtc::Services::V1b\x06proto3"
+	"\x1fcom.udb.core.webrtc.services.v1B\vEgressProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/services/v1;servicesv1\xa2\x02\x04UCWS\xaa\x02\x1bUdb.Core.Webrtc.Services.V1\xca\x02\x1bUdb\\Core\\Webrtc\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Webrtc\\Services\\V1\xea\x02\x1fUdb::Core::Webrtc::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_webrtc_services_v1_egress_proto_rawDescOnce sync.Once

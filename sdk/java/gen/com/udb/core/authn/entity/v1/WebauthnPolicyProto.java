@@ -81,7 +81,7 @@ public final class WebauthnPolicyProto {
       "yB\376\001\n\034com.udb.core.authn.entity.v1B\023Weba" +
       "uthnPolicyProtoP\001ZDgithub.com/fahara02/u" +
       "db/sdk/go/gen/udb/core/authn/entity/v1;e" +
-      "ntityv1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V" +
+      "ntityv1\242\002\004UCAE\252\002\030Udb.Core.Authn.Entity.V" +
       "1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMe" +
       "tadata\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core:" +
       ":Authn::Entity::V1b\006proto3"

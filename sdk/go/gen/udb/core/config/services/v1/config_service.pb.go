@@ -1193,7 +1193,7 @@ const file_udb_core_config_services_v1_config_service_proto_rawDesc = "" +
 	"\x06config\x12\x06config\x1a\x06config\"\x06Config*\x06config0\x018\x01h\x01z\x06config\x82\x01\x06config\x8a\x01\x06config\x92\x01\rnative.config\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06configP\x01\xda\xf0\x19\x89\x01\n" +
 	"\x06config\x12\x11udb/native/config\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x18udb.native.config.config:\x06configJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19@\n" +
 	"\x06config\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x91\x02\n" +
-	"\x1fcom.udb.core.config.services.v1B\x12ConfigServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/config/services/v1;servicesv1\xa2\x02\x04UCCS\xaa\x02\x1budb.core.Config.Services.V1\xca\x02\x1bUdb\\Core\\Config\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Config\\Services\\V1\xea\x02\x1fUdb::Core::Config::Services::V1b\x06proto3"
+	"\x1fcom.udb.core.config.services.v1B\x12ConfigServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/config/services/v1;servicesv1\xa2\x02\x04UCCS\xaa\x02\x1bUdb.Core.Config.Services.V1\xca\x02\x1bUdb\\Core\\Config\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Config\\Services\\V1\xea\x02\x1fUdb::Core::Config::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_config_services_v1_config_service_proto_rawDescOnce sync.Once

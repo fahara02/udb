@@ -739,7 +739,7 @@ const file_udb_core_workflow_services_v1_workflow_service_proto_rawDesc = "" +
 	"\bworkflow\x12\bworkflow\x1a\bworkflow\"\tWorkflows*\bworkflow0\x018\x01h\x01z\bworkflow\x82\x01\bworkflow\x8a\x01\bworkflow\x92\x01\x0fnative.workflow\xd2\xf0\x19\x1b\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x01\xda\xf0\x19\x91\x01\n" +
 	"\bworkflow\x12\x13udb/native/workflow\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1audb.native.workflow.config:\bworkflowJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19B\n" +
 	"\bworkflow\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x9f\x02\n" +
-	"!com.udb.core.workflow.services.v1B\x14WorkflowServiceProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/services/v1;servicesv1\xa2\x02\x04UCWS\xaa\x02\x1dudb.core.Workflow.Services.V1\xca\x02\x1dUdb\\Core\\Workflow\\Services\\V1\xe2\x02)Udb\\GPBMetadata\\Core\\Workflow\\Services\\V1\xea\x02!Udb::Core::Workflow::Services::V1b\x06proto3"
+	"!com.udb.core.workflow.services.v1B\x14WorkflowServiceProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/services/v1;servicesv1\xa2\x02\x04UCWS\xaa\x02\x1dUdb.Core.Workflow.Services.V1\xca\x02\x1dUdb\\Core\\Workflow\\Services\\V1\xe2\x02)Udb\\GPBMetadata\\Core\\Workflow\\Services\\V1\xea\x02!Udb::Core::Workflow::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_workflow_services_v1_workflow_service_proto_rawDescOnce sync.Once

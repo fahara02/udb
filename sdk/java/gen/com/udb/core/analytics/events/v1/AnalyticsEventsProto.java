@@ -94,7 +94,7 @@ public final class AnalyticsEventsProto {
       "udb.core.analytics.events.v1B\024AnalyticsE" +
       "ventsProtoP\001ZHgithub.com/fahara02/udb/sd" +
       "k/go/gen/udb/core/analytics/events/v1;ev" +
-      "entsv1\242\002\004UCAE\252\002\034udb.core.Analytics.Event" +
+      "entsv1\242\002\004UCAE\252\002\034Udb.Core.Analytics.Event" +
       "s.V1\312\002\034Udb\\Core\\Analytics\\Events\\V1\342\002(Ud" +
       "b\\GPBMetadata\\Core\\Analytics\\Events\\V1\352\002" +
       " Udb::Core::Analytics::Events::V1b\006proto" +

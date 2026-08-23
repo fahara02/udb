@@ -45,7 +45,7 @@ public final class EntitiesProto {
       "db.core.analytics.entity.v1B\rEntitiesPro" +
       "toP\001ZHgithub.com/fahara02/udb/sdk/go/gen" +
       "/udb/core/analytics/entity/v1;entityv1\242\002" +
-      "\004UCAE\252\002\034udb.core.Analytics.Entity.V1\312\002\034U" +
+      "\004UCAE\252\002\034Udb.Core.Analytics.Entity.V1\312\002\034U" +
       "db\\Core\\Analytics\\Entity\\V1\342\002(Udb\\GPBMet" +
       "adata\\Core\\Analytics\\Entity\\V1\352\002 Udb::Co" +
       "re::Analytics::Entity::V1P\000P\001P\002b\006proto3"

@@ -89,7 +89,7 @@ public final class PipelineStepProto {
       "esidencyB\374\001\n\034com.udb.core.asset.entity.v" +
       "1B\021PipelineStepProtoP\001ZDgithub.com/fahar" +
       "a02/udb/sdk/go/gen/udb/core/asset/entity" +
-      "/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Asset.Ent" +
+      "/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Asset.Ent" +
       "ity.V1\312\002\030Udb\\Core\\Asset\\Entity\\V1\342\002$Udb\\" +
       "GPBMetadata\\Core\\Asset\\Entity\\V1\352\002\034Udb::" +
       "Core::Asset::Entity::V1b\006proto3"

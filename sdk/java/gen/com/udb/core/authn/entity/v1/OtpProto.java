@@ -104,7 +104,7 @@ public final class OtpProto {
       "_residencyB\363\001\n\034com.udb.core.authn.entity" +
       ".v1B\010OtpProtoP\001ZDgithub.com/fahara02/udb" +
       "/sdk/go/gen/udb/core/authn/entity/v1;ent" +
-      "ityv1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312" +
+      "ityv1\242\002\004UCAE\252\002\030Udb.Core.Authn.Entity.V1\312" +
       "\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMeta" +
       "data\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::A" +
       "uthn::Entity::V1b\006proto3"

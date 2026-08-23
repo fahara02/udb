@@ -1785,7 +1785,7 @@ const file_udb_core_notification_services_v1_core_proto_rawDesc = "" +
 	"\x17ListPreferencesResponse\x12Y\n" +
 	"\vpreferences\x18\x01 \x03(\v27.udb.core.notification.entity.v1.NotificationPreferenceR\vpreferences\x124\n" +
 	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01B\xac\x02\n" +
-	"%com.udb.core.notification.services.v1B\tCoreProtoP\x01ZOgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1;servicesv1\xa2\x02\x04UCNS\xaa\x02!udb.core.Notification.Services.V1\xca\x02!Udb\\Core\\Notification\\Services\\V1\xe2\x02-Udb\\GPBMetadata\\Core\\Notification\\Services\\V1\xea\x02%Udb::Core::Notification::Services::V1b\x06proto3"
+	"%com.udb.core.notification.services.v1B\tCoreProtoP\x01ZOgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1;servicesv1\xa2\x02\x04UCNS\xaa\x02!Udb.Core.Notification.Services.V1\xca\x02!Udb\\Core\\Notification\\Services\\V1\xe2\x02-Udb\\GPBMetadata\\Core\\Notification\\Services\\V1\xea\x02%Udb::Core::Notification::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_notification_services_v1_core_proto_rawDescOnce sync.Once

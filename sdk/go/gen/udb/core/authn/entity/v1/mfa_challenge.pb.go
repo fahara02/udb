@@ -214,7 +214,7 @@ const file_udb_core_authn_entity_v1_mfa_challenge_proto_rawDesc = "" +
 	"\x1aidx_mfa_challenges_expires\x12\x05BTREEZ\n" +
 	"expires_at\xea\x01\aprimary\xfa\x01\x19authn:mfa-challenges:read\x8a\xb2\x19u\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x0eauthn.security@\x1eH\x02R\x06tenantZ\bstandardB\xfc\x01\n" +
-	"\x1ccom.udb.core.authn.entity.v1B\x11MfaChallengeProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authn.entity.v1B\x11MfaChallengeProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_entity_v1_mfa_challenge_proto_rawDescOnce sync.Once

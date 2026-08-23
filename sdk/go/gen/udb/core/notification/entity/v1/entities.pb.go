@@ -25,7 +25,7 @@ var File_udb_core_notification_entity_v1_entities_proto protoreflect.FileDescrip
 const file_udb_core_notification_entity_v1_entities_proto_rawDesc = "" +
 	"\n" +
 	".udb/core/notification/entity/v1/entities.proto\x12\x1fudb.core.notification.entity.v1\x1a+udb/core/notification/entity/v1/enums.proto\x1a2udb/core/notification/entity/v1/notification.proto\x1a6udb/core/notification/entity/v1/notification_log.proto\x1a=udb/core/notification/entity/v1/notification_preference.proto\x1a;udb/core/notification/entity/v1/notification_template.protoB\xa2\x02\n" +
-	"#com.udb.core.notification.entity.v1B\rEntitiesProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1P\x00P\x01P\x02P\x03P\x04b\x06proto3"
+	"#com.udb.core.notification.entity.v1B\rEntitiesProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fUdb.Core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1P\x00P\x01P\x02P\x03P\x04b\x06proto3"
 
 var file_udb_core_notification_entity_v1_entities_proto_goTypes = []any{}
 var file_udb_core_notification_entity_v1_entities_proto_depIdxs = []int32{

@@ -2,8 +2,8 @@ using System.Security.Cryptography;
 using System.Text;
 using Grpc.Core;
 using Grpc.Net.Client;
-using AuthnV1 = udb.core.Authn.Services.V1;
-using AuthzV1 = udb.core.Authz.Services.V1;
+using AuthnV1 = Udb.Core.Authn.Services.V1;
+using AuthzV1 = Udb.Core.Authz.Services.V1;
 
 namespace Udb.Client;
 

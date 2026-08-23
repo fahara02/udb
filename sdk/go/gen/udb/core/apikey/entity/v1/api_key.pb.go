@@ -378,7 +378,7 @@ const file_udb_core_apikey_entity_v1_api_key_proto_rawDesc = "" +
 	"END;\n" +
 	"$$;\xea\x01\aprimary\xfa\x01\rapikey:revoke\x8a\xb2\x19\x98\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x12apikey.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +
-	"\x1dcom.udb.core.apikey.entity.v1B\vApiKeyProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1b\x06proto3"
+	"\x1dcom.udb.core.apikey.entity.v1B\vApiKeyProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19Udb.Core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_apikey_entity_v1_api_key_proto_rawDescOnce sync.Once

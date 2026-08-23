@@ -236,7 +236,7 @@ const file_udb_core_authn_entity_v1_token_family_proto_rawDesc = "" +
 	"\x1cidx_token_families_principal\x12\x05BTREEZ\fprincipal_id\x8a\x01@\n" +
 	"\x1eidx_token_families_current_jti\x12\x04HASHZ\x18current_refresh_jti_hash\xea\x01\aprimary\xfa\x01\x19authn:token-families:read\x8a\xb2\x19y\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xb4\x01H\x02R\x06tenantZ\bstandardB\xfb\x01\n" +
-	"\x1ccom.udb.core.authn.entity.v1B\x10TokenFamilyProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authn.entity.v1B\x10TokenFamilyProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_entity_v1_token_family_proto_rawDescOnce sync.Once

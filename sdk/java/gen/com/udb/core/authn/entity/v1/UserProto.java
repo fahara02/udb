@@ -164,7 +164,7 @@ public final class UserProto {
       "idencyB\364\001\n\034com.udb.core.authn.entity.v1B" +
       "\tUserProtoP\001ZDgithub.com/fahara02/udb/sd" +
       "k/go/gen/udb/core/authn/entity/v1;entity" +
-      "v1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030U" +
+      "v1\242\002\004UCAE\252\002\030Udb.Core.Authn.Entity.V1\312\002\030U" +
       "db\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadat" +
       "a\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Auth" +
       "n::Entity::V1b\006proto3"

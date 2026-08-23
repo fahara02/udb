@@ -509,7 +509,7 @@ const file_udb_core_storage_events_v1_storage_events_proto_rawDesc = "" +
 	"deleted_by\x18\x04 \x01(\tR\tdeletedBy\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp:u\x92\xb2\x19q\n" +
 	"&udb.core.storage.events.v1.FileDeleted\x12\x1budb.storage.file_deleted.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\x89\x02\n" +
-	"\x1ecom.udb.core.storage.events.v1B\x12StorageEventsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/events/v1;eventsv1\xa2\x02\x04UCSE\xaa\x02\x1audb.core.Storage.Events.V1\xca\x02\x1aUdb\\Core\\Storage\\Events\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Events\\V1\xea\x02\x1eUdb::Core::Storage::Events::V1b\x06proto3"
+	"\x1ecom.udb.core.storage.events.v1B\x12StorageEventsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/events/v1;eventsv1\xa2\x02\x04UCSE\xaa\x02\x1aUdb.Core.Storage.Events.V1\xca\x02\x1aUdb\\Core\\Storage\\Events\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Events\\V1\xea\x02\x1eUdb::Core::Storage::Events::V1b\x06proto3"
 
 var (
 	file_udb_core_storage_events_v1_storage_events_proto_rawDescOnce sync.Once

@@ -210,8 +210,8 @@ public final class LockServiceProto {
       "LED2\017UDB_GRPC_TARGETB\203\002\n\035com.udb.core.lo" +
       "ck.services.v1B\020LockServiceProtoP\001ZGgith" +
       "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
-      "lock/services/v1;servicesv1\242\002\004UCLS\252\002\031udb" +
-      ".core.Lock.Services.V1\312\002\031Udb\\Core\\Lock\\S" +
+      "lock/services/v1;servicesv1\242\002\004UCLS\252\002\031Udb" +
+      ".Core.Lock.Services.V1\312\002\031Udb\\Core\\Lock\\S" +
       "ervices\\V1\342\002%Udb\\GPBMetadata\\Core\\Lock\\S" +
       "ervices\\V1\352\002\035Udb::Core::Lock::Services::" +
       "V1b\006proto3"

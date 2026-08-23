@@ -356,7 +356,7 @@ public final class AssetServiceProto {
       "com.udb.core.asset.services.v1B\021AssetSer" +
       "viceProtoP\001ZHgithub.com/fahara02/udb/sdk" +
       "/go/gen/udb/core/asset/services/v1;servi" +
-      "cesv1\242\002\004UCAS\252\002\032udb.core.Asset.Services.V" +
+      "cesv1\242\002\004UCAS\252\002\032Udb.Core.Asset.Services.V" +
       "1\312\002\032Udb\\Core\\Asset\\Services\\V1\342\002&Udb\\GPB" +
       "Metadata\\Core\\Asset\\Services\\V1\352\002\036Udb::C" +
       "ore::Asset::Services::V1b\006proto3"

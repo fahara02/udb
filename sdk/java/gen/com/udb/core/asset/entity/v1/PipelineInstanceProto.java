@@ -90,7 +90,7 @@ public final class PipelineInstanceProto {
       "ore.asset.entity.v1B\025PipelineInstancePro" +
       "toP\001ZDgithub.com/fahara02/udb/sdk/go/gen" +
       "/udb/core/asset/entity/v1;entityv1\242\002\004UCA" +
-      "E\252\002\030udb.core.Asset.Entity.V1\312\002\030Udb\\Core\\" +
+      "E\252\002\030Udb.Core.Asset.Entity.V1\312\002\030Udb\\Core\\" +
       "Asset\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\A" +
       "sset\\Entity\\V1\352\002\034Udb::Core::Asset::Entit" +
       "y::V1b\006proto3"

@@ -249,7 +249,7 @@ public final class AuthzEventsProto {
       "once2\006stableB\373\001\n\034com.udb.core.authz.even" +
       "ts.v1B\020AuthzEventsProtoP\001ZDgithub.com/fa" +
       "hara02/udb/sdk/go/gen/udb/core/authz/eve" +
-      "nts/v1;eventsv1\242\002\004UCAE\252\002\030udb.core.Authz." +
+      "nts/v1;eventsv1\242\002\004UCAE\252\002\030Udb.Core.Authz." +
       "Events.V1\312\002\030Udb\\Core\\Authz\\Events\\V1\342\002$U" +
       "db\\GPBMetadata\\Core\\Authz\\Events\\V1\352\002\034Ud" +
       "b::Core::Authz::Events::V1b\006proto3"

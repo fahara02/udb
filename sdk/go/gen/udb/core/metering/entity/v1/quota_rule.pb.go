@@ -179,7 +179,7 @@ const file_udb_core_metering_entity_v1_quota_rule_proto_rawDesc = "" +
 	"project_idZ\x06metric\x8a\x019\n" +
 	"\x1didx_quota_rules_tenant_metric\x12\x05BTREEZ\ttenant_idZ\x06metric\xf2\x01\x1cudb.metering.quota_rules.cdc\xfa\x01\rmetering:read\x8a\xb2\x19\x93\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x14metering.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x8b\x02\n" +
-	"\x1fcom.udb.core.metering.entity.v1B\x0eQuotaRuleProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/metering/entity/v1;entityv1\xa2\x02\x04UCME\xaa\x02\x1budb.core.Metering.Entity.V1\xca\x02\x1bUdb\\Core\\Metering\\Entity\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Metering\\Entity\\V1\xea\x02\x1fUdb::Core::Metering::Entity::V1b\x06proto3"
+	"\x1fcom.udb.core.metering.entity.v1B\x0eQuotaRuleProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/metering/entity/v1;entityv1\xa2\x02\x04UCME\xaa\x02\x1bUdb.Core.Metering.Entity.V1\xca\x02\x1bUdb\\Core\\Metering\\Entity\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Metering\\Entity\\V1\xea\x02\x1fUdb::Core::Metering::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_metering_entity_v1_quota_rule_proto_rawDescOnce sync.Once

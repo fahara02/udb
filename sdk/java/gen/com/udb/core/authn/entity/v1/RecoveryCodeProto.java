@@ -78,7 +78,7 @@ public final class RecoveryCodeProto {
       "ore.authn.entity.v1B\021RecoveryCodeProtoP\001" +
       "ZDgithub.com/fahara02/udb/sdk/go/gen/udb" +
       "/core/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030" +
-      "udb.core.Authn.Entity.V1\312\002\030Udb\\Core\\Auth" +
+      "Udb.Core.Authn.Entity.V1\312\002\030Udb\\Core\\Auth" +
       "n\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn" +
       "\\Entity\\V1\352\002\034Udb::Core::Authn::Entity::V" +
       "1b\006proto3"

@@ -120,7 +120,7 @@ public final class NotificationTemplateProto {
       "otification.entity.v1B\031NotificationTempl" +
       "ateProtoP\001ZKgithub.com/fahara02/udb/sdk/" +
       "go/gen/udb/core/notification/entity/v1;e" +
-      "ntityv1\242\002\004UCNE\252\002\037udb.core.Notification.E" +
+      "ntityv1\242\002\004UCNE\252\002\037Udb.Core.Notification.E" +
       "ntity.V1\312\002\037Udb\\Core\\Notification\\Entity\\" +
       "V1\342\002+Udb\\GPBMetadata\\Core\\Notification\\E" +
       "ntity\\V1\352\002#Udb::Core::Notification::Enti" +

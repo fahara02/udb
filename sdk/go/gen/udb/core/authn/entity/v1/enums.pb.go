@@ -839,7 +839,7 @@ const file_udb_core_authn_entity_v1_enums_proto_rawDesc = "" +
 	" MFA_CHALLENGE_PURPOSE_ENROLLMENT\x10\x03\x12\"\n" +
 	"\x1eMFA_CHALLENGE_PURPOSE_RECOVERY\x10\x04B\xf5\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\n" +
-	"EnumsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_entity_v1_enums_proto_rawDescOnce sync.Once

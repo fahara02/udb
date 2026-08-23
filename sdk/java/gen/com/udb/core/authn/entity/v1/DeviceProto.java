@@ -90,7 +90,7 @@ public final class DeviceProto {
       "\366\001\n\034com.udb.core.authn.entity.v1B\013Device" +
       "ProtoP\001ZDgithub.com/fahara02/udb/sdk/go/" +
       "gen/udb/core/authn/entity/v1;entityv1\242\002\004" +
-      "UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\Co" +
+      "UCAE\252\002\030Udb.Core.Authn.Entity.V1\312\002\030Udb\\Co" +
       "re\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Cor" +
       "e\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::En" +
       "tity::V1b\006proto3"

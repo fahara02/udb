@@ -46,7 +46,7 @@ public final class EnumsProto {
       "ore.scheduler.entity.v1B\nEnumsProtoP\001ZHg" +
       "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
       "re/scheduler/entity/v1;entityv1\242\002\004UCSE\252\002" +
-      "\034udb.core.Scheduler.Entity.V1\312\002\034Udb\\Core" +
+      "\034Udb.Core.Scheduler.Entity.V1\312\002\034Udb\\Core" +
       "\\Scheduler\\Entity\\V1\342\002(Udb\\GPBMetadata\\C" +
       "ore\\Scheduler\\Entity\\V1\352\002 Udb::Core::Sch" +
       "eduler::Entity::V1b\006proto3"

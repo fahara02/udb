@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Authz.Services.V1 {
+namespace Udb.Core.Authz.Services.V1 {
   /// <summary>
   /// UDB-owned authorization service for RBAC, ABAC, ReBAC, tenant/project
   /// domains, and audit-ready access decisions.
@@ -50,158 +50,158 @@ namespace udb.core.Authz.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.AuthzRequest> __Marshaller_udb_core_authz_services_v1_AuthzRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.AuthzRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.AuthzRequest> __Marshaller_udb_core_authz_services_v1_AuthzRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.AuthzRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.AuthzResponse> __Marshaller_udb_core_authz_services_v1_AuthzResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.AuthzResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.AuthzResponse> __Marshaller_udb_core_authz_services_v1_AuthzResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.AuthzResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.CheckAccessRequest> __Marshaller_udb_core_authz_services_v1_CheckAccessRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.CheckAccessRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.CheckAccessRequest> __Marshaller_udb_core_authz_services_v1_CheckAccessRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.CheckAccessRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.CheckAccessResponse> __Marshaller_udb_core_authz_services_v1_CheckAccessResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.CheckAccessResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.CheckAccessResponse> __Marshaller_udb_core_authz_services_v1_CheckAccessResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.CheckAccessResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.CreateRoleRequest> __Marshaller_udb_core_authz_services_v1_CreateRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.CreateRoleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.CreateRoleRequest> __Marshaller_udb_core_authz_services_v1_CreateRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.CreateRoleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.CreateRoleResponse> __Marshaller_udb_core_authz_services_v1_CreateRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.CreateRoleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.CreateRoleResponse> __Marshaller_udb_core_authz_services_v1_CreateRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.CreateRoleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.AssignRoleRequest> __Marshaller_udb_core_authz_services_v1_AssignRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.AssignRoleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.AssignRoleRequest> __Marshaller_udb_core_authz_services_v1_AssignRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.AssignRoleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.AssignRoleResponse> __Marshaller_udb_core_authz_services_v1_AssignRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.AssignRoleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.AssignRoleResponse> __Marshaller_udb_core_authz_services_v1_AssignRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.AssignRoleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest> __Marshaller_udb_core_authz_services_v1_CreatePolicyRuleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest> __Marshaller_udb_core_authz_services_v1_CreatePolicyRuleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse> __Marshaller_udb_core_authz_services_v1_CreatePolicyRuleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse> __Marshaller_udb_core_authz_services_v1_CreatePolicyRuleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListUserPermissionsRequest> __Marshaller_udb_core_authz_services_v1_ListUserPermissionsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListUserPermissionsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest> __Marshaller_udb_core_authz_services_v1_ListUserPermissionsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListUserPermissionsResponse> __Marshaller_udb_core_authz_services_v1_ListUserPermissionsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListUserPermissionsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse> __Marshaller_udb_core_authz_services_v1_ListUserPermissionsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest> __Marshaller_udb_core_authz_services_v1_ListAccessDecisionAuditsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest> __Marshaller_udb_core_authz_services_v1_ListAccessDecisionAuditsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse> __Marshaller_udb_core_authz_services_v1_ListAccessDecisionAuditsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse> __Marshaller_udb_core_authz_services_v1_ListAccessDecisionAuditsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.RevokeRoleRequest> __Marshaller_udb_core_authz_services_v1_RevokeRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.RevokeRoleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.RevokeRoleRequest> __Marshaller_udb_core_authz_services_v1_RevokeRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.RevokeRoleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.RevokeRoleResponse> __Marshaller_udb_core_authz_services_v1_RevokeRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.RevokeRoleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.RevokeRoleResponse> __Marshaller_udb_core_authz_services_v1_RevokeRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.RevokeRoleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListUserRolesRequest> __Marshaller_udb_core_authz_services_v1_ListUserRolesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListUserRolesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListUserRolesRequest> __Marshaller_udb_core_authz_services_v1_ListUserRolesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListUserRolesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListUserRolesResponse> __Marshaller_udb_core_authz_services_v1_ListUserRolesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListUserRolesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListUserRolesResponse> __Marshaller_udb_core_authz_services_v1_ListUserRolesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListUserRolesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.GetRoleRequest> __Marshaller_udb_core_authz_services_v1_GetRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.GetRoleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.GetRoleRequest> __Marshaller_udb_core_authz_services_v1_GetRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.GetRoleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.GetRoleResponse> __Marshaller_udb_core_authz_services_v1_GetRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.GetRoleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.GetRoleResponse> __Marshaller_udb_core_authz_services_v1_GetRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.GetRoleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListRolesRequest> __Marshaller_udb_core_authz_services_v1_ListRolesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListRolesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListRolesRequest> __Marshaller_udb_core_authz_services_v1_ListRolesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListRolesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListRolesResponse> __Marshaller_udb_core_authz_services_v1_ListRolesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListRolesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListRolesResponse> __Marshaller_udb_core_authz_services_v1_ListRolesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListRolesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest> __Marshaller_udb_core_authz_services_v1_BatchCheckPermissionsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest> __Marshaller_udb_core_authz_services_v1_BatchCheckPermissionsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse> __Marshaller_udb_core_authz_services_v1_BatchCheckPermissionsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse> __Marshaller_udb_core_authz_services_v1_BatchCheckPermissionsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.UpdateRoleRequest> __Marshaller_udb_core_authz_services_v1_UpdateRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.UpdateRoleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.UpdateRoleRequest> __Marshaller_udb_core_authz_services_v1_UpdateRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.UpdateRoleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.UpdateRoleResponse> __Marshaller_udb_core_authz_services_v1_UpdateRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.UpdateRoleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.UpdateRoleResponse> __Marshaller_udb_core_authz_services_v1_UpdateRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.UpdateRoleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.DeleteRoleRequest> __Marshaller_udb_core_authz_services_v1_DeleteRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.DeleteRoleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.DeleteRoleRequest> __Marshaller_udb_core_authz_services_v1_DeleteRoleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.DeleteRoleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.DeleteRoleResponse> __Marshaller_udb_core_authz_services_v1_DeleteRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.DeleteRoleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.DeleteRoleResponse> __Marshaller_udb_core_authz_services_v1_DeleteRoleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.DeleteRoleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.GetPolicyRuleRequest> __Marshaller_udb_core_authz_services_v1_GetPolicyRuleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.GetPolicyRuleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest> __Marshaller_udb_core_authz_services_v1_GetPolicyRuleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.GetPolicyRuleResponse> __Marshaller_udb_core_authz_services_v1_GetPolicyRuleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.GetPolicyRuleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse> __Marshaller_udb_core_authz_services_v1_GetPolicyRuleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListPolicyRulesRequest> __Marshaller_udb_core_authz_services_v1_ListPolicyRulesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListPolicyRulesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest> __Marshaller_udb_core_authz_services_v1_ListPolicyRulesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListPolicyRulesResponse> __Marshaller_udb_core_authz_services_v1_ListPolicyRulesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListPolicyRulesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse> __Marshaller_udb_core_authz_services_v1_ListPolicyRulesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest> __Marshaller_udb_core_authz_services_v1_DeletePolicyRuleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest> __Marshaller_udb_core_authz_services_v1_DeletePolicyRuleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse> __Marshaller_udb_core_authz_services_v1_DeletePolicyRuleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse> __Marshaller_udb_core_authz_services_v1_DeletePolicyRuleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.PutRoleBindingRequest> __Marshaller_udb_core_authz_services_v1_PutRoleBindingRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.PutRoleBindingRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest> __Marshaller_udb_core_authz_services_v1_PutRoleBindingRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.AuthMutationResponse> __Marshaller_udb_core_authz_services_v1_AuthMutationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.AuthMutationResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> __Marshaller_udb_core_authz_services_v1_AuthMutationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.AuthMutationResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.PutRelationshipRequest> __Marshaller_udb_core_authz_services_v1_PutRelationshipRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.PutRelationshipRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.PutRelationshipRequest> __Marshaller_udb_core_authz_services_v1_PutRelationshipRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.PutRelationshipRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest> __Marshaller_udb_core_authz_services_v1_PutAuthzPolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest> __Marshaller_udb_core_authz_services_v1_PutAuthzPolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest> __Marshaller_udb_core_authz_services_v1_LintAuthzPoliciesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest> __Marshaller_udb_core_authz_services_v1_LintAuthzPoliciesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse> __Marshaller_udb_core_authz_services_v1_LintAuthzPoliciesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse> __Marshaller_udb_core_authz_services_v1_LintAuthzPoliciesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.NativeAccessRequest> __Marshaller_udb_core_authz_services_v1_NativeAccessRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.NativeAccessRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.NativeAccessRequest> __Marshaller_udb_core_authz_services_v1_NativeAccessRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.NativeAccessRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.NativeAccessResponse> __Marshaller_udb_core_authz_services_v1_NativeAccessResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.NativeAccessResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.NativeAccessResponse> __Marshaller_udb_core_authz_services_v1_NativeAccessResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.NativeAccessResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.PolicyBundleRequest> __Marshaller_udb_core_authz_services_v1_PolicyBundleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.PolicyBundleRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.PolicyBundleRequest> __Marshaller_udb_core_authz_services_v1_PolicyBundleRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.PolicyBundleRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.PolicyBundleResponse> __Marshaller_udb_core_authz_services_v1_PolicyBundleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.PolicyBundleResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.PolicyBundleResponse> __Marshaller_udb_core_authz_services_v1_PolicyBundleResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.PolicyBundleResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_CreatePolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_CreatePolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.PolicyDraftResponse> __Marshaller_udb_core_authz_services_v1_PolicyDraftResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.PolicyDraftResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> __Marshaller_udb_core_authz_services_v1_PolicyDraftResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_UpdatePolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_UpdatePolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_DiffPolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_DiffPolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse> __Marshaller_udb_core_authz_services_v1_DiffPolicyDraftResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse> __Marshaller_udb_core_authz_services_v1_DiffPolicyDraftResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_SubmitPolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_SubmitPolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_ApprovePolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_ApprovePolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.PolicyApprovalResponse> __Marshaller_udb_core_authz_services_v1_PolicyApprovalResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.PolicyApprovalResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse> __Marshaller_udb_core_authz_services_v1_PolicyApprovalResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_RejectPolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest> __Marshaller_udb_core_authz_services_v1_RejectPolicyDraftRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest> __Marshaller_udb_core_authz_services_v1_ActivatePolicyVersionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest> __Marshaller_udb_core_authz_services_v1_ActivatePolicyVersionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ActivationResponse> __Marshaller_udb_core_authz_services_v1_ActivationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ActivationResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ActivationResponse> __Marshaller_udb_core_authz_services_v1_ActivationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ActivationResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest> __Marshaller_udb_core_authz_services_v1_RollbackPolicyVersionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest> __Marshaller_udb_core_authz_services_v1_RollbackPolicyVersionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ActivateCanaryRequest> __Marshaller_udb_core_authz_services_v1_ActivateCanaryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ActivateCanaryRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest> __Marshaller_udb_core_authz_services_v1_ActivateCanaryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.CanaryResponse> __Marshaller_udb_core_authz_services_v1_CanaryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.CanaryResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.CanaryResponse> __Marshaller_udb_core_authz_services_v1_CanaryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.CanaryResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.PromoteCanaryRequest> __Marshaller_udb_core_authz_services_v1_PromoteCanaryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.PromoteCanaryRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest> __Marshaller_udb_core_authz_services_v1_PromoteCanaryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.GetCanaryStatusRequest> __Marshaller_udb_core_authz_services_v1_GetCanaryStatusRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.GetCanaryStatusRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest> __Marshaller_udb_core_authz_services_v1_GetCanaryStatusRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.GetCanaryStatusResponse> __Marshaller_udb_core_authz_services_v1_GetCanaryStatusResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.GetCanaryStatusResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse> __Marshaller_udb_core_authz_services_v1_GetCanaryStatusResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest> __Marshaller_udb_core_authz_services_v1_ListPolicyVersionsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest> __Marshaller_udb_core_authz_services_v1_ListPolicyVersionsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse> __Marshaller_udb_core_authz_services_v1_ListPolicyVersionsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse> __Marshaller_udb_core_authz_services_v1_ListPolicyVersionsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.SimulatePolicyRequest> __Marshaller_udb_core_authz_services_v1_SimulatePolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.SimulatePolicyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest> __Marshaller_udb_core_authz_services_v1_SimulatePolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.SimulatePolicyResponse> __Marshaller_udb_core_authz_services_v1_SimulatePolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.SimulatePolicyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse> __Marshaller_udb_core_authz_services_v1_SimulatePolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ExplainPolicyRequest> __Marshaller_udb_core_authz_services_v1_ExplainPolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ExplainPolicyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest> __Marshaller_udb_core_authz_services_v1_ExplainPolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.ExplainPolicyResponse> __Marshaller_udb_core_authz_services_v1_ExplainPolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.ExplainPolicyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse> __Marshaller_udb_core_authz_services_v1_ExplainPolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest> __Marshaller_udb_core_authz_services_v1_GetAuthzRevisionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest> __Marshaller_udb_core_authz_services_v1_GetAuthzRevisionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse> __Marshaller_udb_core_authz_services_v1_GetAuthzRevisionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse> __Marshaller_udb_core_authz_services_v1_GetAuthzRevisionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest> __Marshaller_udb_core_authz_services_v1_InvalidatePolicyBundlesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest> __Marshaller_udb_core_authz_services_v1_InvalidatePolicyBundlesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse> __Marshaller_udb_core_authz_services_v1_InvalidatePolicyBundlesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse> __Marshaller_udb_core_authz_services_v1_InvalidatePolicyBundlesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest> __Marshaller_udb_core_authz_services_v1_SeedBuiltinRolesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest> __Marshaller_udb_core_authz_services_v1_SeedBuiltinRolesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse> __Marshaller_udb_core_authz_services_v1_SeedBuiltinRolesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse> __Marshaller_udb_core_authz_services_v1_SeedBuiltinRolesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest> __Marshaller_udb_core_authz_services_v1_MigrateLegacyPoliciesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest> __Marshaller_udb_core_authz_services_v1_MigrateLegacyPoliciesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse> __Marshaller_udb_core_authz_services_v1_MigrateLegacyPoliciesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse> __Marshaller_udb_core_authz_services_v1_MigrateLegacyPoliciesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.AuthzRequest, global::udb.core.Authz.Services.V1.AuthzResponse> __Method_Authorize = new grpc::Method<global::udb.core.Authz.Services.V1.AuthzRequest, global::udb.core.Authz.Services.V1.AuthzResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.AuthzRequest, global::Udb.Core.Authz.Services.V1.AuthzResponse> __Method_Authorize = new grpc::Method<global::Udb.Core.Authz.Services.V1.AuthzRequest, global::Udb.Core.Authz.Services.V1.AuthzResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Authorize",
@@ -209,7 +209,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_AuthzResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.CheckAccessRequest, global::udb.core.Authz.Services.V1.CheckAccessResponse> __Method_CheckAccess = new grpc::Method<global::udb.core.Authz.Services.V1.CheckAccessRequest, global::udb.core.Authz.Services.V1.CheckAccessResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.CheckAccessRequest, global::Udb.Core.Authz.Services.V1.CheckAccessResponse> __Method_CheckAccess = new grpc::Method<global::Udb.Core.Authz.Services.V1.CheckAccessRequest, global::Udb.Core.Authz.Services.V1.CheckAccessResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CheckAccess",
@@ -217,7 +217,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_CheckAccessResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.CreateRoleRequest, global::udb.core.Authz.Services.V1.CreateRoleResponse> __Method_CreateRole = new grpc::Method<global::udb.core.Authz.Services.V1.CreateRoleRequest, global::udb.core.Authz.Services.V1.CreateRoleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.CreateRoleRequest, global::Udb.Core.Authz.Services.V1.CreateRoleResponse> __Method_CreateRole = new grpc::Method<global::Udb.Core.Authz.Services.V1.CreateRoleRequest, global::Udb.Core.Authz.Services.V1.CreateRoleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreateRole",
@@ -225,7 +225,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_CreateRoleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.AssignRoleRequest, global::udb.core.Authz.Services.V1.AssignRoleResponse> __Method_AssignRole = new grpc::Method<global::udb.core.Authz.Services.V1.AssignRoleRequest, global::udb.core.Authz.Services.V1.AssignRoleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.AssignRoleRequest, global::Udb.Core.Authz.Services.V1.AssignRoleResponse> __Method_AssignRole = new grpc::Method<global::Udb.Core.Authz.Services.V1.AssignRoleRequest, global::Udb.Core.Authz.Services.V1.AssignRoleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "AssignRole",
@@ -233,7 +233,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_AssignRoleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest, global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse> __Method_CreatePolicyRule = new grpc::Method<global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest, global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest, global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse> __Method_CreatePolicyRule = new grpc::Method<global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest, global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreatePolicyRule",
@@ -241,7 +241,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_CreatePolicyRuleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ListUserPermissionsRequest, global::udb.core.Authz.Services.V1.ListUserPermissionsResponse> __Method_ListUserPermissions = new grpc::Method<global::udb.core.Authz.Services.V1.ListUserPermissionsRequest, global::udb.core.Authz.Services.V1.ListUserPermissionsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest, global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse> __Method_ListUserPermissions = new grpc::Method<global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest, global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListUserPermissions",
@@ -249,7 +249,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_ListUserPermissionsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest, global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse> __Method_ListAccessDecisionAudits = new grpc::Method<global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest, global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest, global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse> __Method_ListAccessDecisionAudits = new grpc::Method<global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest, global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListAccessDecisionAudits",
@@ -257,7 +257,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_ListAccessDecisionAuditsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.RevokeRoleRequest, global::udb.core.Authz.Services.V1.RevokeRoleResponse> __Method_RevokeRole = new grpc::Method<global::udb.core.Authz.Services.V1.RevokeRoleRequest, global::udb.core.Authz.Services.V1.RevokeRoleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.RevokeRoleRequest, global::Udb.Core.Authz.Services.V1.RevokeRoleResponse> __Method_RevokeRole = new grpc::Method<global::Udb.Core.Authz.Services.V1.RevokeRoleRequest, global::Udb.Core.Authz.Services.V1.RevokeRoleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RevokeRole",
@@ -265,7 +265,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_RevokeRoleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ListUserRolesRequest, global::udb.core.Authz.Services.V1.ListUserRolesResponse> __Method_ListUserRoles = new grpc::Method<global::udb.core.Authz.Services.V1.ListUserRolesRequest, global::udb.core.Authz.Services.V1.ListUserRolesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ListUserRolesRequest, global::Udb.Core.Authz.Services.V1.ListUserRolesResponse> __Method_ListUserRoles = new grpc::Method<global::Udb.Core.Authz.Services.V1.ListUserRolesRequest, global::Udb.Core.Authz.Services.V1.ListUserRolesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListUserRoles",
@@ -273,7 +273,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_ListUserRolesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.GetRoleRequest, global::udb.core.Authz.Services.V1.GetRoleResponse> __Method_GetRole = new grpc::Method<global::udb.core.Authz.Services.V1.GetRoleRequest, global::udb.core.Authz.Services.V1.GetRoleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.GetRoleRequest, global::Udb.Core.Authz.Services.V1.GetRoleResponse> __Method_GetRole = new grpc::Method<global::Udb.Core.Authz.Services.V1.GetRoleRequest, global::Udb.Core.Authz.Services.V1.GetRoleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetRole",
@@ -281,7 +281,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_GetRoleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ListRolesRequest, global::udb.core.Authz.Services.V1.ListRolesResponse> __Method_ListRoles = new grpc::Method<global::udb.core.Authz.Services.V1.ListRolesRequest, global::udb.core.Authz.Services.V1.ListRolesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ListRolesRequest, global::Udb.Core.Authz.Services.V1.ListRolesResponse> __Method_ListRoles = new grpc::Method<global::Udb.Core.Authz.Services.V1.ListRolesRequest, global::Udb.Core.Authz.Services.V1.ListRolesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListRoles",
@@ -289,7 +289,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_ListRolesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest, global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse> __Method_BatchCheckPermissions = new grpc::Method<global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest, global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest, global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse> __Method_BatchCheckPermissions = new grpc::Method<global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest, global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "BatchCheckPermissions",
@@ -297,7 +297,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_BatchCheckPermissionsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.UpdateRoleRequest, global::udb.core.Authz.Services.V1.UpdateRoleResponse> __Method_UpdateRole = new grpc::Method<global::udb.core.Authz.Services.V1.UpdateRoleRequest, global::udb.core.Authz.Services.V1.UpdateRoleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.UpdateRoleRequest, global::Udb.Core.Authz.Services.V1.UpdateRoleResponse> __Method_UpdateRole = new grpc::Method<global::Udb.Core.Authz.Services.V1.UpdateRoleRequest, global::Udb.Core.Authz.Services.V1.UpdateRoleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UpdateRole",
@@ -305,7 +305,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_UpdateRoleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.DeleteRoleRequest, global::udb.core.Authz.Services.V1.DeleteRoleResponse> __Method_DeleteRole = new grpc::Method<global::udb.core.Authz.Services.V1.DeleteRoleRequest, global::udb.core.Authz.Services.V1.DeleteRoleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.DeleteRoleRequest, global::Udb.Core.Authz.Services.V1.DeleteRoleResponse> __Method_DeleteRole = new grpc::Method<global::Udb.Core.Authz.Services.V1.DeleteRoleRequest, global::Udb.Core.Authz.Services.V1.DeleteRoleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DeleteRole",
@@ -313,7 +313,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_DeleteRoleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.GetPolicyRuleRequest, global::udb.core.Authz.Services.V1.GetPolicyRuleResponse> __Method_GetPolicyRule = new grpc::Method<global::udb.core.Authz.Services.V1.GetPolicyRuleRequest, global::udb.core.Authz.Services.V1.GetPolicyRuleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest, global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse> __Method_GetPolicyRule = new grpc::Method<global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest, global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetPolicyRule",
@@ -321,7 +321,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_GetPolicyRuleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ListPolicyRulesRequest, global::udb.core.Authz.Services.V1.ListPolicyRulesResponse> __Method_ListPolicyRules = new grpc::Method<global::udb.core.Authz.Services.V1.ListPolicyRulesRequest, global::udb.core.Authz.Services.V1.ListPolicyRulesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest, global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse> __Method_ListPolicyRules = new grpc::Method<global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest, global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListPolicyRules",
@@ -329,7 +329,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_ListPolicyRulesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest, global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse> __Method_DeletePolicyRule = new grpc::Method<global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest, global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest, global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse> __Method_DeletePolicyRule = new grpc::Method<global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest, global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DeletePolicyRule",
@@ -337,7 +337,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_DeletePolicyRuleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.PutRoleBindingRequest, global::udb.core.Authz.Services.V1.AuthMutationResponse> __Method_PutRoleBinding = new grpc::Method<global::udb.core.Authz.Services.V1.PutRoleBindingRequest, global::udb.core.Authz.Services.V1.AuthMutationResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest, global::Udb.Core.Authz.Services.V1.AuthMutationResponse> __Method_PutRoleBinding = new grpc::Method<global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest, global::Udb.Core.Authz.Services.V1.AuthMutationResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PutRoleBinding",
@@ -345,7 +345,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_AuthMutationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.PutRelationshipRequest, global::udb.core.Authz.Services.V1.AuthMutationResponse> __Method_PutRelationship = new grpc::Method<global::udb.core.Authz.Services.V1.PutRelationshipRequest, global::udb.core.Authz.Services.V1.AuthMutationResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.PutRelationshipRequest, global::Udb.Core.Authz.Services.V1.AuthMutationResponse> __Method_PutRelationship = new grpc::Method<global::Udb.Core.Authz.Services.V1.PutRelationshipRequest, global::Udb.Core.Authz.Services.V1.AuthMutationResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PutRelationship",
@@ -353,7 +353,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_AuthMutationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest, global::udb.core.Authz.Services.V1.AuthMutationResponse> __Method_PutAuthzPolicy = new grpc::Method<global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest, global::udb.core.Authz.Services.V1.AuthMutationResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest, global::Udb.Core.Authz.Services.V1.AuthMutationResponse> __Method_PutAuthzPolicy = new grpc::Method<global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest, global::Udb.Core.Authz.Services.V1.AuthMutationResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PutAuthzPolicy",
@@ -361,7 +361,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_AuthMutationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest, global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse> __Method_LintAuthzPolicies = new grpc::Method<global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest, global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest, global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse> __Method_LintAuthzPolicies = new grpc::Method<global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest, global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "LintAuthzPolicies",
@@ -369,7 +369,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_LintAuthzPoliciesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.NativeAccessRequest, global::udb.core.Authz.Services.V1.NativeAccessResponse> __Method_GetNativeAccess = new grpc::Method<global::udb.core.Authz.Services.V1.NativeAccessRequest, global::udb.core.Authz.Services.V1.NativeAccessResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.NativeAccessRequest, global::Udb.Core.Authz.Services.V1.NativeAccessResponse> __Method_GetNativeAccess = new grpc::Method<global::Udb.Core.Authz.Services.V1.NativeAccessRequest, global::Udb.Core.Authz.Services.V1.NativeAccessResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetNativeAccess",
@@ -377,7 +377,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_NativeAccessResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.PolicyBundleRequest, global::udb.core.Authz.Services.V1.PolicyBundleResponse> __Method_GetPolicyBundle = new grpc::Method<global::udb.core.Authz.Services.V1.PolicyBundleRequest, global::udb.core.Authz.Services.V1.PolicyBundleResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.PolicyBundleRequest, global::Udb.Core.Authz.Services.V1.PolicyBundleResponse> __Method_GetPolicyBundle = new grpc::Method<global::Udb.Core.Authz.Services.V1.PolicyBundleRequest, global::Udb.Core.Authz.Services.V1.PolicyBundleResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetPolicyBundle",
@@ -385,7 +385,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_PolicyBundleResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyDraftResponse> __Method_CreatePolicyDraft = new grpc::Method<global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyDraftResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> __Method_CreatePolicyDraft = new grpc::Method<global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreatePolicyDraft",
@@ -393,7 +393,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_PolicyDraftResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyDraftResponse> __Method_UpdatePolicyDraft = new grpc::Method<global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyDraftResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> __Method_UpdatePolicyDraft = new grpc::Method<global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UpdatePolicyDraft",
@@ -401,7 +401,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_PolicyDraftResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest, global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse> __Method_DiffPolicyDraft = new grpc::Method<global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest, global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest, global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse> __Method_DiffPolicyDraft = new grpc::Method<global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest, global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DiffPolicyDraft",
@@ -409,7 +409,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_DiffPolicyDraftResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyDraftResponse> __Method_SubmitPolicyDraft = new grpc::Method<global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyDraftResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> __Method_SubmitPolicyDraft = new grpc::Method<global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "SubmitPolicyDraft",
@@ -417,7 +417,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_PolicyDraftResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyApprovalResponse> __Method_ApprovePolicyDraft = new grpc::Method<global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyApprovalResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse> __Method_ApprovePolicyDraft = new grpc::Method<global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ApprovePolicyDraft",
@@ -425,7 +425,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_PolicyApprovalResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyApprovalResponse> __Method_RejectPolicyDraft = new grpc::Method<global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyApprovalResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse> __Method_RejectPolicyDraft = new grpc::Method<global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RejectPolicyDraft",
@@ -433,7 +433,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_PolicyApprovalResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest, global::udb.core.Authz.Services.V1.ActivationResponse> __Method_ActivatePolicyVersion = new grpc::Method<global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest, global::udb.core.Authz.Services.V1.ActivationResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest, global::Udb.Core.Authz.Services.V1.ActivationResponse> __Method_ActivatePolicyVersion = new grpc::Method<global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest, global::Udb.Core.Authz.Services.V1.ActivationResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ActivatePolicyVersion",
@@ -441,7 +441,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_ActivationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest, global::udb.core.Authz.Services.V1.ActivationResponse> __Method_RollbackPolicyVersion = new grpc::Method<global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest, global::udb.core.Authz.Services.V1.ActivationResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest, global::Udb.Core.Authz.Services.V1.ActivationResponse> __Method_RollbackPolicyVersion = new grpc::Method<global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest, global::Udb.Core.Authz.Services.V1.ActivationResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RollbackPolicyVersion",
@@ -449,7 +449,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_ActivationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ActivateCanaryRequest, global::udb.core.Authz.Services.V1.CanaryResponse> __Method_ActivateCanary = new grpc::Method<global::udb.core.Authz.Services.V1.ActivateCanaryRequest, global::udb.core.Authz.Services.V1.CanaryResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest, global::Udb.Core.Authz.Services.V1.CanaryResponse> __Method_ActivateCanary = new grpc::Method<global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest, global::Udb.Core.Authz.Services.V1.CanaryResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ActivateCanary",
@@ -457,7 +457,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_CanaryResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.PromoteCanaryRequest, global::udb.core.Authz.Services.V1.CanaryResponse> __Method_PromoteCanary = new grpc::Method<global::udb.core.Authz.Services.V1.PromoteCanaryRequest, global::udb.core.Authz.Services.V1.CanaryResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest, global::Udb.Core.Authz.Services.V1.CanaryResponse> __Method_PromoteCanary = new grpc::Method<global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest, global::Udb.Core.Authz.Services.V1.CanaryResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PromoteCanary",
@@ -465,7 +465,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_CanaryResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.GetCanaryStatusRequest, global::udb.core.Authz.Services.V1.GetCanaryStatusResponse> __Method_GetCanaryStatus = new grpc::Method<global::udb.core.Authz.Services.V1.GetCanaryStatusRequest, global::udb.core.Authz.Services.V1.GetCanaryStatusResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest, global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse> __Method_GetCanaryStatus = new grpc::Method<global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest, global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetCanaryStatus",
@@ -473,7 +473,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_GetCanaryStatusResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest, global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse> __Method_ListPolicyVersions = new grpc::Method<global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest, global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest, global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse> __Method_ListPolicyVersions = new grpc::Method<global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest, global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListPolicyVersions",
@@ -481,7 +481,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_ListPolicyVersionsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.SimulatePolicyRequest, global::udb.core.Authz.Services.V1.SimulatePolicyResponse> __Method_SimulatePolicy = new grpc::Method<global::udb.core.Authz.Services.V1.SimulatePolicyRequest, global::udb.core.Authz.Services.V1.SimulatePolicyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest, global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse> __Method_SimulatePolicy = new grpc::Method<global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest, global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "SimulatePolicy",
@@ -489,7 +489,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_SimulatePolicyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.ExplainPolicyRequest, global::udb.core.Authz.Services.V1.ExplainPolicyResponse> __Method_ExplainPolicy = new grpc::Method<global::udb.core.Authz.Services.V1.ExplainPolicyRequest, global::udb.core.Authz.Services.V1.ExplainPolicyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest, global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse> __Method_ExplainPolicy = new grpc::Method<global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest, global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ExplainPolicy",
@@ -497,7 +497,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_ExplainPolicyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest, global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse> __Method_GetAuthzRevision = new grpc::Method<global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest, global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest, global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse> __Method_GetAuthzRevision = new grpc::Method<global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest, global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetAuthzRevision",
@@ -505,7 +505,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_GetAuthzRevisionResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest, global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse> __Method_InvalidatePolicyBundles = new grpc::Method<global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest, global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest, global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse> __Method_InvalidatePolicyBundles = new grpc::Method<global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest, global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "InvalidatePolicyBundles",
@@ -513,7 +513,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_InvalidatePolicyBundlesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest, global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse> __Method_SeedBuiltinRoles = new grpc::Method<global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest, global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest, global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse> __Method_SeedBuiltinRoles = new grpc::Method<global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest, global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "SeedBuiltinRoles",
@@ -521,7 +521,7 @@ namespace udb.core.Authz.Services.V1 {
         __Marshaller_udb_core_authz_services_v1_SeedBuiltinRolesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest, global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse> __Method_MigrateLegacyPolicies = new grpc::Method<global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest, global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest, global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse> __Method_MigrateLegacyPolicies = new grpc::Method<global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest, global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "MigrateLegacyPolicies",
@@ -531,7 +531,7 @@ namespace udb.core.Authz.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Authz.Services.V1.AuthzServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Authz.Services.V1.AuthzServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of AuthzService</summary>
@@ -539,43 +539,43 @@ namespace udb.core.Authz.Services.V1 {
     public abstract partial class AuthzServiceBase
     {
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.AuthzResponse> Authorize(global::udb.core.Authz.Services.V1.AuthzRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.AuthzResponse> Authorize(global::Udb.Core.Authz.Services.V1.AuthzRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.CheckAccessResponse> CheckAccess(global::udb.core.Authz.Services.V1.CheckAccessRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.CheckAccessResponse> CheckAccess(global::Udb.Core.Authz.Services.V1.CheckAccessRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.CreateRoleResponse> CreateRole(global::udb.core.Authz.Services.V1.CreateRoleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.CreateRoleResponse> CreateRole(global::Udb.Core.Authz.Services.V1.CreateRoleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.AssignRoleResponse> AssignRole(global::udb.core.Authz.Services.V1.AssignRoleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.AssignRoleResponse> AssignRole(global::Udb.Core.Authz.Services.V1.AssignRoleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse> CreatePolicyRule(global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse> CreatePolicyRule(global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.ListUserPermissionsResponse> ListUserPermissions(global::udb.core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse> ListUserPermissions(global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse> ListAccessDecisionAudits(global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse> ListAccessDecisionAudits(global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -587,7 +587,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.RevokeRoleResponse> RevokeRole(global::udb.core.Authz.Services.V1.RevokeRoleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.RevokeRoleResponse> RevokeRole(global::Udb.Core.Authz.Services.V1.RevokeRoleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -599,7 +599,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.ListUserRolesResponse> ListUserRoles(global::udb.core.Authz.Services.V1.ListUserRolesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.ListUserRolesResponse> ListUserRoles(global::Udb.Core.Authz.Services.V1.ListUserRolesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -611,7 +611,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.GetRoleResponse> GetRole(global::udb.core.Authz.Services.V1.GetRoleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.GetRoleResponse> GetRole(global::Udb.Core.Authz.Services.V1.GetRoleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -623,7 +623,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.ListRolesResponse> ListRoles(global::udb.core.Authz.Services.V1.ListRolesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.ListRolesResponse> ListRoles(global::Udb.Core.Authz.Services.V1.ListRolesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -635,7 +635,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse> BatchCheckPermissions(global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse> BatchCheckPermissions(global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -647,7 +647,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.UpdateRoleResponse> UpdateRole(global::udb.core.Authz.Services.V1.UpdateRoleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.UpdateRoleResponse> UpdateRole(global::Udb.Core.Authz.Services.V1.UpdateRoleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -659,7 +659,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.DeleteRoleResponse> DeleteRole(global::udb.core.Authz.Services.V1.DeleteRoleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.DeleteRoleResponse> DeleteRole(global::Udb.Core.Authz.Services.V1.DeleteRoleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -671,7 +671,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.GetPolicyRuleResponse> GetPolicyRule(global::udb.core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse> GetPolicyRule(global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -683,7 +683,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.ListPolicyRulesResponse> ListPolicyRules(global::udb.core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse> ListPolicyRules(global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -695,31 +695,31 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse> DeletePolicyRule(global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse> DeletePolicyRule(global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.AuthMutationResponse> PutRoleBinding(global::udb.core.Authz.Services.V1.PutRoleBindingRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> PutRoleBinding(global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.AuthMutationResponse> PutRelationship(global::udb.core.Authz.Services.V1.PutRelationshipRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> PutRelationship(global::Udb.Core.Authz.Services.V1.PutRelationshipRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.AuthMutationResponse> PutAuthzPolicy(global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> PutAuthzPolicy(global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse> LintAuthzPolicies(global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse> LintAuthzPolicies(global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -732,7 +732,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.NativeAccessResponse> GetNativeAccess(global::udb.core.Authz.Services.V1.NativeAccessRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.NativeAccessResponse> GetNativeAccess(global::Udb.Core.Authz.Services.V1.NativeAccessRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -744,55 +744,55 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.PolicyBundleResponse> GetPolicyBundle(global::udb.core.Authz.Services.V1.PolicyBundleRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.PolicyBundleResponse> GetPolicyBundle(global::Udb.Core.Authz.Services.V1.PolicyBundleRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.PolicyDraftResponse> CreatePolicyDraft(global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> CreatePolicyDraft(global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.PolicyDraftResponse> UpdatePolicyDraft(global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> UpdatePolicyDraft(global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse> DiffPolicyDraft(global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse> DiffPolicyDraft(global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.PolicyDraftResponse> SubmitPolicyDraft(global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> SubmitPolicyDraft(global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.PolicyApprovalResponse> ApprovePolicyDraft(global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse> ApprovePolicyDraft(global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.PolicyApprovalResponse> RejectPolicyDraft(global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse> RejectPolicyDraft(global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.ActivationResponse> ActivatePolicyVersion(global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.ActivationResponse> ActivatePolicyVersion(global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.ActivationResponse> RollbackPolicyVersion(global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.ActivationResponse> RollbackPolicyVersion(global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -805,7 +805,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.CanaryResponse> ActivateCanary(global::udb.core.Authz.Services.V1.ActivateCanaryRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.CanaryResponse> ActivateCanary(global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -817,7 +817,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.CanaryResponse> PromoteCanary(global::udb.core.Authz.Services.V1.PromoteCanaryRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.CanaryResponse> PromoteCanary(global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -829,49 +829,49 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.GetCanaryStatusResponse> GetCanaryStatus(global::udb.core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse> GetCanaryStatus(global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse> ListPolicyVersions(global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse> ListPolicyVersions(global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.SimulatePolicyResponse> SimulatePolicy(global::udb.core.Authz.Services.V1.SimulatePolicyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse> SimulatePolicy(global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.ExplainPolicyResponse> ExplainPolicy(global::udb.core.Authz.Services.V1.ExplainPolicyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse> ExplainPolicy(global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse> GetAuthzRevision(global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse> GetAuthzRevision(global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse> InvalidatePolicyBundles(global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse> InvalidatePolicyBundles(global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse> SeedBuiltinRoles(global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse> SeedBuiltinRoles(global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse> MigrateLegacyPolicies(global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse> MigrateLegacyPolicies(global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -906,142 +906,142 @@ namespace udb.core.Authz.Services.V1 {
       }
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AuthzResponse Authorize(global::udb.core.Authz.Services.V1.AuthzRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.AuthzResponse Authorize(global::Udb.Core.Authz.Services.V1.AuthzRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Authorize(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AuthzResponse Authorize(global::udb.core.Authz.Services.V1.AuthzRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.AuthzResponse Authorize(global::Udb.Core.Authz.Services.V1.AuthzRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Authorize, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AuthzResponse> AuthorizeAsync(global::udb.core.Authz.Services.V1.AuthzRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AuthzResponse> AuthorizeAsync(global::Udb.Core.Authz.Services.V1.AuthzRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return AuthorizeAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AuthzResponse> AuthorizeAsync(global::udb.core.Authz.Services.V1.AuthzRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AuthzResponse> AuthorizeAsync(global::Udb.Core.Authz.Services.V1.AuthzRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Authorize, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CheckAccessResponse CheckAccess(global::udb.core.Authz.Services.V1.CheckAccessRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.CheckAccessResponse CheckAccess(global::Udb.Core.Authz.Services.V1.CheckAccessRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CheckAccess(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CheckAccessResponse CheckAccess(global::udb.core.Authz.Services.V1.CheckAccessRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.CheckAccessResponse CheckAccess(global::Udb.Core.Authz.Services.V1.CheckAccessRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CheckAccess, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CheckAccessResponse> CheckAccessAsync(global::udb.core.Authz.Services.V1.CheckAccessRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CheckAccessResponse> CheckAccessAsync(global::Udb.Core.Authz.Services.V1.CheckAccessRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CheckAccessAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CheckAccessResponse> CheckAccessAsync(global::udb.core.Authz.Services.V1.CheckAccessRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CheckAccessResponse> CheckAccessAsync(global::Udb.Core.Authz.Services.V1.CheckAccessRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CheckAccess, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CreateRoleResponse CreateRole(global::udb.core.Authz.Services.V1.CreateRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.CreateRoleResponse CreateRole(global::Udb.Core.Authz.Services.V1.CreateRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateRole(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CreateRoleResponse CreateRole(global::udb.core.Authz.Services.V1.CreateRoleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.CreateRoleResponse CreateRole(global::Udb.Core.Authz.Services.V1.CreateRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreateRole, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CreateRoleResponse> CreateRoleAsync(global::udb.core.Authz.Services.V1.CreateRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CreateRoleResponse> CreateRoleAsync(global::Udb.Core.Authz.Services.V1.CreateRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateRoleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CreateRoleResponse> CreateRoleAsync(global::udb.core.Authz.Services.V1.CreateRoleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CreateRoleResponse> CreateRoleAsync(global::Udb.Core.Authz.Services.V1.CreateRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreateRole, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AssignRoleResponse AssignRole(global::udb.core.Authz.Services.V1.AssignRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.AssignRoleResponse AssignRole(global::Udb.Core.Authz.Services.V1.AssignRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return AssignRole(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AssignRoleResponse AssignRole(global::udb.core.Authz.Services.V1.AssignRoleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.AssignRoleResponse AssignRole(global::Udb.Core.Authz.Services.V1.AssignRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_AssignRole, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AssignRoleResponse> AssignRoleAsync(global::udb.core.Authz.Services.V1.AssignRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AssignRoleResponse> AssignRoleAsync(global::Udb.Core.Authz.Services.V1.AssignRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return AssignRoleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AssignRoleResponse> AssignRoleAsync(global::udb.core.Authz.Services.V1.AssignRoleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AssignRoleResponse> AssignRoleAsync(global::Udb.Core.Authz.Services.V1.AssignRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_AssignRole, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse CreatePolicyRule(global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse CreatePolicyRule(global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreatePolicyRule(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse CreatePolicyRule(global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse CreatePolicyRule(global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreatePolicyRule, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse> CreatePolicyRuleAsync(global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse> CreatePolicyRuleAsync(global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreatePolicyRuleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse> CreatePolicyRuleAsync(global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse> CreatePolicyRuleAsync(global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreatePolicyRule, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListUserPermissionsResponse ListUserPermissions(global::udb.core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse ListUserPermissions(global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListUserPermissions(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListUserPermissionsResponse ListUserPermissions(global::udb.core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse ListUserPermissions(global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListUserPermissions, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListUserPermissionsResponse> ListUserPermissionsAsync(global::udb.core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse> ListUserPermissionsAsync(global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListUserPermissionsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListUserPermissionsResponse> ListUserPermissionsAsync(global::udb.core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse> ListUserPermissionsAsync(global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListUserPermissions, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse ListAccessDecisionAudits(global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse ListAccessDecisionAudits(global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListAccessDecisionAudits(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse ListAccessDecisionAudits(global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse ListAccessDecisionAudits(global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListAccessDecisionAudits, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse> ListAccessDecisionAuditsAsync(global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse> ListAccessDecisionAuditsAsync(global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListAccessDecisionAuditsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse> ListAccessDecisionAuditsAsync(global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse> ListAccessDecisionAuditsAsync(global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListAccessDecisionAudits, null, options, request);
       }
@@ -1054,7 +1054,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.RevokeRoleResponse RevokeRole(global::udb.core.Authz.Services.V1.RevokeRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.RevokeRoleResponse RevokeRole(global::Udb.Core.Authz.Services.V1.RevokeRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RevokeRole(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1065,7 +1065,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.RevokeRoleResponse RevokeRole(global::udb.core.Authz.Services.V1.RevokeRoleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.RevokeRoleResponse RevokeRole(global::Udb.Core.Authz.Services.V1.RevokeRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RevokeRole, null, options, request);
       }
@@ -1078,7 +1078,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.RevokeRoleResponse> RevokeRoleAsync(global::udb.core.Authz.Services.V1.RevokeRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.RevokeRoleResponse> RevokeRoleAsync(global::Udb.Core.Authz.Services.V1.RevokeRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RevokeRoleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1089,7 +1089,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.RevokeRoleResponse> RevokeRoleAsync(global::udb.core.Authz.Services.V1.RevokeRoleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.RevokeRoleResponse> RevokeRoleAsync(global::Udb.Core.Authz.Services.V1.RevokeRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RevokeRole, null, options, request);
       }
@@ -1102,7 +1102,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListUserRolesResponse ListUserRoles(global::udb.core.Authz.Services.V1.ListUserRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.ListUserRolesResponse ListUserRoles(global::Udb.Core.Authz.Services.V1.ListUserRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListUserRoles(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1113,7 +1113,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListUserRolesResponse ListUserRoles(global::udb.core.Authz.Services.V1.ListUserRolesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.ListUserRolesResponse ListUserRoles(global::Udb.Core.Authz.Services.V1.ListUserRolesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListUserRoles, null, options, request);
       }
@@ -1126,7 +1126,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListUserRolesResponse> ListUserRolesAsync(global::udb.core.Authz.Services.V1.ListUserRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListUserRolesResponse> ListUserRolesAsync(global::Udb.Core.Authz.Services.V1.ListUserRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListUserRolesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1137,7 +1137,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListUserRolesResponse> ListUserRolesAsync(global::udb.core.Authz.Services.V1.ListUserRolesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListUserRolesResponse> ListUserRolesAsync(global::Udb.Core.Authz.Services.V1.ListUserRolesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListUserRoles, null, options, request);
       }
@@ -1150,7 +1150,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.GetRoleResponse GetRole(global::udb.core.Authz.Services.V1.GetRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.GetRoleResponse GetRole(global::Udb.Core.Authz.Services.V1.GetRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetRole(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1161,7 +1161,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.GetRoleResponse GetRole(global::udb.core.Authz.Services.V1.GetRoleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.GetRoleResponse GetRole(global::Udb.Core.Authz.Services.V1.GetRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetRole, null, options, request);
       }
@@ -1174,7 +1174,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.GetRoleResponse> GetRoleAsync(global::udb.core.Authz.Services.V1.GetRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.GetRoleResponse> GetRoleAsync(global::Udb.Core.Authz.Services.V1.GetRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetRoleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1185,7 +1185,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.GetRoleResponse> GetRoleAsync(global::udb.core.Authz.Services.V1.GetRoleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.GetRoleResponse> GetRoleAsync(global::Udb.Core.Authz.Services.V1.GetRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetRole, null, options, request);
       }
@@ -1198,7 +1198,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListRolesResponse ListRoles(global::udb.core.Authz.Services.V1.ListRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.ListRolesResponse ListRoles(global::Udb.Core.Authz.Services.V1.ListRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListRoles(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1209,7 +1209,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListRolesResponse ListRoles(global::udb.core.Authz.Services.V1.ListRolesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.ListRolesResponse ListRoles(global::Udb.Core.Authz.Services.V1.ListRolesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListRoles, null, options, request);
       }
@@ -1222,7 +1222,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListRolesResponse> ListRolesAsync(global::udb.core.Authz.Services.V1.ListRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListRolesResponse> ListRolesAsync(global::Udb.Core.Authz.Services.V1.ListRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListRolesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1233,7 +1233,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListRolesResponse> ListRolesAsync(global::udb.core.Authz.Services.V1.ListRolesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListRolesResponse> ListRolesAsync(global::Udb.Core.Authz.Services.V1.ListRolesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListRoles, null, options, request);
       }
@@ -1246,7 +1246,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse BatchCheckPermissions(global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse BatchCheckPermissions(global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return BatchCheckPermissions(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1257,7 +1257,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse BatchCheckPermissions(global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse BatchCheckPermissions(global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_BatchCheckPermissions, null, options, request);
       }
@@ -1270,7 +1270,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse> BatchCheckPermissionsAsync(global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse> BatchCheckPermissionsAsync(global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return BatchCheckPermissionsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1281,7 +1281,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse> BatchCheckPermissionsAsync(global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse> BatchCheckPermissionsAsync(global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_BatchCheckPermissions, null, options, request);
       }
@@ -1294,7 +1294,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.UpdateRoleResponse UpdateRole(global::udb.core.Authz.Services.V1.UpdateRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.UpdateRoleResponse UpdateRole(global::Udb.Core.Authz.Services.V1.UpdateRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateRole(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1305,7 +1305,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.UpdateRoleResponse UpdateRole(global::udb.core.Authz.Services.V1.UpdateRoleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.UpdateRoleResponse UpdateRole(global::Udb.Core.Authz.Services.V1.UpdateRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UpdateRole, null, options, request);
       }
@@ -1318,7 +1318,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.UpdateRoleResponse> UpdateRoleAsync(global::udb.core.Authz.Services.V1.UpdateRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.UpdateRoleResponse> UpdateRoleAsync(global::Udb.Core.Authz.Services.V1.UpdateRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateRoleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1329,7 +1329,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.UpdateRoleResponse> UpdateRoleAsync(global::udb.core.Authz.Services.V1.UpdateRoleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.UpdateRoleResponse> UpdateRoleAsync(global::Udb.Core.Authz.Services.V1.UpdateRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UpdateRole, null, options, request);
       }
@@ -1342,7 +1342,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.DeleteRoleResponse DeleteRole(global::udb.core.Authz.Services.V1.DeleteRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.DeleteRoleResponse DeleteRole(global::Udb.Core.Authz.Services.V1.DeleteRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteRole(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1353,7 +1353,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.DeleteRoleResponse DeleteRole(global::udb.core.Authz.Services.V1.DeleteRoleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.DeleteRoleResponse DeleteRole(global::Udb.Core.Authz.Services.V1.DeleteRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeleteRole, null, options, request);
       }
@@ -1366,7 +1366,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.DeleteRoleResponse> DeleteRoleAsync(global::udb.core.Authz.Services.V1.DeleteRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.DeleteRoleResponse> DeleteRoleAsync(global::Udb.Core.Authz.Services.V1.DeleteRoleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteRoleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1377,7 +1377,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.DeleteRoleResponse> DeleteRoleAsync(global::udb.core.Authz.Services.V1.DeleteRoleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.DeleteRoleResponse> DeleteRoleAsync(global::Udb.Core.Authz.Services.V1.DeleteRoleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteRole, null, options, request);
       }
@@ -1390,7 +1390,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.GetPolicyRuleResponse GetPolicyRule(global::udb.core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse GetPolicyRule(global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPolicyRule(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1401,7 +1401,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.GetPolicyRuleResponse GetPolicyRule(global::udb.core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse GetPolicyRule(global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetPolicyRule, null, options, request);
       }
@@ -1414,7 +1414,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.GetPolicyRuleResponse> GetPolicyRuleAsync(global::udb.core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse> GetPolicyRuleAsync(global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPolicyRuleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1425,7 +1425,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.GetPolicyRuleResponse> GetPolicyRuleAsync(global::udb.core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse> GetPolicyRuleAsync(global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetPolicyRule, null, options, request);
       }
@@ -1438,7 +1438,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListPolicyRulesResponse ListPolicyRules(global::udb.core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse ListPolicyRules(global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListPolicyRules(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1449,7 +1449,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListPolicyRulesResponse ListPolicyRules(global::udb.core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse ListPolicyRules(global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListPolicyRules, null, options, request);
       }
@@ -1462,7 +1462,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListPolicyRulesResponse> ListPolicyRulesAsync(global::udb.core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse> ListPolicyRulesAsync(global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListPolicyRulesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1473,7 +1473,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListPolicyRulesResponse> ListPolicyRulesAsync(global::udb.core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse> ListPolicyRulesAsync(global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListPolicyRules, null, options, request);
       }
@@ -1486,7 +1486,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse DeletePolicyRule(global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse DeletePolicyRule(global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeletePolicyRule(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1497,7 +1497,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse DeletePolicyRule(global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse DeletePolicyRule(global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeletePolicyRule, null, options, request);
       }
@@ -1510,7 +1510,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse> DeletePolicyRuleAsync(global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse> DeletePolicyRuleAsync(global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeletePolicyRuleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1521,87 +1521,87 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse> DeletePolicyRuleAsync(global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse> DeletePolicyRuleAsync(global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeletePolicyRule, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AuthMutationResponse PutRoleBinding(global::udb.core.Authz.Services.V1.PutRoleBindingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.AuthMutationResponse PutRoleBinding(global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutRoleBinding(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AuthMutationResponse PutRoleBinding(global::udb.core.Authz.Services.V1.PutRoleBindingRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.AuthMutationResponse PutRoleBinding(global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PutRoleBinding, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AuthMutationResponse> PutRoleBindingAsync(global::udb.core.Authz.Services.V1.PutRoleBindingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> PutRoleBindingAsync(global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutRoleBindingAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AuthMutationResponse> PutRoleBindingAsync(global::udb.core.Authz.Services.V1.PutRoleBindingRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> PutRoleBindingAsync(global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PutRoleBinding, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AuthMutationResponse PutRelationship(global::udb.core.Authz.Services.V1.PutRelationshipRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.AuthMutationResponse PutRelationship(global::Udb.Core.Authz.Services.V1.PutRelationshipRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutRelationship(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AuthMutationResponse PutRelationship(global::udb.core.Authz.Services.V1.PutRelationshipRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.AuthMutationResponse PutRelationship(global::Udb.Core.Authz.Services.V1.PutRelationshipRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PutRelationship, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AuthMutationResponse> PutRelationshipAsync(global::udb.core.Authz.Services.V1.PutRelationshipRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> PutRelationshipAsync(global::Udb.Core.Authz.Services.V1.PutRelationshipRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutRelationshipAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AuthMutationResponse> PutRelationshipAsync(global::udb.core.Authz.Services.V1.PutRelationshipRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> PutRelationshipAsync(global::Udb.Core.Authz.Services.V1.PutRelationshipRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PutRelationship, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AuthMutationResponse PutAuthzPolicy(global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.AuthMutationResponse PutAuthzPolicy(global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutAuthzPolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.AuthMutationResponse PutAuthzPolicy(global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.AuthMutationResponse PutAuthzPolicy(global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PutAuthzPolicy, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AuthMutationResponse> PutAuthzPolicyAsync(global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> PutAuthzPolicyAsync(global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutAuthzPolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.AuthMutationResponse> PutAuthzPolicyAsync(global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.AuthMutationResponse> PutAuthzPolicyAsync(global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PutAuthzPolicy, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse LintAuthzPolicies(global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse LintAuthzPolicies(global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return LintAuthzPolicies(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse LintAuthzPolicies(global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse LintAuthzPolicies(global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_LintAuthzPolicies, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse> LintAuthzPoliciesAsync(global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse> LintAuthzPoliciesAsync(global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return LintAuthzPoliciesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse> LintAuthzPoliciesAsync(global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse> LintAuthzPoliciesAsync(global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_LintAuthzPolicies, null, options, request);
       }
@@ -1615,7 +1615,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.NativeAccessResponse GetNativeAccess(global::udb.core.Authz.Services.V1.NativeAccessRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.NativeAccessResponse GetNativeAccess(global::Udb.Core.Authz.Services.V1.NativeAccessRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetNativeAccess(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1627,7 +1627,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.NativeAccessResponse GetNativeAccess(global::udb.core.Authz.Services.V1.NativeAccessRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.NativeAccessResponse GetNativeAccess(global::Udb.Core.Authz.Services.V1.NativeAccessRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetNativeAccess, null, options, request);
       }
@@ -1641,7 +1641,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.NativeAccessResponse> GetNativeAccessAsync(global::udb.core.Authz.Services.V1.NativeAccessRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.NativeAccessResponse> GetNativeAccessAsync(global::Udb.Core.Authz.Services.V1.NativeAccessRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetNativeAccessAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1653,7 +1653,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.NativeAccessResponse> GetNativeAccessAsync(global::udb.core.Authz.Services.V1.NativeAccessRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.NativeAccessResponse> GetNativeAccessAsync(global::Udb.Core.Authz.Services.V1.NativeAccessRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetNativeAccess, null, options, request);
       }
@@ -1666,7 +1666,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyBundleResponse GetPolicyBundle(global::udb.core.Authz.Services.V1.PolicyBundleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyBundleResponse GetPolicyBundle(global::Udb.Core.Authz.Services.V1.PolicyBundleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPolicyBundle(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1677,7 +1677,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyBundleResponse GetPolicyBundle(global::udb.core.Authz.Services.V1.PolicyBundleRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyBundleResponse GetPolicyBundle(global::Udb.Core.Authz.Services.V1.PolicyBundleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetPolicyBundle, null, options, request);
       }
@@ -1690,7 +1690,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyBundleResponse> GetPolicyBundleAsync(global::udb.core.Authz.Services.V1.PolicyBundleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyBundleResponse> GetPolicyBundleAsync(global::Udb.Core.Authz.Services.V1.PolicyBundleRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPolicyBundleAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1701,167 +1701,167 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyBundleResponse> GetPolicyBundleAsync(global::udb.core.Authz.Services.V1.PolicyBundleRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyBundleResponse> GetPolicyBundleAsync(global::Udb.Core.Authz.Services.V1.PolicyBundleRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetPolicyBundle, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyDraftResponse CreatePolicyDraft(global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyDraftResponse CreatePolicyDraft(global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreatePolicyDraft(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyDraftResponse CreatePolicyDraft(global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyDraftResponse CreatePolicyDraft(global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreatePolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyDraftResponse> CreatePolicyDraftAsync(global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> CreatePolicyDraftAsync(global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreatePolicyDraftAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyDraftResponse> CreatePolicyDraftAsync(global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> CreatePolicyDraftAsync(global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreatePolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyDraftResponse UpdatePolicyDraft(global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyDraftResponse UpdatePolicyDraft(global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdatePolicyDraft(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyDraftResponse UpdatePolicyDraft(global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyDraftResponse UpdatePolicyDraft(global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UpdatePolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyDraftResponse> UpdatePolicyDraftAsync(global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> UpdatePolicyDraftAsync(global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdatePolicyDraftAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyDraftResponse> UpdatePolicyDraftAsync(global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> UpdatePolicyDraftAsync(global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UpdatePolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse DiffPolicyDraft(global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse DiffPolicyDraft(global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DiffPolicyDraft(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse DiffPolicyDraft(global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse DiffPolicyDraft(global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DiffPolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse> DiffPolicyDraftAsync(global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse> DiffPolicyDraftAsync(global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DiffPolicyDraftAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse> DiffPolicyDraftAsync(global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse> DiffPolicyDraftAsync(global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DiffPolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyDraftResponse SubmitPolicyDraft(global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyDraftResponse SubmitPolicyDraft(global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SubmitPolicyDraft(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyDraftResponse SubmitPolicyDraft(global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyDraftResponse SubmitPolicyDraft(global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_SubmitPolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyDraftResponse> SubmitPolicyDraftAsync(global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> SubmitPolicyDraftAsync(global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SubmitPolicyDraftAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyDraftResponse> SubmitPolicyDraftAsync(global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyDraftResponse> SubmitPolicyDraftAsync(global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_SubmitPolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyApprovalResponse ApprovePolicyDraft(global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse ApprovePolicyDraft(global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ApprovePolicyDraft(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyApprovalResponse ApprovePolicyDraft(global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse ApprovePolicyDraft(global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ApprovePolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyApprovalResponse> ApprovePolicyDraftAsync(global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse> ApprovePolicyDraftAsync(global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ApprovePolicyDraftAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyApprovalResponse> ApprovePolicyDraftAsync(global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse> ApprovePolicyDraftAsync(global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ApprovePolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyApprovalResponse RejectPolicyDraft(global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse RejectPolicyDraft(global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RejectPolicyDraft(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.PolicyApprovalResponse RejectPolicyDraft(global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse RejectPolicyDraft(global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RejectPolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyApprovalResponse> RejectPolicyDraftAsync(global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse> RejectPolicyDraftAsync(global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RejectPolicyDraftAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.PolicyApprovalResponse> RejectPolicyDraftAsync(global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse> RejectPolicyDraftAsync(global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RejectPolicyDraft, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ActivationResponse ActivatePolicyVersion(global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.ActivationResponse ActivatePolicyVersion(global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ActivatePolicyVersion(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ActivationResponse ActivatePolicyVersion(global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.ActivationResponse ActivatePolicyVersion(global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ActivatePolicyVersion, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ActivationResponse> ActivatePolicyVersionAsync(global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ActivationResponse> ActivatePolicyVersionAsync(global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ActivatePolicyVersionAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ActivationResponse> ActivatePolicyVersionAsync(global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ActivationResponse> ActivatePolicyVersionAsync(global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ActivatePolicyVersion, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ActivationResponse RollbackPolicyVersion(global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.ActivationResponse RollbackPolicyVersion(global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RollbackPolicyVersion(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ActivationResponse RollbackPolicyVersion(global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.ActivationResponse RollbackPolicyVersion(global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RollbackPolicyVersion, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ActivationResponse> RollbackPolicyVersionAsync(global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ActivationResponse> RollbackPolicyVersionAsync(global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RollbackPolicyVersionAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ActivationResponse> RollbackPolicyVersionAsync(global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ActivationResponse> RollbackPolicyVersionAsync(global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RollbackPolicyVersion, null, options, request);
       }
@@ -1875,7 +1875,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CanaryResponse ActivateCanary(global::udb.core.Authz.Services.V1.ActivateCanaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.CanaryResponse ActivateCanary(global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ActivateCanary(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1887,7 +1887,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CanaryResponse ActivateCanary(global::udb.core.Authz.Services.V1.ActivateCanaryRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.CanaryResponse ActivateCanary(global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ActivateCanary, null, options, request);
       }
@@ -1901,7 +1901,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CanaryResponse> ActivateCanaryAsync(global::udb.core.Authz.Services.V1.ActivateCanaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CanaryResponse> ActivateCanaryAsync(global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ActivateCanaryAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1913,7 +1913,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CanaryResponse> ActivateCanaryAsync(global::udb.core.Authz.Services.V1.ActivateCanaryRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CanaryResponse> ActivateCanaryAsync(global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ActivateCanary, null, options, request);
       }
@@ -1926,7 +1926,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CanaryResponse PromoteCanary(global::udb.core.Authz.Services.V1.PromoteCanaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.CanaryResponse PromoteCanary(global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PromoteCanary(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1937,7 +1937,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.CanaryResponse PromoteCanary(global::udb.core.Authz.Services.V1.PromoteCanaryRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.CanaryResponse PromoteCanary(global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PromoteCanary, null, options, request);
       }
@@ -1950,7 +1950,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CanaryResponse> PromoteCanaryAsync(global::udb.core.Authz.Services.V1.PromoteCanaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CanaryResponse> PromoteCanaryAsync(global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PromoteCanaryAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1961,7 +1961,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.CanaryResponse> PromoteCanaryAsync(global::udb.core.Authz.Services.V1.PromoteCanaryRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.CanaryResponse> PromoteCanaryAsync(global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PromoteCanary, null, options, request);
       }
@@ -1974,7 +1974,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.GetCanaryStatusResponse GetCanaryStatus(global::udb.core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse GetCanaryStatus(global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetCanaryStatus(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1985,7 +1985,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.GetCanaryStatusResponse GetCanaryStatus(global::udb.core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse GetCanaryStatus(global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetCanaryStatus, null, options, request);
       }
@@ -1998,7 +1998,7 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.GetCanaryStatusResponse> GetCanaryStatusAsync(global::udb.core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse> GetCanaryStatusAsync(global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetCanaryStatusAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -2009,147 +2009,147 @@ namespace udb.core.Authz.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.GetCanaryStatusResponse> GetCanaryStatusAsync(global::udb.core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse> GetCanaryStatusAsync(global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetCanaryStatus, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse ListPolicyVersions(global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse ListPolicyVersions(global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListPolicyVersions(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse ListPolicyVersions(global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse ListPolicyVersions(global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListPolicyVersions, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse> ListPolicyVersionsAsync(global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse> ListPolicyVersionsAsync(global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListPolicyVersionsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse> ListPolicyVersionsAsync(global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse> ListPolicyVersionsAsync(global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListPolicyVersions, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.SimulatePolicyResponse SimulatePolicy(global::udb.core.Authz.Services.V1.SimulatePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse SimulatePolicy(global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SimulatePolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.SimulatePolicyResponse SimulatePolicy(global::udb.core.Authz.Services.V1.SimulatePolicyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse SimulatePolicy(global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_SimulatePolicy, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.SimulatePolicyResponse> SimulatePolicyAsync(global::udb.core.Authz.Services.V1.SimulatePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse> SimulatePolicyAsync(global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SimulatePolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.SimulatePolicyResponse> SimulatePolicyAsync(global::udb.core.Authz.Services.V1.SimulatePolicyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse> SimulatePolicyAsync(global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_SimulatePolicy, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ExplainPolicyResponse ExplainPolicy(global::udb.core.Authz.Services.V1.ExplainPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse ExplainPolicy(global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ExplainPolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.ExplainPolicyResponse ExplainPolicy(global::udb.core.Authz.Services.V1.ExplainPolicyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse ExplainPolicy(global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ExplainPolicy, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ExplainPolicyResponse> ExplainPolicyAsync(global::udb.core.Authz.Services.V1.ExplainPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse> ExplainPolicyAsync(global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ExplainPolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.ExplainPolicyResponse> ExplainPolicyAsync(global::udb.core.Authz.Services.V1.ExplainPolicyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse> ExplainPolicyAsync(global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ExplainPolicy, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse GetAuthzRevision(global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse GetAuthzRevision(global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetAuthzRevision(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse GetAuthzRevision(global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse GetAuthzRevision(global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetAuthzRevision, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse> GetAuthzRevisionAsync(global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse> GetAuthzRevisionAsync(global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetAuthzRevisionAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse> GetAuthzRevisionAsync(global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse> GetAuthzRevisionAsync(global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetAuthzRevision, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse InvalidatePolicyBundles(global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse InvalidatePolicyBundles(global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return InvalidatePolicyBundles(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse InvalidatePolicyBundles(global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse InvalidatePolicyBundles(global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_InvalidatePolicyBundles, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse> InvalidatePolicyBundlesAsync(global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse> InvalidatePolicyBundlesAsync(global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return InvalidatePolicyBundlesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse> InvalidatePolicyBundlesAsync(global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse> InvalidatePolicyBundlesAsync(global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_InvalidatePolicyBundles, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse SeedBuiltinRoles(global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse SeedBuiltinRoles(global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SeedBuiltinRoles(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse SeedBuiltinRoles(global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse SeedBuiltinRoles(global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_SeedBuiltinRoles, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse> SeedBuiltinRolesAsync(global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse> SeedBuiltinRolesAsync(global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SeedBuiltinRolesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse> SeedBuiltinRolesAsync(global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse> SeedBuiltinRolesAsync(global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_SeedBuiltinRoles, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse MigrateLegacyPolicies(global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse MigrateLegacyPolicies(global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return MigrateLegacyPolicies(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse MigrateLegacyPolicies(global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse MigrateLegacyPolicies(global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_MigrateLegacyPolicies, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse> MigrateLegacyPoliciesAsync(global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse> MigrateLegacyPoliciesAsync(global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return MigrateLegacyPoliciesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse> MigrateLegacyPoliciesAsync(global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse> MigrateLegacyPoliciesAsync(global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_MigrateLegacyPolicies, null, options, request);
       }
@@ -2217,47 +2217,47 @@ namespace udb.core.Authz.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, AuthzServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_Authorize, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.AuthzRequest, global::udb.core.Authz.Services.V1.AuthzResponse>(serviceImpl.Authorize));
-      serviceBinder.AddMethod(__Method_CheckAccess, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.CheckAccessRequest, global::udb.core.Authz.Services.V1.CheckAccessResponse>(serviceImpl.CheckAccess));
-      serviceBinder.AddMethod(__Method_CreateRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.CreateRoleRequest, global::udb.core.Authz.Services.V1.CreateRoleResponse>(serviceImpl.CreateRole));
-      serviceBinder.AddMethod(__Method_AssignRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.AssignRoleRequest, global::udb.core.Authz.Services.V1.AssignRoleResponse>(serviceImpl.AssignRole));
-      serviceBinder.AddMethod(__Method_CreatePolicyRule, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.CreatePolicyRuleRequest, global::udb.core.Authz.Services.V1.CreatePolicyRuleResponse>(serviceImpl.CreatePolicyRule));
-      serviceBinder.AddMethod(__Method_ListUserPermissions, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ListUserPermissionsRequest, global::udb.core.Authz.Services.V1.ListUserPermissionsResponse>(serviceImpl.ListUserPermissions));
-      serviceBinder.AddMethod(__Method_ListAccessDecisionAudits, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsRequest, global::udb.core.Authz.Services.V1.ListAccessDecisionAuditsResponse>(serviceImpl.ListAccessDecisionAudits));
-      serviceBinder.AddMethod(__Method_RevokeRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.RevokeRoleRequest, global::udb.core.Authz.Services.V1.RevokeRoleResponse>(serviceImpl.RevokeRole));
-      serviceBinder.AddMethod(__Method_ListUserRoles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ListUserRolesRequest, global::udb.core.Authz.Services.V1.ListUserRolesResponse>(serviceImpl.ListUserRoles));
-      serviceBinder.AddMethod(__Method_GetRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.GetRoleRequest, global::udb.core.Authz.Services.V1.GetRoleResponse>(serviceImpl.GetRole));
-      serviceBinder.AddMethod(__Method_ListRoles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ListRolesRequest, global::udb.core.Authz.Services.V1.ListRolesResponse>(serviceImpl.ListRoles));
-      serviceBinder.AddMethod(__Method_BatchCheckPermissions, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.BatchCheckPermissionsRequest, global::udb.core.Authz.Services.V1.BatchCheckPermissionsResponse>(serviceImpl.BatchCheckPermissions));
-      serviceBinder.AddMethod(__Method_UpdateRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.UpdateRoleRequest, global::udb.core.Authz.Services.V1.UpdateRoleResponse>(serviceImpl.UpdateRole));
-      serviceBinder.AddMethod(__Method_DeleteRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.DeleteRoleRequest, global::udb.core.Authz.Services.V1.DeleteRoleResponse>(serviceImpl.DeleteRole));
-      serviceBinder.AddMethod(__Method_GetPolicyRule, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.GetPolicyRuleRequest, global::udb.core.Authz.Services.V1.GetPolicyRuleResponse>(serviceImpl.GetPolicyRule));
-      serviceBinder.AddMethod(__Method_ListPolicyRules, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ListPolicyRulesRequest, global::udb.core.Authz.Services.V1.ListPolicyRulesResponse>(serviceImpl.ListPolicyRules));
-      serviceBinder.AddMethod(__Method_DeletePolicyRule, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.DeletePolicyRuleRequest, global::udb.core.Authz.Services.V1.DeletePolicyRuleResponse>(serviceImpl.DeletePolicyRule));
-      serviceBinder.AddMethod(__Method_PutRoleBinding, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.PutRoleBindingRequest, global::udb.core.Authz.Services.V1.AuthMutationResponse>(serviceImpl.PutRoleBinding));
-      serviceBinder.AddMethod(__Method_PutRelationship, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.PutRelationshipRequest, global::udb.core.Authz.Services.V1.AuthMutationResponse>(serviceImpl.PutRelationship));
-      serviceBinder.AddMethod(__Method_PutAuthzPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.PutAuthzPolicyRequest, global::udb.core.Authz.Services.V1.AuthMutationResponse>(serviceImpl.PutAuthzPolicy));
-      serviceBinder.AddMethod(__Method_LintAuthzPolicies, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.LintAuthzPoliciesRequest, global::udb.core.Authz.Services.V1.LintAuthzPoliciesResponse>(serviceImpl.LintAuthzPolicies));
-      serviceBinder.AddMethod(__Method_GetNativeAccess, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.NativeAccessRequest, global::udb.core.Authz.Services.V1.NativeAccessResponse>(serviceImpl.GetNativeAccess));
-      serviceBinder.AddMethod(__Method_GetPolicyBundle, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.PolicyBundleRequest, global::udb.core.Authz.Services.V1.PolicyBundleResponse>(serviceImpl.GetPolicyBundle));
-      serviceBinder.AddMethod(__Method_CreatePolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.CreatePolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyDraftResponse>(serviceImpl.CreatePolicyDraft));
-      serviceBinder.AddMethod(__Method_UpdatePolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.UpdatePolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyDraftResponse>(serviceImpl.UpdatePolicyDraft));
-      serviceBinder.AddMethod(__Method_DiffPolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.DiffPolicyDraftRequest, global::udb.core.Authz.Services.V1.DiffPolicyDraftResponse>(serviceImpl.DiffPolicyDraft));
-      serviceBinder.AddMethod(__Method_SubmitPolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.SubmitPolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyDraftResponse>(serviceImpl.SubmitPolicyDraft));
-      serviceBinder.AddMethod(__Method_ApprovePolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ApprovePolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyApprovalResponse>(serviceImpl.ApprovePolicyDraft));
-      serviceBinder.AddMethod(__Method_RejectPolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.RejectPolicyDraftRequest, global::udb.core.Authz.Services.V1.PolicyApprovalResponse>(serviceImpl.RejectPolicyDraft));
-      serviceBinder.AddMethod(__Method_ActivatePolicyVersion, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ActivatePolicyVersionRequest, global::udb.core.Authz.Services.V1.ActivationResponse>(serviceImpl.ActivatePolicyVersion));
-      serviceBinder.AddMethod(__Method_RollbackPolicyVersion, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.RollbackPolicyVersionRequest, global::udb.core.Authz.Services.V1.ActivationResponse>(serviceImpl.RollbackPolicyVersion));
-      serviceBinder.AddMethod(__Method_ActivateCanary, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ActivateCanaryRequest, global::udb.core.Authz.Services.V1.CanaryResponse>(serviceImpl.ActivateCanary));
-      serviceBinder.AddMethod(__Method_PromoteCanary, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.PromoteCanaryRequest, global::udb.core.Authz.Services.V1.CanaryResponse>(serviceImpl.PromoteCanary));
-      serviceBinder.AddMethod(__Method_GetCanaryStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.GetCanaryStatusRequest, global::udb.core.Authz.Services.V1.GetCanaryStatusResponse>(serviceImpl.GetCanaryStatus));
-      serviceBinder.AddMethod(__Method_ListPolicyVersions, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ListPolicyVersionsRequest, global::udb.core.Authz.Services.V1.ListPolicyVersionsResponse>(serviceImpl.ListPolicyVersions));
-      serviceBinder.AddMethod(__Method_SimulatePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.SimulatePolicyRequest, global::udb.core.Authz.Services.V1.SimulatePolicyResponse>(serviceImpl.SimulatePolicy));
-      serviceBinder.AddMethod(__Method_ExplainPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.ExplainPolicyRequest, global::udb.core.Authz.Services.V1.ExplainPolicyResponse>(serviceImpl.ExplainPolicy));
-      serviceBinder.AddMethod(__Method_GetAuthzRevision, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.GetAuthzRevisionRequest, global::udb.core.Authz.Services.V1.GetAuthzRevisionResponse>(serviceImpl.GetAuthzRevision));
-      serviceBinder.AddMethod(__Method_InvalidatePolicyBundles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesRequest, global::udb.core.Authz.Services.V1.InvalidatePolicyBundlesResponse>(serviceImpl.InvalidatePolicyBundles));
-      serviceBinder.AddMethod(__Method_SeedBuiltinRoles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.SeedBuiltinRolesRequest, global::udb.core.Authz.Services.V1.SeedBuiltinRolesResponse>(serviceImpl.SeedBuiltinRoles));
-      serviceBinder.AddMethod(__Method_MigrateLegacyPolicies, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesRequest, global::udb.core.Authz.Services.V1.MigrateLegacyPoliciesResponse>(serviceImpl.MigrateLegacyPolicies));
+      serviceBinder.AddMethod(__Method_Authorize, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.AuthzRequest, global::Udb.Core.Authz.Services.V1.AuthzResponse>(serviceImpl.Authorize));
+      serviceBinder.AddMethod(__Method_CheckAccess, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.CheckAccessRequest, global::Udb.Core.Authz.Services.V1.CheckAccessResponse>(serviceImpl.CheckAccess));
+      serviceBinder.AddMethod(__Method_CreateRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.CreateRoleRequest, global::Udb.Core.Authz.Services.V1.CreateRoleResponse>(serviceImpl.CreateRole));
+      serviceBinder.AddMethod(__Method_AssignRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.AssignRoleRequest, global::Udb.Core.Authz.Services.V1.AssignRoleResponse>(serviceImpl.AssignRole));
+      serviceBinder.AddMethod(__Method_CreatePolicyRule, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.CreatePolicyRuleRequest, global::Udb.Core.Authz.Services.V1.CreatePolicyRuleResponse>(serviceImpl.CreatePolicyRule));
+      serviceBinder.AddMethod(__Method_ListUserPermissions, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ListUserPermissionsRequest, global::Udb.Core.Authz.Services.V1.ListUserPermissionsResponse>(serviceImpl.ListUserPermissions));
+      serviceBinder.AddMethod(__Method_ListAccessDecisionAudits, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsRequest, global::Udb.Core.Authz.Services.V1.ListAccessDecisionAuditsResponse>(serviceImpl.ListAccessDecisionAudits));
+      serviceBinder.AddMethod(__Method_RevokeRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.RevokeRoleRequest, global::Udb.Core.Authz.Services.V1.RevokeRoleResponse>(serviceImpl.RevokeRole));
+      serviceBinder.AddMethod(__Method_ListUserRoles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ListUserRolesRequest, global::Udb.Core.Authz.Services.V1.ListUserRolesResponse>(serviceImpl.ListUserRoles));
+      serviceBinder.AddMethod(__Method_GetRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.GetRoleRequest, global::Udb.Core.Authz.Services.V1.GetRoleResponse>(serviceImpl.GetRole));
+      serviceBinder.AddMethod(__Method_ListRoles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ListRolesRequest, global::Udb.Core.Authz.Services.V1.ListRolesResponse>(serviceImpl.ListRoles));
+      serviceBinder.AddMethod(__Method_BatchCheckPermissions, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsRequest, global::Udb.Core.Authz.Services.V1.BatchCheckPermissionsResponse>(serviceImpl.BatchCheckPermissions));
+      serviceBinder.AddMethod(__Method_UpdateRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.UpdateRoleRequest, global::Udb.Core.Authz.Services.V1.UpdateRoleResponse>(serviceImpl.UpdateRole));
+      serviceBinder.AddMethod(__Method_DeleteRole, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.DeleteRoleRequest, global::Udb.Core.Authz.Services.V1.DeleteRoleResponse>(serviceImpl.DeleteRole));
+      serviceBinder.AddMethod(__Method_GetPolicyRule, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.GetPolicyRuleRequest, global::Udb.Core.Authz.Services.V1.GetPolicyRuleResponse>(serviceImpl.GetPolicyRule));
+      serviceBinder.AddMethod(__Method_ListPolicyRules, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ListPolicyRulesRequest, global::Udb.Core.Authz.Services.V1.ListPolicyRulesResponse>(serviceImpl.ListPolicyRules));
+      serviceBinder.AddMethod(__Method_DeletePolicyRule, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.DeletePolicyRuleRequest, global::Udb.Core.Authz.Services.V1.DeletePolicyRuleResponse>(serviceImpl.DeletePolicyRule));
+      serviceBinder.AddMethod(__Method_PutRoleBinding, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.PutRoleBindingRequest, global::Udb.Core.Authz.Services.V1.AuthMutationResponse>(serviceImpl.PutRoleBinding));
+      serviceBinder.AddMethod(__Method_PutRelationship, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.PutRelationshipRequest, global::Udb.Core.Authz.Services.V1.AuthMutationResponse>(serviceImpl.PutRelationship));
+      serviceBinder.AddMethod(__Method_PutAuthzPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.PutAuthzPolicyRequest, global::Udb.Core.Authz.Services.V1.AuthMutationResponse>(serviceImpl.PutAuthzPolicy));
+      serviceBinder.AddMethod(__Method_LintAuthzPolicies, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesRequest, global::Udb.Core.Authz.Services.V1.LintAuthzPoliciesResponse>(serviceImpl.LintAuthzPolicies));
+      serviceBinder.AddMethod(__Method_GetNativeAccess, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.NativeAccessRequest, global::Udb.Core.Authz.Services.V1.NativeAccessResponse>(serviceImpl.GetNativeAccess));
+      serviceBinder.AddMethod(__Method_GetPolicyBundle, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.PolicyBundleRequest, global::Udb.Core.Authz.Services.V1.PolicyBundleResponse>(serviceImpl.GetPolicyBundle));
+      serviceBinder.AddMethod(__Method_CreatePolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.CreatePolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse>(serviceImpl.CreatePolicyDraft));
+      serviceBinder.AddMethod(__Method_UpdatePolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.UpdatePolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse>(serviceImpl.UpdatePolicyDraft));
+      serviceBinder.AddMethod(__Method_DiffPolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.DiffPolicyDraftRequest, global::Udb.Core.Authz.Services.V1.DiffPolicyDraftResponse>(serviceImpl.DiffPolicyDraft));
+      serviceBinder.AddMethod(__Method_SubmitPolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.SubmitPolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyDraftResponse>(serviceImpl.SubmitPolicyDraft));
+      serviceBinder.AddMethod(__Method_ApprovePolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ApprovePolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse>(serviceImpl.ApprovePolicyDraft));
+      serviceBinder.AddMethod(__Method_RejectPolicyDraft, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.RejectPolicyDraftRequest, global::Udb.Core.Authz.Services.V1.PolicyApprovalResponse>(serviceImpl.RejectPolicyDraft));
+      serviceBinder.AddMethod(__Method_ActivatePolicyVersion, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ActivatePolicyVersionRequest, global::Udb.Core.Authz.Services.V1.ActivationResponse>(serviceImpl.ActivatePolicyVersion));
+      serviceBinder.AddMethod(__Method_RollbackPolicyVersion, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.RollbackPolicyVersionRequest, global::Udb.Core.Authz.Services.V1.ActivationResponse>(serviceImpl.RollbackPolicyVersion));
+      serviceBinder.AddMethod(__Method_ActivateCanary, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ActivateCanaryRequest, global::Udb.Core.Authz.Services.V1.CanaryResponse>(serviceImpl.ActivateCanary));
+      serviceBinder.AddMethod(__Method_PromoteCanary, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.PromoteCanaryRequest, global::Udb.Core.Authz.Services.V1.CanaryResponse>(serviceImpl.PromoteCanary));
+      serviceBinder.AddMethod(__Method_GetCanaryStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.GetCanaryStatusRequest, global::Udb.Core.Authz.Services.V1.GetCanaryStatusResponse>(serviceImpl.GetCanaryStatus));
+      serviceBinder.AddMethod(__Method_ListPolicyVersions, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ListPolicyVersionsRequest, global::Udb.Core.Authz.Services.V1.ListPolicyVersionsResponse>(serviceImpl.ListPolicyVersions));
+      serviceBinder.AddMethod(__Method_SimulatePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.SimulatePolicyRequest, global::Udb.Core.Authz.Services.V1.SimulatePolicyResponse>(serviceImpl.SimulatePolicy));
+      serviceBinder.AddMethod(__Method_ExplainPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.ExplainPolicyRequest, global::Udb.Core.Authz.Services.V1.ExplainPolicyResponse>(serviceImpl.ExplainPolicy));
+      serviceBinder.AddMethod(__Method_GetAuthzRevision, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.GetAuthzRevisionRequest, global::Udb.Core.Authz.Services.V1.GetAuthzRevisionResponse>(serviceImpl.GetAuthzRevision));
+      serviceBinder.AddMethod(__Method_InvalidatePolicyBundles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesRequest, global::Udb.Core.Authz.Services.V1.InvalidatePolicyBundlesResponse>(serviceImpl.InvalidatePolicyBundles));
+      serviceBinder.AddMethod(__Method_SeedBuiltinRoles, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesRequest, global::Udb.Core.Authz.Services.V1.SeedBuiltinRolesResponse>(serviceImpl.SeedBuiltinRoles));
+      serviceBinder.AddMethod(__Method_MigrateLegacyPolicies, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesRequest, global::Udb.Core.Authz.Services.V1.MigrateLegacyPoliciesResponse>(serviceImpl.MigrateLegacyPolicies));
     }
 
   }

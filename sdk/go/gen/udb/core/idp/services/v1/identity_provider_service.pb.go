@@ -58,7 +58,7 @@ const file_udb_core_idp_services_v1_identity_provider_service_proto_rawDesc = ""
 	"\x03idp\x12\x03idp\x1a\x03idp\"\x12Identity Providers*\x04auth0\x018\x01h\x01z\x11identityProviders\x82\x01\x04auth\x8a\x01\x03idp\x92\x01\n" +
 	"native.idp\xd2\xf0\x19\x16\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x03idpP\x01\xe2\xf0\x19=\n" +
 	"\x03idp\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x89\x02\n" +
-	"\x1ccom.udb.core.idp.services.v1B\x1cIdentityProviderServiceProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/services/v1;servicesv1\xa2\x02\x04UCIS\xaa\x02\x18udb.core.Idp.Services.V1\xca\x02\x18Udb\\Core\\Idp\\Services\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Idp\\Services\\V1\xea\x02\x1cUdb::Core::Idp::Services::V1b\x06proto3"
+	"\x1ccom.udb.core.idp.services.v1B\x1cIdentityProviderServiceProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/services/v1;servicesv1\xa2\x02\x04UCIS\xaa\x02\x18Udb.Core.Idp.Services.V1\xca\x02\x18Udb\\Core\\Idp\\Services\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Idp\\Services\\V1\xea\x02\x1cUdb::Core::Idp::Services::V1b\x06proto3"
 
 var file_udb_core_idp_services_v1_identity_provider_service_proto_goTypes = []any{
 	(*CreateProviderRequest)(nil),           // 0: udb.core.idp.services.v1.CreateProviderRequest

@@ -4393,7 +4393,7 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"ttlSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"|\n" +
 	"\x14PolicyBundleResponse\x12F\n" +
 	"\x06bundle\x18\x01 \x01(\v2..udb.core.authz.services.v1.SignedPolicyBundleR\x06bundle:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01B\x82\x02\n" +
-	"\x1ecom.udb.core.authz.services.v1B\tCoreProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1audb.core.Authz.Services.V1\xca\x02\x1aUdb\\Core\\Authz\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authz\\Services\\V1\xea\x02\x1eUdb::Core::Authz::Services::V1b\x06proto3"
+	"\x1ecom.udb.core.authz.services.v1B\tCoreProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1aUdb.Core.Authz.Services.V1\xca\x02\x1aUdb\\Core\\Authz\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authz\\Services\\V1\xea\x02\x1eUdb::Core::Authz::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_authz_services_v1_core_proto_rawDescOnce sync.Once

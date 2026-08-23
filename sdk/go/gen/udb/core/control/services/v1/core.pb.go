@@ -1251,7 +1251,7 @@ const file_udb_core_control_services_v1_core_proto_rawDesc = "" +
 	"\x16rolled_back_to_version\x18\x01 \x01(\tR\x13rolledBackToVersion\x12'\n" +
 	"\x0fcurrent_version\x18\x02 \x01(\tR\x0ecurrentVersion\x12-\n" +
 	"\x12resources_restored\x18\x03 \x01(\x05R\x11resourcesRestoredB\x8e\x02\n" +
-	" com.udb.core.control.services.v1B\tCoreProtoP\x01ZJgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/services/v1;servicesv1\xa2\x02\x04UCCS\xaa\x02\x1cudb.core.Control.Services.V1\xca\x02\x1cUdb\\Core\\Control\\Services\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Control\\Services\\V1\xea\x02 Udb::Core::Control::Services::V1b\x06proto3"
+	" com.udb.core.control.services.v1B\tCoreProtoP\x01ZJgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/services/v1;servicesv1\xa2\x02\x04UCCS\xaa\x02\x1cUdb.Core.Control.Services.V1\xca\x02\x1cUdb\\Core\\Control\\Services\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Control\\Services\\V1\xea\x02 Udb::Core::Control::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_control_services_v1_core_proto_rawDescOnce sync.Once

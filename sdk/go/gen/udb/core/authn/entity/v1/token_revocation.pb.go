@@ -162,7 +162,7 @@ const file_udb_core_authn_entity_v1_token_revocation_proto_rawDesc = "" +
 	"expires_at\x8a\x010\n" +
 	"\x1cidx_token_revocations_tenant\x12\x05BTREEZ\ttenant_id\xea\x01\aprimary\xfa\x01\x16authn:revocations:read\x8a\xb2\x19?\n" +
 	"\x06tenant\x1a\ttenant_id2\x04none:\x0eauthn.security@ZH\x02R\x06tenantZ\bstandardB\xff\x01\n" +
-	"\x1ccom.udb.core.authn.entity.v1B\x14TokenRevocationProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authn.entity.v1B\x14TokenRevocationProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_entity_v1_token_revocation_proto_rawDescOnce sync.Once

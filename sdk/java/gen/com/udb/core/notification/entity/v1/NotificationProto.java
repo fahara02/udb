@@ -118,7 +118,7 @@ public final class NotificationProto {
       "ification.entity.v1B\021NotificationProtoP\001" +
       "ZKgithub.com/fahara02/udb/sdk/go/gen/udb" +
       "/core/notification/entity/v1;entityv1\242\002\004" +
-      "UCNE\252\002\037udb.core.Notification.Entity.V1\312\002" +
+      "UCNE\252\002\037Udb.Core.Notification.Entity.V1\312\002" +
       "\037Udb\\Core\\Notification\\Entity\\V1\342\002+Udb\\G" +
       "PBMetadata\\Core\\Notification\\Entity\\V1\352\002" +
       "#Udb::Core::Notification::Entity::V1b\006pr" +

@@ -56,7 +56,7 @@ public final class EnumsProto {
       "RCE_NO_MATCH\020\003B\365\001\n\034com.udb.core.authz.en" +
       "tity.v1B\nEnumsProtoP\001ZDgithub.com/fahara" +
       "02/udb/sdk/go/gen/udb/core/authz/entity/" +
-      "v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authz.Enti" +
+      "v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Authz.Enti" +
       "ty.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$Udb\\G" +
       "PBMetadata\\Core\\Authz\\Entity\\V1\352\002\034Udb::C" +
       "ore::Authz::Entity::V1b\006proto3"

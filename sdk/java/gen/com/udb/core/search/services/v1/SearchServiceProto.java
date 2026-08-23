@@ -224,7 +224,7 @@ public final class SearchServiceProto {
       "\n\037com.udb.core.search.services.v1B\022Searc" +
       "hServiceProtoP\001ZIgithub.com/fahara02/udb" +
       "/sdk/go/gen/udb/core/search/services/v1;" +
-      "servicesv1\242\002\004UCSS\252\002\033udb.core.Search.Serv" +
+      "servicesv1\242\002\004UCSS\252\002\033Udb.Core.Search.Serv" +
       "ices.V1\312\002\033Udb\\Core\\Search\\Services\\V1\342\002\'" +
       "Udb\\GPBMetadata\\Core\\Search\\Services\\V1\352" +
       "\002\037Udb::Core::Search::Services::V1b\006proto" +

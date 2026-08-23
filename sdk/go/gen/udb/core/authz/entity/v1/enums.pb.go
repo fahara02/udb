@@ -271,7 +271,7 @@ const file_udb_core_authz_entity_v1_enums_proto_rawDesc = "" +
 	"\x1dDECISION_SOURCE_DIRECT_POLICY\x10\x02\x12\x1c\n" +
 	"\x18DECISION_SOURCE_NO_MATCH\x10\x03B\xf5\x01\n" +
 	"\x1ccom.udb.core.authz.entity.v1B\n" +
-	"EnumsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authz_entity_v1_enums_proto_rawDescOnce sync.Once

@@ -94,7 +94,7 @@ public final class ControlPlaneResourceProto {
       "encyB\220\002\n\036com.udb.core.control.entity.v1B" +
       "\031ControlPlaneResourceProtoP\001ZFgithub.com" +
       "/fahara02/udb/sdk/go/gen/udb/core/contro" +
-      "l/entity/v1;entityv1\242\002\004UCCE\252\002\032udb.core.C" +
+      "l/entity/v1;entityv1\242\002\004UCCE\252\002\032Udb.Core.C" +
       "ontrol.Entity.V1\312\002\032Udb\\Core\\Control\\Enti" +
       "ty\\V1\342\002&Udb\\GPBMetadata\\Core\\Control\\Ent" +
       "ity\\V1\352\002\036Udb::Core::Control::Entity::V1b" +

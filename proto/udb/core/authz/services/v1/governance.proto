@@ -13,7 +13,7 @@ import "udb/core/authz/services/v1/core.proto";
 import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Authz.Services.V1";
+option csharp_namespace = "Udb.Core.Authz.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/services/v1;authzservicev1";
 option java_package = "com.udb.core.authz.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Services\\V1";

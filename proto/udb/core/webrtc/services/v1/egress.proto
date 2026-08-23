@@ -6,7 +6,7 @@ import "google/protobuf/timestamp.proto";
 import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Webrtc.Services.V1";
+option csharp_namespace = "Udb.Core.Webrtc.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/services/v1;webrtcservicev1";
 option java_package = "com.udb.core.webrtc.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Services\\V1";

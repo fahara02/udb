@@ -5,7 +5,7 @@ package udb.sdk.live.v1;
 import "udb/core/common/v1/db.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.sdk.Live.V1";
+option csharp_namespace = "Udb.Sdk.Live.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/sdk/live/v1;livev1";
 option java_package = "com.udb.sdk.live.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Sdk\\Live\\V1";

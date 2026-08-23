@@ -2830,7 +2830,7 @@ const file_udb_core_authz_services_v1_governance_proto_rawDesc = "" +
 	"simulation\x12\x1f\n" +
 	"\vreport_json\x18\x04 \x01(\tR\n" +
 	"reportJson:\x14\x9a\xb2\x19\x10\b\x01\x1a\x03udb@\x01J\x05authzB\x88\x02\n" +
-	"\x1ecom.udb.core.authz.services.v1B\x0fGovernanceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1audb.core.Authz.Services.V1\xca\x02\x1aUdb\\Core\\Authz\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authz\\Services\\V1\xea\x02\x1eUdb::Core::Authz::Services::V1b\x06proto3"
+	"\x1ecom.udb.core.authz.services.v1B\x0fGovernanceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1aUdb.Core.Authz.Services.V1\xca\x02\x1aUdb\\Core\\Authz\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authz\\Services\\V1\xea\x02\x1eUdb::Core::Authz::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_authz_services_v1_governance_proto_rawDescOnce sync.Once

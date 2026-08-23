@@ -98,7 +98,7 @@ public final class EmbeddingSourceProto {
       "dding.entity.v1B\024EmbeddingSourceProtoP\001Z" +
       "Hgithub.com/fahara02/udb/sdk/go/gen/udb/" +
       "core/embedding/entity/v1;entityv1\242\002\004UCEE" +
-      "\252\002\034udb.core.Embedding.Entity.V1\312\002\034Udb\\Co" +
+      "\252\002\034Udb.Core.Embedding.Entity.V1\312\002\034Udb\\Co" +
       "re\\Embedding\\Entity\\V1\342\002(Udb\\GPBMetadata" +
       "\\Core\\Embedding\\Entity\\V1\352\002 Udb::Core::E" +
       "mbedding::Entity::V1b\006proto3"

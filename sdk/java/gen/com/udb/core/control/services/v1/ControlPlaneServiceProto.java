@@ -87,7 +87,7 @@ public final class ControlPlaneServiceProto {
       "ntrol.services.v1B\030ControlPlaneServicePr" +
       "otoP\001ZJgithub.com/fahara02/udb/sdk/go/ge" +
       "n/udb/core/control/services/v1;servicesv" +
-      "1\242\002\004UCCS\252\002\034udb.core.Control.Services.V1\312" +
+      "1\242\002\004UCCS\252\002\034Udb.Core.Control.Services.V1\312" +
       "\002\034Udb\\Core\\Control\\Services\\V1\342\002(Udb\\GPB" +
       "Metadata\\Core\\Control\\Services\\V1\352\002 Udb:" +
       ":Core::Control::Services::V1b\006proto3"

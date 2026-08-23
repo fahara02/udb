@@ -225,7 +225,7 @@ const file_udb_core_webhook_entity_v1_webhook_delivery_proto_rawDesc = "" +
 	"\x1didx_webhook_deliveries_tenant\x12\x05BTREEZ\ttenant_id\x8a\x01@\n" +
 	"\x1fidx_webhook_deliveries_endpoint\x12\x05BTREEZ\ttenant_idZ\vendpoint_id\xf2\x01\"udb.webhook.webhook_deliveries.cdc\xfa\x01\fwebhook:read\x8a\xb2\x19\x8c\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\rwebhook.audit@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x8b\x02\n" +
-	"\x1ecom.udb.core.webhook.entity.v1B\x14WebhookDeliveryProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/webhook/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1audb.core.Webhook.Entity.V1\xca\x02\x1aUdb\\Core\\Webhook\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Webhook\\Entity\\V1\xea\x02\x1eUdb::Core::Webhook::Entity::V1b\x06proto3"
+	"\x1ecom.udb.core.webhook.entity.v1B\x14WebhookDeliveryProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/webhook/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1aUdb.Core.Webhook.Entity.V1\xca\x02\x1aUdb\\Core\\Webhook\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Webhook\\Entity\\V1\xea\x02\x1eUdb::Core::Webhook::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_webhook_entity_v1_webhook_delivery_proto_rawDescOnce sync.Once

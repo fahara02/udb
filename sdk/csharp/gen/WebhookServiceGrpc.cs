@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Webhook.Services.V1 {
+namespace Udb.Core.Webhook.Services.V1 {
   /// <summary>
   /// WebhookService (master-plan 9.4) — delivers tenant-scoped domain events to the
   /// outside world. A tenant registers an external HTTPS endpoint with a topic
@@ -56,32 +56,32 @@ namespace udb.core.Webhook.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.CreateEndpointRequest> __Marshaller_udb_core_webhook_services_v1_CreateEndpointRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.CreateEndpointRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest> __Marshaller_udb_core_webhook_services_v1_CreateEndpointRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.CreateEndpointResponse> __Marshaller_udb_core_webhook_services_v1_CreateEndpointResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.CreateEndpointResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse> __Marshaller_udb_core_webhook_services_v1_CreateEndpointResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.GetEndpointRequest> __Marshaller_udb_core_webhook_services_v1_GetEndpointRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.GetEndpointRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.GetEndpointRequest> __Marshaller_udb_core_webhook_services_v1_GetEndpointRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.GetEndpointRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.GetEndpointResponse> __Marshaller_udb_core_webhook_services_v1_GetEndpointResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.GetEndpointResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.GetEndpointResponse> __Marshaller_udb_core_webhook_services_v1_GetEndpointResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.GetEndpointResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.ListEndpointsRequest> __Marshaller_udb_core_webhook_services_v1_ListEndpointsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.ListEndpointsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest> __Marshaller_udb_core_webhook_services_v1_ListEndpointsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.ListEndpointsResponse> __Marshaller_udb_core_webhook_services_v1_ListEndpointsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.ListEndpointsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse> __Marshaller_udb_core_webhook_services_v1_ListEndpointsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.UpdateEndpointRequest> __Marshaller_udb_core_webhook_services_v1_UpdateEndpointRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.UpdateEndpointRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest> __Marshaller_udb_core_webhook_services_v1_UpdateEndpointRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.UpdateEndpointResponse> __Marshaller_udb_core_webhook_services_v1_UpdateEndpointResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.UpdateEndpointResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse> __Marshaller_udb_core_webhook_services_v1_UpdateEndpointResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.DeleteEndpointRequest> __Marshaller_udb_core_webhook_services_v1_DeleteEndpointRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.DeleteEndpointRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest> __Marshaller_udb_core_webhook_services_v1_DeleteEndpointRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.DeleteEndpointResponse> __Marshaller_udb_core_webhook_services_v1_DeleteEndpointResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.DeleteEndpointResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse> __Marshaller_udb_core_webhook_services_v1_DeleteEndpointResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.ListDeliveriesRequest> __Marshaller_udb_core_webhook_services_v1_ListDeliveriesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.ListDeliveriesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest> __Marshaller_udb_core_webhook_services_v1_ListDeliveriesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Webhook.Services.V1.ListDeliveriesResponse> __Marshaller_udb_core_webhook_services_v1_ListDeliveriesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webhook.Services.V1.ListDeliveriesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse> __Marshaller_udb_core_webhook_services_v1_ListDeliveriesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webhook.Services.V1.CreateEndpointRequest, global::udb.core.Webhook.Services.V1.CreateEndpointResponse> __Method_CreateEndpoint = new grpc::Method<global::udb.core.Webhook.Services.V1.CreateEndpointRequest, global::udb.core.Webhook.Services.V1.CreateEndpointResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest, global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse> __Method_CreateEndpoint = new grpc::Method<global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest, global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreateEndpoint",
@@ -89,7 +89,7 @@ namespace udb.core.Webhook.Services.V1 {
         __Marshaller_udb_core_webhook_services_v1_CreateEndpointResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webhook.Services.V1.GetEndpointRequest, global::udb.core.Webhook.Services.V1.GetEndpointResponse> __Method_GetEndpoint = new grpc::Method<global::udb.core.Webhook.Services.V1.GetEndpointRequest, global::udb.core.Webhook.Services.V1.GetEndpointResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webhook.Services.V1.GetEndpointRequest, global::Udb.Core.Webhook.Services.V1.GetEndpointResponse> __Method_GetEndpoint = new grpc::Method<global::Udb.Core.Webhook.Services.V1.GetEndpointRequest, global::Udb.Core.Webhook.Services.V1.GetEndpointResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetEndpoint",
@@ -97,7 +97,7 @@ namespace udb.core.Webhook.Services.V1 {
         __Marshaller_udb_core_webhook_services_v1_GetEndpointResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webhook.Services.V1.ListEndpointsRequest, global::udb.core.Webhook.Services.V1.ListEndpointsResponse> __Method_ListEndpoints = new grpc::Method<global::udb.core.Webhook.Services.V1.ListEndpointsRequest, global::udb.core.Webhook.Services.V1.ListEndpointsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest, global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse> __Method_ListEndpoints = new grpc::Method<global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest, global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListEndpoints",
@@ -105,7 +105,7 @@ namespace udb.core.Webhook.Services.V1 {
         __Marshaller_udb_core_webhook_services_v1_ListEndpointsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webhook.Services.V1.UpdateEndpointRequest, global::udb.core.Webhook.Services.V1.UpdateEndpointResponse> __Method_UpdateEndpoint = new grpc::Method<global::udb.core.Webhook.Services.V1.UpdateEndpointRequest, global::udb.core.Webhook.Services.V1.UpdateEndpointResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest, global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse> __Method_UpdateEndpoint = new grpc::Method<global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest, global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UpdateEndpoint",
@@ -113,7 +113,7 @@ namespace udb.core.Webhook.Services.V1 {
         __Marshaller_udb_core_webhook_services_v1_UpdateEndpointResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webhook.Services.V1.DeleteEndpointRequest, global::udb.core.Webhook.Services.V1.DeleteEndpointResponse> __Method_DeleteEndpoint = new grpc::Method<global::udb.core.Webhook.Services.V1.DeleteEndpointRequest, global::udb.core.Webhook.Services.V1.DeleteEndpointResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest, global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse> __Method_DeleteEndpoint = new grpc::Method<global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest, global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DeleteEndpoint",
@@ -121,7 +121,7 @@ namespace udb.core.Webhook.Services.V1 {
         __Marshaller_udb_core_webhook_services_v1_DeleteEndpointResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Webhook.Services.V1.ListDeliveriesRequest, global::udb.core.Webhook.Services.V1.ListDeliveriesResponse> __Method_ListDeliveries = new grpc::Method<global::udb.core.Webhook.Services.V1.ListDeliveriesRequest, global::udb.core.Webhook.Services.V1.ListDeliveriesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest, global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse> __Method_ListDeliveries = new grpc::Method<global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest, global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListDeliveries",
@@ -131,7 +131,7 @@ namespace udb.core.Webhook.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Webhook.Services.V1.WebhookServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Webhook.Services.V1.WebhookServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of WebhookService</summary>
@@ -147,7 +147,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webhook.Services.V1.CreateEndpointResponse> CreateEndpoint(global::udb.core.Webhook.Services.V1.CreateEndpointRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse> CreateEndpoint(global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -159,7 +159,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webhook.Services.V1.GetEndpointResponse> GetEndpoint(global::udb.core.Webhook.Services.V1.GetEndpointRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webhook.Services.V1.GetEndpointResponse> GetEndpoint(global::Udb.Core.Webhook.Services.V1.GetEndpointRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -171,7 +171,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webhook.Services.V1.ListEndpointsResponse> ListEndpoints(global::udb.core.Webhook.Services.V1.ListEndpointsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse> ListEndpoints(global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -183,7 +183,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webhook.Services.V1.UpdateEndpointResponse> UpdateEndpoint(global::udb.core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse> UpdateEndpoint(global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -195,7 +195,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webhook.Services.V1.DeleteEndpointResponse> DeleteEndpoint(global::udb.core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse> DeleteEndpoint(global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -208,7 +208,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webhook.Services.V1.ListDeliveriesResponse> ListDeliveries(global::udb.core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse> ListDeliveries(global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -253,7 +253,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.CreateEndpointResponse CreateEndpoint(global::udb.core.Webhook.Services.V1.CreateEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse CreateEndpoint(global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateEndpoint(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -266,7 +266,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.CreateEndpointResponse CreateEndpoint(global::udb.core.Webhook.Services.V1.CreateEndpointRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse CreateEndpoint(global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreateEndpoint, null, options, request);
       }
@@ -281,7 +281,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.CreateEndpointResponse> CreateEndpointAsync(global::udb.core.Webhook.Services.V1.CreateEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse> CreateEndpointAsync(global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateEndpointAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -294,7 +294,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.CreateEndpointResponse> CreateEndpointAsync(global::udb.core.Webhook.Services.V1.CreateEndpointRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse> CreateEndpointAsync(global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreateEndpoint, null, options, request);
       }
@@ -307,7 +307,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.GetEndpointResponse GetEndpoint(global::udb.core.Webhook.Services.V1.GetEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webhook.Services.V1.GetEndpointResponse GetEndpoint(global::Udb.Core.Webhook.Services.V1.GetEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetEndpoint(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -318,7 +318,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.GetEndpointResponse GetEndpoint(global::udb.core.Webhook.Services.V1.GetEndpointRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webhook.Services.V1.GetEndpointResponse GetEndpoint(global::Udb.Core.Webhook.Services.V1.GetEndpointRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetEndpoint, null, options, request);
       }
@@ -331,7 +331,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.GetEndpointResponse> GetEndpointAsync(global::udb.core.Webhook.Services.V1.GetEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.GetEndpointResponse> GetEndpointAsync(global::Udb.Core.Webhook.Services.V1.GetEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetEndpointAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -342,7 +342,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.GetEndpointResponse> GetEndpointAsync(global::udb.core.Webhook.Services.V1.GetEndpointRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.GetEndpointResponse> GetEndpointAsync(global::Udb.Core.Webhook.Services.V1.GetEndpointRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetEndpoint, null, options, request);
       }
@@ -355,7 +355,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.ListEndpointsResponse ListEndpoints(global::udb.core.Webhook.Services.V1.ListEndpointsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse ListEndpoints(global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListEndpoints(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -366,7 +366,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.ListEndpointsResponse ListEndpoints(global::udb.core.Webhook.Services.V1.ListEndpointsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse ListEndpoints(global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListEndpoints, null, options, request);
       }
@@ -379,7 +379,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.ListEndpointsResponse> ListEndpointsAsync(global::udb.core.Webhook.Services.V1.ListEndpointsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse> ListEndpointsAsync(global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListEndpointsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -390,7 +390,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.ListEndpointsResponse> ListEndpointsAsync(global::udb.core.Webhook.Services.V1.ListEndpointsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse> ListEndpointsAsync(global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListEndpoints, null, options, request);
       }
@@ -403,7 +403,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.UpdateEndpointResponse UpdateEndpoint(global::udb.core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse UpdateEndpoint(global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateEndpoint(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -414,7 +414,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.UpdateEndpointResponse UpdateEndpoint(global::udb.core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse UpdateEndpoint(global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UpdateEndpoint, null, options, request);
       }
@@ -427,7 +427,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.UpdateEndpointResponse> UpdateEndpointAsync(global::udb.core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse> UpdateEndpointAsync(global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateEndpointAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -438,7 +438,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.UpdateEndpointResponse> UpdateEndpointAsync(global::udb.core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse> UpdateEndpointAsync(global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UpdateEndpoint, null, options, request);
       }
@@ -451,7 +451,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.DeleteEndpointResponse DeleteEndpoint(global::udb.core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse DeleteEndpoint(global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteEndpoint(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -462,7 +462,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.DeleteEndpointResponse DeleteEndpoint(global::udb.core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse DeleteEndpoint(global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeleteEndpoint, null, options, request);
       }
@@ -475,7 +475,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.DeleteEndpointResponse> DeleteEndpointAsync(global::udb.core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse> DeleteEndpointAsync(global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteEndpointAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -486,7 +486,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.DeleteEndpointResponse> DeleteEndpointAsync(global::udb.core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse> DeleteEndpointAsync(global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteEndpoint, null, options, request);
       }
@@ -500,7 +500,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.ListDeliveriesResponse ListDeliveries(global::udb.core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse ListDeliveries(global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListDeliveries(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -512,7 +512,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Webhook.Services.V1.ListDeliveriesResponse ListDeliveries(global::udb.core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse ListDeliveries(global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListDeliveries, null, options, request);
       }
@@ -526,7 +526,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.ListDeliveriesResponse> ListDeliveriesAsync(global::udb.core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse> ListDeliveriesAsync(global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListDeliveriesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -538,7 +538,7 @@ namespace udb.core.Webhook.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Webhook.Services.V1.ListDeliveriesResponse> ListDeliveriesAsync(global::udb.core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse> ListDeliveriesAsync(global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListDeliveries, null, options, request);
       }
@@ -571,12 +571,12 @@ namespace udb.core.Webhook.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, WebhookServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_CreateEndpoint, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webhook.Services.V1.CreateEndpointRequest, global::udb.core.Webhook.Services.V1.CreateEndpointResponse>(serviceImpl.CreateEndpoint));
-      serviceBinder.AddMethod(__Method_GetEndpoint, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webhook.Services.V1.GetEndpointRequest, global::udb.core.Webhook.Services.V1.GetEndpointResponse>(serviceImpl.GetEndpoint));
-      serviceBinder.AddMethod(__Method_ListEndpoints, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webhook.Services.V1.ListEndpointsRequest, global::udb.core.Webhook.Services.V1.ListEndpointsResponse>(serviceImpl.ListEndpoints));
-      serviceBinder.AddMethod(__Method_UpdateEndpoint, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webhook.Services.V1.UpdateEndpointRequest, global::udb.core.Webhook.Services.V1.UpdateEndpointResponse>(serviceImpl.UpdateEndpoint));
-      serviceBinder.AddMethod(__Method_DeleteEndpoint, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webhook.Services.V1.DeleteEndpointRequest, global::udb.core.Webhook.Services.V1.DeleteEndpointResponse>(serviceImpl.DeleteEndpoint));
-      serviceBinder.AddMethod(__Method_ListDeliveries, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webhook.Services.V1.ListDeliveriesRequest, global::udb.core.Webhook.Services.V1.ListDeliveriesResponse>(serviceImpl.ListDeliveries));
+      serviceBinder.AddMethod(__Method_CreateEndpoint, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webhook.Services.V1.CreateEndpointRequest, global::Udb.Core.Webhook.Services.V1.CreateEndpointResponse>(serviceImpl.CreateEndpoint));
+      serviceBinder.AddMethod(__Method_GetEndpoint, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webhook.Services.V1.GetEndpointRequest, global::Udb.Core.Webhook.Services.V1.GetEndpointResponse>(serviceImpl.GetEndpoint));
+      serviceBinder.AddMethod(__Method_ListEndpoints, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webhook.Services.V1.ListEndpointsRequest, global::Udb.Core.Webhook.Services.V1.ListEndpointsResponse>(serviceImpl.ListEndpoints));
+      serviceBinder.AddMethod(__Method_UpdateEndpoint, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webhook.Services.V1.UpdateEndpointRequest, global::Udb.Core.Webhook.Services.V1.UpdateEndpointResponse>(serviceImpl.UpdateEndpoint));
+      serviceBinder.AddMethod(__Method_DeleteEndpoint, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webhook.Services.V1.DeleteEndpointRequest, global::Udb.Core.Webhook.Services.V1.DeleteEndpointResponse>(serviceImpl.DeleteEndpoint));
+      serviceBinder.AddMethod(__Method_ListDeliveries, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Webhook.Services.V1.ListDeliveriesRequest, global::Udb.Core.Webhook.Services.V1.ListDeliveriesResponse>(serviceImpl.ListDeliveries));
     }
 
   }

@@ -50,7 +50,7 @@ public final class EnumsProto {
       "ORKLOAD\020\007B\373\001\n\035com.udb.core.apikey.entity" +
       ".v1B\nEnumsProtoP\001ZEgithub.com/fahara02/u" +
       "db/sdk/go/gen/udb/core/apikey/entity/v1;" +
-      "entityv1\242\002\004UCAE\252\002\031udb.core.Apikey.Entity" +
+      "entityv1\242\002\004UCAE\252\002\031Udb.Core.Apikey.Entity" +
       ".V1\312\002\031Udb\\Core\\Apikey\\Entity\\V1\342\002%Udb\\GP" +
       "BMetadata\\Core\\Apikey\\Entity\\V1\352\002\035Udb::C" +
       "ore::Apikey::Entity::V1b\006proto3"

@@ -216,7 +216,7 @@ const file_udb_core_asset_entity_v1_pipeline_step_proto_rawDesc = "" +
 	"\x18idx_pipeline_step_tenant\x12\x05BTREEZ\ttenant_id\xf2\x01\x1cudb.asset.pipeline_steps.cdc\xfa\x01\n" +
 	"asset:read\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11asset.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +
-	"\x1ccom.udb.core.asset.entity.v1B\x11PipelineStepProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Asset.Entity.V1\xca\x02\x18Udb\\Core\\Asset\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\xea\x02\x1cUdb::Core::Asset::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.asset.entity.v1B\x11PipelineStepProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Asset.Entity.V1\xca\x02\x18Udb\\Core\\Asset\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\xea\x02\x1cUdb::Core::Asset::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_asset_entity_v1_pipeline_step_proto_rawDescOnce sync.Once

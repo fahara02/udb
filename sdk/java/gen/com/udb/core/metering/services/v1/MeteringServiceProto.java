@@ -242,8 +242,8 @@ public final class MeteringServiceProto {
       "C_TARGETB\237\002\n!com.udb.core.metering.servi" +
       "ces.v1B\024MeteringServiceProtoP\001ZKgithub.c" +
       "om/fahara02/udb/sdk/go/gen/udb/core/mete" +
-      "ring/services/v1;servicesv1\242\002\004UCMS\252\002\035udb" +
-      ".core.Metering.Services.V1\312\002\035Udb\\Core\\Me" +
+      "ring/services/v1;servicesv1\242\002\004UCMS\252\002\035Udb" +
+      ".Core.Metering.Services.V1\312\002\035Udb\\Core\\Me" +
       "tering\\Services\\V1\342\002)Udb\\GPBMetadata\\Cor" +
       "e\\Metering\\Services\\V1\352\002!Udb::Core::Mete" +
       "ring::Services::V1b\006proto3"

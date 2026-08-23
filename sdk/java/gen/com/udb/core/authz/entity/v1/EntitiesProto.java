@@ -55,7 +55,7 @@ public final class EntitiesProto {
       "ntity/v1/user_role.protoB\370\001\n\034com.udb.cor" +
       "e.authz.entity.v1B\rEntitiesProtoP\001ZDgith" +
       "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
-      "authz/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.co" +
+      "authz/entity/v1;entityv1\242\002\004UCAE\252\002\030Udb.Co" +
       "re.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\Enti" +
       "ty\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\Entit" +
       "y\\V1\352\002\034Udb::Core::Authz::Entity::V1P\000P\001P" +

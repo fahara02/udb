@@ -90,8 +90,8 @@ public final class MfaChallengeProto {
       "ty@\036H\002R\006tenantZ\010standardB\374\001\n\034com.udb.cor" +
       "e.authn.entity.v1B\021MfaChallengeProtoP\001ZD" +
       "github.com/fahara02/udb/sdk/go/gen/udb/c" +
-      "ore/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030ud" +
-      "b.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\" +
+      "ore/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030Ud" +
+      "b.Core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\" +
       "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\E" +
       "ntity\\V1\352\002\034Udb::Core::Authn::Entity::V1b" +
       "\006proto3"

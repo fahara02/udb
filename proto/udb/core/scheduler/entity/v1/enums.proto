@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package udb.core.scheduler.entity.v1;
 
-option csharp_namespace = "udb.core.Scheduler.Entity.V1";
+option csharp_namespace = "Udb.Core.Scheduler.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/scheduler/entity/v1;schedulerv1";
 option java_package = "com.udb.core.scheduler.entity.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Scheduler\\Entity\\V1";

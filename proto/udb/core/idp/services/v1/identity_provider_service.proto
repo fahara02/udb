@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 import "udb/core/idp/services/v1/core.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Idp.Services.V1";
+option csharp_namespace = "Udb.Core.Idp.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/idp/services/v1;idpservicev1";
 option java_package = "com.udb.core.idp.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Idp\\Services\\V1";

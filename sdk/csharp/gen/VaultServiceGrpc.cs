@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Vault.Services.V1 {
+namespace Udb.Core.Vault.Services.V1 {
   /// <summary>
   /// VaultService (master-plan 9.1, flagship) — secrets management built into the
   /// broker. Three engines, one crypto stack (the broker AES-256-GCM-SIV envelope,
@@ -59,96 +59,96 @@ namespace udb.core.Vault.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.PutSecretRequest> __Marshaller_udb_core_vault_services_v1_PutSecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.PutSecretRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.PutSecretRequest> __Marshaller_udb_core_vault_services_v1_PutSecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.PutSecretRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.PutSecretResponse> __Marshaller_udb_core_vault_services_v1_PutSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.PutSecretResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.PutSecretResponse> __Marshaller_udb_core_vault_services_v1_PutSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.PutSecretResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GetSecretRequest> __Marshaller_udb_core_vault_services_v1_GetSecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GetSecretRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.GetSecretRequest> __Marshaller_udb_core_vault_services_v1_GetSecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.GetSecretRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GetSecretResponse> __Marshaller_udb_core_vault_services_v1_GetSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GetSecretResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.GetSecretResponse> __Marshaller_udb_core_vault_services_v1_GetSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.GetSecretResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.ListSecretsRequest> __Marshaller_udb_core_vault_services_v1_ListSecretsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.ListSecretsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.ListSecretsRequest> __Marshaller_udb_core_vault_services_v1_ListSecretsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.ListSecretsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.ListSecretsResponse> __Marshaller_udb_core_vault_services_v1_ListSecretsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.ListSecretsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.ListSecretsResponse> __Marshaller_udb_core_vault_services_v1_ListSecretsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.ListSecretsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.DeleteSecretRequest> __Marshaller_udb_core_vault_services_v1_DeleteSecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.DeleteSecretRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.DeleteSecretRequest> __Marshaller_udb_core_vault_services_v1_DeleteSecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.DeleteSecretRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.DeleteSecretResponse> __Marshaller_udb_core_vault_services_v1_DeleteSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.DeleteSecretResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.DeleteSecretResponse> __Marshaller_udb_core_vault_services_v1_DeleteSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.DeleteSecretResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.UndeleteSecretRequest> __Marshaller_udb_core_vault_services_v1_UndeleteSecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.UndeleteSecretRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest> __Marshaller_udb_core_vault_services_v1_UndeleteSecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.UndeleteSecretResponse> __Marshaller_udb_core_vault_services_v1_UndeleteSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.UndeleteSecretResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse> __Marshaller_udb_core_vault_services_v1_UndeleteSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.DestroySecretRequest> __Marshaller_udb_core_vault_services_v1_DestroySecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.DestroySecretRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.DestroySecretRequest> __Marshaller_udb_core_vault_services_v1_DestroySecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.DestroySecretRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.DestroySecretResponse> __Marshaller_udb_core_vault_services_v1_DestroySecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.DestroySecretResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.DestroySecretResponse> __Marshaller_udb_core_vault_services_v1_DestroySecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.DestroySecretResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.CreateTransitKeyRequest> __Marshaller_udb_core_vault_services_v1_CreateTransitKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.CreateTransitKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest> __Marshaller_udb_core_vault_services_v1_CreateTransitKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.CreateTransitKeyResponse> __Marshaller_udb_core_vault_services_v1_CreateTransitKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.CreateTransitKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse> __Marshaller_udb_core_vault_services_v1_CreateTransitKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RotateTransitKeyRequest> __Marshaller_udb_core_vault_services_v1_RotateTransitKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RotateTransitKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest> __Marshaller_udb_core_vault_services_v1_RotateTransitKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RotateTransitKeyResponse> __Marshaller_udb_core_vault_services_v1_RotateTransitKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RotateTransitKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse> __Marshaller_udb_core_vault_services_v1_RotateTransitKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.EncryptRequest> __Marshaller_udb_core_vault_services_v1_EncryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.EncryptRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.EncryptRequest> __Marshaller_udb_core_vault_services_v1_EncryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.EncryptRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.EncryptResponse> __Marshaller_udb_core_vault_services_v1_EncryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.EncryptResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.EncryptResponse> __Marshaller_udb_core_vault_services_v1_EncryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.EncryptResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.DecryptRequest> __Marshaller_udb_core_vault_services_v1_DecryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.DecryptRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.DecryptRequest> __Marshaller_udb_core_vault_services_v1_DecryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.DecryptRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.DecryptResponse> __Marshaller_udb_core_vault_services_v1_DecryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.DecryptResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.DecryptResponse> __Marshaller_udb_core_vault_services_v1_DecryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.DecryptResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.SignRequest> __Marshaller_udb_core_vault_services_v1_SignRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.SignRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.SignRequest> __Marshaller_udb_core_vault_services_v1_SignRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.SignRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.SignResponse> __Marshaller_udb_core_vault_services_v1_SignResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.SignResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.SignResponse> __Marshaller_udb_core_vault_services_v1_SignResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.SignResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.VerifyRequest> __Marshaller_udb_core_vault_services_v1_VerifyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.VerifyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.VerifyRequest> __Marshaller_udb_core_vault_services_v1_VerifyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.VerifyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.VerifyResponse> __Marshaller_udb_core_vault_services_v1_VerifyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.VerifyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.VerifyResponse> __Marshaller_udb_core_vault_services_v1_VerifyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.VerifyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.HmacRequest> __Marshaller_udb_core_vault_services_v1_HmacRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.HmacRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.HmacRequest> __Marshaller_udb_core_vault_services_v1_HmacRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.HmacRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.HmacResponse> __Marshaller_udb_core_vault_services_v1_HmacResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.HmacResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.HmacResponse> __Marshaller_udb_core_vault_services_v1_HmacResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.HmacResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.SealStatusRequest> __Marshaller_udb_core_vault_services_v1_SealStatusRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.SealStatusRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.SealStatusRequest> __Marshaller_udb_core_vault_services_v1_SealStatusRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.SealStatusRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.SealStatusResponse> __Marshaller_udb_core_vault_services_v1_SealStatusResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.SealStatusResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.SealStatusResponse> __Marshaller_udb_core_vault_services_v1_SealStatusResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.SealStatusResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest> __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest> __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest> __Marshaller_udb_core_vault_services_v1_RevokeDatabaseCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest> __Marshaller_udb_core_vault_services_v1_RevokeDatabaseCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest> __Marshaller_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest> __Marshaller_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest> __Marshaller_udb_core_vault_services_v1_GenerateDataKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDataKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest> __Marshaller_udb_core_vault_services_v1_GenerateDataKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> __Marshaller_udb_core_vault_services_v1_GenerateDataKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse> __Marshaller_udb_core_vault_services_v1_GenerateDataKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RewrapRequest> __Marshaller_udb_core_vault_services_v1_RewrapRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RewrapRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.RewrapRequest> __Marshaller_udb_core_vault_services_v1_RewrapRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.RewrapRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RewrapResponse> __Marshaller_udb_core_vault_services_v1_RewrapResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RewrapResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.RewrapResponse> __Marshaller_udb_core_vault_services_v1_RewrapResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.RewrapResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest> __Marshaller_udb_core_vault_services_v1_GetTransitPublicKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest> __Marshaller_udb_core_vault_services_v1_GetTransitPublicKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> __Marshaller_udb_core_vault_services_v1_GetTransitPublicKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse> __Marshaller_udb_core_vault_services_v1_GetTransitPublicKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.BatchEncryptRequest> __Marshaller_udb_core_vault_services_v1_BatchEncryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.BatchEncryptRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.BatchEncryptRequest> __Marshaller_udb_core_vault_services_v1_BatchEncryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.BatchEncryptRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.BatchEncryptResponse> __Marshaller_udb_core_vault_services_v1_BatchEncryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.BatchEncryptResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.BatchEncryptResponse> __Marshaller_udb_core_vault_services_v1_BatchEncryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.BatchEncryptResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.BatchDecryptRequest> __Marshaller_udb_core_vault_services_v1_BatchDecryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.BatchDecryptRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.BatchDecryptRequest> __Marshaller_udb_core_vault_services_v1_BatchDecryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.BatchDecryptRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.BatchDecryptResponse> __Marshaller_udb_core_vault_services_v1_BatchDecryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.BatchDecryptResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.BatchDecryptResponse> __Marshaller_udb_core_vault_services_v1_BatchDecryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.BatchDecryptResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.PutSecretRequest, global::udb.core.Vault.Services.V1.PutSecretResponse> __Method_PutSecret = new grpc::Method<global::udb.core.Vault.Services.V1.PutSecretRequest, global::udb.core.Vault.Services.V1.PutSecretResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.PutSecretRequest, global::Udb.Core.Vault.Services.V1.PutSecretResponse> __Method_PutSecret = new grpc::Method<global::Udb.Core.Vault.Services.V1.PutSecretRequest, global::Udb.Core.Vault.Services.V1.PutSecretResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PutSecret",
@@ -156,7 +156,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_PutSecretResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.GetSecretRequest, global::udb.core.Vault.Services.V1.GetSecretResponse> __Method_GetSecret = new grpc::Method<global::udb.core.Vault.Services.V1.GetSecretRequest, global::udb.core.Vault.Services.V1.GetSecretResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.GetSecretRequest, global::Udb.Core.Vault.Services.V1.GetSecretResponse> __Method_GetSecret = new grpc::Method<global::Udb.Core.Vault.Services.V1.GetSecretRequest, global::Udb.Core.Vault.Services.V1.GetSecretResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetSecret",
@@ -164,7 +164,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_GetSecretResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.ListSecretsRequest, global::udb.core.Vault.Services.V1.ListSecretsResponse> __Method_ListSecrets = new grpc::Method<global::udb.core.Vault.Services.V1.ListSecretsRequest, global::udb.core.Vault.Services.V1.ListSecretsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.ListSecretsRequest, global::Udb.Core.Vault.Services.V1.ListSecretsResponse> __Method_ListSecrets = new grpc::Method<global::Udb.Core.Vault.Services.V1.ListSecretsRequest, global::Udb.Core.Vault.Services.V1.ListSecretsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListSecrets",
@@ -172,7 +172,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_ListSecretsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.DeleteSecretRequest, global::udb.core.Vault.Services.V1.DeleteSecretResponse> __Method_DeleteSecret = new grpc::Method<global::udb.core.Vault.Services.V1.DeleteSecretRequest, global::udb.core.Vault.Services.V1.DeleteSecretResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.DeleteSecretRequest, global::Udb.Core.Vault.Services.V1.DeleteSecretResponse> __Method_DeleteSecret = new grpc::Method<global::Udb.Core.Vault.Services.V1.DeleteSecretRequest, global::Udb.Core.Vault.Services.V1.DeleteSecretResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DeleteSecret",
@@ -180,7 +180,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_DeleteSecretResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.UndeleteSecretRequest, global::udb.core.Vault.Services.V1.UndeleteSecretResponse> __Method_UndeleteSecret = new grpc::Method<global::udb.core.Vault.Services.V1.UndeleteSecretRequest, global::udb.core.Vault.Services.V1.UndeleteSecretResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest, global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse> __Method_UndeleteSecret = new grpc::Method<global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest, global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UndeleteSecret",
@@ -188,7 +188,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_UndeleteSecretResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.DestroySecretRequest, global::udb.core.Vault.Services.V1.DestroySecretResponse> __Method_DestroySecret = new grpc::Method<global::udb.core.Vault.Services.V1.DestroySecretRequest, global::udb.core.Vault.Services.V1.DestroySecretResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.DestroySecretRequest, global::Udb.Core.Vault.Services.V1.DestroySecretResponse> __Method_DestroySecret = new grpc::Method<global::Udb.Core.Vault.Services.V1.DestroySecretRequest, global::Udb.Core.Vault.Services.V1.DestroySecretResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DestroySecret",
@@ -196,7 +196,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_DestroySecretResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.CreateTransitKeyRequest, global::udb.core.Vault.Services.V1.CreateTransitKeyResponse> __Method_CreateTransitKey = new grpc::Method<global::udb.core.Vault.Services.V1.CreateTransitKeyRequest, global::udb.core.Vault.Services.V1.CreateTransitKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest, global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse> __Method_CreateTransitKey = new grpc::Method<global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest, global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreateTransitKey",
@@ -204,7 +204,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_CreateTransitKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.RotateTransitKeyRequest, global::udb.core.Vault.Services.V1.RotateTransitKeyResponse> __Method_RotateTransitKey = new grpc::Method<global::udb.core.Vault.Services.V1.RotateTransitKeyRequest, global::udb.core.Vault.Services.V1.RotateTransitKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest, global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse> __Method_RotateTransitKey = new grpc::Method<global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest, global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RotateTransitKey",
@@ -212,7 +212,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_RotateTransitKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.EncryptRequest, global::udb.core.Vault.Services.V1.EncryptResponse> __Method_Encrypt = new grpc::Method<global::udb.core.Vault.Services.V1.EncryptRequest, global::udb.core.Vault.Services.V1.EncryptResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.EncryptRequest, global::Udb.Core.Vault.Services.V1.EncryptResponse> __Method_Encrypt = new grpc::Method<global::Udb.Core.Vault.Services.V1.EncryptRequest, global::Udb.Core.Vault.Services.V1.EncryptResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Encrypt",
@@ -220,7 +220,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_EncryptResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.DecryptRequest, global::udb.core.Vault.Services.V1.DecryptResponse> __Method_Decrypt = new grpc::Method<global::udb.core.Vault.Services.V1.DecryptRequest, global::udb.core.Vault.Services.V1.DecryptResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.DecryptRequest, global::Udb.Core.Vault.Services.V1.DecryptResponse> __Method_Decrypt = new grpc::Method<global::Udb.Core.Vault.Services.V1.DecryptRequest, global::Udb.Core.Vault.Services.V1.DecryptResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Decrypt",
@@ -228,7 +228,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_DecryptResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.SignRequest, global::udb.core.Vault.Services.V1.SignResponse> __Method_Sign = new grpc::Method<global::udb.core.Vault.Services.V1.SignRequest, global::udb.core.Vault.Services.V1.SignResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.SignRequest, global::Udb.Core.Vault.Services.V1.SignResponse> __Method_Sign = new grpc::Method<global::Udb.Core.Vault.Services.V1.SignRequest, global::Udb.Core.Vault.Services.V1.SignResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Sign",
@@ -236,7 +236,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_SignResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.VerifyRequest, global::udb.core.Vault.Services.V1.VerifyResponse> __Method_Verify = new grpc::Method<global::udb.core.Vault.Services.V1.VerifyRequest, global::udb.core.Vault.Services.V1.VerifyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.VerifyRequest, global::Udb.Core.Vault.Services.V1.VerifyResponse> __Method_Verify = new grpc::Method<global::Udb.Core.Vault.Services.V1.VerifyRequest, global::Udb.Core.Vault.Services.V1.VerifyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Verify",
@@ -244,7 +244,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_VerifyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.HmacRequest, global::udb.core.Vault.Services.V1.HmacResponse> __Method_Hmac = new grpc::Method<global::udb.core.Vault.Services.V1.HmacRequest, global::udb.core.Vault.Services.V1.HmacResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.HmacRequest, global::Udb.Core.Vault.Services.V1.HmacResponse> __Method_Hmac = new grpc::Method<global::Udb.Core.Vault.Services.V1.HmacRequest, global::Udb.Core.Vault.Services.V1.HmacResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Hmac",
@@ -252,7 +252,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_HmacResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.SealStatusRequest, global::udb.core.Vault.Services.V1.SealStatusResponse> __Method_SealStatus = new grpc::Method<global::udb.core.Vault.Services.V1.SealStatusRequest, global::udb.core.Vault.Services.V1.SealStatusResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.SealStatusRequest, global::Udb.Core.Vault.Services.V1.SealStatusResponse> __Method_SealStatus = new grpc::Method<global::Udb.Core.Vault.Services.V1.SealStatusRequest, global::Udb.Core.Vault.Services.V1.SealStatusResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "SealStatus",
@@ -260,7 +260,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_SealStatusResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> __Method_GenerateDatabaseCredentials = new grpc::Method<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest, global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> __Method_GenerateDatabaseCredentials = new grpc::Method<global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest, global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GenerateDatabaseCredentials",
@@ -268,7 +268,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> __Method_RevokeDatabaseCredentials = new grpc::Method<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest, global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> __Method_RevokeDatabaseCredentials = new grpc::Method<global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest, global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RevokeDatabaseCredentials",
@@ -276,7 +276,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_RevokeDatabaseCredentialsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> __Method_EmergencyRevokeDatabaseCredentials = new grpc::Method<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest, global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> __Method_EmergencyRevokeDatabaseCredentials = new grpc::Method<global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest, global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "EmergencyRevokeDatabaseCredentials",
@@ -284,7 +284,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_EmergencyRevokeDatabaseCredentialsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> __Method_GenerateDataKey = new grpc::Method<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest, global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse> __Method_GenerateDataKey = new grpc::Method<global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest, global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GenerateDataKey",
@@ -292,7 +292,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_GenerateDataKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.RewrapRequest, global::udb.core.Vault.Services.V1.RewrapResponse> __Method_Rewrap = new grpc::Method<global::udb.core.Vault.Services.V1.RewrapRequest, global::udb.core.Vault.Services.V1.RewrapResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.RewrapRequest, global::Udb.Core.Vault.Services.V1.RewrapResponse> __Method_Rewrap = new grpc::Method<global::Udb.Core.Vault.Services.V1.RewrapRequest, global::Udb.Core.Vault.Services.V1.RewrapResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Rewrap",
@@ -300,7 +300,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_RewrapResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest, global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> __Method_GetTransitPublicKey = new grpc::Method<global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest, global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest, global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse> __Method_GetTransitPublicKey = new grpc::Method<global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest, global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetTransitPublicKey",
@@ -308,7 +308,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_GetTransitPublicKeyResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.BatchEncryptRequest, global::udb.core.Vault.Services.V1.BatchEncryptResponse> __Method_BatchEncrypt = new grpc::Method<global::udb.core.Vault.Services.V1.BatchEncryptRequest, global::udb.core.Vault.Services.V1.BatchEncryptResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.BatchEncryptRequest, global::Udb.Core.Vault.Services.V1.BatchEncryptResponse> __Method_BatchEncrypt = new grpc::Method<global::Udb.Core.Vault.Services.V1.BatchEncryptRequest, global::Udb.Core.Vault.Services.V1.BatchEncryptResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "BatchEncrypt",
@@ -316,7 +316,7 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_BatchEncryptResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Vault.Services.V1.BatchDecryptRequest, global::udb.core.Vault.Services.V1.BatchDecryptResponse> __Method_BatchDecrypt = new grpc::Method<global::udb.core.Vault.Services.V1.BatchDecryptRequest, global::udb.core.Vault.Services.V1.BatchDecryptResponse>(
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.BatchDecryptRequest, global::Udb.Core.Vault.Services.V1.BatchDecryptResponse> __Method_BatchDecrypt = new grpc::Method<global::Udb.Core.Vault.Services.V1.BatchDecryptRequest, global::Udb.Core.Vault.Services.V1.BatchDecryptResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "BatchDecrypt",
@@ -326,7 +326,7 @@ namespace udb.core.Vault.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Vault.Services.V1.VaultServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Vault.Services.V1.VaultServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of VaultService</summary>
@@ -341,7 +341,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.PutSecretResponse> PutSecret(global::udb.core.Vault.Services.V1.PutSecretRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.PutSecretResponse> PutSecret(global::Udb.Core.Vault.Services.V1.PutSecretRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -354,7 +354,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.GetSecretResponse> GetSecret(global::udb.core.Vault.Services.V1.GetSecretRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.GetSecretResponse> GetSecret(global::Udb.Core.Vault.Services.V1.GetSecretRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -367,7 +367,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.ListSecretsResponse> ListSecrets(global::udb.core.Vault.Services.V1.ListSecretsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.ListSecretsResponse> ListSecrets(global::Udb.Core.Vault.Services.V1.ListSecretsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -380,7 +380,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.DeleteSecretResponse> DeleteSecret(global::udb.core.Vault.Services.V1.DeleteSecretRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.DeleteSecretResponse> DeleteSecret(global::Udb.Core.Vault.Services.V1.DeleteSecretRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -394,7 +394,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.UndeleteSecretResponse> UndeleteSecret(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse> UndeleteSecret(global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -408,7 +408,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.DestroySecretResponse> DestroySecret(global::udb.core.Vault.Services.V1.DestroySecretRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.DestroySecretResponse> DestroySecret(global::Udb.Core.Vault.Services.V1.DestroySecretRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -421,7 +421,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.CreateTransitKeyResponse> CreateTransitKey(global::udb.core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse> CreateTransitKey(global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -435,7 +435,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.RotateTransitKeyResponse> RotateTransitKey(global::udb.core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse> RotateTransitKey(global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -448,7 +448,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.EncryptResponse> Encrypt(global::udb.core.Vault.Services.V1.EncryptRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.EncryptResponse> Encrypt(global::Udb.Core.Vault.Services.V1.EncryptRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -462,7 +462,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.DecryptResponse> Decrypt(global::udb.core.Vault.Services.V1.DecryptRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.DecryptResponse> Decrypt(global::Udb.Core.Vault.Services.V1.DecryptRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -476,7 +476,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.SignResponse> Sign(global::udb.core.Vault.Services.V1.SignRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.SignResponse> Sign(global::Udb.Core.Vault.Services.V1.SignRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -490,7 +490,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.VerifyResponse> Verify(global::udb.core.Vault.Services.V1.VerifyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.VerifyResponse> Verify(global::Udb.Core.Vault.Services.V1.VerifyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -503,7 +503,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.HmacResponse> Hmac(global::udb.core.Vault.Services.V1.HmacRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.HmacResponse> Hmac(global::Udb.Core.Vault.Services.V1.HmacRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -516,7 +516,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.SealStatusResponse> SealStatus(global::udb.core.Vault.Services.V1.SealStatusRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.SealStatusResponse> SealStatus(global::Udb.Core.Vault.Services.V1.SealStatusRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -533,7 +533,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> GenerateDatabaseCredentials(global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> GenerateDatabaseCredentials(global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -548,7 +548,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> RevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> RevokeDatabaseCredentials(global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -562,7 +562,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> EmergencyRevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> EmergencyRevokeDatabaseCredentials(global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -577,7 +577,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> GenerateDataKey(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse> GenerateDataKey(global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -592,7 +592,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.RewrapResponse> Rewrap(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.RewrapResponse> Rewrap(global::Udb.Core.Vault.Services.V1.RewrapRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -608,7 +608,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> GetTransitPublicKey(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse> GetTransitPublicKey(global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -622,7 +622,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.BatchEncryptResponse> BatchEncrypt(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.BatchEncryptResponse> BatchEncrypt(global::Udb.Core.Vault.Services.V1.BatchEncryptRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -635,7 +635,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.BatchDecryptResponse> BatchDecrypt(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.BatchDecryptResponse> BatchDecrypt(global::Udb.Core.Vault.Services.V1.BatchDecryptRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -679,7 +679,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.PutSecretResponse PutSecret(global::udb.core.Vault.Services.V1.PutSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.PutSecretResponse PutSecret(global::Udb.Core.Vault.Services.V1.PutSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutSecret(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -691,7 +691,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.PutSecretResponse PutSecret(global::udb.core.Vault.Services.V1.PutSecretRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.PutSecretResponse PutSecret(global::Udb.Core.Vault.Services.V1.PutSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PutSecret, null, options, request);
       }
@@ -705,7 +705,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.PutSecretResponse> PutSecretAsync(global::udb.core.Vault.Services.V1.PutSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.PutSecretResponse> PutSecretAsync(global::Udb.Core.Vault.Services.V1.PutSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutSecretAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -717,7 +717,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.PutSecretResponse> PutSecretAsync(global::udb.core.Vault.Services.V1.PutSecretRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.PutSecretResponse> PutSecretAsync(global::Udb.Core.Vault.Services.V1.PutSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PutSecret, null, options, request);
       }
@@ -731,7 +731,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.GetSecretResponse GetSecret(global::udb.core.Vault.Services.V1.GetSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.GetSecretResponse GetSecret(global::Udb.Core.Vault.Services.V1.GetSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetSecret(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -743,7 +743,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.GetSecretResponse GetSecret(global::udb.core.Vault.Services.V1.GetSecretRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.GetSecretResponse GetSecret(global::Udb.Core.Vault.Services.V1.GetSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetSecret, null, options, request);
       }
@@ -757,7 +757,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GetSecretResponse> GetSecretAsync(global::udb.core.Vault.Services.V1.GetSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.GetSecretResponse> GetSecretAsync(global::Udb.Core.Vault.Services.V1.GetSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetSecretAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -769,7 +769,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GetSecretResponse> GetSecretAsync(global::udb.core.Vault.Services.V1.GetSecretRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.GetSecretResponse> GetSecretAsync(global::Udb.Core.Vault.Services.V1.GetSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetSecret, null, options, request);
       }
@@ -783,7 +783,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.ListSecretsResponse ListSecrets(global::udb.core.Vault.Services.V1.ListSecretsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.ListSecretsResponse ListSecrets(global::Udb.Core.Vault.Services.V1.ListSecretsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListSecrets(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -795,7 +795,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.ListSecretsResponse ListSecrets(global::udb.core.Vault.Services.V1.ListSecretsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.ListSecretsResponse ListSecrets(global::Udb.Core.Vault.Services.V1.ListSecretsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListSecrets, null, options, request);
       }
@@ -809,7 +809,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.ListSecretsResponse> ListSecretsAsync(global::udb.core.Vault.Services.V1.ListSecretsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.ListSecretsResponse> ListSecretsAsync(global::Udb.Core.Vault.Services.V1.ListSecretsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListSecretsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -821,7 +821,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.ListSecretsResponse> ListSecretsAsync(global::udb.core.Vault.Services.V1.ListSecretsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.ListSecretsResponse> ListSecretsAsync(global::Udb.Core.Vault.Services.V1.ListSecretsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListSecrets, null, options, request);
       }
@@ -835,7 +835,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.DeleteSecretResponse DeleteSecret(global::udb.core.Vault.Services.V1.DeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.DeleteSecretResponse DeleteSecret(global::Udb.Core.Vault.Services.V1.DeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteSecret(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -847,7 +847,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.DeleteSecretResponse DeleteSecret(global::udb.core.Vault.Services.V1.DeleteSecretRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.DeleteSecretResponse DeleteSecret(global::Udb.Core.Vault.Services.V1.DeleteSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeleteSecret, null, options, request);
       }
@@ -861,7 +861,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.DeleteSecretResponse> DeleteSecretAsync(global::udb.core.Vault.Services.V1.DeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.DeleteSecretResponse> DeleteSecretAsync(global::Udb.Core.Vault.Services.V1.DeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteSecretAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -873,7 +873,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.DeleteSecretResponse> DeleteSecretAsync(global::udb.core.Vault.Services.V1.DeleteSecretRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.DeleteSecretResponse> DeleteSecretAsync(global::Udb.Core.Vault.Services.V1.DeleteSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteSecret, null, options, request);
       }
@@ -888,7 +888,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.UndeleteSecretResponse UndeleteSecret(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse UndeleteSecret(global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UndeleteSecret(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -901,7 +901,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.UndeleteSecretResponse UndeleteSecret(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse UndeleteSecret(global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UndeleteSecret, null, options, request);
       }
@@ -916,7 +916,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.UndeleteSecretResponse> UndeleteSecretAsync(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse> UndeleteSecretAsync(global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UndeleteSecretAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -929,7 +929,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.UndeleteSecretResponse> UndeleteSecretAsync(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse> UndeleteSecretAsync(global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UndeleteSecret, null, options, request);
       }
@@ -944,7 +944,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.DestroySecretResponse DestroySecret(global::udb.core.Vault.Services.V1.DestroySecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.DestroySecretResponse DestroySecret(global::Udb.Core.Vault.Services.V1.DestroySecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DestroySecret(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -957,7 +957,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.DestroySecretResponse DestroySecret(global::udb.core.Vault.Services.V1.DestroySecretRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.DestroySecretResponse DestroySecret(global::Udb.Core.Vault.Services.V1.DestroySecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DestroySecret, null, options, request);
       }
@@ -972,7 +972,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.DestroySecretResponse> DestroySecretAsync(global::udb.core.Vault.Services.V1.DestroySecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.DestroySecretResponse> DestroySecretAsync(global::Udb.Core.Vault.Services.V1.DestroySecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DestroySecretAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -985,7 +985,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.DestroySecretResponse> DestroySecretAsync(global::udb.core.Vault.Services.V1.DestroySecretRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.DestroySecretResponse> DestroySecretAsync(global::Udb.Core.Vault.Services.V1.DestroySecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DestroySecret, null, options, request);
       }
@@ -999,7 +999,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.CreateTransitKeyResponse CreateTransitKey(global::udb.core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse CreateTransitKey(global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateTransitKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1011,7 +1011,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.CreateTransitKeyResponse CreateTransitKey(global::udb.core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse CreateTransitKey(global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreateTransitKey, null, options, request);
       }
@@ -1025,7 +1025,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.CreateTransitKeyResponse> CreateTransitKeyAsync(global::udb.core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse> CreateTransitKeyAsync(global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateTransitKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1037,7 +1037,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.CreateTransitKeyResponse> CreateTransitKeyAsync(global::udb.core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse> CreateTransitKeyAsync(global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreateTransitKey, null, options, request);
       }
@@ -1052,7 +1052,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.RotateTransitKeyResponse RotateTransitKey(global::udb.core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse RotateTransitKey(global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RotateTransitKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1065,7 +1065,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.RotateTransitKeyResponse RotateTransitKey(global::udb.core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse RotateTransitKey(global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RotateTransitKey, null, options, request);
       }
@@ -1080,7 +1080,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RotateTransitKeyResponse> RotateTransitKeyAsync(global::udb.core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse> RotateTransitKeyAsync(global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RotateTransitKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1093,7 +1093,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RotateTransitKeyResponse> RotateTransitKeyAsync(global::udb.core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse> RotateTransitKeyAsync(global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RotateTransitKey, null, options, request);
       }
@@ -1107,7 +1107,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.EncryptResponse Encrypt(global::udb.core.Vault.Services.V1.EncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.EncryptResponse Encrypt(global::Udb.Core.Vault.Services.V1.EncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Encrypt(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1119,7 +1119,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.EncryptResponse Encrypt(global::udb.core.Vault.Services.V1.EncryptRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.EncryptResponse Encrypt(global::Udb.Core.Vault.Services.V1.EncryptRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Encrypt, null, options, request);
       }
@@ -1133,7 +1133,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.EncryptResponse> EncryptAsync(global::udb.core.Vault.Services.V1.EncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.EncryptResponse> EncryptAsync(global::Udb.Core.Vault.Services.V1.EncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return EncryptAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1145,7 +1145,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.EncryptResponse> EncryptAsync(global::udb.core.Vault.Services.V1.EncryptRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.EncryptResponse> EncryptAsync(global::Udb.Core.Vault.Services.V1.EncryptRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Encrypt, null, options, request);
       }
@@ -1160,7 +1160,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.DecryptResponse Decrypt(global::udb.core.Vault.Services.V1.DecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.DecryptResponse Decrypt(global::Udb.Core.Vault.Services.V1.DecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Decrypt(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1173,7 +1173,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.DecryptResponse Decrypt(global::udb.core.Vault.Services.V1.DecryptRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.DecryptResponse Decrypt(global::Udb.Core.Vault.Services.V1.DecryptRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Decrypt, null, options, request);
       }
@@ -1188,7 +1188,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.DecryptResponse> DecryptAsync(global::udb.core.Vault.Services.V1.DecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.DecryptResponse> DecryptAsync(global::Udb.Core.Vault.Services.V1.DecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DecryptAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1201,7 +1201,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.DecryptResponse> DecryptAsync(global::udb.core.Vault.Services.V1.DecryptRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.DecryptResponse> DecryptAsync(global::Udb.Core.Vault.Services.V1.DecryptRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Decrypt, null, options, request);
       }
@@ -1216,7 +1216,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.SignResponse Sign(global::udb.core.Vault.Services.V1.SignRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.SignResponse Sign(global::Udb.Core.Vault.Services.V1.SignRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Sign(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1229,7 +1229,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.SignResponse Sign(global::udb.core.Vault.Services.V1.SignRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.SignResponse Sign(global::Udb.Core.Vault.Services.V1.SignRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Sign, null, options, request);
       }
@@ -1244,7 +1244,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.SignResponse> SignAsync(global::udb.core.Vault.Services.V1.SignRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.SignResponse> SignAsync(global::Udb.Core.Vault.Services.V1.SignRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SignAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1257,7 +1257,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.SignResponse> SignAsync(global::udb.core.Vault.Services.V1.SignRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.SignResponse> SignAsync(global::Udb.Core.Vault.Services.V1.SignRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Sign, null, options, request);
       }
@@ -1272,7 +1272,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.VerifyResponse Verify(global::udb.core.Vault.Services.V1.VerifyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.VerifyResponse Verify(global::Udb.Core.Vault.Services.V1.VerifyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Verify(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1285,7 +1285,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.VerifyResponse Verify(global::udb.core.Vault.Services.V1.VerifyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.VerifyResponse Verify(global::Udb.Core.Vault.Services.V1.VerifyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Verify, null, options, request);
       }
@@ -1300,7 +1300,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.VerifyResponse> VerifyAsync(global::udb.core.Vault.Services.V1.VerifyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.VerifyResponse> VerifyAsync(global::Udb.Core.Vault.Services.V1.VerifyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return VerifyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1313,7 +1313,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.VerifyResponse> VerifyAsync(global::udb.core.Vault.Services.V1.VerifyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.VerifyResponse> VerifyAsync(global::Udb.Core.Vault.Services.V1.VerifyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Verify, null, options, request);
       }
@@ -1327,7 +1327,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.HmacResponse Hmac(global::udb.core.Vault.Services.V1.HmacRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.HmacResponse Hmac(global::Udb.Core.Vault.Services.V1.HmacRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Hmac(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1339,7 +1339,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.HmacResponse Hmac(global::udb.core.Vault.Services.V1.HmacRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.HmacResponse Hmac(global::Udb.Core.Vault.Services.V1.HmacRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Hmac, null, options, request);
       }
@@ -1353,7 +1353,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.HmacResponse> HmacAsync(global::udb.core.Vault.Services.V1.HmacRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.HmacResponse> HmacAsync(global::Udb.Core.Vault.Services.V1.HmacRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return HmacAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1365,7 +1365,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.HmacResponse> HmacAsync(global::udb.core.Vault.Services.V1.HmacRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.HmacResponse> HmacAsync(global::Udb.Core.Vault.Services.V1.HmacRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Hmac, null, options, request);
       }
@@ -1379,7 +1379,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.SealStatusResponse SealStatus(global::udb.core.Vault.Services.V1.SealStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.SealStatusResponse SealStatus(global::Udb.Core.Vault.Services.V1.SealStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SealStatus(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1391,7 +1391,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.SealStatusResponse SealStatus(global::udb.core.Vault.Services.V1.SealStatusRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.SealStatusResponse SealStatus(global::Udb.Core.Vault.Services.V1.SealStatusRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_SealStatus, null, options, request);
       }
@@ -1405,7 +1405,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.SealStatusResponse> SealStatusAsync(global::udb.core.Vault.Services.V1.SealStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.SealStatusResponse> SealStatusAsync(global::Udb.Core.Vault.Services.V1.SealStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SealStatusAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1417,7 +1417,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.SealStatusResponse> SealStatusAsync(global::udb.core.Vault.Services.V1.SealStatusRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.SealStatusResponse> SealStatusAsync(global::Udb.Core.Vault.Services.V1.SealStatusRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_SealStatus, null, options, request);
       }
@@ -1435,7 +1435,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse GenerateDatabaseCredentials(global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse GenerateDatabaseCredentials(global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GenerateDatabaseCredentials(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1451,7 +1451,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse GenerateDatabaseCredentials(global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse GenerateDatabaseCredentials(global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GenerateDatabaseCredentials, null, options, request);
       }
@@ -1469,7 +1469,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> GenerateDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> GenerateDatabaseCredentialsAsync(global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GenerateDatabaseCredentialsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1485,7 +1485,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> GenerateDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> GenerateDatabaseCredentialsAsync(global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GenerateDatabaseCredentials, null, options, request);
       }
@@ -1501,7 +1501,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse RevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse RevokeDatabaseCredentials(global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RevokeDatabaseCredentials(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1515,7 +1515,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse RevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse RevokeDatabaseCredentials(global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RevokeDatabaseCredentials, null, options, request);
       }
@@ -1531,7 +1531,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> RevokeDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> RevokeDatabaseCredentialsAsync(global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RevokeDatabaseCredentialsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1545,7 +1545,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> RevokeDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse> RevokeDatabaseCredentialsAsync(global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RevokeDatabaseCredentials, null, options, request);
       }
@@ -1560,7 +1560,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse EmergencyRevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse EmergencyRevokeDatabaseCredentials(global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return EmergencyRevokeDatabaseCredentials(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1573,7 +1573,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse EmergencyRevokeDatabaseCredentials(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse EmergencyRevokeDatabaseCredentials(global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_EmergencyRevokeDatabaseCredentials, null, options, request);
       }
@@ -1588,7 +1588,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> EmergencyRevokeDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> EmergencyRevokeDatabaseCredentialsAsync(global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return EmergencyRevokeDatabaseCredentialsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1601,7 +1601,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> EmergencyRevokeDatabaseCredentialsAsync(global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse> EmergencyRevokeDatabaseCredentialsAsync(global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_EmergencyRevokeDatabaseCredentials, null, options, request);
       }
@@ -1617,7 +1617,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.GenerateDataKeyResponse GenerateDataKey(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse GenerateDataKey(global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GenerateDataKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1631,7 +1631,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.GenerateDataKeyResponse GenerateDataKey(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse GenerateDataKey(global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GenerateDataKey, null, options, request);
       }
@@ -1647,7 +1647,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> GenerateDataKeyAsync(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse> GenerateDataKeyAsync(global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GenerateDataKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1661,7 +1661,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> GenerateDataKeyAsync(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse> GenerateDataKeyAsync(global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GenerateDataKey, null, options, request);
       }
@@ -1677,7 +1677,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.RewrapResponse Rewrap(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.RewrapResponse Rewrap(global::Udb.Core.Vault.Services.V1.RewrapRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Rewrap(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1691,7 +1691,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.RewrapResponse Rewrap(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.RewrapResponse Rewrap(global::Udb.Core.Vault.Services.V1.RewrapRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Rewrap, null, options, request);
       }
@@ -1707,7 +1707,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RewrapResponse> RewrapAsync(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.RewrapResponse> RewrapAsync(global::Udb.Core.Vault.Services.V1.RewrapRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RewrapAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1721,7 +1721,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RewrapResponse> RewrapAsync(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.RewrapResponse> RewrapAsync(global::Udb.Core.Vault.Services.V1.RewrapRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Rewrap, null, options, request);
       }
@@ -1738,7 +1738,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse GetTransitPublicKey(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse GetTransitPublicKey(global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetTransitPublicKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1753,7 +1753,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse GetTransitPublicKey(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse GetTransitPublicKey(global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetTransitPublicKey, null, options, request);
       }
@@ -1770,7 +1770,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> GetTransitPublicKeyAsync(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse> GetTransitPublicKeyAsync(global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetTransitPublicKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1785,7 +1785,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> GetTransitPublicKeyAsync(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse> GetTransitPublicKeyAsync(global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetTransitPublicKey, null, options, request);
       }
@@ -1800,7 +1800,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.BatchEncryptResponse BatchEncrypt(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.BatchEncryptResponse BatchEncrypt(global::Udb.Core.Vault.Services.V1.BatchEncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return BatchEncrypt(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1813,7 +1813,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.BatchEncryptResponse BatchEncrypt(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.BatchEncryptResponse BatchEncrypt(global::Udb.Core.Vault.Services.V1.BatchEncryptRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_BatchEncrypt, null, options, request);
       }
@@ -1828,7 +1828,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.BatchEncryptResponse> BatchEncryptAsync(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.BatchEncryptResponse> BatchEncryptAsync(global::Udb.Core.Vault.Services.V1.BatchEncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return BatchEncryptAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1841,7 +1841,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.BatchEncryptResponse> BatchEncryptAsync(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.BatchEncryptResponse> BatchEncryptAsync(global::Udb.Core.Vault.Services.V1.BatchEncryptRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_BatchEncrypt, null, options, request);
       }
@@ -1855,7 +1855,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.BatchDecryptResponse BatchDecrypt(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Vault.Services.V1.BatchDecryptResponse BatchDecrypt(global::Udb.Core.Vault.Services.V1.BatchDecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return BatchDecrypt(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1867,7 +1867,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Vault.Services.V1.BatchDecryptResponse BatchDecrypt(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Vault.Services.V1.BatchDecryptResponse BatchDecrypt(global::Udb.Core.Vault.Services.V1.BatchDecryptRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_BatchDecrypt, null, options, request);
       }
@@ -1881,7 +1881,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.BatchDecryptResponse> BatchDecryptAsync(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.BatchDecryptResponse> BatchDecryptAsync(global::Udb.Core.Vault.Services.V1.BatchDecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return BatchDecryptAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -1893,7 +1893,7 @@ namespace udb.core.Vault.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.BatchDecryptResponse> BatchDecryptAsync(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.BatchDecryptResponse> BatchDecryptAsync(global::Udb.Core.Vault.Services.V1.BatchDecryptRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_BatchDecrypt, null, options, request);
       }
@@ -1942,28 +1942,28 @@ namespace udb.core.Vault.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, VaultServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_PutSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.PutSecretRequest, global::udb.core.Vault.Services.V1.PutSecretResponse>(serviceImpl.PutSecret));
-      serviceBinder.AddMethod(__Method_GetSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GetSecretRequest, global::udb.core.Vault.Services.V1.GetSecretResponse>(serviceImpl.GetSecret));
-      serviceBinder.AddMethod(__Method_ListSecrets, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.ListSecretsRequest, global::udb.core.Vault.Services.V1.ListSecretsResponse>(serviceImpl.ListSecrets));
-      serviceBinder.AddMethod(__Method_DeleteSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.DeleteSecretRequest, global::udb.core.Vault.Services.V1.DeleteSecretResponse>(serviceImpl.DeleteSecret));
-      serviceBinder.AddMethod(__Method_UndeleteSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.UndeleteSecretRequest, global::udb.core.Vault.Services.V1.UndeleteSecretResponse>(serviceImpl.UndeleteSecret));
-      serviceBinder.AddMethod(__Method_DestroySecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.DestroySecretRequest, global::udb.core.Vault.Services.V1.DestroySecretResponse>(serviceImpl.DestroySecret));
-      serviceBinder.AddMethod(__Method_CreateTransitKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.CreateTransitKeyRequest, global::udb.core.Vault.Services.V1.CreateTransitKeyResponse>(serviceImpl.CreateTransitKey));
-      serviceBinder.AddMethod(__Method_RotateTransitKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.RotateTransitKeyRequest, global::udb.core.Vault.Services.V1.RotateTransitKeyResponse>(serviceImpl.RotateTransitKey));
-      serviceBinder.AddMethod(__Method_Encrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.EncryptRequest, global::udb.core.Vault.Services.V1.EncryptResponse>(serviceImpl.Encrypt));
-      serviceBinder.AddMethod(__Method_Decrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.DecryptRequest, global::udb.core.Vault.Services.V1.DecryptResponse>(serviceImpl.Decrypt));
-      serviceBinder.AddMethod(__Method_Sign, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.SignRequest, global::udb.core.Vault.Services.V1.SignResponse>(serviceImpl.Sign));
-      serviceBinder.AddMethod(__Method_Verify, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.VerifyRequest, global::udb.core.Vault.Services.V1.VerifyResponse>(serviceImpl.Verify));
-      serviceBinder.AddMethod(__Method_Hmac, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.HmacRequest, global::udb.core.Vault.Services.V1.HmacResponse>(serviceImpl.Hmac));
-      serviceBinder.AddMethod(__Method_SealStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.SealStatusRequest, global::udb.core.Vault.Services.V1.SealStatusResponse>(serviceImpl.SealStatus));
-      serviceBinder.AddMethod(__Method_GenerateDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse>(serviceImpl.GenerateDatabaseCredentials));
-      serviceBinder.AddMethod(__Method_RevokeDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.RevokeDatabaseCredentialsResponse>(serviceImpl.RevokeDatabaseCredentials));
-      serviceBinder.AddMethod(__Method_EmergencyRevokeDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse>(serviceImpl.EmergencyRevokeDatabaseCredentials));
-      serviceBinder.AddMethod(__Method_GenerateDataKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse>(serviceImpl.GenerateDataKey));
-      serviceBinder.AddMethod(__Method_Rewrap, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.RewrapRequest, global::udb.core.Vault.Services.V1.RewrapResponse>(serviceImpl.Rewrap));
-      serviceBinder.AddMethod(__Method_GetTransitPublicKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest, global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse>(serviceImpl.GetTransitPublicKey));
-      serviceBinder.AddMethod(__Method_BatchEncrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.BatchEncryptRequest, global::udb.core.Vault.Services.V1.BatchEncryptResponse>(serviceImpl.BatchEncrypt));
-      serviceBinder.AddMethod(__Method_BatchDecrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.BatchDecryptRequest, global::udb.core.Vault.Services.V1.BatchDecryptResponse>(serviceImpl.BatchDecrypt));
+      serviceBinder.AddMethod(__Method_PutSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.PutSecretRequest, global::Udb.Core.Vault.Services.V1.PutSecretResponse>(serviceImpl.PutSecret));
+      serviceBinder.AddMethod(__Method_GetSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.GetSecretRequest, global::Udb.Core.Vault.Services.V1.GetSecretResponse>(serviceImpl.GetSecret));
+      serviceBinder.AddMethod(__Method_ListSecrets, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.ListSecretsRequest, global::Udb.Core.Vault.Services.V1.ListSecretsResponse>(serviceImpl.ListSecrets));
+      serviceBinder.AddMethod(__Method_DeleteSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.DeleteSecretRequest, global::Udb.Core.Vault.Services.V1.DeleteSecretResponse>(serviceImpl.DeleteSecret));
+      serviceBinder.AddMethod(__Method_UndeleteSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest, global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse>(serviceImpl.UndeleteSecret));
+      serviceBinder.AddMethod(__Method_DestroySecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.DestroySecretRequest, global::Udb.Core.Vault.Services.V1.DestroySecretResponse>(serviceImpl.DestroySecret));
+      serviceBinder.AddMethod(__Method_CreateTransitKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.CreateTransitKeyRequest, global::Udb.Core.Vault.Services.V1.CreateTransitKeyResponse>(serviceImpl.CreateTransitKey));
+      serviceBinder.AddMethod(__Method_RotateTransitKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.RotateTransitKeyRequest, global::Udb.Core.Vault.Services.V1.RotateTransitKeyResponse>(serviceImpl.RotateTransitKey));
+      serviceBinder.AddMethod(__Method_Encrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.EncryptRequest, global::Udb.Core.Vault.Services.V1.EncryptResponse>(serviceImpl.Encrypt));
+      serviceBinder.AddMethod(__Method_Decrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.DecryptRequest, global::Udb.Core.Vault.Services.V1.DecryptResponse>(serviceImpl.Decrypt));
+      serviceBinder.AddMethod(__Method_Sign, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.SignRequest, global::Udb.Core.Vault.Services.V1.SignResponse>(serviceImpl.Sign));
+      serviceBinder.AddMethod(__Method_Verify, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.VerifyRequest, global::Udb.Core.Vault.Services.V1.VerifyResponse>(serviceImpl.Verify));
+      serviceBinder.AddMethod(__Method_Hmac, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.HmacRequest, global::Udb.Core.Vault.Services.V1.HmacResponse>(serviceImpl.Hmac));
+      serviceBinder.AddMethod(__Method_SealStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.SealStatusRequest, global::Udb.Core.Vault.Services.V1.SealStatusResponse>(serviceImpl.SealStatus));
+      serviceBinder.AddMethod(__Method_GenerateDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsRequest, global::Udb.Core.Vault.Services.V1.GenerateDatabaseCredentialsResponse>(serviceImpl.GenerateDatabaseCredentials));
+      serviceBinder.AddMethod(__Method_RevokeDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsRequest, global::Udb.Core.Vault.Services.V1.RevokeDatabaseCredentialsResponse>(serviceImpl.RevokeDatabaseCredentials));
+      serviceBinder.AddMethod(__Method_EmergencyRevokeDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsRequest, global::Udb.Core.Vault.Services.V1.EmergencyRevokeDatabaseCredentialsResponse>(serviceImpl.EmergencyRevokeDatabaseCredentials));
+      serviceBinder.AddMethod(__Method_GenerateDataKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.GenerateDataKeyRequest, global::Udb.Core.Vault.Services.V1.GenerateDataKeyResponse>(serviceImpl.GenerateDataKey));
+      serviceBinder.AddMethod(__Method_Rewrap, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.RewrapRequest, global::Udb.Core.Vault.Services.V1.RewrapResponse>(serviceImpl.Rewrap));
+      serviceBinder.AddMethod(__Method_GetTransitPublicKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyRequest, global::Udb.Core.Vault.Services.V1.GetTransitPublicKeyResponse>(serviceImpl.GetTransitPublicKey));
+      serviceBinder.AddMethod(__Method_BatchEncrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.BatchEncryptRequest, global::Udb.Core.Vault.Services.V1.BatchEncryptResponse>(serviceImpl.BatchEncrypt));
+      serviceBinder.AddMethod(__Method_BatchDecrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.BatchDecryptRequest, global::Udb.Core.Vault.Services.V1.BatchDecryptResponse>(serviceImpl.BatchDecrypt));
     }
 
   }

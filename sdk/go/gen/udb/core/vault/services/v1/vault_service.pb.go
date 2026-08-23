@@ -3380,7 +3380,7 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"\x05vault\x12\x05vault\x1a\x05vault\"\x05Vault*\x05vault0\x018\x01h\x01z\x05vault\x82\x01\x05vault\x8a\x01\x05vault\x92\x01\fnative.vault\xd2\xf0\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\xda\xf0\x19\x85\x01\n" +
 	"\x05vault\x12\x10udb/native/vault\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x17udb.native.vault.config:\x05vaultJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19?\n" +
 	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x8a\x02\n" +
-	"\x1ecom.udb.core.vault.services.v1B\x11VaultServiceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/vault/services/v1;servicesv1\xa2\x02\x04UCVS\xaa\x02\x1audb.core.Vault.Services.V1\xca\x02\x1aUdb\\Core\\Vault\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Vault\\Services\\V1\xea\x02\x1eUdb::Core::Vault::Services::V1b\x06proto3"
+	"\x1ecom.udb.core.vault.services.v1B\x11VaultServiceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/vault/services/v1;servicesv1\xa2\x02\x04UCVS\xaa\x02\x1aUdb.Core.Vault.Services.V1\xca\x02\x1aUdb\\Core\\Vault\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Vault\\Services\\V1\xea\x02\x1eUdb::Core::Vault::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_vault_services_v1_vault_service_proto_rawDescOnce sync.Once

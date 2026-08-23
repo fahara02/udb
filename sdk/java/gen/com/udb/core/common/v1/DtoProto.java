@@ -129,7 +129,7 @@ public final class DtoProto {
       "value:\0028\001B\315\001\n\026com.udb.core.common.v1B\010Dt" +
       "oProtoP\001Z>github.com/fahara02/udb/sdk/go" +
       "/gen/udb/core/common/v1;commonv1\242\002\003UCC\252\002" +
-      "\022udb.core.Common.V1\312\002\022Udb\\Core\\Common\\V1" +
+      "\022Udb.Core.Common.V1\312\002\022Udb\\Core\\Common\\V1" +
       "\342\002\036Udb\\GPBMetadata\\Core\\Common\\V1\352\002\025Udb:" +
       ":Core::Common::V1b\006proto3"
     };

@@ -5,7 +5,7 @@ package udb.core.asset.events.v1;
 import "google/protobuf/timestamp.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Asset.Events.V1";
+option csharp_namespace = "Udb.Core.Asset.Events.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/asset/events/v1;asseteventsv1";
 option java_package = "com.udb.core.asset.events.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Asset\\Events\\V1";

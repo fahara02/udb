@@ -337,7 +337,7 @@ public final class AuthnEventsProto {
       "east_once2\006stableB\373\001\n\034com.udb.core.authn" +
       ".events.v1B\020AuthnEventsProtoP\001ZDgithub.c" +
       "om/fahara02/udb/sdk/go/gen/udb/core/auth" +
-      "n/events/v1;eventsv1\242\002\004UCAE\252\002\030udb.core.A" +
+      "n/events/v1;eventsv1\242\002\004UCAE\252\002\030Udb.Core.A" +
       "uthn.Events.V1\312\002\030Udb\\Core\\Authn\\Events\\V" +
       "1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Events\\V1" +
       "\352\002\034Udb::Core::Authn::Events::V1b\006proto3"

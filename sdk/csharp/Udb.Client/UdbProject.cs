@@ -1,14 +1,14 @@
 using Grpc.Net.Client;
 using Udb.Entity.V1;
 using Udb.Services.V1;
-using AnalyticsV1 = udb.core.Analytics.Services.V1;
-using ApikeyV1 = udb.core.Apikey.Services.V1;
-using AssetV1 = udb.core.Asset.Services.V1;
-using NotificationV1 = udb.core.Notification.Services.V1;
-using StorageV1 = udb.core.Storage.Services.V1;
-using TenantV1 = udb.core.Tenant.Services.V1;
-using WebRtcV1 = udb.core.Webrtc.Services.V1;
-using AuthnV1 = udb.core.Authn.Services.V1;
+using AnalyticsV1 = Udb.Core.Analytics.Services.V1;
+using ApikeyV1 = Udb.Core.Apikey.Services.V1;
+using AssetV1 = Udb.Core.Asset.Services.V1;
+using NotificationV1 = Udb.Core.Notification.Services.V1;
+using StorageV1 = Udb.Core.Storage.Services.V1;
+using TenantV1 = Udb.Core.Tenant.Services.V1;
+using WebRtcV1 = Udb.Core.Webrtc.Services.V1;
+using AuthnV1 = Udb.Core.Authn.Services.V1;
 
 namespace Udb.Client;
 

@@ -237,7 +237,7 @@ public final class IdentityProviderServiceProto {
       "B\211\002\n\034com.udb.core.idp.services.v1B\034Ident" +
       "ityProviderServiceProtoP\001ZFgithub.com/fa" +
       "hara02/udb/sdk/go/gen/udb/core/idp/servi" +
-      "ces/v1;servicesv1\242\002\004UCIS\252\002\030udb.core.Idp." +
+      "ces/v1;servicesv1\242\002\004UCIS\252\002\030Udb.Core.Idp." +
       "Services.V1\312\002\030Udb\\Core\\Idp\\Services\\V1\342\002" +
       "$Udb\\GPBMetadata\\Core\\Idp\\Services\\V1\352\002\034" +
       "Udb::Core::Idp::Services::V1b\006proto3"

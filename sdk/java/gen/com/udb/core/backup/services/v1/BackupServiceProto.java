@@ -359,8 +359,8 @@ public final class BackupServiceProto {
       "\017UDB_GRPC_TARGETB\221\002\n\037com.udb.core.backup" +
       ".services.v1B\022BackupServiceProtoP\001ZIgith" +
       "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
-      "backup/services/v1;servicesv1\242\002\004UCBS\252\002\033u" +
-      "db.core.Backup.Services.V1\312\002\033Udb\\Core\\Ba" +
+      "backup/services/v1;servicesv1\242\002\004UCBS\252\002\033U" +
+      "db.Core.Backup.Services.V1\312\002\033Udb\\Core\\Ba" +
       "ckup\\Services\\V1\342\002\'Udb\\GPBMetadata\\Core\\" +
       "Backup\\Services\\V1\352\002\037Udb::Core::Backup::" +
       "Services::V1b\006proto3"

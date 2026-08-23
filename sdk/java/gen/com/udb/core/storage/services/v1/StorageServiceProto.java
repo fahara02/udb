@@ -446,7 +446,7 @@ public final class StorageServiceProto {
       "eB\230\002\n com.udb.core.storage.services.v1B\023" +
       "StorageServiceProtoP\001ZJgithub.com/fahara" +
       "02/udb/sdk/go/gen/udb/core/storage/servi" +
-      "ces/v1;servicesv1\242\002\004UCSS\252\002\034udb.core.Stor" +
+      "ces/v1;servicesv1\242\002\004UCSS\252\002\034Udb.Core.Stor" +
       "age.Services.V1\312\002\034Udb\\Core\\Storage\\Servi" +
       "ces\\V1\342\002(Udb\\GPBMetadata\\Core\\Storage\\Se" +
       "rvices\\V1\352\002 Udb::Core::Storage::Services" +

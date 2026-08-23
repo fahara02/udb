@@ -153,7 +153,7 @@ public final class NotificationEventsProto {
       "\002\n#com.udb.core.notification.events.v1B\027" +
       "NotificationEventsProtoP\001ZKgithub.com/fa" +
       "hara02/udb/sdk/go/gen/udb/core/notificat" +
-      "ion/events/v1;eventsv1\242\002\004UCNE\252\002\037udb.core" +
+      "ion/events/v1;eventsv1\242\002\004UCNE\252\002\037Udb.Core" +
       ".Notification.Events.V1\312\002\037Udb\\Core\\Notif" +
       "ication\\Events\\V1\342\002+Udb\\GPBMetadata\\Core" +
       "\\Notification\\Events\\V1\352\002#Udb::Core::Not" +

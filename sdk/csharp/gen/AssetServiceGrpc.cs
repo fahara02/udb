@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Asset.Services.V1 {
+namespace Udb.Core.Asset.Services.V1 {
   public static partial class AssetService
   {
     static readonly string __ServiceName = "udb.core.asset.services.v1.AssetService";
@@ -46,40 +46,40 @@ namespace udb.core.Asset.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest> __Marshaller_udb_core_asset_services_v1_CreatePipelineDefinitionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest> __Marshaller_udb_core_asset_services_v1_CreatePipelineDefinitionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse> __Marshaller_udb_core_asset_services_v1_CreatePipelineDefinitionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse> __Marshaller_udb_core_asset_services_v1_CreatePipelineDefinitionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest> __Marshaller_udb_core_asset_services_v1_GetPipelineDefinitionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest> __Marshaller_udb_core_asset_services_v1_GetPipelineDefinitionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse> __Marshaller_udb_core_asset_services_v1_GetPipelineDefinitionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse> __Marshaller_udb_core_asset_services_v1_GetPipelineDefinitionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.RegisterAssetRequest> __Marshaller_udb_core_asset_services_v1_RegisterAssetRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.RegisterAssetRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.RegisterAssetRequest> __Marshaller_udb_core_asset_services_v1_RegisterAssetRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.RegisterAssetRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.RegisterAssetResponse> __Marshaller_udb_core_asset_services_v1_RegisterAssetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.RegisterAssetResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.RegisterAssetResponse> __Marshaller_udb_core_asset_services_v1_RegisterAssetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.RegisterAssetResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.StartPipelineRequest> __Marshaller_udb_core_asset_services_v1_StartPipelineRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.StartPipelineRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.StartPipelineRequest> __Marshaller_udb_core_asset_services_v1_StartPipelineRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.StartPipelineRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.StartPipelineResponse> __Marshaller_udb_core_asset_services_v1_StartPipelineResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.StartPipelineResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.StartPipelineResponse> __Marshaller_udb_core_asset_services_v1_StartPipelineResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.StartPipelineResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.GetPipelineRequest> __Marshaller_udb_core_asset_services_v1_GetPipelineRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.GetPipelineRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.GetPipelineRequest> __Marshaller_udb_core_asset_services_v1_GetPipelineRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.GetPipelineRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.GetPipelineResponse> __Marshaller_udb_core_asset_services_v1_GetPipelineResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.GetPipelineResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.GetPipelineResponse> __Marshaller_udb_core_asset_services_v1_GetPipelineResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.GetPipelineResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.CompleteStepRequest> __Marshaller_udb_core_asset_services_v1_CompleteStepRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.CompleteStepRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.CompleteStepRequest> __Marshaller_udb_core_asset_services_v1_CompleteStepRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.CompleteStepRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.CompleteStepResponse> __Marshaller_udb_core_asset_services_v1_CompleteStepResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.CompleteStepResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.CompleteStepResponse> __Marshaller_udb_core_asset_services_v1_CompleteStepResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.CompleteStepResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.ListAssetsRequest> __Marshaller_udb_core_asset_services_v1_ListAssetsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.ListAssetsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.ListAssetsRequest> __Marshaller_udb_core_asset_services_v1_ListAssetsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.ListAssetsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.ListAssetsResponse> __Marshaller_udb_core_asset_services_v1_ListAssetsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.ListAssetsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.ListAssetsResponse> __Marshaller_udb_core_asset_services_v1_ListAssetsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.ListAssetsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.GetAssetRequest> __Marshaller_udb_core_asset_services_v1_GetAssetRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.GetAssetRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.GetAssetRequest> __Marshaller_udb_core_asset_services_v1_GetAssetRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.GetAssetRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Asset.Services.V1.GetAssetResponse> __Marshaller_udb_core_asset_services_v1_GetAssetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Asset.Services.V1.GetAssetResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Asset.Services.V1.GetAssetResponse> __Marshaller_udb_core_asset_services_v1_GetAssetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Asset.Services.V1.GetAssetResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest, global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse> __Method_CreatePipelineDefinition = new grpc::Method<global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest, global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse>(
+    static readonly grpc::Method<global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest, global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse> __Method_CreatePipelineDefinition = new grpc::Method<global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest, global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreatePipelineDefinition",
@@ -87,7 +87,7 @@ namespace udb.core.Asset.Services.V1 {
         __Marshaller_udb_core_asset_services_v1_CreatePipelineDefinitionResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest, global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse> __Method_GetPipelineDefinition = new grpc::Method<global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest, global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse>(
+    static readonly grpc::Method<global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest, global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse> __Method_GetPipelineDefinition = new grpc::Method<global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest, global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetPipelineDefinition",
@@ -95,7 +95,7 @@ namespace udb.core.Asset.Services.V1 {
         __Marshaller_udb_core_asset_services_v1_GetPipelineDefinitionResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Asset.Services.V1.RegisterAssetRequest, global::udb.core.Asset.Services.V1.RegisterAssetResponse> __Method_RegisterAsset = new grpc::Method<global::udb.core.Asset.Services.V1.RegisterAssetRequest, global::udb.core.Asset.Services.V1.RegisterAssetResponse>(
+    static readonly grpc::Method<global::Udb.Core.Asset.Services.V1.RegisterAssetRequest, global::Udb.Core.Asset.Services.V1.RegisterAssetResponse> __Method_RegisterAsset = new grpc::Method<global::Udb.Core.Asset.Services.V1.RegisterAssetRequest, global::Udb.Core.Asset.Services.V1.RegisterAssetResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RegisterAsset",
@@ -103,7 +103,7 @@ namespace udb.core.Asset.Services.V1 {
         __Marshaller_udb_core_asset_services_v1_RegisterAssetResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Asset.Services.V1.StartPipelineRequest, global::udb.core.Asset.Services.V1.StartPipelineResponse> __Method_StartPipeline = new grpc::Method<global::udb.core.Asset.Services.V1.StartPipelineRequest, global::udb.core.Asset.Services.V1.StartPipelineResponse>(
+    static readonly grpc::Method<global::Udb.Core.Asset.Services.V1.StartPipelineRequest, global::Udb.Core.Asset.Services.V1.StartPipelineResponse> __Method_StartPipeline = new grpc::Method<global::Udb.Core.Asset.Services.V1.StartPipelineRequest, global::Udb.Core.Asset.Services.V1.StartPipelineResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "StartPipeline",
@@ -111,7 +111,7 @@ namespace udb.core.Asset.Services.V1 {
         __Marshaller_udb_core_asset_services_v1_StartPipelineResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Asset.Services.V1.GetPipelineRequest, global::udb.core.Asset.Services.V1.GetPipelineResponse> __Method_GetPipeline = new grpc::Method<global::udb.core.Asset.Services.V1.GetPipelineRequest, global::udb.core.Asset.Services.V1.GetPipelineResponse>(
+    static readonly grpc::Method<global::Udb.Core.Asset.Services.V1.GetPipelineRequest, global::Udb.Core.Asset.Services.V1.GetPipelineResponse> __Method_GetPipeline = new grpc::Method<global::Udb.Core.Asset.Services.V1.GetPipelineRequest, global::Udb.Core.Asset.Services.V1.GetPipelineResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetPipeline",
@@ -119,7 +119,7 @@ namespace udb.core.Asset.Services.V1 {
         __Marshaller_udb_core_asset_services_v1_GetPipelineResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Asset.Services.V1.CompleteStepRequest, global::udb.core.Asset.Services.V1.CompleteStepResponse> __Method_CompleteStep = new grpc::Method<global::udb.core.Asset.Services.V1.CompleteStepRequest, global::udb.core.Asset.Services.V1.CompleteStepResponse>(
+    static readonly grpc::Method<global::Udb.Core.Asset.Services.V1.CompleteStepRequest, global::Udb.Core.Asset.Services.V1.CompleteStepResponse> __Method_CompleteStep = new grpc::Method<global::Udb.Core.Asset.Services.V1.CompleteStepRequest, global::Udb.Core.Asset.Services.V1.CompleteStepResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CompleteStep",
@@ -127,7 +127,7 @@ namespace udb.core.Asset.Services.V1 {
         __Marshaller_udb_core_asset_services_v1_CompleteStepResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Asset.Services.V1.ListAssetsRequest, global::udb.core.Asset.Services.V1.ListAssetsResponse> __Method_ListAssets = new grpc::Method<global::udb.core.Asset.Services.V1.ListAssetsRequest, global::udb.core.Asset.Services.V1.ListAssetsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Asset.Services.V1.ListAssetsRequest, global::Udb.Core.Asset.Services.V1.ListAssetsResponse> __Method_ListAssets = new grpc::Method<global::Udb.Core.Asset.Services.V1.ListAssetsRequest, global::Udb.Core.Asset.Services.V1.ListAssetsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListAssets",
@@ -135,7 +135,7 @@ namespace udb.core.Asset.Services.V1 {
         __Marshaller_udb_core_asset_services_v1_ListAssetsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Asset.Services.V1.GetAssetRequest, global::udb.core.Asset.Services.V1.GetAssetResponse> __Method_GetAsset = new grpc::Method<global::udb.core.Asset.Services.V1.GetAssetRequest, global::udb.core.Asset.Services.V1.GetAssetResponse>(
+    static readonly grpc::Method<global::Udb.Core.Asset.Services.V1.GetAssetRequest, global::Udb.Core.Asset.Services.V1.GetAssetResponse> __Method_GetAsset = new grpc::Method<global::Udb.Core.Asset.Services.V1.GetAssetRequest, global::Udb.Core.Asset.Services.V1.GetAssetResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetAsset",
@@ -145,7 +145,7 @@ namespace udb.core.Asset.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Asset.Services.V1.AssetServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Asset.Services.V1.AssetServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of AssetService</summary>
@@ -159,7 +159,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse> CreatePipelineDefinition(global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse> CreatePipelineDefinition(global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -171,7 +171,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse> GetPipelineDefinition(global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse> GetPipelineDefinition(global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -183,7 +183,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Asset.Services.V1.RegisterAssetResponse> RegisterAsset(global::udb.core.Asset.Services.V1.RegisterAssetRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Asset.Services.V1.RegisterAssetResponse> RegisterAsset(global::Udb.Core.Asset.Services.V1.RegisterAssetRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -195,7 +195,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Asset.Services.V1.StartPipelineResponse> StartPipeline(global::udb.core.Asset.Services.V1.StartPipelineRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Asset.Services.V1.StartPipelineResponse> StartPipeline(global::Udb.Core.Asset.Services.V1.StartPipelineRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -207,7 +207,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Asset.Services.V1.GetPipelineResponse> GetPipeline(global::udb.core.Asset.Services.V1.GetPipelineRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Asset.Services.V1.GetPipelineResponse> GetPipeline(global::Udb.Core.Asset.Services.V1.GetPipelineRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -219,7 +219,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Asset.Services.V1.CompleteStepResponse> CompleteStep(global::udb.core.Asset.Services.V1.CompleteStepRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Asset.Services.V1.CompleteStepResponse> CompleteStep(global::Udb.Core.Asset.Services.V1.CompleteStepRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -231,7 +231,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Asset.Services.V1.ListAssetsResponse> ListAssets(global::udb.core.Asset.Services.V1.ListAssetsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Asset.Services.V1.ListAssetsResponse> ListAssets(global::Udb.Core.Asset.Services.V1.ListAssetsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -243,7 +243,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Asset.Services.V1.GetAssetResponse> GetAsset(global::udb.core.Asset.Services.V1.GetAssetRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Asset.Services.V1.GetAssetResponse> GetAsset(global::Udb.Core.Asset.Services.V1.GetAssetRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -286,7 +286,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse CreatePipelineDefinition(global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse CreatePipelineDefinition(global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreatePipelineDefinition(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -297,7 +297,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse CreatePipelineDefinition(global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse CreatePipelineDefinition(global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreatePipelineDefinition, null, options, request);
       }
@@ -310,7 +310,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse> CreatePipelineDefinitionAsync(global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse> CreatePipelineDefinitionAsync(global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreatePipelineDefinitionAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -321,7 +321,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse> CreatePipelineDefinitionAsync(global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse> CreatePipelineDefinitionAsync(global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreatePipelineDefinition, null, options, request);
       }
@@ -334,7 +334,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse GetPipelineDefinition(global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse GetPipelineDefinition(global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPipelineDefinition(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -345,7 +345,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse GetPipelineDefinition(global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse GetPipelineDefinition(global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetPipelineDefinition, null, options, request);
       }
@@ -358,7 +358,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse> GetPipelineDefinitionAsync(global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse> GetPipelineDefinitionAsync(global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPipelineDefinitionAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -369,7 +369,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse> GetPipelineDefinitionAsync(global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse> GetPipelineDefinitionAsync(global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetPipelineDefinition, null, options, request);
       }
@@ -382,7 +382,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.RegisterAssetResponse RegisterAsset(global::udb.core.Asset.Services.V1.RegisterAssetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Asset.Services.V1.RegisterAssetResponse RegisterAsset(global::Udb.Core.Asset.Services.V1.RegisterAssetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RegisterAsset(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -393,7 +393,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.RegisterAssetResponse RegisterAsset(global::udb.core.Asset.Services.V1.RegisterAssetRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Asset.Services.V1.RegisterAssetResponse RegisterAsset(global::Udb.Core.Asset.Services.V1.RegisterAssetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RegisterAsset, null, options, request);
       }
@@ -406,7 +406,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.RegisterAssetResponse> RegisterAssetAsync(global::udb.core.Asset.Services.V1.RegisterAssetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.RegisterAssetResponse> RegisterAssetAsync(global::Udb.Core.Asset.Services.V1.RegisterAssetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RegisterAssetAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -417,7 +417,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.RegisterAssetResponse> RegisterAssetAsync(global::udb.core.Asset.Services.V1.RegisterAssetRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.RegisterAssetResponse> RegisterAssetAsync(global::Udb.Core.Asset.Services.V1.RegisterAssetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RegisterAsset, null, options, request);
       }
@@ -430,7 +430,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.StartPipelineResponse StartPipeline(global::udb.core.Asset.Services.V1.StartPipelineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Asset.Services.V1.StartPipelineResponse StartPipeline(global::Udb.Core.Asset.Services.V1.StartPipelineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartPipeline(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -441,7 +441,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.StartPipelineResponse StartPipeline(global::udb.core.Asset.Services.V1.StartPipelineRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Asset.Services.V1.StartPipelineResponse StartPipeline(global::Udb.Core.Asset.Services.V1.StartPipelineRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_StartPipeline, null, options, request);
       }
@@ -454,7 +454,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.StartPipelineResponse> StartPipelineAsync(global::udb.core.Asset.Services.V1.StartPipelineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.StartPipelineResponse> StartPipelineAsync(global::Udb.Core.Asset.Services.V1.StartPipelineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartPipelineAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -465,7 +465,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.StartPipelineResponse> StartPipelineAsync(global::udb.core.Asset.Services.V1.StartPipelineRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.StartPipelineResponse> StartPipelineAsync(global::Udb.Core.Asset.Services.V1.StartPipelineRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_StartPipeline, null, options, request);
       }
@@ -478,7 +478,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.GetPipelineResponse GetPipeline(global::udb.core.Asset.Services.V1.GetPipelineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Asset.Services.V1.GetPipelineResponse GetPipeline(global::Udb.Core.Asset.Services.V1.GetPipelineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPipeline(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -489,7 +489,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.GetPipelineResponse GetPipeline(global::udb.core.Asset.Services.V1.GetPipelineRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Asset.Services.V1.GetPipelineResponse GetPipeline(global::Udb.Core.Asset.Services.V1.GetPipelineRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetPipeline, null, options, request);
       }
@@ -502,7 +502,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.GetPipelineResponse> GetPipelineAsync(global::udb.core.Asset.Services.V1.GetPipelineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.GetPipelineResponse> GetPipelineAsync(global::Udb.Core.Asset.Services.V1.GetPipelineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPipelineAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -513,7 +513,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.GetPipelineResponse> GetPipelineAsync(global::udb.core.Asset.Services.V1.GetPipelineRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.GetPipelineResponse> GetPipelineAsync(global::Udb.Core.Asset.Services.V1.GetPipelineRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetPipeline, null, options, request);
       }
@@ -526,7 +526,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.CompleteStepResponse CompleteStep(global::udb.core.Asset.Services.V1.CompleteStepRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Asset.Services.V1.CompleteStepResponse CompleteStep(global::Udb.Core.Asset.Services.V1.CompleteStepRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CompleteStep(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -537,7 +537,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.CompleteStepResponse CompleteStep(global::udb.core.Asset.Services.V1.CompleteStepRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Asset.Services.V1.CompleteStepResponse CompleteStep(global::Udb.Core.Asset.Services.V1.CompleteStepRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CompleteStep, null, options, request);
       }
@@ -550,7 +550,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.CompleteStepResponse> CompleteStepAsync(global::udb.core.Asset.Services.V1.CompleteStepRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.CompleteStepResponse> CompleteStepAsync(global::Udb.Core.Asset.Services.V1.CompleteStepRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CompleteStepAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -561,7 +561,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.CompleteStepResponse> CompleteStepAsync(global::udb.core.Asset.Services.V1.CompleteStepRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.CompleteStepResponse> CompleteStepAsync(global::Udb.Core.Asset.Services.V1.CompleteStepRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CompleteStep, null, options, request);
       }
@@ -574,7 +574,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.ListAssetsResponse ListAssets(global::udb.core.Asset.Services.V1.ListAssetsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Asset.Services.V1.ListAssetsResponse ListAssets(global::Udb.Core.Asset.Services.V1.ListAssetsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListAssets(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -585,7 +585,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.ListAssetsResponse ListAssets(global::udb.core.Asset.Services.V1.ListAssetsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Asset.Services.V1.ListAssetsResponse ListAssets(global::Udb.Core.Asset.Services.V1.ListAssetsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListAssets, null, options, request);
       }
@@ -598,7 +598,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.ListAssetsResponse> ListAssetsAsync(global::udb.core.Asset.Services.V1.ListAssetsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.ListAssetsResponse> ListAssetsAsync(global::Udb.Core.Asset.Services.V1.ListAssetsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListAssetsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -609,7 +609,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.ListAssetsResponse> ListAssetsAsync(global::udb.core.Asset.Services.V1.ListAssetsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.ListAssetsResponse> ListAssetsAsync(global::Udb.Core.Asset.Services.V1.ListAssetsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListAssets, null, options, request);
       }
@@ -622,7 +622,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.GetAssetResponse GetAsset(global::udb.core.Asset.Services.V1.GetAssetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Asset.Services.V1.GetAssetResponse GetAsset(global::Udb.Core.Asset.Services.V1.GetAssetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetAsset(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -633,7 +633,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Asset.Services.V1.GetAssetResponse GetAsset(global::udb.core.Asset.Services.V1.GetAssetRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Asset.Services.V1.GetAssetResponse GetAsset(global::Udb.Core.Asset.Services.V1.GetAssetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetAsset, null, options, request);
       }
@@ -646,7 +646,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.GetAssetResponse> GetAssetAsync(global::udb.core.Asset.Services.V1.GetAssetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.GetAssetResponse> GetAssetAsync(global::Udb.Core.Asset.Services.V1.GetAssetRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetAssetAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -657,7 +657,7 @@ namespace udb.core.Asset.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Asset.Services.V1.GetAssetResponse> GetAssetAsync(global::udb.core.Asset.Services.V1.GetAssetRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Asset.Services.V1.GetAssetResponse> GetAssetAsync(global::Udb.Core.Asset.Services.V1.GetAssetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetAsset, null, options, request);
       }
@@ -692,14 +692,14 @@ namespace udb.core.Asset.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, AssetServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_CreatePipelineDefinition, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Asset.Services.V1.CreatePipelineDefinitionRequest, global::udb.core.Asset.Services.V1.CreatePipelineDefinitionResponse>(serviceImpl.CreatePipelineDefinition));
-      serviceBinder.AddMethod(__Method_GetPipelineDefinition, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Asset.Services.V1.GetPipelineDefinitionRequest, global::udb.core.Asset.Services.V1.GetPipelineDefinitionResponse>(serviceImpl.GetPipelineDefinition));
-      serviceBinder.AddMethod(__Method_RegisterAsset, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Asset.Services.V1.RegisterAssetRequest, global::udb.core.Asset.Services.V1.RegisterAssetResponse>(serviceImpl.RegisterAsset));
-      serviceBinder.AddMethod(__Method_StartPipeline, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Asset.Services.V1.StartPipelineRequest, global::udb.core.Asset.Services.V1.StartPipelineResponse>(serviceImpl.StartPipeline));
-      serviceBinder.AddMethod(__Method_GetPipeline, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Asset.Services.V1.GetPipelineRequest, global::udb.core.Asset.Services.V1.GetPipelineResponse>(serviceImpl.GetPipeline));
-      serviceBinder.AddMethod(__Method_CompleteStep, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Asset.Services.V1.CompleteStepRequest, global::udb.core.Asset.Services.V1.CompleteStepResponse>(serviceImpl.CompleteStep));
-      serviceBinder.AddMethod(__Method_ListAssets, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Asset.Services.V1.ListAssetsRequest, global::udb.core.Asset.Services.V1.ListAssetsResponse>(serviceImpl.ListAssets));
-      serviceBinder.AddMethod(__Method_GetAsset, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Asset.Services.V1.GetAssetRequest, global::udb.core.Asset.Services.V1.GetAssetResponse>(serviceImpl.GetAsset));
+      serviceBinder.AddMethod(__Method_CreatePipelineDefinition, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionRequest, global::Udb.Core.Asset.Services.V1.CreatePipelineDefinitionResponse>(serviceImpl.CreatePipelineDefinition));
+      serviceBinder.AddMethod(__Method_GetPipelineDefinition, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionRequest, global::Udb.Core.Asset.Services.V1.GetPipelineDefinitionResponse>(serviceImpl.GetPipelineDefinition));
+      serviceBinder.AddMethod(__Method_RegisterAsset, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Asset.Services.V1.RegisterAssetRequest, global::Udb.Core.Asset.Services.V1.RegisterAssetResponse>(serviceImpl.RegisterAsset));
+      serviceBinder.AddMethod(__Method_StartPipeline, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Asset.Services.V1.StartPipelineRequest, global::Udb.Core.Asset.Services.V1.StartPipelineResponse>(serviceImpl.StartPipeline));
+      serviceBinder.AddMethod(__Method_GetPipeline, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Asset.Services.V1.GetPipelineRequest, global::Udb.Core.Asset.Services.V1.GetPipelineResponse>(serviceImpl.GetPipeline));
+      serviceBinder.AddMethod(__Method_CompleteStep, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Asset.Services.V1.CompleteStepRequest, global::Udb.Core.Asset.Services.V1.CompleteStepResponse>(serviceImpl.CompleteStep));
+      serviceBinder.AddMethod(__Method_ListAssets, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Asset.Services.V1.ListAssetsRequest, global::Udb.Core.Asset.Services.V1.ListAssetsResponse>(serviceImpl.ListAssets));
+      serviceBinder.AddMethod(__Method_GetAsset, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Asset.Services.V1.GetAssetRequest, global::Udb.Core.Asset.Services.V1.GetAssetResponse>(serviceImpl.GetAsset));
     }
 
   }

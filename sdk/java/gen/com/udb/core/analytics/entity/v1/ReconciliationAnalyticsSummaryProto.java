@@ -81,7 +81,7 @@ public final class ReconciliationAnalyticsSummaryProto {
       "core.analytics.entity.v1B#Reconciliation" +
       "AnalyticsSummaryProtoP\001ZHgithub.com/faha" +
       "ra02/udb/sdk/go/gen/udb/core/analytics/e" +
-      "ntity/v1;entityv1\242\002\004UCAE\252\002\034udb.core.Anal" +
+      "ntity/v1;entityv1\242\002\004UCAE\252\002\034Udb.Core.Anal" +
       "ytics.Entity.V1\312\002\034Udb\\Core\\Analytics\\Ent" +
       "ity\\V1\342\002(Udb\\GPBMetadata\\Core\\Analytics\\" +
       "Entity\\V1\352\002 Udb::Core::Analytics::Entity" +

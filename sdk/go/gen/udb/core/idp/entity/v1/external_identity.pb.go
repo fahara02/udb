@@ -185,7 +185,7 @@ const file_udb_core_idp_entity_v1_external_identity_proto_rawDesc = "" +
 	".uq_external_identities_tenant_provider_subject\x12\x05BTREE\x18\x01Z\ttenant_idZ\vprovider_idZ\asubject\x8a\x019\n" +
 	"\x1cidx_external_identities_user\x12\x05BTREEZ\ttenant_idZ\auser_id\xea\x01\aprimary\xf2\x01\x1fudb.idp.external_identities.cdc\xfa\x01\x13idp:identities:read\x8a\xb2\x19\x92\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\fidp.identity@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf4\x01\n" +
-	"\x1acom.udb.core.idp.entity.v1B\x15ExternalIdentityProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16udb.core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
+	"\x1acom.udb.core.idp.entity.v1B\x15ExternalIdentityProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16Udb.Core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_idp_entity_v1_external_identity_proto_rawDescOnce sync.Once

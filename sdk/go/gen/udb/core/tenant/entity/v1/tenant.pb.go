@@ -203,7 +203,7 @@ const file_udb_core_tenant_entity_v1_tenant_proto_rawDesc = "" +
 	"END;\n" +
 	"$$;\xf2\x01\x16udb.tenant.tenants.cdc\xfa\x01\vtenant:read\x8a\xb2\x19\x98\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x12tenant.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +
-	"\x1dcom.udb.core.tenant.entity.v1B\vTenantProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/entity/v1;entityv1\xa2\x02\x04UCTE\xaa\x02\x19udb.core.Tenant.Entity.V1\xca\x02\x19Udb\\Core\\Tenant\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1\xea\x02\x1dUdb::Core::Tenant::Entity::V1b\x06proto3"
+	"\x1dcom.udb.core.tenant.entity.v1B\vTenantProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/entity/v1;entityv1\xa2\x02\x04UCTE\xaa\x02\x19Udb.Core.Tenant.Entity.V1\xca\x02\x19Udb\\Core\\Tenant\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1\xea\x02\x1dUdb::Core::Tenant::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_tenant_entity_v1_tenant_proto_rawDescOnce sync.Once

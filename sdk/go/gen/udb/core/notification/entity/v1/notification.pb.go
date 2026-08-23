@@ -276,7 +276,7 @@ const file_udb_core_notification_entity_v1_notification_proto_rawDesc = "" +
 	"\x1fidx_notifications_tenant_status\x12\x05BTREEZ\ttenant_idZ\x06status\x8a\x012\n" +
 	"\x1bidx_notifications_recipient\x12\x05BTREEZ\frecipient_id\xea\x01\aprimary\xfa\x01\x12notification:write\x8a\xb2\x19\x9f\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x18notification.operational@\xfb\x13H\x02R\x06tenantZ\trecipientr\x15tenant.data_residencyB\xa6\x02\n" +
-	"#com.udb.core.notification.entity.v1B\x11NotificationProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
+	"#com.udb.core.notification.entity.v1B\x11NotificationProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fUdb.Core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_notification_entity_v1_notification_proto_rawDescOnce sync.Once

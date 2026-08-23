@@ -1,7 +1,7 @@
 using Xunit;
-using AssetV1 = udb.core.Asset.Services.V1;
-using StorageV1 = udb.core.Storage.Services.V1;
-using WebRtcV1 = udb.core.Webrtc.Services.V1;
+using AssetV1 = Udb.Core.Asset.Services.V1;
+using StorageV1 = Udb.Core.Storage.Services.V1;
+using WebRtcV1 = Udb.Core.Webrtc.Services.V1;
 
 namespace Udb.Client.Tests;
 

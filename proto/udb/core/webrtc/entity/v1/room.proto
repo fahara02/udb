@@ -8,7 +8,7 @@ import "udb/core/common/v1/security.proto";
 import "udb/core/common/v1/types.proto";
 import "udb/core/webrtc/entity/v1/enums.proto";
 
-option csharp_namespace = "udb.core.Webrtc.Entity.V1";
+option csharp_namespace = "Udb.Core.Webrtc.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/entity/v1;webrtcv1";
 option java_package = "com.udb.core.webrtc.entity.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1";

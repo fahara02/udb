@@ -10,7 +10,7 @@ import "udb/core/asset/entity/v1/pipeline_definition.proto";
 import "udb/core/asset/entity/v1/pipeline_instance.proto";
 import "udb/core/asset/entity/v1/pipeline_step.proto";
 
-option csharp_namespace = "udb.core.Asset.Services.V1";
+option csharp_namespace = "Udb.Core.Asset.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/asset/services/v1;assetservicev1";
 option java_package = "com.udb.core.asset.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Asset\\Services\\V1";

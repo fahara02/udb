@@ -293,7 +293,7 @@ public final class NotificationServiceProto {
       "ion.services.v1B\030NotificationServiceProt" +
       "oP\001ZOgithub.com/fahara02/udb/sdk/go/gen/" +
       "udb/core/notification/services/v1;servic" +
-      "esv1\242\002\004UCNS\252\002!udb.core.Notification.Serv" +
+      "esv1\242\002\004UCNS\252\002!Udb.Core.Notification.Serv" +
       "ices.V1\312\002!Udb\\Core\\Notification\\Services" +
       "\\V1\342\002-Udb\\GPBMetadata\\Core\\Notification\\" +
       "Services\\V1\352\002%Udb::Core::Notification::S" +

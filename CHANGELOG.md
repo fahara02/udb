@@ -5,6 +5,54 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [Unreleased]
+
+### Fixed
+
+- **The repository root could not be fetched as a Go module.** Two tracked
+  directories differed only in case — `sdk/csharp/gen/Udb` and
+  `sdk/csharp/gen/udb` — because protoc derives the C# output directory from
+  `option csharp_namespace`, and that option was split across two casings in the
+  proto tree. `golang.org/x/mod/zip` refuses to build a module zip whose file set
+  cannot be extracted on a case-insensitive filesystem, so every
+  `go install github.com/fahara02/udb@vX` failed at zip creation. The
+  `github.com/fahara02/udb/sdk/go` submodule was never affected, and the CLI's
+  supported channel is the release binary, so this blocked exactly one thing:
+  fetching the repo root as a Go module.
+
+  The defect was invisible to anyone developing on Windows or macOS — those
+  filesystems collapse both index paths into one physical directory and report a
+  clean working tree — and invisible to CI, which checks out on Linux where both
+  directories coexist happily and never fetches the root module.
+
+  Published tags cannot be repaired; the module proxy caches immutably. Every
+  0.5.x tag stays broken and the fix necessarily ships as a new version.
+
+### Changed
+
+- **BREAKING (C# SDK): generated namespaces are now PascalCase throughout.**
+  Namespaces that began `udb.core.…` are now `Udb.Core.…`, so the whole SDK sits
+  under one `Udb.*` root. C# `using` statements referencing the old lowercase
+  form must be updated — for example
+  `using AuthnV1 = udb.core.Authn.Services.V1;` becomes
+  `using AuthnV1 = Udb.Core.Authn.Services.V1;`. The lowercase form was also
+  non-idiomatic for .NET and mixed casing within a single namespace. Wire
+  compatibility is unaffected: gRPC method paths derive from the proto `package`,
+  which is unchanged, so old and new clients interoperate.
+
+### Added
+
+- **A path case-collision guard** (`scripts/check-path-case-collisions.py`, run
+  in CI). It compares every tracked path PREFIX, not whole paths: the naive
+  whole-path check reported nothing while the repository was broken, because the
+  colliding directories contained no colliding filenames. It reads the git index
+  rather than the filesystem, because the working tree cannot represent the
+  collision on the platforms most contributors use. Verified to catch the defect
+  as shipped.
+- The SDK codegen gate now fails on **untracked** generated files as well as
+  modified ones, and removes the C# tree before regenerating so output from a
+  previous generator configuration cannot accumulate unnoticed.
+
 ## [0.5.20] - 2026-08-21
 
 The release that turned the tests back on. Four suites and 178 CLI tests were

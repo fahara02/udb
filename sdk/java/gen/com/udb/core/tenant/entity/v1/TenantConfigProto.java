@@ -85,7 +85,7 @@ public final class TenantConfigProto {
       "re.tenant.entity.v1B\021TenantConfigProtoP\001" +
       "ZEgithub.com/fahara02/udb/sdk/go/gen/udb" +
       "/core/tenant/entity/v1;entityv1\242\002\004UCTE\252\002" +
-      "\031udb.core.Tenant.Entity.V1\312\002\031Udb\\Core\\Te" +
+      "\031Udb.Core.Tenant.Entity.V1\312\002\031Udb\\Core\\Te" +
       "nant\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Te" +
       "nant\\Entity\\V1\352\002\035Udb::Core::Tenant::Enti" +
       "ty::V1b\006proto3"

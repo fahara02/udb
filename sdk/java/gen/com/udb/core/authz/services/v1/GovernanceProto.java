@@ -460,8 +460,8 @@ public final class GovernanceProto {
       "\262\031\020\010\001\032\003udb@\001J\005authzB\210\002\n\036com.udb.core.aut" +
       "hz.services.v1B\017GovernanceProtoP\001ZHgithu" +
       "b.com/fahara02/udb/sdk/go/gen/udb/core/a" +
-      "uthz/services/v1;servicesv1\242\002\004UCAS\252\002\032udb" +
-      ".core.Authz.Services.V1\312\002\032Udb\\Core\\Authz" +
+      "uthz/services/v1;servicesv1\242\002\004UCAS\252\002\032Udb" +
+      ".Core.Authz.Services.V1\312\002\032Udb\\Core\\Authz" +
       "\\Services\\V1\342\002&Udb\\GPBMetadata\\Core\\Auth" +
       "z\\Services\\V1\352\002\036Udb::Core::Authz::Servic" +
       "es::V1b\006proto3"

@@ -38,12 +38,12 @@ from udb.core.authn.entity.v1.session_pb2 import *
 from udb.core.authn.entity.v1.user_pb2 import *
 from udb.core.authn.entity.v1.webauthn_pb2 import *
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'udb/core/authn/entity/v1/entities.proto\x12\x18udb.core.authn.entity.v1\x1a$udb/core/authn/entity/v1/enums.proto\x1a)udb/core/authn/entity/v1/mfa_policy.proto\x1a\"udb/core/authn/entity/v1/otp.proto\x1a,udb/core/authn/entity/v1/recovery_code.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a\'udb/core/authn/entity/v1/webauthn.protoB\xf8\x01\n\x1c\x63om.udb.core.authn.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'udb/core/authn/entity/v1/entities.proto\x12\x18udb.core.authn.entity.v1\x1a$udb/core/authn/entity/v1/enums.proto\x1a)udb/core/authn/entity/v1/mfa_policy.proto\x1a\"udb/core/authn/entity/v1/otp.proto\x1a,udb/core/authn/entity/v1/recovery_code.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a\'udb/core/authn/entity/v1/webauthn.protoB\xf8\x01\n\x1c\x63om.udb.core.authn.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'udb.core.authn.entity.v1.entities_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'\n\034com.udb.core.authn.entity.v1B\rEntitiesProtoP\001ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::Entity::V1'
+  _globals['DESCRIPTOR']._serialized_options = b'\n\034com.udb.core.authn.entity.v1B\rEntitiesProtoP\001ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::Entity::V1'
 # @@protoc_insertion_point(module_scope)

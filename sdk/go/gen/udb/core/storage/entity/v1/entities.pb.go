@@ -25,7 +25,7 @@ var File_udb_core_storage_entity_v1_entities_proto protoreflect.FileDescriptor
 const file_udb_core_storage_entity_v1_entities_proto_rawDesc = "" +
 	"\n" +
 	")udb/core/storage/entity/v1/entities.proto\x12\x1audb.core.storage.entity.v1\x1a&udb/core/storage/entity/v1/enums.proto\x1a%udb/core/storage/entity/v1/file.protoB\x84\x02\n" +
-	"\x1ecom.udb.core.storage.entity.v1B\rEntitiesProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1audb.core.Storage.Entity.V1\xca\x02\x1aUdb\\Core\\Storage\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\xea\x02\x1eUdb::Core::Storage::Entity::V1P\x00P\x01b\x06proto3"
+	"\x1ecom.udb.core.storage.entity.v1B\rEntitiesProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1aUdb.Core.Storage.Entity.V1\xca\x02\x1aUdb\\Core\\Storage\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1\xea\x02\x1eUdb::Core::Storage::Entity::V1P\x00P\x01b\x06proto3"
 
 var file_udb_core_storage_entity_v1_entities_proto_goTypes = []any{}
 var file_udb_core_storage_entity_v1_entities_proto_depIdxs = []int32{

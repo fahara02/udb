@@ -85,7 +85,7 @@ public final class AuthzRevisionProto {
       "_residencyB\375\001\n\034com.udb.core.authz.entity" +
       ".v1B\022AuthzRevisionProtoP\001ZDgithub.com/fa" +
       "hara02/udb/sdk/go/gen/udb/core/authz/ent" +
-      "ity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authz." +
+      "ity/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Authz." +
       "Entity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$U" +
       "db\\GPBMetadata\\Core\\Authz\\Entity\\V1\352\002\034Ud" +
       "b::Core::Authz::Entity::V1b\006proto3"

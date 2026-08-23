@@ -1147,7 +1147,7 @@ const file_udb_core_metering_services_v1_metering_service_proto_rawDesc = "" +
 	"\bmetering\x12\bmetering\x1a\bmetering\"\bMetering*\bmetering0\x018\x01h\x01z\bmetering\x82\x01\bmetering\x8a\x01\bmetering\x92\x01\x0fnative.metering\xd2\xf0\x19\x1b\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bmeteringP\x01\xda\xf0\x19\x91\x01\n" +
 	"\bmetering\x12\x13udb/native/metering\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1audb.native.metering.config:\bmeteringJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19B\n" +
 	"\bmetering\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x9f\x02\n" +
-	"!com.udb.core.metering.services.v1B\x14MeteringServiceProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/metering/services/v1;servicesv1\xa2\x02\x04UCMS\xaa\x02\x1dudb.core.Metering.Services.V1\xca\x02\x1dUdb\\Core\\Metering\\Services\\V1\xe2\x02)Udb\\GPBMetadata\\Core\\Metering\\Services\\V1\xea\x02!Udb::Core::Metering::Services::V1b\x06proto3"
+	"!com.udb.core.metering.services.v1B\x14MeteringServiceProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/metering/services/v1;servicesv1\xa2\x02\x04UCMS\xaa\x02\x1dUdb.Core.Metering.Services.V1\xca\x02\x1dUdb\\Core\\Metering\\Services\\V1\xe2\x02)Udb\\GPBMetadata\\Core\\Metering\\Services\\V1\xea\x02!Udb::Core::Metering::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_metering_services_v1_metering_service_proto_rawDescOnce sync.Once

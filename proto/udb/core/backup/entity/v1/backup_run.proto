@@ -6,7 +6,7 @@ import "google/protobuf/timestamp.proto";
 import "udb/core/common/v1/db.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Backup.Entity.V1";
+option csharp_namespace = "Udb.Core.Backup.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/backup/entity/v1;backupv1";
 option java_package = "com.udb.core.backup.entity.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Backup\\Entity\\V1";

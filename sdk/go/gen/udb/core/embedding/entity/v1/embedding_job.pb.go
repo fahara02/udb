@@ -262,7 +262,7 @@ const file_udb_core_embedding_entity_v1_embedding_job_proto_rawDesc = "" +
 	" idx_embedding_jobs_tenant_status\x12\x05BTREEZ\ttenant_idZ\x06statusZ\n" +
 	"created_at\xf2\x01 udb.embedding.embedding_jobs.cdc\xfa\x01\x13embedding:jobs:read\x8a\xb2\x19\x8e\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id'):\x15embedding.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x94\x02\n" +
-	" com.udb.core.embedding.entity.v1B\x11EmbeddingJobProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/embedding/entity/v1;entityv1\xa2\x02\x04UCEE\xaa\x02\x1cudb.core.Embedding.Entity.V1\xca\x02\x1cUdb\\Core\\Embedding\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1\xea\x02 Udb::Core::Embedding::Entity::V1b\x06proto3"
+	" com.udb.core.embedding.entity.v1B\x11EmbeddingJobProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/embedding/entity/v1;entityv1\xa2\x02\x04UCEE\xaa\x02\x1cUdb.Core.Embedding.Entity.V1\xca\x02\x1cUdb\\Core\\Embedding\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1\xea\x02 Udb::Core::Embedding::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_embedding_entity_v1_embedding_job_proto_rawDescOnce sync.Once

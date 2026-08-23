@@ -224,7 +224,7 @@ const file_udb_core_analytics_entity_v1_pipeline_metric_snapshot_proto_rawDesc =
 	"\tbtree_gin\x12\x06public\xa2\x01\xe4\x02\n" +
 	"\x13mv_daily_throughput\x12\rudb_analytics\x1a\xbb\x02SELECT date_trunc('day', snapshot_hour) AS day, stage_name, tenant_id, SUM(total_requests) AS total_requests, SUM(successful) AS successful, SUM(failed) AS failed, AVG(throughput_rps) AS avg_throughput_rps FROM udb_analytics.pipeline_metric_snapshots GROUP BY date_trunc('day', snapshot_hour), stage_name, tenant_id \x01\xea\x01\areplica\x8a\xb2\x19\x94\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x15analytics.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x9e\x02\n" +
-	" com.udb.core.analytics.entity.v1B\x1bPipelineMetricSnapshotProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x1cudb.core.Analytics.Entity.V1\xca\x02\x1cUdb\\Core\\Analytics\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\xea\x02 Udb::Core::Analytics::Entity::V1b\x06proto3"
+	" com.udb.core.analytics.entity.v1B\x1bPipelineMetricSnapshotProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x1cUdb.Core.Analytics.Entity.V1\xca\x02\x1cUdb\\Core\\Analytics\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\xea\x02 Udb::Core::Analytics::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_analytics_entity_v1_pipeline_metric_snapshot_proto_rawDescOnce sync.Once

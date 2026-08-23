@@ -144,8 +144,8 @@ public final class EgressProto {
       "RESS_STATUS_FAILED\020\005B\212\002\n\037com.udb.core.we" +
       "brtc.services.v1B\013EgressProtoP\001ZIgithub." +
       "com/fahara02/udb/sdk/go/gen/udb/core/web" +
-      "rtc/services/v1;servicesv1\242\002\004UCWS\252\002\033udb." +
-      "core.Webrtc.Services.V1\312\002\033Udb\\Core\\Webrt" +
+      "rtc/services/v1;servicesv1\242\002\004UCWS\252\002\033Udb." +
+      "Core.Webrtc.Services.V1\312\002\033Udb\\Core\\Webrt" +
       "c\\Services\\V1\342\002\'Udb\\GPBMetadata\\Core\\Web" +
       "rtc\\Services\\V1\352\002\037Udb::Core::Webrtc::Ser" +
       "vices::V1b\006proto3"

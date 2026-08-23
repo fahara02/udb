@@ -150,7 +150,7 @@ const file_udb_sdk_live_v1_sdk_live_proto_rawDesc = "" +
 	"lookup_key\xa2\x01\x1d\n" +
 	"\amv_test\x12\x06public\x1a\bSELECT 1 \x01\xf2\x01\x18udb.sdk.live.records.cdc\xfa\x01\tudb:admin\x8a\xb2\x190\n" +
 	"\x04none\x12\x04none2\x04none:\x0etest.ephemeralH\x01R\x04noneZ\x04noneB\xbd\x01\n" +
-	"\x13com.udb.sdk.live.v1B\fSdkLiveProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/sdk/live/v1;livev1\xa2\x02\x03USL\xaa\x02\x0fudb.sdk.Live.V1\xca\x02\x0fUdb\\Sdk\\Live\\V1\xe2\x02\x1bUdb\\GPBMetadata\\Sdk\\Live\\V1\xea\x02\x12Udb::Sdk::Live::V1b\x06proto3"
+	"\x13com.udb.sdk.live.v1B\fSdkLiveProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/sdk/live/v1;livev1\xa2\x02\x03USL\xaa\x02\x0fUdb.Sdk.Live.V1\xca\x02\x0fUdb\\Sdk\\Live\\V1\xe2\x02\x1bUdb\\GPBMetadata\\Sdk\\Live\\V1\xea\x02\x12Udb::Sdk::Live::V1b\x06proto3"
 
 var (
 	file_udb_sdk_live_v1_sdk_live_proto_rawDescOnce sync.Once

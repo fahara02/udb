@@ -158,7 +158,7 @@ const file_udb_core_apikey_entity_v1_enums_proto_rawDesc = "" +
 	"\"API_KEY_OWNER_TYPE_SERVICE_ACCOUNT\x10\x06\x12\x1f\n" +
 	"\x1bAPI_KEY_OWNER_TYPE_WORKLOAD\x10\aB\xfb\x01\n" +
 	"\x1dcom.udb.core.apikey.entity.v1B\n" +
-	"EnumsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19Udb.Core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_apikey_entity_v1_enums_proto_rawDescOnce sync.Once

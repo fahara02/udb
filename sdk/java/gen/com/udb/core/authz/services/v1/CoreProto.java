@@ -709,7 +709,7 @@ public final class CoreProto {
       "(\260\352\0010\003@\001J\005authzP\001B\202\002\n\036com.udb.core.authz" +
       ".services.v1B\tCoreProtoP\001ZHgithub.com/fa" +
       "hara02/udb/sdk/go/gen/udb/core/authz/ser" +
-      "vices/v1;servicesv1\242\002\004UCAS\252\002\032udb.core.Au" +
+      "vices/v1;servicesv1\242\002\004UCAS\252\002\032Udb.Core.Au" +
       "thz.Services.V1\312\002\032Udb\\Core\\Authz\\Service" +
       "s\\V1\342\002&Udb\\GPBMetadata\\Core\\Authz\\Servic" +
       "es\\V1\352\002\036Udb::Core::Authz::Services::V1b\006" +

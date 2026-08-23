@@ -78,7 +78,7 @@ public final class ApiKeyUsageProto {
       "ta_residencyB\201\002\n\035com.udb.core.apikey.ent" +
       "ity.v1B\020ApiKeyUsageProtoP\001ZEgithub.com/f" +
       "ahara02/udb/sdk/go/gen/udb/core/apikey/e" +
-      "ntity/v1;entityv1\242\002\004UCAE\252\002\031udb.core.Apik" +
+      "ntity/v1;entityv1\242\002\004UCAE\252\002\031Udb.Core.Apik" +
       "ey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity\\V1" +
       "\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1" +
       "\352\002\035Udb::Core::Apikey::Entity::V1b\006proto3"

@@ -4465,7 +4465,7 @@ const file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc = "" +
 	"Embeddings*\tembedding0\x018\x01h\x01z\tembedding\x82\x01\tembedding\x8a\x01\tembedding\x92\x01\x10native.embedding\xd2\xf0\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\xda\xf0\x19\x95\x01\n" +
 	"\tembedding\x12\x14udb/native/embedding\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1budb.native.embedding.config:\tembeddingJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19C\n" +
 	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\xa6\x02\n" +
-	"\"com.udb.core.embedding.services.v1B\x15EmbeddingServiceProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/embedding/services/v1;servicesv1\xa2\x02\x04UCES\xaa\x02\x1eudb.core.Embedding.Services.V1\xca\x02\x1eUdb\\Core\\Embedding\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Embedding\\Services\\V1\xea\x02\"Udb::Core::Embedding::Services::V1b\x06proto3"
+	"\"com.udb.core.embedding.services.v1B\x15EmbeddingServiceProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/embedding/services/v1;servicesv1\xa2\x02\x04UCES\xaa\x02\x1eUdb.Core.Embedding.Services.V1\xca\x02\x1eUdb\\Core\\Embedding\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Embedding\\Services\\V1\xea\x02\"Udb::Core::Embedding::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_embedding_services_v1_embedding_service_proto_rawDescOnce sync.Once

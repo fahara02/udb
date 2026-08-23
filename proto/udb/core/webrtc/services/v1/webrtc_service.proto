@@ -12,7 +12,7 @@ import "udb/core/webrtc/entity/v1/peer.proto";
 import "udb/core/webrtc/entity/v1/track.proto";
 import "udb/core/webrtc/services/v1/egress.proto";
 
-option csharp_namespace = "udb.core.Webrtc.Services.V1";
+option csharp_namespace = "Udb.Core.Webrtc.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/services/v1;webrtcservicev1";
 option java_package = "com.udb.core.webrtc.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Services\\V1";

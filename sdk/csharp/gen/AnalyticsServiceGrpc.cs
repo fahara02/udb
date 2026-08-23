@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Analytics.Services.V1 {
+namespace Udb.Core.Analytics.Services.V1 {
   public static partial class AnalyticsService
   {
     static readonly string __ServiceName = "udb.core.analytics.services.v1.AnalyticsService";
@@ -46,36 +46,36 @@ namespace udb.core.Analytics.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest> __Marshaller_udb_core_analytics_services_v1_RecordPipelineMetricRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest> __Marshaller_udb_core_analytics_services_v1_RecordPipelineMetricRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse> __Marshaller_udb_core_analytics_services_v1_RecordPipelineMetricResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse> __Marshaller_udb_core_analytics_services_v1_RecordPipelineMetricResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest> __Marshaller_udb_core_analytics_services_v1_GetPipelineSummaryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest> __Marshaller_udb_core_analytics_services_v1_GetPipelineSummaryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse> __Marshaller_udb_core_analytics_services_v1_GetPipelineSummaryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse> __Marshaller_udb_core_analytics_services_v1_GetPipelineSummaryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest> __Marshaller_udb_core_analytics_services_v1_GetExecutorPerformanceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest> __Marshaller_udb_core_analytics_services_v1_GetExecutorPerformanceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse> __Marshaller_udb_core_analytics_services_v1_GetExecutorPerformanceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse> __Marshaller_udb_core_analytics_services_v1_GetExecutorPerformanceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest> __Marshaller_udb_core_analytics_services_v1_GetReconciliationAnalyticsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest> __Marshaller_udb_core_analytics_services_v1_GetReconciliationAnalyticsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> __Marshaller_udb_core_analytics_services_v1_GetReconciliationAnalyticsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> __Marshaller_udb_core_analytics_services_v1_GetReconciliationAnalyticsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetThroughputRequest> __Marshaller_udb_core_analytics_services_v1_GetThroughputRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetThroughputRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetThroughputRequest> __Marshaller_udb_core_analytics_services_v1_GetThroughputRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetThroughputRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetThroughputResponse> __Marshaller_udb_core_analytics_services_v1_GetThroughputResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetThroughputResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetThroughputResponse> __Marshaller_udb_core_analytics_services_v1_GetThroughputResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetThroughputResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest> __Marshaller_udb_core_analytics_services_v1_GetSlaComplianceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest> __Marshaller_udb_core_analytics_services_v1_GetSlaComplianceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse> __Marshaller_udb_core_analytics_services_v1_GetSlaComplianceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse> __Marshaller_udb_core_analytics_services_v1_GetSlaComplianceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest> __Marshaller_udb_core_analytics_services_v1_TriggerSnapshotRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest> __Marshaller_udb_core_analytics_services_v1_TriggerSnapshotRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse> __Marshaller_udb_core_analytics_services_v1_TriggerSnapshotResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse> __Marshaller_udb_core_analytics_services_v1_TriggerSnapshotResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest, global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse> __Method_RecordPipelineMetric = new grpc::Method<global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest, global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse>(
+    static readonly grpc::Method<global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest, global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse> __Method_RecordPipelineMetric = new grpc::Method<global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest, global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RecordPipelineMetric",
@@ -83,7 +83,7 @@ namespace udb.core.Analytics.Services.V1 {
         __Marshaller_udb_core_analytics_services_v1_RecordPipelineMetricResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest, global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse> __Method_GetPipelineSummary = new grpc::Method<global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest, global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse>(
+    static readonly grpc::Method<global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest, global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse> __Method_GetPipelineSummary = new grpc::Method<global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest, global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetPipelineSummary",
@@ -91,7 +91,7 @@ namespace udb.core.Analytics.Services.V1 {
         __Marshaller_udb_core_analytics_services_v1_GetPipelineSummaryResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest, global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse> __Method_GetExecutorPerformance = new grpc::Method<global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest, global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse>(
+    static readonly grpc::Method<global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest, global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse> __Method_GetExecutorPerformance = new grpc::Method<global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest, global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetExecutorPerformance",
@@ -99,7 +99,7 @@ namespace udb.core.Analytics.Services.V1 {
         __Marshaller_udb_core_analytics_services_v1_GetExecutorPerformanceResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest, global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> __Method_GetReconciliationAnalytics = new grpc::Method<global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest, global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest, global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> __Method_GetReconciliationAnalytics = new grpc::Method<global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest, global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetReconciliationAnalytics",
@@ -107,7 +107,7 @@ namespace udb.core.Analytics.Services.V1 {
         __Marshaller_udb_core_analytics_services_v1_GetReconciliationAnalyticsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Analytics.Services.V1.GetThroughputRequest, global::udb.core.Analytics.Services.V1.GetThroughputResponse> __Method_GetThroughput = new grpc::Method<global::udb.core.Analytics.Services.V1.GetThroughputRequest, global::udb.core.Analytics.Services.V1.GetThroughputResponse>(
+    static readonly grpc::Method<global::Udb.Core.Analytics.Services.V1.GetThroughputRequest, global::Udb.Core.Analytics.Services.V1.GetThroughputResponse> __Method_GetThroughput = new grpc::Method<global::Udb.Core.Analytics.Services.V1.GetThroughputRequest, global::Udb.Core.Analytics.Services.V1.GetThroughputResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetThroughput",
@@ -115,7 +115,7 @@ namespace udb.core.Analytics.Services.V1 {
         __Marshaller_udb_core_analytics_services_v1_GetThroughputResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest, global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse> __Method_GetSlaCompliance = new grpc::Method<global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest, global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse>(
+    static readonly grpc::Method<global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest, global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse> __Method_GetSlaCompliance = new grpc::Method<global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest, global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetSlaCompliance",
@@ -123,7 +123,7 @@ namespace udb.core.Analytics.Services.V1 {
         __Marshaller_udb_core_analytics_services_v1_GetSlaComplianceResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest, global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse> __Method_TriggerSnapshot = new grpc::Method<global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest, global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse>(
+    static readonly grpc::Method<global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest, global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse> __Method_TriggerSnapshot = new grpc::Method<global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest, global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "TriggerSnapshot",
@@ -133,7 +133,7 @@ namespace udb.core.Analytics.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Analytics.Services.V1.AnalyticsServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Analytics.Services.V1.AnalyticsServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of AnalyticsService</summary>
@@ -147,7 +147,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse> RecordPipelineMetric(global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse> RecordPipelineMetric(global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -159,7 +159,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse> GetPipelineSummary(global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse> GetPipelineSummary(global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -171,7 +171,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse> GetExecutorPerformance(global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse> GetExecutorPerformance(global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -183,7 +183,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> GetReconciliationAnalytics(global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> GetReconciliationAnalytics(global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -195,7 +195,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Analytics.Services.V1.GetThroughputResponse> GetThroughput(global::udb.core.Analytics.Services.V1.GetThroughputRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Analytics.Services.V1.GetThroughputResponse> GetThroughput(global::Udb.Core.Analytics.Services.V1.GetThroughputRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -207,7 +207,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse> GetSlaCompliance(global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse> GetSlaCompliance(global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -219,7 +219,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse> TriggerSnapshot(global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse> TriggerSnapshot(global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -262,7 +262,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse RecordPipelineMetric(global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse RecordPipelineMetric(global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RecordPipelineMetric(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -273,7 +273,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse RecordPipelineMetric(global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse RecordPipelineMetric(global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RecordPipelineMetric, null, options, request);
       }
@@ -286,7 +286,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse> RecordPipelineMetricAsync(global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse> RecordPipelineMetricAsync(global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RecordPipelineMetricAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -297,7 +297,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse> RecordPipelineMetricAsync(global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse> RecordPipelineMetricAsync(global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RecordPipelineMetric, null, options, request);
       }
@@ -310,7 +310,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse GetPipelineSummary(global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse GetPipelineSummary(global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPipelineSummary(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -321,7 +321,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse GetPipelineSummary(global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse GetPipelineSummary(global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetPipelineSummary, null, options, request);
       }
@@ -334,7 +334,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse> GetPipelineSummaryAsync(global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse> GetPipelineSummaryAsync(global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPipelineSummaryAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -345,7 +345,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse> GetPipelineSummaryAsync(global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse> GetPipelineSummaryAsync(global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetPipelineSummary, null, options, request);
       }
@@ -358,7 +358,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse GetExecutorPerformance(global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse GetExecutorPerformance(global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetExecutorPerformance(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -369,7 +369,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse GetExecutorPerformance(global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse GetExecutorPerformance(global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetExecutorPerformance, null, options, request);
       }
@@ -382,7 +382,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse> GetExecutorPerformanceAsync(global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse> GetExecutorPerformanceAsync(global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetExecutorPerformanceAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -393,7 +393,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse> GetExecutorPerformanceAsync(global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse> GetExecutorPerformanceAsync(global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetExecutorPerformance, null, options, request);
       }
@@ -406,7 +406,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse GetReconciliationAnalytics(global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse GetReconciliationAnalytics(global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetReconciliationAnalytics(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -417,7 +417,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse GetReconciliationAnalytics(global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse GetReconciliationAnalytics(global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetReconciliationAnalytics, null, options, request);
       }
@@ -430,7 +430,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> GetReconciliationAnalyticsAsync(global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> GetReconciliationAnalyticsAsync(global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetReconciliationAnalyticsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -441,7 +441,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> GetReconciliationAnalyticsAsync(global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse> GetReconciliationAnalyticsAsync(global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetReconciliationAnalytics, null, options, request);
       }
@@ -454,7 +454,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetThroughputResponse GetThroughput(global::udb.core.Analytics.Services.V1.GetThroughputRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Analytics.Services.V1.GetThroughputResponse GetThroughput(global::Udb.Core.Analytics.Services.V1.GetThroughputRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetThroughput(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -465,7 +465,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetThroughputResponse GetThroughput(global::udb.core.Analytics.Services.V1.GetThroughputRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Analytics.Services.V1.GetThroughputResponse GetThroughput(global::Udb.Core.Analytics.Services.V1.GetThroughputRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetThroughput, null, options, request);
       }
@@ -478,7 +478,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetThroughputResponse> GetThroughputAsync(global::udb.core.Analytics.Services.V1.GetThroughputRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetThroughputResponse> GetThroughputAsync(global::Udb.Core.Analytics.Services.V1.GetThroughputRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetThroughputAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -489,7 +489,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetThroughputResponse> GetThroughputAsync(global::udb.core.Analytics.Services.V1.GetThroughputRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetThroughputResponse> GetThroughputAsync(global::Udb.Core.Analytics.Services.V1.GetThroughputRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetThroughput, null, options, request);
       }
@@ -502,7 +502,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse GetSlaCompliance(global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse GetSlaCompliance(global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetSlaCompliance(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -513,7 +513,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse GetSlaCompliance(global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse GetSlaCompliance(global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetSlaCompliance, null, options, request);
       }
@@ -526,7 +526,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse> GetSlaComplianceAsync(global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse> GetSlaComplianceAsync(global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetSlaComplianceAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -537,7 +537,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse> GetSlaComplianceAsync(global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse> GetSlaComplianceAsync(global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetSlaCompliance, null, options, request);
       }
@@ -550,7 +550,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse TriggerSnapshot(global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse TriggerSnapshot(global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return TriggerSnapshot(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -561,7 +561,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse TriggerSnapshot(global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse TriggerSnapshot(global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_TriggerSnapshot, null, options, request);
       }
@@ -574,7 +574,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse> TriggerSnapshotAsync(global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse> TriggerSnapshotAsync(global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return TriggerSnapshotAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -585,7 +585,7 @@ namespace udb.core.Analytics.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse> TriggerSnapshotAsync(global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse> TriggerSnapshotAsync(global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_TriggerSnapshot, null, options, request);
       }
@@ -619,13 +619,13 @@ namespace udb.core.Analytics.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, AnalyticsServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_RecordPipelineMetric, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Analytics.Services.V1.RecordPipelineMetricRequest, global::udb.core.Analytics.Services.V1.RecordPipelineMetricResponse>(serviceImpl.RecordPipelineMetric));
-      serviceBinder.AddMethod(__Method_GetPipelineSummary, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Analytics.Services.V1.GetPipelineSummaryRequest, global::udb.core.Analytics.Services.V1.GetPipelineSummaryResponse>(serviceImpl.GetPipelineSummary));
-      serviceBinder.AddMethod(__Method_GetExecutorPerformance, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Analytics.Services.V1.GetExecutorPerformanceRequest, global::udb.core.Analytics.Services.V1.GetExecutorPerformanceResponse>(serviceImpl.GetExecutorPerformance));
-      serviceBinder.AddMethod(__Method_GetReconciliationAnalytics, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsRequest, global::udb.core.Analytics.Services.V1.GetReconciliationAnalyticsResponse>(serviceImpl.GetReconciliationAnalytics));
-      serviceBinder.AddMethod(__Method_GetThroughput, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Analytics.Services.V1.GetThroughputRequest, global::udb.core.Analytics.Services.V1.GetThroughputResponse>(serviceImpl.GetThroughput));
-      serviceBinder.AddMethod(__Method_GetSlaCompliance, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Analytics.Services.V1.GetSlaComplianceRequest, global::udb.core.Analytics.Services.V1.GetSlaComplianceResponse>(serviceImpl.GetSlaCompliance));
-      serviceBinder.AddMethod(__Method_TriggerSnapshot, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Analytics.Services.V1.TriggerSnapshotRequest, global::udb.core.Analytics.Services.V1.TriggerSnapshotResponse>(serviceImpl.TriggerSnapshot));
+      serviceBinder.AddMethod(__Method_RecordPipelineMetric, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricRequest, global::Udb.Core.Analytics.Services.V1.RecordPipelineMetricResponse>(serviceImpl.RecordPipelineMetric));
+      serviceBinder.AddMethod(__Method_GetPipelineSummary, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryRequest, global::Udb.Core.Analytics.Services.V1.GetPipelineSummaryResponse>(serviceImpl.GetPipelineSummary));
+      serviceBinder.AddMethod(__Method_GetExecutorPerformance, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceRequest, global::Udb.Core.Analytics.Services.V1.GetExecutorPerformanceResponse>(serviceImpl.GetExecutorPerformance));
+      serviceBinder.AddMethod(__Method_GetReconciliationAnalytics, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsRequest, global::Udb.Core.Analytics.Services.V1.GetReconciliationAnalyticsResponse>(serviceImpl.GetReconciliationAnalytics));
+      serviceBinder.AddMethod(__Method_GetThroughput, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Analytics.Services.V1.GetThroughputRequest, global::Udb.Core.Analytics.Services.V1.GetThroughputResponse>(serviceImpl.GetThroughput));
+      serviceBinder.AddMethod(__Method_GetSlaCompliance, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Analytics.Services.V1.GetSlaComplianceRequest, global::Udb.Core.Analytics.Services.V1.GetSlaComplianceResponse>(serviceImpl.GetSlaCompliance));
+      serviceBinder.AddMethod(__Method_TriggerSnapshot, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Analytics.Services.V1.TriggerSnapshotRequest, global::Udb.Core.Analytics.Services.V1.TriggerSnapshotResponse>(serviceImpl.TriggerSnapshot));
     }
 
   }

@@ -55,7 +55,7 @@ public final class EnumsProto {
       "\023ASSET_STATUS_FAILED\020\003B\365\001\n\034com.udb.core." +
       "asset.entity.v1B\nEnumsProtoP\001ZDgithub.co" +
       "m/fahara02/udb/sdk/go/gen/udb/core/asset" +
-      "/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.As" +
+      "/entity/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.As" +
       "set.Entity.V1\312\002\030Udb\\Core\\Asset\\Entity\\V1" +
       "\342\002$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\352" +
       "\002\034Udb::Core::Asset::Entity::V1b\006proto3"

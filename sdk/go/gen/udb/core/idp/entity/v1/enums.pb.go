@@ -282,7 +282,7 @@ const file_udb_core_idp_entity_v1_enums_proto_rawDesc = "" +
 	"\x19DEPROVISION_POLICY_DELETE\x10\x02\x12\x1d\n" +
 	"\x19DEPROVISION_POLICY_RETAIN\x10\x03B\xe9\x01\n" +
 	"\x1acom.udb.core.idp.entity.v1B\n" +
-	"EnumsProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16udb.core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16Udb.Core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_idp_entity_v1_enums_proto_rawDescOnce sync.Once

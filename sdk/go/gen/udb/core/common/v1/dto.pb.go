@@ -732,7 +732,7 @@ const file_udb_core_common_v1_dto_proto_rawDesc = "" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\xcd\x01\n" +
-	"\x16com.udb.core.common.v1B\bDtoProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12udb.core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1b\x06proto3"
+	"\x16com.udb.core.common.v1B\bDtoProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12Udb.Core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1b\x06proto3"
 
 var (
 	file_udb_core_common_v1_dto_proto_rawDescOnce sync.Once

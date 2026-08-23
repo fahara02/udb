@@ -85,7 +85,7 @@ public final class AssetProto {
       "enant.data_residencyB\365\001\n\034com.udb.core.as" +
       "set.entity.v1B\nAssetProtoP\001ZDgithub.com/" +
       "fahara02/udb/sdk/go/gen/udb/core/asset/e" +
-      "ntity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Asse" +
+      "ntity/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Asse" +
       "t.Entity.V1\312\002\030Udb\\Core\\Asset\\Entity\\V1\342\002" +
       "$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\352\002\034" +
       "Udb::Core::Asset::Entity::V1b\006proto3"

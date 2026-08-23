@@ -221,7 +221,7 @@ public final class CoreProto {
       "B\216\002\n com.udb.core.control.services.v1B\tC" +
       "oreProtoP\001ZJgithub.com/fahara02/udb/sdk/" +
       "go/gen/udb/core/control/services/v1;serv" +
-      "icesv1\242\002\004UCCS\252\002\034udb.core.Control.Service" +
+      "icesv1\242\002\004UCCS\252\002\034Udb.Core.Control.Service" +
       "s.V1\312\002\034Udb\\Core\\Control\\Services\\V1\342\002(Ud" +
       "b\\GPBMetadata\\Core\\Control\\Services\\V1\352\002" +
       " Udb::Core::Control::Services::V1b\006proto" +

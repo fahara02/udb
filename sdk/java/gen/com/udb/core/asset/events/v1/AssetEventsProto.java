@@ -105,7 +105,7 @@ public final class AssetEventsProto {
       "stableB\373\001\n\034com.udb.core.asset.events.v1B" +
       "\020AssetEventsProtoP\001ZDgithub.com/fahara02" +
       "/udb/sdk/go/gen/udb/core/asset/events/v1" +
-      ";eventsv1\242\002\004UCAE\252\002\030udb.core.Asset.Events" +
+      ";eventsv1\242\002\004UCAE\252\002\030Udb.Core.Asset.Events" +
       ".V1\312\002\030Udb\\Core\\Asset\\Events\\V1\342\002$Udb\\GPB" +
       "Metadata\\Core\\Asset\\Events\\V1\352\002\034Udb::Cor" +
       "e::Asset::Events::V1b\006proto3"

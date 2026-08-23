@@ -149,7 +149,7 @@ const file_udb_core_scheduler_entity_v1_enums_proto_rawDesc = "" +
 	"\x14JOB_STATUS_COMPLETED\x10\x03\x12\x13\n" +
 	"\x0fJOB_STATUS_DEAD\x10\x04B\x8d\x02\n" +
 	" com.udb.core.scheduler.entity.v1B\n" +
-	"EnumsProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/scheduler/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1cudb.core.Scheduler.Entity.V1\xca\x02\x1cUdb\\Core\\Scheduler\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Scheduler\\Entity\\V1\xea\x02 Udb::Core::Scheduler::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/scheduler/entity/v1;entityv1\xa2\x02\x04UCSE\xaa\x02\x1cUdb.Core.Scheduler.Entity.V1\xca\x02\x1cUdb\\Core\\Scheduler\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Scheduler\\Entity\\V1\xea\x02 Udb::Core::Scheduler::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_scheduler_entity_v1_enums_proto_rawDescOnce sync.Once

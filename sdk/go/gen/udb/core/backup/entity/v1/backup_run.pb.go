@@ -269,7 +269,7 @@ const file_udb_core_backup_entity_v1_backup_run_proto_rawDesc = "" +
 	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
 	"project_id*otenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')2\x04none:\n" +
 	"backup.run@\xc2\x1cH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xff\x01\n" +
-	"\x1dcom.udb.core.backup.entity.v1B\x0eBackupRunProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/backup/entity/v1;entityv1\xa2\x02\x04UCBE\xaa\x02\x19udb.core.Backup.Entity.V1\xca\x02\x19Udb\\Core\\Backup\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Backup\\Entity\\V1\xea\x02\x1dUdb::Core::Backup::Entity::V1b\x06proto3"
+	"\x1dcom.udb.core.backup.entity.v1B\x0eBackupRunProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/backup/entity/v1;entityv1\xa2\x02\x04UCBE\xaa\x02\x19Udb.Core.Backup.Entity.V1\xca\x02\x19Udb\\Core\\Backup\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Backup\\Entity\\V1\xea\x02\x1dUdb::Core::Backup::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_backup_entity_v1_backup_run_proto_rawDescOnce sync.Once

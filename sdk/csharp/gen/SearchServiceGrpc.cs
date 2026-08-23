@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Search.Services.V1 {
+namespace Udb.Core.Search.Services.V1 {
   /// <summary>
   /// SearchService (master-plan 9.5) — one search box over everything. Registers
   /// tenant-scoped full-text / vector / hybrid indexes over source entities and
@@ -53,28 +53,28 @@ namespace udb.core.Search.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.CreateIndexRequest> __Marshaller_udb_core_search_services_v1_CreateIndexRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.CreateIndexRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.CreateIndexRequest> __Marshaller_udb_core_search_services_v1_CreateIndexRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.CreateIndexRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.CreateIndexResponse> __Marshaller_udb_core_search_services_v1_CreateIndexResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.CreateIndexResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.CreateIndexResponse> __Marshaller_udb_core_search_services_v1_CreateIndexResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.CreateIndexResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.DeleteIndexRequest> __Marshaller_udb_core_search_services_v1_DeleteIndexRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.DeleteIndexRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.DeleteIndexRequest> __Marshaller_udb_core_search_services_v1_DeleteIndexRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.DeleteIndexRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.DeleteIndexResponse> __Marshaller_udb_core_search_services_v1_DeleteIndexResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.DeleteIndexResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.DeleteIndexResponse> __Marshaller_udb_core_search_services_v1_DeleteIndexResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.DeleteIndexResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.ListIndexesRequest> __Marshaller_udb_core_search_services_v1_ListIndexesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.ListIndexesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.ListIndexesRequest> __Marshaller_udb_core_search_services_v1_ListIndexesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.ListIndexesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.ListIndexesResponse> __Marshaller_udb_core_search_services_v1_ListIndexesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.ListIndexesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.ListIndexesResponse> __Marshaller_udb_core_search_services_v1_ListIndexesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.ListIndexesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.SearchRequest> __Marshaller_udb_core_search_services_v1_SearchRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.SearchRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.SearchRequest> __Marshaller_udb_core_search_services_v1_SearchRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.SearchRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.SearchResponse> __Marshaller_udb_core_search_services_v1_SearchResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.SearchResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.SearchResponse> __Marshaller_udb_core_search_services_v1_SearchResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.SearchResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.ReindexRequest> __Marshaller_udb_core_search_services_v1_ReindexRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.ReindexRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.ReindexRequest> __Marshaller_udb_core_search_services_v1_ReindexRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.ReindexRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Search.Services.V1.ReindexResponse> __Marshaller_udb_core_search_services_v1_ReindexResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Search.Services.V1.ReindexResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Search.Services.V1.ReindexResponse> __Marshaller_udb_core_search_services_v1_ReindexResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Search.Services.V1.ReindexResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Search.Services.V1.CreateIndexRequest, global::udb.core.Search.Services.V1.CreateIndexResponse> __Method_CreateIndex = new grpc::Method<global::udb.core.Search.Services.V1.CreateIndexRequest, global::udb.core.Search.Services.V1.CreateIndexResponse>(
+    static readonly grpc::Method<global::Udb.Core.Search.Services.V1.CreateIndexRequest, global::Udb.Core.Search.Services.V1.CreateIndexResponse> __Method_CreateIndex = new grpc::Method<global::Udb.Core.Search.Services.V1.CreateIndexRequest, global::Udb.Core.Search.Services.V1.CreateIndexResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreateIndex",
@@ -82,7 +82,7 @@ namespace udb.core.Search.Services.V1 {
         __Marshaller_udb_core_search_services_v1_CreateIndexResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Search.Services.V1.DeleteIndexRequest, global::udb.core.Search.Services.V1.DeleteIndexResponse> __Method_DeleteIndex = new grpc::Method<global::udb.core.Search.Services.V1.DeleteIndexRequest, global::udb.core.Search.Services.V1.DeleteIndexResponse>(
+    static readonly grpc::Method<global::Udb.Core.Search.Services.V1.DeleteIndexRequest, global::Udb.Core.Search.Services.V1.DeleteIndexResponse> __Method_DeleteIndex = new grpc::Method<global::Udb.Core.Search.Services.V1.DeleteIndexRequest, global::Udb.Core.Search.Services.V1.DeleteIndexResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DeleteIndex",
@@ -90,7 +90,7 @@ namespace udb.core.Search.Services.V1 {
         __Marshaller_udb_core_search_services_v1_DeleteIndexResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Search.Services.V1.ListIndexesRequest, global::udb.core.Search.Services.V1.ListIndexesResponse> __Method_ListIndexes = new grpc::Method<global::udb.core.Search.Services.V1.ListIndexesRequest, global::udb.core.Search.Services.V1.ListIndexesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Search.Services.V1.ListIndexesRequest, global::Udb.Core.Search.Services.V1.ListIndexesResponse> __Method_ListIndexes = new grpc::Method<global::Udb.Core.Search.Services.V1.ListIndexesRequest, global::Udb.Core.Search.Services.V1.ListIndexesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListIndexes",
@@ -98,7 +98,7 @@ namespace udb.core.Search.Services.V1 {
         __Marshaller_udb_core_search_services_v1_ListIndexesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Search.Services.V1.SearchRequest, global::udb.core.Search.Services.V1.SearchResponse> __Method_Search = new grpc::Method<global::udb.core.Search.Services.V1.SearchRequest, global::udb.core.Search.Services.V1.SearchResponse>(
+    static readonly grpc::Method<global::Udb.Core.Search.Services.V1.SearchRequest, global::Udb.Core.Search.Services.V1.SearchResponse> __Method_Search = new grpc::Method<global::Udb.Core.Search.Services.V1.SearchRequest, global::Udb.Core.Search.Services.V1.SearchResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Search",
@@ -106,7 +106,7 @@ namespace udb.core.Search.Services.V1 {
         __Marshaller_udb_core_search_services_v1_SearchResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Search.Services.V1.ReindexRequest, global::udb.core.Search.Services.V1.ReindexResponse> __Method_Reindex = new grpc::Method<global::udb.core.Search.Services.V1.ReindexRequest, global::udb.core.Search.Services.V1.ReindexResponse>(
+    static readonly grpc::Method<global::Udb.Core.Search.Services.V1.ReindexRequest, global::Udb.Core.Search.Services.V1.ReindexResponse> __Method_Reindex = new grpc::Method<global::Udb.Core.Search.Services.V1.ReindexRequest, global::Udb.Core.Search.Services.V1.ReindexResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "Reindex",
@@ -116,7 +116,7 @@ namespace udb.core.Search.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Search.Services.V1.SearchServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Search.Services.V1.SearchServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of SearchService</summary>
@@ -131,7 +131,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Search.Services.V1.CreateIndexResponse> CreateIndex(global::udb.core.Search.Services.V1.CreateIndexRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Search.Services.V1.CreateIndexResponse> CreateIndex(global::Udb.Core.Search.Services.V1.CreateIndexRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -144,7 +144,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Search.Services.V1.DeleteIndexResponse> DeleteIndex(global::udb.core.Search.Services.V1.DeleteIndexRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Search.Services.V1.DeleteIndexResponse> DeleteIndex(global::Udb.Core.Search.Services.V1.DeleteIndexRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -156,7 +156,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Search.Services.V1.ListIndexesResponse> ListIndexes(global::udb.core.Search.Services.V1.ListIndexesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Search.Services.V1.ListIndexesResponse> ListIndexes(global::Udb.Core.Search.Services.V1.ListIndexesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -169,7 +169,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Search.Services.V1.SearchResponse> Search(global::udb.core.Search.Services.V1.SearchRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Search.Services.V1.SearchResponse> Search(global::Udb.Core.Search.Services.V1.SearchRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -182,7 +182,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Search.Services.V1.ReindexResponse> Reindex(global::udb.core.Search.Services.V1.ReindexRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Search.Services.V1.ReindexResponse> Reindex(global::Udb.Core.Search.Services.V1.ReindexRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -226,7 +226,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.CreateIndexResponse CreateIndex(global::udb.core.Search.Services.V1.CreateIndexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Search.Services.V1.CreateIndexResponse CreateIndex(global::Udb.Core.Search.Services.V1.CreateIndexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateIndex(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -238,7 +238,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.CreateIndexResponse CreateIndex(global::udb.core.Search.Services.V1.CreateIndexRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Search.Services.V1.CreateIndexResponse CreateIndex(global::Udb.Core.Search.Services.V1.CreateIndexRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreateIndex, null, options, request);
       }
@@ -252,7 +252,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.CreateIndexResponse> CreateIndexAsync(global::udb.core.Search.Services.V1.CreateIndexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.CreateIndexResponse> CreateIndexAsync(global::Udb.Core.Search.Services.V1.CreateIndexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateIndexAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -264,7 +264,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.CreateIndexResponse> CreateIndexAsync(global::udb.core.Search.Services.V1.CreateIndexRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.CreateIndexResponse> CreateIndexAsync(global::Udb.Core.Search.Services.V1.CreateIndexRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreateIndex, null, options, request);
       }
@@ -278,7 +278,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.DeleteIndexResponse DeleteIndex(global::udb.core.Search.Services.V1.DeleteIndexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Search.Services.V1.DeleteIndexResponse DeleteIndex(global::Udb.Core.Search.Services.V1.DeleteIndexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteIndex(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -290,7 +290,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.DeleteIndexResponse DeleteIndex(global::udb.core.Search.Services.V1.DeleteIndexRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Search.Services.V1.DeleteIndexResponse DeleteIndex(global::Udb.Core.Search.Services.V1.DeleteIndexRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeleteIndex, null, options, request);
       }
@@ -304,7 +304,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.DeleteIndexResponse> DeleteIndexAsync(global::udb.core.Search.Services.V1.DeleteIndexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.DeleteIndexResponse> DeleteIndexAsync(global::Udb.Core.Search.Services.V1.DeleteIndexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteIndexAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -316,7 +316,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.DeleteIndexResponse> DeleteIndexAsync(global::udb.core.Search.Services.V1.DeleteIndexRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.DeleteIndexResponse> DeleteIndexAsync(global::Udb.Core.Search.Services.V1.DeleteIndexRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteIndex, null, options, request);
       }
@@ -329,7 +329,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.ListIndexesResponse ListIndexes(global::udb.core.Search.Services.V1.ListIndexesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Search.Services.V1.ListIndexesResponse ListIndexes(global::Udb.Core.Search.Services.V1.ListIndexesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListIndexes(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -340,7 +340,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.ListIndexesResponse ListIndexes(global::udb.core.Search.Services.V1.ListIndexesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Search.Services.V1.ListIndexesResponse ListIndexes(global::Udb.Core.Search.Services.V1.ListIndexesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListIndexes, null, options, request);
       }
@@ -353,7 +353,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.ListIndexesResponse> ListIndexesAsync(global::udb.core.Search.Services.V1.ListIndexesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.ListIndexesResponse> ListIndexesAsync(global::Udb.Core.Search.Services.V1.ListIndexesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListIndexesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -364,7 +364,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.ListIndexesResponse> ListIndexesAsync(global::udb.core.Search.Services.V1.ListIndexesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.ListIndexesResponse> ListIndexesAsync(global::Udb.Core.Search.Services.V1.ListIndexesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListIndexes, null, options, request);
       }
@@ -378,7 +378,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.SearchResponse Search(global::udb.core.Search.Services.V1.SearchRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Search.Services.V1.SearchResponse Search(global::Udb.Core.Search.Services.V1.SearchRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Search(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -390,7 +390,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.SearchResponse Search(global::udb.core.Search.Services.V1.SearchRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Search.Services.V1.SearchResponse Search(global::Udb.Core.Search.Services.V1.SearchRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Search, null, options, request);
       }
@@ -404,7 +404,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.SearchResponse> SearchAsync(global::udb.core.Search.Services.V1.SearchRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.SearchResponse> SearchAsync(global::Udb.Core.Search.Services.V1.SearchRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SearchAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -416,7 +416,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.SearchResponse> SearchAsync(global::udb.core.Search.Services.V1.SearchRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.SearchResponse> SearchAsync(global::Udb.Core.Search.Services.V1.SearchRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Search, null, options, request);
       }
@@ -430,7 +430,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.ReindexResponse Reindex(global::udb.core.Search.Services.V1.ReindexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Search.Services.V1.ReindexResponse Reindex(global::Udb.Core.Search.Services.V1.ReindexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return Reindex(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -442,7 +442,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Search.Services.V1.ReindexResponse Reindex(global::udb.core.Search.Services.V1.ReindexRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Search.Services.V1.ReindexResponse Reindex(global::Udb.Core.Search.Services.V1.ReindexRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_Reindex, null, options, request);
       }
@@ -456,7 +456,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.ReindexResponse> ReindexAsync(global::udb.core.Search.Services.V1.ReindexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.ReindexResponse> ReindexAsync(global::Udb.Core.Search.Services.V1.ReindexRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ReindexAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -468,7 +468,7 @@ namespace udb.core.Search.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Search.Services.V1.ReindexResponse> ReindexAsync(global::udb.core.Search.Services.V1.ReindexRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Search.Services.V1.ReindexResponse> ReindexAsync(global::Udb.Core.Search.Services.V1.ReindexRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Reindex, null, options, request);
       }
@@ -500,11 +500,11 @@ namespace udb.core.Search.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, SearchServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_CreateIndex, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Search.Services.V1.CreateIndexRequest, global::udb.core.Search.Services.V1.CreateIndexResponse>(serviceImpl.CreateIndex));
-      serviceBinder.AddMethod(__Method_DeleteIndex, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Search.Services.V1.DeleteIndexRequest, global::udb.core.Search.Services.V1.DeleteIndexResponse>(serviceImpl.DeleteIndex));
-      serviceBinder.AddMethod(__Method_ListIndexes, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Search.Services.V1.ListIndexesRequest, global::udb.core.Search.Services.V1.ListIndexesResponse>(serviceImpl.ListIndexes));
-      serviceBinder.AddMethod(__Method_Search, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Search.Services.V1.SearchRequest, global::udb.core.Search.Services.V1.SearchResponse>(serviceImpl.Search));
-      serviceBinder.AddMethod(__Method_Reindex, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Search.Services.V1.ReindexRequest, global::udb.core.Search.Services.V1.ReindexResponse>(serviceImpl.Reindex));
+      serviceBinder.AddMethod(__Method_CreateIndex, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Search.Services.V1.CreateIndexRequest, global::Udb.Core.Search.Services.V1.CreateIndexResponse>(serviceImpl.CreateIndex));
+      serviceBinder.AddMethod(__Method_DeleteIndex, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Search.Services.V1.DeleteIndexRequest, global::Udb.Core.Search.Services.V1.DeleteIndexResponse>(serviceImpl.DeleteIndex));
+      serviceBinder.AddMethod(__Method_ListIndexes, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Search.Services.V1.ListIndexesRequest, global::Udb.Core.Search.Services.V1.ListIndexesResponse>(serviceImpl.ListIndexes));
+      serviceBinder.AddMethod(__Method_Search, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Search.Services.V1.SearchRequest, global::Udb.Core.Search.Services.V1.SearchResponse>(serviceImpl.Search));
+      serviceBinder.AddMethod(__Method_Reindex, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Search.Services.V1.ReindexRequest, global::Udb.Core.Search.Services.V1.ReindexResponse>(serviceImpl.Reindex));
     }
 
   }

@@ -771,7 +771,7 @@ public final class EmbeddingServiceProto {
       "core.embedding.services.v1B\025EmbeddingSer" +
       "viceProtoP\001ZLgithub.com/fahara02/udb/sdk" +
       "/go/gen/udb/core/embedding/services/v1;s" +
-      "ervicesv1\242\002\004UCES\252\002\036udb.core.Embedding.Se" +
+      "ervicesv1\242\002\004UCES\252\002\036Udb.Core.Embedding.Se" +
       "rvices.V1\312\002\036Udb\\Core\\Embedding\\Services\\" +
       "V1\342\002*Udb\\GPBMetadata\\Core\\Embedding\\Serv" +
       "ices\\V1\352\002\"Udb::Core::Embedding::Services" +

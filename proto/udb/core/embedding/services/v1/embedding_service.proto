@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Embedding.Services.V1";
+option csharp_namespace = "Udb.Core.Embedding.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/embedding/services/v1;embeddingservicev1";
 option java_package = "com.udb.core.embedding.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Embedding\\Services\\V1";

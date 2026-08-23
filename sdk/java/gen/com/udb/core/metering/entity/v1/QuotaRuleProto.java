@@ -77,7 +77,7 @@ public final class QuotaRuleProto {
       "residencyB\213\002\n\037com.udb.core.metering.enti" +
       "ty.v1B\016QuotaRuleProtoP\001ZGgithub.com/faha" +
       "ra02/udb/sdk/go/gen/udb/core/metering/en" +
-      "tity/v1;entityv1\242\002\004UCME\252\002\033udb.core.Meter" +
+      "tity/v1;entityv1\242\002\004UCME\252\002\033Udb.Core.Meter" +
       "ing.Entity.V1\312\002\033Udb\\Core\\Metering\\Entity" +
       "\\V1\342\002\'Udb\\GPBMetadata\\Core\\Metering\\Enti" +
       "ty\\V1\352\002\037Udb::Core::Metering::Entity::V1b" +

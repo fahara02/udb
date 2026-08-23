@@ -90,7 +90,7 @@ public final class WebhookDeliveryProto {
       "ore.webhook.entity.v1B\024WebhookDeliveryPr" +
       "otoP\001ZFgithub.com/fahara02/udb/sdk/go/ge" +
       "n/udb/core/webhook/entity/v1;entityv1\242\002\004" +
-      "UCWE\252\002\032udb.core.Webhook.Entity.V1\312\002\032Udb\\" +
+      "UCWE\252\002\032Udb.Core.Webhook.Entity.V1\312\002\032Udb\\" +
       "Core\\Webhook\\Entity\\V1\342\002&Udb\\GPBMetadata" +
       "\\Core\\Webhook\\Entity\\V1\352\002\036Udb::Core::Web" +
       "hook::Entity::V1b\006proto3"

@@ -395,7 +395,7 @@ const file_udb_core_authz_entity_v1_policy_canary_proto_rawDesc = "" +
 	"\x15CANARY_STATE_PROMOTED\x10\x02\x12\x1c\n" +
 	"\x18CANARY_STATE_ROLLED_BACK\x10\x03\x12\x17\n" +
 	"\x13CANARY_STATE_PAUSED\x10\x04B\xfc\x01\n" +
-	"\x1ccom.udb.core.authz.entity.v1B\x11PolicyCanaryProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authz.entity.v1B\x11PolicyCanaryProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authz_entity_v1_policy_canary_proto_rawDescOnce sync.Once

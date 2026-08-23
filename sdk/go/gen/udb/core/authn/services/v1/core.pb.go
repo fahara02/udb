@@ -7176,7 +7176,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"Z\n" +
 	" DeleteWebAuthnCredentialResponse\x12\x18\n" +
 	"\adeleted\x18\x01 \x01(\bR\adeleted:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01B\x82\x02\n" +
-	"\x1ecom.udb.core.authn.services.v1B\tCoreProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1audb.core.Authn.Services.V1\xca\x02\x1aUdb\\Core\\Authn\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authn\\Services\\V1\xea\x02\x1eUdb::Core::Authn::Services::V1b\x06proto3"
+	"\x1ecom.udb.core.authn.services.v1B\tCoreProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1aUdb.Core.Authn.Services.V1\xca\x02\x1aUdb\\Core\\Authn\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authn\\Services\\V1\xea\x02\x1eUdb::Core::Authn::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_services_v1_core_proto_rawDescOnce sync.Once

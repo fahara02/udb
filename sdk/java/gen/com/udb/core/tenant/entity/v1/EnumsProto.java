@@ -52,7 +52,7 @@ public final class EnumsProto {
       "ATUS_INACTIVE\020\003B\373\001\n\035com.udb.core.tenant." +
       "entity.v1B\nEnumsProtoP\001ZEgithub.com/faha" +
       "ra02/udb/sdk/go/gen/udb/core/tenant/enti" +
-      "ty/v1;entityv1\242\002\004UCTE\252\002\031udb.core.Tenant." +
+      "ty/v1;entityv1\242\002\004UCTE\252\002\031Udb.Core.Tenant." +
       "Entity.V1\312\002\031Udb\\Core\\Tenant\\Entity\\V1\342\002%" +
       "Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1\352\002\035" +
       "Udb::Core::Tenant::Entity::V1b\006proto3"

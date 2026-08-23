@@ -87,8 +87,8 @@ public final class PolicySetProto {
       "ardr\025tenant.data_residencyB\371\001\n\034com.udb.c" +
       "ore.authz.entity.v1B\016PolicySetProtoP\001ZDg" +
       "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
-      "re/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030udb" +
-      ".core.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\E" +
+      "re/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030Udb" +
+      ".Core.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\E" +
       "ntity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\En" +
       "tity\\V1\352\002\034Udb::Core::Authz::Entity::V1b\006" +
       "proto3"

@@ -2105,7 +2105,7 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt:\x85\x01\x92\xb2\x19\x80\x01\n" +
 	"0udb.core.authn.events.v1.WebauthnRegisteredEvent\x12 udb.authn.webauthn.registered.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xfb\x01\n" +
-	"\x1ccom.udb.core.authn.events.v1B\x10AuthnEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Events.V1\xca\x02\x18Udb\\Core\\Authn\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Events\\V1\xea\x02\x1cUdb::Core::Authn::Events::V1b\x06proto3"
+	"\x1ccom.udb.core.authn.events.v1B\x10AuthnEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Events.V1\xca\x02\x18Udb\\Core\\Authn\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Events\\V1\xea\x02\x1cUdb::Core::Authn::Events::V1b\x06proto3"
 
 var (
 	file_udb_core_authn_events_v1_authn_events_proto_rawDescOnce sync.Once

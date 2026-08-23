@@ -103,8 +103,8 @@ public final class ScheduledJobProto {
       "data_residencyB\224\002\n com.udb.core.schedule" +
       "r.entity.v1B\021ScheduledJobProtoP\001ZHgithub" +
       ".com/fahara02/udb/sdk/go/gen/udb/core/sc" +
-      "heduler/entity/v1;entityv1\242\002\004UCSE\252\002\034udb." +
-      "core.Scheduler.Entity.V1\312\002\034Udb\\Core\\Sche" +
+      "heduler/entity/v1;entityv1\242\002\004UCSE\252\002\034Udb." +
+      "Core.Scheduler.Entity.V1\312\002\034Udb\\Core\\Sche" +
       "duler\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\S" +
       "cheduler\\Entity\\V1\352\002 Udb::Core::Schedule" +
       "r::Entity::V1b\006proto3"

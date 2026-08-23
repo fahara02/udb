@@ -3796,7 +3796,7 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\tpg_column\x12\x1d.google.protobuf.FieldOptions\x18\xf0\x86\x03 \x01(\v2!.udb.core.common.v1.ColumnOptionsR\bpgColumn:b\n" +
 	"\astorage\x12\x1d.google.protobuf.FieldOptions\x18ֆ\x03 \x01(\v2'.udb.core.common.v1.StorageFieldOptionsR\astorage:s\n" +
 	"\x0fcolumn_security\x12\x1d.google.protobuf.FieldOptions\x18\xe5\x86\x03 \x01(\v2).udb.core.common.v1.ColumnSecurityOptionsR\x0ecolumnSecurityB\xcc\x01\n" +
-	"\x16com.udb.core.common.v1B\aDbProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12udb.core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1b\x06proto3"
+	"\x16com.udb.core.common.v1B\aDbProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12Udb.Core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1b\x06proto3"
 
 var (
 	file_udb_core_common_v1_db_proto_rawDescOnce sync.Once

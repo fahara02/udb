@@ -140,7 +140,7 @@ const file_udb_core_idp_entity_v1_saml_replay_entry_proto_rawDesc = "" +
 	"(uq_saml_replay_tenant_provider_assertion\x12\x05BTREE\x18\x01Z\ttenant_idZ\vprovider_idZ\fassertion_id\x8a\x010\n" +
 	"\x16idx_saml_replay_expiry\x12\x05BTREEZ\x0fnot_on_or_after\xea\x01\aprimary\x8a\xb2\x19\x8d\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x0fidp.operational@\x1eH\x01R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf3\x01\n" +
-	"\x1acom.udb.core.idp.entity.v1B\x14SamlReplayEntryProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16udb.core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
+	"\x1acom.udb.core.idp.entity.v1B\x14SamlReplayEntryProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16Udb.Core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_idp_entity_v1_saml_replay_entry_proto_rawDescOnce sync.Once

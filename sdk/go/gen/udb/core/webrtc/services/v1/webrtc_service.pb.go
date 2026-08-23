@@ -2703,7 +2703,7 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\x10webrtc.signaling\x12\x06webrtc\x1a\tsignaling\"\x10WebRTC Signaling*\brealtime0\x01h\x01p\x01z\x10webrtc.signaling\x82\x01\x06webrtc\x8a\x01\x10webrtc.signaling\x92\x01\x17native.webrtc.signaling\x98\x01\x01\xd2\xf0\x19(\b\x01\x1a\x03udb\"\rbidirectional(\xb0\xea\x010\x01@\x01J\x06webrtcP\x01\xda\xf0\x19\x98\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1dudb.native.webrtc.config.json:\x10webrtc.signalingJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19@\n" +
 	"\x10webrtc.signaling2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x91\x02\n" +
-	"\x1fcom.udb.core.webrtc.services.v1B\x12WebrtcServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/services/v1;servicesv1\xa2\x02\x04UCWS\xaa\x02\x1budb.core.Webrtc.Services.V1\xca\x02\x1bUdb\\Core\\Webrtc\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Webrtc\\Services\\V1\xea\x02\x1fUdb::Core::Webrtc::Services::V1b\x06proto3"
+	"\x1fcom.udb.core.webrtc.services.v1B\x12WebrtcServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/services/v1;servicesv1\xa2\x02\x04UCWS\xaa\x02\x1bUdb.Core.Webrtc.Services.V1\xca\x02\x1bUdb\\Core\\Webrtc\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Webrtc\\Services\\V1\xea\x02\x1fUdb::Core::Webrtc::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDescOnce sync.Once

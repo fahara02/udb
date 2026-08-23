@@ -5,7 +5,7 @@ package udb.core.webrtc.events.v1;
 import "google/protobuf/timestamp.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Webrtc.Events.V1";
+option csharp_namespace = "Udb.Core.Webrtc.Events.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/events/v1;webrtceventsv1";
 option java_package = "com.udb.core.webrtc.events.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Events\\V1";

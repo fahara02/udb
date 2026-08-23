@@ -667,7 +667,7 @@ public final class DbProto {
       "urityOptionsR\016columnSecurityB\314\001\n\026com.udb" +
       ".core.common.v1B\007DbProtoP\001Z>github.com/f" +
       "ahara02/udb/sdk/go/gen/udb/core/common/v" +
-      "1;commonv1\242\002\003UCC\252\002\022udb.core.Common.V1\312\002\022" +
+      "1;commonv1\242\002\003UCC\252\002\022Udb.Core.Common.V1\312\002\022" +
       "Udb\\Core\\Common\\V1\342\002\036Udb\\GPBMetadata\\Cor" +
       "e\\Common\\V1\352\002\025Udb::Core::Common::V1b\006pro" +
       "to3"

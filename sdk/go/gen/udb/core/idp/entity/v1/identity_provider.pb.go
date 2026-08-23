@@ -386,7 +386,7 @@ const file_udb_core_idp_entity_v1_identity_provider_proto_rawDesc = "" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01Y\n" +
 	"!uq_identity_providers_tenant_name\x12\x05BTREE\x18\x01:\x12deleted_at IS NULLZ\ttenant_idZ\fdisplay_name\xea\x01\aprimary\xf2\x01\x15udb.idp.providers.cdc\xfa\x01\x12idp:providers:read\x8a\xb2\x19\x97\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11idp.configuration@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf4\x01\n" +
-	"\x1acom.udb.core.idp.entity.v1B\x15IdentityProviderProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16udb.core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
+	"\x1acom.udb.core.idp.entity.v1B\x15IdentityProviderProtoP\x01ZBgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1;entityv1\xa2\x02\x04UCIE\xaa\x02\x16Udb.Core.Idp.Entity.V1\xca\x02\x16Udb\\Core\\Idp\\Entity\\V1\xe2\x02\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\xea\x02\x1aUdb::Core::Idp::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_idp_entity_v1_identity_provider_proto_rawDescOnce sync.Once

@@ -814,8 +814,8 @@ public final class SecurityProto {
       "ContractOptionsR\031serviceDependencyContra" +
       "ctB\322\001\n\026com.udb.core.common.v1B\rSecurityP" +
       "rotoP\001Z>github.com/fahara02/udb/sdk/go/g" +
-      "en/udb/core/common/v1;commonv1\242\002\003UCC\252\002\022u" +
-      "db.core.Common.V1\312\002\022Udb\\Core\\Common\\V1\342\002" +
+      "en/udb/core/common/v1;commonv1\242\002\003UCC\252\002\022U" +
+      "db.Core.Common.V1\312\002\022Udb\\Core\\Common\\V1\342\002" +
       "\036Udb\\GPBMetadata\\Core\\Common\\V1\352\002\025Udb::C" +
       "ore::Common::V1b\006proto3"
     };

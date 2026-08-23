@@ -1,5 +1,5 @@
-using udb.Client;
-using udb.Entity.V1;
+using Udb.Client;
+using Udb.Entity.V1;
 
 await using var client = new UdbClient(
     "http://localhost:50051",

@@ -71,7 +71,7 @@ public final class TenantEventsProto {
       "2\006stableB\202\002\n\035com.udb.core.tenant.events." +
       "v1B\021TenantEventsProtoP\001ZEgithub.com/faha" +
       "ra02/udb/sdk/go/gen/udb/core/tenant/even" +
-      "ts/v1;eventsv1\242\002\004UCTE\252\002\031udb.core.Tenant." +
+      "ts/v1;eventsv1\242\002\004UCTE\252\002\031Udb.Core.Tenant." +
       "Events.V1\312\002\031Udb\\Core\\Tenant\\Events\\V1\342\002%" +
       "Udb\\GPBMetadata\\Core\\Tenant\\Events\\V1\352\002\035" +
       "Udb::Core::Tenant::Events::V1b\006proto3"

@@ -315,7 +315,7 @@ const file_udb_core_vault_entity_v1_vault_db_credential_lease_proto_rawDesc = ""
 	"vault:read\x8a\xb2\x19\xdf\x01\n" +
 	"\x06tenant\x12\aproject\x1a\ttenant_id\"\n" +
 	"project_id*otenant_id = current_setting('app.current_tenant_id') AND project_id = current_setting('app.current_project_id')2\x04none:\x11vault.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x86\x02\n" +
-	"\x1ccom.udb.core.vault.entity.v1B\x1bVaultDbCredentialLeaseProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/vault/entity/v1;entityv1\xa2\x02\x04UCVE\xaa\x02\x18udb.core.Vault.Entity.V1\xca\x02\x18Udb\\Core\\Vault\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Vault\\Entity\\V1\xea\x02\x1cUdb::Core::Vault::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.vault.entity.v1B\x1bVaultDbCredentialLeaseProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/vault/entity/v1;entityv1\xa2\x02\x04UCVE\xaa\x02\x18Udb.Core.Vault.Entity.V1\xca\x02\x18Udb\\Core\\Vault\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Vault\\Entity\\V1\xea\x02\x1cUdb::Core::Vault::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_vault_entity_v1_vault_db_credential_lease_proto_rawDescOnce sync.Once

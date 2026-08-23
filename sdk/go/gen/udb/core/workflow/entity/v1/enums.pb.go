@@ -117,7 +117,7 @@ const file_udb_core_workflow_entity_v1_enums_proto_rawDesc = "" +
 	"\x19WORKFLOW_STATUS_CANCELLED\x10\a\x12\x1a\n" +
 	"\x16WORKFLOW_STATUS_FAILED\x10\bB\x87\x02\n" +
 	"\x1fcom.udb.core.workflow.entity.v1B\n" +
-	"EnumsProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1budb.core.Workflow.Entity.V1\xca\x02\x1bUdb\\Core\\Workflow\\Entity\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1\xea\x02\x1fUdb::Core::Workflow::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1bUdb.Core.Workflow.Entity.V1\xca\x02\x1bUdb\\Core\\Workflow\\Entity\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1\xea\x02\x1fUdb::Core::Workflow::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_workflow_entity_v1_enums_proto_rawDescOnce sync.Once

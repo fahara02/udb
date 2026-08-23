@@ -9,7 +9,7 @@ import "udb/core/common/v1/security.proto";
 import "udb/core/tenant/entity/v1/tenant.proto";
 import "udb/core/tenant/entity/v1/tenant_config.proto";
 
-option csharp_namespace = "udb.core.Tenant.Services.V1";
+option csharp_namespace = "Udb.Core.Tenant.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/tenant/services/v1;tenantservicev1";
 option java_package = "com.udb.core.tenant.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Tenant\\Services\\V1";

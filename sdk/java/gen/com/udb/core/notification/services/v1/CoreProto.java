@@ -327,7 +327,7 @@ public final class CoreProto {
       "ation.services.v1B\tCoreProtoP\001ZOgithub.c" +
       "om/fahara02/udb/sdk/go/gen/udb/core/noti" +
       "fication/services/v1;servicesv1\242\002\004UCNS\252\002" +
-      "!udb.core.Notification.Services.V1\312\002!Udb" +
+      "!Udb.Core.Notification.Services.V1\312\002!Udb" +
       "\\Core\\Notification\\Services\\V1\342\002-Udb\\GPB" +
       "Metadata\\Core\\Notification\\Services\\V1\352\002" +
       "%Udb::Core::Notification::Services::V1b\006" +

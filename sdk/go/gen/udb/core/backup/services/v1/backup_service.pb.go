@@ -1748,7 +1748,7 @@ const file_udb_core_backup_services_v1_backup_service_proto_rawDesc = "" +
 	"\x06backup\x12\x06backup\x1a\x06backup\"\x06Backup*\x06backup0\x018\x01h\x01z\x06backup\x82\x01\x06backup\x8a\x01\x06backup\x92\x01\rnative.backup\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x01\xda\xf0\x19\x89\x01\n" +
 	"\x06backup\x12\x11udb/native/backup\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x18udb.native.backup.config:\x06backupJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19@\n" +
 	"\x06backup\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x91\x02\n" +
-	"\x1fcom.udb.core.backup.services.v1B\x12BackupServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/backup/services/v1;servicesv1\xa2\x02\x04UCBS\xaa\x02\x1budb.core.Backup.Services.V1\xca\x02\x1bUdb\\Core\\Backup\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Backup\\Services\\V1\xea\x02\x1fUdb::Core::Backup::Services::V1b\x06proto3"
+	"\x1fcom.udb.core.backup.services.v1B\x12BackupServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/backup/services/v1;servicesv1\xa2\x02\x04UCBS\xaa\x02\x1bUdb.Core.Backup.Services.V1\xca\x02\x1bUdb\\Core\\Backup\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Backup\\Services\\V1\xea\x02\x1fUdb::Core::Backup::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_backup_services_v1_backup_service_proto_rawDescOnce sync.Once

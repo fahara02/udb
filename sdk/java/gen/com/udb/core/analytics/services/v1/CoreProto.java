@@ -196,7 +196,7 @@ public final class CoreProto {
       "e.analytics.services.v1B\tCoreProtoP\001ZLgi" +
       "thub.com/fahara02/udb/sdk/go/gen/udb/cor" +
       "e/analytics/services/v1;servicesv1\242\002\004UCA" +
-      "S\252\002\036udb.core.Analytics.Services.V1\312\002\036Udb" +
+      "S\252\002\036Udb.Core.Analytics.Services.V1\312\002\036Udb" +
       "\\Core\\Analytics\\Services\\V1\342\002*Udb\\GPBMet" +
       "adata\\Core\\Analytics\\Services\\V1\352\002\"Udb::" +
       "Core::Analytics::Services::V1b\006proto3"

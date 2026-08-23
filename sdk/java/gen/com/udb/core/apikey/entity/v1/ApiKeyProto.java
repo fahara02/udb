@@ -146,7 +146,7 @@ public final class ApiKeyProto {
       "enant.data_residencyB\374\001\n\035com.udb.core.ap" +
       "ikey.entity.v1B\013ApiKeyProtoP\001ZEgithub.co" +
       "m/fahara02/udb/sdk/go/gen/udb/core/apike" +
-      "y/entity/v1;entityv1\242\002\004UCAE\252\002\031udb.core.A" +
+      "y/entity/v1;entityv1\242\002\004UCAE\252\002\031Udb.Core.A" +
       "pikey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity" +
       "\\V1\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity" +
       "\\V1\352\002\035Udb::Core::Apikey::Entity::V1b\006pro" +

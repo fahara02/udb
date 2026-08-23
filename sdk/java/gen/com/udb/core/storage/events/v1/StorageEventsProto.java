@@ -112,7 +112,7 @@ public final class StorageEventsProto {
       "core.storage.events.v1B\022StorageEventsPro" +
       "toP\001ZFgithub.com/fahara02/udb/sdk/go/gen" +
       "/udb/core/storage/events/v1;eventsv1\242\002\004U" +
-      "CSE\252\002\032udb.core.Storage.Events.V1\312\002\032Udb\\C" +
+      "CSE\252\002\032Udb.Core.Storage.Events.V1\312\002\032Udb\\C" +
       "ore\\Storage\\Events\\V1\342\002&Udb\\GPBMetadata\\" +
       "Core\\Storage\\Events\\V1\352\002\036Udb::Core::Stor" +
       "age::Events::V1b\006proto3"

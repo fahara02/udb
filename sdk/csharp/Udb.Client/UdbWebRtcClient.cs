@@ -1,5 +1,5 @@
 using Grpc.Core;
-using WebRtcV1 = udb.core.Webrtc.Services.V1;
+using WebRtcV1 = Udb.Core.Webrtc.Services.V1;
 
 namespace Udb.Client;
 

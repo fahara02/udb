@@ -92,7 +92,7 @@ const file_udb_core_notification_services_v1_notification_service_proto_rawDesc 
 	"\fnotification\x12\fnotification\x1a\fnotification\"\rNotifications*\tmessaging0\x018\x01P\x01h\x01z\fnotification\x82\x01\fnotification\x8a\x01\fnotification\x92\x01\x13native.notification\xd2\xf0\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xda\xf0\x19\xa6\x01\n" +
 	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"#udb.native.notification.config.json:\fnotificationJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19T\n" +
 	"\fnotification\x1a\bpostgres\x1a\x05kafka2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET:\x05kafkaB\xbb\x02\n" +
-	"%com.udb.core.notification.services.v1B\x18NotificationServiceProtoP\x01ZOgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1;servicesv1\xa2\x02\x04UCNS\xaa\x02!udb.core.Notification.Services.V1\xca\x02!Udb\\Core\\Notification\\Services\\V1\xe2\x02-Udb\\GPBMetadata\\Core\\Notification\\Services\\V1\xea\x02%Udb::Core::Notification::Services::V1b\x06proto3"
+	"%com.udb.core.notification.services.v1B\x18NotificationServiceProtoP\x01ZOgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1;servicesv1\xa2\x02\x04UCNS\xaa\x02!Udb.Core.Notification.Services.V1\xca\x02!Udb\\Core\\Notification\\Services\\V1\xe2\x02-Udb\\GPBMetadata\\Core\\Notification\\Services\\V1\xea\x02%Udb::Core::Notification::Services::V1b\x06proto3"
 
 var file_udb_core_notification_services_v1_notification_service_proto_goTypes = []any{
 	(*SendNotificationRequest)(nil),   // 0: udb.core.notification.services.v1.SendNotificationRequest

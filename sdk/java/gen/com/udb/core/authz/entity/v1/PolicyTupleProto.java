@@ -85,8 +85,8 @@ public final class PolicyTupleProto {
       "rdr\025tenant.data_residencyB\373\001\n\034com.udb.co" +
       "re.authz.entity.v1B\020PolicyTupleProtoP\001ZD" +
       "github.com/fahara02/udb/sdk/go/gen/udb/c" +
-      "ore/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030ud" +
-      "b.core.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\" +
+      "ore/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030Ud" +
+      "b.Core.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\" +
       "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\E" +
       "ntity\\V1\352\002\034Udb::Core::Authz::Entity::V1b" +
       "\006proto3"

@@ -47,7 +47,7 @@ public final class EntitiesProto {
       "\002\n#com.udb.core.notification.entity.v1B\r" +
       "EntitiesProtoP\001ZKgithub.com/fahara02/udb" +
       "/sdk/go/gen/udb/core/notification/entity" +
-      "/v1;entityv1\242\002\004UCNE\252\002\037udb.core.Notificat" +
+      "/v1;entityv1\242\002\004UCNE\252\002\037Udb.Core.Notificat" +
       "ion.Entity.V1\312\002\037Udb\\Core\\Notification\\En" +
       "tity\\V1\342\002+Udb\\GPBMetadata\\Core\\Notificat" +
       "ion\\Entity\\V1\352\002#Udb::Core::Notification:" +

@@ -84,7 +84,7 @@ public final class RoomProto {
       "\n\035com.udb.core.webrtc.entity.v1B\tRoomPro" +
       "toP\001ZEgithub.com/fahara02/udb/sdk/go/gen" +
       "/udb/core/webrtc/entity/v1;entityv1\242\002\004UC" +
-      "WE\252\002\031udb.core.Webrtc.Entity.V1\312\002\031Udb\\Cor" +
+      "WE\252\002\031Udb.Core.Webrtc.Entity.V1\312\002\031Udb\\Cor" +
       "e\\Webrtc\\Entity\\V1\342\002%Udb\\GPBMetadata\\Cor" +
       "e\\Webrtc\\Entity\\V1\352\002\035Udb::Core::Webrtc::" +
       "Entity::V1b\006proto3"

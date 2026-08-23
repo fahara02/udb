@@ -542,7 +542,7 @@ const file_udb_core_livequery_services_v1_livequery_service_proto_rawDesc = "" +
 	"Live Query*\tlivequery0\x018\x01h\x01z\tlivequery\x82\x01\tlivequery\x8a\x01\tlivequery\x92\x01\x10native.livequery\xd2\xf0\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tlivequeryP\x01\xda\xf0\x19\x95\x01\n" +
 	"\tlivequery\x12\x14udb/native/livequery\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1budb.native.livequery.config:\tlivequeryJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19C\n" +
 	"\tlivequery\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\xa6\x02\n" +
-	"\"com.udb.core.livequery.services.v1B\x15LivequeryServiceProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/livequery/services/v1;servicesv1\xa2\x02\x04UCLS\xaa\x02\x1eudb.core.LiveQuery.Services.V1\xca\x02\x1eUdb\\Core\\Livequery\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Livequery\\Services\\V1\xea\x02\"Udb::Core::Livequery::Services::V1b\x06proto3"
+	"\"com.udb.core.livequery.services.v1B\x15LivequeryServiceProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/livequery/services/v1;servicesv1\xa2\x02\x04UCLS\xaa\x02\x1eUdb.Core.LiveQuery.Services.V1\xca\x02\x1eUdb\\Core\\Livequery\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Livequery\\Services\\V1\xea\x02\"Udb::Core::Livequery::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_livequery_services_v1_livequery_service_proto_rawDescOnce sync.Once

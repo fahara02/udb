@@ -139,7 +139,7 @@ const file_udb_core_authz_entity_v1_role_permission_proto_rawDesc = "" +
 	"granted_by\x12\x05users\x1a\auser_id\"\tudb_authn(\x04:\x1efk_role_permissions_granted_by\xa2\x01\xc1\x01\n" +
 	"\x18mv_effective_permissions\x12\tudb_authz\x1a\x97\x01SELECT ur.user_id, ur.domain, ur.role_id, rp.permission_code FROM udb_authz.user_roles ur JOIN udb_authz.role_permissions rp ON rp.role_id = ur.role_id \x01\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfe\x01\n" +
-	"\x1ccom.udb.core.authz.entity.v1B\x13RolePermissionProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
+	"\x1ccom.udb.core.authz.entity.v1B\x13RolePermissionProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_authz_entity_v1_role_permission_proto_rawDescOnce sync.Once

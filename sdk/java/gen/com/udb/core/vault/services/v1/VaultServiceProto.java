@@ -728,7 +728,7 @@ public final class VaultServiceProto {
       "om.udb.core.vault.services.v1B\021VaultServ" +
       "iceProtoP\001ZHgithub.com/fahara02/udb/sdk/" +
       "go/gen/udb/core/vault/services/v1;servic" +
-      "esv1\242\002\004UCVS\252\002\032udb.core.Vault.Services.V1" +
+      "esv1\242\002\004UCVS\252\002\032Udb.Core.Vault.Services.V1" +
       "\312\002\032Udb\\Core\\Vault\\Services\\V1\342\002&Udb\\GPBM" +
       "etadata\\Core\\Vault\\Services\\V1\352\002\036Udb::Co" +
       "re::Vault::Services::V1b\006proto3"

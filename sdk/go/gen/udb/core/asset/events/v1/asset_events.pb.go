@@ -443,7 +443,7 @@ const file_udb_core_asset_events_v1_asset_events_proto_rawDesc = "" +
 	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp:w\x92\xb2\x19s\n" +
 	"'udb.core.asset.events.v1.PipelineFailed\x12\x1cudb.asset.pipeline_failed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xfb\x01\n" +
-	"\x1ccom.udb.core.asset.events.v1B\x10AssetEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Asset.Events.V1\xca\x02\x18Udb\\Core\\Asset\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Asset\\Events\\V1\xea\x02\x1cUdb::Core::Asset::Events::V1b\x06proto3"
+	"\x1ccom.udb.core.asset.events.v1B\x10AssetEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Asset.Events.V1\xca\x02\x18Udb\\Core\\Asset\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Asset\\Events\\V1\xea\x02\x1cUdb::Core::Asset::Events::V1b\x06proto3"
 
 var (
 	file_udb_core_asset_events_v1_asset_events_proto_rawDescOnce sync.Once

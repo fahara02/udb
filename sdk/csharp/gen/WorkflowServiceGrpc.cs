@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Workflow.Services.V1 {
+namespace Udb.Core.Workflow.Services.V1 {
   /// <summary>
   /// WorkflowService (master-plan 9.12) — durable multi-step operations with
   /// compensation, exposed as a first-class native service. A workflow is a durable,
@@ -56,28 +56,28 @@ namespace udb.core.Workflow.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.StartWorkflowRequest> __Marshaller_udb_core_workflow_services_v1_StartWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.StartWorkflowRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest> __Marshaller_udb_core_workflow_services_v1_StartWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.StartWorkflowResponse> __Marshaller_udb_core_workflow_services_v1_StartWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.StartWorkflowResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse> __Marshaller_udb_core_workflow_services_v1_StartWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.GetWorkflowRequest> __Marshaller_udb_core_workflow_services_v1_GetWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.GetWorkflowRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest> __Marshaller_udb_core_workflow_services_v1_GetWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.GetWorkflowResponse> __Marshaller_udb_core_workflow_services_v1_GetWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.GetWorkflowResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse> __Marshaller_udb_core_workflow_services_v1_GetWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.ListWorkflowsRequest> __Marshaller_udb_core_workflow_services_v1_ListWorkflowsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.ListWorkflowsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest> __Marshaller_udb_core_workflow_services_v1_ListWorkflowsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.ListWorkflowsResponse> __Marshaller_udb_core_workflow_services_v1_ListWorkflowsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.ListWorkflowsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse> __Marshaller_udb_core_workflow_services_v1_ListWorkflowsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.CancelWorkflowRequest> __Marshaller_udb_core_workflow_services_v1_CancelWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.CancelWorkflowRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest> __Marshaller_udb_core_workflow_services_v1_CancelWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.CancelWorkflowResponse> __Marshaller_udb_core_workflow_services_v1_CancelWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.CancelWorkflowResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse> __Marshaller_udb_core_workflow_services_v1_CancelWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.SignalWorkflowRequest> __Marshaller_udb_core_workflow_services_v1_SignalWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.SignalWorkflowRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest> __Marshaller_udb_core_workflow_services_v1_SignalWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Workflow.Services.V1.SignalWorkflowResponse> __Marshaller_udb_core_workflow_services_v1_SignalWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Workflow.Services.V1.SignalWorkflowResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse> __Marshaller_udb_core_workflow_services_v1_SignalWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Workflow.Services.V1.StartWorkflowRequest, global::udb.core.Workflow.Services.V1.StartWorkflowResponse> __Method_StartWorkflow = new grpc::Method<global::udb.core.Workflow.Services.V1.StartWorkflowRequest, global::udb.core.Workflow.Services.V1.StartWorkflowResponse>(
+    static readonly grpc::Method<global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest, global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse> __Method_StartWorkflow = new grpc::Method<global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest, global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "StartWorkflow",
@@ -85,7 +85,7 @@ namespace udb.core.Workflow.Services.V1 {
         __Marshaller_udb_core_workflow_services_v1_StartWorkflowResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Workflow.Services.V1.GetWorkflowRequest, global::udb.core.Workflow.Services.V1.GetWorkflowResponse> __Method_GetWorkflow = new grpc::Method<global::udb.core.Workflow.Services.V1.GetWorkflowRequest, global::udb.core.Workflow.Services.V1.GetWorkflowResponse>(
+    static readonly grpc::Method<global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest, global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse> __Method_GetWorkflow = new grpc::Method<global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest, global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetWorkflow",
@@ -93,7 +93,7 @@ namespace udb.core.Workflow.Services.V1 {
         __Marshaller_udb_core_workflow_services_v1_GetWorkflowResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Workflow.Services.V1.ListWorkflowsRequest, global::udb.core.Workflow.Services.V1.ListWorkflowsResponse> __Method_ListWorkflows = new grpc::Method<global::udb.core.Workflow.Services.V1.ListWorkflowsRequest, global::udb.core.Workflow.Services.V1.ListWorkflowsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest, global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse> __Method_ListWorkflows = new grpc::Method<global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest, global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListWorkflows",
@@ -101,7 +101,7 @@ namespace udb.core.Workflow.Services.V1 {
         __Marshaller_udb_core_workflow_services_v1_ListWorkflowsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Workflow.Services.V1.CancelWorkflowRequest, global::udb.core.Workflow.Services.V1.CancelWorkflowResponse> __Method_CancelWorkflow = new grpc::Method<global::udb.core.Workflow.Services.V1.CancelWorkflowRequest, global::udb.core.Workflow.Services.V1.CancelWorkflowResponse>(
+    static readonly grpc::Method<global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest, global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse> __Method_CancelWorkflow = new grpc::Method<global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest, global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CancelWorkflow",
@@ -109,7 +109,7 @@ namespace udb.core.Workflow.Services.V1 {
         __Marshaller_udb_core_workflow_services_v1_CancelWorkflowResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Workflow.Services.V1.SignalWorkflowRequest, global::udb.core.Workflow.Services.V1.SignalWorkflowResponse> __Method_SignalWorkflow = new grpc::Method<global::udb.core.Workflow.Services.V1.SignalWorkflowRequest, global::udb.core.Workflow.Services.V1.SignalWorkflowResponse>(
+    static readonly grpc::Method<global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest, global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse> __Method_SignalWorkflow = new grpc::Method<global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest, global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "SignalWorkflow",
@@ -119,7 +119,7 @@ namespace udb.core.Workflow.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Workflow.Services.V1.WorkflowServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Workflow.Services.V1.WorkflowServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of WorkflowService</summary>
@@ -134,7 +134,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Workflow.Services.V1.StartWorkflowResponse> StartWorkflow(global::udb.core.Workflow.Services.V1.StartWorkflowRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse> StartWorkflow(global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -146,7 +146,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Workflow.Services.V1.GetWorkflowResponse> GetWorkflow(global::udb.core.Workflow.Services.V1.GetWorkflowRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse> GetWorkflow(global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -158,7 +158,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Workflow.Services.V1.ListWorkflowsResponse> ListWorkflows(global::udb.core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse> ListWorkflows(global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -172,7 +172,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Workflow.Services.V1.CancelWorkflowResponse> CancelWorkflow(global::udb.core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse> CancelWorkflow(global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -185,7 +185,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Workflow.Services.V1.SignalWorkflowResponse> SignalWorkflow(global::udb.core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse> SignalWorkflow(global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -229,7 +229,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.StartWorkflowResponse StartWorkflow(global::udb.core.Workflow.Services.V1.StartWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse StartWorkflow(global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartWorkflow(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -241,7 +241,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.StartWorkflowResponse StartWorkflow(global::udb.core.Workflow.Services.V1.StartWorkflowRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse StartWorkflow(global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_StartWorkflow, null, options, request);
       }
@@ -255,7 +255,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.StartWorkflowResponse> StartWorkflowAsync(global::udb.core.Workflow.Services.V1.StartWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse> StartWorkflowAsync(global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartWorkflowAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -267,7 +267,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.StartWorkflowResponse> StartWorkflowAsync(global::udb.core.Workflow.Services.V1.StartWorkflowRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse> StartWorkflowAsync(global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_StartWorkflow, null, options, request);
       }
@@ -280,7 +280,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.GetWorkflowResponse GetWorkflow(global::udb.core.Workflow.Services.V1.GetWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse GetWorkflow(global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetWorkflow(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -291,7 +291,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.GetWorkflowResponse GetWorkflow(global::udb.core.Workflow.Services.V1.GetWorkflowRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse GetWorkflow(global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetWorkflow, null, options, request);
       }
@@ -304,7 +304,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.GetWorkflowResponse> GetWorkflowAsync(global::udb.core.Workflow.Services.V1.GetWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse> GetWorkflowAsync(global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetWorkflowAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -315,7 +315,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.GetWorkflowResponse> GetWorkflowAsync(global::udb.core.Workflow.Services.V1.GetWorkflowRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse> GetWorkflowAsync(global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetWorkflow, null, options, request);
       }
@@ -328,7 +328,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.ListWorkflowsResponse ListWorkflows(global::udb.core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse ListWorkflows(global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListWorkflows(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -339,7 +339,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.ListWorkflowsResponse ListWorkflows(global::udb.core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse ListWorkflows(global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListWorkflows, null, options, request);
       }
@@ -352,7 +352,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.ListWorkflowsResponse> ListWorkflowsAsync(global::udb.core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse> ListWorkflowsAsync(global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListWorkflowsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -363,7 +363,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.ListWorkflowsResponse> ListWorkflowsAsync(global::udb.core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse> ListWorkflowsAsync(global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListWorkflows, null, options, request);
       }
@@ -378,7 +378,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.CancelWorkflowResponse CancelWorkflow(global::udb.core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse CancelWorkflow(global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CancelWorkflow(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -391,7 +391,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.CancelWorkflowResponse CancelWorkflow(global::udb.core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse CancelWorkflow(global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CancelWorkflow, null, options, request);
       }
@@ -406,7 +406,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.CancelWorkflowResponse> CancelWorkflowAsync(global::udb.core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse> CancelWorkflowAsync(global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CancelWorkflowAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -419,7 +419,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.CancelWorkflowResponse> CancelWorkflowAsync(global::udb.core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse> CancelWorkflowAsync(global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CancelWorkflow, null, options, request);
       }
@@ -433,7 +433,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.SignalWorkflowResponse SignalWorkflow(global::udb.core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse SignalWorkflow(global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SignalWorkflow(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -445,7 +445,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Workflow.Services.V1.SignalWorkflowResponse SignalWorkflow(global::udb.core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse SignalWorkflow(global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_SignalWorkflow, null, options, request);
       }
@@ -459,7 +459,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.SignalWorkflowResponse> SignalWorkflowAsync(global::udb.core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse> SignalWorkflowAsync(global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SignalWorkflowAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -471,7 +471,7 @@ namespace udb.core.Workflow.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Workflow.Services.V1.SignalWorkflowResponse> SignalWorkflowAsync(global::udb.core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse> SignalWorkflowAsync(global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_SignalWorkflow, null, options, request);
       }
@@ -503,11 +503,11 @@ namespace udb.core.Workflow.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, WorkflowServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_StartWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Workflow.Services.V1.StartWorkflowRequest, global::udb.core.Workflow.Services.V1.StartWorkflowResponse>(serviceImpl.StartWorkflow));
-      serviceBinder.AddMethod(__Method_GetWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Workflow.Services.V1.GetWorkflowRequest, global::udb.core.Workflow.Services.V1.GetWorkflowResponse>(serviceImpl.GetWorkflow));
-      serviceBinder.AddMethod(__Method_ListWorkflows, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Workflow.Services.V1.ListWorkflowsRequest, global::udb.core.Workflow.Services.V1.ListWorkflowsResponse>(serviceImpl.ListWorkflows));
-      serviceBinder.AddMethod(__Method_CancelWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Workflow.Services.V1.CancelWorkflowRequest, global::udb.core.Workflow.Services.V1.CancelWorkflowResponse>(serviceImpl.CancelWorkflow));
-      serviceBinder.AddMethod(__Method_SignalWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Workflow.Services.V1.SignalWorkflowRequest, global::udb.core.Workflow.Services.V1.SignalWorkflowResponse>(serviceImpl.SignalWorkflow));
+      serviceBinder.AddMethod(__Method_StartWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest, global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse>(serviceImpl.StartWorkflow));
+      serviceBinder.AddMethod(__Method_GetWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest, global::Udb.Core.Workflow.Services.V1.GetWorkflowResponse>(serviceImpl.GetWorkflow));
+      serviceBinder.AddMethod(__Method_ListWorkflows, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest, global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse>(serviceImpl.ListWorkflows));
+      serviceBinder.AddMethod(__Method_CancelWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest, global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse>(serviceImpl.CancelWorkflow));
+      serviceBinder.AddMethod(__Method_SignalWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest, global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse>(serviceImpl.SignalWorkflow));
     }
 
   }

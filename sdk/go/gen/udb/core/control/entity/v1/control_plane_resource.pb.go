@@ -215,7 +215,7 @@ const file_udb_core_control_entity_v1_control_plane_resource_proto_rawDesc = "" 
 	"%uq_control_resources_type_name_tenant\x12\x05BTREE\x18\x01Z\rresource_typeZ\x04nameZ\ttenant_id\x8a\x012\n" +
 	"\x1aidx_control_resources_type\x12\x05BTREEZ\rresource_type\xea\x01\aprimary\xf2\x01'udb.control.control_plane_resources.cdc\xfa\x01\x16control:resources:read\x8a\xb2\x19\xa3\x01\n" +
 	"\x06tenant\x1a\ttenant_id*Itenant_id IS NULL OR tenant_id = current_setting('app.current_tenant_id')2\x04none:\x13control.operational@\xfb\x13H\x02R\x06tenantZ\x04noner\x15tenant.data_residencyB\x90\x02\n" +
-	"\x1ecom.udb.core.control.entity.v1B\x19ControlPlaneResourceProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x1audb.core.Control.Entity.V1\xca\x02\x1aUdb\\Core\\Control\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xea\x02\x1eUdb::Core::Control::Entity::V1b\x06proto3"
+	"\x1ecom.udb.core.control.entity.v1B\x19ControlPlaneResourceProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x1aUdb.Core.Control.Entity.V1\xca\x02\x1aUdb\\Core\\Control\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xea\x02\x1eUdb::Core::Control::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_control_entity_v1_control_plane_resource_proto_rawDescOnce sync.Once

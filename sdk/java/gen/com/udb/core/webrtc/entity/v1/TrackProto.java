@@ -80,7 +80,7 @@ public final class TrackProto {
       "t.data_residencyB\373\001\n\035com.udb.core.webrtc" +
       ".entity.v1B\nTrackProtoP\001ZEgithub.com/fah" +
       "ara02/udb/sdk/go/gen/udb/core/webrtc/ent" +
-      "ity/v1;entityv1\242\002\004UCWE\252\002\031udb.core.Webrtc" +
+      "ity/v1;entityv1\242\002\004UCWE\252\002\031Udb.Core.Webrtc" +
       ".Entity.V1\312\002\031Udb\\Core\\Webrtc\\Entity\\V1\342\002" +
       "%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1\352\002" +
       "\035Udb::Core::Webrtc::Entity::V1b\006proto3"

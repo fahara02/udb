@@ -104,7 +104,7 @@ const file_udb_core_control_entity_v1_enums_proto_rawDesc = "" +
 	"'RESOURCE_TYPE_NATIVE_SERVICE_ENABLEMENT\x10\x04\x12+\n" +
 	"'RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\x10\x05B\x81\x02\n" +
 	"\x1ecom.udb.core.control.entity.v1B\n" +
-	"EnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x1audb.core.Control.Entity.V1\xca\x02\x1aUdb\\Core\\Control\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xea\x02\x1eUdb::Core::Control::Entity::V1b\x06proto3"
+	"EnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x1aUdb.Core.Control.Entity.V1\xca\x02\x1aUdb\\Core\\Control\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xea\x02\x1eUdb::Core::Control::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_control_entity_v1_enums_proto_rawDescOnce sync.Once

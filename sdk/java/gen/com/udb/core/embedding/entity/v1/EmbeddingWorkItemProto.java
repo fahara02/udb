@@ -125,7 +125,7 @@ public final class EmbeddingWorkItemProto {
       ".udb.core.embedding.entity.v1B\026Embedding" +
       "WorkItemProtoP\001ZHgithub.com/fahara02/udb" +
       "/sdk/go/gen/udb/core/embedding/entity/v1" +
-      ";entityv1\242\002\004UCEE\252\002\034udb.core.Embedding.En" +
+      ";entityv1\242\002\004UCEE\252\002\034Udb.Core.Embedding.En" +
       "tity.V1\312\002\034Udb\\Core\\Embedding\\Entity\\V1\342\002" +
       "(Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V" +
       "1\352\002 Udb::Core::Embedding::Entity::V1b\006pr" +

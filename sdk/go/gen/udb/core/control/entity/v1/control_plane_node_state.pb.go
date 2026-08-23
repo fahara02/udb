@@ -230,7 +230,7 @@ const file_udb_core_control_entity_v1_control_plane_node_state_proto_rawDesc = "
 	" uq_control_node_states_node_type\x12\x05BTREE\x18\x01Z\anode_idZ\rresource_type\x8a\x01.\n" +
 	"\x1cidx_control_node_states_node\x12\x05BTREEZ\anode_id\xea\x01\aprimary\xf2\x01)udb.control.control_plane_node_states.cdc\xfa\x01\x18control:node-states:read\x8a\xb2\x194\n" +
 	"\x06global2\x04none:\x13control.operational@\xed\x02H\x02R\x04noneZ\x04noneB\x91\x02\n" +
-	"\x1ecom.udb.core.control.entity.v1B\x1aControlPlaneNodeStateProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x1audb.core.Control.Entity.V1\xca\x02\x1aUdb\\Core\\Control\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xea\x02\x1eUdb::Core::Control::Entity::V1b\x06proto3"
+	"\x1ecom.udb.core.control.entity.v1B\x1aControlPlaneNodeStateProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xa2\x02\x04UCCE\xaa\x02\x1aUdb.Core.Control.Entity.V1\xca\x02\x1aUdb\\Core\\Control\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xea\x02\x1eUdb::Core::Control::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_control_entity_v1_control_plane_node_state_proto_rawDescOnce sync.Once

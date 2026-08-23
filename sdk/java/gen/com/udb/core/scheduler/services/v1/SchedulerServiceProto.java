@@ -258,7 +258,7 @@ public final class SchedulerServiceProto {
       "core.scheduler.services.v1B\025SchedulerSer" +
       "viceProtoP\001ZLgithub.com/fahara02/udb/sdk" +
       "/go/gen/udb/core/scheduler/services/v1;s" +
-      "ervicesv1\242\002\004UCSS\252\002\036udb.core.Scheduler.Se" +
+      "ervicesv1\242\002\004UCSS\252\002\036Udb.Core.Scheduler.Se" +
       "rvices.V1\312\002\036Udb\\Core\\Scheduler\\Services\\" +
       "V1\342\002*Udb\\GPBMetadata\\Core\\Scheduler\\Serv" +
       "ices\\V1\352\002\"Udb::Core::Scheduler::Services" +

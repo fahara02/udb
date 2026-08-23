@@ -227,7 +227,7 @@ const file_udb_core_tenant_events_v1_tenant_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x128\n" +
 	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp:\x90\x01\x92\xb2\x19\x8b\x01\n" +
 	"2udb.core.tenant.events.v1.TenantStatusChangedEvent\x12)udb.tenant.tenant_status_changed_event.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\x82\x02\n" +
-	"\x1dcom.udb.core.tenant.events.v1B\x11TenantEventsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/events/v1;eventsv1\xa2\x02\x04UCTE\xaa\x02\x19udb.core.Tenant.Events.V1\xca\x02\x19Udb\\Core\\Tenant\\Events\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Tenant\\Events\\V1\xea\x02\x1dUdb::Core::Tenant::Events::V1b\x06proto3"
+	"\x1dcom.udb.core.tenant.events.v1B\x11TenantEventsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/events/v1;eventsv1\xa2\x02\x04UCTE\xaa\x02\x19Udb.Core.Tenant.Events.V1\xca\x02\x19Udb\\Core\\Tenant\\Events\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Tenant\\Events\\V1\xea\x02\x1dUdb::Core::Tenant::Events::V1b\x06proto3"
 
 var (
 	file_udb_core_tenant_events_v1_tenant_events_proto_rawDescOnce sync.Once

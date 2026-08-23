@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using AuthzV1 = udb.core.Authz.Services.V1;
+using AuthzV1 = Udb.Core.Authz.Services.V1;
 
 namespace Udb.Client;
 

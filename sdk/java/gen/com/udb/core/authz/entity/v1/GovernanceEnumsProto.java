@@ -58,7 +58,7 @@ public final class GovernanceEnumsProto {
       ".core.authz.entity.v1B\024GovernanceEnumsPr" +
       "otoP\001ZDgithub.com/fahara02/udb/sdk/go/ge" +
       "n/udb/core/authz/entity/v1;entityv1\242\002\004UC" +
-      "AE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core" +
+      "AE\252\002\030Udb.Core.Authz.Entity.V1\312\002\030Udb\\Core" +
       "\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\" +
       "Authz\\Entity\\V1\352\002\034Udb::Core::Authz::Enti" +
       "ty::V1b\006proto3"

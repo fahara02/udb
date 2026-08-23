@@ -163,7 +163,7 @@ public final class TypesProto {
       "DIRECTION_ASC\020\001\022\027\n\023SORT_DIRECTION_DESC\020\002" +
       "B\317\001\n\026com.udb.core.common.v1B\nTypesProtoP" +
       "\001Z>github.com/fahara02/udb/sdk/go/gen/ud" +
-      "b/core/common/v1;commonv1\242\002\003UCC\252\002\022udb.co" +
+      "b/core/common/v1;commonv1\242\002\003UCC\252\002\022Udb.Co" +
       "re.Common.V1\312\002\022Udb\\Core\\Common\\V1\342\002\036Udb\\" +
       "GPBMetadata\\Core\\Common\\V1\352\002\025Udb::Core::" +
       "Common::V1P\001b\006proto3"

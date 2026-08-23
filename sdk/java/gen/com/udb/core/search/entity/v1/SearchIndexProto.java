@@ -90,8 +90,8 @@ public final class SearchIndexProto {
       "r\025tenant.data_residencyB\201\002\n\035com.udb.core" +
       ".search.entity.v1B\020SearchIndexProtoP\001ZEg" +
       "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
-      "re/search/entity/v1;entityv1\242\002\004UCSE\252\002\031ud" +
-      "b.core.Search.Entity.V1\312\002\031Udb\\Core\\Searc" +
+      "re/search/entity/v1;entityv1\242\002\004UCSE\252\002\031Ud" +
+      "b.Core.Search.Entity.V1\312\002\031Udb\\Core\\Searc" +
       "h\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Searc" +
       "h\\Entity\\V1\352\002\035Udb::Core::Search::Entity:" +
       ":V1b\006proto3"

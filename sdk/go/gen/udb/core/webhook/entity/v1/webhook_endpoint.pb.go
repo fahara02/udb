@@ -221,7 +221,7 @@ const file_udb_core_webhook_entity_v1_webhook_endpoint_proto_rawDesc = "" +
 	"\x1cidx_webhook_endpoints_tenant\x12\x05BTREEZ\ttenant_id\x8a\x01?\n" +
 	"#idx_webhook_endpoints_tenant_active\x12\x05BTREEZ\ttenant_idZ\x06active\xf2\x01!udb.webhook.webhook_endpoints.cdc\xfa\x01\fwebhook:read\x8a\xb2\x19\x99\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x13webhook.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x8b\x02\n" +
-	"\x1ecom.udb.core.webhook.entity.v1B\x14WebhookEndpointProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/webhook/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1audb.core.Webhook.Entity.V1\xca\x02\x1aUdb\\Core\\Webhook\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Webhook\\Entity\\V1\xea\x02\x1eUdb::Core::Webhook::Entity::V1b\x06proto3"
+	"\x1ecom.udb.core.webhook.entity.v1B\x14WebhookEndpointProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/webhook/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1aUdb.Core.Webhook.Entity.V1\xca\x02\x1aUdb\\Core\\Webhook\\Entity\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Webhook\\Entity\\V1\xea\x02\x1eUdb::Core::Webhook::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_webhook_entity_v1_webhook_endpoint_proto_rawDescOnce sync.Once

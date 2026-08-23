@@ -16,7 +16,7 @@ class Enums
           return;
         }
         $pool->internalAddGeneratedFile(
-            "\x0A\xCB\x04\x0A&udb/core/control/entity/v1/enums.proto\x12\x1Audb.core.control.entity.v1*\xF8\x01\x0A\x0CResourceType\x12\x1D\x0A\x19RESOURCE_TYPE_UNSPECIFIED\x10\x00\x12 \x0A\x1CRESOURCE_TYPE_ROUTING_POLICY\x10\x01\x12(\x0A\$RESOURCE_TYPE_METHOD_SECURITY_POLICY\x10\x02\x12#\x0A\x1FRESOURCE_TYPE_RLS_TENANT_POLICY\x10\x03\x12+\x0A'RESOURCE_TYPE_NATIVE_SERVICE_ENABLEMENT\x10\x04\x12+\x0A'RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\x10\x05B\x81\x02\x0A\x1Ecom.udb.core.control.entity.v1B\x0AEnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xA2\x02\x04UCCE\xAA\x02\x1Audb.core.Control.Entity.V1\xCA\x02\x1AUdb\\Core\\Control\\Entity\\V1\xE2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xEA\x02\x1EUdb::Core::Control::Entity::V1b\x06proto3"
+            "\x0A\xCB\x04\x0A&udb/core/control/entity/v1/enums.proto\x12\x1Audb.core.control.entity.v1*\xF8\x01\x0A\x0CResourceType\x12\x1D\x0A\x19RESOURCE_TYPE_UNSPECIFIED\x10\x00\x12 \x0A\x1CRESOURCE_TYPE_ROUTING_POLICY\x10\x01\x12(\x0A\$RESOURCE_TYPE_METHOD_SECURITY_POLICY\x10\x02\x12#\x0A\x1FRESOURCE_TYPE_RLS_TENANT_POLICY\x10\x03\x12+\x0A'RESOURCE_TYPE_NATIVE_SERVICE_ENABLEMENT\x10\x04\x12+\x0A'RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\x10\x05B\x81\x02\x0A\x1Ecom.udb.core.control.entity.v1B\x0AEnumsProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1;entityv1\xA2\x02\x04UCCE\xAA\x02\x1AUdb.Core.Control.Entity.V1\xCA\x02\x1AUdb\\Core\\Control\\Entity\\V1\xE2\x02&Udb\\GPBMetadata\\Core\\Control\\Entity\\V1\xEA\x02\x1EUdb::Core::Control::Entity::V1b\x06proto3"
         , true);
 
         static::$is_initialized = true;

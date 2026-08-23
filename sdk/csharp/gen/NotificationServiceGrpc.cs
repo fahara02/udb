@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Notification.Services.V1 {
+namespace Udb.Core.Notification.Services.V1 {
   public static partial class NotificationService
   {
     static readonly string __ServiceName = "udb.core.notification.services.v1.NotificationService";
@@ -46,56 +46,56 @@ namespace udb.core.Notification.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.SendNotificationRequest> __Marshaller_udb_core_notification_services_v1_SendNotificationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.SendNotificationRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.SendNotificationRequest> __Marshaller_udb_core_notification_services_v1_SendNotificationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.SendNotificationRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.SendNotificationResponse> __Marshaller_udb_core_notification_services_v1_SendNotificationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.SendNotificationResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.SendNotificationResponse> __Marshaller_udb_core_notification_services_v1_SendNotificationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.SendNotificationResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.GetNotificationRequest> __Marshaller_udb_core_notification_services_v1_GetNotificationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.GetNotificationRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.GetNotificationRequest> __Marshaller_udb_core_notification_services_v1_GetNotificationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.GetNotificationRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.GetNotificationResponse> __Marshaller_udb_core_notification_services_v1_GetNotificationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.GetNotificationResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.GetNotificationResponse> __Marshaller_udb_core_notification_services_v1_GetNotificationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.GetNotificationResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ListNotificationsRequest> __Marshaller_udb_core_notification_services_v1_ListNotificationsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ListNotificationsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.ListNotificationsRequest> __Marshaller_udb_core_notification_services_v1_ListNotificationsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.ListNotificationsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ListNotificationsResponse> __Marshaller_udb_core_notification_services_v1_ListNotificationsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ListNotificationsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.ListNotificationsResponse> __Marshaller_udb_core_notification_services_v1_ListNotificationsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.ListNotificationsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.RetryNotificationRequest> __Marshaller_udb_core_notification_services_v1_RetryNotificationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.RetryNotificationRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.RetryNotificationRequest> __Marshaller_udb_core_notification_services_v1_RetryNotificationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.RetryNotificationRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.RetryNotificationResponse> __Marshaller_udb_core_notification_services_v1_RetryNotificationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.RetryNotificationResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.RetryNotificationResponse> __Marshaller_udb_core_notification_services_v1_RetryNotificationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.RetryNotificationResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ReportDeliveryRequest> __Marshaller_udb_core_notification_services_v1_ReportDeliveryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ReportDeliveryRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest> __Marshaller_udb_core_notification_services_v1_ReportDeliveryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ReportDeliveryResponse> __Marshaller_udb_core_notification_services_v1_ReportDeliveryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ReportDeliveryResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse> __Marshaller_udb_core_notification_services_v1_ReportDeliveryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.UpsertTemplateRequest> __Marshaller_udb_core_notification_services_v1_UpsertTemplateRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.UpsertTemplateRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest> __Marshaller_udb_core_notification_services_v1_UpsertTemplateRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.UpsertTemplateResponse> __Marshaller_udb_core_notification_services_v1_UpsertTemplateResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.UpsertTemplateResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse> __Marshaller_udb_core_notification_services_v1_UpsertTemplateResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.GetTemplateRequest> __Marshaller_udb_core_notification_services_v1_GetTemplateRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.GetTemplateRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.GetTemplateRequest> __Marshaller_udb_core_notification_services_v1_GetTemplateRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.GetTemplateRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.GetTemplateResponse> __Marshaller_udb_core_notification_services_v1_GetTemplateResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.GetTemplateResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.GetTemplateResponse> __Marshaller_udb_core_notification_services_v1_GetTemplateResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.GetTemplateResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ListTemplatesRequest> __Marshaller_udb_core_notification_services_v1_ListTemplatesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ListTemplatesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.ListTemplatesRequest> __Marshaller_udb_core_notification_services_v1_ListTemplatesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.ListTemplatesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ListTemplatesResponse> __Marshaller_udb_core_notification_services_v1_ListTemplatesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ListTemplatesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.ListTemplatesResponse> __Marshaller_udb_core_notification_services_v1_ListTemplatesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.ListTemplatesResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest> __Marshaller_udb_core_notification_services_v1_GetDeliveryStatsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest> __Marshaller_udb_core_notification_services_v1_GetDeliveryStatsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse> __Marshaller_udb_core_notification_services_v1_GetDeliveryStatsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse> __Marshaller_udb_core_notification_services_v1_GetDeliveryStatsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.SetPreferenceRequest> __Marshaller_udb_core_notification_services_v1_SetPreferenceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.SetPreferenceRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.SetPreferenceRequest> __Marshaller_udb_core_notification_services_v1_SetPreferenceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.SetPreferenceRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.SetPreferenceResponse> __Marshaller_udb_core_notification_services_v1_SetPreferenceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.SetPreferenceResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.SetPreferenceResponse> __Marshaller_udb_core_notification_services_v1_SetPreferenceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.SetPreferenceResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.GetPreferenceRequest> __Marshaller_udb_core_notification_services_v1_GetPreferenceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.GetPreferenceRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.GetPreferenceRequest> __Marshaller_udb_core_notification_services_v1_GetPreferenceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.GetPreferenceRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.GetPreferenceResponse> __Marshaller_udb_core_notification_services_v1_GetPreferenceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.GetPreferenceResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.GetPreferenceResponse> __Marshaller_udb_core_notification_services_v1_GetPreferenceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.GetPreferenceResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ListPreferencesRequest> __Marshaller_udb_core_notification_services_v1_ListPreferencesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ListPreferencesRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.ListPreferencesRequest> __Marshaller_udb_core_notification_services_v1_ListPreferencesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.ListPreferencesRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ListPreferencesResponse> __Marshaller_udb_core_notification_services_v1_ListPreferencesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ListPreferencesResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Notification.Services.V1.ListPreferencesResponse> __Marshaller_udb_core_notification_services_v1_ListPreferencesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Notification.Services.V1.ListPreferencesResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.SendNotificationRequest, global::udb.core.Notification.Services.V1.SendNotificationResponse> __Method_SendNotification = new grpc::Method<global::udb.core.Notification.Services.V1.SendNotificationRequest, global::udb.core.Notification.Services.V1.SendNotificationResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.SendNotificationRequest, global::Udb.Core.Notification.Services.V1.SendNotificationResponse> __Method_SendNotification = new grpc::Method<global::Udb.Core.Notification.Services.V1.SendNotificationRequest, global::Udb.Core.Notification.Services.V1.SendNotificationResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "SendNotification",
@@ -103,7 +103,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_SendNotificationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.GetNotificationRequest, global::udb.core.Notification.Services.V1.GetNotificationResponse> __Method_GetNotification = new grpc::Method<global::udb.core.Notification.Services.V1.GetNotificationRequest, global::udb.core.Notification.Services.V1.GetNotificationResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.GetNotificationRequest, global::Udb.Core.Notification.Services.V1.GetNotificationResponse> __Method_GetNotification = new grpc::Method<global::Udb.Core.Notification.Services.V1.GetNotificationRequest, global::Udb.Core.Notification.Services.V1.GetNotificationResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetNotification",
@@ -111,7 +111,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_GetNotificationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.ListNotificationsRequest, global::udb.core.Notification.Services.V1.ListNotificationsResponse> __Method_ListNotifications = new grpc::Method<global::udb.core.Notification.Services.V1.ListNotificationsRequest, global::udb.core.Notification.Services.V1.ListNotificationsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.ListNotificationsRequest, global::Udb.Core.Notification.Services.V1.ListNotificationsResponse> __Method_ListNotifications = new grpc::Method<global::Udb.Core.Notification.Services.V1.ListNotificationsRequest, global::Udb.Core.Notification.Services.V1.ListNotificationsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListNotifications",
@@ -119,7 +119,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_ListNotificationsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.RetryNotificationRequest, global::udb.core.Notification.Services.V1.RetryNotificationResponse> __Method_RetryNotification = new grpc::Method<global::udb.core.Notification.Services.V1.RetryNotificationRequest, global::udb.core.Notification.Services.V1.RetryNotificationResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.RetryNotificationRequest, global::Udb.Core.Notification.Services.V1.RetryNotificationResponse> __Method_RetryNotification = new grpc::Method<global::Udb.Core.Notification.Services.V1.RetryNotificationRequest, global::Udb.Core.Notification.Services.V1.RetryNotificationResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "RetryNotification",
@@ -127,7 +127,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_RetryNotificationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.ReportDeliveryRequest, global::udb.core.Notification.Services.V1.ReportDeliveryResponse> __Method_ReportDelivery = new grpc::Method<global::udb.core.Notification.Services.V1.ReportDeliveryRequest, global::udb.core.Notification.Services.V1.ReportDeliveryResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest, global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse> __Method_ReportDelivery = new grpc::Method<global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest, global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ReportDelivery",
@@ -135,7 +135,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_ReportDeliveryResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.UpsertTemplateRequest, global::udb.core.Notification.Services.V1.UpsertTemplateResponse> __Method_UpsertTemplate = new grpc::Method<global::udb.core.Notification.Services.V1.UpsertTemplateRequest, global::udb.core.Notification.Services.V1.UpsertTemplateResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest, global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse> __Method_UpsertTemplate = new grpc::Method<global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest, global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UpsertTemplate",
@@ -143,7 +143,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_UpsertTemplateResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.GetTemplateRequest, global::udb.core.Notification.Services.V1.GetTemplateResponse> __Method_GetTemplate = new grpc::Method<global::udb.core.Notification.Services.V1.GetTemplateRequest, global::udb.core.Notification.Services.V1.GetTemplateResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.GetTemplateRequest, global::Udb.Core.Notification.Services.V1.GetTemplateResponse> __Method_GetTemplate = new grpc::Method<global::Udb.Core.Notification.Services.V1.GetTemplateRequest, global::Udb.Core.Notification.Services.V1.GetTemplateResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetTemplate",
@@ -151,7 +151,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_GetTemplateResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.ListTemplatesRequest, global::udb.core.Notification.Services.V1.ListTemplatesResponse> __Method_ListTemplates = new grpc::Method<global::udb.core.Notification.Services.V1.ListTemplatesRequest, global::udb.core.Notification.Services.V1.ListTemplatesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.ListTemplatesRequest, global::Udb.Core.Notification.Services.V1.ListTemplatesResponse> __Method_ListTemplates = new grpc::Method<global::Udb.Core.Notification.Services.V1.ListTemplatesRequest, global::Udb.Core.Notification.Services.V1.ListTemplatesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListTemplates",
@@ -159,7 +159,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_ListTemplatesResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest, global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse> __Method_GetDeliveryStats = new grpc::Method<global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest, global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest, global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse> __Method_GetDeliveryStats = new grpc::Method<global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest, global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetDeliveryStats",
@@ -167,7 +167,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_GetDeliveryStatsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.SetPreferenceRequest, global::udb.core.Notification.Services.V1.SetPreferenceResponse> __Method_SetPreference = new grpc::Method<global::udb.core.Notification.Services.V1.SetPreferenceRequest, global::udb.core.Notification.Services.V1.SetPreferenceResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.SetPreferenceRequest, global::Udb.Core.Notification.Services.V1.SetPreferenceResponse> __Method_SetPreference = new grpc::Method<global::Udb.Core.Notification.Services.V1.SetPreferenceRequest, global::Udb.Core.Notification.Services.V1.SetPreferenceResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "SetPreference",
@@ -175,7 +175,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_SetPreferenceResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.GetPreferenceRequest, global::udb.core.Notification.Services.V1.GetPreferenceResponse> __Method_GetPreference = new grpc::Method<global::udb.core.Notification.Services.V1.GetPreferenceRequest, global::udb.core.Notification.Services.V1.GetPreferenceResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.GetPreferenceRequest, global::Udb.Core.Notification.Services.V1.GetPreferenceResponse> __Method_GetPreference = new grpc::Method<global::Udb.Core.Notification.Services.V1.GetPreferenceRequest, global::Udb.Core.Notification.Services.V1.GetPreferenceResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetPreference",
@@ -183,7 +183,7 @@ namespace udb.core.Notification.Services.V1 {
         __Marshaller_udb_core_notification_services_v1_GetPreferenceResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Notification.Services.V1.ListPreferencesRequest, global::udb.core.Notification.Services.V1.ListPreferencesResponse> __Method_ListPreferences = new grpc::Method<global::udb.core.Notification.Services.V1.ListPreferencesRequest, global::udb.core.Notification.Services.V1.ListPreferencesResponse>(
+    static readonly grpc::Method<global::Udb.Core.Notification.Services.V1.ListPreferencesRequest, global::Udb.Core.Notification.Services.V1.ListPreferencesResponse> __Method_ListPreferences = new grpc::Method<global::Udb.Core.Notification.Services.V1.ListPreferencesRequest, global::Udb.Core.Notification.Services.V1.ListPreferencesResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListPreferences",
@@ -193,7 +193,7 @@ namespace udb.core.Notification.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Notification.Services.V1.NotificationServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Notification.Services.V1.NotificationServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of NotificationService</summary>
@@ -207,7 +207,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.SendNotificationResponse> SendNotification(global::udb.core.Notification.Services.V1.SendNotificationRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.SendNotificationResponse> SendNotification(global::Udb.Core.Notification.Services.V1.SendNotificationRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -219,7 +219,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.GetNotificationResponse> GetNotification(global::udb.core.Notification.Services.V1.GetNotificationRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.GetNotificationResponse> GetNotification(global::Udb.Core.Notification.Services.V1.GetNotificationRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -231,7 +231,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.ListNotificationsResponse> ListNotifications(global::udb.core.Notification.Services.V1.ListNotificationsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.ListNotificationsResponse> ListNotifications(global::Udb.Core.Notification.Services.V1.ListNotificationsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -243,7 +243,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.RetryNotificationResponse> RetryNotification(global::udb.core.Notification.Services.V1.RetryNotificationRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.RetryNotificationResponse> RetryNotification(global::Udb.Core.Notification.Services.V1.RetryNotificationRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -258,7 +258,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.ReportDeliveryResponse> ReportDelivery(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse> ReportDelivery(global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -270,7 +270,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.UpsertTemplateResponse> UpsertTemplate(global::udb.core.Notification.Services.V1.UpsertTemplateRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse> UpsertTemplate(global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -282,7 +282,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.GetTemplateResponse> GetTemplate(global::udb.core.Notification.Services.V1.GetTemplateRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.GetTemplateResponse> GetTemplate(global::Udb.Core.Notification.Services.V1.GetTemplateRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -294,7 +294,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.ListTemplatesResponse> ListTemplates(global::udb.core.Notification.Services.V1.ListTemplatesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.ListTemplatesResponse> ListTemplates(global::Udb.Core.Notification.Services.V1.ListTemplatesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -306,7 +306,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse> GetDeliveryStats(global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse> GetDeliveryStats(global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -318,7 +318,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.SetPreferenceResponse> SetPreference(global::udb.core.Notification.Services.V1.SetPreferenceRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.SetPreferenceResponse> SetPreference(global::Udb.Core.Notification.Services.V1.SetPreferenceRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -330,7 +330,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.GetPreferenceResponse> GetPreference(global::udb.core.Notification.Services.V1.GetPreferenceRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.GetPreferenceResponse> GetPreference(global::Udb.Core.Notification.Services.V1.GetPreferenceRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -342,7 +342,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.ListPreferencesResponse> ListPreferences(global::udb.core.Notification.Services.V1.ListPreferencesRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Notification.Services.V1.ListPreferencesResponse> ListPreferences(global::Udb.Core.Notification.Services.V1.ListPreferencesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -385,7 +385,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.SendNotificationResponse SendNotification(global::udb.core.Notification.Services.V1.SendNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.SendNotificationResponse SendNotification(global::Udb.Core.Notification.Services.V1.SendNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SendNotification(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -396,7 +396,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.SendNotificationResponse SendNotification(global::udb.core.Notification.Services.V1.SendNotificationRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.SendNotificationResponse SendNotification(global::Udb.Core.Notification.Services.V1.SendNotificationRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_SendNotification, null, options, request);
       }
@@ -409,7 +409,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.SendNotificationResponse> SendNotificationAsync(global::udb.core.Notification.Services.V1.SendNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.SendNotificationResponse> SendNotificationAsync(global::Udb.Core.Notification.Services.V1.SendNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SendNotificationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -420,7 +420,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.SendNotificationResponse> SendNotificationAsync(global::udb.core.Notification.Services.V1.SendNotificationRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.SendNotificationResponse> SendNotificationAsync(global::Udb.Core.Notification.Services.V1.SendNotificationRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_SendNotification, null, options, request);
       }
@@ -433,7 +433,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.GetNotificationResponse GetNotification(global::udb.core.Notification.Services.V1.GetNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.GetNotificationResponse GetNotification(global::Udb.Core.Notification.Services.V1.GetNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetNotification(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -444,7 +444,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.GetNotificationResponse GetNotification(global::udb.core.Notification.Services.V1.GetNotificationRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.GetNotificationResponse GetNotification(global::Udb.Core.Notification.Services.V1.GetNotificationRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetNotification, null, options, request);
       }
@@ -457,7 +457,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.GetNotificationResponse> GetNotificationAsync(global::udb.core.Notification.Services.V1.GetNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.GetNotificationResponse> GetNotificationAsync(global::Udb.Core.Notification.Services.V1.GetNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetNotificationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -468,7 +468,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.GetNotificationResponse> GetNotificationAsync(global::udb.core.Notification.Services.V1.GetNotificationRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.GetNotificationResponse> GetNotificationAsync(global::Udb.Core.Notification.Services.V1.GetNotificationRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetNotification, null, options, request);
       }
@@ -481,7 +481,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.ListNotificationsResponse ListNotifications(global::udb.core.Notification.Services.V1.ListNotificationsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.ListNotificationsResponse ListNotifications(global::Udb.Core.Notification.Services.V1.ListNotificationsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListNotifications(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -492,7 +492,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.ListNotificationsResponse ListNotifications(global::udb.core.Notification.Services.V1.ListNotificationsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.ListNotificationsResponse ListNotifications(global::Udb.Core.Notification.Services.V1.ListNotificationsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListNotifications, null, options, request);
       }
@@ -505,7 +505,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ListNotificationsResponse> ListNotificationsAsync(global::udb.core.Notification.Services.V1.ListNotificationsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.ListNotificationsResponse> ListNotificationsAsync(global::Udb.Core.Notification.Services.V1.ListNotificationsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListNotificationsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -516,7 +516,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ListNotificationsResponse> ListNotificationsAsync(global::udb.core.Notification.Services.V1.ListNotificationsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.ListNotificationsResponse> ListNotificationsAsync(global::Udb.Core.Notification.Services.V1.ListNotificationsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListNotifications, null, options, request);
       }
@@ -529,7 +529,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.RetryNotificationResponse RetryNotification(global::udb.core.Notification.Services.V1.RetryNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.RetryNotificationResponse RetryNotification(global::Udb.Core.Notification.Services.V1.RetryNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RetryNotification(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -540,7 +540,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.RetryNotificationResponse RetryNotification(global::udb.core.Notification.Services.V1.RetryNotificationRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.RetryNotificationResponse RetryNotification(global::Udb.Core.Notification.Services.V1.RetryNotificationRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_RetryNotification, null, options, request);
       }
@@ -553,7 +553,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.RetryNotificationResponse> RetryNotificationAsync(global::udb.core.Notification.Services.V1.RetryNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.RetryNotificationResponse> RetryNotificationAsync(global::Udb.Core.Notification.Services.V1.RetryNotificationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return RetryNotificationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -564,7 +564,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.RetryNotificationResponse> RetryNotificationAsync(global::udb.core.Notification.Services.V1.RetryNotificationRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.RetryNotificationResponse> RetryNotificationAsync(global::Udb.Core.Notification.Services.V1.RetryNotificationRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RetryNotification, null, options, request);
       }
@@ -580,7 +580,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.ReportDeliveryResponse ReportDelivery(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse ReportDelivery(global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ReportDelivery(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -594,7 +594,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.ReportDeliveryResponse ReportDelivery(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse ReportDelivery(global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ReportDelivery, null, options, request);
       }
@@ -610,7 +610,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ReportDeliveryResponse> ReportDeliveryAsync(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse> ReportDeliveryAsync(global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ReportDeliveryAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -624,7 +624,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ReportDeliveryResponse> ReportDeliveryAsync(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse> ReportDeliveryAsync(global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ReportDelivery, null, options, request);
       }
@@ -637,7 +637,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.UpsertTemplateResponse UpsertTemplate(global::udb.core.Notification.Services.V1.UpsertTemplateRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse UpsertTemplate(global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpsertTemplate(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -648,7 +648,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.UpsertTemplateResponse UpsertTemplate(global::udb.core.Notification.Services.V1.UpsertTemplateRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse UpsertTemplate(global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UpsertTemplate, null, options, request);
       }
@@ -661,7 +661,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.UpsertTemplateResponse> UpsertTemplateAsync(global::udb.core.Notification.Services.V1.UpsertTemplateRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse> UpsertTemplateAsync(global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpsertTemplateAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -672,7 +672,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.UpsertTemplateResponse> UpsertTemplateAsync(global::udb.core.Notification.Services.V1.UpsertTemplateRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse> UpsertTemplateAsync(global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UpsertTemplate, null, options, request);
       }
@@ -685,7 +685,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.GetTemplateResponse GetTemplate(global::udb.core.Notification.Services.V1.GetTemplateRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.GetTemplateResponse GetTemplate(global::Udb.Core.Notification.Services.V1.GetTemplateRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetTemplate(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -696,7 +696,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.GetTemplateResponse GetTemplate(global::udb.core.Notification.Services.V1.GetTemplateRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.GetTemplateResponse GetTemplate(global::Udb.Core.Notification.Services.V1.GetTemplateRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetTemplate, null, options, request);
       }
@@ -709,7 +709,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.GetTemplateResponse> GetTemplateAsync(global::udb.core.Notification.Services.V1.GetTemplateRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.GetTemplateResponse> GetTemplateAsync(global::Udb.Core.Notification.Services.V1.GetTemplateRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetTemplateAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -720,7 +720,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.GetTemplateResponse> GetTemplateAsync(global::udb.core.Notification.Services.V1.GetTemplateRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.GetTemplateResponse> GetTemplateAsync(global::Udb.Core.Notification.Services.V1.GetTemplateRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetTemplate, null, options, request);
       }
@@ -733,7 +733,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.ListTemplatesResponse ListTemplates(global::udb.core.Notification.Services.V1.ListTemplatesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.ListTemplatesResponse ListTemplates(global::Udb.Core.Notification.Services.V1.ListTemplatesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListTemplates(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -744,7 +744,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.ListTemplatesResponse ListTemplates(global::udb.core.Notification.Services.V1.ListTemplatesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.ListTemplatesResponse ListTemplates(global::Udb.Core.Notification.Services.V1.ListTemplatesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListTemplates, null, options, request);
       }
@@ -757,7 +757,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ListTemplatesResponse> ListTemplatesAsync(global::udb.core.Notification.Services.V1.ListTemplatesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.ListTemplatesResponse> ListTemplatesAsync(global::Udb.Core.Notification.Services.V1.ListTemplatesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListTemplatesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -768,7 +768,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ListTemplatesResponse> ListTemplatesAsync(global::udb.core.Notification.Services.V1.ListTemplatesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.ListTemplatesResponse> ListTemplatesAsync(global::Udb.Core.Notification.Services.V1.ListTemplatesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListTemplates, null, options, request);
       }
@@ -781,7 +781,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse GetDeliveryStats(global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse GetDeliveryStats(global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetDeliveryStats(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -792,7 +792,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse GetDeliveryStats(global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse GetDeliveryStats(global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetDeliveryStats, null, options, request);
       }
@@ -805,7 +805,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse> GetDeliveryStatsAsync(global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse> GetDeliveryStatsAsync(global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetDeliveryStatsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -816,7 +816,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse> GetDeliveryStatsAsync(global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse> GetDeliveryStatsAsync(global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetDeliveryStats, null, options, request);
       }
@@ -829,7 +829,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.SetPreferenceResponse SetPreference(global::udb.core.Notification.Services.V1.SetPreferenceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.SetPreferenceResponse SetPreference(global::Udb.Core.Notification.Services.V1.SetPreferenceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SetPreference(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -840,7 +840,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.SetPreferenceResponse SetPreference(global::udb.core.Notification.Services.V1.SetPreferenceRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.SetPreferenceResponse SetPreference(global::Udb.Core.Notification.Services.V1.SetPreferenceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_SetPreference, null, options, request);
       }
@@ -853,7 +853,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.SetPreferenceResponse> SetPreferenceAsync(global::udb.core.Notification.Services.V1.SetPreferenceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.SetPreferenceResponse> SetPreferenceAsync(global::Udb.Core.Notification.Services.V1.SetPreferenceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return SetPreferenceAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -864,7 +864,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.SetPreferenceResponse> SetPreferenceAsync(global::udb.core.Notification.Services.V1.SetPreferenceRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.SetPreferenceResponse> SetPreferenceAsync(global::Udb.Core.Notification.Services.V1.SetPreferenceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_SetPreference, null, options, request);
       }
@@ -877,7 +877,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.GetPreferenceResponse GetPreference(global::udb.core.Notification.Services.V1.GetPreferenceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.GetPreferenceResponse GetPreference(global::Udb.Core.Notification.Services.V1.GetPreferenceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPreference(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -888,7 +888,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.GetPreferenceResponse GetPreference(global::udb.core.Notification.Services.V1.GetPreferenceRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.GetPreferenceResponse GetPreference(global::Udb.Core.Notification.Services.V1.GetPreferenceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetPreference, null, options, request);
       }
@@ -901,7 +901,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.GetPreferenceResponse> GetPreferenceAsync(global::udb.core.Notification.Services.V1.GetPreferenceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.GetPreferenceResponse> GetPreferenceAsync(global::Udb.Core.Notification.Services.V1.GetPreferenceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetPreferenceAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -912,7 +912,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.GetPreferenceResponse> GetPreferenceAsync(global::udb.core.Notification.Services.V1.GetPreferenceRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.GetPreferenceResponse> GetPreferenceAsync(global::Udb.Core.Notification.Services.V1.GetPreferenceRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetPreference, null, options, request);
       }
@@ -925,7 +925,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.ListPreferencesResponse ListPreferences(global::udb.core.Notification.Services.V1.ListPreferencesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Notification.Services.V1.ListPreferencesResponse ListPreferences(global::Udb.Core.Notification.Services.V1.ListPreferencesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListPreferences(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -936,7 +936,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Notification.Services.V1.ListPreferencesResponse ListPreferences(global::udb.core.Notification.Services.V1.ListPreferencesRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Notification.Services.V1.ListPreferencesResponse ListPreferences(global::Udb.Core.Notification.Services.V1.ListPreferencesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListPreferences, null, options, request);
       }
@@ -949,7 +949,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ListPreferencesResponse> ListPreferencesAsync(global::udb.core.Notification.Services.V1.ListPreferencesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.ListPreferencesResponse> ListPreferencesAsync(global::Udb.Core.Notification.Services.V1.ListPreferencesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListPreferencesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -960,7 +960,7 @@ namespace udb.core.Notification.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ListPreferencesResponse> ListPreferencesAsync(global::udb.core.Notification.Services.V1.ListPreferencesRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Notification.Services.V1.ListPreferencesResponse> ListPreferencesAsync(global::Udb.Core.Notification.Services.V1.ListPreferencesRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListPreferences, null, options, request);
       }
@@ -999,18 +999,18 @@ namespace udb.core.Notification.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, NotificationServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_SendNotification, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.SendNotificationRequest, global::udb.core.Notification.Services.V1.SendNotificationResponse>(serviceImpl.SendNotification));
-      serviceBinder.AddMethod(__Method_GetNotification, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.GetNotificationRequest, global::udb.core.Notification.Services.V1.GetNotificationResponse>(serviceImpl.GetNotification));
-      serviceBinder.AddMethod(__Method_ListNotifications, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.ListNotificationsRequest, global::udb.core.Notification.Services.V1.ListNotificationsResponse>(serviceImpl.ListNotifications));
-      serviceBinder.AddMethod(__Method_RetryNotification, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.RetryNotificationRequest, global::udb.core.Notification.Services.V1.RetryNotificationResponse>(serviceImpl.RetryNotification));
-      serviceBinder.AddMethod(__Method_ReportDelivery, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.ReportDeliveryRequest, global::udb.core.Notification.Services.V1.ReportDeliveryResponse>(serviceImpl.ReportDelivery));
-      serviceBinder.AddMethod(__Method_UpsertTemplate, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.UpsertTemplateRequest, global::udb.core.Notification.Services.V1.UpsertTemplateResponse>(serviceImpl.UpsertTemplate));
-      serviceBinder.AddMethod(__Method_GetTemplate, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.GetTemplateRequest, global::udb.core.Notification.Services.V1.GetTemplateResponse>(serviceImpl.GetTemplate));
-      serviceBinder.AddMethod(__Method_ListTemplates, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.ListTemplatesRequest, global::udb.core.Notification.Services.V1.ListTemplatesResponse>(serviceImpl.ListTemplates));
-      serviceBinder.AddMethod(__Method_GetDeliveryStats, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest, global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse>(serviceImpl.GetDeliveryStats));
-      serviceBinder.AddMethod(__Method_SetPreference, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.SetPreferenceRequest, global::udb.core.Notification.Services.V1.SetPreferenceResponse>(serviceImpl.SetPreference));
-      serviceBinder.AddMethod(__Method_GetPreference, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.GetPreferenceRequest, global::udb.core.Notification.Services.V1.GetPreferenceResponse>(serviceImpl.GetPreference));
-      serviceBinder.AddMethod(__Method_ListPreferences, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.ListPreferencesRequest, global::udb.core.Notification.Services.V1.ListPreferencesResponse>(serviceImpl.ListPreferences));
+      serviceBinder.AddMethod(__Method_SendNotification, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.SendNotificationRequest, global::Udb.Core.Notification.Services.V1.SendNotificationResponse>(serviceImpl.SendNotification));
+      serviceBinder.AddMethod(__Method_GetNotification, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.GetNotificationRequest, global::Udb.Core.Notification.Services.V1.GetNotificationResponse>(serviceImpl.GetNotification));
+      serviceBinder.AddMethod(__Method_ListNotifications, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.ListNotificationsRequest, global::Udb.Core.Notification.Services.V1.ListNotificationsResponse>(serviceImpl.ListNotifications));
+      serviceBinder.AddMethod(__Method_RetryNotification, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.RetryNotificationRequest, global::Udb.Core.Notification.Services.V1.RetryNotificationResponse>(serviceImpl.RetryNotification));
+      serviceBinder.AddMethod(__Method_ReportDelivery, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.ReportDeliveryRequest, global::Udb.Core.Notification.Services.V1.ReportDeliveryResponse>(serviceImpl.ReportDelivery));
+      serviceBinder.AddMethod(__Method_UpsertTemplate, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.UpsertTemplateRequest, global::Udb.Core.Notification.Services.V1.UpsertTemplateResponse>(serviceImpl.UpsertTemplate));
+      serviceBinder.AddMethod(__Method_GetTemplate, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.GetTemplateRequest, global::Udb.Core.Notification.Services.V1.GetTemplateResponse>(serviceImpl.GetTemplate));
+      serviceBinder.AddMethod(__Method_ListTemplates, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.ListTemplatesRequest, global::Udb.Core.Notification.Services.V1.ListTemplatesResponse>(serviceImpl.ListTemplates));
+      serviceBinder.AddMethod(__Method_GetDeliveryStats, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.GetDeliveryStatsRequest, global::Udb.Core.Notification.Services.V1.GetDeliveryStatsResponse>(serviceImpl.GetDeliveryStats));
+      serviceBinder.AddMethod(__Method_SetPreference, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.SetPreferenceRequest, global::Udb.Core.Notification.Services.V1.SetPreferenceResponse>(serviceImpl.SetPreference));
+      serviceBinder.AddMethod(__Method_GetPreference, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.GetPreferenceRequest, global::Udb.Core.Notification.Services.V1.GetPreferenceResponse>(serviceImpl.GetPreference));
+      serviceBinder.AddMethod(__Method_ListPreferences, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Notification.Services.V1.ListPreferencesRequest, global::Udb.Core.Notification.Services.V1.ListPreferencesResponse>(serviceImpl.ListPreferences));
     }
 
   }

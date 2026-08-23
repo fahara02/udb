@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Tenant.Services.V1 {
+namespace Udb.Core.Tenant.Services.V1 {
   public static partial class TenantService
   {
     static readonly string __ServiceName = "udb.core.tenant.services.v1.TenantService";
@@ -46,40 +46,40 @@ namespace udb.core.Tenant.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.CreateTenantRequest> __Marshaller_udb_core_tenant_services_v1_CreateTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.CreateTenantRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.CreateTenantRequest> __Marshaller_udb_core_tenant_services_v1_CreateTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.CreateTenantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.CreateTenantResponse> __Marshaller_udb_core_tenant_services_v1_CreateTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.CreateTenantResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.CreateTenantResponse> __Marshaller_udb_core_tenant_services_v1_CreateTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.CreateTenantResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.GetTenantRequest> __Marshaller_udb_core_tenant_services_v1_GetTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.GetTenantRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.GetTenantRequest> __Marshaller_udb_core_tenant_services_v1_GetTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.GetTenantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.GetTenantResponse> __Marshaller_udb_core_tenant_services_v1_GetTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.GetTenantResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.GetTenantResponse> __Marshaller_udb_core_tenant_services_v1_GetTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.GetTenantResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.ListTenantsRequest> __Marshaller_udb_core_tenant_services_v1_ListTenantsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.ListTenantsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.ListTenantsRequest> __Marshaller_udb_core_tenant_services_v1_ListTenantsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.ListTenantsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.ListTenantsResponse> __Marshaller_udb_core_tenant_services_v1_ListTenantsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.ListTenantsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.ListTenantsResponse> __Marshaller_udb_core_tenant_services_v1_ListTenantsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.ListTenantsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.UpdateTenantRequest> __Marshaller_udb_core_tenant_services_v1_UpdateTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.UpdateTenantRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest> __Marshaller_udb_core_tenant_services_v1_UpdateTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.UpdateTenantResponse> __Marshaller_udb_core_tenant_services_v1_UpdateTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.UpdateTenantResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse> __Marshaller_udb_core_tenant_services_v1_UpdateTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.GetTenantConfigRequest> __Marshaller_udb_core_tenant_services_v1_GetTenantConfigRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.GetTenantConfigRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest> __Marshaller_udb_core_tenant_services_v1_GetTenantConfigRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.GetTenantConfigResponse> __Marshaller_udb_core_tenant_services_v1_GetTenantConfigResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.GetTenantConfigResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse> __Marshaller_udb_core_tenant_services_v1_GetTenantConfigResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest> __Marshaller_udb_core_tenant_services_v1_UpdateTenantConfigRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest> __Marshaller_udb_core_tenant_services_v1_UpdateTenantConfigRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse> __Marshaller_udb_core_tenant_services_v1_UpdateTenantConfigResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse> __Marshaller_udb_core_tenant_services_v1_UpdateTenantConfigResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.PurgeTenantRequest> __Marshaller_udb_core_tenant_services_v1_PurgeTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.PurgeTenantRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest> __Marshaller_udb_core_tenant_services_v1_PurgeTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.PurgeTenantResponse> __Marshaller_udb_core_tenant_services_v1_PurgeTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.PurgeTenantResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse> __Marshaller_udb_core_tenant_services_v1_PurgeTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest> __Marshaller_udb_core_tenant_services_v1_AdminPurgeTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest> __Marshaller_udb_core_tenant_services_v1_AdminPurgeTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> __Marshaller_udb_core_tenant_services_v1_AdminPurgeTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse> __Marshaller_udb_core_tenant_services_v1_AdminPurgeTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Tenant.Services.V1.CreateTenantRequest, global::udb.core.Tenant.Services.V1.CreateTenantResponse> __Method_CreateTenant = new grpc::Method<global::udb.core.Tenant.Services.V1.CreateTenantRequest, global::udb.core.Tenant.Services.V1.CreateTenantResponse>(
+    static readonly grpc::Method<global::Udb.Core.Tenant.Services.V1.CreateTenantRequest, global::Udb.Core.Tenant.Services.V1.CreateTenantResponse> __Method_CreateTenant = new grpc::Method<global::Udb.Core.Tenant.Services.V1.CreateTenantRequest, global::Udb.Core.Tenant.Services.V1.CreateTenantResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreateTenant",
@@ -87,7 +87,7 @@ namespace udb.core.Tenant.Services.V1 {
         __Marshaller_udb_core_tenant_services_v1_CreateTenantResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Tenant.Services.V1.GetTenantRequest, global::udb.core.Tenant.Services.V1.GetTenantResponse> __Method_GetTenant = new grpc::Method<global::udb.core.Tenant.Services.V1.GetTenantRequest, global::udb.core.Tenant.Services.V1.GetTenantResponse>(
+    static readonly grpc::Method<global::Udb.Core.Tenant.Services.V1.GetTenantRequest, global::Udb.Core.Tenant.Services.V1.GetTenantResponse> __Method_GetTenant = new grpc::Method<global::Udb.Core.Tenant.Services.V1.GetTenantRequest, global::Udb.Core.Tenant.Services.V1.GetTenantResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetTenant",
@@ -95,7 +95,7 @@ namespace udb.core.Tenant.Services.V1 {
         __Marshaller_udb_core_tenant_services_v1_GetTenantResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Tenant.Services.V1.ListTenantsRequest, global::udb.core.Tenant.Services.V1.ListTenantsResponse> __Method_ListTenants = new grpc::Method<global::udb.core.Tenant.Services.V1.ListTenantsRequest, global::udb.core.Tenant.Services.V1.ListTenantsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Tenant.Services.V1.ListTenantsRequest, global::Udb.Core.Tenant.Services.V1.ListTenantsResponse> __Method_ListTenants = new grpc::Method<global::Udb.Core.Tenant.Services.V1.ListTenantsRequest, global::Udb.Core.Tenant.Services.V1.ListTenantsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListTenants",
@@ -103,7 +103,7 @@ namespace udb.core.Tenant.Services.V1 {
         __Marshaller_udb_core_tenant_services_v1_ListTenantsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Tenant.Services.V1.UpdateTenantRequest, global::udb.core.Tenant.Services.V1.UpdateTenantResponse> __Method_UpdateTenant = new grpc::Method<global::udb.core.Tenant.Services.V1.UpdateTenantRequest, global::udb.core.Tenant.Services.V1.UpdateTenantResponse>(
+    static readonly grpc::Method<global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest, global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse> __Method_UpdateTenant = new grpc::Method<global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest, global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UpdateTenant",
@@ -111,7 +111,7 @@ namespace udb.core.Tenant.Services.V1 {
         __Marshaller_udb_core_tenant_services_v1_UpdateTenantResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Tenant.Services.V1.GetTenantConfigRequest, global::udb.core.Tenant.Services.V1.GetTenantConfigResponse> __Method_GetTenantConfig = new grpc::Method<global::udb.core.Tenant.Services.V1.GetTenantConfigRequest, global::udb.core.Tenant.Services.V1.GetTenantConfigResponse>(
+    static readonly grpc::Method<global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest, global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse> __Method_GetTenantConfig = new grpc::Method<global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest, global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetTenantConfig",
@@ -119,7 +119,7 @@ namespace udb.core.Tenant.Services.V1 {
         __Marshaller_udb_core_tenant_services_v1_GetTenantConfigResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest, global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse> __Method_UpdateTenantConfig = new grpc::Method<global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest, global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse>(
+    static readonly grpc::Method<global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest, global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse> __Method_UpdateTenantConfig = new grpc::Method<global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest, global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "UpdateTenantConfig",
@@ -127,7 +127,7 @@ namespace udb.core.Tenant.Services.V1 {
         __Marshaller_udb_core_tenant_services_v1_UpdateTenantConfigResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Tenant.Services.V1.PurgeTenantRequest, global::udb.core.Tenant.Services.V1.PurgeTenantResponse> __Method_PurgeTenant = new grpc::Method<global::udb.core.Tenant.Services.V1.PurgeTenantRequest, global::udb.core.Tenant.Services.V1.PurgeTenantResponse>(
+    static readonly grpc::Method<global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest, global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse> __Method_PurgeTenant = new grpc::Method<global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest, global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PurgeTenant",
@@ -135,7 +135,7 @@ namespace udb.core.Tenant.Services.V1 {
         __Marshaller_udb_core_tenant_services_v1_PurgeTenantResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest, global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> __Method_AdminPurgeTenant = new grpc::Method<global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest, global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse>(
+    static readonly grpc::Method<global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest, global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse> __Method_AdminPurgeTenant = new grpc::Method<global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest, global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "AdminPurgeTenant",
@@ -145,7 +145,7 @@ namespace udb.core.Tenant.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Tenant.Services.V1.TenantServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Tenant.Services.V1.TenantServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of TenantService</summary>
@@ -159,7 +159,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.CreateTenantResponse> CreateTenant(global::udb.core.Tenant.Services.V1.CreateTenantRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Tenant.Services.V1.CreateTenantResponse> CreateTenant(global::Udb.Core.Tenant.Services.V1.CreateTenantRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -171,7 +171,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.GetTenantResponse> GetTenant(global::udb.core.Tenant.Services.V1.GetTenantRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Tenant.Services.V1.GetTenantResponse> GetTenant(global::Udb.Core.Tenant.Services.V1.GetTenantRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -183,7 +183,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.ListTenantsResponse> ListTenants(global::udb.core.Tenant.Services.V1.ListTenantsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Tenant.Services.V1.ListTenantsResponse> ListTenants(global::Udb.Core.Tenant.Services.V1.ListTenantsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -195,7 +195,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.UpdateTenantResponse> UpdateTenant(global::udb.core.Tenant.Services.V1.UpdateTenantRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse> UpdateTenant(global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -207,7 +207,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.GetTenantConfigResponse> GetTenantConfig(global::udb.core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse> GetTenantConfig(global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -219,7 +219,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse> UpdateTenantConfig(global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse> UpdateTenantConfig(global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -236,7 +236,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.PurgeTenantResponse> PurgeTenant(global::udb.core.Tenant.Services.V1.PurgeTenantRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse> PurgeTenant(global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -258,7 +258,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> AdminPurgeTenant(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse> AdminPurgeTenant(global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -301,7 +301,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.CreateTenantResponse CreateTenant(global::udb.core.Tenant.Services.V1.CreateTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Tenant.Services.V1.CreateTenantResponse CreateTenant(global::Udb.Core.Tenant.Services.V1.CreateTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateTenant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -312,7 +312,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.CreateTenantResponse CreateTenant(global::udb.core.Tenant.Services.V1.CreateTenantRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Tenant.Services.V1.CreateTenantResponse CreateTenant(global::Udb.Core.Tenant.Services.V1.CreateTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreateTenant, null, options, request);
       }
@@ -325,7 +325,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.CreateTenantResponse> CreateTenantAsync(global::udb.core.Tenant.Services.V1.CreateTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.CreateTenantResponse> CreateTenantAsync(global::Udb.Core.Tenant.Services.V1.CreateTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateTenantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -336,7 +336,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.CreateTenantResponse> CreateTenantAsync(global::udb.core.Tenant.Services.V1.CreateTenantRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.CreateTenantResponse> CreateTenantAsync(global::Udb.Core.Tenant.Services.V1.CreateTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreateTenant, null, options, request);
       }
@@ -349,7 +349,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.GetTenantResponse GetTenant(global::udb.core.Tenant.Services.V1.GetTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Tenant.Services.V1.GetTenantResponse GetTenant(global::Udb.Core.Tenant.Services.V1.GetTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetTenant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -360,7 +360,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.GetTenantResponse GetTenant(global::udb.core.Tenant.Services.V1.GetTenantRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Tenant.Services.V1.GetTenantResponse GetTenant(global::Udb.Core.Tenant.Services.V1.GetTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetTenant, null, options, request);
       }
@@ -373,7 +373,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.GetTenantResponse> GetTenantAsync(global::udb.core.Tenant.Services.V1.GetTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.GetTenantResponse> GetTenantAsync(global::Udb.Core.Tenant.Services.V1.GetTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetTenantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -384,7 +384,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.GetTenantResponse> GetTenantAsync(global::udb.core.Tenant.Services.V1.GetTenantRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.GetTenantResponse> GetTenantAsync(global::Udb.Core.Tenant.Services.V1.GetTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetTenant, null, options, request);
       }
@@ -397,7 +397,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.ListTenantsResponse ListTenants(global::udb.core.Tenant.Services.V1.ListTenantsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Tenant.Services.V1.ListTenantsResponse ListTenants(global::Udb.Core.Tenant.Services.V1.ListTenantsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListTenants(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -408,7 +408,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.ListTenantsResponse ListTenants(global::udb.core.Tenant.Services.V1.ListTenantsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Tenant.Services.V1.ListTenantsResponse ListTenants(global::Udb.Core.Tenant.Services.V1.ListTenantsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListTenants, null, options, request);
       }
@@ -421,7 +421,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.ListTenantsResponse> ListTenantsAsync(global::udb.core.Tenant.Services.V1.ListTenantsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.ListTenantsResponse> ListTenantsAsync(global::Udb.Core.Tenant.Services.V1.ListTenantsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListTenantsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -432,7 +432,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.ListTenantsResponse> ListTenantsAsync(global::udb.core.Tenant.Services.V1.ListTenantsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.ListTenantsResponse> ListTenantsAsync(global::Udb.Core.Tenant.Services.V1.ListTenantsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListTenants, null, options, request);
       }
@@ -445,7 +445,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.UpdateTenantResponse UpdateTenant(global::udb.core.Tenant.Services.V1.UpdateTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse UpdateTenant(global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateTenant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -456,7 +456,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.UpdateTenantResponse UpdateTenant(global::udb.core.Tenant.Services.V1.UpdateTenantRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse UpdateTenant(global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UpdateTenant, null, options, request);
       }
@@ -469,7 +469,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.UpdateTenantResponse> UpdateTenantAsync(global::udb.core.Tenant.Services.V1.UpdateTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse> UpdateTenantAsync(global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateTenantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -480,7 +480,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.UpdateTenantResponse> UpdateTenantAsync(global::udb.core.Tenant.Services.V1.UpdateTenantRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse> UpdateTenantAsync(global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UpdateTenant, null, options, request);
       }
@@ -493,7 +493,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.GetTenantConfigResponse GetTenantConfig(global::udb.core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse GetTenantConfig(global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetTenantConfig(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -504,7 +504,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.GetTenantConfigResponse GetTenantConfig(global::udb.core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse GetTenantConfig(global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetTenantConfig, null, options, request);
       }
@@ -517,7 +517,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.GetTenantConfigResponse> GetTenantConfigAsync(global::udb.core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse> GetTenantConfigAsync(global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetTenantConfigAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -528,7 +528,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.GetTenantConfigResponse> GetTenantConfigAsync(global::udb.core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse> GetTenantConfigAsync(global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetTenantConfig, null, options, request);
       }
@@ -541,7 +541,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse UpdateTenantConfig(global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse UpdateTenantConfig(global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateTenantConfig(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -552,7 +552,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse UpdateTenantConfig(global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse UpdateTenantConfig(global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_UpdateTenantConfig, null, options, request);
       }
@@ -565,7 +565,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse> UpdateTenantConfigAsync(global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse> UpdateTenantConfigAsync(global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return UpdateTenantConfigAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -576,7 +576,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse> UpdateTenantConfigAsync(global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse> UpdateTenantConfigAsync(global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_UpdateTenantConfig, null, options, request);
       }
@@ -594,7 +594,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.PurgeTenantResponse PurgeTenant(global::udb.core.Tenant.Services.V1.PurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse PurgeTenant(global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PurgeTenant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -610,7 +610,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.PurgeTenantResponse PurgeTenant(global::udb.core.Tenant.Services.V1.PurgeTenantRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse PurgeTenant(global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PurgeTenant, null, options, request);
       }
@@ -628,7 +628,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.PurgeTenantResponse> PurgeTenantAsync(global::udb.core.Tenant.Services.V1.PurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse> PurgeTenantAsync(global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PurgeTenantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -644,7 +644,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.PurgeTenantResponse> PurgeTenantAsync(global::udb.core.Tenant.Services.V1.PurgeTenantRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse> PurgeTenantAsync(global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PurgeTenant, null, options, request);
       }
@@ -667,7 +667,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse AdminPurgeTenant(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse AdminPurgeTenant(global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return AdminPurgeTenant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -688,7 +688,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse AdminPurgeTenant(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse AdminPurgeTenant(global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_AdminPurgeTenant, null, options, request);
       }
@@ -711,7 +711,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> AdminPurgeTenantAsync(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse> AdminPurgeTenantAsync(global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return AdminPurgeTenantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -732,7 +732,7 @@ namespace udb.core.Tenant.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> AdminPurgeTenantAsync(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse> AdminPurgeTenantAsync(global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_AdminPurgeTenant, null, options, request);
       }
@@ -767,14 +767,14 @@ namespace udb.core.Tenant.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, TenantServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_CreateTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.CreateTenantRequest, global::udb.core.Tenant.Services.V1.CreateTenantResponse>(serviceImpl.CreateTenant));
-      serviceBinder.AddMethod(__Method_GetTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.GetTenantRequest, global::udb.core.Tenant.Services.V1.GetTenantResponse>(serviceImpl.GetTenant));
-      serviceBinder.AddMethod(__Method_ListTenants, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.ListTenantsRequest, global::udb.core.Tenant.Services.V1.ListTenantsResponse>(serviceImpl.ListTenants));
-      serviceBinder.AddMethod(__Method_UpdateTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.UpdateTenantRequest, global::udb.core.Tenant.Services.V1.UpdateTenantResponse>(serviceImpl.UpdateTenant));
-      serviceBinder.AddMethod(__Method_GetTenantConfig, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.GetTenantConfigRequest, global::udb.core.Tenant.Services.V1.GetTenantConfigResponse>(serviceImpl.GetTenantConfig));
-      serviceBinder.AddMethod(__Method_UpdateTenantConfig, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest, global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse>(serviceImpl.UpdateTenantConfig));
-      serviceBinder.AddMethod(__Method_PurgeTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.PurgeTenantRequest, global::udb.core.Tenant.Services.V1.PurgeTenantResponse>(serviceImpl.PurgeTenant));
-      serviceBinder.AddMethod(__Method_AdminPurgeTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest, global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse>(serviceImpl.AdminPurgeTenant));
+      serviceBinder.AddMethod(__Method_CreateTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Tenant.Services.V1.CreateTenantRequest, global::Udb.Core.Tenant.Services.V1.CreateTenantResponse>(serviceImpl.CreateTenant));
+      serviceBinder.AddMethod(__Method_GetTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Tenant.Services.V1.GetTenantRequest, global::Udb.Core.Tenant.Services.V1.GetTenantResponse>(serviceImpl.GetTenant));
+      serviceBinder.AddMethod(__Method_ListTenants, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Tenant.Services.V1.ListTenantsRequest, global::Udb.Core.Tenant.Services.V1.ListTenantsResponse>(serviceImpl.ListTenants));
+      serviceBinder.AddMethod(__Method_UpdateTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Tenant.Services.V1.UpdateTenantRequest, global::Udb.Core.Tenant.Services.V1.UpdateTenantResponse>(serviceImpl.UpdateTenant));
+      serviceBinder.AddMethod(__Method_GetTenantConfig, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Tenant.Services.V1.GetTenantConfigRequest, global::Udb.Core.Tenant.Services.V1.GetTenantConfigResponse>(serviceImpl.GetTenantConfig));
+      serviceBinder.AddMethod(__Method_UpdateTenantConfig, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigRequest, global::Udb.Core.Tenant.Services.V1.UpdateTenantConfigResponse>(serviceImpl.UpdateTenantConfig));
+      serviceBinder.AddMethod(__Method_PurgeTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Tenant.Services.V1.PurgeTenantRequest, global::Udb.Core.Tenant.Services.V1.PurgeTenantResponse>(serviceImpl.PurgeTenant));
+      serviceBinder.AddMethod(__Method_AdminPurgeTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantRequest, global::Udb.Core.Tenant.Services.V1.AdminPurgeTenantResponse>(serviceImpl.AdminPurgeTenant));
     }
 
   }

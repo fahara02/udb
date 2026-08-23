@@ -289,7 +289,7 @@ const file_udb_core_workflow_entity_v1_workflow_instance_proto_rawDesc = "" +
 	"\x1didx_workflow_instances_tenant\x12\x05BTREEZ\ttenant_id\x8a\x018\n" +
 	"\x1aidx_workflow_instances_due\x12\x05BTREEZ\x06statusZ\vnext_run_at\xf2\x01#udb.workflow.workflow_instances.cdc\xfa\x01\rworkflow:read\x8a\xb2\x19\x9a\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x14workflow.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x92\x02\n" +
-	"\x1fcom.udb.core.workflow.entity.v1B\x15WorkflowInstanceProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1budb.core.Workflow.Entity.V1\xca\x02\x1bUdb\\Core\\Workflow\\Entity\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1\xea\x02\x1fUdb::Core::Workflow::Entity::V1b\x06proto3"
+	"\x1fcom.udb.core.workflow.entity.v1B\x15WorkflowInstanceProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x1bUdb.Core.Workflow.Entity.V1\xca\x02\x1bUdb\\Core\\Workflow\\Entity\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1\xea\x02\x1fUdb::Core::Workflow::Entity::V1b\x06proto3"
 
 var (
 	file_udb_core_workflow_entity_v1_workflow_instance_proto_rawDescOnce sync.Once

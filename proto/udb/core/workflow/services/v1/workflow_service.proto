@@ -7,7 +7,7 @@ import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/security.proto";
 import "udb/core/workflow/entity/v1/workflow_instance.proto";
 
-option csharp_namespace = "udb.core.Workflow.Services.V1";
+option csharp_namespace = "Udb.Core.Workflow.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/workflow/services/v1;workflowservicev1";
 option java_package = "com.udb.core.workflow.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Workflow\\Services\\V1";

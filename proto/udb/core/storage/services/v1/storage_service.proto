@@ -10,7 +10,7 @@ import "udb/core/common/v1/security.proto";
 import "udb/core/storage/entity/v1/enums.proto";
 import "udb/core/storage/entity/v1/file.proto";
 
-option csharp_namespace = "udb.core.Storage.Services.V1";
+option csharp_namespace = "Udb.Core.Storage.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/storage/services/v1;storageservicev1";
 option java_package = "com.udb.core.storage.services.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Storage\\Services\\V1";

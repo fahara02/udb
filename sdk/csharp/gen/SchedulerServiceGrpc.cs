@@ -7,7 +7,7 @@
 
 using grpc = global::Grpc.Core;
 
-namespace udb.core.Scheduler.Services.V1 {
+namespace Udb.Core.Scheduler.Services.V1 {
   /// <summary>
   /// SchedulerService — durable cron and one-shot jobs as a native service.
   /// Mutations persist to the canonical store, tenant-scoped by the verified claim,
@@ -52,32 +52,32 @@ namespace udb.core.Scheduler.Services.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.CreateJobRequest> __Marshaller_udb_core_scheduler_services_v1_CreateJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.CreateJobRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.CreateJobRequest> __Marshaller_udb_core_scheduler_services_v1_CreateJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.CreateJobRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.CreateJobResponse> __Marshaller_udb_core_scheduler_services_v1_CreateJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.CreateJobResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.CreateJobResponse> __Marshaller_udb_core_scheduler_services_v1_CreateJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.CreateJobResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.GetJobRequest> __Marshaller_udb_core_scheduler_services_v1_GetJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.GetJobRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.GetJobRequest> __Marshaller_udb_core_scheduler_services_v1_GetJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.GetJobRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.GetJobResponse> __Marshaller_udb_core_scheduler_services_v1_GetJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.GetJobResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.GetJobResponse> __Marshaller_udb_core_scheduler_services_v1_GetJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.GetJobResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.ListJobsRequest> __Marshaller_udb_core_scheduler_services_v1_ListJobsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.ListJobsRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.ListJobsRequest> __Marshaller_udb_core_scheduler_services_v1_ListJobsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.ListJobsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.ListJobsResponse> __Marshaller_udb_core_scheduler_services_v1_ListJobsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.ListJobsResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.ListJobsResponse> __Marshaller_udb_core_scheduler_services_v1_ListJobsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.ListJobsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.DeleteJobRequest> __Marshaller_udb_core_scheduler_services_v1_DeleteJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.DeleteJobRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest> __Marshaller_udb_core_scheduler_services_v1_DeleteJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.DeleteJobResponse> __Marshaller_udb_core_scheduler_services_v1_DeleteJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.DeleteJobResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse> __Marshaller_udb_core_scheduler_services_v1_DeleteJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.PauseJobRequest> __Marshaller_udb_core_scheduler_services_v1_PauseJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.PauseJobRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.PauseJobRequest> __Marshaller_udb_core_scheduler_services_v1_PauseJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.PauseJobRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.PauseJobResponse> __Marshaller_udb_core_scheduler_services_v1_PauseJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.PauseJobResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.PauseJobResponse> __Marshaller_udb_core_scheduler_services_v1_PauseJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.PauseJobResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.ResumeJobRequest> __Marshaller_udb_core_scheduler_services_v1_ResumeJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.ResumeJobRequest.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest> __Marshaller_udb_core_scheduler_services_v1_ResumeJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::udb.core.Scheduler.Services.V1.ResumeJobResponse> __Marshaller_udb_core_scheduler_services_v1_ResumeJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Scheduler.Services.V1.ResumeJobResponse.Parser));
+    static readonly grpc::Marshaller<global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse> __Marshaller_udb_core_scheduler_services_v1_ResumeJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Scheduler.Services.V1.CreateJobRequest, global::udb.core.Scheduler.Services.V1.CreateJobResponse> __Method_CreateJob = new grpc::Method<global::udb.core.Scheduler.Services.V1.CreateJobRequest, global::udb.core.Scheduler.Services.V1.CreateJobResponse>(
+    static readonly grpc::Method<global::Udb.Core.Scheduler.Services.V1.CreateJobRequest, global::Udb.Core.Scheduler.Services.V1.CreateJobResponse> __Method_CreateJob = new grpc::Method<global::Udb.Core.Scheduler.Services.V1.CreateJobRequest, global::Udb.Core.Scheduler.Services.V1.CreateJobResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "CreateJob",
@@ -85,7 +85,7 @@ namespace udb.core.Scheduler.Services.V1 {
         __Marshaller_udb_core_scheduler_services_v1_CreateJobResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Scheduler.Services.V1.GetJobRequest, global::udb.core.Scheduler.Services.V1.GetJobResponse> __Method_GetJob = new grpc::Method<global::udb.core.Scheduler.Services.V1.GetJobRequest, global::udb.core.Scheduler.Services.V1.GetJobResponse>(
+    static readonly grpc::Method<global::Udb.Core.Scheduler.Services.V1.GetJobRequest, global::Udb.Core.Scheduler.Services.V1.GetJobResponse> __Method_GetJob = new grpc::Method<global::Udb.Core.Scheduler.Services.V1.GetJobRequest, global::Udb.Core.Scheduler.Services.V1.GetJobResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "GetJob",
@@ -93,7 +93,7 @@ namespace udb.core.Scheduler.Services.V1 {
         __Marshaller_udb_core_scheduler_services_v1_GetJobResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Scheduler.Services.V1.ListJobsRequest, global::udb.core.Scheduler.Services.V1.ListJobsResponse> __Method_ListJobs = new grpc::Method<global::udb.core.Scheduler.Services.V1.ListJobsRequest, global::udb.core.Scheduler.Services.V1.ListJobsResponse>(
+    static readonly grpc::Method<global::Udb.Core.Scheduler.Services.V1.ListJobsRequest, global::Udb.Core.Scheduler.Services.V1.ListJobsResponse> __Method_ListJobs = new grpc::Method<global::Udb.Core.Scheduler.Services.V1.ListJobsRequest, global::Udb.Core.Scheduler.Services.V1.ListJobsResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ListJobs",
@@ -101,7 +101,7 @@ namespace udb.core.Scheduler.Services.V1 {
         __Marshaller_udb_core_scheduler_services_v1_ListJobsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Scheduler.Services.V1.DeleteJobRequest, global::udb.core.Scheduler.Services.V1.DeleteJobResponse> __Method_DeleteJob = new grpc::Method<global::udb.core.Scheduler.Services.V1.DeleteJobRequest, global::udb.core.Scheduler.Services.V1.DeleteJobResponse>(
+    static readonly grpc::Method<global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest, global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse> __Method_DeleteJob = new grpc::Method<global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest, global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "DeleteJob",
@@ -109,7 +109,7 @@ namespace udb.core.Scheduler.Services.V1 {
         __Marshaller_udb_core_scheduler_services_v1_DeleteJobResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Scheduler.Services.V1.PauseJobRequest, global::udb.core.Scheduler.Services.V1.PauseJobResponse> __Method_PauseJob = new grpc::Method<global::udb.core.Scheduler.Services.V1.PauseJobRequest, global::udb.core.Scheduler.Services.V1.PauseJobResponse>(
+    static readonly grpc::Method<global::Udb.Core.Scheduler.Services.V1.PauseJobRequest, global::Udb.Core.Scheduler.Services.V1.PauseJobResponse> __Method_PauseJob = new grpc::Method<global::Udb.Core.Scheduler.Services.V1.PauseJobRequest, global::Udb.Core.Scheduler.Services.V1.PauseJobResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "PauseJob",
@@ -117,7 +117,7 @@ namespace udb.core.Scheduler.Services.V1 {
         __Marshaller_udb_core_scheduler_services_v1_PauseJobResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::udb.core.Scheduler.Services.V1.ResumeJobRequest, global::udb.core.Scheduler.Services.V1.ResumeJobResponse> __Method_ResumeJob = new grpc::Method<global::udb.core.Scheduler.Services.V1.ResumeJobRequest, global::udb.core.Scheduler.Services.V1.ResumeJobResponse>(
+    static readonly grpc::Method<global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest, global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse> __Method_ResumeJob = new grpc::Method<global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest, global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
         "ResumeJob",
@@ -127,7 +127,7 @@ namespace udb.core.Scheduler.Services.V1 {
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
-      get { return global::udb.core.Scheduler.Services.V1.SchedulerServiceReflection.Descriptor.Services[0]; }
+      get { return global::Udb.Core.Scheduler.Services.V1.SchedulerServiceReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of SchedulerService</summary>
@@ -141,7 +141,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Scheduler.Services.V1.CreateJobResponse> CreateJob(global::udb.core.Scheduler.Services.V1.CreateJobRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Scheduler.Services.V1.CreateJobResponse> CreateJob(global::Udb.Core.Scheduler.Services.V1.CreateJobRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -153,7 +153,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Scheduler.Services.V1.GetJobResponse> GetJob(global::udb.core.Scheduler.Services.V1.GetJobRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Scheduler.Services.V1.GetJobResponse> GetJob(global::Udb.Core.Scheduler.Services.V1.GetJobRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -165,7 +165,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Scheduler.Services.V1.ListJobsResponse> ListJobs(global::udb.core.Scheduler.Services.V1.ListJobsRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Scheduler.Services.V1.ListJobsResponse> ListJobs(global::Udb.Core.Scheduler.Services.V1.ListJobsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -177,7 +177,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Scheduler.Services.V1.DeleteJobResponse> DeleteJob(global::udb.core.Scheduler.Services.V1.DeleteJobRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse> DeleteJob(global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -189,7 +189,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Scheduler.Services.V1.PauseJobResponse> PauseJob(global::udb.core.Scheduler.Services.V1.PauseJobRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Scheduler.Services.V1.PauseJobResponse> PauseJob(global::Udb.Core.Scheduler.Services.V1.PauseJobRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -201,7 +201,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::udb.core.Scheduler.Services.V1.ResumeJobResponse> ResumeJob(global::udb.core.Scheduler.Services.V1.ResumeJobRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse> ResumeJob(global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -244,7 +244,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.CreateJobResponse CreateJob(global::udb.core.Scheduler.Services.V1.CreateJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Scheduler.Services.V1.CreateJobResponse CreateJob(global::Udb.Core.Scheduler.Services.V1.CreateJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateJob(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -255,7 +255,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.CreateJobResponse CreateJob(global::udb.core.Scheduler.Services.V1.CreateJobRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Scheduler.Services.V1.CreateJobResponse CreateJob(global::Udb.Core.Scheduler.Services.V1.CreateJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_CreateJob, null, options, request);
       }
@@ -268,7 +268,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.CreateJobResponse> CreateJobAsync(global::udb.core.Scheduler.Services.V1.CreateJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.CreateJobResponse> CreateJobAsync(global::Udb.Core.Scheduler.Services.V1.CreateJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return CreateJobAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -279,7 +279,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.CreateJobResponse> CreateJobAsync(global::udb.core.Scheduler.Services.V1.CreateJobRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.CreateJobResponse> CreateJobAsync(global::Udb.Core.Scheduler.Services.V1.CreateJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_CreateJob, null, options, request);
       }
@@ -292,7 +292,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.GetJobResponse GetJob(global::udb.core.Scheduler.Services.V1.GetJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Scheduler.Services.V1.GetJobResponse GetJob(global::Udb.Core.Scheduler.Services.V1.GetJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetJob(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -303,7 +303,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.GetJobResponse GetJob(global::udb.core.Scheduler.Services.V1.GetJobRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Scheduler.Services.V1.GetJobResponse GetJob(global::Udb.Core.Scheduler.Services.V1.GetJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_GetJob, null, options, request);
       }
@@ -316,7 +316,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.GetJobResponse> GetJobAsync(global::udb.core.Scheduler.Services.V1.GetJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.GetJobResponse> GetJobAsync(global::Udb.Core.Scheduler.Services.V1.GetJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return GetJobAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -327,7 +327,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.GetJobResponse> GetJobAsync(global::udb.core.Scheduler.Services.V1.GetJobRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.GetJobResponse> GetJobAsync(global::Udb.Core.Scheduler.Services.V1.GetJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetJob, null, options, request);
       }
@@ -340,7 +340,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.ListJobsResponse ListJobs(global::udb.core.Scheduler.Services.V1.ListJobsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Scheduler.Services.V1.ListJobsResponse ListJobs(global::Udb.Core.Scheduler.Services.V1.ListJobsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListJobs(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -351,7 +351,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.ListJobsResponse ListJobs(global::udb.core.Scheduler.Services.V1.ListJobsRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Scheduler.Services.V1.ListJobsResponse ListJobs(global::Udb.Core.Scheduler.Services.V1.ListJobsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ListJobs, null, options, request);
       }
@@ -364,7 +364,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.ListJobsResponse> ListJobsAsync(global::udb.core.Scheduler.Services.V1.ListJobsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.ListJobsResponse> ListJobsAsync(global::Udb.Core.Scheduler.Services.V1.ListJobsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListJobsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -375,7 +375,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.ListJobsResponse> ListJobsAsync(global::udb.core.Scheduler.Services.V1.ListJobsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.ListJobsResponse> ListJobsAsync(global::Udb.Core.Scheduler.Services.V1.ListJobsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListJobs, null, options, request);
       }
@@ -388,7 +388,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.DeleteJobResponse DeleteJob(global::udb.core.Scheduler.Services.V1.DeleteJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse DeleteJob(global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteJob(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -399,7 +399,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.DeleteJobResponse DeleteJob(global::udb.core.Scheduler.Services.V1.DeleteJobRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse DeleteJob(global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeleteJob, null, options, request);
       }
@@ -412,7 +412,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.DeleteJobResponse> DeleteJobAsync(global::udb.core.Scheduler.Services.V1.DeleteJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse> DeleteJobAsync(global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeleteJobAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -423,7 +423,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.DeleteJobResponse> DeleteJobAsync(global::udb.core.Scheduler.Services.V1.DeleteJobRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse> DeleteJobAsync(global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteJob, null, options, request);
       }
@@ -436,7 +436,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.PauseJobResponse PauseJob(global::udb.core.Scheduler.Services.V1.PauseJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Scheduler.Services.V1.PauseJobResponse PauseJob(global::Udb.Core.Scheduler.Services.V1.PauseJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PauseJob(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -447,7 +447,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.PauseJobResponse PauseJob(global::udb.core.Scheduler.Services.V1.PauseJobRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Scheduler.Services.V1.PauseJobResponse PauseJob(global::Udb.Core.Scheduler.Services.V1.PauseJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PauseJob, null, options, request);
       }
@@ -460,7 +460,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.PauseJobResponse> PauseJobAsync(global::udb.core.Scheduler.Services.V1.PauseJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.PauseJobResponse> PauseJobAsync(global::Udb.Core.Scheduler.Services.V1.PauseJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PauseJobAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -471,7 +471,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.PauseJobResponse> PauseJobAsync(global::udb.core.Scheduler.Services.V1.PauseJobRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.PauseJobResponse> PauseJobAsync(global::Udb.Core.Scheduler.Services.V1.PauseJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_PauseJob, null, options, request);
       }
@@ -484,7 +484,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.ResumeJobResponse ResumeJob(global::udb.core.Scheduler.Services.V1.ResumeJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse ResumeJob(global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ResumeJob(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -495,7 +495,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::udb.core.Scheduler.Services.V1.ResumeJobResponse ResumeJob(global::udb.core.Scheduler.Services.V1.ResumeJobRequest request, grpc::CallOptions options)
+      public virtual global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse ResumeJob(global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ResumeJob, null, options, request);
       }
@@ -508,7 +508,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.ResumeJobResponse> ResumeJobAsync(global::udb.core.Scheduler.Services.V1.ResumeJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse> ResumeJobAsync(global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ResumeJobAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -519,7 +519,7 @@ namespace udb.core.Scheduler.Services.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::udb.core.Scheduler.Services.V1.ResumeJobResponse> ResumeJobAsync(global::udb.core.Scheduler.Services.V1.ResumeJobRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse> ResumeJobAsync(global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ResumeJob, null, options, request);
       }
@@ -552,12 +552,12 @@ namespace udb.core.Scheduler.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, SchedulerServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_CreateJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Scheduler.Services.V1.CreateJobRequest, global::udb.core.Scheduler.Services.V1.CreateJobResponse>(serviceImpl.CreateJob));
-      serviceBinder.AddMethod(__Method_GetJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Scheduler.Services.V1.GetJobRequest, global::udb.core.Scheduler.Services.V1.GetJobResponse>(serviceImpl.GetJob));
-      serviceBinder.AddMethod(__Method_ListJobs, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Scheduler.Services.V1.ListJobsRequest, global::udb.core.Scheduler.Services.V1.ListJobsResponse>(serviceImpl.ListJobs));
-      serviceBinder.AddMethod(__Method_DeleteJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Scheduler.Services.V1.DeleteJobRequest, global::udb.core.Scheduler.Services.V1.DeleteJobResponse>(serviceImpl.DeleteJob));
-      serviceBinder.AddMethod(__Method_PauseJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Scheduler.Services.V1.PauseJobRequest, global::udb.core.Scheduler.Services.V1.PauseJobResponse>(serviceImpl.PauseJob));
-      serviceBinder.AddMethod(__Method_ResumeJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Scheduler.Services.V1.ResumeJobRequest, global::udb.core.Scheduler.Services.V1.ResumeJobResponse>(serviceImpl.ResumeJob));
+      serviceBinder.AddMethod(__Method_CreateJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Scheduler.Services.V1.CreateJobRequest, global::Udb.Core.Scheduler.Services.V1.CreateJobResponse>(serviceImpl.CreateJob));
+      serviceBinder.AddMethod(__Method_GetJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Scheduler.Services.V1.GetJobRequest, global::Udb.Core.Scheduler.Services.V1.GetJobResponse>(serviceImpl.GetJob));
+      serviceBinder.AddMethod(__Method_ListJobs, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Scheduler.Services.V1.ListJobsRequest, global::Udb.Core.Scheduler.Services.V1.ListJobsResponse>(serviceImpl.ListJobs));
+      serviceBinder.AddMethod(__Method_DeleteJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Scheduler.Services.V1.DeleteJobRequest, global::Udb.Core.Scheduler.Services.V1.DeleteJobResponse>(serviceImpl.DeleteJob));
+      serviceBinder.AddMethod(__Method_PauseJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Scheduler.Services.V1.PauseJobRequest, global::Udb.Core.Scheduler.Services.V1.PauseJobResponse>(serviceImpl.PauseJob));
+      serviceBinder.AddMethod(__Method_ResumeJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Scheduler.Services.V1.ResumeJobRequest, global::Udb.Core.Scheduler.Services.V1.ResumeJobResponse>(serviceImpl.ResumeJob));
     }
 
   }

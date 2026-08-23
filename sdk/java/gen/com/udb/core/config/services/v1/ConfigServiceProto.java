@@ -252,7 +252,7 @@ public final class ConfigServiceProto {
       "RGETB\221\002\n\037com.udb.core.config.services.v1" +
       "B\022ConfigServiceProtoP\001ZIgithub.com/fahar" +
       "a02/udb/sdk/go/gen/udb/core/config/servi" +
-      "ces/v1;servicesv1\242\002\004UCCS\252\002\033udb.core.Conf" +
+      "ces/v1;servicesv1\242\002\004UCCS\252\002\033Udb.Core.Conf" +
       "ig.Services.V1\312\002\033Udb\\Core\\Config\\Service" +
       "s\\V1\342\002\'Udb\\GPBMetadata\\Core\\Config\\Servi" +
       "ces\\V1\352\002\037Udb::Core::Config::Services::V1" +

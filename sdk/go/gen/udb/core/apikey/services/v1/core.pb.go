@@ -1426,7 +1426,7 @@ const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"\x1bGetApiKeyUsageStatsResponse\x12B\n" +
 	"\x05stats\x18\x01 \x03(\v2,.udb.core.apikey.services.v1.ApiKeyDailyStatR\x05stats\x12%\n" +
 	"\x0etotal_requests\x18\x02 \x01(\x03R\rtotalRequests:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01B\x88\x02\n" +
-	"\x1fcom.udb.core.apikey.services.v1B\tCoreProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1budb.core.Apikey.Services.V1\xca\x02\x1bUdb\\Core\\Apikey\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Apikey\\Services\\V1\xea\x02\x1fUdb::Core::Apikey::Services::V1b\x06proto3"
+	"\x1fcom.udb.core.apikey.services.v1B\tCoreProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1bUdb.Core.Apikey.Services.V1\xca\x02\x1bUdb\\Core\\Apikey\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Apikey\\Services\\V1\xea\x02\x1fUdb::Core::Apikey::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_apikey_services_v1_core_proto_rawDescOnce sync.Once

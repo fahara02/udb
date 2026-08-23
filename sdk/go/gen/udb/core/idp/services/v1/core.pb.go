@@ -4196,7 +4196,7 @@ const file_udb_core_idp_services_v1_core_proto_rawDesc = "" +
 	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"3\n" +
 	"\x17ScimDeleteGroupResponse\x12\x18\n" +
 	"\adeleted\x18\x01 \x01(\bR\adeletedB\xf6\x01\n" +
-	"\x1ccom.udb.core.idp.services.v1B\tCoreProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/services/v1;servicesv1\xa2\x02\x04UCIS\xaa\x02\x18udb.core.Idp.Services.V1\xca\x02\x18Udb\\Core\\Idp\\Services\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Idp\\Services\\V1\xea\x02\x1cUdb::Core::Idp::Services::V1b\x06proto3"
+	"\x1ccom.udb.core.idp.services.v1B\tCoreProtoP\x01ZFgithub.com/fahara02/udb/sdk/go/gen/udb/core/idp/services/v1;servicesv1\xa2\x02\x04UCIS\xaa\x02\x18Udb.Core.Idp.Services.V1\xca\x02\x18Udb\\Core\\Idp\\Services\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Idp\\Services\\V1\xea\x02\x1cUdb::Core::Idp::Services::V1b\x06proto3"
 
 var (
 	file_udb_core_idp_services_v1_core_proto_rawDescOnce sync.Once

@@ -53,7 +53,7 @@ public final class EnumsProto {
       "NDED\020\003B\373\001\n\035com.udb.core.webrtc.entity.v1" +
       "B\nEnumsProtoP\001ZEgithub.com/fahara02/udb/" +
       "sdk/go/gen/udb/core/webrtc/entity/v1;ent" +
-      "ityv1\242\002\004UCWE\252\002\031udb.core.Webrtc.Entity.V1" +
+      "ityv1\242\002\004UCWE\252\002\031Udb.Core.Webrtc.Entity.V1" +
       "\312\002\031Udb\\Core\\Webrtc\\Entity\\V1\342\002%Udb\\GPBMe" +
       "tadata\\Core\\Webrtc\\Entity\\V1\352\002\035Udb::Core" +
       "::Webrtc::Entity::V1b\006proto3"

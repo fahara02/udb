@@ -6,7 +6,7 @@ import public "udb/core/apikey/entity/v1/api_key.proto";
 import public "udb/core/apikey/entity/v1/api_key_usage.proto";
 import public "udb/core/apikey/entity/v1/enums.proto";
 
-option csharp_namespace = "udb.core.Apikey.Entity.V1";
+option csharp_namespace = "Udb.Core.Apikey.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/entity/v1;apikeyv1";
 option java_package = "com.udb.core.apikey.entity.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1";

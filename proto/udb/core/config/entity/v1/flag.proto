@@ -5,7 +5,7 @@ package udb.core.config.entity.v1;
 import "udb/core/common/v1/db.proto";
 import "udb/core/common/v1/security.proto";
 
-option csharp_namespace = "udb.core.Config.Entity.V1";
+option csharp_namespace = "Udb.Core.Config.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/config/entity/v1;configv1";
 option java_package = "com.udb.core.config.entity.v1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Config\\Entity\\V1";

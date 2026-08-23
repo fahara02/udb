@@ -89,8 +89,8 @@ public final class SigningKeyProto {
       "rdr\025tenant.data_residencyB\372\001\n\034com.udb.co" +
       "re.authn.entity.v1B\017SigningKeyProtoP\001ZDg" +
       "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
-      "re/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb" +
-      ".core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\E" +
+      "re/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030Udb" +
+      ".Core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\E" +
       "ntity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\En" +
       "tity\\V1\352\002\034Udb::Core::Authn::Entity::V1b\006" +
       "proto3"
