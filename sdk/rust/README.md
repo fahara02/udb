@@ -112,6 +112,48 @@ let mut udb = UdbClient::connect("http://127.0.0.1:50051", meta).await?;
 
 `TokenManager`'s `Debug` redacts the stored tokens.
 
+## Typed errors, and retries that will not double-charge you
+
+Failures decode the broker's `udb-error-detail-bin` trailer into `UdbError`, so
+you read what the broker actually said instead of matching on message strings:
+
+```rust,no_run
+# use udb_client::{UdbClient, UdbError};
+# async fn f(udb: &mut UdbClient, req: udb_client::proto::udb::entity::v1::SelectRequest) {
+match udb.select(req).await {
+    Ok(set) => println!("{} row(s)", set.rows.len()),
+    Err(err) => {
+        if let Some(cap) = err.capability_required() {
+            eprintln!("this deployment is missing {cap}");
+        }
+        for v in err.field_violations() {
+            eprintln!("rejected field: {}", v.field);
+        }
+        eprintln!("correlation id for a bug report: {:?}", err.correlation_id());
+    }
+}
+# }
+```
+
+Retry policy is per-RPC and conservative by default:
+
+| RPC | default | why |
+|---|---|---|
+| `select`, `vector_search` | retried | a read cannot have applied a mutation |
+| `upsert`, `update`, `delete`, `vector_upsert` | **not** retried | the broker cannot tell a replay from a new write unless the request carries an idempotency key |
+| `bulk_cas` | never retried | a CAS that timed out may have committed; a blind repeat would compare against state its own first attempt wrote |
+
+`err.is_retryable()` trusts the broker's own `retryable` flag over any guess made
+from the gRPC code, and backoff honours `retry_after_ms` when the broker sends
+one. Opt a mutation into retries only when it carries an idempotency key:
+
+```rust,no_run
+# use udb_client::{CallPolicy, UdbClient};
+# fn f(udb: &UdbClient) {
+let retrying = udb.with_policy(CallPolicy::idempotent());
+# }
+```
+
 ## Generated types
 
 Stubs are generated **at build time** from the protos rather than committed, so

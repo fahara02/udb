@@ -8,6 +8,7 @@
 use tonic::transport::{Channel, Endpoint};
 use tonic::{Request, Status};
 
+use crate::error::{CallPolicy, UdbError};
 use crate::metadata::Metadata;
 use crate::proto::udb::entity::v1 as entity;
 use crate::proto::udb::services::v1::data_broker_client::DataBrokerClient;
@@ -17,6 +18,45 @@ use crate::proto::udb::services::v1::data_broker_client::DataBrokerClient;
 pub struct UdbClient {
     inner: DataBrokerClient<Channel>,
     meta: Metadata,
+    /// Overrides the per-RPC default when set. Reads default to a retrying
+    /// policy and mutations to a single attempt, so an override is only needed
+    /// to tighten a deadline or to opt a mutation into retries the CALLER knows
+    /// are safe (an idempotency key, say).
+    policy: Option<CallPolicy>,
+}
+
+/// Generate an RPC wrapper with identical retry and deadline handling.
+///
+/// A macro rather than a generic helper because the closure would have to hand a
+/// `&mut` client into an async block per attempt, and the lifetime dance costs
+/// more clarity than the repetition saves. `$default` is the policy used when the
+/// client carries no override.
+macro_rules! rpc {
+    ($(#[$m:meta])* $name:ident, $rpc:ident, $req:ty, $resp:ty, $default:expr) => {
+        $(#[$m])*
+        pub async fn $name(&mut self, req: $req) -> Result<$resp, UdbError> {
+            let policy = self.policy.unwrap_or($default);
+            let mut attempt: u32 = 1;
+            loop {
+                let mut request = self.request(req.clone())?;
+                if let Some(deadline) = policy.deadline {
+                    request.set_timeout(deadline);
+                }
+                match self.inner.$rpc(request).await {
+                    Ok(response) => return Ok(response.into_inner()),
+                    Err(status) => {
+                        let err = UdbError::from_status(status);
+                        if policy.should_retry(attempt, &err) {
+                            tokio::time::sleep(policy.backoff_for(attempt, &err)).await;
+                            attempt += 1;
+                            continue;
+                        }
+                        return Err(err);
+                    }
+                }
+            }
+        }
+    };
 }
 
 impl UdbClient {
@@ -41,6 +81,7 @@ impl UdbClient {
         Self {
             inner: DataBrokerClient::new(channel),
             meta,
+            policy: None,
         }
     }
 
@@ -60,6 +101,7 @@ impl UdbClient {
         Self {
             inner: self.inner.clone(),
             meta: self.meta.clone().with_audit(purpose, correlation_id),
+            policy: self.policy,
         }
     }
 
@@ -68,6 +110,7 @@ impl UdbClient {
         Self {
             inner: self.inner.clone(),
             meta: self.meta.clone().with_bearer_token(token),
+            policy: self.policy,
         }
     }
 
@@ -88,61 +131,76 @@ impl UdbClient {
         &mut self.inner
     }
 
-    pub async fn select(
-        &mut self,
-        req: entity::SelectRequest,
-    ) -> Result<entity::RecordSet, Status> {
-        let req = self.request(req)?;
-        Ok(self.inner.select(req).await?.into_inner())
+    /// Apply a deadline/retry policy to every call this client makes.
+    pub fn with_policy(&self, policy: CallPolicy) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            meta: self.meta.clone(),
+            policy: Some(policy),
+        }
     }
 
-    pub async fn upsert(
-        &mut self,
-        req: entity::UpsertRequest,
-    ) -> Result<entity::MutationResponse, Status> {
-        let req = self.request(req)?;
-        Ok(self.inner.upsert(req).await?.into_inner())
-    }
-
-    pub async fn update(
-        &mut self,
-        req: entity::UpdateRequest,
-    ) -> Result<entity::MutationResponse, Status> {
-        let req = self.request(req)?;
-        Ok(self.inner.update(req).await?.into_inner())
-    }
-
-    pub async fn delete(
-        &mut self,
-        req: entity::DeleteRequest,
-    ) -> Result<entity::MutationResponse, Status> {
-        let req = self.request(req)?;
-        Ok(self.inner.delete(req).await?.into_inner())
-    }
-
-    pub async fn bulk_cas(
-        &mut self,
-        req: entity::BulkCasRequest,
-    ) -> Result<entity::BulkCasResponse, Status> {
-        let req = self.request(req)?;
-        Ok(self.inner.bulk_cas(req).await?.into_inner())
-    }
-
-    pub async fn vector_search(
-        &mut self,
-        req: entity::VectorSearchRequest,
-    ) -> Result<entity::VectorSet, Status> {
-        let req = self.request(req)?;
-        Ok(self.inner.vector_search(req).await?.into_inner())
-    }
-
-    pub async fn vector_upsert(
-        &mut self,
-        req: entity::VectorUpsertRequest,
-    ) -> Result<entity::MutationResponse, Status> {
-        let req = self.request(req)?;
-        Ok(self.inner.vector_upsert(req).await?.into_inner())
-    }
+    rpc!(
+        /// Read. Retried by default: a read cannot have applied a mutation.
+        select,
+        select,
+        entity::SelectRequest,
+        entity::RecordSet,
+        CallPolicy::idempotent()
+    );
+    rpc!(
+        /// Write. NOT retried by default — the broker cannot tell a client's
+        /// replay from a new write unless the request carries an idempotency key,
+        /// so opt in with `with_policy(CallPolicy::idempotent())` only when it
+        /// does.
+        upsert,
+        upsert,
+        entity::UpsertRequest,
+        entity::MutationResponse,
+        CallPolicy::default()
+    );
+    rpc!(
+        /// Write. Not retried by default; see [`UdbClient::upsert`].
+        update,
+        update,
+        entity::UpdateRequest,
+        entity::MutationResponse,
+        CallPolicy::default()
+    );
+    rpc!(
+        /// Write. Not retried by default; see [`UdbClient::upsert`].
+        delete,
+        delete,
+        entity::DeleteRequest,
+        entity::MutationResponse,
+        CallPolicy::default()
+    );
+    rpc!(
+        /// Compare-and-swap. Never retried by default: a CAS that timed out may
+        /// have committed, and a blind repeat would compare against state its own
+        /// first attempt wrote.
+        bulk_cas,
+        bulk_cas,
+        entity::BulkCasRequest,
+        entity::BulkCasResponse,
+        CallPolicy::once()
+    );
+    rpc!(
+        /// Read.
+        vector_search,
+        vector_search,
+        entity::VectorSearchRequest,
+        entity::VectorSet,
+        CallPolicy::idempotent()
+    );
+    rpc!(
+        /// Write. Not retried by default; see [`UdbClient::upsert`].
+        vector_upsert,
+        vector_upsert,
+        entity::VectorUpsertRequest,
+        entity::MutationResponse,
+        CallPolicy::default()
+    );
 }
 
 #[cfg(test)]

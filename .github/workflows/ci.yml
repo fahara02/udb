@@ -1036,6 +1036,32 @@ jobs:
           dotnet: "true"
       - run: dotnet build -c Release
 
+  # ── Rust SDK: the client crate, built OUTSIDE the broker workspace ──
+  rust-sdk:
+    name: Rust SDK (build + test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: sdk/rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: sdk/rust
+      # The stubs are generated from ../../proto at build time, so this job also
+      # proves the SDK still compiles against the CURRENT wire contract — a proto
+      # change that breaks the client fails here rather than at a consumer.
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      # Lib doctests are disabled (google/api proto comments are not Rust), so the
+      # documented usage is compile-checked here instead.
+      - run: cargo build --examples
+
   # ── Java SDK: compile the committed buf gen surface + handwritten client ──
   java-sdk:
     name: Java SDK (compile)

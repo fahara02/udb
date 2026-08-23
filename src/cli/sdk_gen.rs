@@ -475,7 +475,15 @@ fn print_preflight_report(report: &SdkPreflight) -> usize {
 fn resolve_init_languages(lang: &str) -> Result<Vec<&'static str>, String> {
     let normalized = lang.trim().to_ascii_lowercase();
     if normalized.is_empty() || normalized == "all" {
-        return Ok(vec!["typescript", "python", "go", "java", "csharp", "php"]);
+        return Ok(vec![
+            "typescript",
+            "python",
+            "go",
+            "java",
+            "csharp",
+            "php",
+            "rust",
+        ]);
     }
     let lang = match normalized.as_str() {
         "ts" | "typescript" | "node" | "javascript" => "typescript",
@@ -484,9 +492,10 @@ fn resolve_init_languages(lang: &str) -> Result<Vec<&'static str>, String> {
         "java" | "jvm" => "java",
         "cs" | "c#" | "csharp" | "dotnet" => "csharp",
         "php" | "laravel" | "symfony" => "php",
+        "rust" | "rs" | "cargo" => "rust",
         other => {
             return Err(format!(
-                "sdk init: unknown language `{other}`; expected all, typescript, python, go, java, csharp, or php"
+                "sdk init: unknown language `{other}`; expected all, typescript, python, go, java, csharp, php, or rust"
             ));
         }
     };
@@ -588,6 +597,21 @@ fn preflight_language(lang: &str) -> SdkPreflight {
                     RequirementKind::Recommended,
                     "Linux/macOS: `pecl install protobuf` then add `extension=protobuf.so`; Windows: download the matching PECL php_protobuf.dll and add `extension=php_protobuf.dll`. The Composer google/protobuf runtime works without it but is slower.",
                 ),
+            ],
+        },
+        "rust" => SdkPreflight {
+            lang: "rust",
+            title: "Rust SDK",
+            bootstrap: format!("cargo add udb-client@{UDB_PACKAGE_VERSION}"),
+            requirements: vec![
+                command_req(
+                    "cargo",
+                    "Cargo (Rust)",
+                    "Install Rust 1.88+ from https://rustup.rs/.",
+                ),
+                // Deliberately NOT a protoc requirement: `udb-client` vendors
+                // protoc through `protoc-bin-vendored`, exactly as the broker
+                // does, so a Rust consumer needs no system protobuf install.
             ],
         },
         _ => unreachable!("resolve_init_languages normalizes languages"),

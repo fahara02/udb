@@ -46,6 +46,7 @@
 
 pub mod auth;
 pub mod client;
+pub mod error;
 pub mod metadata;
 
 /// Generated protobuf and tonic client types, nested by proto package.
@@ -62,4 +63,5 @@ pub mod proto {
 
 pub use auth::{Token, TokenManager};
 pub use client::UdbClient;
+pub use error::{CallPolicy, UdbError};
 pub use metadata::Metadata;

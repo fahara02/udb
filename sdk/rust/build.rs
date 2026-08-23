@@ -33,6 +33,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Native auth plane: login, refresh, and the authz decision surface.
         "udb/core/authn/services/v1/authn_service.proto",
         "udb/core/authz/services/v1/authz_service.proto",
+        // The typed error payload the broker attaches to the
+        // `udb-error-detail-bin` trailer. Listed EXPLICITLY because no service
+        // proto imports it — it travels as trailer bytes, not as a field — so it
+        // is absent from the transitive closure and would not otherwise be
+        // generated.
+        "udb/entity/v1/error.proto",
     ];
     let proto_paths: Vec<PathBuf> = protos.iter().map(|p| proto_root.join(p)).collect();
 
