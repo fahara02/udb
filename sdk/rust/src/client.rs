@@ -32,10 +32,10 @@ pub struct UdbClient {
 /// more clarity than the repetition saves. `$default` is the policy used when the
 /// client carries no override.
 macro_rules! rpc {
-    ($(#[$m:meta])* $name:ident, $rpc:ident, $req:ty, $resp:ty, $default:expr) => {
+    ($(#[$m:meta])* $name:ident, $rpc:ident, $req:ty, $resp:ty, $path:expr) => {
         $(#[$m])*
         pub async fn $name(&mut self, req: $req) -> Result<$resp, UdbError> {
-            let policy = self.policy.unwrap_or($default);
+            let policy = self.policy.unwrap_or_else(|| CallPolicy::from_contract($path));
             let mut attempt: u32 = 1;
             loop {
                 let mut request = self.request(req.clone())?;
@@ -141,49 +141,46 @@ impl UdbClient {
     }
 
     rpc!(
-        /// Read. Retried by default: a read cannot have applied a mutation.
+        /// Read. Retry policy comes from the contract, not this wrapper.
         select,
         select,
         entity::SelectRequest,
         entity::RecordSet,
-        CallPolicy::idempotent()
+        "/udb.services.v1.DataBroker/Select"
     );
     rpc!(
-        /// Write. NOT retried by default — the broker cannot tell a client's
-        /// replay from a new write unless the request carries an idempotency key,
-        /// so opt in with `with_policy(CallPolicy::idempotent())` only when it
-        /// does.
+        /// Write. The contract declares it replayable, so it retries.
         upsert,
         upsert,
         entity::UpsertRequest,
         entity::MutationResponse,
-        CallPolicy::default()
+        "/udb.services.v1.DataBroker/Upsert"
     );
     rpc!(
-        /// Write. Not retried by default; see [`UdbClient::upsert`].
+        /// Write. Contract-declared replayable.
         update,
         update,
         entity::UpdateRequest,
         entity::MutationResponse,
-        CallPolicy::default()
+        "/udb.services.v1.DataBroker/Update"
     );
     rpc!(
-        /// Write. Not retried by default; see [`UdbClient::upsert`].
+        /// Write. Contract-declared replayable.
         delete,
         delete,
         entity::DeleteRequest,
         entity::MutationResponse,
-        CallPolicy::default()
+        "/udb.services.v1.DataBroker/Delete"
     );
     rpc!(
-        /// Compare-and-swap. Never retried by default: a CAS that timed out may
-        /// have committed, and a blind repeat would compare against state its own
-        /// first attempt wrote.
+        /// Compare-and-swap. The contract does NOT declare it replayable: a CAS
+        /// that timed out may have committed, and a repeat would compare against
+        /// state its own first attempt wrote.
         bulk_cas,
         bulk_cas,
         entity::BulkCasRequest,
         entity::BulkCasResponse,
-        CallPolicy::once()
+        "/udb.services.v1.DataBroker/BulkCas"
     );
     rpc!(
         /// Read.
@@ -191,15 +188,15 @@ impl UdbClient {
         vector_search,
         entity::VectorSearchRequest,
         entity::VectorSet,
-        CallPolicy::idempotent()
+        "/udb.services.v1.DataBroker/VectorSearch"
     );
     rpc!(
-        /// Write. Not retried by default; see [`UdbClient::upsert`].
+        /// Write. Not contract-declared replayable.
         vector_upsert,
         vector_upsert,
         entity::VectorUpsertRequest,
         entity::MutationResponse,
-        CallPolicy::default()
+        "/udb.services.v1.DataBroker/VectorUpsert"
     );
 }
 
@@ -239,6 +236,41 @@ mod tests {
         assert_eq!(md.get(headers::TENANT_ID).unwrap(), "tenant-1");
         assert_eq!(md.get(headers::PURPOSE).unwrap(), "billing");
         assert_eq!(md.get(headers::CORRELATION_ID).unwrap(), "corr-7");
+    }
+
+    #[test]
+    fn wrapped_rpc_paths_exist_in_the_registry() {
+        // A typo in a path literal would make `from_contract` fall through to the
+        // conservative default and silently stop retrying that RPC — a change
+        // nothing else would catch.
+        for path in [
+            "/udb.services.v1.DataBroker/Select",
+            "/udb.services.v1.DataBroker/Upsert",
+            "/udb.services.v1.DataBroker/Update",
+            "/udb.services.v1.DataBroker/Delete",
+            "/udb.services.v1.DataBroker/BulkCas",
+            "/udb.services.v1.DataBroker/VectorSearch",
+            "/udb.services.v1.DataBroker/VectorUpsert",
+        ] {
+            assert!(
+                crate::generated_rpcs::spec_for_path(path).is_some(),
+                "{path} is not in the generated registry"
+            );
+        }
+    }
+
+    #[test]
+    fn contract_drives_retry_and_disagrees_with_naive_naming() {
+        use crate::generated_rpcs::is_retry_safe;
+        // Reads: obviously repeatable.
+        assert!(is_retry_safe("/udb.services.v1.DataBroker/Select"));
+        // Mutations the CONTRACT declares replayable. A name-based guess would
+        // refuse these, which is exactly the mistake this replaced.
+        assert!(is_retry_safe("/udb.services.v1.DataBroker/Upsert"));
+        assert!(is_retry_safe("/udb.services.v1.DataBroker/Delete"));
+        // And ones it does not.
+        assert!(!is_retry_safe("/udb.services.v1.DataBroker/BulkCas"));
+        assert!(!is_retry_safe("/udb.services.v1.DataBroker/VectorUpsert"));
     }
 
     #[tokio::test]

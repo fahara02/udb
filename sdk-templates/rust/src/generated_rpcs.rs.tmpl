@@ -2,11 +2,11 @@
 //!
 //! The RPC registry, derived from the proto descriptor set.
 //!
-//! Its reason for existing is [`RpcSpec::replay_safe`]. Whether an RPC may be
-//! retried is a property the PROTO declares (`operation_kind`), not something a
-//! client should infer from a method name — "update" is not reliably a mutation
-//! and "get" is not reliably a read across every service. Guessing from names is
-//! how a retry ends up replaying a charge.
+//! Its reason for existing is [`RpcSpec::retry_safe`]. Whether an RPC may be
+//! retried is a property the PROTO declares, not something a client should infer
+//! from a method name — "update" is not reliably a mutation and "get" is not
+//! reliably a read across every service. Guessing from names is how a retry ends
+//! up replaying a charge.
 //!
 //! Generated from the same descriptor the broker serves, so the table cannot
 //! drift from the contract: adding an RPC upstream adds a row here.
@@ -28,9 +28,10 @@ pub struct RpcSpec {
     pub operation_kind: &'static str,
     /// True when the RPC performs no mutation.
     pub read_only: bool,
-    /// True when repeating the call is safe. THE field to consult before
-    /// retrying — do not substitute a guess based on the gRPC status code or the
-    /// method name.
+    /// True when the contract EXPLICITLY declares this mutation replayable
+    /// (`idempotency_contract`). `false` also means "no contract declared", which
+    /// is why most read-only RPCs report `false` here. Do not read this alone
+    /// before retrying — call [`RpcSpec::retry_safe`].
     pub replay_safe: bool,
     pub client_streaming: bool,
     pub server_streaming: bool,
@@ -43,6 +44,23 @@ impl RpcSpec {
     /// Whether this RPC streams in either direction.
     pub fn is_streaming(&self) -> bool {
         self.client_streaming || self.server_streaming
+    }
+
+    /// Whether repeating this call is safe.
+    ///
+    /// TWO independent facts, and both matter:
+    ///
+    /// - `read_only` comes from `operation_kind`. A read applies no mutation, so
+    ///   repeating it is safe regardless of what else is declared.
+    /// - `replay_safe` comes from an OPTIONAL `idempotency_contract`, and is
+    ///   `false` when that contract is simply absent. It marks the handful of
+    ///   MUTATIONS the broker guarantees are replayable.
+    ///
+    /// Reading `replay_safe` alone would therefore treat "no contract declared"
+    /// as "unsafe" and refuse to retry any read — the overwhelming majority of
+    /// the surface. Consult this, not either field on its own.
+    pub fn retry_safe(&self) -> bool {
+        self.read_only || self.replay_safe
     }
 }
 
@@ -75,10 +93,21 @@ pub fn spec_for_path(path: &str) -> Option<&'static RpcSpec> {
     RPCS.iter().find(|spec| spec.path == path)
 }
 
-/// Whether the contract declares this RPC safe to repeat.
+/// Whether repeating this RPC is safe — read-only OR contract-declared replayable.
+///
+/// This is the one to call before a retry; see [`RpcSpec::retry_safe`] for why
+/// `replay_safe` alone is the wrong question.
 ///
 /// Unknown paths return `false`: an RPC this build has never heard of is the
 /// last thing that should be retried blindly.
+pub fn is_retry_safe(path: &str) -> bool {
+    spec_for_path(path).is_some_and(RpcSpec::retry_safe)
+}
+
+/// Whether the contract explicitly declares this MUTATION replayable.
+///
+/// Narrow on purpose: this is the `idempotency_contract` flag, not the general
+/// "may I retry" answer. Use [`is_retry_safe`] for that.
 pub fn is_replay_safe(path: &str) -> bool {
     spec_for_path(path).is_some_and(|spec| spec.replay_safe)
 }
@@ -124,12 +153,25 @@ mod tests {
     }
 
     #[test]
-    fn read_only_rpcs_are_replay_safe() {
+    fn read_only_and_replay_safe_are_independent() {
+        // Documenting the shape of the contract so the earlier misreading cannot
+        // return: `replay_safe` is an OPTIONAL idempotency contract that defaults
+        // to false, so most read-only RPCs do not set it. That is "not declared",
+        // not "unsafe".
+        let read_only_without_contract = RPCS
+            .iter()
+            .filter(|s| s.read_only && !s.replay_safe)
+            .count();
+        assert!(
+            read_only_without_contract > 0,
+            "expected read-only RPCs with no idempotency contract; if this is now \
+             zero, retry_safe() can be simplified"
+        );
         for spec in RPCS {
             if spec.read_only {
                 assert!(
-                    spec.replay_safe,
-                    "{} is read-only but not replay-safe, which is contradictory",
+                    spec.retry_safe(),
+                    "{} is read-only so it must be retry-safe",
                     spec.path
                 );
             }
@@ -137,7 +179,27 @@ mod tests {
     }
 
     #[test]
+    fn retry_safe_covers_reads_and_declared_replayable_mutations() {
+        for spec in RPCS {
+            assert_eq!(
+                spec.retry_safe(),
+                spec.read_only || spec.replay_safe,
+                "{} retry_safe disagrees with its inputs",
+                spec.path
+            );
+        }
+        // A retry policy keyed on `replay_safe` alone would refuse every read.
+        let by_replay_safe = RPCS.iter().filter(|s| s.replay_safe).count();
+        let by_retry_safe = RPCS.iter().filter(|s| s.retry_safe()).count();
+        assert!(
+            by_retry_safe > by_replay_safe,
+            "retry_safe must admit reads that declare no idempotency contract"
+        );
+    }
+
+    #[test]
     fn unknown_paths_are_not_assumed_safe() {
+        assert!(!is_retry_safe("/not.a.real.Service/Method"));
         assert!(!is_replay_safe("/not.a.real.Service/Method"));
         assert!(!is_read_only("/not.a.real.Service/Method"));
         assert!(spec_for_path("/not.a.real.Service/Method").is_none());

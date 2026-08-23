@@ -135,17 +135,30 @@ match udb.select(req).await {
 # }
 ```
 
-Retry policy is per-RPC and conservative by default:
+Retry policy comes from the **contract**, not from this client's opinion. The
+generated registry (`generated_rpcs`) carries each RPC's declared
+`operation_kind` and `idempotency_contract`, and the default policy reads them:
 
-| RPC | default | why |
+| RPC | retried | because the contract says |
 |---|---|---|
-| `select`, `vector_search` | retried | a read cannot have applied a mutation |
-| `upsert`, `update`, `delete`, `vector_upsert` | **not** retried | the broker cannot tell a replay from a new write unless the request carries an idempotency key |
-| `bulk_cas` | never retried | a CAS that timed out may have committed; a blind repeat would compare against state its own first attempt wrote |
+| `select`, `vector_search` | yes | `read_only` — applies no mutation |
+| `upsert`, `update`, `delete` | yes | `replay_safe` — the broker declares them replayable |
+| `bulk_cas`, `vector_upsert` | no | neither read-only nor declared replayable |
+
+That table is not hand-maintained; it is what the descriptor says. An earlier
+draft of this client hard-coded "mutations are never retried", which the contract
+contradicts for three of them — refusing a retry the broker was happy to serve
+costs availability for no safety gain. Deciding from the descriptor rather than
+the method name is the whole point of the `operation_kind` annotation.
+
+One subtlety worth knowing if you read the registry directly: `replay_safe` comes
+from an OPTIONAL `idempotency_contract` and is `false` when simply undeclared, so
+most read-only RPCs report `false`. Use `RpcSpec::retry_safe()` (or
+`is_retry_safe`), which is `read_only || replay_safe`.
 
 `err.is_retryable()` trusts the broker's own `retryable` flag over any guess made
 from the gRPC code, and backoff honours `retry_after_ms` when the broker sends
-one. Opt a mutation into retries only when it carries an idempotency key:
+one. Override the contract's choice per client when you have reason to:
 
 ```rust,no_run
 # use udb_client::{CallPolicy, UdbClient};

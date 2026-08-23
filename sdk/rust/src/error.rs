@@ -150,6 +150,24 @@ impl CallPolicy {
         }
     }
 
+    /// The policy the CONTRACT implies for one RPC path.
+    ///
+    /// This replaced a hand-written per-method judgement, which was wrong in both
+    /// directions: it refused to retry `Upsert`, `Update` and `Delete` even
+    /// though the broker declares them replayable, costing availability on a
+    /// transient failure the broker was happy to see again.
+    ///
+    /// Deciding from the descriptor instead of a method name is the point of the
+    /// `operation_kind` annotation. An unknown path yields the conservative
+    /// default (no retries).
+    pub fn from_contract(path: &str) -> Self {
+        if crate::generated_rpcs::is_retry_safe(path) {
+            Self::idempotent()
+        } else {
+            Self::default()
+        }
+    }
+
     /// No retries at all.
     pub fn once() -> Self {
         Self {

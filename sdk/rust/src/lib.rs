@@ -47,6 +47,11 @@
 pub mod auth;
 pub mod client;
 pub mod error;
+/// The RPC registry generated from the proto descriptor set.
+///
+/// Regenerate with `udb sdk generate --lang rust --out sdk`; CI fails if the
+/// committed copy differs from what the descriptor produces.
+pub mod generated_rpcs;
 pub mod metadata;
 
 /// Generated protobuf and tonic client types, nested by proto package.
@@ -64,4 +69,5 @@ pub mod proto {
 pub use auth::{Token, TokenManager};
 pub use client::UdbClient;
 pub use error::{CallPolicy, UdbError};
+pub use generated_rpcs::{is_retry_safe, spec_for_path, RpcSpec};
 pub use metadata::Metadata;
