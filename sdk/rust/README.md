@@ -1,0 +1,163 @@
+# UDB Rust SDK (`udb-client`)
+
+Typed tonic clients for the [UDB](https://github.com/fahara02/udb) broker, plus
+the tenant/project metadata and token lifecycle the broker expects.
+
+> **`udb-client` is the client. `udb` is the broker.** The `udb` crate on
+> crates.io is the server: its default features pull in every backend driver —
+> sqlx, mongodb, cassandra, kafka, elasticsearch, S3. Depending on it to make a
+> gRPC call compiles a database engine you will not use.
+
+## Install
+
+```toml
+[dependencies]
+udb-client = "0.5"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+```
+
+No system `protoc` is required — the vendored compiler is used, matching the
+broker's own build.
+
+## Use
+
+```rust,no_run
+use udb_client::proto::udb::entity::v1::SelectRequest;
+use udb_client::{Metadata, UdbClient};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let meta = Metadata::new("tenant-1")
+        .with_project("default")
+        .with_bearer_token(std::env::var("UDB_TOKEN")?);
+
+    let mut udb = UdbClient::connect("http://127.0.0.1:50051", meta).await?;
+
+    let set = udb
+        .select(SelectRequest {
+            message_type: "myapp.v1.Invoice".into(),
+            limit: 10,
+            ..Default::default()
+        })
+        .await?;
+
+    println!("{} row(s)", set.rows.len());
+    Ok(())
+}
+```
+
+A complete program, including login, is in
+[`examples/quickstart.rs`](examples/quickstart.rs):
+
+```sh
+UDB_TENANT_ID=tenant-1 UDB_TOKEN=... cargo run --example quickstart -- myapp.v1.Invoice
+```
+
+## Two listeners, two authorization models
+
+UDB serves its data plane and its native services on **separate listeners with
+different authorization models** — the data plane authorizes through Casbin, the
+native services through scope-based endpoint security. A credential accepted by
+one is not automatically accepted by the other, and the mismatch presents as a
+permissions error rather than a wrong-address error. `UdbClient` speaks to the
+data plane (`:50051` by default).
+
+## Identity is per-connection, audit is per-request
+
+`Metadata` splits deliberately:
+
+- **Identity** — tenant, user, project, scopes, service identity — is fixed for
+  the connection. It is not settable per call, because a tenant that a caller can
+  vary per request is not an isolation boundary.
+- **Audit** — purpose, correlation id, catalog version — varies per call via
+  `with_audit`.
+
+Every method routes through `UdbClient::request`, the single point that applies
+metadata. If applying tenant scope were the caller's job, forgetting once would
+be a cross-tenant read.
+
+Reaching an RPC this wrapper does not expose yet:
+
+```rust,no_run
+# use udb_client::{Metadata, UdbClient};
+# async fn f(udb: &mut UdbClient) -> Result<(), Box<dyn std::error::Error>> {
+let request = udb.request(/* any request message */ ())?; // metadata applied
+// udb.raw().some_rpc(request).await?;
+# Ok(())
+# }
+```
+
+## Tokens rotate — let `TokenManager` hold them
+
+The broker's refresh token is **single-use**: each successful refresh mints a new
+one and invalidates the presented one atomically. A client that keeps sending its
+original refresh token authenticates, refreshes once, then fails with
+`Unauthenticated: invalid credential` at the second refresh boundary — an hour or
+a day later, far from the code that caused it.
+
+```rust,no_run
+# use udb_client::{Metadata, TokenManager, UdbClient};
+# async fn f(channel: tonic::transport::Channel) -> Result<(), Box<dyn std::error::Error>> {
+let tokens = TokenManager::new(channel, Metadata::new("tenant-1"));
+tokens.login("alice", "hunter2").await?;
+
+// Refreshes if stale, persists the rotated refresh token, single-flighted so
+// concurrent callers share one round-trip instead of racing to spend the same
+// single-use credential.
+let meta = tokens.authenticated_metadata().await?;
+let mut udb = UdbClient::connect("http://127.0.0.1:50051", meta).await?;
+# Ok(())
+# }
+```
+
+`TokenManager`'s `Debug` redacts the stored tokens.
+
+## Generated types
+
+Stubs are generated **at build time** from the protos rather than committed, so
+this crate cannot drift from the contract it ships with. They are laid out by
+proto package — `udb.entity.v1` is `udb_client::proto::udb::entity::v1`. The
+module tree is emitted by `build.rs` from the packages tonic actually produced,
+so a new service in the contract needs no hand-edited list here.
+
+`build.rs` resolves the protos from `../../proto` in a repo checkout, falling
+back to a vendored `./proto`.
+
+## Publishing
+
+`cargo publish` cannot reach outside the package directory, so the protos must be
+vendored in first:
+
+```sh
+udb proto export --out sdk/rust/proto      # also writes third_party/googleapis
+cargo publish -p udb-client
+```
+
+Verify the packaged crate builds standalone before pushing the tag:
+
+```sh
+cargo package -p udb-client --allow-dirty && cargo build --manifest-path \
+  target/package/udb-client-<version>/Cargo.toml
+```
+
+## Development
+
+This crate is deliberately **excluded from the broker's cargo workspace** — it is
+a consumer of the wire contract, not part of the broker, and excluding it keeps a
+root `cargo build` from compiling the client or unifying features with it.
+
+```sh
+cd sdk/rust
+cargo test                 # unit tests
+cargo build --examples     # compile-checks the documented usage
+cargo clippy --all-targets -- -D warnings
+```
+
+Lib doctests are off: google/api's proto comments embed indented HTTP and proto
+examples, and rustdoc reads an indented block in a doc comment as a Rust doctest,
+so `cargo test` tries to compile Google's prose. `examples/` covers usage instead,
+which is a stronger check — a real program rather than a fragment.
+
+## License
+
+MIT OR Apache-2.0, matching the broker.

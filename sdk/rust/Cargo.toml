@@ -1,0 +1,52 @@
+[package]
+name = "udb-client"
+version = "0.5.20"
+edition = "2021"
+rust-version = "1.88"
+description = "Rust client for UDB — a proto-driven gRPC broker over multiple databases. Typed tonic clients plus the tenant/project metadata and token lifecycle the broker expects."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/fahara02/udb"
+homepage = "https://github.com/fahara02/udb"
+documentation = "https://docs.rs/udb-client"
+readme = "README.md"
+keywords = ["udb", "grpc", "database", "multi-tenant", "client"]
+categories = ["database", "api-bindings"]
+
+# The stubs are generated from the protos at build time rather than committed, so
+# this crate cannot drift from the wire contract it ships with. `proto/` and
+# `third_party/` are packaged so `cargo publish` produces a crate that builds
+# standalone off the registry, with no repo checkout.
+include = [
+    "src/**",
+    "build.rs",
+    "README.md",
+    "proto/**",
+    "third_party/**",
+]
+
+[lib]
+# google/api's proto comments embed indented HTTP and proto examples, and rustdoc
+# reads an indented block in a doc comment as a RUST doctest — so `cargo test`
+# tries to compile Google's prose and fails on it. tonic-build's
+# `disable_comments` does not strip them here. Usage is compile-checked by
+# `examples/` instead (see `cargo build --examples`), which is a stronger check
+# than a `no_run` doctest: the example is a real program, not a fragment.
+doctest = false
+
+# tonic/prost are pinned to the SAME majors the broker builds with (tonic 0.12,
+# prost 0.13). A consumer that links both this client and `udb` as a library then
+# gets one set of generated types rather than two incompatible ones.
+[dependencies]
+tonic = { version = "0.12", features = ["tls", "tls-roots"] }
+prost = "0.13"
+prost-types = "0.13"
+tokio = { version = "1", features = ["sync", "time"] }
+
+[build-dependencies]
+tonic-build = "0.12"
+# Vendored protoc, matching the broker: building this crate must not require a
+# system protoc install.
+protoc-bin-vendored = "3"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

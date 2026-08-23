@@ -9737,7 +9737,7 @@ public static class UdbIr
             "",
             "",
             "",
-            "udb.core.Analytics.Entity.V1.ExecutorPerformanceSummary");
+            "Udb.Core.Analytics.Entity.V1.ExecutorPerformanceSummary");
         entities["udb.core.analytics.entity.v1.PipelineMetricSnapshot"] = new EntityBinding(
             "udb.core.analytics.entity.v1.PipelineMetricSnapshot",
             "pipeline_metric_snapshots",
@@ -9747,7 +9747,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Analytics.Entity.V1.PipelineMetricSnapshot");
+            "Udb.Core.Analytics.Entity.V1.PipelineMetricSnapshot");
         entities["udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary"] = new EntityBinding(
             "udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary",
             "reconciliation_analytics_summaries",
@@ -9757,7 +9757,7 @@ public static class UdbIr
             "",
             "",
             "",
-            "udb.core.Analytics.Entity.V1.ReconciliationAnalyticsSummary");
+            "Udb.Core.Analytics.Entity.V1.ReconciliationAnalyticsSummary");
         entities["udb.core.apikey.entity.v1.ApiKey"] = new EntityBinding(
             "udb.core.apikey.entity.v1.ApiKey",
             "api_keys",
@@ -9767,7 +9767,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Apikey.Entity.V1.ApiKey");
+            "Udb.Core.Apikey.Entity.V1.ApiKey");
         entities["udb.core.apikey.entity.v1.ApiKeyUsage"] = new EntityBinding(
             "udb.core.apikey.entity.v1.ApiKeyUsage",
             "api_key_usages",
@@ -9777,7 +9777,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Apikey.Entity.V1.ApiKeyUsage");
+            "Udb.Core.Apikey.Entity.V1.ApiKeyUsage");
         entities["udb.core.asset.entity.v1.Asset"] = new EntityBinding(
             "udb.core.asset.entity.v1.Asset",
             "assets",
@@ -9787,7 +9787,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Asset.Entity.V1.Asset");
+            "Udb.Core.Asset.Entity.V1.Asset");
         entities["udb.core.asset.entity.v1.PipelineDefinition"] = new EntityBinding(
             "udb.core.asset.entity.v1.PipelineDefinition",
             "pipeline_definitions",
@@ -9797,7 +9797,7 @@ public static class UdbIr
             "version",
             "tenant_id",
             "",
-            "udb.core.Asset.Entity.V1.PipelineDefinition");
+            "Udb.Core.Asset.Entity.V1.PipelineDefinition");
         entities["udb.core.asset.entity.v1.PipelineInstance"] = new EntityBinding(
             "udb.core.asset.entity.v1.PipelineInstance",
             "pipeline_instances",
@@ -9807,7 +9807,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Asset.Entity.V1.PipelineInstance");
+            "Udb.Core.Asset.Entity.V1.PipelineInstance");
         entities["udb.core.asset.entity.v1.PipelineStep"] = new EntityBinding(
             "udb.core.asset.entity.v1.PipelineStep",
             "pipeline_steps",
@@ -9817,7 +9817,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Asset.Entity.V1.PipelineStep");
+            "Udb.Core.Asset.Entity.V1.PipelineStep");
         entities["udb.core.authn.entity.v1.CertificateBinding"] = new EntityBinding(
             "udb.core.authn.entity.v1.CertificateBinding",
             "certificate_bindings",
@@ -9827,7 +9827,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.CertificateBinding");
+            "Udb.Core.Authn.Entity.V1.CertificateBinding");
         entities["udb.core.authn.entity.v1.Device"] = new EntityBinding(
             "udb.core.authn.entity.v1.Device",
             "devices",
@@ -9837,7 +9837,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.Device");
+            "Udb.Core.Authn.Entity.V1.Device");
         entities["udb.core.authn.entity.v1.MfaChallenge"] = new EntityBinding(
             "udb.core.authn.entity.v1.MfaChallenge",
             "mfa_challenges",
@@ -9847,7 +9847,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.MfaChallenge");
+            "Udb.Core.Authn.Entity.V1.MfaChallenge");
         entities["udb.core.authn.entity.v1.MfaPolicy"] = new EntityBinding(
             "udb.core.authn.entity.v1.MfaPolicy",
             "mfa_policies",
@@ -9857,7 +9857,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.MfaPolicy");
+            "Udb.Core.Authn.Entity.V1.MfaPolicy");
         entities["udb.core.authn.entity.v1.OTP"] = new EntityBinding(
             "udb.core.authn.entity.v1.OTP",
             "otps",
@@ -9867,7 +9867,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.OTP");
+            "Udb.Core.Authn.Entity.V1.OTP");
         entities["udb.core.authn.entity.v1.RecoveryCode"] = new EntityBinding(
             "udb.core.authn.entity.v1.RecoveryCode",
             "recovery_codes",
@@ -9877,7 +9877,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.RecoveryCode");
+            "Udb.Core.Authn.Entity.V1.RecoveryCode");
         entities["udb.core.authn.entity.v1.ServiceAccountGrant"] = new EntityBinding(
             "udb.core.authn.entity.v1.ServiceAccountGrant",
             "service_account_grants",
@@ -9887,7 +9887,7 @@ public static class UdbIr
             "revision",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.ServiceAccountGrant");
+            "Udb.Core.Authn.Entity.V1.ServiceAccountGrant");
         entities["udb.core.authn.entity.v1.Session"] = new EntityBinding(
             "udb.core.authn.entity.v1.Session",
             "sessions",
@@ -9897,7 +9897,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.Session");
+            "Udb.Core.Authn.Entity.V1.Session");
         entities["udb.core.authn.entity.v1.SigningKey"] = new EntityBinding(
             "udb.core.authn.entity.v1.SigningKey",
             "signing_keys",
@@ -9907,7 +9907,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.SigningKey");
+            "Udb.Core.Authn.Entity.V1.SigningKey");
         entities["udb.core.authn.entity.v1.TokenFamily"] = new EntityBinding(
             "udb.core.authn.entity.v1.TokenFamily",
             "token_families",
@@ -9917,7 +9917,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.TokenFamily");
+            "Udb.Core.Authn.Entity.V1.TokenFamily");
         entities["udb.core.authn.entity.v1.TokenRevocation"] = new EntityBinding(
             "udb.core.authn.entity.v1.TokenRevocation",
             "token_revocations",
@@ -9927,7 +9927,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.TokenRevocation");
+            "Udb.Core.Authn.Entity.V1.TokenRevocation");
         entities["udb.core.authn.entity.v1.User"] = new EntityBinding(
             "udb.core.authn.entity.v1.User",
             "users",
@@ -9937,7 +9937,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.User");
+            "Udb.Core.Authn.Entity.V1.User");
         entities["udb.core.authn.entity.v1.WebAuthnCredential"] = new EntityBinding(
             "udb.core.authn.entity.v1.WebAuthnCredential",
             "webauthn_credentials",
@@ -9947,7 +9947,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.WebAuthnCredential");
+            "Udb.Core.Authn.Entity.V1.WebAuthnCredential");
         entities["udb.core.authn.entity.v1.WebAuthnPolicy"] = new EntityBinding(
             "udb.core.authn.entity.v1.WebAuthnPolicy",
             "webauthn_policies",
@@ -9957,7 +9957,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authn.Entity.V1.WebAuthnPolicy");
+            "Udb.Core.Authn.Entity.V1.WebAuthnPolicy");
         entities["udb.core.authz.entity.v1.AccessDecisionAudit"] = new EntityBinding(
             "udb.core.authz.entity.v1.AccessDecisionAudit",
             "access_decision_audits",
@@ -9967,7 +9967,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.AccessDecisionAudit");
+            "Udb.Core.Authz.Entity.V1.AccessDecisionAudit");
         entities["udb.core.authz.entity.v1.AuthzRevision"] = new EntityBinding(
             "udb.core.authz.entity.v1.AuthzRevision",
             "authz_revisions",
@@ -9977,7 +9977,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.AuthzRevision");
+            "Udb.Core.Authz.Entity.V1.AuthzRevision");
         entities["udb.core.authz.entity.v1.PolicyApproval"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyApproval",
             "policy_approvals",
@@ -9987,7 +9987,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.PolicyApproval");
+            "Udb.Core.Authz.Entity.V1.PolicyApproval");
         entities["udb.core.authz.entity.v1.PolicyCanary"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyCanary",
             "policy_canaries",
@@ -9997,7 +9997,7 @@ public static class UdbIr
             "revision",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.PolicyCanary");
+            "Udb.Core.Authz.Entity.V1.PolicyCanary");
         entities["udb.core.authz.entity.v1.PolicyDraft"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyDraft",
             "policy_drafts",
@@ -10007,7 +10007,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.PolicyDraft");
+            "Udb.Core.Authz.Entity.V1.PolicyDraft");
         entities["udb.core.authz.entity.v1.PolicyRule"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyRule",
             "policy_rules",
@@ -10017,7 +10017,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.PolicyRule");
+            "Udb.Core.Authz.Entity.V1.PolicyRule");
         entities["udb.core.authz.entity.v1.PolicySet"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicySet",
             "policy_sets",
@@ -10027,7 +10027,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.PolicySet");
+            "Udb.Core.Authz.Entity.V1.PolicySet");
         entities["udb.core.authz.entity.v1.PolicySimulation"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicySimulation",
             "policy_simulations",
@@ -10037,7 +10037,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.PolicySimulation");
+            "Udb.Core.Authz.Entity.V1.PolicySimulation");
         entities["udb.core.authz.entity.v1.PolicyTuple"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyTuple",
             "policy_tuples",
@@ -10047,7 +10047,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.PolicyTuple");
+            "Udb.Core.Authz.Entity.V1.PolicyTuple");
         entities["udb.core.authz.entity.v1.PolicyVersion"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyVersion",
             "policy_versions",
@@ -10057,7 +10057,7 @@ public static class UdbIr
             "revision",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.PolicyVersion");
+            "Udb.Core.Authz.Entity.V1.PolicyVersion");
         entities["udb.core.authz.entity.v1.Role"] = new EntityBinding(
             "udb.core.authz.entity.v1.Role",
             "roles",
@@ -10067,7 +10067,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.Role");
+            "Udb.Core.Authz.Entity.V1.Role");
         entities["udb.core.authz.entity.v1.RolePermission"] = new EntityBinding(
             "udb.core.authz.entity.v1.RolePermission",
             "role_permissions",
@@ -10077,7 +10077,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.RolePermission");
+            "Udb.Core.Authz.Entity.V1.RolePermission");
         entities["udb.core.authz.entity.v1.UserRole"] = new EntityBinding(
             "udb.core.authz.entity.v1.UserRole",
             "user_roles",
@@ -10087,7 +10087,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Authz.Entity.V1.UserRole");
+            "Udb.Core.Authz.Entity.V1.UserRole");
         entities["udb.core.backup.entity.v1.BackupPolicy"] = new EntityBinding(
             "udb.core.backup.entity.v1.BackupPolicy",
             "backup_policies",
@@ -10097,7 +10097,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "project_id",
-            "udb.core.Backup.Entity.V1.BackupPolicy");
+            "Udb.Core.Backup.Entity.V1.BackupPolicy");
         entities["udb.core.backup.entity.v1.BackupRun"] = new EntityBinding(
             "udb.core.backup.entity.v1.BackupRun",
             "backup_runs",
@@ -10107,7 +10107,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "project_id",
-            "udb.core.Backup.Entity.V1.BackupRun");
+            "Udb.Core.Backup.Entity.V1.BackupRun");
         entities["udb.core.config.entity.v1.Flag"] = new EntityBinding(
             "udb.core.config.entity.v1.Flag",
             "flags",
@@ -10117,7 +10117,7 @@ public static class UdbIr
             "revision",
             "tenant_id",
             "",
-            "udb.core.Config.Entity.V1.Flag");
+            "Udb.Core.Config.Entity.V1.Flag");
         entities["udb.core.control.entity.v1.ControlPlaneNodeState"] = new EntityBinding(
             "udb.core.control.entity.v1.ControlPlaneNodeState",
             "control_plane_node_states",
@@ -10127,7 +10127,7 @@ public static class UdbIr
             "",
             "",
             "",
-            "udb.core.Control.Entity.V1.ControlPlaneNodeState");
+            "Udb.Core.Control.Entity.V1.ControlPlaneNodeState");
         entities["udb.core.control.entity.v1.ControlPlaneResource"] = new EntityBinding(
             "udb.core.control.entity.v1.ControlPlaneResource",
             "control_plane_resources",
@@ -10137,7 +10137,7 @@ public static class UdbIr
             "version",
             "tenant_id",
             "",
-            "udb.core.Control.Entity.V1.ControlPlaneResource");
+            "Udb.Core.Control.Entity.V1.ControlPlaneResource");
         entities["udb.core.embedding.entity.v1.EmbeddingDocument"] = new EntityBinding(
             "udb.core.embedding.entity.v1.EmbeddingDocument",
             "embedding_documents",
@@ -10147,7 +10147,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Embedding.Entity.V1.EmbeddingDocument");
+            "Udb.Core.Embedding.Entity.V1.EmbeddingDocument");
         entities["udb.core.embedding.entity.v1.EmbeddingJob"] = new EntityBinding(
             "udb.core.embedding.entity.v1.EmbeddingJob",
             "embedding_jobs",
@@ -10157,7 +10157,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Embedding.Entity.V1.EmbeddingJob");
+            "Udb.Core.Embedding.Entity.V1.EmbeddingJob");
         entities["udb.core.embedding.entity.v1.EmbeddingModel"] = new EntityBinding(
             "udb.core.embedding.entity.v1.EmbeddingModel",
             "embedding_models",
@@ -10167,7 +10167,7 @@ public static class UdbIr
             "version",
             "tenant_id",
             "",
-            "udb.core.Embedding.Entity.V1.EmbeddingModel");
+            "Udb.Core.Embedding.Entity.V1.EmbeddingModel");
         entities["udb.core.embedding.entity.v1.EmbeddingSource"] = new EntityBinding(
             "udb.core.embedding.entity.v1.EmbeddingSource",
             "embedding_sources",
@@ -10177,7 +10177,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Embedding.Entity.V1.EmbeddingSource");
+            "Udb.Core.Embedding.Entity.V1.EmbeddingSource");
         entities["udb.core.embedding.entity.v1.EmbeddingWorkItem"] = new EntityBinding(
             "udb.core.embedding.entity.v1.EmbeddingWorkItem",
             "embedding_work_items",
@@ -10187,7 +10187,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Embedding.Entity.V1.EmbeddingWorkItem");
+            "Udb.Core.Embedding.Entity.V1.EmbeddingWorkItem");
         entities["udb.core.idp.entity.v1.ExternalIdentity"] = new EntityBinding(
             "udb.core.idp.entity.v1.ExternalIdentity",
             "external_identities",
@@ -10197,7 +10197,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Idp.Entity.V1.ExternalIdentity");
+            "Udb.Core.Idp.Entity.V1.ExternalIdentity");
         entities["udb.core.idp.entity.v1.IdentityProvider"] = new EntityBinding(
             "udb.core.idp.entity.v1.IdentityProvider",
             "identity_providers",
@@ -10207,7 +10207,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Idp.Entity.V1.IdentityProvider");
+            "Udb.Core.Idp.Entity.V1.IdentityProvider");
         entities["udb.core.idp.entity.v1.SamlReplayEntry"] = new EntityBinding(
             "udb.core.idp.entity.v1.SamlReplayEntry",
             "saml_replay_entries",
@@ -10217,7 +10217,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Idp.Entity.V1.SamlReplayEntry");
+            "Udb.Core.Idp.Entity.V1.SamlReplayEntry");
         entities["udb.core.idp.entity.v1.ScimDirectoryState"] = new EntityBinding(
             "udb.core.idp.entity.v1.ScimDirectoryState",
             "scim_directory_state",
@@ -10227,7 +10227,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Idp.Entity.V1.ScimDirectoryState");
+            "Udb.Core.Idp.Entity.V1.ScimDirectoryState");
         entities["udb.core.lock.entity.v1.Lock"] = new EntityBinding(
             "udb.core.lock.entity.v1.Lock",
             "locks",
@@ -10237,7 +10237,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Lock.Entity.V1.Lock");
+            "Udb.Core.Lock.Entity.V1.Lock");
         entities["udb.core.metering.entity.v1.QuotaRule"] = new EntityBinding(
             "udb.core.metering.entity.v1.QuotaRule",
             "quota_rules",
@@ -10247,7 +10247,7 @@ public static class UdbIr
             "revision",
             "tenant_id",
             "",
-            "udb.core.Metering.Entity.V1.QuotaRule");
+            "Udb.Core.Metering.Entity.V1.QuotaRule");
         entities["udb.core.metering.entity.v1.UsageEvent"] = new EntityBinding(
             "udb.core.metering.entity.v1.UsageEvent",
             "usage_events",
@@ -10257,7 +10257,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Metering.Entity.V1.UsageEvent");
+            "Udb.Core.Metering.Entity.V1.UsageEvent");
         entities["udb.core.notification.entity.v1.Notification"] = new EntityBinding(
             "udb.core.notification.entity.v1.Notification",
             "notifications",
@@ -10267,7 +10267,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Notification.Entity.V1.Notification");
+            "Udb.Core.Notification.Entity.V1.Notification");
         entities["udb.core.notification.entity.v1.NotificationDeliveryAttempt"] = new EntityBinding(
             "udb.core.notification.entity.v1.NotificationDeliveryAttempt",
             "notification_delivery_attempts",
@@ -10277,7 +10277,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "project_id",
-            "udb.core.Notification.Entity.V1.NotificationDeliveryAttempt");
+            "Udb.Core.Notification.Entity.V1.NotificationDeliveryAttempt");
         entities["udb.core.notification.entity.v1.NotificationLog"] = new EntityBinding(
             "udb.core.notification.entity.v1.NotificationLog",
             "notification_logs",
@@ -10287,7 +10287,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "project_id",
-            "udb.core.Notification.Entity.V1.NotificationLog");
+            "Udb.Core.Notification.Entity.V1.NotificationLog");
         entities["udb.core.notification.entity.v1.NotificationPreference"] = new EntityBinding(
             "udb.core.notification.entity.v1.NotificationPreference",
             "notification_preferences",
@@ -10297,7 +10297,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "project_id",
-            "udb.core.Notification.Entity.V1.NotificationPreference");
+            "Udb.Core.Notification.Entity.V1.NotificationPreference");
         entities["udb.core.notification.entity.v1.NotificationTemplate"] = new EntityBinding(
             "udb.core.notification.entity.v1.NotificationTemplate",
             "notification_templates",
@@ -10307,7 +10307,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "project_id",
-            "udb.core.Notification.Entity.V1.NotificationTemplate");
+            "Udb.Core.Notification.Entity.V1.NotificationTemplate");
         entities["udb.core.scheduler.entity.v1.ScheduledJob"] = new EntityBinding(
             "udb.core.scheduler.entity.v1.ScheduledJob",
             "scheduled_jobs",
@@ -10317,7 +10317,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Scheduler.Entity.V1.ScheduledJob");
+            "Udb.Core.Scheduler.Entity.V1.ScheduledJob");
         entities["udb.core.search.entity.v1.SearchIndex"] = new EntityBinding(
             "udb.core.search.entity.v1.SearchIndex",
             "search_indexes",
@@ -10327,7 +10327,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Search.Entity.V1.SearchIndex");
+            "Udb.Core.Search.Entity.V1.SearchIndex");
         entities["udb.core.storage.entity.v1.File"] = new EntityBinding(
             "udb.core.storage.entity.v1.File",
             "files",
@@ -10337,7 +10337,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Storage.Entity.V1.File");
+            "Udb.Core.Storage.Entity.V1.File");
         entities["udb.core.tenant.entity.v1.Tenant"] = new EntityBinding(
             "udb.core.tenant.entity.v1.Tenant",
             "tenants",
@@ -10347,7 +10347,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Tenant.Entity.V1.Tenant");
+            "Udb.Core.Tenant.Entity.V1.Tenant");
         entities["udb.core.tenant.entity.v1.TenantConfig"] = new EntityBinding(
             "udb.core.tenant.entity.v1.TenantConfig",
             "tenant_configs",
@@ -10357,7 +10357,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Tenant.Entity.V1.TenantConfig");
+            "Udb.Core.Tenant.Entity.V1.TenantConfig");
         entities["udb.core.vault.entity.v1.VaultDbCredentialLease"] = new EntityBinding(
             "udb.core.vault.entity.v1.VaultDbCredentialLease",
             "vault_db_credential_leases",
@@ -10367,7 +10367,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "project_id",
-            "udb.core.Vault.Entity.V1.VaultDbCredentialLease");
+            "Udb.Core.Vault.Entity.V1.VaultDbCredentialLease");
         entities["udb.core.vault.entity.v1.VaultSecret"] = new EntityBinding(
             "udb.core.vault.entity.v1.VaultSecret",
             "vault_secrets",
@@ -10377,7 +10377,7 @@ public static class UdbIr
             "version",
             "tenant_id",
             "",
-            "udb.core.Vault.Entity.V1.VaultSecret");
+            "Udb.Core.Vault.Entity.V1.VaultSecret");
         entities["udb.core.vault.entity.v1.VaultTransitKey"] = new EntityBinding(
             "udb.core.vault.entity.v1.VaultTransitKey",
             "vault_transit_keys",
@@ -10387,7 +10387,7 @@ public static class UdbIr
             "version",
             "tenant_id",
             "",
-            "udb.core.Vault.Entity.V1.VaultTransitKey");
+            "Udb.Core.Vault.Entity.V1.VaultTransitKey");
         entities["udb.core.webhook.entity.v1.WebhookDelivery"] = new EntityBinding(
             "udb.core.webhook.entity.v1.WebhookDelivery",
             "webhook_deliveries",
@@ -10397,7 +10397,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Webhook.Entity.V1.WebhookDelivery");
+            "Udb.Core.Webhook.Entity.V1.WebhookDelivery");
         entities["udb.core.webhook.entity.v1.WebhookEndpoint"] = new EntityBinding(
             "udb.core.webhook.entity.v1.WebhookEndpoint",
             "webhook_endpoints",
@@ -10407,7 +10407,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Webhook.Entity.V1.WebhookEndpoint");
+            "Udb.Core.Webhook.Entity.V1.WebhookEndpoint");
         entities["udb.core.webrtc.entity.v1.Peer"] = new EntityBinding(
             "udb.core.webrtc.entity.v1.Peer",
             "peers",
@@ -10417,7 +10417,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Webrtc.Entity.V1.Peer");
+            "Udb.Core.Webrtc.Entity.V1.Peer");
         entities["udb.core.webrtc.entity.v1.Room"] = new EntityBinding(
             "udb.core.webrtc.entity.v1.Room",
             "rooms",
@@ -10427,7 +10427,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Webrtc.Entity.V1.Room");
+            "Udb.Core.Webrtc.Entity.V1.Room");
         entities["udb.core.webrtc.entity.v1.Track"] = new EntityBinding(
             "udb.core.webrtc.entity.v1.Track",
             "tracks",
@@ -10437,7 +10437,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Webrtc.Entity.V1.Track");
+            "Udb.Core.Webrtc.Entity.V1.Track");
         entities["udb.core.workflow.entity.v1.WorkflowInstance"] = new EntityBinding(
             "udb.core.workflow.entity.v1.WorkflowInstance",
             "workflow_instances",
@@ -10447,7 +10447,7 @@ public static class UdbIr
             "",
             "tenant_id",
             "",
-            "udb.core.Workflow.Entity.V1.WorkflowInstance");
+            "Udb.Core.Workflow.Entity.V1.WorkflowInstance");
         return entities;
     }
 
