@@ -40,17 +40,27 @@ include = [
 # than a `no_run` doctest: the example is a real program, not a fragment.
 doctest = false
 
-# tonic/prost are pinned to the SAME majors the broker builds with (tonic 0.12,
-# prost 0.13). A consumer that links both this client and `udb` as a library then
-# gets one set of generated types rather than two incompatible ones.
+# CURRENT tonic/prost, deliberately NOT the broker's older pins.
+#
+# 0.5.21 pinned tonic 0.12 / prost 0.13 "to match the broker", reasoning that a
+# consumer linking both would get one set of generated types. That optimises for a
+# rare consumer — almost nobody links a gRPC SERVER as a library beside its client
+# — and penalises the common one, who is on current prost and cannot pass their own
+# `prost_types::Struct` into `UpsertRequest.payload` because it is a different
+# nominal type. The client is a separate artifact with separate consumers and
+# tracks the ecosystem, not the broker.
 [dependencies]
-tonic = { version = "0.12", features = ["tls", "tls-roots"] }
-prost = "0.13"
-prost-types = "0.13"
+tonic = { version = "0.14", features = ["transport", "tls-ring", "tls-native-roots"] }
+# tonic 0.14 moved the prost codec into its own runtime crate; the generated
+# clients reference `tonic_prost`, so it is a normal dependency, not a build one.
+tonic-prost = "0.14"
+prost = "0.14"
+prost-types = "0.14"
 tokio = { version = "1", features = ["sync", "time"] }
 
 [build-dependencies]
-tonic-build = "0.12"
+# tonic 0.14 split codegen out of `tonic-build` into `tonic-prost-build`.
+tonic-prost-build = "0.14"
 # Vendored protoc, matching the broker: building this crate must not require a
 # system protoc install.
 protoc-bin-vendored = "3"

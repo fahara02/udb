@@ -53,6 +53,24 @@ A complete program, including login, is in
 UDB_TENANT_ID=tenant-1 UDB_TOKEN=... cargo run --example quickstart -- myapp.v1.Invoice
 ```
 
+## Versions: current tonic/prost, not the broker's
+
+This crate tracks **tonic 0.14 / prost 0.14** — deliberately NOT the broker's older
+pins.
+
+0.5.21 pinned tonic 0.12 / prost 0.13 to match the broker, reasoning that a
+consumer linking both would get one set of generated types. That optimises for a
+consumer who links a gRPC *server* as a library beside its client, which is rare,
+and penalises the common one: `UpsertRequest.payload` and `.expected` are
+`Option<prost_types::Struct>`, so a workspace on current prost could not build a
+payload or express a compare-and-swap at all — its `Struct` was a different
+nominal type with the same name.
+
+`sdk/rust-consumer-check/` is a crate that declares its own `prost-types` and
+`tonic` and passes them across this SDK's public API. It runs in CI. If these pins
+drift from the ecosystem again, it stops compiling — which is the check whose
+absence let 0.5.21 ship unusable to exactly the consumers it was written for.
+
 ## Two listeners, two authorization models
 
 UDB serves its data plane and its native services on **separate listeners with

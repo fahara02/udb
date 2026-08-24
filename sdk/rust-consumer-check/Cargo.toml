@@ -1,0 +1,23 @@
+# A CONSUMER of udb-client, not part of it.
+#
+# This crate exists to fail. udb-client 0.5.21 pinned prost 0.13 / tonic 0.12 "to
+# match the broker", which meant a consumer on current prost could not construct a
+# `prost_types::Struct` that fit `UpsertRequest.payload` — two identically-named
+# nominal types. Nothing caught it, because every test in the SDK ran with
+# udb-client as the ROOT crate, where there is nothing to conflict with. The
+# defect only exists when udb-client is a DEPENDENCY beside a different prost.
+#
+# So this crate declares its OWN prost-types and tonic, resolved independently,
+# and uses them across the SDK's public API. If the SDK's pins drift away from the
+# ecosystem again, this stops compiling.
+[package]
+name = "udb-client-consumer-check"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+udb-client = { path = "../rust" }
+# Deliberately NOT inherited from udb-client — a consumer's own resolution.
+prost-types = "0.14"
+tonic = "0.14"

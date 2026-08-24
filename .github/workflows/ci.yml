@@ -1073,6 +1073,14 @@ jobs:
       # Lib doctests are disabled (google/api proto comments are not Rust), so the
       # documented usage is compile-checked here instead.
       - run: cargo build --examples
+      # The gate whose absence let 0.5.21 ship unusable. Every check above runs
+      # with udb-client as the ROOT crate, where its prost/tonic pins cannot
+      # conflict with anything. This builds a CONSUMER that declares its own
+      # prost-types and tonic and passes them across the SDK's public API — the
+      # only configuration in which a version-identity break is visible.
+      - name: Consumer integration (independent prost/tonic resolution)
+        working-directory: sdk/rust-consumer-check
+        run: cargo run
 
   # ── Java SDK: compile the committed buf gen surface + handwritten client ──
   java-sdk:

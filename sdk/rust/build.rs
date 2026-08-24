@@ -58,14 +58,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed={}", proto_root.display());
 
     let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
-    tonic_build::configure()
+    tonic_prost_build::configure()
         .build_server(false)
         .build_client(true)
         // google/api's comments embed indented HTTP and proto examples. rustdoc
         // reads an indented block in a doc comment as a RUST doctest, so
         // `cargo test` tries to compile Google's prose and fails on it. Dropping
         // comments for that package only leaves UDB's own docs intact.
-        .disable_comments("google.api")
+        .disable_comments(["google.api"])
         .compile_protos(&proto_paths, &[proto_root.clone(), googleapis])?;
 
     // Emit the module tree from what was ACTUALLY generated, rather than a

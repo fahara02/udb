@@ -7,7 +7,7 @@ members = ["crates/udb-portable", "crates/udb-wasm"]
 # The Rust SDK is a CONSUMER of the wire contract, not part of the broker.
 # Excluding it keeps `cargo build` at the root from compiling the client and
 # stops the two from sharing a lockfile or feature unification.
-exclude = ["sdk/rust"]
+exclude = ["sdk/rust", "sdk/rust-consumer-check"]
 resolver = "2"
 
 [package]
