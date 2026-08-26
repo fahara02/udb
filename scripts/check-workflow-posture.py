@@ -1228,6 +1228,7 @@ CI_QUICK_GATE_SOURCE_GUARDS = (
     ("Go SDK posture guard", "scripts/check-go-sdk-posture.py", "Go SDK posture"),
     ("TypeScript SDK posture guard", "scripts/check-ts-sdk-posture.py", "TypeScript SDK posture"),
     ("Python/PHP SDK posture guard", "scripts/check-python-php-sdk-posture.py", "Python/PHP SDK posture"),
+    ("Path case-collision guard", "scripts/check-path-case-collisions.py", "path case-collision"),
     ("Java/C# SDK audit guard", "scripts/check-java-csharp-sdk-audit.py", "Java/C# SDK audit"),
     ("API/SDK alias posture guard", "scripts/check-api-sdk-alias-posture.py", "API/SDK alias posture"),
     ("OpenAPI operation-id posture guard", "scripts/check-openapi-operationid-posture.py", "OpenAPI operation-id posture"),
@@ -4318,6 +4319,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/check-go-sdk-posture.py", "Go SDK posture guard"),
     ("scripts/check-ts-sdk-posture.py", "TypeScript SDK posture guard"),
     ("scripts/check-python-php-sdk-posture.py", "Python/PHP SDK posture guard"),
+    ("scripts/check-path-case-collisions.py", "path case-collision guard"),
     ("scripts/check-java-csharp-sdk-audit.py", "Java/C# SDK audit guard"),
     ("scripts/check-api-sdk-alias-posture.py", "API/SDK alias posture guard"),
     ("scripts/check-openapi-operationid-posture.py", "OpenAPI operation-id posture guard"),
@@ -6806,6 +6808,10 @@ jobs:
         run: |
           python3 scripts/check-python-php-sdk-posture.py --selftest
           python3 scripts/check-python-php-sdk-posture.py
+      - name: Path case-collision guard
+        run: |
+          python3 scripts/check-path-case-collisions.py --selftest
+          python3 scripts/check-path-case-collisions.py
       - name: Java/C# SDK audit guard
         run: |
           python3 scripts/check-java-csharp-sdk-audit.py --selftest

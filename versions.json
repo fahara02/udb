@@ -3,7 +3,7 @@
   "protocol": "1.0.0",
   "components": {
     "sdk-csharp": {
-      "version": "0.5.21",
+      "version": "0.5.22",
       "manifest": "sdk/csharp/Udb.Client/Udb.Client.csproj",
       "tag": "v{version}",
       "publishes": [
@@ -11,7 +11,7 @@
       ]
     },
     "sdk-go": {
-      "version": "0.5.21",
+      "version": "0.5.22",
       "manifest": "(git tag only \u2014 Go module)",
       "tag": "sdk/go/v{version}",
       "publishes": [
@@ -19,7 +19,7 @@
       ]
     },
     "sdk-java": {
-      "version": "0.5.21",
+      "version": "0.5.22",
       "manifest": "sdk/java/pom.xml",
       "tag": "v{version}",
       "publishes": [
@@ -27,7 +27,7 @@
       ]
     },
     "sdk-php": {
-      "version": "0.5.21",
+      "version": "0.5.22",
       "manifest": "(git tag only \u2014 Composer/VCS)",
       "tag": "v{version}",
       "publishes": [
@@ -35,7 +35,7 @@
       ]
     },
     "sdk-python": {
-      "version": "0.5.21",
+      "version": "0.5.22",
       "manifest": "sdk/python/pyproject.toml",
       "tag": "v{version}",
       "publishes": [
@@ -48,10 +48,10 @@
         "crates.io (udb-client)"
       ],
       "tag": "v{version}",
-      "version": "0.5.21"
+      "version": "0.5.22"
     },
     "sdk-typescript": {
-      "version": "0.5.21",
+      "version": "0.5.22",
       "manifest": "sdk/typescript/package.json",
       "tag": "v{version}",
       "publishes": [
@@ -59,7 +59,7 @@
       ]
     },
     "udb": {
-      "version": "0.5.21",
+      "version": "0.5.22",
       "manifest": "Cargo.toml",
       "tag": "v{version}",
       "publishes": [

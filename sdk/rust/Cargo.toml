@@ -1,6 +1,6 @@
 [package]
 name = "udb-client"
-version = "0.5.21"
+version = "0.5.22"
 edition = "2021"
 rust-version = "1.88"
 description = "Rust client for UDB — a proto-driven gRPC broker over multiple databases. Typed tonic clients plus the tenant/project metadata and token lifecycle the broker expects."

@@ -5,6 +5,57 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.22] - 2026-08-26
+
+A single-purpose release: the Rust client shipped in 0.5.21 could not be used by
+the consumers it was written for. If you do not depend on `udb-client`, nothing
+here changes for you.
+
+### Fixed
+
+- **`udb-client` 0.5.21 was undependable from any crate on current prost.** The
+  0.5.21 manifest pinned tonic 0.12 / prost 0.13 to match the broker's own pins.
+  That reasoning only helps someone linking a gRPC *server* beside its client,
+  and it penalises the ordinary consumer, who is on prost 0.14.
+
+  `UpsertRequest.payload` and `.expected` are `Option<prost_types::Struct>`, so
+  the split landed squarely on the main write path: such a consumer could not
+  send a payload or express a compare-and-swap at all. The compiler error names
+  two paths that look identical, because both types are called
+  `prost_types::Struct` — they simply come from different crate versions.
+
+  `udb-client` now tracks tonic 0.14 / prost 0.14. It is a separate artifact with
+  separate consumers, and it follows the ecosystem rather than the broker.
+
+  **The broker is untouched.** `sdk/rust` is excluded from the broker workspace,
+  so the broker keeps its own tonic 0.12 with no feature unification between the
+  two. That isolation is what lets the client move independently.
+
+  **Upgrading:** depend on `udb-client = "0.5.22"` and on `tonic = "0.14"` /
+  `prost-types = "0.14"` as ordinary dependencies. If you pinned `tonic =
+  "=0.12.3"` to work around 0.5.21, drop the pin. 0.5.21 remains published —
+  crates.io versions are immutable, and yanking hides rather than deletes.
+
+### Added
+
+- **A consumer crate that would have caught it.** Every check `udb-client` had —
+  unit tests, clippy, fmt, even the standalone build of the packaged crate — ran
+  with `udb-client` as the *root* crate, where prost resolves once and nothing can
+  conflict. The defect only exists when it is a *dependency* beside a different
+  prost, and no such consumer existed in this repo.
+
+  `sdk/rust-consumer-check/` is that consumer: a crate declaring its own
+  `prost-types` and `tonic`, exercising both across the SDK's public API. Every
+  assertion is the compiler's. It runs in the rust-sdk CI job, so a future drift
+  between these pins and the ecosystem fails the build rather than the user.
+
+### Changed
+
+- The path case-collision guard added in 0.5.21 is now registered in the workflow
+  posture tables, so editing it re-triggers the workflow lint and removing it
+  fails the build. Without that registration the guard protecting every future tag
+  could have been deleted silently.
+
 ## [0.5.21] - 2026-08-24
 
 The release that made the repository fetchable again, closed the event-loss window

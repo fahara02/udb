@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.21 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.22 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,7 +18,7 @@ metadata.
 ## Install
 
 ```powershell
-dotnet add package Udb.Client --version 0.5.21
+dotnet add package Udb.Client --version 0.5.22
 ```
 
 Runtime: .NET 8
@@ -26,7 +26,7 @@ Runtime: .NET 8
 The companion CLI tool is `Udb.Cli`:
 
 ```powershell
-dotnet tool install --global Udb.Cli --version 0.5.21
+dotnet tool install --global Udb.Cli --version 0.5.22
 ```
 
 The tool exposes `udb` and resolves the version-matched UDB binary.
