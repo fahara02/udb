@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option csharp_namespace = "Udb.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package = "com.udb.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+option php_namespace = "Udb\\Entity\\V1";
+
+// ── RecordBatchV2 (additive columnar row encoding) ────────────────────────────
+//
+// `RecordBatchV2` is an additive, columnar alternative to the row-oriented
+// `RecordSet` (relational.proto). It is advertised under the
+// `ProtocolSupport.encodings` token "record_batch_v2" and consumed by the
+// additive `SelectV2` RPC; the V1 `Select`/`RecordSet` path is unchanged. A
+// columnar layout avoids repeating field names per row and lets clients decode
+// typed columns without per-cell `google.protobuf.Value` boxing, which is
+// cheaper for large typed reads.
+
+// Logical type of a column. Exactly one of `ColumnBatch`'s typed arrays is
+// populated according to this discriminator (plus the `nulls` bitmap).
+enum ColumnType {
+  COLUMN_TYPE_UNSPECIFIED = 0;
+  // Every value in the column is NULL (no typed array populated).
+  COLUMN_TYPE_NULL = 1;
+  COLUMN_TYPE_BOOL = 2;
+  COLUMN_TYPE_INT64 = 3;
+  COLUMN_TYPE_DOUBLE = 4;
+  COLUMN_TYPE_STRING = 5;
+  COLUMN_TYPE_BYTES = 6;
+  // JSON fallback for nested/heterogeneous values (arrays, objects, or columns
+  // whose values mix scalar kinds). Each entry is a JSON-encoded string.
+  COLUMN_TYPE_JSON = 7;
+}
+
+// One column of a `RecordBatchV2`. The typed array selected by `type` carries
+// one entry per row; NULL rows carry a type-default placeholder and are marked
+// in the `nulls` bitmap so clients never confuse a real default with NULL.
+message ColumnBatch {
+  string name = 1;
+  ColumnType type = 2;
+  // Exactly one of the following is populated based on `type`. Each, when
+  // populated, has `RecordBatchV2.row_count` entries.
+  repeated bool bool_values = 3;
+  repeated int64 int64_values = 4;
+  repeated double double_values = 5;
+  repeated string string_values = 6;
+  repeated bytes bytes_values = 7;
+  // JSON-encoded values for COLUMN_TYPE_JSON.
+  repeated string json_values = 8;
+  // Null bitmap: `nulls[i] == true` means the value at row i is NULL. Always
+  // `row_count` long.
+  repeated bool nulls = 9;
+}
+
+// A columnar batch of rows. Decoders read column j's values from the typed
+// array selected by `columns[j].type`, row i at index i.
+message RecordBatchV2 {
+  repeated ColumnBatch columns = 1;
+  int32 row_count = 2;
+  // Active catalog version the batch was produced under (empty if unknown).
+  string schema_version = 3;
+  // Column names in positional order, for clients that index columns by
+  // position rather than name.
+  repeated string field_order = 4;
+  // Pagination parity with `RecordSet`.
+  string next_page_token = 5;
+  int32 total_count = 6;
+}

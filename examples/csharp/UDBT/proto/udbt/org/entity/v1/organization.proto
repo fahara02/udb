@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package udbt.org.entity.v1;
+
+import "udbt/org/services/org.proto";
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+
+
+// Vehicle — an ambulance unit registered in the fleet.
+// Source migration: fleet/001_vehicles.sql
+message Org {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "organization"
+    schema_name: "org"
+    migration_order: 300
+    is_table: true
+    comment: "Organization"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: false
+    // indexes: {
+    //   index_name: "idx_fleet_vehicles_reg"
+    //   index_type: "BTREE"
+    //   composite_fields: "registration_number"
+    // }
+    // indexes: {
+    //   index_name: "idx_fleet_vehicles_active"
+    //   index_type: "BTREE"
+    //   composite_fields: "is_active"
+    //   composite_fields: "service_level"
+    // }
+  };
+
+  string id = 1 [(udb.core.common.v1.pg_column) = {
+    column_name: "org_id"
+    sql_type: "UUID"
+    primary_key: true
+    not_null: true
+    default_value: "gen_random_uuid()"
+  }];
+  // @inject_tag: gorm:"primaryKey;column:vehicle_id;not null"
+
+  // Official vehicle registration plate number
+  string code = 2 [(udb.core.common.v1.pg_column) = {
+    column_name: "org_code"
+    sql_type: "VARCHAR(30)"
+    not_null: true
+    unique: true
+  }];
+  
+  string name = 3 [(udb.core.common.v1.pg_column) = {
+    column_name: "org_name"
+    sql_type: "VARCHAR(30)"
+    not_null: true
+    unique: false
+  }];
+  
+  string phone = 4 [(udb.core.common.v1.pg_column) = {
+    column_name: "org_phone"
+    sql_type: "VARCHAR(30)"
+    not_null: true
+    unique: true
+  }];
+  
+  string email = 5 [(udb.core.common.v1.pg_column) = {
+    column_name: "org_email"
+    sql_type: "VARCHAR(30)"
+    not_null: true
+    unique: true
+  }];
+
+
+
+
+  // @inject_tag: gorm:"column:registration_number;not null;uniqueIndex"
+
+  ehr.organization.v1.OrganizationType type = 6 [(udb.core.common.v1.pg_column) = {
+    column_name: "org_type"
+    sql_type: "VARCHAR(30)"
+    not_null: true
+    check_constraint: "type IN ('HEALTH_SYSTEM','HOSPITAL','CLINIC','NETWORK')"
+  }];
+  // @inject_tag: gorm:"column:service_level;not null;serializer:proto_enum"
+
+
+  // @inject_tag: gorm:"column:make"
+
+  // @inject_tag: gorm:"column:model"
+
+  // int32 year = 6 [(udb.core.common.v1.pg_column) = {
+  //   column_name: "year"
+  //   sql_type: "INTEGER"
+  //   // int2→int4 promotion (UDB row decoder reads INT2 as NULL — UPSTREAM_NOTES.md §3)
+  //   using_expression: "year::integer"
+  // }];
+  // @inject_tag: gorm:"column:year"
+
+
+  // @inject_tag: gorm:"column:is_active;not null"
+
+  // bool is_serviceable = 8 [(udb.core.common.v1.pg_column) = {
+  //   column_name: "is_serviceable"
+  //   sql_type: "BOOLEAN"
+  //   not_null: true
+  //   default_value: "true"
+  //   comment: "false = under maintenance, cannot be dispatched"
+  // }];
+  // @inject_tag: gorm:"column:is_serviceable;not null"
+  // @inject_tag: gorm:"column:created_by"
+
+  google.protobuf.Timestamp created_at = 7 [(udb.core.common.v1.pg_column) = {
+    column_name: "created_at"
+    sql_type: "TIMESTAMPTZ"
+    not_null: true
+    default_value: "NOW()"
+    exclude_from_update: true
+  }];
+  // @inject_tag: gorm:"column:created_at;not null;serializer:proto_timestamp"
+
+  google.protobuf.Timestamp updated_at = 8 [(udb.core.common.v1.pg_column) = {
+    column_name: "updated_at"
+    sql_type: "TIMESTAMPTZ"
+    not_null: true
+    default_value: "NOW()"
+  }];
+  // @inject_tag: gorm:"column:updated_at;not null;serializer:proto_timestamp"
+}
+
+// VehicleCapabilityEntry — join table: which capabilities a vehicle has.
+// Source migration: fleet/002_vehicle_capabilities.sql
+

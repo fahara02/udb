@@ -1,0 +1,16 @@
+version: v2
+
+managed:
+  enabled: true
+  override:
+    - file_option: csharp_namespace
+      value: UDBT
+
+plugins:
+  - remote: buf.build/protocolbuffers/csharp
+    out: UDBT/gen
+
+  - remote: buf.build/grpc/csharp
+    out: UDBT/gen
+    # opt:
+    #   - paths=source_relative

@@ -1,0 +1,1994 @@
+syntax = "proto3";
+
+package udb.core.webrtc.services.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/webrtc/entity/v1/room.proto";
+import "udb/core/webrtc/entity/v1/peer.proto";
+import "udb/core/webrtc/entity/v1/track.proto";
+import "udb/core/webrtc/services/v1/egress.proto";
+
+option csharp_namespace = "Udb.Core.Webrtc.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/services/v1;webrtcservicev1";
+option java_package = "com.udb.core.webrtc.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Services\\V1";
+option php_namespace = "Udb\\Core\\Webrtc\\Services\\V1";
+
+service RoomService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "webrtc.room"
+    logical_service_id: "webrtc"
+    proto_service_id: "room"
+    display_name: "WebRTC Rooms"
+    category: "realtime"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "webrtc.rooms"
+    cli_scaffold_group: "webrtc"
+    health_check_ref: "webrtc.room"
+    capability_ref: "native.webrtc.room"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "webrtc"
+    import_path: "udb/native/webrtc"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.webrtc.config.json"
+    required_native_services: "webrtc.room"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "webrtc.room"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Create a room
+  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: webrtc RoomService::create_room persists the room row (state
+    // ACTIVE) via native_entity_write_for_service before returning, and GetRoom
+    // reads it by (tenant_id, room_id). The returned room_id is immediately
+    // gettable. Primary read.
+    option (udb.core.common.v1.method_readback_contract) = {
+      returned_id_field: "room_id"
+      readback_rpc: "GetRoom"
+      readback_request_field: "room_id"
+      requires_primary_read: true
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:room:create-room"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.room.CreateRoom"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_room" rest_operation_id: "createRoom"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.create_room.boilerplate"
+      route_name: "create_room"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.room"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.room"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.room.CreateRoom"
+      outbox_topic: "webrtc.room.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.webrtc.room.created.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/rooms"
+      body: "*"
+    };
+  }
+
+  // Get a room
+  rpc GetRoom(GetRoomRequest) returns (GetRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:room:get-room"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.room.GetRoom"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_room" rest_operation_id: "getRoom"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.get_room.boilerplate"
+      route_name: "get_room"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.room"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.room"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.room.GetRoom"
+      outbox_topic: "webrtc.room.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/webrtc/rooms/{room_id}"};
+  }
+
+  // Update a room
+  rpc UpdateRoom(UpdateRoomRequest) returns (UpdateRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:room:update-room"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.room.UpdateRoom"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "update_room" rest_operation_id: "updateRoom"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.update_room.boilerplate"
+      route_name: "update_room"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.room"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.room"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.room.UpdateRoom"
+      outbox_topic: "webrtc.room.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      patch: "/v1/webrtc/rooms/{room_id}"
+      body: "*"
+    };
+  }
+
+  // Close a room
+  rpc CloseRoom(CloseRoomRequest) returns (CloseRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: webrtc RoomService::close_room runs UPDATE ... SET state =
+    // 'CLOSED', participant_count = 0 WHERE room_id = ... — driving the room to
+    // the CLOSED terminal state. join_room_inner then refuses any join on a
+    // CLOSED room (WHERE state <> 'CLOSED'), so CLOSED is genuinely terminal.
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "Room"
+      target_state: "CLOSED"
+      terminal_states: "CLOSED"
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:room:close-room"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.room.CloseRoom"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "close_room" rest_operation_id: "closeRoom"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.close_room.boilerplate"
+      route_name: "close_room"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.room"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.room"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.room.CloseRoom"
+      outbox_topic: "webrtc.room.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.webrtc.peer.left.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+      emits: { topic: "udb.webrtc.track.ended.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+      emits: { topic: "udb.webrtc.room.closed.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/rooms/{room_id}:close"
+      body: "*"
+    };
+  }
+
+  // List rooms
+  rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:room:list-rooms"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.room.ListRooms"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_rooms" rest_operation_id: "listRooms"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.list_rooms.boilerplate"
+      route_name: "list_rooms"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.room"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.room"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.room.ListRooms"
+      outbox_topic: "webrtc.room.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/webrtc/rooms"};
+  }
+
+  // ── Recording / egress (master-plan 5.5) ───────────────────────────────────
+  // Added to the EXISTING RoomService (not a new service) so the GOLDEN
+  // service-set snapshot + sdk_manifest gates stay green (RPCs are subset-
+  // checked). Handlers fail closed (FAILED_PRECONDITION, never UNIMPLEMENTED)
+  // until UDB_WEBRTC_EGRESS_ENABLED is set and a real egress backend is wired.
+
+  // Start a composite recording/egress of a whole room.
+  rpc StartRoomComposite(StartRoomCompositeRequest) returns (StartRoomCompositeResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:room:start-room-composite"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.room.StartRoomComposite"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "start_room_composite" rest_operation_id: "startRoomComposite"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.start_room_composite.boilerplate"
+      route_name: "start_room_composite"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.room"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.room"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.room.StartRoomComposite"
+      outbox_topic: "webrtc.room.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.webrtc.egress.started.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+      emits: { topic: "udb.webrtc.egress.failed.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/rooms/{room_id}/egress:composite"
+      body: "*"
+    };
+  }
+
+  // Start an egress of a single published track.
+  rpc StartTrackEgress(StartTrackEgressRequest) returns (StartTrackEgressResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:room:start-track-egress"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.room.StartTrackEgress"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "start_track_egress" rest_operation_id: "startTrackEgress"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.start_track_egress.boilerplate"
+      route_name: "start_track_egress"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.room"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.room"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.room.StartTrackEgress"
+      outbox_topic: "webrtc.room.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.webrtc.egress.started.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+      emits: { topic: "udb.webrtc.egress.failed.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/tracks/{track_id}:startEgress"
+      body: "*"
+    };
+  }
+
+  // Stop a running egress. `egress_id` must belong to the verified tenant.
+  rpc StopEgress(StopEgressRequest) returns (StopEgressResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:room:stop-egress"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.room.StopEgress"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "stop_egress" rest_operation_id: "stopEgress"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.stop_egress.boilerplate"
+      route_name: "stop_egress"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.room"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.room"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.room.StopEgress"
+      outbox_topic: "webrtc.room.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.webrtc.egress.stopped.v1" partition_key_field: "tenant_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+      emits: { topic: "udb.webrtc.egress.failed.v1" partition_key_field: "tenant_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/egress/{egress_id}:stop"
+      body: "*"
+    };
+  }
+
+  // List egress jobs for the verified tenant.
+  rpc ListEgress(ListEgressRequest) returns (ListEgressResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:room:list-egress"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.room.ListEgress"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_egress" rest_operation_id: "listEgress"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.list_egress.boilerplate"
+      route_name: "list_egress"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.room"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.room"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.room.ListEgress"
+      outbox_topic: "webrtc.room.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/webrtc/egress"};
+  }
+}
+
+service PeerService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "webrtc.peer"
+    logical_service_id: "webrtc"
+    proto_service_id: "peer"
+    display_name: "WebRTC Peers"
+    category: "realtime"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    peer_listener_allowed: true
+    sdk_facade_name: "webrtc.peers"
+    cli_scaffold_group: "webrtc"
+    health_check_ref: "webrtc.peer"
+    capability_ref: "native.webrtc.peer"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "webrtc"
+    import_path: "udb/native/webrtc"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.webrtc.config.json"
+    required_native_services: "webrtc.peer"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "webrtc.peer"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Join a room
+  rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: join_room_inner does a capacity-CAS that only succeeds when the
+    // room is ACTIVE and not CLOSED and under capacity (WHERE state <> 'CLOSED'
+    // AND participant_count < max); it then inserts a Peer in state CONNECTED.
+    // The room ACTIVE state is the legal source; the peer reaches CONNECTED.
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "Peer"
+      legal_source_states: "ACTIVE"
+      target_state: "CONNECTED"
+    };
+    // Verified: when the CAS claims zero rows (room missing, CLOSED, or at
+    // capacity) join_room_inner returns failed_precondition_with_reason(ROOM_FULL).
+    option (udb.core.common.v1.method_error_contract) = {
+      cases: { canonical_code: "ROOM_FULL" grpc_status: "FAILED_PRECONDITION" retryable: false }
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:peer:join-room"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.peer.JoinRoom"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "join_room" rest_operation_id: "joinRoom"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.join_room.boilerplate"
+      route_name: "join_room"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.peer"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.peer"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.peer.JoinRoom"
+      outbox_topic: "webrtc.peer.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.webrtc.peer.joined.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/rooms/{room_id}/peers"
+      body: "*"
+    };
+  }
+
+  // Join a room and atomically mint TURN credentials for the freshly-inserted peer
+  rpc JoinSession(JoinSessionRequest) returns (JoinSessionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: join_session runs the SAME join_room_inner CAS+insert as JoinRoom
+    // (room must be ACTIVE/not CLOSED/under capacity; peer reaches CONNECTED),
+    // then mints TURN credentials for the freshly-inserted peer.
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "Peer"
+      legal_source_states: "ACTIVE"
+      target_state: "CONNECTED"
+    };
+    // Verified: ROOM_FULL from the join_room_inner CAS; TURN_NOT_CONFIGURED is
+    // returned fail-closed when no TURN secret is configured (UDB_TURN_SECRET).
+    option (udb.core.common.v1.method_error_contract) = {
+      cases: { canonical_code: "ROOM_FULL" grpc_status: "FAILED_PRECONDITION" retryable: false }
+      cases: { canonical_code: "TURN_NOT_CONFIGURED" grpc_status: "FAILED_PRECONDITION" retryable: false }
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:peer:join-room"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.peer.JoinSession"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "join_session" rest_operation_id: "joinSession"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+  }
+
+  // Leave a room
+  rpc LeaveRoom(LeaveRoomRequest) returns (LeaveRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:peer:leave-room"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.peer.LeaveRoom"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "leave_room" rest_operation_id: "leaveRoom"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.leave_room.boilerplate"
+      route_name: "leave_room"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.peer"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.peer"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.peer.LeaveRoom"
+      outbox_topic: "webrtc.peer.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.webrtc.peer.left.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/rooms/{room_id}/peers/{peer_id}:leave"
+      body: "*"
+    };
+  }
+
+  // Get a peer
+  rpc GetPeer(GetPeerRequest) returns (GetPeerResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:peer:get-peer"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.peer.GetPeer"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_peer" rest_operation_id: "getPeer"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.get_peer.boilerplate"
+      route_name: "get_peer"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.peer"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.peer"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.peer.GetPeer"
+      outbox_topic: "webrtc.peer.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/webrtc/peers/{peer_id}"};
+  }
+
+  // List peers
+  rpc ListPeers(ListPeersRequest) returns (ListPeersResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:peer:list-peers"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.peer.ListPeers"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_peers" rest_operation_id: "listPeers"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.list_peers.boilerplate"
+      route_name: "list_peers"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.peer"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.peer"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.peer.ListPeers"
+      outbox_topic: "webrtc.peer.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/webrtc/rooms/{room_id}/peers"};
+  }
+}
+
+service TrackService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "webrtc.track"
+    logical_service_id: "webrtc"
+    proto_service_id: "track"
+    display_name: "WebRTC Tracks"
+    category: "realtime"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    peer_listener_allowed: true
+    sdk_facade_name: "webrtc.tracks"
+    cli_scaffold_group: "webrtc"
+    health_check_ref: "webrtc.track"
+    capability_ref: "native.webrtc.track"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "webrtc"
+    import_path: "udb/native/webrtc"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.webrtc.config.json"
+    required_native_services: "webrtc.track"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "webrtc.track"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Publish a track
+  rpc PublishTrack(PublishTrackRequest) returns (PublishTrackResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:track:publish-track"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.track.PublishTrack"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "publish_track" rest_operation_id: "publishTrack"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.publish_track.boilerplate"
+      route_name: "publish_track"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.track"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.track"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.track.PublishTrack"
+      outbox_topic: "webrtc.track.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.webrtc.track.published.v1" partition_key_field: "room_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/tracks"
+      body: "*"
+    };
+  }
+
+  // Unpublish a track
+  rpc UnpublishTrack(UnpublishTrackRequest) returns (UnpublishTrackResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:track:unpublish-track"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.track.UnpublishTrack"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "unpublish_track" rest_operation_id: "unpublishTrack"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.unpublish_track.boilerplate"
+      route_name: "unpublish_track"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.track"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.track"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.track.UnpublishTrack"
+      outbox_topic: "webrtc.track.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/tracks/{track_id}:unpublish"
+      body: "*"
+    };
+  }
+
+  // Mute or unmute a track
+  rpc MuteTrack(MuteTrackRequest) returns (MuteTrackResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:track:mute-track"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.track.MuteTrack"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "mute_track" rest_operation_id: "muteTrack"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.mute_track.boilerplate"
+      route_name: "mute_track"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.track"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.track"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.track.MuteTrack"
+      outbox_topic: "webrtc.track.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/tracks/{track_id}:mute"
+      body: "*"
+    };
+  }
+
+  // List tracks
+  rpc ListTracks(ListTracksRequest) returns (ListTracksResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:track:list-tracks"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.track.ListTracks"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_tracks" rest_operation_id: "listTracks"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.list_tracks.boilerplate"
+      route_name: "list_tracks"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.track"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.track"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.track.ListTracks"
+      outbox_topic: "webrtc.track.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/webrtc/rooms/{room_id}/tracks"};
+  }
+}
+
+service TurnService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "webrtc.turn"
+    logical_service_id: "webrtc"
+    proto_service_id: "turn"
+    display_name: "WebRTC TURN"
+    category: "realtime"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    peer_listener_allowed: true
+    sdk_facade_name: "webrtc.turn"
+    cli_scaffold_group: "webrtc"
+    health_check_ref: "webrtc.turn"
+    capability_ref: "native.webrtc.turn"
+    owns_background_workers: true
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "webrtc"
+    import_path: "udb/native/webrtc"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.webrtc.config.json"
+    required_native_services: "webrtc.turn"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "webrtc.turn"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Issue ephemeral TURN/STUN credentials
+  rpc IssueCredentials(IssueCredentialsRequest) returns (IssueCredentialsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:turn:issue-credentials"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.turn.IssueCredentials"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "issue_credentials" rest_operation_id: "issueCredentials"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.issue_credentials.boilerplate"
+      route_name: "issue_credentials"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.turn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.turn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.turn.IssueCredentials"
+      outbox_topic: "webrtc.turn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webrtc/turn/credentials"
+      body: "*"
+    };
+  }
+}
+
+service SignalingService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "webrtc.signaling"
+    logical_service_id: "webrtc"
+    proto_service_id: "signaling"
+    display_name: "WebRTC Signaling"
+    category: "realtime"
+    default_enabled: true
+    control_plane_listener_allowed: true
+    peer_listener_allowed: true
+    sdk_facade_name: "webrtc.signaling"
+    cli_scaffold_group: "webrtc"
+    health_check_ref: "webrtc.signaling"
+    capability_ref: "native.webrtc.signaling"
+    owns_background_workers: true
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    streaming_helper_type: "bidirectional"
+    default_deadline_ms: 30000
+    default_max_attempts: 1
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "webrtc"
+    import_path: "udb/native/webrtc"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.webrtc.config.json"
+    required_native_services: "webrtc.signaling"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "webrtc.signaling"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Bidirectional signaling channel for SDP offer/answer and ICE exchange.
+  // Streaming RPC: no google.api.http (REST mapping is not supported for
+  // streaming methods) and no rest_contract.
+  // Named `Signal` (not `Connect`) because tonic generates a client `connect`
+  // associated constructor; an RPC named `Connect` collides with it.
+  rpc Signal(stream SignalRequest) returns (stream SignalResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:signal"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      tenant_required: true
+      decision_resource: "webrtc.signaling"
+      tenant_field: "tenant_id"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "signal" rest_operation_id: "signal"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "webrtc"
+      import_path: "udb/native/webrtc"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.webrtc.signal.boilerplate"
+      route_name: "signal"
+      middleware_name: "udb_webrtc"
+      required_native_services: "webrtc.signaling"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webrtc.signaling"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webrtc.signaling.Signal"
+      outbox_topic: "webrtc.signaling.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+  }
+}
+
+// ============================================================
+// RoomService messages
+// ============================================================
+
+message CreateRoomRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string name = 2;
+  int32 max_participants = 3;
+  string config = 4; // JSON
+  string created_by = 5;
+}
+
+message CreateRoomResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string room_id = 1;
+  string message = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message GetRoomRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+}
+
+message GetRoomResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  entity.v1.Room room = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message UpdateRoomRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string name = 3;
+  string state = 4;
+  string config = 5; // JSON
+  // Optional PATCH mask relative to the room resource. When omitted, legacy
+  // clients keep the historical non-empty-field patch behavior.
+  google.protobuf.FieldMask update_mask = 6;
+}
+
+message UpdateRoomResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message CloseRoomRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+}
+
+message CloseRoomResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ListRoomsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string state = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListRoomsResponse.next_page_token.
+  string page_token = 5;
+}
+
+message ListRoomsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  repeated entity.v1.Room rooms = 1;
+  int32 total_count = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more rooms are available.
+  string next_page_token = 4;
+}
+
+// ============================================================
+// PeerService messages
+// ============================================================
+
+message JoinRoomRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string display_name = 3;
+  string metadata = 4; // JSON
+  string user_agent = 5;
+}
+
+message JoinRoomResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  entity.v1.Peer peer = 1;
+  repeated entity.v1.Peer existing_peers = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message JoinSessionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string display_name = 3;
+  string metadata = 4; // JSON
+  string user_agent = 5;
+  int32 ttl_seconds = 6;
+}
+
+message JoinSessionResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  entity.v1.Peer peer = 1;
+  repeated entity.v1.Peer existing_peers = 2;
+  repeated IceServer ice_servers = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message LeaveRoomRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string peer_id = 3;
+}
+
+message LeaveRoomResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  bool success = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message GetPeerRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string peer_id = 2;
+}
+
+message GetPeerResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  entity.v1.Peer peer = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ListPeersRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string state = 3;
+  // Requested page size. Defaults to 50 and is capped at the native list maximum.
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListPeersResponse.next_page_token.
+  string page_token = 5;
+}
+
+message ListPeersResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  repeated entity.v1.Peer peers = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+  // Opaque token for the next page; empty when no more peers are available.
+  string next_page_token = 3;
+}
+
+// ============================================================
+// TrackService messages
+// ============================================================
+
+message PublishTrackRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string peer_id = 3;
+  string kind = 4;
+  string label = 5;
+  string settings = 6; // JSON
+  string metadata = 7; // JSON
+}
+
+message PublishTrackResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string track_id = 1;
+  string message = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message UnpublishTrackRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string track_id = 2;
+}
+
+message UnpublishTrackResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  bool success = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message MuteTrackRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string track_id = 2;
+  bool muted = 3;
+}
+
+message MuteTrackResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ListTracksRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string peer_id = 3;
+  string kind = 4;
+  // Requested page size. Defaults to 50 and is capped at the native list maximum.
+  int32 page_size = 5;
+  // Opaque pagination token returned by ListTracksResponse.next_page_token.
+  string page_token = 6;
+}
+
+message ListTracksResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  repeated entity.v1.Track tracks = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+  // Opaque token for the next page; empty when no more tracks are available.
+  string next_page_token = 3;
+}
+
+// ============================================================
+// TurnService messages
+// ============================================================
+
+message IceServer {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  repeated string urls = 1;
+  string username = 2;
+  string credential = 3;
+}
+
+message IssueCredentialsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string peer_id = 3;
+  int32 ttl_seconds = 4;
+}
+
+message IssueCredentialsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  repeated IceServer ice_servers = 1;
+  string username = 2;
+  string credential = 3;
+  int32 ttl_seconds = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 6;
+  // The action bound into the signed TURN REST username. Credentials issued by
+  // this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+  string allowed_action = 7;
+}
+
+// ============================================================
+// SignalingService messages
+// ============================================================
+
+message SignalRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string room_id = 1;
+  string peer_id = 2;
+  string tenant_id = 7;
+  oneof payload {
+    string offer_sdp = 3;
+    string answer_sdp = 4;
+    string ice_candidate = 5;
+    bool ping = 6;
+  }
+}
+
+message SignalResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  oneof payload {
+    string offer_sdp = 1;
+    string answer_sdp = 2;
+    string ice_candidate = 3;
+    string peer_joined = 4;
+    string peer_left = 5;
+    string track_published = 6;
+    bool pong = 7;
+  }
+}
