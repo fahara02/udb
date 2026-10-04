@@ -2134,7 +2134,10 @@ mod tests {
         assert_eq!(plans[0].targets[0].backend, "mongodb");
     }
 
-    fn tenanted_vector_manifest(checksum: &str, options: Vec<ManifestStoreOption>) -> CatalogManifest {
+    fn tenanted_vector_manifest(
+        checksum: &str,
+        options: Vec<ManifestStoreOption>,
+    ) -> CatalogManifest {
         CatalogManifest {
             checksum_sha256: checksum.to_string(),
             tables: vec![ManifestTable {
@@ -2171,9 +2174,12 @@ mod tests {
 
     #[test]
     fn projection_plan_names_the_source_tenant_column() {
-        let plans = ProjectionPlan::from_manifest(&tenanted_vector_manifest("tenant-field", vec![]));
+        let plans =
+            ProjectionPlan::from_manifest(&tenanted_vector_manifest("tenant-field", vec![]));
         assert!(
-            plans[0].targets[0].options.contains(&opt("tenant_field", "tenant_id")),
+            plans[0].targets[0]
+                .options
+                .contains(&opt("tenant_field", "tenant_id")),
             "{:?}",
             plans[0].targets[0].options
         );
@@ -2195,7 +2201,8 @@ mod tests {
     /// tenant-scoped search could ever see a projected point.
     #[test]
     fn vector_projection_stamps_the_keys_vector_search_filters_on() {
-        let plans = ProjectionPlan::from_manifest(&tenanted_vector_manifest("vector-stamp", vec![]));
+        let plans =
+            ProjectionPlan::from_manifest(&tenanted_vector_manifest("vector-stamp", vec![]));
         let options = serde_json::to_value(&plans[0].targets[0].options).unwrap();
         let payload = json!({"id":"d1","tenant_id":"t1","vector":[0.1,0.2]});
         let scope = ProjectionScope::resolve("proj-a", &options, &payload);
@@ -2227,9 +2234,17 @@ mod tests {
     fn lint_predicate_matches_the_worker_dispatch() {
         let options = json!([{"key":"vector_field","value":"vector"}]);
         let payload = json!({"id":"p1","vector":[0.1],"_id":"p1"});
-        for backend in ["qdrant", "mongodb", "neo4j", "clickhouse", "weaviate", "pinecone",
-            "elasticsearch", "milvus", "postgres"]
-        {
+        for backend in [
+            "qdrant",
+            "mongodb",
+            "neo4j",
+            "clickhouse",
+            "weaviate",
+            "pinecone",
+            "elasticsearch",
+            "milvus",
+            "postgres",
+        ] {
             let projection = ManifestProjection {
                 projection_kind: "vector".to_string(),
                 backend: backend.to_string(),
@@ -2238,7 +2253,13 @@ mod tests {
                 ..ManifestProjection::default()
             };
             let rendered = render_projection_mutation(
-                backend, "vector", "r", "upsert", &json!({"id":"p1"}), &options, &payload,
+                backend,
+                "vector",
+                "r",
+                "upsert",
+                &json!({"id":"p1"}),
+                &options,
+                &payload,
                 &ProjectionScope::default(),
             );
             let unsupported = matches!(&rendered, Err(e) if e.contains("is not supported")
@@ -2261,7 +2282,13 @@ mod tests {
         let filter = json!({"id":"p1","tenant_id":{"$eq":"t1"}});
         let scope = ProjectionScope::resolve("proj-a", &options, &filter);
         let err = render_projection_mutation(
-            "neo4j", "graph", "patients", "delete", &json!({"id":"p1"}), &options, &filter,
+            "neo4j",
+            "graph",
+            "patients",
+            "delete",
+            &json!({"id":"p1"}),
+            &options,
+            &filter,
             &scope,
         )
         .unwrap_err();
@@ -2270,8 +2297,14 @@ mod tests {
 
     #[test]
     fn task_project_id_resolves_empty_to_the_default_project() {
-        assert_eq!(task_project_id(""), crate::runtime::catalog::DEFAULT_PROJECT_ID);
-        assert_eq!(task_project_id("  "), crate::runtime::catalog::DEFAULT_PROJECT_ID);
+        assert_eq!(
+            task_project_id(""),
+            crate::runtime::catalog::DEFAULT_PROJECT_ID
+        );
+        assert_eq!(
+            task_project_id("  "),
+            crate::runtime::catalog::DEFAULT_PROJECT_ID
+        );
         assert_eq!(task_project_id(" billing "), "billing");
     }
 
@@ -2289,7 +2322,10 @@ mod tests {
         )
         .unwrap();
         assert_eq!(upsert["operation"], "create_node");
-        assert_eq!(upsert["scope"], json!({"_tenant_id":"t1","_project_id":"proj-a"}));
+        assert_eq!(
+            upsert["scope"],
+            json!({"_tenant_id":"t1","_project_id":"proj-a"})
+        );
         assert_eq!(upsert["properties"]["_tenant_id"], "t1");
         let delete = render_projection_mutation(
             "neo4j", "graph", "patients", "delete", &key, &options, &key, &scope,
@@ -2313,7 +2349,14 @@ mod tests {
         let scope = ProjectionScope::resolve("proj-a", &options, &payload);
         let key = json!({"id":"e1"});
         let upsert = render_projection_mutation(
-            "neo4j", "graph", "treatments", "upsert", &key, &options, &payload, &scope,
+            "neo4j",
+            "graph",
+            "treatments",
+            "upsert",
+            &key,
+            &options,
+            &payload,
+            &scope,
         )
         .unwrap();
         assert_eq!(upsert["operation"], "upsert_edge");
@@ -2321,10 +2364,20 @@ mod tests {
         assert_eq!(upsert["id"], "e1");
         assert_eq!(upsert["from_id"], "d1");
         assert_eq!(upsert["to_id"], "p1");
-        assert_eq!(upsert["scope"], json!({"_tenant_id":"t1","_project_id":"proj-a"}));
+        assert_eq!(
+            upsert["scope"],
+            json!({"_tenant_id":"t1","_project_id":"proj-a"})
+        );
 
         let delete = render_projection_mutation(
-            "neo4j", "graph", "treatments", "delete", &key, &options, &key, &scope,
+            "neo4j",
+            "graph",
+            "treatments",
+            "delete",
+            &key,
+            &options,
+            &key,
+            &scope,
         )
         .unwrap();
         assert_eq!(delete["operation"], "delete_edge");
@@ -2333,7 +2386,13 @@ mod tests {
         // An edge row without an endpoint value fails (and retries) loudly.
         let missing = json!({"id":"e2","tenant_id":"t1","doctor_id":"d1"});
         let err = render_projection_mutation(
-            "neo4j", "graph", "treatments", "upsert", &json!({"id":"e2"}), &options, &missing,
+            "neo4j",
+            "graph",
+            "treatments",
+            "upsert",
+            &json!({"id":"e2"}),
+            &options,
+            &missing,
             &scope,
         )
         .unwrap_err();
@@ -2343,7 +2402,14 @@ mod tests {
         let half = json!([{"key":"edge_source_field","value":"doctor_id"}]);
         assert!(
             render_projection_mutation(
-                "neo4j", "graph", "treatments", "upsert", &key, &half, &payload, &scope,
+                "neo4j",
+                "graph",
+                "treatments",
+                "upsert",
+                &key,
+                &half,
+                &payload,
+                &scope,
             )
             .is_err()
         );

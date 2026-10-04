@@ -1269,7 +1269,10 @@ mod tests {
                 report.items
             );
         }
-        let report = lint_catalog(&base_manifest(vec![base_projection(true), projection("qdrant")]));
+        let report = lint_catalog(&base_manifest(vec![
+            base_projection(true),
+            projection("qdrant"),
+        ]));
         assert!(!has_kind(&report, "projection_backend_not_materialized"));
     }
 

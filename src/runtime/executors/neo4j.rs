@@ -573,7 +573,11 @@ impl Neo4jExecutor {
     /// removed in the same statement. An endpoint that does not exist (yet) is an
     /// error, not a silent no-op: the projection task retries until the node
     /// projection that creates it has landed.
-    pub async fn upsert_scoped_edge(&self, edge: &GraphEdge, scope: &GraphScope) -> Result<(), String> {
+    pub async fn upsert_scoped_edge(
+        &self,
+        edge: &GraphEdge,
+        scope: &GraphScope,
+    ) -> Result<(), String> {
         let cypher = scoped_edge_upsert_cypher(edge, scope)?;
         let rows = self
             .run_single(
@@ -648,7 +652,9 @@ impl GraphScope {
                     fields.push((field, value.clone()));
                 }
                 Some(_) => {
-                    return Err(format!("graph scope field '{field}' must be a non-empty string"));
+                    return Err(format!(
+                        "graph scope field '{field}' must be a non-empty string"
+                    ));
                 }
             }
         }
@@ -703,7 +709,9 @@ fn scoped_node_upsert_cypher(label: &str, scope: &GraphScope) -> (String, String
         .collect::<Vec<_>>()
         .join(" AND ");
     (
-        format!("MATCH (n:{label} {{id: $id}}) WHERE {unscoped} SET n += $scope RETURN count(n) AS adopted"),
+        format!(
+            "MATCH (n:{label} {{id: $id}}) WHERE {unscoped} SET n += $scope RETURN count(n) AS adopted"
+        ),
         format!(
             "MERGE (n:{label} {{id: $id{key}}}) SET n += $props RETURN n",
             key = scope.key_clause()
@@ -1048,8 +1056,8 @@ mod tests {
                 .contains("_tenant_id: $scope_tenant_id")
         );
         // A caller-chosen key would otherwise be spliced into the Cypher text.
-        let err = GraphScope::from_request(Some(&json!({"id}) DETACH DELETE n //": "x"})))
-            .unwrap_err();
+        let err =
+            GraphScope::from_request(Some(&json!({"id}) DETACH DELETE n //": "x"}))).unwrap_err();
         assert!(err.contains("not one of _tenant_id/_project_id"), "{err}");
         assert!(GraphScope::from_request(Some(&json!({"_tenant_id": 7}))).is_err());
     }
@@ -1065,7 +1073,10 @@ mod tests {
         assert!(adopt.contains("n._tenant_id IS NULL AND n._project_id IS NULL"));
         let params = tenant_scope().params(json!({"id": "a"}));
         assert_eq!(params["scope_tenant_id"], "t1");
-        assert_eq!(params["scope"], json!({"_tenant_id": "t1", "_project_id": "p1"}));
+        assert_eq!(
+            params["scope"],
+            json!({"_tenant_id": "t1", "_project_id": "p1"})
+        );
     }
 
     #[test]
