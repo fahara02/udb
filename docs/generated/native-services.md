@@ -32,4 +32,4 @@ Contract version `7.2.0` · 27 native services.
 | `webrtc_signaling` | WebRTC Signaling | realtime | yes | — | 1 | control-plane, peer |
 | `webrtc_track` | WebRTC Tracks | realtime | yes | postgres | 4 | control-plane, peer |
 | `webrtc_turn` | WebRTC TURN | realtime | yes | postgres | 1 | control-plane, peer |
-| `workflow` | Workflows | workflow | yes | postgres | 5 | control-plane |
+| `workflow` | Workflows | workflow | yes | postgres | 6 | control-plane |

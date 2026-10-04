@@ -1813,6 +1813,18 @@
   },
   {
     "file": "data_broker.md",
+    "rpc": "AbortMultipartUpload",
+    "service": "DataBroker",
+    "wire_rpc": "DataBroker/AbortMultipartUpload",
+    "api_alias": "abort_multipart_upload",
+    "operation_id": "abortMultipartUpload",
+    "op_kind": "MUTATION",
+    "request_msg": "AbortMultipartUploadRequest",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"bucket\": \"<seed:bucket>\", \"object_key\": \"<seed:object_key>\", \"upload_id\": \"sdk-perf-unknown-upload\" }`",
+    "notes": "an unknown `upload_id` is the idempotent no-op path (`aborted: false`); `idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
     "rpc": "ActivateCatalog",
     "service": "DataBroker",
     "wire_rpc": "DataBroker/ActivateCatalog",
@@ -1954,6 +1966,18 @@
     "request_msg": "CacheSetRequest",
     "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"redis\" }, \"key\": \"<seed:object_key>\", \"value\": \"cGVyZg==\", \"content_type\": \"text/plain\", \"ttl_seconds\": 60 }`",
     "notes": "`only_if_absent`/`only_if_present`/`idempotency_key`/`metadata` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "CompleteMultipartUpload",
+    "service": "DataBroker",
+    "wire_rpc": "DataBroker/CompleteMultipartUpload",
+    "api_alias": "complete_multipart_upload",
+    "operation_id": "completeMultipartUpload",
+    "op_kind": "MUTATION",
+    "request_msg": "CompleteMultipartUploadRequest",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"bucket\": \"<seed:bucket>\", \"object_key\": \"<seed:object_key>\", \"upload_id\": \"sdk-perf-unknown-upload\", \"parts\": [ { \"part_number\": 1, \"etag\": \"sdk-perf-etag\" } ] }`",
+    "notes": "unknown `upload_id` exercises the tenant-scoped NoSuchUpload refusal; a real completion needs an Initiate + part upload first."
   },
   {
     "file": "data_broker.md",
@@ -4522,6 +4546,18 @@
     "request_msg": "IssueCredentialsRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"room_id\": \"<seed:room_id>\", \"peer_id\": \"<seed:peer_id>\", \"ttl_seconds\": 3600 }`",
     "notes": "ttl_seconds int32. Returns ephemeral ICE servers + signed username/credential. TURN config must be present (fail-closed)."
+  },
+  {
+    "file": "workflow.md",
+    "rpc": "AckWorkflowStep",
+    "service": "WorkflowService",
+    "wire_rpc": "WorkflowService/AckWorkflowStep",
+    "api_alias": "ack_workflow_step",
+    "operation_id": "ackWorkflowStep",
+    "op_kind": "MUTATION",
+    "request_msg": "AckWorkflowStepRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"workflow_id\": \"<seed:workflow_id>\", \"step_index\": 0, \"outcome\": \"WORKFLOW_STEP_OUTCOME_SUCCEEDED\", \"output\": \"{\\\"ok\\\":true}\" }`",
+    "notes": "acknowledges the in-flight step of the seeded workflow; an ack for a step that is not in flight returns FAILED_PRECONDITION."
   },
   {
     "file": "workflow.md",

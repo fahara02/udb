@@ -46228,7 +46228,7 @@
     "/v1/workflows/{workflowId}:ack-step": {
       "post": {
         "summary": "Acknowledge the outcome of the step the workflow tick dispatched\n(`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:\nthe instance stays RUNNING awaiting this acknowledgement, and a step that is\nnot acknowledged within the step timeout fails the workflow (compensating\nany completed steps). SUCCEEDED advances to the next step (or COMPLETED on\nthe last one); FAILED fails the workflow through the same\nfailed/compensating path as a timeout.",
-        "operationId": "WorkflowService_AckWorkflowStep",
+        "operationId": "ackWorkflowStep",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -46358,7 +46358,20 @@
         ],
         "tags": [
           "WorkflowService"
-        ]
+        ],
+        "x-udb-sdk-alias": "ack_workflow_step",
+        "x-udb-scope": [
+          "udb:workflow:ack-workflow-step"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "workflows",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/workflows/{workflowId}:cancel": {

@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "d978d65f2d9ebffdd994b73f8a8cc943e415b86ff35ba5e251a642486120ec83",
+  "descriptor_sha256": "20e0f8f4dd685037a7fb8514e30b96e385ca2317dae6fb75755b3556b456aee4",
   "contract_version": "7.2.0",
   "udb_version": "0.5.23",
   "protocol_version": "1.0.0",
@@ -29124,8 +29124,104 @@
         ],
         "degraded_when_missing": []
       },
-      "rpc_count": 5,
+      "rpc_count": 6,
       "rpcs": [
+        {
+          "method": "AckWorkflowStep",
+          "method_alias": "ack_workflow_step",
+          "rest_operation_id": "ackWorkflowStep",
+          "path": "/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.core.workflow.services.v1.AckWorkflowStepRequest",
+          "output": ".udb.core.workflow.services.v1.AckWorkflowStepResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:workflow:ack-workflow-step"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:workflow:ack-workflow-step"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "workflow.AckWorkflowStep",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": {
+            "event_type": "workflow.AckWorkflowStep",
+            "outbox_topic": "udb.workflow.step.advanced.v1",
+            "partition_key_field": "workflow_id",
+            "payload_redaction_profile": "standard",
+            "delivery_guarantee": "at_least_once",
+            "replay_compatibility": "stable"
+          },
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "ack_workflow_step",
+            "rest_operation_id": "ackWorkflowStep",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "workflow"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "workflow"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/workflows/{workflow_id}:ack-step",
+            "body": "*",
+            "response_body": ""
+          }
+        },
         {
           "method": "CancelWorkflow",
           "method_alias": "cancel_workflow",
@@ -29601,8 +29697,49 @@
       "sdk_surface": null,
       "cli_scaffold": null,
       "dependency_contract": null,
-      "rpc_count": 79,
+      "rpc_count": 81,
       "rpcs": [
+        {
+          "method": "AbortMultipartUpload",
+          "method_alias": "abort_multipart_upload",
+          "rest_operation_id": "abortMultipartUpload",
+          "path": "/udb.services.v1.DataBroker/AbortMultipartUpload",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.entity.v1.AbortMultipartUploadRequest",
+          "output": ".udb.entity.v1.AbortMultipartUploadResponse",
+          "auth_mode": "unspecified",
+          "scopes": [],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": false,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": null,
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "abort_multipart_upload",
+            "rest_operation_id": "abortMultipartUpload",
+            "required_credential_provider": "",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 0,
+            "default_max_attempts": 0,
+            "browser_safe": false,
+            "server_only": false,
+            "boilerplate_recipe_tags": [],
+            "generate_minimal_example": false
+          },
+          "dependency_contract": null,
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": null
+        },
         {
           "method": "ActivateCatalog",
           "method_alias": "activate_catalog",
@@ -30105,6 +30242,47 @@
             "include_in_facade": true,
             "method_alias": "cache_set",
             "rest_operation_id": "cacheSet",
+            "required_credential_provider": "",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 0,
+            "default_max_attempts": 0,
+            "browser_safe": false,
+            "server_only": false,
+            "boilerplate_recipe_tags": [],
+            "generate_minimal_example": false
+          },
+          "dependency_contract": null,
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": null
+        },
+        {
+          "method": "CompleteMultipartUpload",
+          "method_alias": "complete_multipart_upload",
+          "rest_operation_id": "completeMultipartUpload",
+          "path": "/udb.services.v1.DataBroker/CompleteMultipartUpload",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.entity.v1.CompleteMultipartUploadRequest",
+          "output": ".udb.entity.v1.CompleteMultipartUploadResponse",
+          "auth_mode": "unspecified",
+          "scopes": [],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": false,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": null,
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "complete_multipart_upload",
+            "rest_operation_id": "completeMultipartUpload",
             "required_credential_provider": "",
             "streaming_helper_type": "",
             "default_deadline_ms": 0,
@@ -32898,7 +33076,7 @@
       ]
     }
   ],
-  "message_count": 1042,
+  "message_count": 1049,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -140900,6 +141078,227 @@
       ]
     },
     {
+      "message": "udb.core.workflow.services.v1.AckWorkflowStepRequest",
+      "file": "udb/core/workflow/services/v1/workflow_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "workflow"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 6,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "workflow_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "step_index",
+          "number": 3,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "outcome",
+          "number": 4,
+          "type": ".udb.core.workflow.services.v1.WorkflowStepOutcome",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "output",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error_message",
+          "number": 6,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.workflow.services.v1.AckWorkflowStepResponse",
+      "file": "udb/core/workflow/services/v1/workflow_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "workflow"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "message",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 2,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "status",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.workflow.services.v1.CancelWorkflowRequest",
       "file": "udb/core/workflow/services/v1/workflow_service.proto",
       "sdk_surface": {
@@ -141778,6 +142177,142 @@
           "name": "error",
           "number": 3,
           "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.AbortMultipartUploadRequest",
+      "file": "udb/entity/v1/blob.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "context",
+          "number": 1,
+          "type": ".udb.entity.v1.RequestContext",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "bucket",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "object_key",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "upload_id",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.AbortMultipartUploadResponse",
+      "file": "udb/entity/v1/blob.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "aborted",
+          "number": 1,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -147193,6 +147728,199 @@
       ]
     },
     {
+      "message": "udb.entity.v1.CompleteMultipartUploadRequest",
+      "file": "udb/entity/v1/blob.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 6,
+      "fields": [
+        {
+          "name": "context",
+          "number": 1,
+          "type": ".udb.entity.v1.RequestContext",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "bucket",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "object_key",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "upload_id",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "parts",
+          "number": 5,
+          "type": ".udb.entity.v1.MultipartUploadPart",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 6,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.CompleteMultipartUploadResponse",
+      "file": "udb/entity/v1/blob.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "resource_uri",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "etag",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "size_bytes",
+          "number": 3,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.entity.v1.DeleteRequest",
       "file": "udb/entity/v1/relational.proto",
       "sdk_surface": null,
@@ -151317,6 +152045,55 @@
           "name": "applyable",
           "number": 10,
           "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.MultipartUploadPart",
+      "file": "udb/entity/v1/blob.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 2,
+      "fields": [
+        {
+          "name": "part_number",
+          "number": 1,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "etag",
+          "number": 2,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -180626,7 +181403,7 @@
       ]
     }
   ],
-  "event_count": 255,
+  "event_count": 256,
   "events": [
     {
       "event_type": "analytics.GetExecutorPerformance",
@@ -182310,6 +183087,15 @@
       "delivery_guarantee": "at_least_once",
       "replay_compatibility": "stable",
       "source": "/udb.core.webrtc.services.v1.TurnService/IssueCredentials"
+    },
+    {
+      "event_type": "workflow.AckWorkflowStep",
+      "outbox_topic": "udb.workflow.step.advanced.v1",
+      "partition_key_field": "workflow_id",
+      "payload_redaction_profile": "standard",
+      "delivery_guarantee": "at_least_once",
+      "replay_compatibility": "stable",
+      "source": "/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep"
     },
     {
       "event_type": "workflow.CancelWorkflow",

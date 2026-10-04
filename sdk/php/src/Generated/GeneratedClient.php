@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.5.23
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 382
+ *   RPCs ............. 385
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -360,11 +360,13 @@ final class GeneratedClient
         "PublishTrack" => "mutation",
         "UnpublishTrack" => "mutation",
         "IssueCredentials" => "mutation",
+        "AckWorkflowStep" => "mutation",
         "CancelWorkflow" => "destructive",
         "GetWorkflow" => "read_only",
         "ListWorkflows" => "read_only",
         "SignalWorkflow" => "mutation",
         "StartWorkflow" => "mutation",
+        "AbortMultipartUpload" => "mutation",
         "ActivateCatalog" => "destructive",
         "AnalyticalQuery" => "read_only",
         "ApplyMigration" => "mutation",
@@ -377,6 +379,7 @@ final class GeneratedClient
         "CacheGet" => "read_only",
         "CacheScan" => "read_only",
         "CacheSet" => "mutation",
+        "CompleteMultipartUpload" => "mutation",
         "CreateMaterializedView" => "mutation",
         "Delete" => "mutation",
         "DeletePolicy" => "mutation",
@@ -751,11 +754,13 @@ final class GeneratedClient
         "TrackService/PublishTrack" => "mutation",
         "TrackService/UnpublishTrack" => "mutation",
         "TurnService/IssueCredentials" => "mutation",
+        "WorkflowService/AckWorkflowStep" => "mutation",
         "WorkflowService/CancelWorkflow" => "destructive",
         "WorkflowService/GetWorkflow" => "read_only",
         "WorkflowService/ListWorkflows" => "read_only",
         "WorkflowService/SignalWorkflow" => "mutation",
         "WorkflowService/StartWorkflow" => "mutation",
+        "DataBroker/AbortMultipartUpload" => "mutation",
         "DataBroker/ActivateCatalog" => "destructive",
         "DataBroker/AnalyticalQuery" => "read_only",
         "DataBroker/ApplyMigration" => "mutation",
@@ -768,6 +773,7 @@ final class GeneratedClient
         "DataBroker/CacheGet" => "read_only",
         "DataBroker/CacheScan" => "read_only",
         "DataBroker/CacheSet" => "mutation",
+        "DataBroker/CompleteMultipartUpload" => "mutation",
         "DataBroker/CreateMaterializedView" => "mutation",
         "DataBroker/Delete" => "mutation",
         "DataBroker/DeletePolicy" => "mutation",
@@ -1142,11 +1148,13 @@ final class GeneratedClient
         "TrackService/PublishTrack" => "publish_track",
         "TrackService/UnpublishTrack" => "unpublish_track",
         "TurnService/IssueCredentials" => "issue_credentials",
+        "WorkflowService/AckWorkflowStep" => "ack_workflow_step",
         "WorkflowService/CancelWorkflow" => "cancel_workflow",
         "WorkflowService/GetWorkflow" => "get_workflow",
         "WorkflowService/ListWorkflows" => "list_workflows",
         "WorkflowService/SignalWorkflow" => "signal_workflow",
         "WorkflowService/StartWorkflow" => "start_workflow",
+        "DataBroker/AbortMultipartUpload" => "abort_multipart_upload",
         "DataBroker/ActivateCatalog" => "activate_catalog",
         "DataBroker/AnalyticalQuery" => "analytical_query",
         "DataBroker/ApplyMigration" => "apply_migration",
@@ -1159,6 +1167,7 @@ final class GeneratedClient
         "DataBroker/CacheGet" => "cache_get",
         "DataBroker/CacheScan" => "cache_scan",
         "DataBroker/CacheSet" => "cache_set",
+        "DataBroker/CompleteMultipartUpload" => "complete_multipart_upload",
         "DataBroker/CreateMaterializedView" => "create_materialized_view",
         "DataBroker/Delete" => "delete",
         "DataBroker/DeletePolicy" => "delete_policy",
@@ -1532,11 +1541,13 @@ final class GeneratedClient
         "TrackService/PublishTrack" => "publishTrack",
         "TrackService/UnpublishTrack" => "unpublishTrack",
         "TurnService/IssueCredentials" => "issueCredentials",
+        "WorkflowService/AckWorkflowStep" => "ackWorkflowStep",
         "WorkflowService/CancelWorkflow" => "cancelWorkflow",
         "WorkflowService/GetWorkflow" => "getWorkflow",
         "WorkflowService/ListWorkflows" => "listWorkflows",
         "WorkflowService/SignalWorkflow" => "signalWorkflow",
         "WorkflowService/StartWorkflow" => "startWorkflow",
+        "DataBroker/AbortMultipartUpload" => "abortMultipartUpload",
         "DataBroker/ActivateCatalog" => "activateCatalog",
         "DataBroker/AnalyticalQuery" => "analyticalQuery",
         "DataBroker/ApplyMigration" => "applyMigration",
@@ -1549,6 +1560,7 @@ final class GeneratedClient
         "DataBroker/CacheGet" => "cacheGet",
         "DataBroker/CacheScan" => "cacheScan",
         "DataBroker/CacheSet" => "cacheSet",
+        "DataBroker/CompleteMultipartUpload" => "completeMultipartUpload",
         "DataBroker/CreateMaterializedView" => "createMaterializedView",
         "DataBroker/Delete" => "delete",
         "DataBroker/DeletePolicy" => "deletePolicy",
@@ -1922,11 +1934,13 @@ final class GeneratedClient
         "TrackService/PublishTrack" => "post",
         "TrackService/UnpublishTrack" => "post",
         "TurnService/IssueCredentials" => "post",
+        "WorkflowService/AckWorkflowStep" => "post",
         "WorkflowService/CancelWorkflow" => "post",
         "WorkflowService/GetWorkflow" => "get",
         "WorkflowService/ListWorkflows" => "get",
         "WorkflowService/SignalWorkflow" => "post",
         "WorkflowService/StartWorkflow" => "post",
+        "DataBroker/AbortMultipartUpload" => "",
         "DataBroker/ActivateCatalog" => "",
         "DataBroker/AnalyticalQuery" => "",
         "DataBroker/ApplyMigration" => "",
@@ -1939,6 +1953,7 @@ final class GeneratedClient
         "DataBroker/CacheGet" => "",
         "DataBroker/CacheScan" => "",
         "DataBroker/CacheSet" => "",
+        "DataBroker/CompleteMultipartUpload" => "",
         "DataBroker/CreateMaterializedView" => "",
         "DataBroker/Delete" => "",
         "DataBroker/DeletePolicy" => "",
@@ -2312,11 +2327,13 @@ final class GeneratedClient
         "TrackService/PublishTrack" => "/v1/webrtc/tracks",
         "TrackService/UnpublishTrack" => "/v1/webrtc/tracks/{track_id}:unpublish",
         "TurnService/IssueCredentials" => "/v1/webrtc/turn/credentials",
+        "WorkflowService/AckWorkflowStep" => "/v1/workflows/{workflow_id}:ack-step",
         "WorkflowService/CancelWorkflow" => "/v1/workflows/{workflow_id}:cancel",
         "WorkflowService/GetWorkflow" => "/v1/workflows/{workflow_id}",
         "WorkflowService/ListWorkflows" => "/v1/workflows",
         "WorkflowService/SignalWorkflow" => "/v1/workflows/{workflow_id}:signal",
         "WorkflowService/StartWorkflow" => "/v1/workflows:start",
+        "DataBroker/AbortMultipartUpload" => "",
         "DataBroker/ActivateCatalog" => "",
         "DataBroker/AnalyticalQuery" => "",
         "DataBroker/ApplyMigration" => "",
@@ -2329,6 +2346,7 @@ final class GeneratedClient
         "DataBroker/CacheGet" => "",
         "DataBroker/CacheScan" => "",
         "DataBroker/CacheSet" => "",
+        "DataBroker/CompleteMultipartUpload" => "",
         "DataBroker/CreateMaterializedView" => "",
         "DataBroker/Delete" => "",
         "DataBroker/DeletePolicy" => "",
@@ -2806,11 +2824,13 @@ final class GeneratedClient
         "publish_track" => "publishTrack",
         "unpublish_track" => "unpublishTrack",
         "issue_credentials" => "issueCredentials",
+        "ack_workflow_step" => "ackWorkflowStep",
         "cancel_workflow" => "cancelWorkflow",
         "get_workflow" => "getWorkflow",
         "list_workflows" => "listWorkflows",
         "signal_workflow" => "signalWorkflow",
         "start_workflow" => "startWorkflow",
+        "abort_multipart_upload" => "abortMultipartUpload",
         "activate_catalog" => "activateCatalog",
         "analytical_query" => "analyticalQuery",
         "apply_migration" => "applyMigration",
@@ -2823,6 +2843,7 @@ final class GeneratedClient
         "cache_get" => "cacheGet",
         "cache_scan" => "cacheScan",
         "cache_set" => "cacheSet",
+        "complete_multipart_upload" => "completeMultipartUpload",
         "create_materialized_view" => "createMaterializedView",
         "delete" => "delete",
         "delete_policy" => "deletePolicy",
@@ -9128,6 +9149,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.workflow.services.v1.WorkflowService / AckWorkflowStep (unary), public alias ack_workflow_step.
+     *
+     * Forwards to {@see stubFor()}->AckWorkflowStep(); retries transient codes.
+     * Path: /udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AckWorkflowStepResponse
+     */
+    public function ackWorkflowStep($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AckWorkflowStep',
+            'WorkflowService',
+            'udb.core.workflow.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AckWorkflowStep($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.workflow.services.v1.WorkflowService / CancelWorkflow (unary), public alias cancel_workflow.
      *
      * Forwards to {@see stubFor()}->CancelWorkflow(); retries transient codes.
@@ -9227,6 +9269,27 @@ final class GeneratedClient
             'WorkflowService',
             'udb.core.workflow.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartWorkflow($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.services.v1.DataBroker / AbortMultipartUpload (unary), public alias abort_multipart_upload.
+     *
+     * Forwards to {@see stubFor()}->AbortMultipartUpload(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/AbortMultipartUpload
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AbortMultipartUploadResponse
+     */
+    public function abortMultipartUpload($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AbortMultipartUpload',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AbortMultipartUpload($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -9416,6 +9479,27 @@ final class GeneratedClient
             'DataBroker',
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheSet($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.services.v1.DataBroker / CompleteMultipartUpload (unary), public alias complete_multipart_upload.
+     *
+     * Forwards to {@see stubFor()}->CompleteMultipartUpload(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/CompleteMultipartUpload
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CompleteMultipartUploadResponse
+     */
+    public function completeMultipartUpload($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CompleteMultipartUpload',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CompleteMultipartUpload($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -11168,7 +11252,7 @@ final class GeneratedClient
         return $this->stubFor('TurnService', 'udb.core.webrtc.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.workflow.services.v1.WorkflowService (5 RPC(s)).
+     * Underlying buf-generated stub for udb.core.workflow.services.v1.WorkflowService (6 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a WorkflowServiceClient
@@ -11178,7 +11262,7 @@ final class GeneratedClient
         return $this->stubFor('WorkflowService', 'udb.core.workflow.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.services.v1.DataBroker (79 RPC(s)).
+     * Underlying buf-generated stub for udb.services.v1.DataBroker (81 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a DataBrokerClient

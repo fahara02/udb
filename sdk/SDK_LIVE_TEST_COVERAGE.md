@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 382 RPCs across 28 services.
+Current generated RPC surface: 385 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -41,7 +41,7 @@ do not yet publish per-RPC live benchmark results.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 79 | 35 | 37 | 7 | 0 |
+| DataBroker | 81 | 35 | 39 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -59,7 +59,7 @@ do not yet publish per-RPC live benchmark results.
 | TurnService | 1 | 0 | 1 | 0 | 0 |
 | VaultService | 22 | 6 | 13 | 3 | 0 |
 | WebhookService | 6 | 3 | 2 | 1 | 0 |
-| WorkflowService | 5 | 2 | 2 | 1 | 0 |
+| WorkflowService | 6 | 2 | 3 | 1 | 0 |
 
 ## Per-RPC Benchmark Manifest
 
@@ -219,6 +219,7 @@ benchmark harnesses.
 | ControlPlaneService | `ControlPlaneService/ListNodeStates` | `list_node_states` | `listNodeStates` | READ_ONLY | control_plane.md |
 | ControlPlaneService | `ControlPlaneService/RollbackResources` | `rollback_resources` | `rollbackResources` | MUTATION | control_plane.md |
 | ControlPlaneService | `ControlPlaneService/StreamResources` | `stream_resources` | `streamResources` | MUTATION | control_plane.md |
+| DataBroker | `DataBroker/AbortMultipartUpload` | `abort_multipart_upload` | `abortMultipartUpload` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/ActivateCatalog` | `activate_catalog` | `activateCatalog` | DESTRUCTIVE | data_broker.md |
 | DataBroker | `DataBroker/AnalyticalQuery` | `analytical_query` | `analyticalQuery` | READ_ONLY | data_broker.md |
 | DataBroker | `DataBroker/ApplyMigration` | `apply_migration` | `applyMigration` | MUTATION | data_broker.md |
@@ -231,6 +232,7 @@ benchmark harnesses.
 | DataBroker | `DataBroker/CacheGet` | `cache_get` | `cacheGet` | READ_ONLY | data_broker.md |
 | DataBroker | `DataBroker/CacheScan` | `cache_scan` | `cacheScan` | READ_ONLY | data_broker.md |
 | DataBroker | `DataBroker/CacheSet` | `cache_set` | `cacheSet` | MUTATION | data_broker.md |
+| DataBroker | `DataBroker/CompleteMultipartUpload` | `complete_multipart_upload` | `completeMultipartUpload` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/CreateMaterializedView` | `create_materialized_view` | `createMaterializedView` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/Delete` | `delete` | `delete` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/DeletePolicy` | `delete_policy` | `deletePolicy` | MUTATION | data_broker.md |
@@ -445,6 +447,7 @@ benchmark harnesses.
 | WebhookService | `WebhookService/ListDeliveries` | `list_deliveries` | `listWebhookDeliveries` | READ_ONLY | webhook.md |
 | WebhookService | `WebhookService/ListEndpoints` | `list_endpoints` | `listWebhookEndpoints` | READ_ONLY | webhook.md |
 | WebhookService | `WebhookService/UpdateEndpoint` | `update_endpoint` | `updateWebhookEndpoint` | MUTATION | webhook.md |
+| WorkflowService | `WorkflowService/AckWorkflowStep` | `ack_workflow_step` | `ackWorkflowStep` | MUTATION | workflow.md |
 | WorkflowService | `WorkflowService/CancelWorkflow` | `cancel_workflow` | `cancelWorkflow` | DESTRUCTIVE | workflow.md |
 | WorkflowService | `WorkflowService/GetWorkflow` | `get_workflow` | `getWorkflow` | READ_ONLY | workflow.md |
 | WorkflowService | `WorkflowService/ListWorkflows` | `list_workflows` | `listWorkflows` | READ_ONLY | workflow.md |

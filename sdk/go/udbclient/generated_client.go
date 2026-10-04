@@ -25,7 +25,7 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 382 RPCs across 28 services
+// Covers 385 RPCs across 28 services
 // (UDB v0.5.23, wire protocol 1.0.0).
 
 import (
@@ -954,11 +954,13 @@ var AllRPCs = []RPCInfo{
 	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/PublishTrack", Name: "PublishTrack", APIAlias: "publish_track", OperationID: "publishTrack", HTTPMethod: "post", HTTPPath: "/v1/webrtc/tracks", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/UnpublishTrack", Name: "UnpublishTrack", APIAlias: "unpublish_track", OperationID: "unpublishTrack", HTTPMethod: "post", HTTPPath: "/v1/webrtc/tracks/{track_id}:unpublish", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "TurnService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TurnService/IssueCredentials", Name: "IssueCredentials", APIAlias: "issue_credentials", OperationID: "issueCredentials", HTTPMethod: "post", HTTPPath: "/v1/webrtc/turn/credentials", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "WorkflowService", ServicePkg: "udb.core.workflow.services.v1", FullMethod: "/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep", Name: "AckWorkflowStep", APIAlias: "ack_workflow_step", OperationID: "ackWorkflowStep", HTTPMethod: "post", HTTPPath: "/v1/workflows/{workflow_id}:ack-step", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "WorkflowService", ServicePkg: "udb.core.workflow.services.v1", FullMethod: "/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow", Name: "CancelWorkflow", APIAlias: "cancel_workflow", OperationID: "cancelWorkflow", HTTPMethod: "post", HTTPPath: "/v1/workflows/{workflow_id}:cancel", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
 	{Service: "WorkflowService", ServicePkg: "udb.core.workflow.services.v1", FullMethod: "/udb.core.workflow.services.v1.WorkflowService/GetWorkflow", Name: "GetWorkflow", APIAlias: "get_workflow", OperationID: "getWorkflow", HTTPMethod: "get", HTTPPath: "/v1/workflows/{workflow_id}", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "WorkflowService", ServicePkg: "udb.core.workflow.services.v1", FullMethod: "/udb.core.workflow.services.v1.WorkflowService/ListWorkflows", Name: "ListWorkflows", APIAlias: "list_workflows", OperationID: "listWorkflows", HTTPMethod: "get", HTTPPath: "/v1/workflows", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "WorkflowService", ServicePkg: "udb.core.workflow.services.v1", FullMethod: "/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow", Name: "SignalWorkflow", APIAlias: "signal_workflow", OperationID: "signalWorkflow", HTTPMethod: "post", HTTPPath: "/v1/workflows/{workflow_id}:signal", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "WorkflowService", ServicePkg: "udb.core.workflow.services.v1", FullMethod: "/udb.core.workflow.services.v1.WorkflowService/StartWorkflow", Name: "StartWorkflow", APIAlias: "start_workflow", OperationID: "startWorkflow", HTTPMethod: "post", HTTPPath: "/v1/workflows:start", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/AbortMultipartUpload", Name: "AbortMultipartUpload", APIAlias: "abort_multipart_upload", OperationID: "abortMultipartUpload", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ActivateCatalog", Name: "ActivateCatalog", APIAlias: "activate_catalog", OperationID: "activateCatalog", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/AnalyticalQuery", Name: "AnalyticalQuery", APIAlias: "analytical_query", OperationID: "analyticalQuery", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ApplyMigration", Name: "ApplyMigration", APIAlias: "apply_migration", OperationID: "applyMigration", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
@@ -971,6 +973,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheGet", Name: "CacheGet", APIAlias: "cache_get", OperationID: "cacheGet", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheScan", Name: "CacheScan", APIAlias: "cache_scan", OperationID: "cacheScan", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheSet", Name: "CacheSet", APIAlias: "cache_set", OperationID: "cacheSet", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CompleteMultipartUpload", Name: "CompleteMultipartUpload", APIAlias: "complete_multipart_upload", OperationID: "completeMultipartUpload", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CreateMaterializedView", Name: "CreateMaterializedView", APIAlias: "create_materialized_view", OperationID: "createMaterializedView", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Delete", Name: "Delete", APIAlias: "delete", OperationID: "delete", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DeletePolicy", Name: "DeletePolicy", APIAlias: "delete_policy", OperationID: "deletePolicy", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
@@ -1068,8 +1071,8 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.webrtc.services.v1.SignalingService": 1,
 	"udb.core.webrtc.services.v1.TrackService": 4,
 	"udb.core.webrtc.services.v1.TurnService": 1,
-	"udb.core.workflow.services.v1.WorkflowService": 5,
-	"udb.services.v1.DataBroker": 79,
+	"udb.core.workflow.services.v1.WorkflowService": 6,
+	"udb.services.v1.DataBroker": 81,
 }
 
 // Entities is the catalog-derived entity registry, generated from the annotated

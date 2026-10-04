@@ -1,7 +1,7 @@
 {
   "generated_by": "node scripts/check-http-api-style.mjs --write-report",
   "counts": {
-    "native_contract_http_operations": 294,
+    "native_contract_http_operations": 295,
     "proto_http_annotations": 295,
     "generated_route_style_exceptions": 0,
     "source_route_style_exceptions": 0,

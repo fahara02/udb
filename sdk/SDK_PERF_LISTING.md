@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 382 RPCs across 28 services.
+Current generated RPC surface: 385 RPCs across 28 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -57,7 +57,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 79 | 35 | 37 | 7 | 0 |
+| DataBroker | 81 | 35 | 39 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -75,7 +75,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | TurnService | 1 | 0 | 1 | 0 | 0 |
 | VaultService | 22 | 6 | 13 | 3 | 0 |
 | WebhookService | 6 | 3 | 2 | 1 | 0 |
-| WorkflowService | 5 | 2 | 2 | 1 | 0 |
+| WorkflowService | 6 | 2 | 3 | 1 | 0 |
 
 ## Canonical APIs
 
@@ -236,6 +236,7 @@ identity surface available to benchmark reports.
 | `ControlPlaneService/ListNodeStates` | `list_node_states` | `listNodeStates` | READ_ONLY |
 | `ControlPlaneService/RollbackResources` | `rollback_resources` | `rollbackResources` | MUTATION |
 | `ControlPlaneService/StreamResources` | `stream_resources` | `streamResources` | MUTATION |
+| `DataBroker/AbortMultipartUpload` | `abort_multipart_upload` | `abortMultipartUpload` | MUTATION |
 | `DataBroker/ActivateCatalog` | `activate_catalog` | `activateCatalog` | DESTRUCTIVE |
 | `DataBroker/AnalyticalQuery` | `analytical_query` | `analyticalQuery` | READ_ONLY |
 | `DataBroker/ApplyMigration` | `apply_migration` | `applyMigration` | MUTATION |
@@ -248,6 +249,7 @@ identity surface available to benchmark reports.
 | `DataBroker/CacheGet` | `cache_get` | `cacheGet` | READ_ONLY |
 | `DataBroker/CacheScan` | `cache_scan` | `cacheScan` | READ_ONLY |
 | `DataBroker/CacheSet` | `cache_set` | `cacheSet` | MUTATION |
+| `DataBroker/CompleteMultipartUpload` | `complete_multipart_upload` | `completeMultipartUpload` | MUTATION |
 | `DataBroker/CreateMaterializedView` | `create_materialized_view` | `createMaterializedView` | MUTATION |
 | `DataBroker/Delete` | `delete` | `delete` | MUTATION |
 | `DataBroker/DeletePolicy` | `delete_policy` | `deletePolicy` | MUTATION |
@@ -462,6 +464,7 @@ identity surface available to benchmark reports.
 | `WebhookService/ListDeliveries` | `list_deliveries` | `listWebhookDeliveries` | READ_ONLY |
 | `WebhookService/ListEndpoints` | `list_endpoints` | `listWebhookEndpoints` | READ_ONLY |
 | `WebhookService/UpdateEndpoint` | `update_endpoint` | `updateWebhookEndpoint` | MUTATION |
+| `WorkflowService/AckWorkflowStep` | `ack_workflow_step` | `ackWorkflowStep` | MUTATION |
 | `WorkflowService/CancelWorkflow` | `cancel_workflow` | `cancelWorkflow` | DESTRUCTIVE |
 | `WorkflowService/GetWorkflow` | `get_workflow` | `getWorkflow` | READ_ONLY |
 | `WorkflowService/ListWorkflows` | `list_workflows` | `listWorkflows` | READ_ONLY |

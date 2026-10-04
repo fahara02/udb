@@ -6,7 +6,7 @@
 //   UDB version:      0.5.23
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             382
+//   RPCs:             385
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -361,11 +361,13 @@ public static class GeneratedRpcIdentities
         map["/udb.core.webrtc.services.v1.TrackService/PublishTrack"] = new RpcIdentity("/udb.core.webrtc.services.v1.TrackService/PublishTrack", "TrackService", "PublishTrack", "publish_track", "publishTrack", "mutation", "post", "/v1/webrtc/tracks");
         map["/udb.core.webrtc.services.v1.TrackService/UnpublishTrack"] = new RpcIdentity("/udb.core.webrtc.services.v1.TrackService/UnpublishTrack", "TrackService", "UnpublishTrack", "unpublish_track", "unpublishTrack", "mutation", "post", "/v1/webrtc/tracks/{track_id}:unpublish");
         map["/udb.core.webrtc.services.v1.TurnService/IssueCredentials"] = new RpcIdentity("/udb.core.webrtc.services.v1.TurnService/IssueCredentials", "TurnService", "IssueCredentials", "issue_credentials", "issueCredentials", "mutation", "post", "/v1/webrtc/turn/credentials");
+        map["/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep", "WorkflowService", "AckWorkflowStep", "ack_workflow_step", "ackWorkflowStep", "mutation", "post", "/v1/workflows/{workflow_id}:ack-step");
         map["/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow", "WorkflowService", "CancelWorkflow", "cancel_workflow", "cancelWorkflow", "destructive", "post", "/v1/workflows/{workflow_id}:cancel");
         map["/udb.core.workflow.services.v1.WorkflowService/GetWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/GetWorkflow", "WorkflowService", "GetWorkflow", "get_workflow", "getWorkflow", "read_only", "get", "/v1/workflows/{workflow_id}");
         map["/udb.core.workflow.services.v1.WorkflowService/ListWorkflows"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/ListWorkflows", "WorkflowService", "ListWorkflows", "list_workflows", "listWorkflows", "read_only", "get", "/v1/workflows");
         map["/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow", "WorkflowService", "SignalWorkflow", "signal_workflow", "signalWorkflow", "mutation", "post", "/v1/workflows/{workflow_id}:signal");
         map["/udb.core.workflow.services.v1.WorkflowService/StartWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/StartWorkflow", "WorkflowService", "StartWorkflow", "start_workflow", "startWorkflow", "mutation", "post", "/v1/workflows:start");
+        map["/udb.services.v1.DataBroker/AbortMultipartUpload"] = new RpcIdentity("/udb.services.v1.DataBroker/AbortMultipartUpload", "DataBroker", "AbortMultipartUpload", "abort_multipart_upload", "abortMultipartUpload", "mutation", "", "");
         map["/udb.services.v1.DataBroker/ActivateCatalog"] = new RpcIdentity("/udb.services.v1.DataBroker/ActivateCatalog", "DataBroker", "ActivateCatalog", "activate_catalog", "activateCatalog", "destructive", "", "");
         map["/udb.services.v1.DataBroker/AnalyticalQuery"] = new RpcIdentity("/udb.services.v1.DataBroker/AnalyticalQuery", "DataBroker", "AnalyticalQuery", "analytical_query", "analyticalQuery", "read_only", "", "");
         map["/udb.services.v1.DataBroker/ApplyMigration"] = new RpcIdentity("/udb.services.v1.DataBroker/ApplyMigration", "DataBroker", "ApplyMigration", "apply_migration", "applyMigration", "mutation", "", "");
@@ -378,6 +380,7 @@ public static class GeneratedRpcIdentities
         map["/udb.services.v1.DataBroker/CacheGet"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheGet", "DataBroker", "CacheGet", "cache_get", "cacheGet", "read_only", "", "");
         map["/udb.services.v1.DataBroker/CacheScan"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheScan", "DataBroker", "CacheScan", "cache_scan", "cacheScan", "read_only", "", "");
         map["/udb.services.v1.DataBroker/CacheSet"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheSet", "DataBroker", "CacheSet", "cache_set", "cacheSet", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/CompleteMultipartUpload"] = new RpcIdentity("/udb.services.v1.DataBroker/CompleteMultipartUpload", "DataBroker", "CompleteMultipartUpload", "complete_multipart_upload", "completeMultipartUpload", "mutation", "", "");
         map["/udb.services.v1.DataBroker/CreateMaterializedView"] = new RpcIdentity("/udb.services.v1.DataBroker/CreateMaterializedView", "DataBroker", "CreateMaterializedView", "create_materialized_view", "createMaterializedView", "mutation", "", "");
         map["/udb.services.v1.DataBroker/Delete"] = new RpcIdentity("/udb.services.v1.DataBroker/Delete", "DataBroker", "Delete", "delete", "delete", "mutation", "", "");
         map["/udb.services.v1.DataBroker/DeletePolicy"] = new RpcIdentity("/udb.services.v1.DataBroker/DeletePolicy", "DataBroker", "DeletePolicy", "delete_policy", "deletePolicy", "mutation", "", "");
@@ -1159,7 +1162,7 @@ public sealed partial class GeneratedTurnServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.workflow.services.v1.WorkflowService</c> service
-/// (5 RPCs). Forwards to the buf-generated
+/// (6 RPCs). Forwards to the buf-generated
 /// <c>WorkflowServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedWorkflowServiceClient : GeneratedServiceBase
@@ -1186,7 +1189,7 @@ public sealed partial class GeneratedWorkflowServiceClient : GeneratedServiceBas
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.services.v1.DataBroker</c> service
-/// (79 RPCs). Forwards to the buf-generated
+/// (81 RPCs). Forwards to the buf-generated
 /// <c>DataBrokerClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedDataBrokerClient : GeneratedServiceBase
@@ -7955,6 +7958,29 @@ public sealed partial class GeneratedTurnServiceClient
 public sealed partial class GeneratedWorkflowServiceClient
 {
     /// <summary>
+    /// <c>ack_workflow_step</c> (unary) — forwards to <c>WorkflowServiceClient.AckWorkflowStepAsync</c>.
+    /// gRPC path: <c>/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> AckWorkflowStepAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.AckWorkflowStepAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep",
+            co => (object)_stub.AckWorkflowStepAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWorkflowServiceClient
+{
+    /// <summary>
     /// <c>cancel_workflow</c> (unary) — forwards to <c>WorkflowServiceClient.CancelWorkflowAsync</c>.
     /// gRPC path: <c>/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -8060,6 +8086,29 @@ public sealed partial class GeneratedWorkflowServiceClient
         return InvokeUnaryAsync(
             "/udb.core.workflow.services.v1.WorkflowService/StartWorkflow",
             co => (object)_stub.StartWorkflowAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedDataBrokerClient
+{
+    /// <summary>
+    /// <c>abort_multipart_upload</c> (unary) — forwards to <c>DataBrokerClient.AbortMultipartUploadAsync</c>.
+    /// gRPC path: <c>/udb.services.v1.DataBroker/AbortMultipartUpload</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> AbortMultipartUploadAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.AbortMultipartUploadAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.services.v1.DataBroker/AbortMultipartUpload",
+            co => (object)_stub.AbortMultipartUploadAsync(request, co),
             deadline,
             cancellationToken,
             "mutation" == "read_only",
@@ -8267,6 +8316,29 @@ public sealed partial class GeneratedDataBrokerClient
         return InvokeUnaryAsync(
             "/udb.services.v1.DataBroker/CacheSet",
             co => (object)_stub.CacheSetAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedDataBrokerClient
+{
+    /// <summary>
+    /// <c>complete_multipart_upload</c> (unary) — forwards to <c>DataBrokerClient.CompleteMultipartUploadAsync</c>.
+    /// gRPC path: <c>/udb.services.v1.DataBroker/CompleteMultipartUpload</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CompleteMultipartUploadAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CompleteMultipartUploadAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.services.v1.DataBroker/CompleteMultipartUpload",
+            co => (object)_stub.CompleteMultipartUploadAsync(request, co),
             deadline,
             cancellationToken,
             "mutation" == "read_only",
