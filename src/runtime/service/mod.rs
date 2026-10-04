@@ -5003,7 +5003,7 @@ mod rate_limit_bucket_tests {
 }
 
 #[cfg(test)]
-mod live_tests;
+pub(crate) mod live_tests;
 // Build-time ratchet against a SILENT breakage class: a native handler that lets
 // `native_service_context` fall back to the x-udb-project-id header, which the entity
 // layer then applies as a query predicate. Runs on every `cargo test`; no DB needed.

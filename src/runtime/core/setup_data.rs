@@ -3566,12 +3566,12 @@ impl DataBrokerRuntime {
         &self,
         manifest: &CatalogManifest,
         first: Chunk,
-        mut stream: tonic::Streaming<Chunk>,
+        stream: tonic::Streaming<Chunk>,
         metadata_context: RequestContext,
     ) -> Result<MutationResponse, tonic::Status> {
         #[cfg(not(any(feature = "s3", feature = "gcs", feature = "azureblob")))]
         {
-            let _ = (manifest, first, &mut stream, metadata_context);
+            let _ = (manifest, first, stream, metadata_context);
             return Err(no_object_store_feature_status("put_object"));
         }
         #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]

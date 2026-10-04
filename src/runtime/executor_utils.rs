@@ -3715,7 +3715,9 @@ mod cached_record_set_shape_tests {
 // 01.1.1.1 is reverted (i.e. body scopes once again override metadata scopes).
 #[cfg(test)]
 mod merge_context_scope_authority_tests {
-    use super::{ProtoRequestContext, RequestContext, cache_key, merge_context};
+    use super::{
+        ProtoRequestContext, RequestContext, cache_invalidation_pattern, cache_key, merge_context,
+    };
     use serde_json::json;
 
     fn metadata_ctx(scopes: &[&str]) -> RequestContext {
