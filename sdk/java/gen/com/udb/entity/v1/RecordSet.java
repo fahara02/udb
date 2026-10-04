@@ -6,6 +6,13 @@
 package com.udb.entity.v1;
 
 /**
+ * <pre>
+ * A page of relational records.
+ *
+ * The records are in `records_json`. `rows` is a parallel representation kept
+ * for wire compatibility and is NOT the data — read `records_json`.
+ * </pre>
+ *
  * Protobuf type {@code udb.entity.v1.RecordSet}
  */
 @com.google.protobuf.Generated
@@ -53,6 +60,16 @@ private static final long serialVersionUID = 0L;
   private com.google.protobuf.Internal.ProtobufList<com.google.protobuf.ByteString> recordsJson_ =
       emptyList(com.google.protobuf.ByteString.class);
   /**
+   * <pre>
+   * CANONICAL. One JSON object per record, index-aligned with `rows` and
+   * `record_revisions`. This is the record: integers keep their exact value
+   * here, which is why it, and not `rows`, is what every SDK decodes.
+   *
+   * Decode with a reader that preserves 64-bit integers — Go's
+   * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+   * that materialises every number as a double corrupts BIGINT silently.
+   * </pre>
+   *
    * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
    * @return A list containing the recordsJson.
    */
@@ -62,6 +79,16 @@ private static final long serialVersionUID = 0L;
     return recordsJson_;
   }
   /**
+   * <pre>
+   * CANONICAL. One JSON object per record, index-aligned with `rows` and
+   * `record_revisions`. This is the record: integers keep their exact value
+   * here, which is why it, and not `rows`, is what every SDK decodes.
+   *
+   * Decode with a reader that preserves 64-bit integers — Go's
+   * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+   * that materialises every number as a double corrupts BIGINT silently.
+   * </pre>
+   *
    * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
    * @return The count of recordsJson.
    */
@@ -69,6 +96,16 @@ private static final long serialVersionUID = 0L;
     return recordsJson_.size();
   }
   /**
+   * <pre>
+   * CANONICAL. One JSON object per record, index-aligned with `rows` and
+   * `record_revisions`. This is the record: integers keep their exact value
+   * here, which is why it, and not `rows`, is what every SDK decodes.
+   *
+   * Decode with a reader that preserves 64-bit integers — Go's
+   * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+   * that materialises every number as a double corrupts BIGINT silently.
+   * </pre>
+   *
    * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
    * @param index The index of the element to return.
    * @return The recordsJson at the given index.
@@ -81,6 +118,23 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private java.util.List<com.udb.entity.v1.Row> rows_;
   /**
+   * <pre>
+   * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+   * read path, cached and uncached alike, so this array's LENGTH is meaningful
+   * and its CONTENTS are not.
+   *
+   * Reading `rows[i].fields` therefore yields the correct record count with no
+   * record data, and a populated table reads back as a page of empty entities
+   * with no error raised anywhere. A client that does this is not misusing the
+   * API in a way the type system can catch, which is why the behaviour is
+   * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+   * this field and silently returned empty records for every real query.
+   *
+   * Retained rather than removed because removing a populated field from a
+   * released contract breaks decoders that still reference it. Treat it as
+   * deprecated for reads.
+   * </pre>
+   *
    * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
    */
   @java.lang.Override
@@ -88,6 +142,23 @@ private static final long serialVersionUID = 0L;
     return rows_;
   }
   /**
+   * <pre>
+   * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+   * read path, cached and uncached alike, so this array's LENGTH is meaningful
+   * and its CONTENTS are not.
+   *
+   * Reading `rows[i].fields` therefore yields the correct record count with no
+   * record data, and a populated table reads back as a page of empty entities
+   * with no error raised anywhere. A client that does this is not misusing the
+   * API in a way the type system can catch, which is why the behaviour is
+   * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+   * this field and silently returned empty records for every real query.
+   *
+   * Retained rather than removed because removing a populated field from a
+   * released contract breaks decoders that still reference it. Treat it as
+   * deprecated for reads.
+   * </pre>
+   *
    * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
    */
   @java.lang.Override
@@ -96,6 +167,23 @@ private static final long serialVersionUID = 0L;
     return rows_;
   }
   /**
+   * <pre>
+   * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+   * read path, cached and uncached alike, so this array's LENGTH is meaningful
+   * and its CONTENTS are not.
+   *
+   * Reading `rows[i].fields` therefore yields the correct record count with no
+   * record data, and a populated table reads back as a page of empty entities
+   * with no error raised anywhere. A client that does this is not misusing the
+   * API in a way the type system can catch, which is why the behaviour is
+   * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+   * this field and silently returned empty records for every real query.
+   *
+   * Retained rather than removed because removing a populated field from a
+   * released contract breaks decoders that still reference it. Treat it as
+   * deprecated for reads.
+   * </pre>
+   *
    * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
    */
   @java.lang.Override
@@ -103,6 +191,23 @@ private static final long serialVersionUID = 0L;
     return rows_.size();
   }
   /**
+   * <pre>
+   * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+   * read path, cached and uncached alike, so this array's LENGTH is meaningful
+   * and its CONTENTS are not.
+   *
+   * Reading `rows[i].fields` therefore yields the correct record count with no
+   * record data, and a populated table reads back as a page of empty entities
+   * with no error raised anywhere. A client that does this is not misusing the
+   * API in a way the type system can catch, which is why the behaviour is
+   * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+   * this field and silently returned empty records for every real query.
+   *
+   * Retained rather than removed because removing a populated field from a
+   * released contract breaks decoders that still reference it. Treat it as
+   * deprecated for reads.
+   * </pre>
+   *
    * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
    */
   @java.lang.Override
@@ -110,6 +215,23 @@ private static final long serialVersionUID = 0L;
     return rows_.get(index);
   }
   /**
+   * <pre>
+   * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+   * read path, cached and uncached alike, so this array's LENGTH is meaningful
+   * and its CONTENTS are not.
+   *
+   * Reading `rows[i].fields` therefore yields the correct record count with no
+   * record data, and a populated table reads back as a page of empty entities
+   * with no error raised anywhere. A client that does this is not misusing the
+   * API in a way the type system can catch, which is why the behaviour is
+   * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+   * this field and silently returned empty records for every real query.
+   *
+   * Retained rather than removed because removing a populated field from a
+   * released contract breaks decoders that still reference it. Treat it as
+   * deprecated for reads.
+   * </pre>
+   *
    * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
    */
   @java.lang.Override
@@ -469,6 +591,13 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
+   * <pre>
+   * A page of relational records.
+   *
+   * The records are in `records_json`. `rows` is a parallel representation kept
+   * for wire compatibility and is NOT the data — read `records_json`.
+   * </pre>
+   *
    * Protobuf type {@code udb.entity.v1.RecordSet}
    */
   public static final class Builder extends
@@ -729,6 +858,16 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000001;
     }
     /**
+     * <pre>
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     *
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     * </pre>
+     *
      * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      * @return A list containing the recordsJson.
      */
@@ -738,6 +877,16 @@ private static final long serialVersionUID = 0L;
       return recordsJson_;
     }
     /**
+     * <pre>
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     *
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     * </pre>
+     *
      * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      * @return The count of recordsJson.
      */
@@ -745,6 +894,16 @@ private static final long serialVersionUID = 0L;
       return recordsJson_.size();
     }
     /**
+     * <pre>
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     *
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     * </pre>
+     *
      * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      * @param index The index of the element to return.
      * @return The recordsJson at the given index.
@@ -753,6 +912,16 @@ private static final long serialVersionUID = 0L;
       return recordsJson_.get(index);
     }
     /**
+     * <pre>
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     *
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     * </pre>
+     *
      * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      * @param index The index to set the value at.
      * @param value The recordsJson to set.
@@ -768,6 +937,16 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     *
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     * </pre>
+     *
      * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      * @param value The recordsJson to add.
      * @return This builder for chaining.
@@ -781,6 +960,16 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     *
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     * </pre>
+     *
      * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      * @param values The recordsJson to add.
      * @return This builder for chaining.
@@ -795,6 +984,16 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     *
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     * </pre>
+     *
      * <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      * @return This builder for chaining.
      */
@@ -818,6 +1017,23 @@ private static final long serialVersionUID = 0L;
         com.udb.entity.v1.Row, com.udb.entity.v1.Row.Builder, com.udb.entity.v1.RowOrBuilder> rowsBuilder_;
 
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public java.util.List<com.udb.entity.v1.Row> getRowsList() {
@@ -828,6 +1044,23 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public int getRowsCount() {
@@ -838,6 +1071,23 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public com.udb.entity.v1.Row getRows(int index) {
@@ -848,6 +1098,23 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public Builder setRows(
@@ -865,6 +1132,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public Builder setRows(
@@ -879,6 +1163,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public Builder addRows(com.udb.entity.v1.Row value) {
@@ -895,6 +1196,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public Builder addRows(
@@ -912,6 +1230,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public Builder addRows(
@@ -926,6 +1261,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public Builder addRows(
@@ -940,6 +1292,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public Builder addAllRows(
@@ -955,6 +1324,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public Builder clearRows() {
@@ -968,6 +1354,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public Builder removeRows(int index) {
@@ -981,6 +1384,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public com.udb.entity.v1.Row.Builder getRowsBuilder(
@@ -988,6 +1408,23 @@ private static final long serialVersionUID = 0L;
       return internalGetRowsFieldBuilder().getBuilder(index);
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public com.udb.entity.v1.RowOrBuilder getRowsOrBuilder(
@@ -998,6 +1435,23 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public java.util.List<? extends com.udb.entity.v1.RowOrBuilder>
@@ -1009,6 +1463,23 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public com.udb.entity.v1.Row.Builder addRowsBuilder() {
@@ -1016,6 +1487,23 @@ private static final long serialVersionUID = 0L;
           com.udb.entity.v1.Row.getDefaultInstance());
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public com.udb.entity.v1.Row.Builder addRowsBuilder(
@@ -1024,6 +1512,23 @@ private static final long serialVersionUID = 0L;
           index, com.udb.entity.v1.Row.getDefaultInstance());
     }
     /**
+     * <pre>
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     *
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     *
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     * </pre>
+     *
      * <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     public java.util.List<com.udb.entity.v1.Row.Builder>

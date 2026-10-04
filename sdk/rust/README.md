@@ -33,17 +33,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut udb = UdbClient::connect("http://127.0.0.1:50051", meta).await?;
 
-    let set = udb
-        .select(SelectRequest {
+    // `select_records` decodes the canonical representation. See "Reading a
+    // result" below before reaching for the raw `select`.
+    let records = udb
+        .select_records(SelectRequest {
             message_type: "myapp.v1.Invoice".into(),
             limit: 10,
             ..Default::default()
         })
         .await?;
 
-    println!("{} row(s)", set.rows.len());
+    for record in records.iter() {
+        println!("{} {}", record.str("id")?, record.i64("amount_minor")?);
+    }
     Ok(())
 }
+```
+
+## Reading a result
+
+A `RecordSet` carries the page in two parallel fields, and only one is the data:
+
+| field | what it is |
+| --- | --- |
+| `records_json` | **The records.** One JSON object each. What every UDB SDK decodes. |
+| `rows` | Compatibility only. Sent as one **empty** entry per record. |
+
+Nothing in the generated struct marks the difference, so `set.rows[i].fields`
+compiles, type-checks, and returns the correct record COUNT with every field map
+empty — a populated table reads back as a page of empty entities and no error is
+raised anywhere.
+
+Use [`UdbClient::select_records`], or `Records::decode` on a `RecordSet` you
+already have. Both read `records_json`, reject a structurally inconsistent page
+instead of returning a plausible one, and keep integers exact — a `BIGINT` past
+2^53 survives, which it cannot when a decoder routes numbers through a double.
+
+```rust,no_run
+# use udb_client::{Records, UdbClient};
+# async fn f(udb: &mut UdbClient, req: udb_client::proto::udb::entity::v1::SelectRequest)
+# -> Result<(), Box<dyn std::error::Error>> {
+let set = udb.select(req).await?;          // raw RecordSet
+let records = Records::decode(&set)?;      // canonical records
+for record in records.iter() {
+    let id = record.str("id")?;
+    let created = record.timestamp("created_at")?;   // RFC 3339 text
+    let blob = record.bytes("body")?;                // BYTEA, base64-decoded
+    let closed = record.optional("closed_at", udb_client::Record::timestamp)?;
+    println!("{id} {created} {} bytes, closed={closed:?}", blob.len());
+}
+# Ok(())
+# }
 ```
 
 A complete program, including login, is in
@@ -139,7 +179,8 @@ you read what the broker actually said instead of matching on message strings:
 # use udb_client::{UdbClient, UdbError};
 # async fn f(udb: &mut UdbClient, req: udb_client::proto::udb::entity::v1::SelectRequest) {
 match udb.select(req).await {
-    Ok(set) => println!("{} row(s)", set.rows.len()),
+    // `records_json` is the canonical field, so its length is the record count.
+    Ok(set) => println!("{} record(s)", set.records_json.len()),
     Err(err) => {
         if let Some(cap) = err.capability_required() {
             eprintln!("this deployment is missing {cap}");

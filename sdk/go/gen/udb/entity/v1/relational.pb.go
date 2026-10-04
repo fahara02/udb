@@ -134,6 +134,10 @@ func (x *CacheOptions) GetTtlSeconds() int32 {
 	return 0
 }
 
+// COMPATIBILITY ONLY on relational reads. See `RecordSet.rows`: the broker
+// emits `fields` EMPTY there, and it cannot faithfully carry a relational row in
+// any case — `google.protobuf.Value`'s only numeric kind is a double, so every
+// integer past 2^53 rounds. Read `RecordSet.records_json` instead.
 type Row struct {
 	state         protoimpl.MessageState     `protogen:"open.v1"`
 	Fields        map[string]*structpb.Value `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -178,12 +182,37 @@ func (x *Row) GetFields() map[string]*structpb.Value {
 	return nil
 }
 
+// A page of relational records.
+//
+// The records are in `records_json`. `rows` is a parallel representation kept
+// for wire compatibility and is NOT the data — read `records_json`.
 type RecordSet struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RecordsJson   [][]byte               `protobuf:"bytes,1,rep,name=records_json,json=recordsJson,proto3" json:"records_json,omitempty"`
-	Rows          []*Row                 `protobuf:"bytes,2,rep,name=rows,proto3" json:"rows,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	TotalCount    int32                  `protobuf:"varint,4,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// CANONICAL. One JSON object per record, index-aligned with `rows` and
+	// `record_revisions`. This is the record: integers keep their exact value
+	// here, which is why it, and not `rows`, is what every SDK decodes.
+	//
+	// Decode with a reader that preserves 64-bit integers — Go's
+	// `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+	// that materialises every number as a double corrupts BIGINT silently.
+	RecordsJson [][]byte `protobuf:"bytes,1,rep,name=records_json,json=recordsJson,proto3" json:"records_json,omitempty"`
+	// COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+	// read path, cached and uncached alike, so this array's LENGTH is meaningful
+	// and its CONTENTS are not.
+	//
+	// Reading `rows[i].fields` therefore yields the correct record count with no
+	// record data, and a populated table reads back as a page of empty entities
+	// with no error raised anywhere. A client that does this is not misusing the
+	// API in a way the type system can catch, which is why the behaviour is
+	// spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+	// this field and silently returned empty records for every real query.
+	//
+	// Retained rather than removed because removing a populated field from a
+	// released contract breaks decoders that still reference it. Treat it as
+	// deprecated for reads.
+	Rows          []*Row `protobuf:"bytes,2,rep,name=rows,proto3" json:"rows,omitempty"`
+	NextPageToken string `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalCount    int32  `protobuf:"varint,4,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	// #5 (opaque row revision / ETag): when the caller asked for revisions
 	// (`SelectRequest.include_revision`), this carries the broker-maintained
 	// opaque revision token for each returned record, index-aligned with
@@ -375,15 +404,30 @@ func (x *SelectRequest) GetIncludeRevision() bool {
 }
 
 type UpsertRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Context        *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	MessageType    string                 `protobuf:"bytes,2,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
-	RecordJson     []byte                 `protobuf:"bytes,3,opt,name=record_json,json=recordJson,proto3" json:"record_json,omitempty"`
-	Payload        *structpb.Struct       `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
-	ConflictFields []string               `protobuf:"bytes,5,rep,name=conflict_fields,json=conflictFields,proto3" json:"conflict_fields,omitempty"`
-	ReturnRecord   bool                   `protobuf:"varint,6,opt,name=return_record,json=returnRecord,proto3" json:"return_record,omitempty"`
-	Cache          *CacheOptions          `protobuf:"bytes,7,opt,name=cache,proto3" json:"cache,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Context     *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	MessageType string                 `protobuf:"bytes,2,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
+	// The record to write, in EITHER of two forms. Set exactly one.
+	//
+	// PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored
+	// entirely — no error, no warning. Setting both because a migration left the
+	// old field populated therefore writes the new one silently.
+	//
+	// `record_json` is the exact form. It preserves 64-bit integers, because it is
+	// JSON text rather than a `google.protobuf.Value` graph.
+	RecordJson []byte `protobuf:"bytes,3,opt,name=record_json,json=recordJson,proto3" json:"record_json,omitempty"`
+	// See `record_json` for precedence. `payload` is more convenient but cannot
+	// represent every value exactly: `google.protobuf.Value`'s only numeric kind is
+	// a double, so an integer beyond 2^53 does not survive it. The broker FAILS
+	// CLOSED on that rather than writing a rounded number — such a value stays a
+	// float and the relational binder rejects it for an integer column. To write
+	// the full 64-bit range through this field, send the number as its decimal
+	// STRING, which the binder accepts for integer columns.
+	Payload        *structpb.Struct `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
+	ConflictFields []string         `protobuf:"bytes,5,rep,name=conflict_fields,json=conflictFields,proto3" json:"conflict_fields,omitempty"`
+	ReturnRecord   bool             `protobuf:"varint,6,opt,name=return_record,json=returnRecord,proto3" json:"return_record,omitempty"`
+	Cache          *CacheOptions    `protobuf:"bytes,7,opt,name=cache,proto3" json:"cache,omitempty"`
+	IdempotencyKey string           `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	// Optional compare-and-swap precondition (UDB-GO-005). When set, each
 	// `field -> value` assertion is checked against the CURRENT row — located by
 	// `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the

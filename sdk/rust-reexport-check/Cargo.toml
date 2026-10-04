@@ -1,0 +1,24 @@
+# A CONSUMER of udb-client that declares NOTHING ELSE.
+#
+# The sibling `rust-consumer-check` proves the SDK's pins agree with a consumer
+# who brings their own prost/tonic. This crate proves the opposite direction: a
+# consumer who brings NOTHING can still use the whole public API.
+#
+# That matters because udb-client's public surface is made of other crates'
+# types — `UpsertRequest.payload` is a `prost_types::Struct`, every failure
+# carries a `tonic::Status`. Without re-exports those are a hidden requirement:
+# the consumer has to discover which VERSIONS the SDK resolved and add matching
+# dependencies by hand, and a wrong guess produces a second nominal
+# `prost_types::Struct` whose error names two identical-looking paths.
+#
+# The dependency list below is the assertion. If using the SDK ever requires a
+# direct prost, prost-types, tonic, or serde_json again, this crate stops
+# compiling — and adding one to fix it would be deleting the test.
+[package]
+name = "udb-client-reexport-check"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+udb-client = { path = "../rust" }

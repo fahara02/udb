@@ -209,16 +209,26 @@ def product_json(product: acme_billing.Product) -> bytes:
     ).encode("utf-8")
 
 
+def canonical_records(rows: types_pb2.RecordSet) -> list[bytes]:
+    # `records_json` is the canonical representation of a read. `rows` is a
+    # compatibility field the broker sends EMPTY (one entry per record), so
+    # falling back to it reports the right count and finds nothing in it.
+    if rows.rows and not rows.records_json:
+        raise ValueError(
+            f"record set has {len(rows.rows)} compatibility row(s) but no records_json"
+        )
+    return list(rows.records_json)
+
+
 def record_count(rows: types_pb2.RecordSet) -> int:
-    if rows.records_json:
-        return len(rows.records_json)
-    return len(rows.rows)
+    return len(canonical_records(rows))
 
 
 def records_contain(rows: types_pb2.RecordSet, needle: str) -> bool:
-    if any(needle in record.decode("utf-8", errors="replace") for record in rows.records_json):
-        return True
-    return any(needle in str(row) for row in rows.rows)
+    return any(
+        needle in record.decode("utf-8", errors="replace")
+        for record in canonical_records(rows)
+    )
 
 
 def make_vector(dimension: int) -> list[float]:

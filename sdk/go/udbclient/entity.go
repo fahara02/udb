@@ -491,14 +491,23 @@ func decodeRecordSet(rs *entityv1.RecordSet) ([]map[string]any, error) {
 		return nil, nil
 	}
 	rows := rs.GetRecordsJson()
+	// RecordsJson is the canonical representation. Rows is a compatibility field
+	// the broker sends EMPTY, one entry per record, so Rows without RecordsJson
+	// is not an empty result: the records are missing, and returning zero rows
+	// would read as "no match".
+	if len(rows) == 0 && len(rs.GetRows()) > 0 {
+		return nil, fmt.Errorf("udb: record set carries %d compatibility row(s) but no records_json", len(rs.GetRows()))
+	}
 	out := make([]map[string]any, 0, len(rows))
-	for _, raw := range rows {
+	for i, raw := range rows {
+		// Fail rather than skip: a skipped record leaves the page SHORT while
+		// TotalCount still reports the full number.
 		if len(raw) == 0 {
-			continue
+			return nil, fmt.Errorf("udb: decode record row %d: empty body", i)
 		}
 		m, err := decodeRecordJSON(raw)
 		if err != nil {
-			return nil, fmt.Errorf("udb: decode record row: %w", err)
+			return nil, fmt.Errorf("udb: decode record row %d: %w", i, err)
 		}
 		out = append(out, m)
 	}

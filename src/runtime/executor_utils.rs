@@ -1251,21 +1251,31 @@ pub(crate) fn reject_plan(errors: &[String]) -> Result<(), tonic::Status> {
 }
 
 pub(crate) fn cached_record_set(records_json: Vec<Vec<u8>>) -> RecordSet {
-    // Deserialise the cached JSON blobs back into proto rows (best-effort).
-    let rows: Vec<ProtoRow> = records_json
-        .iter()
-        .filter_map(|blob| {
-            let value: JsonValue = serde_json::from_slice(blob).ok()?;
-            let fields = value
-                .as_object()?
-                .iter()
-                .filter_map(|(key, val)| json_to_prost_value(val).map(|v| (key.clone(), v)))
-                .collect();
-            Some(ProtoRow { fields })
-        })
-        .collect();
+    // Emit the SAME shape as the uncached relational path (`rows_to_record_set`):
+    // records in `records_json`, one EMPTY compatibility row each.
+    //
+    // This path used to rebuild populated `ProtoRow.fields` from the cached
+    // blobs, which made a cached read observationally DIFFERENT from an uncached
+    // one — the same query returned a usable `rows` map on a cache hit and an
+    // empty one otherwise. A client written against a warm cache (or a fake that
+    // mimicked it) then read empty records in production, with no error to
+    // explain it, and the behaviour flipped on cache eviction.
+    //
+    // Restoring the fields on BOTH paths was the other option, and it is not
+    // available: rebuilding them goes through `json_to_prost_value`, whose only
+    // numeric kind is `NumberValue(f64)`. Any integer past 2^53 — a BIGINT id, a
+    // counter, money in minor units — is silently rounded on the way in, and a
+    // value that fails to convert is dropped from the map entirely by the
+    // `filter_map`. That representation cannot carry a relational row faithfully,
+    // so the honest fix is to stop pretending it can and let `records_json` be
+    // the single canonical answer.
+    //
+    // Consumers read `records_json` (every SDK does; the Rust client's
+    // `Records::decode` is the reference reader). `rows` stays in the message,
+    // emitted empty, for wire compatibility.
+    let rows = vec![ProtoRow::default(); records_json.len()];
     RecordSet {
-        total_count: rows.len() as i32,
+        total_count: records_json.len() as i32,
         rows,
         records_json,
         ..RecordSet::default()
@@ -1438,26 +1448,43 @@ pub(crate) fn record_batch_v2_from_json_rows(
 }
 
 /// Convert a V1 [`RecordSet`] into the additive [`crate::proto::RecordBatchV2`]
-/// columnar encoding, preferring the serialized `records_json` blobs (the masked
-/// canonical form) and falling back to the proto `rows`.
+/// columnar encoding, reading the canonical `records_json` blobs (the masked
+/// form every SDK decodes) and falling back to the compatibility `rows` only
+/// when there are none.
+///
+/// Fails rather than skipping a record it cannot parse. This used to
+/// `filter_map(...ok())`, which silently dropped an unparseable blob: the batch
+/// came back SHORT while `total_count` still reported the full number, so a
+/// caller saw fewer records than the query matched with nothing anywhere saying
+/// so. Same failure mode as reading the empty compatibility rows — a wrong
+/// answer that looks like a right one.
 pub(crate) fn record_batch_v2_from_record_set(
     set: &RecordSet,
     schema_version: &str,
-) -> crate::proto::RecordBatchV2 {
+) -> Result<crate::proto::RecordBatchV2, tonic::Status> {
     let rows: Vec<JsonValue> = if !set.records_json.is_empty() {
         set.records_json
             .iter()
-            .filter_map(|blob| serde_json::from_slice(blob).ok())
-            .collect()
+            .enumerate()
+            .map(|(index, blob)| {
+                serde_json::from_slice(blob).map_err(|err| {
+                    internal_status(
+                        "postgres",
+                        "record_batch_v2",
+                        format!("record {index} is not valid JSON: {err}"),
+                    )
+                })
+            })
+            .collect::<Result<_, _>>()?
     } else {
         set.rows.iter().map(proto_row_to_json).collect()
     };
-    record_batch_v2_from_json_rows(
+    Ok(record_batch_v2_from_json_rows(
         &rows,
         schema_version,
         set.next_page_token.clone(),
         set.total_count,
-    )
+    ))
 }
 
 // ── JSON helpers ──────────────────────────────────────────────────────────────
@@ -3500,7 +3527,7 @@ mod record_batch_tests {
             next_page_token: "n".into(),
             ..RecordSet::default()
         };
-        let batch = record_batch_v2_from_record_set(&set, "v1");
+        let batch = record_batch_v2_from_record_set(&set, "v1").expect("valid record set");
         assert_eq!(batch.row_count, 1);
         assert_eq!(batch.total_count, 1);
         assert_eq!(batch.next_page_token, "n");
@@ -3531,7 +3558,7 @@ mod record_batch_tests {
             total_count: 1,
             ..RecordSet::default()
         };
-        let batch = record_batch_v2_from_record_set(&set, "v9");
+        let batch = record_batch_v2_from_record_set(&set, "v9").expect("valid record set");
 
         let mut names: Vec<String> = batch.columns.iter().map(|c| c.name.clone()).collect();
         names.sort();
@@ -3543,6 +3570,81 @@ mod record_batch_tests {
         assert_eq!(col(&batch, "id").int64_values, vec![1]);
         assert_eq!(col(&batch, "email").string_values, vec!["a@b.com"]);
         assert_eq!(batch.schema_version, "v9");
+    }
+
+    /// A record the columnar encoder cannot parse must fail the call, not shrink
+    /// the batch. Dropping it produced a SHORT batch beside a full `total_count`,
+    /// which reads to a caller as a complete answer.
+    #[test]
+    fn v2_batch_fails_closed_on_an_unparseable_record() {
+        let set = RecordSet {
+            records_json: vec![
+                serde_json::to_vec(&json!({"id": 1})).unwrap(),
+                b"{not json".to_vec(),
+            ],
+            total_count: 2,
+            ..RecordSet::default()
+        };
+        let err = record_batch_v2_from_record_set(&set, "v1")
+            .expect_err("an unparseable record must not be skipped");
+        assert_eq!(err.code(), tonic::Code::Internal);
+        assert!(
+            err.message().contains("record 1"),
+            "the error names the offending record: {}",
+            err.message()
+        );
+    }
+}
+
+/// `cached_record_set` must be indistinguishable from the uncached relational
+/// path (`rows_to_record_set`).
+///
+/// It used to rebuild populated `ProtoRow.fields` from the cached blobs, so the
+/// SAME query returned a usable `rows` map on a cache hit and an empty one
+/// otherwise — a client (or a test fake mimicking one) could pass consistently
+/// and then read empty records in production the moment the cache missed.
+#[cfg(test)]
+mod cached_record_set_shape_tests {
+    use super::cached_record_set;
+    use prost_types::value::Kind;
+    use serde_json::json;
+
+    #[test]
+    fn cached_reads_emit_the_same_shape_as_uncached_ones() {
+        let blobs = vec![
+            serde_json::to_vec(&json!({"id": 1, "big": 9007199254740993i64})).unwrap(),
+            serde_json::to_vec(&json!({"id": 2})).unwrap(),
+        ];
+        let set = cached_record_set(blobs.clone());
+
+        assert_eq!(
+            set.records_json, blobs,
+            "the canonical records pass through"
+        );
+        assert_eq!(set.total_count, 2);
+        // One EMPTY compatibility row per record — exactly what
+        // `rows_to_record_set` emits.
+        assert_eq!(set.rows.len(), blobs.len());
+        assert!(
+            set.rows.iter().all(|row| row.fields.is_empty()),
+            "a cached read must not populate `rows` when an uncached one does not"
+        );
+    }
+
+    /// Populating `rows` is not merely inconsistent, it is lossy: the conversion
+    /// to `google.protobuf.Value` is double-only. This pins the reason the parity
+    /// fix removes the population rather than adding it to the other path.
+    #[test]
+    fn the_compatibility_representation_cannot_hold_a_big_integer() {
+        let exact = 9007199254740993i64;
+        let converted = super::json_to_prost_value(&json!(exact)).expect("value");
+        let Kind::NumberValue(as_double) = converted.kind.expect("kind") else {
+            panic!("google.protobuf.Value has no integer kind");
+        };
+        assert_ne!(
+            as_double as i64, exact,
+            "a double cannot represent 2^53+1 — which is why records travel as JSON"
+        );
     }
 }
 

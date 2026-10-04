@@ -2455,13 +2455,22 @@ fn rows_to_record_set(
     let mut proto_rows = Vec::with_capacity(rows.len());
     let mut records_json = Vec::with_capacity(rows.len());
     for row in rows {
-        // The default relational read path serialises every row into
-        // `records_json` (the bytes every SDK actually decodes). The per-row
-        // proto `fields` map was a parallel representation that no client reads,
-        // so we no longer build it on this path: that drops a per-row HashMap
-        // allocation plus a `json_to_prost_value` convert per column. The proto
-        // `ProtoRow.fields` field is preserved in the message (emitted empty)
-        // to keep the wire contract intact.
+        // `records_json` is the CANONICAL representation of a relational read:
+        // the record, serialised once, with integers intact. Every SDK decodes
+        // it. `ProtoRow.fields` is a parallel representation kept only for wire
+        // compatibility, and it is emitted EMPTY here — building it would cost a
+        // HashMap allocation plus a `json_to_prost_value` convert per column, and
+        // it could not carry the row faithfully anyway (that conversion's only
+        // numeric kind is an f64, which rounds any integer past 2^53).
+        //
+        // This comment previously asserted that no client reads `fields`. That
+        // was an assumption about consumers, not a fact about them, and it was
+        // false: the 0.5.21 Rust SDK read exactly that field and so returned
+        // empty records for every populated table. Emitting the field empty is
+        // fine; the contract has to SAY so, which it now does — see the
+        // `RecordSet` comments in `proto/udb/entity/v1/relational.proto`. The
+        // cache path (`cached_record_set`) emits the same shape, so a cached and
+        // an uncached read are indistinguishable to a client.
         //
         // Size the per-row json map to the column count up front, so a wide row
         // does not rehash/regrow cell-by-cell.

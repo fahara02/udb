@@ -66,6 +66,11 @@ export const CacheOptionsSchema: GenMessage<CacheOptions> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_relational, 1);
 
 /**
+ * COMPATIBILITY ONLY on relational reads. See `RecordSet.rows`: the broker
+ * emits `fields` EMPTY there, and it cannot faithfully carry a relational row in
+ * any case — `google.protobuf.Value`'s only numeric kind is a double, so every
+ * integer past 2^53 rounds. Read `RecordSet.records_json` instead.
+ *
  * @generated from message udb.entity.v1.Row
  */
 export type Row = Message<"udb.entity.v1.Row"> & {
@@ -83,15 +88,43 @@ export const RowSchema: GenMessage<Row> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_relational, 2);
 
 /**
+ * A page of relational records.
+ *
+ * The records are in `records_json`. `rows` is a parallel representation kept
+ * for wire compatibility and is NOT the data — read `records_json`.
+ *
  * @generated from message udb.entity.v1.RecordSet
  */
 export type RecordSet = Message<"udb.entity.v1.RecordSet"> & {
   /**
+   * CANONICAL. One JSON object per record, index-aligned with `rows` and
+   * `record_revisions`. This is the record: integers keep their exact value
+   * here, which is why it, and not `rows`, is what every SDK decodes.
+   *
+   * Decode with a reader that preserves 64-bit integers — Go's
+   * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+   * that materialises every number as a double corrupts BIGINT silently.
+   *
    * @generated from field: repeated bytes records_json = 1;
    */
   recordsJson: Uint8Array[];
 
   /**
+   * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+   * read path, cached and uncached alike, so this array's LENGTH is meaningful
+   * and its CONTENTS are not.
+   *
+   * Reading `rows[i].fields` therefore yields the correct record count with no
+   * record data, and a populated table reads back as a page of empty entities
+   * with no error raised anywhere. A client that does this is not misusing the
+   * API in a way the type system can catch, which is why the behaviour is
+   * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+   * this field and silently returned empty records for every real query.
+   *
+   * Retained rather than removed because removing a populated field from a
+   * released contract breaks decoders that still reference it. Treat it as
+   * deprecated for reads.
+   *
    * @generated from field: repeated udb.entity.v1.Row rows = 2;
    */
   rows: Row[];
@@ -205,11 +238,28 @@ export type UpsertRequest = Message<"udb.entity.v1.UpsertRequest"> & {
   messageType: string;
 
   /**
+   * The record to write, in EITHER of two forms. Set exactly one.
+   *
+   * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored
+   * entirely — no error, no warning. Setting both because a migration left the
+   * old field populated therefore writes the new one silently.
+   *
+   * `record_json` is the exact form. It preserves 64-bit integers, because it is
+   * JSON text rather than a `google.protobuf.Value` graph.
+   *
    * @generated from field: bytes record_json = 3;
    */
   recordJson: Uint8Array;
 
   /**
+   * See `record_json` for precedence. `payload` is more convenient but cannot
+   * represent every value exactly: `google.protobuf.Value`'s only numeric kind is
+   * a double, so an integer beyond 2^53 does not survive it. The broker FAILS
+   * CLOSED on that rather than writing a rounded number — such a value stays a
+   * float and the relational binder rejects it for an integer column. To write
+   * the full 64-bit range through this field, send the number as its decimal
+   * STRING, which the binder accepts for integer columns.
+   *
    * @generated from field: google.protobuf.Struct payload = 4;
    */
   payload?: JsonObject | undefined;

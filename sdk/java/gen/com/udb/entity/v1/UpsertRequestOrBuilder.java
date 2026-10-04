@@ -38,22 +38,63 @@ public interface UpsertRequestOrBuilder extends
       getMessageTypeBytes();
 
   /**
+   * <pre>
+   * The record to write, in EITHER of two forms. Set exactly one.
+   *
+   * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored
+   * entirely — no error, no warning. Setting both because a migration left the
+   * old field populated therefore writes the new one silently.
+   *
+   * `record_json` is the exact form. It preserves 64-bit integers, because it is
+   * JSON text rather than a `google.protobuf.Value` graph.
+   * </pre>
+   *
    * <code>bytes record_json = 3 [json_name = "recordJson"];</code>
    * @return The recordJson.
    */
   com.google.protobuf.ByteString getRecordJson();
 
   /**
+   * <pre>
+   * See `record_json` for precedence. `payload` is more convenient but cannot
+   * represent every value exactly: `google.protobuf.Value`'s only numeric kind is
+   * a double, so an integer beyond 2^53 does not survive it. The broker FAILS
+   * CLOSED on that rather than writing a rounded number — such a value stays a
+   * float and the relational binder rejects it for an integer column. To write
+   * the full 64-bit range through this field, send the number as its decimal
+   * STRING, which the binder accepts for integer columns.
+   * </pre>
+   *
    * <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
    * @return Whether the payload field is set.
    */
   boolean hasPayload();
   /**
+   * <pre>
+   * See `record_json` for precedence. `payload` is more convenient but cannot
+   * represent every value exactly: `google.protobuf.Value`'s only numeric kind is
+   * a double, so an integer beyond 2^53 does not survive it. The broker FAILS
+   * CLOSED on that rather than writing a rounded number — such a value stays a
+   * float and the relational binder rejects it for an integer column. To write
+   * the full 64-bit range through this field, send the number as its decimal
+   * STRING, which the binder accepts for integer columns.
+   * </pre>
+   *
    * <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
    * @return The payload.
    */
   com.google.protobuf.Struct getPayload();
   /**
+   * <pre>
+   * See `record_json` for precedence. `payload` is more convenient but cannot
+   * represent every value exactly: `google.protobuf.Value`'s only numeric kind is
+   * a double, so an integer beyond 2^53 does not survive it. The broker FAILS
+   * CLOSED on that rather than writing a rounded number — such a value stays a
+   * float and the relational binder rejects it for an integer column. To write
+   * the full 64-bit range through this field, send the number as its decimal
+   * STRING, which the binder accepts for integer columns.
+   * </pre>
+   *
    * <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
    */
   com.google.protobuf.StructOrBuilder getPayloadOrBuilder();

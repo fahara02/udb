@@ -18,4 +18,7 @@ var response = await client.SelectAsync(new SelectRequest
     Limit = 25
 });
 
-Console.WriteLine($"rows={response.Rows.Count}");
+// RecordsJson is the canonical representation; Rows is a compatibility field the
+// broker sends EMPTY, one entry per record — counting it looks right, reading it
+// finds nothing.
+Console.WriteLine($"records={response.RecordsJson.Count}");

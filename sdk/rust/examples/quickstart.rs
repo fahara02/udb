@@ -52,17 +52,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Audit fields are request-scoped; identity above is not overridable.
         .with_audit("quickstart", "corr-quickstart-1");
 
-    let set = udb
-        .select(SelectRequest {
+    // `select_records` decodes the canonical `records_json`. The raw `select`
+    // returns a `RecordSet` whose `rows` field is sent EMPTY for wire
+    // compatibility, so counting `set.rows` reports the right number of records
+    // and reading `set.rows[i].fields` finds nothing in them.
+    let records = udb
+        .select_records(SelectRequest {
             message_type: message_type.clone(),
             limit: 10,
             ..Default::default()
         })
         .await?;
 
-    println!("{}: {} row(s)", message_type, set.rows.len());
-    if !set.next_page_token.is_empty() {
-        println!("more available; next_page_token = {}", set.next_page_token);
+    println!("{}: {} record(s)", message_type, records.len());
+    // Print a real value, not just a count: a count is the one thing that still
+    // looks right when the records come back empty.
+    for record in records.iter() {
+        let summary = record
+            .fields()
+            .iter()
+            .map(|(name, value)| format!("{name}={value}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        println!("  {summary}");
+    }
+    if !records.next_page_token().is_empty() {
+        println!(
+            "more available; next_page_token = {}",
+            records.next_page_token()
+        );
     }
     Ok(())
 }

@@ -6,6 +6,13 @@
 package com.udb.entity.v1;
 
 /**
+ * <pre>
+ * COMPATIBILITY ONLY on relational reads. See `RecordSet.rows`: the broker
+ * emits `fields` EMPTY there, and it cannot faithfully carry a relational row in
+ * any case — `google.protobuf.Value`'s only numeric kind is a double, so every
+ * integer past 2^53 rounds. Read `RecordSet.records_json` instead.
+ * </pre>
+ *
  * Protobuf type {@code udb.entity.v1.Row}
  */
 @com.google.protobuf.Generated
@@ -303,6 +310,13 @@ com.google.protobuf.Value defaultValue) {
     return builder;
   }
   /**
+   * <pre>
+   * COMPATIBILITY ONLY on relational reads. See `RecordSet.rows`: the broker
+   * emits `fields` EMPTY there, and it cannot faithfully carry a relational row in
+   * any case — `google.protobuf.Value`'s only numeric kind is a double, so every
+   * integer past 2^53 rounds. Read `RecordSet.records_json` instead.
+   * </pre>
+   *
    * Protobuf type {@code udb.entity.v1.Row}
    */
   public static final class Builder extends

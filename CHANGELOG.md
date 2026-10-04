@@ -9,6 +9,46 @@ release line was tagged.
 
 ### Fixed
 
+- **A relational read could return the right number of records with nothing in
+  them.** `RecordSet` carries a page in two parallel fields: `records_json` (the
+  records) and `rows` (a compatibility field the broker emits EMPTY). Nothing in
+  the proto marked the difference, so reading `rows[i].fields` compiled,
+  type-checked, returned the correct record COUNT, and yielded no data — a
+  populated table read back as a page of empty entities with no error raised
+  anywhere.
+
+  Six SDKs already read `records_json`. The 0.5.21 Rust client read `rows`, and
+  its examples counted `set.rows.len()` — the one accessor that still returns the
+  right answer when the defect is present.
+
+  The contract now states which field is canonical, `Row` is marked
+  compatibility-only, and the Rust client has a supported decoder.
+
+- **A cached read and an uncached read of the same query returned different
+  shapes.** `cached_record_set` rebuilt populated `rows` from the cached blobs
+  while the relational path left them empty, so a client written against a warm
+  cache — or a test fake that mimicked one — passed consistently and then read
+  empty records in production the moment the cache missed.
+
+  Both paths now emit the same shape. The population was removed rather than
+  added to the other path because it is lossy by construction: rebuilding those
+  maps goes through `google.protobuf.Value`, whose only numeric kind is a double,
+  so every integer past 2^53 was silently rounded and any value that failed to
+  convert was dropped from the map entirely.
+
+- **The Go client skipped an empty record and decoded a compatibility-only page
+  as "no rows".** `decodeRecordSet` `continue`d past a zero-length record body (a
+  short page beside a full `TotalCount`) and returned zero rows for a set that
+  carried `rows` but no `records_json`. Both are now errors that name the record.
+  The Python billing example's `record_count`/`records_contain` and the C#
+  reporting example fell back to the compatibility `rows` the same way; they read
+  `records_json` only.
+
+- **`SelectV2` silently dropped records it could not parse.** The columnar
+  encoder used `filter_map(...ok())`, so a malformed record left the batch SHORT
+  while `total_count` still reported the full number — a truncated result that
+  reads as a complete one. It now fails the call and names the offending record.
+
 - **Projected vector points were invisible to every tenant-scoped search.**
   `VectorSearch` ANDs `_tenant_id` and `_project_id` into every filter, but the
   projection worker wrote the source row as the point payload unchanged — no
@@ -90,6 +130,54 @@ release line was tagged.
   vets the native-services Go example, whose `go.sum` was missing the
   `genproto/googleapis/api` entry and had stopped building on any toolchain.
 
+- **`Records` / `Record` in the Rust client** — the supported way to read a
+  relational result. `Records::decode` reads `records_json`, and
+  `UdbClient::select_records` does the call and the decode in one step.
+
+  It fails closed rather than returning a plausible page: a set carrying
+  compatibility `rows` with no canonical records is an error, not an empty
+  result; misaligned `record_revisions` are rejected rather than attaching a
+  record's CAS token to a different record; a malformed or non-object record body
+  names its index.
+
+  Integers stay exact. Values are decoded with `serde_json`, whose `Number` holds
+  `i64`/`u64` natively, so a `BIGINT` of `9007199254740993` survives. Typed
+  accessors (`i64`, `u64`, `i32`, `str`, `bool`, `bytes`, `timestamp`, `object`,
+  `array`) reject fractional, out-of-range, and wrong-kind values instead of
+  truncating or zeroing, and distinguish an absent column from a NULL one.
+
+- **`udb-client` re-exports `prost`, `prost_types`, `tonic`, and `serde_json`.**
+  The public API is made of those crates' types — `UpsertRequest.payload` is a
+  `prost_types::Struct`, every failure carries a `tonic::Status` — so without
+  re-exports a consumer had to discover which versions the SDK resolved and add
+  matching dependencies by hand. Naming them through `udb_client::` always works.
+
+- **Two consumer crates in CI, asserting opposite directions.**
+  `sdk/rust-consumer-check` brings its own prost/tonic (so a version-identity
+  break fails the build); the new `sdk/rust-reexport-check` brings NOTHING and
+  reaches everything through the re-exports (so a hidden direct dependency fails
+  the build). The second also asserts on the exact served `RecordSet` shape.
+
+  Neither could have existed before: every prior SDK check ran with `udb-client`
+  as the ROOT crate, where nothing conflicts and the compatibility field is never
+  exercised against real bytes.
+
+### Changed
+
+- `RecordSet.records_json` is documented as CANONICAL and `RecordSet.rows` /
+  `Row.fields` as compatibility-only, deprecated for reads. `rows` is retained,
+  and still emitted with one empty entry per record, so its LENGTH stays
+  meaningful and existing decoders keep working.
+
+- `UpsertRequest` and `Mutation` now document that `payload` takes precedence
+  over `record_json` when both are set — previously undocumented, and silent.
+  They also document that `payload` cannot carry an integer beyond 2^53 and
+  fails closed for integer columns, with the decimal-string form as the escape
+  hatch.
+
+- The Rust and Go `select` examples read a real value instead of counting rows.
+  A count is the assertion that survives this class of defect, which is why both
+  examples looked correct while the Rust client returned nothing.
 
 ## [0.5.22] - 2026-08-26
 

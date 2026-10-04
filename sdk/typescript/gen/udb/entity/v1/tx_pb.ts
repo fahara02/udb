@@ -46,6 +46,17 @@ export type Mutation = Message<"udb.entity.v1.Mutation"> & {
   messageType: string;
 
   /**
+   * The record to write, in EITHER of two forms. Set exactly one.
+   *
+   * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+   * with no error — identical to `UpsertRequest.record_json`/`payload`, and
+   * resolved by the same helper.
+   *
+   * `record_json` is the exact form; `payload` cannot carry an integer beyond
+   * 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+   * columns rather than writing a rounded value. Send such a number as its
+   * decimal STRING through `payload`, or use `record_json`.
+   *
    * @generated from field: bytes record_json = 5;
    */
   recordJson: Uint8Array;

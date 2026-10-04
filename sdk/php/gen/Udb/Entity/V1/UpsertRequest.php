@@ -23,10 +23,25 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      */
     protected $message_type = '';
     /**
+     * The record to write, in EITHER of two forms. Set exactly one.
+     * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored
+     * entirely — no error, no warning. Setting both because a migration left the
+     * old field populated therefore writes the new one silently.
+     * `record_json` is the exact form. It preserves 64-bit integers, because it is
+     * JSON text rather than a `google.protobuf.Value` graph.
+     *
      * Generated from protobuf field <code>bytes record_json = 3 [json_name = "recordJson"];</code>
      */
     protected $record_json = '';
     /**
+     * See `record_json` for precedence. `payload` is more convenient but cannot
+     * represent every value exactly: `google.protobuf.Value`'s only numeric kind is
+     * a double, so an integer beyond 2^53 does not survive it. The broker FAILS
+     * CLOSED on that rather than writing a rounded number — such a value stays a
+     * float and the relational binder rejects it for an integer column. To write
+     * the full 64-bit range through this field, send the number as its decimal
+     * STRING, which the binder accepts for integer columns.
+     *
      * Generated from protobuf field <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
      */
     protected $payload = null;
@@ -86,7 +101,20 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\RequestContext $context
      *     @type string $message_type
      *     @type string $record_json
+     *           The record to write, in EITHER of two forms. Set exactly one.
+     *           PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored
+     *           entirely — no error, no warning. Setting both because a migration left the
+     *           old field populated therefore writes the new one silently.
+     *           `record_json` is the exact form. It preserves 64-bit integers, because it is
+     *           JSON text rather than a `google.protobuf.Value` graph.
      *     @type \Google\Protobuf\Struct $payload
+     *           See `record_json` for precedence. `payload` is more convenient but cannot
+     *           represent every value exactly: `google.protobuf.Value`'s only numeric kind is
+     *           a double, so an integer beyond 2^53 does not survive it. The broker FAILS
+     *           CLOSED on that rather than writing a rounded number — such a value stays a
+     *           float and the relational binder rejects it for an integer column. To write
+     *           the full 64-bit range through this field, send the number as its decimal
+     *           STRING, which the binder accepts for integer columns.
      *     @type string[] $conflict_fields
      *     @type bool $return_record
      *     @type \Udb\Entity\V1\CacheOptions $cache
@@ -172,6 +200,13 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * The record to write, in EITHER of two forms. Set exactly one.
+     * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored
+     * entirely — no error, no warning. Setting both because a migration left the
+     * old field populated therefore writes the new one silently.
+     * `record_json` is the exact form. It preserves 64-bit integers, because it is
+     * JSON text rather than a `google.protobuf.Value` graph.
+     *
      * Generated from protobuf field <code>bytes record_json = 3 [json_name = "recordJson"];</code>
      * @return string
      */
@@ -181,6 +216,13 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * The record to write, in EITHER of two forms. Set exactly one.
+     * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored
+     * entirely — no error, no warning. Setting both because a migration left the
+     * old field populated therefore writes the new one silently.
+     * `record_json` is the exact form. It preserves 64-bit integers, because it is
+     * JSON text rather than a `google.protobuf.Value` graph.
+     *
      * Generated from protobuf field <code>bytes record_json = 3 [json_name = "recordJson"];</code>
      * @param string $var
      * @return $this
@@ -194,6 +236,14 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * See `record_json` for precedence. `payload` is more convenient but cannot
+     * represent every value exactly: `google.protobuf.Value`'s only numeric kind is
+     * a double, so an integer beyond 2^53 does not survive it. The broker FAILS
+     * CLOSED on that rather than writing a rounded number — such a value stays a
+     * float and the relational binder rejects it for an integer column. To write
+     * the full 64-bit range through this field, send the number as its decimal
+     * STRING, which the binder accepts for integer columns.
+     *
      * Generated from protobuf field <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
      * @return \Google\Protobuf\Struct|null
      */
@@ -213,6 +263,14 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * See `record_json` for precedence. `payload` is more convenient but cannot
+     * represent every value exactly: `google.protobuf.Value`'s only numeric kind is
+     * a double, so an integer beyond 2^53 does not survive it. The broker FAILS
+     * CLOSED on that rather than writing a rounded number — such a value stays a
+     * float and the relational binder rejects it for an integer column. To write
+     * the full 64-bit range through this field, send the number as its decimal
+     * STRING, which the binder accepts for integer columns.
+     *
      * Generated from protobuf field <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
      * @param \Google\Protobuf\Struct $var
      * @return $this

@@ -198,10 +198,16 @@ impl DataBrokerService {
             // the typed stale-read warning is surfaced only on the V1 `Select`
             // handler, so discard it here (hard-fail modes already errored).
             Ok((record_set, _stale_warning)) => {
-                let batch = crate::runtime::executor_utils::record_batch_v2_from_record_set(
+                // A record the columnar encoder cannot parse is an error, not a
+                // row to leave out: a short batch beside a full `total_count`
+                // reads as a complete answer.
+                let batch = match crate::runtime::executor_utils::record_batch_v2_from_record_set(
                     &record_set,
                     &schema_version,
-                );
+                ) {
+                    Ok(batch) => batch,
+                    Err(err) => return self.record_grpc("SelectV2", started, Err(err)),
+                };
                 let stream: ResponseStream<crate::proto::RecordBatchV2> =
                     Box::pin(tokio_stream::once(Ok(batch)));
                 self.record_grpc(

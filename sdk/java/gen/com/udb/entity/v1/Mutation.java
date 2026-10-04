@@ -202,6 +202,19 @@ private static final long serialVersionUID = 0L;
   public static final int RECORD_JSON_FIELD_NUMBER = 5;
   private com.google.protobuf.ByteString recordJson_ = com.google.protobuf.ByteString.EMPTY;
   /**
+   * <pre>
+   * The record to write, in EITHER of two forms. Set exactly one.
+   *
+   * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+   * with no error — identical to `UpsertRequest.record_json`/`payload`, and
+   * resolved by the same helper.
+   *
+   * `record_json` is the exact form; `payload` cannot carry an integer beyond
+   * 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+   * columns rather than writing a rounded value. Send such a number as its
+   * decimal STRING through `payload`, or use `record_json`.
+   * </pre>
+   *
    * <code>bytes record_json = 5 [json_name = "recordJson"];</code>
    * @return The recordJson.
    */
@@ -1963,6 +1976,19 @@ private static final long serialVersionUID = 0L;
 
     private com.google.protobuf.ByteString recordJson_ = com.google.protobuf.ByteString.EMPTY;
     /**
+     * <pre>
+     * The record to write, in EITHER of two forms. Set exactly one.
+     *
+     * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+     * with no error — identical to `UpsertRequest.record_json`/`payload`, and
+     * resolved by the same helper.
+     *
+     * `record_json` is the exact form; `payload` cannot carry an integer beyond
+     * 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+     * columns rather than writing a rounded value. Send such a number as its
+     * decimal STRING through `payload`, or use `record_json`.
+     * </pre>
+     *
      * <code>bytes record_json = 5 [json_name = "recordJson"];</code>
      * @return The recordJson.
      */
@@ -1971,6 +1997,19 @@ private static final long serialVersionUID = 0L;
       return recordJson_;
     }
     /**
+     * <pre>
+     * The record to write, in EITHER of two forms. Set exactly one.
+     *
+     * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+     * with no error — identical to `UpsertRequest.record_json`/`payload`, and
+     * resolved by the same helper.
+     *
+     * `record_json` is the exact form; `payload` cannot carry an integer beyond
+     * 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+     * columns rather than writing a rounded value. Send such a number as its
+     * decimal STRING through `payload`, or use `record_json`.
+     * </pre>
+     *
      * <code>bytes record_json = 5 [json_name = "recordJson"];</code>
      * @param value The recordJson to set.
      * @return This builder for chaining.
@@ -1983,6 +2022,19 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * The record to write, in EITHER of two forms. Set exactly one.
+     *
+     * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+     * with no error — identical to `UpsertRequest.record_json`/`payload`, and
+     * resolved by the same helper.
+     *
+     * `record_json` is the exact form; `payload` cannot carry an integer beyond
+     * 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+     * columns rather than writing a rounded value. Send such a number as its
+     * decimal STRING through `payload`, or use `record_json`.
+     * </pre>
+     *
      * <code>bytes record_json = 5 [json_name = "recordJson"];</code>
      * @return This builder for chaining.
      */

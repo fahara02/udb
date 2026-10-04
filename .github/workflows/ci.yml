@@ -1098,6 +1098,15 @@ jobs:
       - name: Consumer integration (independent prost/tonic resolution)
         working-directory: sdk/rust-consumer-check
         run: cargo run
+      # The other direction: a consumer that declares ONLY udb-client. The SDK's
+      # public API is made of prost/tonic types, so without re-exports those are a
+      # hidden requirement a consumer has to satisfy by guessing versions. This
+      # crate has no prost, tonic, or serde_json dependency; if using the SDK ever
+      # needs one again, it stops compiling. It also asserts on the exact served
+      # RecordSet shape — records in `records_json`, compatibility `rows` empty.
+      - name: Consumer integration (re-exports only, no direct prost/tonic)
+        working-directory: sdk/rust-reexport-check
+        run: cargo run
 
   # ── Java SDK: compile the committed buf gen surface + handwritten client ──
   java-sdk:

@@ -10,15 +10,39 @@ use Google\Protobuf\Internal\GPBUtil;
 use Google\Protobuf\RepeatedField;
 
 /**
+ * A page of relational records.
+ * The records are in `records_json`. `rows` is a parallel representation kept
+ * for wire compatibility and is NOT the data — read `records_json`.
+ *
  * Generated from protobuf message <code>udb.entity.v1.RecordSet</code>
  */
 class RecordSet extends \Google\Protobuf\Internal\Message
 {
     /**
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     *
      * Generated from protobuf field <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      */
     private $records_json;
     /**
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     *
      * Generated from protobuf field <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      */
     private $rows;
@@ -52,7 +76,25 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type string[] $records_json
+     *           CANONICAL. One JSON object per record, index-aligned with `rows` and
+     *           `record_revisions`. This is the record: integers keep their exact value
+     *           here, which is why it, and not `rows`, is what every SDK decodes.
+     *           Decode with a reader that preserves 64-bit integers — Go's
+     *           `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     *           that materialises every number as a double corrupts BIGINT silently.
      *     @type \Udb\Entity\V1\Row[] $rows
+     *           COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     *           read path, cached and uncached alike, so this array's LENGTH is meaningful
+     *           and its CONTENTS are not.
+     *           Reading `rows[i].fields` therefore yields the correct record count with no
+     *           record data, and a populated table reads back as a page of empty entities
+     *           with no error raised anywhere. A client that does this is not misusing the
+     *           API in a way the type system can catch, which is why the behaviour is
+     *           spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     *           this field and silently returned empty records for every real query.
+     *           Retained rather than removed because removing a populated field from a
+     *           released contract breaks decoders that still reference it. Treat it as
+     *           deprecated for reads.
      *     @type string $next_page_token
      *     @type int $total_count
      *     @type string[] $record_revisions
@@ -73,6 +115,13 @@ class RecordSet extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     *
      * Generated from protobuf field <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      * @return RepeatedField<string>
      */
@@ -82,6 +131,13 @@ class RecordSet extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * CANONICAL. One JSON object per record, index-aligned with `rows` and
+     * `record_revisions`. This is the record: integers keep their exact value
+     * here, which is why it, and not `rows`, is what every SDK decodes.
+     * Decode with a reader that preserves 64-bit integers — Go's
+     * `json.Decoder.UseNumber`, the Rust client's `Records::decode`. A decoder
+     * that materialises every number as a double corrupts BIGINT silently.
+     *
      * Generated from protobuf field <code>repeated bytes records_json = 1 [json_name = "recordsJson"];</code>
      * @param string[] $var
      * @return $this
@@ -95,6 +151,19 @@ class RecordSet extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     *
      * Generated from protobuf field <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      * @return RepeatedField<\Udb\Entity\V1\Row>
      */
@@ -104,6 +173,19 @@ class RecordSet extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * COMPATIBILITY. Emitted with one EMPTY `Row` per record on every relational
+     * read path, cached and uncached alike, so this array's LENGTH is meaningful
+     * and its CONTENTS are not.
+     * Reading `rows[i].fields` therefore yields the correct record count with no
+     * record data, and a populated table reads back as a page of empty entities
+     * with no error raised anywhere. A client that does this is not misusing the
+     * API in a way the type system can catch, which is why the behaviour is
+     * spelled out here rather than left to be discovered: the 0.5.21 Rust SDK read
+     * this field and silently returned empty records for every real query.
+     * Retained rather than removed because removing a populated field from a
+     * released contract breaks decoders that still reference it. Treat it as
+     * deprecated for reads.
+     *
      * Generated from protobuf field <code>repeated .udb.entity.v1.Row rows = 2 [json_name = "rows"];</code>
      * @param \Udb\Entity\V1\Row[] $var
      * @return $this

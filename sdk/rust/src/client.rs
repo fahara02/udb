@@ -12,6 +12,7 @@ use crate::error::{CallPolicy, UdbError};
 use crate::metadata::Metadata;
 use crate::proto::udb::entity::v1 as entity;
 use crate::proto::udb::services::v1::data_broker_client::DataBrokerClient;
+use crate::record::{DecodeError, Records};
 
 /// A connected UDB data-plane client bound to one identity.
 #[derive(Clone, Debug)]
@@ -198,6 +199,67 @@ impl UdbClient {
         entity::MutationResponse,
         "/udb.services.v1.DataBroker/VectorUpsert"
     );
+
+    /// Select and decode in one step.
+    ///
+    /// Prefer this over [`UdbClient::select`] plus hand-decoding. The raw
+    /// `RecordSet` carries the records in `records_json` and sends the
+    /// `rows` field EMPTY for wire compatibility, and nothing in the generated
+    /// struct says which is which — so the natural-looking `set.rows[i].fields`
+    /// yields the right record COUNT with no data in it, and reports a populated
+    /// table as a page of empty entities. See [`crate::record`].
+    pub async fn select_records(
+        &mut self,
+        req: entity::SelectRequest,
+    ) -> Result<Records, SelectError> {
+        let set = self.select(req).await?;
+        Ok(Records::decode(&set)?)
+    }
+}
+
+/// A failed [`UdbClient::select_records`]: the call itself, or the decode of what
+/// came back.
+///
+/// Kept as two variants rather than flattened into [`UdbError`] so a caller can
+/// tell "the broker refused" from "the broker answered with something this client
+/// could not trust" — they need different responses, and only the first is worth
+/// retrying.
+#[derive(Debug)]
+pub enum SelectError {
+    /// The RPC failed.
+    Call(UdbError),
+    /// The RPC succeeded and the response was not structurally decodable.
+    Decode(DecodeError),
+}
+
+impl From<UdbError> for SelectError {
+    fn from(err: UdbError) -> Self {
+        Self::Call(err)
+    }
+}
+
+impl From<DecodeError> for SelectError {
+    fn from(err: DecodeError) -> Self {
+        Self::Decode(err)
+    }
+}
+
+impl std::fmt::Display for SelectError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Call(err) => write!(f, "select failed: {err}"),
+            Self::Decode(err) => write!(f, "select returned an undecodable record set: {err}"),
+        }
+    }
+}
+
+impl std::error::Error for SelectError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Call(err) => Some(err),
+            Self::Decode(err) => Some(err),
+        }
+    }
 }
 
 #[cfg(test)]

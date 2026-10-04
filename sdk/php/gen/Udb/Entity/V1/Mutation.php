@@ -31,6 +31,15 @@ class Mutation extends \Google\Protobuf\Internal\Message
      */
     protected $message_type = '';
     /**
+     * The record to write, in EITHER of two forms. Set exactly one.
+     * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+     * with no error — identical to `UpsertRequest.record_json`/`payload`, and
+     * resolved by the same helper.
+     * `record_json` is the exact form; `payload` cannot carry an integer beyond
+     * 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+     * columns rather than writing a rounded value. Send such a number as its
+     * decimal STRING through `payload`, or use `record_json`.
+     *
      * Generated from protobuf field <code>bytes record_json = 5 [json_name = "recordJson"];</code>
      */
     protected $record_json = '';
@@ -130,6 +139,14 @@ class Mutation extends \Google\Protobuf\Internal\Message
      *     @type string $operation
      *     @type string $message_type
      *     @type string $record_json
+     *           The record to write, in EITHER of two forms. Set exactly one.
+     *           PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+     *           with no error — identical to `UpsertRequest.record_json`/`payload`, and
+     *           resolved by the same helper.
+     *           `record_json` is the exact form; `payload` cannot carry an integer beyond
+     *           2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+     *           columns rather than writing a rounded value. Send such a number as its
+     *           decimal STRING through `payload`, or use `record_json`.
      *     @type \Google\Protobuf\Struct $payload
      *     @type \Google\Protobuf\Struct $filter
      *     @type string $collection
@@ -272,6 +289,15 @@ class Mutation extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * The record to write, in EITHER of two forms. Set exactly one.
+     * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+     * with no error — identical to `UpsertRequest.record_json`/`payload`, and
+     * resolved by the same helper.
+     * `record_json` is the exact form; `payload` cannot carry an integer beyond
+     * 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+     * columns rather than writing a rounded value. Send such a number as its
+     * decimal STRING through `payload`, or use `record_json`.
+     *
      * Generated from protobuf field <code>bytes record_json = 5 [json_name = "recordJson"];</code>
      * @return string
      */
@@ -281,6 +307,15 @@ class Mutation extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * The record to write, in EITHER of two forms. Set exactly one.
+     * PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+     * with no error — identical to `UpsertRequest.record_json`/`payload`, and
+     * resolved by the same helper.
+     * `record_json` is the exact form; `payload` cannot carry an integer beyond
+     * 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+     * columns rather than writing a rounded value. Send such a number as its
+     * decimal STRING through `payload`, or use `record_json`.
+     *
      * Generated from protobuf field <code>bytes record_json = 5 [json_name = "recordJson"];</code>
      * @param string $var
      * @return $this

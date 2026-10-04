@@ -78,11 +78,21 @@ func (TxStatus_State) EnumDescriptor() ([]byte, []int) {
 }
 
 type Mutation struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Context        *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	TxId           string                 `protobuf:"bytes,2,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
-	Operation      string                 `protobuf:"bytes,3,opt,name=operation,proto3" json:"operation,omitempty"`
-	MessageType    string                 `protobuf:"bytes,4,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Context     *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	TxId        string                 `protobuf:"bytes,2,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
+	Operation   string                 `protobuf:"bytes,3,opt,name=operation,proto3" json:"operation,omitempty"`
+	MessageType string                 `protobuf:"bytes,4,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
+	// The record to write, in EITHER of two forms. Set exactly one.
+	//
+	// PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+	// with no error — identical to `UpsertRequest.record_json`/`payload`, and
+	// resolved by the same helper.
+	//
+	// `record_json` is the exact form; `payload` cannot carry an integer beyond
+	// 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+	// columns rather than writing a rounded value. Send such a number as its
+	// decimal STRING through `payload`, or use `record_json`.
 	RecordJson     []byte                 `protobuf:"bytes,5,opt,name=record_json,json=recordJson,proto3" json:"record_json,omitempty"`
 	Payload        *structpb.Struct       `protobuf:"bytes,6,opt,name=payload,proto3" json:"payload,omitempty"`
 	Filter         *structpb.Struct       `protobuf:"bytes,7,opt,name=filter,proto3" json:"filter,omitempty"`

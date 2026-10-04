@@ -34,5 +34,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("rows=%d", len(resp.Rows))
+	// RecordsJson is the canonical representation; Rows is a compatibility field
+	// the broker sends EMPTY, one entry per record. Counting Rows happens to give
+	// the right number, which is exactly what makes reading Rows[i].Fields —
+	// and getting nothing — so easy to miss.
+	log.Printf("records=%d", len(resp.RecordsJson))
 }

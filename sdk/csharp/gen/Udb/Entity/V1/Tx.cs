@@ -185,6 +185,18 @@ namespace Udb.Entity.V1 {
     /// <summary>Field number for the "record_json" field.</summary>
     public const int RecordJsonFieldNumber = 5;
     private pb::ByteString recordJson_ = pb::ByteString.Empty;
+    /// <summary>
+    /// The record to write, in EITHER of two forms. Set exactly one.
+    ///
+    /// PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,
+    /// with no error — identical to `UpsertRequest.record_json`/`payload`, and
+    /// resolved by the same helper.
+    ///
+    /// `record_json` is the exact form; `payload` cannot carry an integer beyond
+    /// 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
+    /// columns rather than writing a rounded value. Send such a number as its
+    /// decimal STRING through `payload`, or use `record_json`.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public pb::ByteString RecordJson {

@@ -16,7 +16,11 @@
 //!         ..Default::default()
 //!     })
 //!     .await?;
-//! println!("{} row(s)", set.rows.len());
+//! // `records_json` is the canonical representation; `set.rows` is a
+//! // compatibility field the broker sends EMPTY. Decode, never index `rows`.
+//! for record in udb_client::Records::decode(&set)?.iter() {
+//!     println!("{}", record.str("id")?);
+//! }
 //! # Ok(())
 //! # }
 //! ```
@@ -53,6 +57,7 @@ pub mod error;
 /// committed copy differs from what the descriptor produces.
 pub mod generated_rpcs;
 pub mod metadata;
+pub mod record;
 
 /// Generated protobuf and tonic client types, nested by proto package.
 ///
@@ -67,7 +72,26 @@ pub mod proto {
 }
 
 pub use auth::{Token, TokenManager};
-pub use client::UdbClient;
+pub use client::{SelectError, UdbClient};
 pub use error::{CallPolicy, UdbError};
 pub use generated_rpcs::{is_retry_safe, spec_for_path, RpcSpec};
 pub use metadata::Metadata;
+pub use record::{DecodeError, Record, Records};
+
+// ── Runtime re-exports ────────────────────────────────────────────────────────
+//
+// This crate's public API is made of these crates' types: `UpsertRequest.payload`
+// is a `prost_types::Struct`, every call returns a `tonic::Status`, and every
+// generated message is a `prost::Message`. Without these re-exports a consumer
+// has to work out which VERSIONS this crate resolved and add matching
+// dependencies by hand — and getting it wrong produces a second nominal
+// `prost_types::Struct` that cannot be passed to `payload`, with an error naming
+// two paths that look identical.
+//
+// Re-exporting means the consumer can always name the exact instances this crate
+// uses (`udb_client::prost_types::Struct`), whatever it resolves to. Adding a
+// direct dependency stays optional rather than being a hidden requirement.
+pub use prost;
+pub use prost_types;
+pub use serde_json;
+pub use tonic;
