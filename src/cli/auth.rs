@@ -14,6 +14,7 @@ use udb::proto::udb::core::apikey::services::v1::api_key_service_client::ApiKeyS
 use udb::proto::udb::core::authn::entity::v1 as authn_entity_pb;
 use udb::proto::udb::core::authn::services::v1 as authn_pb;
 use udb::proto::udb::core::authn::services::v1::authn_service_client::AuthnServiceClient;
+use udb::proto::udb::core::authz::entity::v1 as authz_entity_pb;
 use udb::proto::udb::core::authz::services::v1 as authz_pb;
 use udb::proto::udb::core::authz::services::v1::authz_service_client::AuthzServiceClient;
 use udb::proto::udb::core::common::v1 as common_pb;
@@ -600,6 +601,118 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 "tenant_id": user_role.tenant_id,
             }))
         }
+        AuthCommand::RoleBindingPut {
+            principal,
+            role,
+            tenant,
+            project,
+            expires_at_unix,
+        } => {
+            require_role_binding(&principal, &role, &tenant)?;
+            put_role_binding(principal, role, tenant, project, expires_at_unix, "bind").await
+        }
+        AuthCommand::RoleUnbind {
+            principal,
+            role,
+            tenant,
+            project,
+        } => {
+            require_role_binding(&principal, &role, &tenant)?;
+            // The binding row is keyed on (subject, tenant, role); re-putting it
+            // already expired is what removes it from the enforcer's snapshot.
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|elapsed| elapsed.as_secs() as i64)
+                .unwrap_or(1)
+                .max(1);
+            put_role_binding(principal, role, tenant, project, now, "unbind").await
+        }
+        AuthCommand::RoleCreate {
+            code,
+            name,
+            description,
+            tenant,
+            project,
+        } => {
+            require("code", &code)?;
+            let scope_type = if !project.trim().is_empty() {
+                authz_entity_pb::RoleScopeType::Project
+            } else if !tenant.trim().is_empty() {
+                authz_entity_pb::RoleScopeType::Tenant
+            } else {
+                authz_entity_pb::RoleScopeType::Unspecified
+            };
+            let mut client = authz_client().await?;
+            let response = client
+                .create_role(with_metadata(authz_pb::CreateRoleRequest {
+                    name: if name.trim().is_empty() {
+                        code.clone()
+                    } else {
+                        name
+                    },
+                    description,
+                    role_code: code,
+                    tenant_id: tenant,
+                    project_id: project,
+                    scope_type: scope_type as i32,
+                    ..Default::default()
+                }))
+                .await
+                .map_err(|err| format!("role create failed: {err}"))?
+                .into_inner();
+            let role = response
+                .role
+                .ok_or_else(|| "role create returned no role".to_string())?;
+            Ok(json!({ "created": true, "role": role_json(&role) }))
+        }
+        AuthCommand::RoleList {
+            domain,
+            include_inactive,
+        } => {
+            let mut client = authz_client().await?;
+            let response = client
+                .list_roles(with_metadata(authz_pb::ListRolesRequest {
+                    domain,
+                    active_only: !include_inactive,
+                    ..Default::default()
+                }))
+                .await
+                .map_err(|err| format!("role list failed: {err}"))?
+                .into_inner();
+            Ok(json!({
+                "roles": response.roles.iter().map(role_json).collect::<Vec<_>>(),
+            }))
+        }
+        AuthCommand::RoleAssignments { user_id, domain } => {
+            require("user", &user_id)?;
+            let mut client = authz_client().await?;
+            let response = client
+                .list_user_roles(with_metadata(authz_pb::ListUserRolesRequest {
+                    user_id,
+                    domain,
+                    active_only: true,
+                    ..Default::default()
+                }))
+                .await
+                .map_err(|err| format!("role assignments failed: {err}"))?
+                .into_inner();
+            Ok(json!({
+                "user_roles": response
+                    .user_roles
+                    .iter()
+                    .map(|assignment| json!({
+                        "user_role_id": assignment.user_role_id,
+                        "user_id": assignment.user_id,
+                        "role_id": assignment.role_id,
+                        "domain": assignment.domain,
+                        "tenant_id": assignment.tenant_id,
+                        "expires_at": timestamp_json(assignment.expires_at.clone()),
+                    }))
+                    .collect::<Vec<_>>(),
+                "note": "lists AssignRole (`user_roles`) assignments; bindings made with \
+                         `role bind --principal` are policy tuples and are not listed here",
+            }))
+        }
         AuthCommand::RelationPut {
             subject,
             relation,
@@ -784,6 +897,71 @@ fn with_metadata<T>(message: T) -> Request<T> {
         }
     }
     request
+}
+
+fn require_role_binding(principal: &str, role: &str, tenant: &str) -> Result<(), String> {
+    require("principal", principal)?;
+    require("role", role)?;
+    require("tenant", tenant)?;
+    // The enforcer matches the bare code: `authz seed --role app_rw` writes
+    // policies for `app_rw`, and a `role:app_rw` binding would never match.
+    if role.trim().starts_with("role:") {
+        return Err(format!(
+            "--role takes the bare role code (`{}`), not `{role}`",
+            role.trim().trim_start_matches("role:")
+        ));
+    }
+    Ok(())
+}
+
+/// PutRoleBinding: the grouping tuple the data-plane enforcer reads.
+async fn put_role_binding(
+    principal: String,
+    role: String,
+    tenant: String,
+    project: String,
+    expires_at_unix: i64,
+    verb: &str,
+) -> Result<serde_json::Value, String> {
+    let mut client = authz_client().await?;
+    let response = client
+        .put_role_binding(with_metadata(authz_pb::PutRoleBindingRequest {
+            binding: Some(authz_pb::RoleBinding {
+                subject: principal.trim().to_string(),
+                role: role.trim().to_string(),
+                tenant: tenant.trim().to_string(),
+                project: project.trim().to_string(),
+                expires_at_unix,
+                source: "udb-cli".to_string(),
+            }),
+        }))
+        .await
+        .map_err(|err| format!("role {verb} failed: {err}"))?
+        .into_inner();
+    Ok(json!({
+        "ok": response.ok,
+        "message": response.message,
+        "principal": principal.trim(),
+        "role": role.trim(),
+        "tenant": tenant.trim(),
+        "project": if project.trim().is_empty() { "*".to_string() } else { project.trim().to_string() },
+        "expires_at_unix": expires_at_unix,
+        "unbound": verb == "unbind",
+    }))
+}
+
+fn role_json(role: &authz_entity_pb::Role) -> serde_json::Value {
+    json!({
+        "role_id": role.role_id,
+        "role_code": role.role_code,
+        "name": role.name,
+        "description": role.description,
+        "tenant_id": role.tenant_id,
+        "project_id": role.project_id,
+        "domain": role.domain,
+        "is_active": role.is_active,
+        "is_system": role.is_system,
+    })
 }
 
 fn require(name: &str, value: &str) -> Result<(), String> {

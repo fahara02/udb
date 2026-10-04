@@ -1289,6 +1289,7 @@ a "did you mean …?" suggestion.
 | `udb auth api-key-create …` | Mint an API key (owner must be an active service account + grant). |
 | `udb auth policy put --subject role:R --action '*' --resource <fqn> --effect allow --tenant <UUID>` | Write a `policy_rules` Allow via `PutAuthzPolicy` (needs a running broker). |
 | `udb auth role bind --principal <id> --role R --tenant <UUID>` | Bind a principal to a role. |
+| `udb auth role unbind --principal <id> --role R --tenant <UUID>` / `role create --code R` / `role list` / `role assignments --user <id>` | Revoke a binding (re-put expired), create/list roles, list AssignRole assignments. `R` is the bare role code, never `role:R`. |
 | `udb auth relation put …` | Write a ReBAC tuple. |
 | `udb auth grant …` | Service-account grant lifecycle. |
 | `udb authz seed --tenant <UUID> [--role R] [--entity <fqn>…] [--emit <file>]` | THE straightforward offline seeder: role-gated Allow rows (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas` — validated tokens) directly into `udb_authz.policy_rules` (Postgres-direct, idempotent + atomic). Then bind principals with `udb auth role bind`. |

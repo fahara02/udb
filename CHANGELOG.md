@@ -73,6 +73,18 @@ release line was tagged.
 
 ### Added
 
+- **`udb auth role` can now bind users and service accounts to data-plane roles.**
+  `udb authz seed`, its help, the docs and the skill all told operators to run
+  `udb auth role bind --principal <id> --role <role> --tenant <uuid>`, but no
+  parser accepted those flags, and the only working form (`--user` + a role
+  UUID, via AssignRole) needed a Role row that `authz seed` never creates.
+  `role bind --principal` now calls PutRoleBinding, the binding the enforcer
+  matches seeded policies against, with the bare role code (a `role:` prefix
+  is rejected with the right spelling). New verbs: `role unbind` (re-puts the
+  binding expired, which the enforcer snapshot drops; there is no
+  delete-binding RPC), `role create`, `role list`, `role assignments`. The
+  `--user <id> --role <uuid>` form still works.
+
 - **Go SDK: supported on Go 1.22 through 1.27.** CI now vets, builds and runs the
   full Go SDK test suite on Go 1.27 as well as on the 1.22 `go.mod` floor, and
   vets the native-services Go example, whose `go.sum` was missing the

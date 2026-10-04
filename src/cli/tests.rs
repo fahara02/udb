@@ -607,6 +607,72 @@ fn parse_args_recognizes_offline_platform_admin_bootstrap() {
     ));
 }
 
+fn argv(line: &str) -> Vec<String> {
+    line.split_whitespace().map(ToString::to_string).collect()
+}
+
+/// `udb authz seed` prints exactly this command as its next step; it used to
+/// name flags no parser accepted.
+#[test]
+fn parse_args_role_bind_with_principal_is_a_role_binding() {
+    let (command, _, _, _) = parse_args(&argv(
+        "auth role bind --principal 5f0c-sa --role svc_billing --tenant 0000-t --project p1",
+    ));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::RoleBindingPut {
+            principal,
+            role,
+            tenant,
+            project,
+            expires_at_unix: 0,
+        }) if principal == "5f0c-sa" && role == "svc_billing" && tenant == "0000-t" && project == "p1"
+    ));
+}
+
+#[test]
+fn parse_args_role_bind_with_user_keeps_the_assign_role_form() {
+    let (command, _, _, _) = parse_args(&argv("auth role bind --user u1 --role 7a1e-role-uuid"));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::RoleBind { user_id, role_id, .. })
+            if user_id == "u1" && role_id == "7a1e-role-uuid"
+    ));
+}
+
+#[test]
+fn parse_args_recognizes_role_unbind_create_list_and_assignments() {
+    let (command, _, _, _) = parse_args(&argv(
+        "auth role unbind --principal sa --role app_rw --tenant t",
+    ));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::RoleUnbind { principal, role, tenant, .. })
+            if principal == "sa" && role == "app_rw" && tenant == "t"
+    ));
+    let (command, _, _, _) = parse_args(&argv(
+        "auth role create --code svc_billing --tenant t --name Billing",
+    ));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::RoleCreate { code, name, tenant, .. })
+            if code == "svc_billing" && name == "Billing" && tenant == "t"
+    ));
+    let (command, _, _, _) = parse_args(&argv("auth role list --all"));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::RoleList {
+            include_inactive: true,
+            ..
+        })
+    ));
+    let (command, _, _, _) = parse_args(&argv("auth role assignments --user u1"));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::RoleAssignments { user_id, .. }) if user_id == "u1"
+    ));
+}
+
 #[test]
 fn parse_args_recognizes_auth_policy_lint() {
     let args = vec!["auth".to_string(), "policy".to_string(), "lint".to_string()];

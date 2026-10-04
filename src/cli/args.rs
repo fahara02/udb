@@ -436,11 +436,47 @@ pub(crate) enum AuthCommand {
         binding_id: String,
         reason: String,
     },
+    /// Legacy `role bind --user <id> --role <role-UUID>`: a `user_roles` row via
+    /// AssignRole. Needs a Role row (`auth role create`) for the role UUID.
     RoleBind {
         user_id: String,
         role_id: String,
         domain: String,
         assigned_by: String,
+    },
+    /// `role bind --principal <id> --role <role-code> --tenant <uuid>`: the
+    /// PutRoleBinding grouping tuple the data-plane enforcer reads — the binding
+    /// `authz seed` policies are matched against. Works for users and service
+    /// accounts alike; the role is the bare code (`app_rw`, `svc_billing`).
+    RoleBindingPut {
+        principal: String,
+        role: String,
+        tenant: String,
+        project: String,
+        expires_at_unix: i64,
+    },
+    /// `role unbind`: re-puts the same binding already expired, which the
+    /// enforcer snapshot skips (there is no delete-binding RPC).
+    RoleUnbind {
+        principal: String,
+        role: String,
+        tenant: String,
+        project: String,
+    },
+    RoleCreate {
+        code: String,
+        name: String,
+        description: String,
+        tenant: String,
+        project: String,
+    },
+    RoleList {
+        domain: String,
+        include_inactive: bool,
+    },
+    RoleAssignments {
+        user_id: String,
+        domain: String,
     },
     RelationPut {
         subject: String,
@@ -794,11 +830,45 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
             project: flag_value("--project").unwrap_or_else(|| "default".to_string()),
             platform_admin: has_flag("--platform-admin"),
         },
-        (Some("role"), Some("bind")) => AuthCommand::RoleBind {
-            user_id: flag_value("--user").unwrap_or_default(),
-            role_id: flag_value("--role").unwrap_or_default(),
+        // `--user` selects the legacy AssignRole form (role UUID); everything
+        // else is the binding form `authz seed` tells operators to run.
+        (Some("role"), Some("bind")) if has_flag("--user") && !has_flag("--principal") => {
+            AuthCommand::RoleBind {
+                user_id: flag_value("--user").unwrap_or_default(),
+                role_id: flag_value("--role").unwrap_or_default(),
+                domain: flag_value("--domain").unwrap_or_default(),
+                assigned_by: flag_value("--by").unwrap_or_default(),
+            }
+        }
+        (Some("role"), Some("bind")) => AuthCommand::RoleBindingPut {
+            principal: flag_value("--principal").unwrap_or_default(),
+            role: flag_value("--role").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+            expires_at_unix: flag_value("--expires-at-unix")
+                .and_then(|value| value.trim().parse::<i64>().ok())
+                .unwrap_or(0),
+        },
+        (Some("role"), Some("unbind")) => AuthCommand::RoleUnbind {
+            principal: flag_value("--principal").unwrap_or_default(),
+            role: flag_value("--role").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+        },
+        (Some("role"), Some("create")) => AuthCommand::RoleCreate {
+            code: flag_value("--code").unwrap_or_default(),
+            name: flag_value("--name").unwrap_or_default(),
+            description: flag_value("--description").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+        },
+        (Some("role"), Some("list")) => AuthCommand::RoleList {
             domain: flag_value("--domain").unwrap_or_default(),
-            assigned_by: flag_value("--by").unwrap_or_default(),
+            include_inactive: has_flag("--all"),
+        },
+        (Some("role"), Some("assignments")) => AuthCommand::RoleAssignments {
+            user_id: flag_value("--user").unwrap_or_default(),
+            domain: flag_value("--domain").unwrap_or_default(),
         },
         (Some("relation"), Some("put")) => AuthCommand::RelationPut {
             subject: flag_value("--subject").unwrap_or_default(),

@@ -248,6 +248,32 @@ const COMMANDS: &[CmdHelp] = &[
   Re-creating a REVOKED selector supersedes the old row in place (same id).",
     },
     CmdHelp {
+        name: "auth role",
+        group: "Auth & policy",
+        summary: "Bind users and service accounts to data-plane roles; create and list roles.",
+        usage: "udb auth role <bind|unbind|create|list|assignments> [flags]",
+        details: "\
+  udb auth role bind --principal <id> --role <code> --tenant <uuid> [--project <p>] [--expires-at-unix <n>]
+    PutRoleBinding — the binding the data-plane enforcer matches `udb authz seed`
+    policies against. <id> is the bare user_id (for a service account, its
+    user_id / API-key owner; its service identity also matches). <code> is the
+    bare role code (`app_rw`, `svc_billing`), NOT `role:…`. <uuid> is the
+    canonical tenant UUID; omit --project to bind across all projects. Takes
+    effect within the enforcer snapshot TTL (5s by default).
+  udb auth role unbind --principal <id> --role <code> --tenant <uuid> [--project <p>]
+    Re-puts the same binding already expired, so the enforcer drops it.
+  udb auth role create --code <code> [--name <n>] [--description <d>] [--tenant <uuid>] [--project <p>]
+  udb auth role list [--domain <d>] [--all]
+  udb auth role assignments --user <id> [--domain <d>]
+    Lists AssignRole (`user_roles`) assignments, not `bind --principal` bindings.
+  Legacy: udb auth role bind --user <id> --role <role-UUID> (AssignRole; needs a
+  Role row from `role create`; tenant/project from UDB_TENANT_ID/UDB_PROJECT_ID).\n\
+  All verbs call the native authz API: set UDB_AUTH_TOKEN to an admin bearer
+  (an `auth bootstrap user` organization owner is enough). PutRoleBinding is
+  refused in governed mode — use the policy draft flow there.\n\
+  Example: udb auth role bind --principal 3c1f…-sa --role svc_billing --tenant 00000000-0000-0000-0000-0000000d0001",
+    },
+    CmdHelp {
         name: "auth policy put",
         group: "Auth & policy",
         summary: "Write a control-plane Casbin governance rule (NOT the data-plane ABAC gate).",
