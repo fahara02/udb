@@ -3,6 +3,7 @@ _proto: core/workflow/services/v1/workflow_service.proto_
 
 | done | RPC | op_kind | request msg | valid body | seed refs / notes |
 | --- | --- | --- | --- | --- | --- |
+| [ ] | AckWorkflowStep | MUTATION | AckWorkflowStepRequest | `{ "tenant_id": "<seed:tenant_id>", "workflow_id": "<seed:workflow_id>", "step_index": 0, "outcome": "WORKFLOW_STEP_OUTCOME_SUCCEEDED", "output": "{\"ok\":true}" }` | acknowledges the in-flight step of the seeded workflow; an ack for a step that is not in flight returns FAILED_PRECONDITION. |
 | [ ] | CancelWorkflow | DESTRUCTIVE | CancelWorkflowRequest | `{ "tenant_id": "<seed:tenant_id>", "workflow_id": "<seed:cancel_workflow_id>", "reason": "sdk perf cancel" }` | cancels a disposable seeded workflow. |
 | [ ] | GetWorkflow | READ_ONLY | GetWorkflowRequest | `{ "tenant_id": "<seed:tenant_id>", "workflow_id": "<seed:workflow_id>" }` | reads the seeded workflow instance. |
 | [ ] | ListWorkflows | READ_ONLY | ListWorkflowsRequest | `{ "tenant_id": "<seed:tenant_id>", "status": "RUNNING", "page": 1, "page_size": 20 }` | lists running workflows for the tenant. |

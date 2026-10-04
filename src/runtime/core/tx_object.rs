@@ -107,11 +107,11 @@ fn xa_unsupported_participants_status(unsupported: &[String]) -> tonic::Status {
 // instance implicitly (the previous behaviour) wrote PG-shaped rows into
 // unrelated databases, so participation is now an explicit opt-in mapping.
 
-/// Env var naming the MySQL instances that mirror the relational tables and
-/// therefore join `BeginTx` 2PC as replay participants (comma-separated
-/// instance names, e.g. `primary,reporting`). Unset/empty = no MySQL
-/// participant: 2PC covers PostgreSQL only.
-const MYSQL_XA_MIRROR_INSTANCES_ENV: &str = "UDB_XA_MYSQL_MIRROR_INSTANCES";
+// The MySQL instances that mirror the relational tables, and therefore join
+// `BeginTx` 2PC as replay participants, come from
+// `config::MYSQL_XA_MIRROR_INSTANCES_ENV` (comma-separated instance names, e.g.
+// `primary,reporting`). Unset/empty = no MySQL participant: 2PC covers
+// PostgreSQL only.
 
 /// Parse the explicit mirror list: trimmed, de-duplicated, sorted (stable
 /// participant order for the XA ledger).
@@ -131,7 +131,7 @@ fn parse_mysql_xa_mirror_instances(raw: Option<&str>) -> Vec<String> {
 
 #[cfg_attr(not(feature = "mysql"), allow(dead_code))]
 fn mysql_xa_mirror_instances() -> Vec<String> {
-    parse_mysql_xa_mirror_instances(std::env::var(MYSQL_XA_MIRROR_INSTANCES_ENV).ok().as_deref())
+    parse_mysql_xa_mirror_instances(crate::runtime::config::mysql_xa_mirror_instances_env())
 }
 
 /// Resolve the explicit mirror list against the configured MySQL instances.

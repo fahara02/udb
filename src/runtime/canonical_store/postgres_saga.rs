@@ -509,9 +509,7 @@ mod tests {
     }
 
     fn live_pg_dsn() -> Option<String> {
-        std::env::var("UDB_LIVE_SAGA_PG_DSN")
-            .or_else(|_| std::env::var("UDB_INTEGRATION_PG_DSN"))
-            .ok()
+        crate::runtime::config::live_saga_pg_dsn()
     }
 
     async fn live_store() -> Option<(sqlx::PgPool, PostgresCanonicalStore)> {

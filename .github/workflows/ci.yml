@@ -377,6 +377,10 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           target/debug/udb sdk generate --lang all --out sdk
+          # The bench manifest takes its RPC metadata from the generated Go
+          # client, so it must be rebuilt after `sdk generate` and before the
+          # benchmark docs validate against it — a new RPC otherwise fails here.
+          node scripts/gen-bench-bodies-json.mjs
           node scripts/gen-sdk-benchmark-docs.mjs
           # Mark new generated files intent-to-add so `git diff` SEES them. Without
           # this, a template that emits a file nobody has committed yet leaves an
@@ -461,6 +465,10 @@ jobs:
         run: |
           test -x target/debug/udb
           target/debug/udb sdk generate --lang all --out sdk
+          # The bench manifest takes its RPC metadata from the generated Go
+          # client, so it must be rebuilt after `sdk generate` and before the
+          # benchmark docs validate against it — a new RPC otherwise fails here.
+          node scripts/gen-bench-bodies-json.mjs
           node scripts/gen-sdk-benchmark-docs.mjs
           python3 scripts/generate-codebase-map.py
           python3 udb-skill/sync_references.py

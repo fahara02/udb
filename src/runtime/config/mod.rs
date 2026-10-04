@@ -2220,3 +2220,47 @@ mod instances;
 pub use backends::*;
 pub use deploy::*;
 pub use instances::*;
+
+// ── Node-level startup knobs read outside `UdbConfig` ─────────────────────────
+//
+// Read ONCE and cached: these are startup configuration, and the runtime's
+// request paths (saga bookkeeping, BeginTx participant selection) must not read
+// the process environment per call.
+
+/// Env var naming the MySQL instances BeginTx 2PC mirrors into
+/// (comma-separated). Unlisted instances never join the transaction.
+pub(crate) const MYSQL_XA_MIRROR_INSTANCES_ENV: &str = "UDB_XA_MYSQL_MIRROR_INSTANCES";
+
+/// Raw `UDB_XA_MYSQL_MIRROR_INSTANCES`, read once.
+pub(crate) fn mysql_xa_mirror_instances_env() -> Option<&'static str> {
+    static VALUE: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    VALUE
+        .get_or_init(|| std::env::var(MYSQL_XA_MIRROR_INSTANCES_ENV).ok())
+        .as_deref()
+}
+
+/// `(UDB_NODE_ID, host name)` for this broker node, read once. The host name
+/// is `HOSTNAME`, falling back to `COMPUTERNAME` on Windows.
+pub(crate) fn node_identity_env() -> (Option<String>, Option<String>) {
+    static VALUE: std::sync::OnceLock<(Option<String>, Option<String>)> =
+        std::sync::OnceLock::new();
+    VALUE
+        .get_or_init(|| {
+            (
+                std::env::var("UDB_NODE_ID").ok(),
+                std::env::var("HOSTNAME")
+                    .ok()
+                    .or_else(|| std::env::var("COMPUTERNAME").ok()),
+            )
+        })
+        .clone()
+}
+
+/// DSN for the env-gated live saga-store tests (`UDB_LIVE_SAGA_PG_DSN`, else
+/// `UDB_INTEGRATION_PG_DSN`).
+#[cfg(test)]
+pub(crate) fn live_saga_pg_dsn() -> Option<String> {
+    std::env::var("UDB_LIVE_SAGA_PG_DSN")
+        .or_else(|_| std::env::var("UDB_INTEGRATION_PG_DSN"))
+        .ok()
+}

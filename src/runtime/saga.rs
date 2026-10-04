@@ -107,12 +107,8 @@ pub(crate) fn startup_mark_indeterminate_sql(relation: &str) -> String {
 /// the host name. Deliberately NOT the process id — the startup sweep must
 /// recognise sagas opened by the previous (crashed) incarnation of this node.
 pub(crate) fn local_saga_owner() -> String {
-    saga_owner_from(
-        std::env::var("UDB_NODE_ID").ok(),
-        std::env::var("HOSTNAME")
-            .ok()
-            .or_else(|| std::env::var("COMPUTERNAME").ok()),
-    )
+    let (node_id, host) = crate::runtime::config::node_identity_env();
+    saga_owner_from(node_id, host)
 }
 
 fn saga_owner_from(node_id: Option<String>, host: Option<String>) -> String {
