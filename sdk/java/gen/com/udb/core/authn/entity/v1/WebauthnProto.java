@@ -72,7 +72,7 @@ public final class WebauthnProto {
       "updatedAt\022]\n\014last_used_at\030\t \001(\0132\032.google" +
       ".protobuf.TimestampB\037\202\267\030\033\n\014last_used_at\022" +
       "\013TIMESTAMPTZR\nlastUsedAt:\357\002\372\266\030\325\001\n\024webaut" +
-      "hn_credentials\022\tudb_authn\030\004 \001*0Server-si" +
+      "hn_credentials\022\tudb_authn\030\010 \001*0Server-si" +
       "de WebAuthn passkeys bound to UDB users@" +
       "\001b^\n\020tenant_isolation\032H(tenant_id::text " +
       "= current_setting(\'app.current_tenant_id" +
@@ -104,7 +104,7 @@ public final class WebauthnProto {
       "ogle.protobuf.TimestampB6\202\267\0302\n\ncreated_a" +
       "t\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R" +
       "\tcreatedAt:\347\001\372\266\030\342\001\n\023webauthn_challenges\022" +
-      "\tudb_authn\030\005 \001*>Server-side WebAuthn cer" +
+      "\tudb_authn\030\t \001*>Server-side WebAuthn cer" +
       "emony state; never returned to clients@\001" +
       "b^\n\020tenant_isolation\032H(tenant_id::text =" +
       " current_setting(\'app.current_tenant_id\'" +

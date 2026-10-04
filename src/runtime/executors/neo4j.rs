@@ -98,6 +98,17 @@ fn unsupported_neo4j_operation_status(operation: &str) -> tonic::Status {
     )
 }
 
+/// The optional `scope` (`{_tenant_id, _project_id}`) of a mutation request.
+fn request_scope(spec: &Json) -> Result<GraphScope, tonic::Status> {
+    GraphScope::from_request(spec.get("scope")).map_err(|message| {
+        neo4j_invalid_field_status(
+            "scope",
+            "must be an object holding only _tenant_id / _project_id strings",
+            message,
+        )
+    })
+}
+
 fn neo4j_identifier_status(field: impl Into<String>, message: impl Into<String>) -> tonic::Status {
     neo4j_invalid_field_status(field, "must be a valid Neo4j identifier", message)
 }
@@ -239,13 +250,14 @@ impl crate::runtime::backend_context::BackendContextEnforcer for Neo4jExecutor {
         &self,
         ctx: &crate::runtime::backend_context::AppliedContext,
     ) -> crate::runtime::backend_context::ContextEffect {
-        // C7/C8: the Neo4j IR compiler now ANDs `n._tenant_id = $ctx_tenant_id`
-        // / `n._project_id = $ctx_project_id` into every MATCH WHERE
-        // clause AND stamps them into the MERGE key of every write.
-        // Tenant boundary is protocol-enforced.
+        // C7/C8: the Neo4j IR compiler ANDs `n._tenant_id = $ctx_tenant_id` /
+        // `n._project_id = $ctx_project_id` into every MATCH WHERE clause and
+        // stamps them into the MERGE key of every write; projection writes key
+        // nodes and edges on the same two properties through a request `scope`.
+        // Raw Cypher dispatch carries no scope — the raw-dispatch gate governs it.
         crate::runtime::backend_context::enforce_with_mechanism(
             ctx,
-            "_tenant_id / _project_id stamped in MERGE key; ANDed into MATCH WHERE",
+            "_tenant_id / _project_id in MERGE key and MATCH WHERE (IR + projection scope); raw Cypher gated",
         )
     }
 }
@@ -511,6 +523,217 @@ impl Neo4jExecutor {
         .await?;
         Ok(())
     }
+
+    /// Tenant/project-scoped node upsert: the MERGE key is `{id}` plus the
+    /// scope fields (the same key the IR compiler writes), so two tenants'
+    /// rows sharing an id never collapse into one node. A node written before
+    /// scoping existed (no `_tenant_id`/`_project_id`) is adopted into the scope
+    /// first, in the same transaction; otherwise the MERGE would create a twin
+    /// that trips the unique-`id` constraint and the write could never land.
+    pub async fn upsert_scoped_node(
+        &self,
+        label: &str,
+        id: &str,
+        properties: Json,
+        scope: &GraphScope,
+    ) -> Result<(), String> {
+        validate_neo4j_identifier(label)?;
+        if scope.is_empty() {
+            return self.create_node(label, id, properties).await;
+        }
+        let (adopt, merge) = scoped_node_upsert_cypher(label, scope);
+        let params = scope.params(json!({ "id": id, "props": properties }));
+        self.cypher(&[(&adopt, params.clone()), (&merge, params)])
+            .await?;
+        Ok(())
+    }
+
+    /// Tenant/project-scoped node delete: only the node inside the scope is
+    /// removed, never another tenant's node that shares the id.
+    pub async fn delete_scoped_node(
+        &self,
+        label: &str,
+        id: &str,
+        scope: &GraphScope,
+    ) -> Result<(), String> {
+        validate_neo4j_identifier(label)?;
+        let cypher = format!(
+            "MATCH (n:{label} {{id: $id{key}}}) DETACH DELETE n",
+            key = scope.key_clause()
+        );
+        self.run_single(&cypher, scope.params(json!({ "id": id })))
+            .await?;
+        Ok(())
+    }
+
+    /// Upsert the edge identified by `id`, from the node whose `id` is
+    /// `from_id` to the node whose `id` is `to_id`. Both endpoints must lie in
+    /// the edge's own scope, so an edge cannot join two tenants' nodes. When the
+    /// row's endpoints changed, the edge that still connects the old endpoints is
+    /// removed in the same statement. An endpoint that does not exist (yet) is an
+    /// error, not a silent no-op: the projection task retries until the node
+    /// projection that creates it has landed.
+    pub async fn upsert_scoped_edge(&self, edge: &GraphEdge, scope: &GraphScope) -> Result<(), String> {
+        let cypher = scoped_edge_upsert_cypher(edge, scope)?;
+        let rows = self
+            .run_single(
+                &cypher,
+                scope.params(json!({
+                    "id": edge.id,
+                    "from_id": edge.from_id,
+                    "to_id": edge.to_id,
+                    "props": edge.properties,
+                })),
+            )
+            .await?;
+        if rows.is_empty() {
+            return Err(format!(
+                "graph edge '{}' ({}) not written: endpoint node '{}' or '{}' does not exist in its tenant/project scope",
+                edge.id, edge.rel_type, edge.from_id, edge.to_id
+            ));
+        }
+        Ok(())
+    }
+
+    /// Delete the scoped edge identified by `id` (idempotent).
+    pub async fn delete_scoped_edge(
+        &self,
+        rel_type: &str,
+        id: &str,
+        scope: &GraphScope,
+    ) -> Result<(), String> {
+        validate_neo4j_identifier(rel_type)?;
+        let cypher = format!(
+            "MATCH ()-[r:{rel_type} {{id: $id{key}}}]->() DELETE r",
+            key = scope.key_clause()
+        );
+        self.run_single(&cypher, scope.params(json!({ "id": id })))
+            .await?;
+        Ok(())
+    }
+}
+
+/// The `{_tenant_id, _project_id}` system fields a graph record is scoped by.
+/// Only these two names are accepted, so request JSON never reaches the Cypher
+/// text; their values travel as parameters.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GraphScope {
+    fields: Vec<(&'static str, String)>,
+}
+
+const GRAPH_SCOPE_FIELDS: [&str; 2] = ["_tenant_id", "_project_id"];
+
+impl GraphScope {
+    /// Parse the optional `scope` object of a mutation request.
+    pub fn from_request(scope: Option<&Json>) -> Result<Self, String> {
+        let Some(scope) = scope.filter(|s| !s.is_null()) else {
+            return Ok(Self::default());
+        };
+        let map = scope
+            .as_object()
+            .ok_or_else(|| "graph scope must be an object".to_string())?;
+        if let Some(unknown) = map
+            .keys()
+            .find(|key| !GRAPH_SCOPE_FIELDS.contains(&key.as_str()))
+        {
+            return Err(format!(
+                "graph scope field '{unknown}' is not one of _tenant_id/_project_id"
+            ));
+        }
+        let mut fields = Vec::new();
+        for field in GRAPH_SCOPE_FIELDS {
+            match map.get(field) {
+                None | Some(Json::Null) => {}
+                Some(Json::String(value)) if !value.trim().is_empty() => {
+                    fields.push((field, value.clone()));
+                }
+                Some(_) => {
+                    return Err(format!("graph scope field '{field}' must be a non-empty string"));
+                }
+            }
+        }
+        Ok(Self { fields })
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
+    }
+
+    /// `, _tenant_id: $scope_tenant_id, ...` appended inside a `{id: $id ...}`
+    /// property-map key.
+    fn key_clause(&self) -> String {
+        self.fields
+            .iter()
+            .map(|(field, _)| format!(", {field}: $scope{field}"))
+            .collect()
+    }
+
+    /// `base` plus one `scope<field>` parameter per field and the whole scope as
+    /// `$scope` (for `SET n += $scope`).
+    fn params(&self, mut base: Json) -> Json {
+        if let Json::Object(map) = &mut base {
+            let mut scope = serde_json::Map::new();
+            for (field, value) in &self.fields {
+                map.insert(format!("scope{field}"), Json::String(value.clone()));
+                scope.insert((*field).to_string(), Json::String(value.clone()));
+            }
+            map.insert("scope".to_string(), Json::Object(scope));
+        }
+        base
+    }
+}
+
+/// One projected relationship.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GraphEdge {
+    pub rel_type: String,
+    pub id: String,
+    pub from_id: String,
+    pub to_id: String,
+    pub from_label: Option<String>,
+    pub to_label: Option<String>,
+    pub properties: Json,
+}
+
+/// `(adopt legacy node, scoped MERGE)` statements for [`Neo4jExecutor::upsert_scoped_node`].
+fn scoped_node_upsert_cypher(label: &str, scope: &GraphScope) -> (String, String) {
+    let unscoped = GRAPH_SCOPE_FIELDS
+        .iter()
+        .map(|field| format!("n.{field} IS NULL"))
+        .collect::<Vec<_>>()
+        .join(" AND ");
+    (
+        format!("MATCH (n:{label} {{id: $id}}) WHERE {unscoped} SET n += $scope RETURN count(n) AS adopted"),
+        format!(
+            "MERGE (n:{label} {{id: $id{key}}}) SET n += $props RETURN n",
+            key = scope.key_clause()
+        ),
+    )
+}
+
+fn scoped_edge_upsert_cypher(edge: &GraphEdge, scope: &GraphScope) -> Result<String, String> {
+    validate_neo4j_identifier(&edge.rel_type)?;
+    let label = |label: &Option<String>| -> Result<String, String> {
+        match label.as_deref().map(str::trim).filter(|l| !l.is_empty()) {
+            Some(label) => {
+                validate_neo4j_identifier(label)?;
+                Ok(format!(":{label}"))
+            }
+            None => Ok(String::new()),
+        }
+    };
+    let key = scope.key_clause();
+    Ok(format!(
+        "MATCH (a{from} {{id: $from_id{key}}}), (b{to} {{id: $to_id{key}}}) \
+         OPTIONAL MATCH ()-[old:{rel} {{id: $id{key}}}]->() \
+         WHERE startNode(old) <> a OR endNode(old) <> b \
+         DELETE old \
+         WITH DISTINCT a, b \
+         MERGE (a)-[r:{rel} {{id: $id{key}}}]->(b) SET r += $props RETURN r.id AS id",
+        from = label(&edge.from_label)?,
+        to = label(&edge.to_label)?,
+        rel = edge.rel_type,
+    ))
 }
 
 // ── BackendExecutor (runtime trait) ─────────────────────────────────────────────
@@ -551,7 +774,10 @@ impl QueryExecutor for Neo4jExecutor {
 }
 
 impl MutationExecutor for Neo4jExecutor {
-    /// `{"operation":"cypher|create_node|upsert_node|update_node|delete_node|create_relationship|upsert_relationship", ...}`.
+    /// `{"operation":"cypher|create_node|upsert_node|update_node|delete_node|create_relationship|upsert_relationship|upsert_edge|delete_edge", ...}`.
+    /// `create_node`/`upsert_node`/`delete_node`/`upsert_edge`/`delete_edge`
+    /// accept an optional `scope` (`{_tenant_id, _project_id}`) that keys the
+    /// record, so a scoped write or delete never reaches another tenant's node.
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
         let spec: Json =
             serde_json::from_str(request_json).map_err(invalid_neo4j_request_json_status)?;
@@ -583,7 +809,8 @@ impl MutationExecutor for Neo4jExecutor {
                     .or_else(|| spec.get("props"))
                     .cloned()
                     .unwrap_or_else(|| json!({}));
-                self.create_node(&label, &id, properties)
+                let scope = request_scope(&spec)?;
+                self.upsert_scoped_node(&label, &id, properties, &scope)
                     .await
                     .map_err(|err| neo4j_internal_status("create_node", err))?;
                 Ok(r#"{"affected_rows":1}"#.to_string())
@@ -600,9 +827,40 @@ impl MutationExecutor for Neo4jExecutor {
             "delete_node" => {
                 let label = req_str("label")?;
                 let id = req_str("id")?;
-                self.delete_node(&label, &id)
+                let scope = request_scope(&spec)?;
+                self.delete_scoped_node(&label, &id, &scope)
                     .await
                     .map_err(|err| neo4j_internal_status("delete_node", err))?;
+                Ok(r#"{"affected_rows":1}"#.to_string())
+            }
+            "upsert_edge" => {
+                let opt_str = |key: &str| {
+                    spec.get(key)
+                        .and_then(Json::as_str)
+                        .map(ToString::to_string)
+                };
+                let edge = GraphEdge {
+                    rel_type: req_str("rel_type")?,
+                    id: req_str("id")?,
+                    from_id: req_str("from_id")?,
+                    to_id: req_str("to_id")?,
+                    from_label: opt_str("from_label"),
+                    to_label: opt_str("to_label"),
+                    properties: spec.get("properties").cloned().unwrap_or_else(|| json!({})),
+                };
+                let scope = request_scope(&spec)?;
+                self.upsert_scoped_edge(&edge, &scope)
+                    .await
+                    .map_err(|err| neo4j_internal_status("upsert_edge", err))?;
+                Ok(r#"{"affected_rows":1}"#.to_string())
+            }
+            "delete_edge" => {
+                let rel_type = req_str("rel_type")?;
+                let id = req_str("id")?;
+                let scope = request_scope(&spec)?;
+                self.delete_scoped_edge(&rel_type, &id, &scope)
+                    .await
+                    .map_err(|err| neo4j_internal_status("delete_edge", err))?;
                 Ok(r#"{"affected_rows":1}"#.to_string())
             }
             "create_relationship" | "upsert_relationship" => {
@@ -773,6 +1031,68 @@ mod tests {
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
         assert!(detail.field_violations.is_empty());
+    }
+
+    fn tenant_scope() -> GraphScope {
+        GraphScope::from_request(Some(&json!({"_tenant_id": "t1", "_project_id": "p1"})))
+            .expect("valid scope")
+    }
+
+    #[test]
+    fn graph_scope_accepts_only_the_two_system_fields() {
+        assert!(GraphScope::from_request(None).unwrap().is_empty());
+        assert!(
+            GraphScope::from_request(Some(&json!({"_tenant_id": "t1"})))
+                .unwrap()
+                .key_clause()
+                .contains("_tenant_id: $scope_tenant_id")
+        );
+        // A caller-chosen key would otherwise be spliced into the Cypher text.
+        let err = GraphScope::from_request(Some(&json!({"id}) DETACH DELETE n //": "x"})))
+            .unwrap_err();
+        assert!(err.contains("not one of _tenant_id/_project_id"), "{err}");
+        assert!(GraphScope::from_request(Some(&json!({"_tenant_id": 7}))).is_err());
+    }
+
+    #[test]
+    fn scoped_node_merge_keys_on_tenant_and_project() {
+        let (adopt, merge) = scoped_node_upsert_cypher("Patient", &tenant_scope());
+        assert_eq!(
+            merge,
+            "MERGE (n:Patient {id: $id, _tenant_id: $scope_tenant_id, _project_id: $scope_project_id}) SET n += $props RETURN n"
+        );
+        // Only an UNSCOPED legacy node is adopted — never another tenant's node.
+        assert!(adopt.contains("n._tenant_id IS NULL AND n._project_id IS NULL"));
+        let params = tenant_scope().params(json!({"id": "a"}));
+        assert_eq!(params["scope_tenant_id"], "t1");
+        assert_eq!(params["scope"], json!({"_tenant_id": "t1", "_project_id": "p1"}));
+    }
+
+    #[test]
+    fn scoped_edge_matches_both_endpoints_inside_the_scope() {
+        let edge = GraphEdge {
+            rel_type: "TREATS".into(),
+            id: "e1".into(),
+            from_id: "doc-1".into(),
+            to_id: "pat-1".into(),
+            from_label: None,
+            to_label: Some("Patient".into()),
+            properties: json!({}),
+        };
+        let cypher = scoped_edge_upsert_cypher(&edge, &tenant_scope()).unwrap();
+        assert!(cypher.starts_with(
+            "MATCH (a {id: $from_id, _tenant_id: $scope_tenant_id, _project_id: $scope_project_id}), \
+             (b:Patient {id: $to_id, _tenant_id: $scope_tenant_id, _project_id: $scope_project_id})"
+        ));
+        assert!(cypher.contains("WHERE startNode(old) <> a OR endNode(old) <> b DELETE old"));
+        assert!(cypher.contains(
+            "MERGE (a)-[r:TREATS {id: $id, _tenant_id: $scope_tenant_id, _project_id: $scope_project_id}]->(b)"
+        ));
+        let bad = GraphEdge {
+            rel_type: "TREATS]->() DETACH DELETE a //".into(),
+            ..edge
+        };
+        assert!(scoped_edge_upsert_cypher(&bad, &tenant_scope()).is_err());
     }
 
     #[test]

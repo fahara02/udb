@@ -18,7 +18,7 @@ message Notification {
   option (udb.core.common.v1.pg_table) = {
     table_name: "notifications"
     schema_name: "udb_notification"
-    migration_order: 1
+    migration_order: 5
     is_table: true
     comment: "Queued, sent, delivered, and failed notification records"
     soft_delete: true

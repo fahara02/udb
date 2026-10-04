@@ -51,6 +51,11 @@ pub fn generate_neo4j_artifacts(
         let id_constraint =
             safe_identifier(&format!("{label}_{id_field}_unique"), "node_id_unique");
         let tenant_index = safe_identifier(&format!("{label}_{tenant_field}"), "node_tenant");
+        // Projected and IR-written nodes are keyed (and every scoped read is
+        // filtered) on the `_tenant_id` / `_project_id` system properties,
+        // whatever the source's own tenant column is called; index them so a
+        // scoped lookup doesn't scan the whole label.
+        let scope_index = safe_identifier(&format!("{label}_udb_scope"), "node_scope");
 
         let cypher = format!(
             "// UDB:migration_kind=bootstrap\n\
@@ -65,7 +70,10 @@ pub fn generate_neo4j_artifacts(
              {indent}FOR (n:{label}) REQUIRE n.{id_field} IS UNIQUE;\n\
              \n\
              CREATE INDEX {tenant_index} IF NOT EXISTS\n\
-             {indent}FOR (n:{label}) ON (n.{tenant_field});\n",
+             {indent}FOR (n:{label}) ON (n.{tenant_field});\n\
+             \n\
+             CREATE INDEX {scope_index} IF NOT EXISTS\n\
+             {indent}FOR (n:{label}) ON (n._tenant_id, n._project_id);\n",
             database_header = safe_comment_value(&database),
             label_header = safe_comment_value(&label),
             indent = "  "

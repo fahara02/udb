@@ -102,7 +102,7 @@ public final class NotificationProto {
       " \001(\tB\026\202\267\030\022\n\ndeleted_by\022\004UUIDR\tdeletedBy\032" +
       "?\n\021TemplateDataEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024" +
       "\n\005value\030\002 \001(\tR\005value:\0028\001:\200\004\372\266\030\327\002\n\rnotifi" +
-      "cations\022\020udb_notification\030\001 \001*8Queued, s" +
+      "cations\022\020udb_notification\030\005 \001*8Queued, s" +
       "ent, delivered, and failed notification " +
       "records0\0018\001@\001b^\n\020tenant_isolation\032H(tena" +
       "nt_id::text = current_setting(\'app.curre" +

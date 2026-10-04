@@ -5,6 +5,72 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [Unreleased]
+
+### Fixed
+
+- **Projected vector points were invisible to every tenant-scoped search.**
+  `VectorSearch` ANDs `_tenant_id` and `_project_id` into every filter, but the
+  projection worker wrote the source row as the point payload unchanged — no
+  `_tenant_id`, no `_project_id` — so a point projected from a canonical table
+  could never match. The worker now stamps both: the tenant from the row's own
+  tenant column (the planner already refuses an upsert whose tenant column
+  differs from the caller's verified tenant, and replay reads the same column
+  back, so the live and replayed stamps agree), the project from the task.
+
+  The write path was also filing every projection task under the caller's
+  TENANT id in the `project_id` slot. The worker validates and routes a task by
+  that value, so tasks failed catalog validation unless the tenant id happened
+  to equal the project key. Tasks now carry the writer's project (empty resolves
+  to the default project, as catalog lookup does).
+
+- **Graph edges were never projected.** `GraphStoreOptions.edge_source_field` /
+  `edge_target_field` were parsed into the manifest and then read by nothing:
+  an edge store's rows became lone nodes. A graph store naming both fields now
+  projects one relationship per row (the store label is the relationship type),
+  through new Neo4j `upsert_edge` / `delete_edge` operations. Both endpoints must
+  exist inside the edge's own tenant/project, so an edge cannot join two
+  tenants' nodes; a missing endpoint fails the task so it retries once the node
+  projection lands, instead of the old relationship write's silent
+  `affected_rows: 1`. When a row's endpoints change, the edge to the old
+  endpoints is removed in the same statement.
+
+- **The graph store's tenant field was not enforced.** `tenant_field` only
+  reached the bootstrap index. Projected nodes were MERGEd and deleted on `{id}`
+  alone, so two tenants' rows sharing an id collapsed into one node, and a
+  projected delete could remove another tenant's node. Nodes are now keyed on
+  `{id, _tenant_id, _project_id}` (the key the IR compiler already wrote) with the
+  tenant read from the declared `tenant_field`, falling back to the table's
+  tenant column. A node written before this release, with neither property, is
+  adopted into its scope on its next write, in the same transaction, rather than
+  duplicated against the unique-`id` constraint. The bootstrap also indexes
+  `(_tenant_id, _project_id)`.
+
+- **`udb lint` accepted backends UDB cannot run.** The proto enums name more
+  backends than the runtime has (MILVUS, PGVECTOR, OPENSEARCH, MEMGRAPH,
+  ARANGODB, DYNAMODB, COSMOSDB, TIMESCALEDB, INFLUXDB, BIGTABLE, …).
+  `from_store_kind` fell back to the store kind's default for an unrecognised
+  name, so a Milvus store linted as Qdrant (and was provisioned as one), and the
+  only rejected state was unreachable for any known backend. Lint now resolves
+  the name on its own: unknown → error, compiled out of this binary → warning;
+  only an empty or `UNSPECIFIED` backend selects the default. A second rule
+  rejects projections the projection worker cannot write (weaviate, pinecone,
+  elasticsearch, …), which used to dead-letter every write at runtime.
+  `STORAGE_BACKEND_AZURE_BLOB` (`azure_blob`) was also missing from the
+  resolver and silently routed to MinIO; it now resolves to Azure Blob.
+
+- **udb's own native tables shared migration orders**, which put three warnings
+  in every application's `udb lint` and `serve` log: `api_keys` /
+  `webauthn_credentials` (4), `api_key_usages` / `webauthn_challenges` (5), and
+  `notification_templates` / `notifications` (1). `webauthn_credentials` and
+  `webauthn_challenges` move to 8 and 9, `notifications` to 5; no foreign-key
+  order changes. A test now fails if the embedded native catalog reintroduces a
+  shared order.
+
+- **Three webhook errors printed a literal `{err}`.** Create, update and delete
+  endpoint failures at transaction begin used `{{err}}`, an escaped brace, so
+  the cause was dropped from the message.
+
 ## [0.5.22] - 2026-08-26
 
 A single-purpose release: the Rust client shipped in 0.5.21 could not be used by

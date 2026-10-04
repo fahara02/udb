@@ -729,6 +729,23 @@ mod tests {
     }
 
     #[test]
+    fn embedded_native_manifest_has_no_shared_migration_orders() {
+        // The native schemas merge into every application's catalog, so a
+        // shared order here surfaces as a warning in every app's `udb lint` and
+        // `serve` log — noise the app owner cannot fix. Two tables sharing an
+        // order are applied in table-name order, not the declared one.
+        let shared: Vec<&String> = native_manifest()
+            .warnings
+            .iter()
+            .filter(|warning| warning.contains("sharing migration_order"))
+            .collect();
+        assert!(
+            shared.is_empty(),
+            "embedded native catalog declares shared migration orders:\n{shared:#?}"
+        );
+    }
+
+    #[test]
     fn native_service_catalog_ddl_is_generated_from_embedded_proto() {
         let ddl = native_service_catalog_ddl();
         let joined = ddl.join("\n");

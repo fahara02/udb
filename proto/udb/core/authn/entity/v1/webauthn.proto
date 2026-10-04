@@ -16,7 +16,7 @@ message WebAuthnCredential {
   option (udb.core.common.v1.pg_table) = {
     table_name: "webauthn_credentials"
     schema_name: "udb_authn"
-    migration_order: 4
+    migration_order: 8
     is_table: true
     comment: "Server-side WebAuthn passkeys bound to UDB users"
     enable_rls: true
@@ -57,7 +57,7 @@ message WebAuthnChallenge {
   option (udb.core.common.v1.pg_table) = {
     table_name: "webauthn_challenges"
     schema_name: "udb_authn"
-    migration_order: 5
+    migration_order: 9
     is_table: true
     comment: "Server-side WebAuthn ceremony state; never returned to clients"
     enable_rls: true

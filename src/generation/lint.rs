@@ -215,40 +215,55 @@ pub fn lint_catalog(manifest: &CatalogManifest) -> LintReport {
         }
     }
 
-    // ── GAP 37: Detect stores using NotImplemented backends ──────────────────
-    // Any manifest that declares an Elasticsearch or Cassandra store will be
-    // flagged as an Error so operators cannot accidentally deploy with an
-    // unsupported backend silently failing at runtime.
+    // ── GAP 37: Detect stores using backends with no runtime support ─────────
+    // The proto store enums name more backends than UDB runs (MILVUS, PGVECTOR,
+    // MEMGRAPH, ARANGODB, DYNAMODB, TIMESCALEDB, ...). The backend NAME is
+    // resolved on its own here: `BackendKind::from_store_kind` falls back to
+    // the store kind's default for an unrecognised name, which would quietly
+    // turn a Milvus store into a Qdrant one rather than reject it. Only an
+    // empty or UNSPECIFIED backend selects that default on purpose.
     //
-    // U2 step 6: the "is this kind known but unimplemented" check used to live
-    // in `planning::BackendRegistry`; it now reads from `backend::support_state_for_kind`,
-    // the single source of truth for which kinds have runtime executors.
+    // `backend::support_state_for_token` is the single source of truth for
+    // which backends have runtime executors in this binary.
     {
-        use crate::backend::{BackendKind, BackendSupportState, support_state_for_kind};
+        use crate::backend::{BackendSupportState, support_state_for_token};
         for store in &manifest.stores {
-            if let Some(kind) = BackendKind::from_store_kind(&store.store_kind, &store.backend) {
-                let not_implemented = matches!(
-                    support_state_for_kind(&kind),
-                    BackendSupportState::KnownUnsupported
-                );
-                if not_implemented {
-                    items.push(LintItem {
-                        severity: LintSeverity::Error,
-                        kind: "backend_not_implemented".to_string(),
-                        schema: store.owner_schema.clone(),
-                        description: format!(
-                            "Store '{}' uses backend '{}' (kind: {:?}) which is marked \
-                             NotImplemented — it will silently fail or deny all requests \
-                             at runtime.",
-                            store.logical_name, store.backend, kind
-                        ),
-                        suggestion: "Remove this store or switch to a supported backend \
-                             (postgres, qdrant, clickhouse, neo4j, mongodb, minio)."
-                            .to_string(),
-                        ..LintItem::default()
-                    });
-                }
+            let backend = store.backend.trim();
+            if backend.is_empty() || backend.eq_ignore_ascii_case("unspecified") {
+                continue;
             }
+            let state = support_state_for_token(backend);
+            let severity = match state {
+                BackendSupportState::RuntimeSupported => continue,
+                // The binary running lint may be a slimmer build than the one
+                // that serves (the portable release asset): warn, don't fail.
+                BackendSupportState::DisabledByFeature => LintSeverity::Warning,
+                BackendSupportState::Unknown | BackendSupportState::KnownUnsupported => {
+                    LintSeverity::Error
+                }
+            };
+            items.push(LintItem {
+                severity,
+                kind: "backend_not_implemented".to_string(),
+                schema: store.owner_schema.clone(),
+                table: store.owner_table.clone(),
+                description: format!(
+                    "Store '{}' ({} store) uses backend '{}': {}.",
+                    store.logical_name,
+                    store.store_kind,
+                    backend,
+                    state.diagnostic(backend)
+                ),
+                suggestion: format!(
+                    "Switch this store to a runtime-supported backend: {}.",
+                    crate::backend::all_plugins()
+                        .iter()
+                        .map(|plugin| plugin.kind().as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                ..LintItem::default()
+            });
         }
     }
 
@@ -804,6 +819,32 @@ fn lint_projection_supported(
         });
     }
 
+    if supported_value(&projection.projection_kind, SUPPORTED_PROJECTION_KINDS)
+        && !crate::runtime::projection::projection_target_supported(projection)
+    {
+        items.push(LintItem {
+            severity: LintSeverity::Error,
+            kind: "projection_backend_not_materialized".to_string(),
+            schema: schema.clone(),
+            table: table_name.clone(),
+            description: format!(
+                "Projection '{}' for message '{}' targets backend '{}' ({} projection), \
+                 which the projection worker cannot write: every write would \
+                 dead-letter with \"projection backend not supported\".",
+                projection.resource_name,
+                projection.message_fqn(),
+                projection.backend,
+                projection.projection_kind
+            ),
+            suggestion: format!(
+                "Project onto one of: {}.",
+                crate::runtime::projection::supported_projection_backends()
+            ),
+            source_file: source_file.clone(),
+            ..LintItem::default()
+        });
+    }
+
     if !supported_value(&projection.read_policy, SUPPORTED_READ_POLICIES) {
         items.push(LintItem {
             severity: LintSeverity::Error,
@@ -1136,6 +1177,100 @@ mod tests {
 
     fn has_kind(report: &LintReport, kind: &str) -> bool {
         report.items.iter().any(|item| item.kind == kind)
+    }
+
+    fn store(store_kind: &str, backend: &str) -> crate::generation::manifest::ManifestStore {
+        crate::generation::manifest::ManifestStore {
+            store_kind: store_kind.to_string(),
+            backend: backend.to_string(),
+            logical_name: "Patient".to_string(),
+            owner_schema: "public".to_string(),
+            owner_table: "patients".to_string(),
+            ..Default::default()
+        }
+    }
+
+    fn backend_findings(report: &LintReport) -> Vec<&LintItem> {
+        report
+            .items
+            .iter()
+            .filter(|item| item.kind == "backend_not_implemented")
+            .collect()
+    }
+
+    /// The bug: MILVUS / PGVECTOR / MEMGRAPH / ARANGODB passed lint because an
+    /// unrecognised name fell back to the store kind's default backend, and the
+    /// only rejected state (KnownUnsupported) is unreachable for known kinds.
+    #[test]
+    fn lint_rejects_store_backends_with_no_runtime_support() {
+        for (kind, backend) in [
+            ("vector", "milvus"),
+            ("vector", "pgvector"),
+            ("graph", "memgraph"),
+            ("graph", "arangodb"),
+            ("nosql", "dynamodb"),
+            ("timeseries", "timescaledb"),
+        ] {
+            let mut manifest = base_manifest(vec![base_projection(true)]);
+            manifest.stores = vec![store(kind, backend)];
+            let report = lint_catalog(&manifest);
+            let findings = backend_findings(&report);
+            assert_eq!(findings.len(), 1, "{kind}/{backend}: {:?}", report.items);
+            assert_eq!(findings[0].severity, LintSeverity::Error);
+            assert!(findings[0].description.contains(backend));
+            assert!(!report.passed);
+        }
+    }
+
+    #[test]
+    fn lint_accepts_runtime_backends_and_the_store_default() {
+        for (kind, backend) in [
+            ("vector", "qdrant"),
+            ("graph", "neo4j"),
+            ("cache", "redis"),
+            // `STORAGE_BACKEND_AZURE_BLOB` normalizes to `azure_blob`.
+            ("storage", "azure_blob"),
+            ("vector", "unspecified"),
+            ("vector", ""),
+        ] {
+            let mut manifest = base_manifest(vec![base_projection(true)]);
+            manifest.stores = vec![store(kind, backend)];
+            let report = lint_catalog(&manifest);
+            assert!(
+                backend_findings(&report)
+                    .iter()
+                    .all(|item| item.severity != LintSeverity::Error),
+                "{kind}/{backend}: {:?}",
+                report.items
+            );
+        }
+    }
+
+    #[test]
+    fn lint_rejects_projections_the_worker_cannot_materialize() {
+        let projection = |backend: &str| ManifestProjection {
+            projection_kind: "vector".to_string(),
+            backend: backend.to_string(),
+            resource_name: "patient_vectors".to_string(),
+            read_policy: "vector".to_string(),
+            write_policy: "projection".to_string(),
+            fanout_policy: "async_projection".to_string(),
+            write_owner: false,
+            ..base_projection(false)
+        };
+        for backend in ["weaviate", "milvus"] {
+            let report = lint_catalog(&base_manifest(vec![
+                base_projection(true),
+                projection(backend),
+            ]));
+            assert!(
+                has_kind(&report, "projection_backend_not_materialized"),
+                "{backend}: {:?}",
+                report.items
+            );
+        }
+        let report = lint_catalog(&base_manifest(vec![base_projection(true), projection("qdrant")]));
+        assert!(!has_kind(&report, "projection_backend_not_materialized"));
     }
 
     #[test]

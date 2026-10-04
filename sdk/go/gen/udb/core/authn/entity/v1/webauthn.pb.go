@@ -273,7 +273,7 @@ const file_udb_core_authn_entity_v1_webauthn_proto_rawDesc = "" +
 	"\flast_used_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x1f\x82\xb7\x18\x1b\n" +
 	"\flast_used_at\x12\vTIMESTAMPTZR\n" +
 	"lastUsedAt:\xef\x02\xfa\xb6\x18\xd5\x01\n" +
-	"\x14webauthn_credentials\x12\tudb_authn\x18\x04 \x01*0Server-side WebAuthn passkeys bound to UDB users@\x01b^\n" +
+	"\x14webauthn_credentials\x12\tudb_authn\x18\b \x01*0Server-side WebAuthn passkeys bound to UDB users@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\xfa\x01\x0fauthn:mfa:write\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residency\"\xe7\b\n" +
 	"\x11WebAuthnChallenge\x12R\n" +
@@ -307,7 +307,7 @@ const file_udb_core_authn_entity_v1_webauthn_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
 	"\n" +
 	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt:\xe7\x01\xfa\xb6\x18\xe2\x01\n" +
-	"\x13webauthn_challenges\x12\tudb_authn\x18\x05 \x01*>Server-side WebAuthn ceremony state; never returned to clients@\x01b^\n" +
+	"\x13webauthn_challenges\x12\tudb_authn\x18\t \x01*>Server-side WebAuthn ceremony state; never returned to clients@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\xfa\x01\x0fauthn:mfa:writeB\xf8\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\rWebauthnProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18Udb.Core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 

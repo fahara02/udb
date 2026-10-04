@@ -410,7 +410,7 @@ impl DataBrokerRuntime {
                                         } else if let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                                                 &mut tx,
                                                 &projection_config,
-                                                &context.tenant_id,
+                                                crate::runtime::projection::task_project_id(&context.project_id),
                                                 &mutation.message_type,
                                                 "upsert",
                                                 &record,
@@ -503,7 +503,7 @@ impl DataBrokerRuntime {
                             crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                                 &mut tx,
                                 &projection_config,
-                                &context.tenant_id,
+                                crate::runtime::projection::task_project_id(&context.project_id),
                                 &mutation.message_type,
                                 "delete",
                                 &filter,

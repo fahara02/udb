@@ -99,7 +99,7 @@ pub(crate) async fn create_endpoint(
     let mut tx = pool.begin().await.map_err(|err| {
         webhook_internal_status(
             "create_webhook_endpoint",
-            format!("create webhook endpoint failed: {{err}}"),
+            format!("create webhook endpoint failed: {err}"),
         )
     })?;
     sqlx::query(&format!(
@@ -352,7 +352,7 @@ pub(crate) async fn update_endpoint(
     let mut tx = pool.begin().await.map_err(|err| {
         webhook_internal_status(
             "update_webhook_endpoint",
-            format!("update webhook endpoint failed: {{err}}"),
+            format!("update webhook endpoint failed: {err}"),
         )
     })?;
     let result = sqlx::query(&format!(
@@ -456,7 +456,7 @@ pub(crate) async fn delete_endpoint(
     let mut tx = pool.begin().await.map_err(|err| {
         webhook_internal_status(
             "delete_webhook_endpoint",
-            format!("delete webhook endpoint failed: {{err}}"),
+            format!("delete webhook endpoint failed: {err}"),
         )
     })?;
     let result = sqlx::query(&format!(

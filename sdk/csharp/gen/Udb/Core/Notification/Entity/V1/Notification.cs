@@ -75,7 +75,7 @@ namespace Udb.Core.Notification.Entity.V1 {
             "IAEoCUIWgrcYEgoKZGVsZXRlZF9ieRIEVVVJRFIJZGVsZXRlZEJ5Gj8KEVRl",
             "bXBsYXRlRGF0YUVudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIg",
             "ASgJUgV2YWx1ZToCOAE6gAT6thjXAgoNbm90aWZpY2F0aW9ucxIQdWRiX25v",
-            "dGlmaWNhdGlvbhgBIAEqOFF1ZXVlZCwgc2VudCwgZGVsaXZlcmVkLCBhbmQg",
+            "dGlmaWNhdGlvbhgFIAEqOFF1ZXVlZCwgc2VudCwgZGVsaXZlcmVkLCBhbmQg",
             "ZmFpbGVkIG5vdGlmaWNhdGlvbiByZWNvcmRzMAE4AUABYl4KEHRlbmFudF9p",
             "c29sYXRpb24aSCh0ZW5hbnRfaWQ6OnRleHQgPSBjdXJyZW50X3NldHRpbmco",
             "J2FwcC5jdXJyZW50X3RlbmFudF9pZCcsIHRydWUpOjp0ZXh0KSgBigE7Ch9p",

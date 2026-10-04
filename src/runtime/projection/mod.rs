@@ -119,6 +119,7 @@ impl ProjectionPlan {
                 if projections.is_empty() {
                     return None;
                 }
+                let tenant_column = crate::generation::sql::resolve_tenant_column(table);
                 let targets: Vec<ProjectionTarget> = projections
                     .iter()
                     .filter(|p| should_materialize_projection(p))
@@ -129,7 +130,7 @@ impl ProjectionPlan {
                         resource_name: p.resource_name.clone(),
                         write_policy: p.write_policy.clone(),
                         fanout_policy: p.fanout_policy.clone(),
-                        options: p.options.clone(),
+                        options: with_tenant_field(&p.options, tenant_column),
                     })
                     .collect();
                 if targets.is_empty() {
@@ -168,6 +169,144 @@ impl ProjectionPlan {
         }
         payload.clone()
     }
+}
+
+/// Name the source row's tenant column on the target as `tenant_field`, so the
+/// worker can stamp the projected record's `_tenant_id` from the canonical row.
+/// The worker runs with no request context, and the row is the only tenant
+/// source that is identical on the live-write path and on replay: the planner
+/// refuses an upsert whose tenant column differs from the caller's verified
+/// tenant, and replay reads the same column back. An explicitly declared
+/// `tenant_field` (graph/document store options) wins.
+fn with_tenant_field(
+    options: &[ManifestStoreOption],
+    tenant_column: Option<&str>,
+) -> Vec<ManifestStoreOption> {
+    let mut options = options.to_vec();
+    let declared = options
+        .iter()
+        .any(|o| o.key.eq_ignore_ascii_case("tenant_field") && !o.value.trim().is_empty());
+    if !declared && let Some(column) = tenant_column {
+        options.retain(|o| !o.key.eq_ignore_ascii_case("tenant_field"));
+        options.push(ManifestStoreOption {
+            key: "tenant_field".to_string(),
+            value: column.to_string(),
+        });
+    }
+    options
+}
+
+/// The project a projection task belongs to: the writer's project, with an
+/// empty one resolved to the default project the same way catalog lookup does.
+/// The worker validates and routes each task by this value, and stamps it on
+/// vector and graph records as `_project_id`.
+pub fn task_project_id(project_id: &str) -> &str {
+    let trimmed = project_id.trim();
+    if trimmed.is_empty() {
+        crate::runtime::catalog::DEFAULT_PROJECT_ID
+    } else {
+        trimmed
+    }
+}
+
+/// Tenant/project a projected record is stamped with. Search-side scoping
+/// (`VectorSearch`, the IR compilers) filters on the `_tenant_id` /
+/// `_project_id` system fields, so a record projected without them is
+/// invisible to every tenant-scoped read.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct ProjectionScope {
+    tenant_id: Option<String>,
+    project_id: Option<String>,
+    /// The `tenant_field` the target declares but whose value this record does
+    /// not carry as a plain scalar (a delete filter using an operator, say).
+    unresolved_tenant_field: Option<String>,
+}
+
+impl ProjectionScope {
+    fn resolve(
+        project_id: &str,
+        target_options: &serde_json::Value,
+        source_payload: &serde_json::Value,
+    ) -> Self {
+        let tenant_field = option_value(target_options, "tenant_field")
+            .map(|field| field.trim().to_string())
+            .filter(|field| !field.is_empty());
+        let tenant_id = tenant_field
+            .as_deref()
+            .and_then(|field| source_payload.get(field))
+            .filter(|value| value.is_string() || value.is_number())
+            .map(json_scalar_to_string)
+            .filter(|value| !value.trim().is_empty());
+        let project_id = Some(project_id.trim().to_string()).filter(|p| !p.is_empty());
+        Self {
+            unresolved_tenant_field: tenant_field.filter(|_| tenant_id.is_none()),
+            tenant_id,
+            project_id,
+        }
+    }
+
+    /// Graph records are KEYED by the scope, so dropping an unresolved tenant
+    /// would widen a delete (or an edge's endpoint match) to every tenant in
+    /// the project. Refuse instead.
+    fn require_tenant(&self, what: &str) -> Result<(), String> {
+        match &self.unresolved_tenant_field {
+            Some(field) => Err(format!(
+                "{what}: tenant field '{field}' has no scalar value in the projected record; refusing to write it outside its tenant scope"
+            )),
+            None => Ok(()),
+        }
+    }
+
+    /// `{_tenant_id, _project_id}` for whichever of the two is known.
+    fn fields(&self) -> serde_json::Map<String, serde_json::Value> {
+        let mut fields = serde_json::Map::new();
+        if let Some(tenant_id) = &self.tenant_id {
+            fields.insert("_tenant_id".to_string(), tenant_id.clone().into());
+        }
+        if let Some(project_id) = &self.project_id {
+            fields.insert("_project_id".to_string(), project_id.clone().into());
+        }
+        fields
+    }
+
+    /// The payload with the scope fields stamped over it. The stamp overwrites:
+    /// a source column that happens to be named `_tenant_id` must not let a row
+    /// claim a tenant other than the one its tenant column carries.
+    fn stamp(&self, payload: &serde_json::Value) -> serde_json::Value {
+        let mut stamped = payload.clone();
+        if let serde_json::Value::Object(map) = &mut stamped {
+            map.extend(self.fields());
+        }
+        stamped
+    }
+}
+
+/// Backends [`render_projection_mutation`] renders a mutation for.
+const RENDERED_PROJECTION_BACKENDS: [&str; 4] = ["mongodb", "qdrant", "neo4j", "clickhouse"];
+
+/// Whether the projection worker can materialize `projection` — the dispatch of
+/// `ProjectionWorker::execute_task` as a predicate. `udb lint` uses it so a
+/// projection onto a backend the worker has no writer for (weaviate, pinecone,
+/// elasticsearch, an unknown name such as milvus) is rejected at build time
+/// instead of dead-lettering every write at runtime.
+pub fn projection_target_supported(p: &crate::generation::manifest::ManifestProjection) -> bool {
+    if !should_materialize_projection(p) {
+        return true;
+    }
+    let backend = normalize_backend(&p.backend);
+    let kind = p.projection_kind.trim();
+    backend == "redis"
+        || kind.eq_ignore_ascii_case("cache")
+        || backend == "s3"
+        || kind.eq_ignore_ascii_case("object")
+        || RENDERED_PROJECTION_BACKENDS.contains(&backend.as_str())
+}
+
+/// The backends the projection worker materializes, for diagnostics.
+pub fn supported_projection_backends() -> String {
+    let mut backends = vec!["redis (cache)", "s3/minio (object)"];
+    backends.extend(RENDERED_PROJECTION_BACKENDS);
+    backends.join(", ")
 }
 
 fn should_materialize_projection(p: &crate::generation::manifest::ManifestProjection) -> bool {
@@ -1061,6 +1200,7 @@ impl ProjectionWorker {
                 .await;
         }
 
+        let scope = ProjectionScope::resolve(project_id, target_options, source_payload);
         let request = render_projection_mutation(
             &normalized_backend,
             projection_kind,
@@ -1069,6 +1209,7 @@ impl ProjectionWorker {
             source_row_key,
             target_options,
             source_payload,
+            &scope,
         )?;
         self.runtime
             .mutate_backend_target_for_project(
@@ -1237,6 +1378,8 @@ fn normalize_backend(backend: &str) -> String {
         "pg" | "postgresql" => "postgres".to_string(),
         "mongo" => "mongodb".to_string(),
         "minio" => "s3".to_string(),
+        // `STORAGE_BACKEND_AZURE_BLOB` normalizes to `azure_blob`.
+        "azure_blob" | "azure" => "azureblob".to_string(),
         other => other.to_string(),
     }
 }
@@ -1324,6 +1467,7 @@ fn render_key_pattern(
     rendered
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_projection_mutation(
     backend: &str,
     projection_kind: &str,
@@ -1332,6 +1476,7 @@ fn render_projection_mutation(
     source_row_key: &serde_json::Value,
     target_options: &serde_json::Value,
     source_payload: &serde_json::Value,
+    scope: &ProjectionScope,
 ) -> Result<serde_json::Value, String> {
     match backend {
         "mongodb" => render_mongodb_projection(
@@ -1347,6 +1492,7 @@ fn render_projection_mutation(
             source_row_key,
             target_options,
             source_payload,
+            scope,
         ),
         "neo4j" => render_neo4j_projection(
             resource_name,
@@ -1354,6 +1500,7 @@ fn render_projection_mutation(
             source_row_key,
             target_options,
             source_payload,
+            scope,
         ),
         "clickhouse" => render_clickhouse_projection(resource_name, operation, source_payload),
         "postgres" => render_postgres_projection(resource_name, operation, source_payload),
@@ -1408,6 +1555,7 @@ fn render_qdrant_projection(
     source_row_key: &serde_json::Value,
     target_options: &serde_json::Value,
     source_payload: &serde_json::Value,
+    scope: &ProjectionScope,
 ) -> Result<serde_json::Value, String> {
     let id = row_identity(source_row_key, source_payload, target_options)?;
     if operation.eq_ignore_ascii_case("delete") {
@@ -1433,7 +1581,7 @@ fn render_qdrant_projection(
         "points": [{
             "id": id,
             "vector": vector,
-            "payload": source_payload,
+            "payload": scope.stamp(source_payload),
         }],
     }))
 }
@@ -1444,24 +1592,74 @@ fn render_neo4j_projection(
     source_row_key: &serde_json::Value,
     target_options: &serde_json::Value,
     source_payload: &serde_json::Value,
+    scope: &ProjectionScope,
 ) -> Result<serde_json::Value, String> {
     let label = option_value(target_options, "node_label")
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| resource_name.to_string());
     let id = row_identity(source_row_key, source_payload, target_options)?;
-    if operation.eq_ignore_ascii_case("delete") {
-        return Ok(serde_json::json!({
-            "operation": "delete_node",
-            "label": label,
-            "id": id,
-        }));
+    scope.require_tenant(&format!("graph projection '{label}' record '{id}'"))?;
+    let scope_fields = serde_json::Value::Object(scope.fields());
+    let delete = operation.eq_ignore_ascii_case("delete");
+    let edge_source =
+        option_value(target_options, "edge_source_field").filter(|v| !v.trim().is_empty());
+    let edge_target =
+        option_value(target_options, "edge_target_field").filter(|v| !v.trim().is_empty());
+    match (edge_source, edge_target) {
+        // A graph store naming both endpoint fields models one EDGE per row: the
+        // store label is the relationship type, and the endpoints are the nodes
+        // whose `id` the two fields carry, inside the row's own tenant/project.
+        (Some(source_field), Some(target_field)) => {
+            if delete {
+                return Ok(serde_json::json!({
+                    "operation": "delete_edge",
+                    "rel_type": label,
+                    "id": id,
+                    "scope": scope_fields,
+                }));
+            }
+            let endpoint = |field: &str| -> Result<String, String> {
+                source_payload
+                    .get(field.trim())
+                    .map(json_scalar_to_string)
+                    .filter(|value| !value.trim().is_empty())
+                    .ok_or_else(|| {
+                        format!(
+                            "graph edge projection '{label}' row '{id}' has no value for endpoint field '{field}'"
+                        )
+                    })
+            };
+            Ok(serde_json::json!({
+                "operation": "upsert_edge",
+                "rel_type": label,
+                "id": id,
+                "from_id": endpoint(&source_field)?,
+                "to_id": endpoint(&target_field)?,
+                "properties": scope.stamp(source_payload),
+                "scope": scope_fields,
+            }))
+        }
+        (None, None) => {
+            if delete {
+                return Ok(serde_json::json!({
+                    "operation": "delete_node",
+                    "label": label,
+                    "id": id,
+                    "scope": scope_fields,
+                }));
+            }
+            Ok(serde_json::json!({
+                "operation": "create_node",
+                "label": label,
+                "id": id,
+                "properties": scope.stamp(source_payload),
+                "scope": scope_fields,
+            }))
+        }
+        _ => Err(format!(
+            "graph projection '{label}' declares only one of edge_source_field / edge_target_field; an edge needs both"
+        )),
     }
-    Ok(serde_json::json!({
-        "operation": "create_node",
-        "label": label,
-        "id": id,
-        "properties": source_payload,
-    }))
 }
 
 fn render_clickhouse_projection(
@@ -1936,6 +2134,221 @@ mod tests {
         assert_eq!(plans[0].targets[0].backend, "mongodb");
     }
 
+    fn tenanted_vector_manifest(checksum: &str, options: Vec<ManifestStoreOption>) -> CatalogManifest {
+        CatalogManifest {
+            checksum_sha256: checksum.to_string(),
+            tables: vec![ManifestTable {
+                message_name: "Document".to_string(),
+                schema: "app".to_string(),
+                table: "documents".to_string(),
+                primary_key: vec!["id".to_string()],
+                columns: vec![
+                    crate::generation::manifest::ManifestColumn {
+                        column_name: "id".to_string(),
+                        ..Default::default()
+                    },
+                    crate::generation::manifest::ManifestColumn {
+                        column_name: "tenant_id".to_string(),
+                        is_tenant_column: true,
+                        ..Default::default()
+                    },
+                ],
+                ..ManifestTable::default()
+            }],
+            projections: vec![ManifestProjection {
+                message_type: "Document".to_string(),
+                projection_kind: "vector".to_string(),
+                backend: "qdrant".to_string(),
+                resource_name: "documents".to_string(),
+                write_policy: "projection".to_string(),
+                fanout_policy: "async_projection".to_string(),
+                options,
+                ..ManifestProjection::default()
+            }],
+            ..CatalogManifest::default()
+        }
+    }
+
+    #[test]
+    fn projection_plan_names_the_source_tenant_column() {
+        let plans = ProjectionPlan::from_manifest(&tenanted_vector_manifest("tenant-field", vec![]));
+        assert!(
+            plans[0].targets[0].options.contains(&opt("tenant_field", "tenant_id")),
+            "{:?}",
+            plans[0].targets[0].options
+        );
+        // A declared tenant_field (graph/document store option) wins.
+        let plans = ProjectionPlan::from_manifest(&tenanted_vector_manifest(
+            "tenant-field-declared",
+            vec![opt("tenant_field", "org")],
+        ));
+        let tenant_fields: Vec<_> = plans[0].targets[0]
+            .options
+            .iter()
+            .filter(|o| o.key == "tenant_field")
+            .collect();
+        assert_eq!(tenant_fields, vec![&opt("tenant_field", "org")]);
+    }
+
+    /// The bug: projected points carried no `_tenant_id`/`_project_id`, and
+    /// `VectorSearch` ANDs exactly those two keys into every filter, so no
+    /// tenant-scoped search could ever see a projected point.
+    #[test]
+    fn vector_projection_stamps_the_keys_vector_search_filters_on() {
+        let plans = ProjectionPlan::from_manifest(&tenanted_vector_manifest("vector-stamp", vec![]));
+        let options = serde_json::to_value(&plans[0].targets[0].options).unwrap();
+        let payload = json!({"id":"d1","tenant_id":"t1","vector":[0.1,0.2]});
+        let scope = ProjectionScope::resolve("proj-a", &options, &payload);
+        let request = render_projection_mutation(
+            "qdrant",
+            "vector",
+            "documents",
+            "upsert",
+            &json!({"id":"d1"}),
+            &options,
+            &payload,
+            &scope,
+        )
+        .unwrap();
+        let point_payload = &request["points"][0]["payload"];
+        assert_eq!(point_payload["_tenant_id"], "t1");
+        assert_eq!(point_payload["_project_id"], "proj-a");
+        assert_eq!(point_payload["tenant_id"], "t1", "source columns are kept");
+
+        // A spoofed `_tenant_id` source field cannot override the tenant column.
+        let spoofed = json!({"id":"d1","tenant_id":"t1","_tenant_id":"t2","vector":[0.1]});
+        let scope = ProjectionScope::resolve("proj-a", &options, &spoofed);
+        assert_eq!(scope.stamp(&spoofed)["_tenant_id"], "t1");
+    }
+
+    /// `projection_target_supported` (what `udb lint` checks) must agree with
+    /// what `render_projection_mutation` (what the worker runs) can render.
+    #[test]
+    fn lint_predicate_matches_the_worker_dispatch() {
+        let options = json!([{"key":"vector_field","value":"vector"}]);
+        let payload = json!({"id":"p1","vector":[0.1],"_id":"p1"});
+        for backend in ["qdrant", "mongodb", "neo4j", "clickhouse", "weaviate", "pinecone",
+            "elasticsearch", "milvus", "postgres"]
+        {
+            let projection = ManifestProjection {
+                projection_kind: "vector".to_string(),
+                backend: backend.to_string(),
+                write_policy: "projection".to_string(),
+                fanout_policy: "async_projection".to_string(),
+                ..ManifestProjection::default()
+            };
+            let rendered = render_projection_mutation(
+                backend, "vector", "r", "upsert", &json!({"id":"p1"}), &options, &payload,
+                &ProjectionScope::default(),
+            );
+            let unsupported = matches!(&rendered, Err(e) if e.contains("is not supported")
+                || e.contains("must be handled by the canonical write path"));
+            assert_eq!(
+                projection_target_supported(&projection),
+                !unsupported,
+                "{backend}: {rendered:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn graph_projection_refuses_a_record_whose_tenant_it_cannot_resolve() {
+        let options = json!([
+            {"key":"node_label","value":"Patient"},
+            {"key":"tenant_field","value":"tenant_id"}
+        ]);
+        // A delete filter carrying the tenant as an operator, not a value.
+        let filter = json!({"id":"p1","tenant_id":{"$eq":"t1"}});
+        let scope = ProjectionScope::resolve("proj-a", &options, &filter);
+        let err = render_projection_mutation(
+            "neo4j", "graph", "patients", "delete", &json!({"id":"p1"}), &options, &filter,
+            &scope,
+        )
+        .unwrap_err();
+        assert!(err.contains("tenant field 'tenant_id'"), "{err}");
+    }
+
+    #[test]
+    fn task_project_id_resolves_empty_to_the_default_project() {
+        assert_eq!(task_project_id(""), crate::runtime::catalog::DEFAULT_PROJECT_ID);
+        assert_eq!(task_project_id("  "), crate::runtime::catalog::DEFAULT_PROJECT_ID);
+        assert_eq!(task_project_id(" billing "), "billing");
+    }
+
+    #[test]
+    fn graph_projection_scopes_nodes_by_tenant_and_project() {
+        let options = json!([
+            {"key":"node_label","value":"Patient"},
+            {"key":"tenant_field","value":"tenant_id"}
+        ]);
+        let payload = json!({"id":"p1","tenant_id":"t1","name":"Ada"});
+        let scope = ProjectionScope::resolve("proj-a", &options, &payload);
+        let key = json!({"id":"p1"});
+        let upsert = render_projection_mutation(
+            "neo4j", "graph", "patients", "upsert", &key, &options, &payload, &scope,
+        )
+        .unwrap();
+        assert_eq!(upsert["operation"], "create_node");
+        assert_eq!(upsert["scope"], json!({"_tenant_id":"t1","_project_id":"proj-a"}));
+        assert_eq!(upsert["properties"]["_tenant_id"], "t1");
+        let delete = render_projection_mutation(
+            "neo4j", "graph", "patients", "delete", &key, &options, &key, &scope,
+        )
+        .unwrap();
+        assert_eq!(delete["operation"], "delete_node");
+        assert_eq!(delete["scope"]["_tenant_id"], "t1");
+    }
+
+    /// The bug: `edge_source_field` / `edge_target_field` were never read, so
+    /// an edge store projected each row as a lone node and no edge existed.
+    #[test]
+    fn graph_projection_with_edge_fields_renders_a_scoped_edge() {
+        let options = json!([
+            {"key":"node_label","value":"TREATS"},
+            {"key":"tenant_field","value":"tenant_id"},
+            {"key":"edge_source_field","value":"doctor_id"},
+            {"key":"edge_target_field","value":"patient_id"}
+        ]);
+        let payload = json!({"id":"e1","tenant_id":"t1","doctor_id":"d1","patient_id":"p1"});
+        let scope = ProjectionScope::resolve("proj-a", &options, &payload);
+        let key = json!({"id":"e1"});
+        let upsert = render_projection_mutation(
+            "neo4j", "graph", "treatments", "upsert", &key, &options, &payload, &scope,
+        )
+        .unwrap();
+        assert_eq!(upsert["operation"], "upsert_edge");
+        assert_eq!(upsert["rel_type"], "TREATS");
+        assert_eq!(upsert["id"], "e1");
+        assert_eq!(upsert["from_id"], "d1");
+        assert_eq!(upsert["to_id"], "p1");
+        assert_eq!(upsert["scope"], json!({"_tenant_id":"t1","_project_id":"proj-a"}));
+
+        let delete = render_projection_mutation(
+            "neo4j", "graph", "treatments", "delete", &key, &options, &key, &scope,
+        )
+        .unwrap();
+        assert_eq!(delete["operation"], "delete_edge");
+        assert_eq!(delete["rel_type"], "TREATS");
+
+        // An edge row without an endpoint value fails (and retries) loudly.
+        let missing = json!({"id":"e2","tenant_id":"t1","doctor_id":"d1"});
+        let err = render_projection_mutation(
+            "neo4j", "graph", "treatments", "upsert", &json!({"id":"e2"}), &options, &missing,
+            &scope,
+        )
+        .unwrap_err();
+        assert!(err.contains("patient_id"), "{err}");
+
+        // Half an edge declaration is a configuration error, not a node.
+        let half = json!([{"key":"edge_source_field","value":"doctor_id"}]);
+        assert!(
+            render_projection_mutation(
+                "neo4j", "graph", "treatments", "upsert", &key, &half, &payload, &scope,
+            )
+            .is_err()
+        );
+    }
+
     #[test]
     fn message_type_match_accepts_full_name_and_leaf_alias() {
         assert!(message_type_matches(
@@ -1992,8 +2405,10 @@ mod tests {
         let payload = json!({"id":"p1","name":"Ada","vector":[0.1,0.2]});
         let key = json!({"id":"p1"});
 
+        let scope = ProjectionScope::default();
+
         let mongo = render_projection_mutation(
-            "mongodb", "document", "patients", "upsert", &key, &options, &payload,
+            "mongodb", "document", "patients", "upsert", &key, &options, &payload, &scope,
         )
         .unwrap();
         assert_eq!(mongo["operation"], "upsert");
@@ -2008,13 +2423,14 @@ mod tests {
             &key,
             &options,
             &payload,
+            &scope,
         )
         .unwrap();
         assert_eq!(qdrant["collection"], "patient_vectors");
         assert_eq!(qdrant["points"][0]["id"], "p1");
 
         let neo4j = render_projection_mutation(
-            "neo4j", "graph", "Patient", "delete", &key, &options, &payload,
+            "neo4j", "graph", "Patient", "delete", &key, &options, &payload, &scope,
         )
         .unwrap();
         assert_eq!(neo4j["operation"], "delete_node");

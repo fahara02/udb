@@ -1182,7 +1182,7 @@ impl DataBrokerRuntime {
                 crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                     &mut tx,
                     &crate::runtime::system::SystemCatalogConfig::current(),
-                    &context.tenant_id,
+                    crate::runtime::projection::task_project_id(&context.project_id),
                     &request.message_type,
                     "upsert",
                     &record,
@@ -1925,7 +1925,7 @@ impl DataBrokerRuntime {
                 crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                     &mut tx,
                     &crate::runtime::system::SystemCatalogConfig::current(),
-                    &context.tenant_id,
+                    crate::runtime::projection::task_project_id(&context.project_id),
                     message_type,
                     "delete",
                     &filter,
@@ -2218,7 +2218,7 @@ impl DataBrokerRuntime {
                     crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                         &mut *tx,
                         &crate::runtime::system::SystemCatalogConfig::current(),
-                        &context.tenant_id,
+                        crate::runtime::projection::task_project_id(&context.project_id),
                         message_type,
                         "upsert",
                         row_json,

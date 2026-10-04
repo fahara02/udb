@@ -271,7 +271,7 @@ const file_udb_core_notification_entity_v1_notification_proto_rawDesc = "" +
 	"\x11TemplateDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x80\x04\xfa\xb6\x18\xd7\x02\n" +
-	"\rnotifications\x12\x10udb_notification\x18\x01 \x01*8Queued, sent, delivered, and failed notification records0\x018\x01@\x01b^\n" +
+	"\rnotifications\x12\x10udb_notification\x18\x05 \x01*8Queued, sent, delivered, and failed notification records0\x018\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01;\n" +
 	"\x1fidx_notifications_tenant_status\x12\x05BTREEZ\ttenant_idZ\x06status\x8a\x012\n" +
 	"\x1bidx_notifications_recipient\x12\x05BTREEZ\frecipient_id\xea\x01\aprimary\xfa\x01\x12notification:write\x8a\xb2\x19\x9f\x01\n" +

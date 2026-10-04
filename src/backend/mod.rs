@@ -1237,7 +1237,7 @@ impl BackendKind {
                 "pinecone" => return Some(Self::Pinecone),
                 "minio" => return Some(Self::Minio),
                 "s3" => return Some(Self::S3),
-                "azureblob" | "azure" => return Some(Self::AzureBlob),
+                "azureblob" | "azure_blob" | "azure" => return Some(Self::AzureBlob),
                 "gcs" => return Some(Self::Gcs),
                 "mongodb" | "mongo" => return Some(Self::Mongodb),
                 "elasticsearch" | "elastic" => return Some(Self::Elasticsearch),
