@@ -340,16 +340,42 @@ impl Compiler for MssqlCompiler {
                     ConflictStrategy::Replace => columns.clone(),
                     _ => unreachable!(),
                 };
-                let set_clause = target_cols
+                // Cross-tenant takeover guard: never reassign the tenant/project
+                // columns, and only take the WHEN MATCHED branch when the matched
+                // row already belongs to the scope being written. A matched row
+                // that fails the guard falls through to no action (it is matched,
+                // so WHEN NOT MATCHED does not fire either).
+                let isolation = Ms::upsert_isolation_columns(table);
+                let guard = Ms::upsert_scope_guard(
+                    table,
+                    ctx,
+                    &columns,
+                    &mut params,
+                    |c| format!("target.[{c}]"),
+                    |c| format!("source.[{c}]"),
+                    |a, b| format!("({a} = {b} OR ({a} IS NULL AND {b} IS NULL))"),
+                );
+                let mut assignments = target_cols
                     .iter()
+                    .filter(|c| !isolation.contains(c))
                     .map(|c| format!("target.[{c}] = source.[{c}]"))
-                    .collect::<Vec<_>>()
-                    .join(", ");
+                    .collect::<Vec<_>>();
+                if assignments.is_empty()
+                    && guard.is_some()
+                    && let Some(c) = isolation.first()
+                {
+                    assignments.push(format!("target.[{c}] = target.[{c}]"));
+                }
+                let set_clause = assignments.join(", ");
+                let matched = match guard {
+                    Some(guard) => format!("WHEN MATCHED AND {guard} THEN"),
+                    None => "WHEN MATCHED THEN".to_string(),
+                };
                 let sql = format!(
                     "MERGE INTO [{schema}].[{table}] AS target \
                      USING (VALUES {values}) AS source({column_list}) \
                      ON {on_clause} \
-                     WHEN MATCHED THEN UPDATE SET {set_clause} \
+                     {matched} UPDATE SET {set_clause} \
                      WHEN NOT MATCHED THEN \
                          INSERT ({column_list}) VALUES ({source_values});",
                     schema = table.schema,
@@ -1195,6 +1221,46 @@ mod tests {
             params
                 .iter()
                 .any(|p| matches!(p, LogicalValue::String(s) if s == "t1"))
+        );
+    }
+
+    /// Cross-tenant takeover: WHEN MATCHED only fires for a row that already
+    /// belongs to the written tenant, and the tenant column is never assigned.
+    #[test]
+    fn upsert_guards_merge_matched_branch_by_tenant() {
+        let mut m = fixture();
+        m.tables[0].columns.push(ManifestColumn {
+            field_name: "tenant_id".into(),
+            column_name: "tenant_id".into(),
+            proto_type: "string".into(),
+            sql_type: "nvarchar(64)".into(),
+            is_tenant_column: true,
+            ..Default::default()
+        });
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let mut rec = LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        rec.insert("name".into(), LogicalValue::String("Alice".into()));
+        rec.insert("tenant_id".into(), LogicalValue::String("t1".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::update(vec!["name".into(), "tenant_id".into()]),
+            return_fields: vec![],
+        };
+        let (statement, _) = sql(MssqlCompiler.compile_write(&write, &ctx).unwrap());
+        assert!(
+            statement.contains(
+                "WHEN MATCHED AND (target.[tenant_id] = source.[tenant_id] OR \
+                 (target.[tenant_id] IS NULL AND source.[tenant_id] IS NULL)) \
+                 THEN UPDATE SET target.[name] = source.[name] "
+            ),
+            "{statement}"
+        );
+        assert!(
+            !statement.contains("target.[tenant_id] = source.[tenant_id],")
+                && !statement.contains("SET target.[tenant_id]"),
+            "the tenant column must never be reassigned: {statement}"
         );
     }
 }

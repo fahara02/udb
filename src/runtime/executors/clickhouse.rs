@@ -79,6 +79,22 @@ fn validate_ch_identifier(id: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// `written_rows` from an `X-ClickHouse-Summary` header value
+/// (`{"read_rows":"0","written_rows":"2",...}`; counters are JSON strings).
+fn clickhouse_summary_written_rows(summary: &str) -> Option<u64> {
+    let parsed: Json = serde_json::from_str(summary).ok()?;
+    let value = parsed.get("written_rows")?;
+    value
+        .as_u64()
+        .or_else(|| value.as_str().and_then(|raw| raw.parse::<u64>().ok()))
+}
+
+fn is_insert_statement(sql: &str) -> bool {
+    sql.split_whitespace()
+        .next()
+        .is_some_and(|head| head.eq_ignore_ascii_case("insert"))
+}
+
 fn validate_clickhouse_compiled_mutation_sql(sql: &str) -> Result<(), tonic::Status> {
     validate_single_statement(sql)?;
     let normalized = sql
@@ -385,6 +401,19 @@ impl ClickHouseExecutor {
     /// Execute a SQL query string against ClickHouse and return the raw response body.
     /// Appends `FORMAT <fmt>` unless the query already contains a FORMAT clause.
     async fn execute_raw(&self, sql: &str, format: &str) -> Result<String, String> {
+        self.execute_raw_with_summary(sql, format)
+            .await
+            .map(|(body, _)| body)
+    }
+
+    /// [`Self::execute_raw`] plus the server's `written_rows` from the
+    /// `X-ClickHouse-Summary` response header (present for INSERTs), so a
+    /// write can report how many rows it really wrote.
+    async fn execute_raw_with_summary(
+        &self,
+        sql: &str,
+        format: &str,
+    ) -> Result<(String, Option<u64>), String> {
         let full_sql = if format.is_empty() || Self::has_trailing_format_clause(sql) {
             sql.to_string()
         } else {
@@ -414,11 +443,16 @@ impl ClickHouseExecutor {
             .map_err(|e| format!("ClickHouse HTTP error: {e}"))?;
 
         let status = resp.status();
+        let written_rows = resp
+            .headers()
+            .get("X-ClickHouse-Summary")
+            .and_then(|value| value.to_str().ok())
+            .and_then(clickhouse_summary_written_rows);
         let body = resp.text().await.unwrap_or_default();
         if !status.is_success() {
             return Err(format!("ClickHouse query failed [{status}]: {body}"));
         }
-        Ok(body)
+        Ok((body, written_rows))
     }
 
     /// Execute a `SELECT` and return rows as a `Vec<Json>`.
@@ -691,10 +725,18 @@ impl MutationExecutor for ClickHouseExecutor {
             } else {
                 validate_mutation_sql(sql)?;
             }
-            self.execute_ddl(sql)
+            let (_, written_rows) = self
+                .execute_raw_with_summary(sql, "")
                 .await
                 .map_err(|err| clickhouse_internal_status("mutate_ddl", err))?;
-            return Ok(r#"{"affected_rows":0}"#.to_string());
+            // An INSERT reports the rows the server actually wrote; DDL and
+            // asynchronous `ALTER ... DELETE` mutations have no row count.
+            let affected = if is_insert_statement(sql) {
+                written_rows.unwrap_or(0)
+            } else {
+                0
+            };
+            return Ok(format!(r#"{{"affected_rows":{affected}}}"#));
         }
         let table = spec.get("table").and_then(Json::as_str).ok_or_else(|| {
             clickhouse_required_field_status("table", "missing required field 'table'")
@@ -831,6 +873,24 @@ mod tests {
             .get_bin(ERROR_DETAIL_METADATA_KEY)
             .expect("typed detail trailer is present");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn insert_affected_rows_come_from_the_server_summary() {
+        assert_eq!(
+            clickhouse_summary_written_rows(
+                r#"{"read_rows":"0","read_bytes":"0","written_rows":"3","written_bytes":"96"}"#
+            ),
+            Some(3)
+        );
+        assert_eq!(
+            clickhouse_summary_written_rows(r#"{"written_rows":2}"#),
+            Some(2)
+        );
+        assert_eq!(clickhouse_summary_written_rows("not json"), None);
+        assert!(is_insert_statement("  INSERT INTO `db`.`t` (a) VALUES (1)"));
+        assert!(is_insert_statement("insert\ninto t format JSONEachRow"));
+        assert!(!is_insert_statement("ALTER TABLE t DELETE WHERE id = 1"));
     }
 
     fn assert_single_field(status: &tonic::Status, field: &str) {

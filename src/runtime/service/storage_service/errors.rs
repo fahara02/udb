@@ -10,8 +10,8 @@ use crate::proto::udb::core::common::v1 as common_pb;
 
 use super::config::{
     ALREADY_FINALIZED, DELETE_PRECONDITION_FAILED, FINALIZE_IMMUTABLE_MISMATCH,
-    IDEMPOTENCY_KEY_CONFLICT, OBJECT_DELETE_FAILED, OBJECT_KEY_TRAVERSAL, OBJECT_NOT_PRESENT,
-    REISSUE_REQUIRES_PENDING, UNSUPPORTED_OBJECT_BACKEND, UPLOAD_SIZE_MISMATCH,
+    IDEMPOTENCY_KEY_CONFLICT, OBJECT_DELETE_FAILED, OBJECT_DELETE_ORPHANED, OBJECT_KEY_TRAVERSAL,
+    OBJECT_NOT_PRESENT, REISSUE_REQUIRES_PENDING, UNSUPPORTED_OBJECT_BACKEND, UPLOAD_SIZE_MISMATCH,
     UPLOAD_URL_UNAVAILABLE,
 };
 
@@ -188,6 +188,43 @@ pub(crate) fn api_error_upload_url_unavailable(
         message: message.into(),
         retryable,
         ..Default::default()
+    }
+}
+
+/// SOFT `DeleteFile` committed the metadata tombstone, but the inline byte delete
+/// FAILED. The RPC stays OK (the metadata delete happened and is not undone), and
+/// this `ApiError` states plainly that the bytes were NOT removed, instead of a
+/// bare `success: true` that read as "file and bytes gone".
+///
+/// `intent_recorded = true` → a durable GC intent was written and the sweep will
+/// remove the bytes (`OBJECT_DELETE_FAILED`, not retryable by the client: the
+/// broker owns the retry). `false` → no intent could be recorded either, so the
+/// bytes are orphaned until an operator cleans them (`OBJECT_DELETE_ORPHANED`).
+pub(crate) fn api_error_object_bytes_not_removed(
+    message: impl Into<String>,
+    intent_recorded: bool,
+) -> common_pb::ApiError {
+    let message = message.into();
+    if intent_recorded {
+        common_pb::ApiError {
+            code: OBJECT_DELETE_FAILED.to_string(),
+            message: format!(
+                "file metadata was deleted but object byte removal failed; a durable GC intent \
+                 was recorded and the GC sweep will remove the bytes: {message}"
+            ),
+            retryable: false,
+            ..Default::default()
+        }
+    } else {
+        common_pb::ApiError {
+            code: OBJECT_DELETE_ORPHANED.to_string(),
+            message: format!(
+                "file metadata was deleted but object byte removal failed and no GC intent could \
+                 be recorded; the bytes are orphaned: {message}"
+            ),
+            retryable: false,
+            ..Default::default()
+        }
     }
 }
 

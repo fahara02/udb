@@ -411,7 +411,6 @@ pub(crate) fn gc_intent_fingerprint(file_id: &str, mode: &str) -> String {
 /// leave Postgres typed here) to avoid depending on sqlx's uuid feature.
 pub(crate) struct GcIntentRow {
     pub(crate) intent_id: String,
-    #[allow(dead_code)]
     pub(crate) tenant_id: String,
     pub(crate) project_id: String,
     pub(crate) backend: String,
@@ -686,6 +685,59 @@ impl StorageServiceImpl {
             )
         })?;
         Ok(Some(intent_id))
+    }
+
+    /// Record a PENDING GC intent for bytes whose inline delete already FAILED on a
+    /// path whose metadata change is committed separately (the SOFT delete, after
+    /// its tombstone; the orphan reaper, after its row delete). Without this row
+    /// those bytes were only logged as orphaned and never retried. The sweep
+    /// drives it to convergence exactly like a HARD intent. `attempts` starts at 1
+    /// (the failed inline attempt) and `last_error` carries its cause. No
+    /// idempotency key: each failed delete is its own intent.
+    pub(crate) async fn insert_gc_intent(
+        &self,
+        tenant_id: &str,
+        file_id: &str,
+        project_id: &str,
+        backend: &str,
+        bucket: &str,
+        object_key: &str,
+        mode: &str,
+        reason: &str,
+        last_error: &str,
+    ) -> Result<String, Status> {
+        self.ensure_gc_intents_table().await?;
+        let pool = self.gc_intent_pool()?;
+        let intent_id = uuid::Uuid::new_v4().to_string();
+        let truncated: String = last_error.chars().take(500).collect();
+        let sql = format!(
+            "INSERT INTO {GC_INTENTS_RELATION} \
+               (intent_id, tenant_id, project_id, file_id, backend, bucket, object_key, mode, \
+                reason, status, attempts, last_error, request_fingerprint) \
+             VALUES ($1::uuid, $2::uuid, NULLIF($3,'')::varchar(120), $4::uuid, $5, $6, $7, $8, $9, \
+                'PENDING', 1, $10, $11)"
+        );
+        sqlx::query(&sql)
+            .bind(&intent_id)
+            .bind(tenant_id)
+            .bind(project_id)
+            .bind(file_id)
+            .bind(backend)
+            .bind(bucket)
+            .bind(object_key)
+            .bind(mode)
+            .bind(reason)
+            .bind(truncated)
+            .bind(gc_intent_fingerprint(file_id, mode))
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                storage_internal_status(
+                    "gc_intent_insert",
+                    format!("storage GC-intent insert failed: {err}"),
+                )
+            })?;
+        Ok(intent_id)
     }
 
     /// Record the immutable success outcome once the bytes are confirmed removed.

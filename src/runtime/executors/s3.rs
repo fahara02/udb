@@ -40,12 +40,14 @@ impl crate::runtime::backend_context::BackendContextEnforcer for S3Executor {
                 recorded_in: "no_context_to_apply".into(),
             };
         }
-        // C7/C8: the S3 IR compiler now prepends `t:<tenant>/p:<project>/`
-        // to every resolved object key in compile_read/write/delete.
-        // Combined with the bucket = schema convention, an S3 PUT or
-        // GET cannot escape its tenant namespace at the key layer.
+        // C7/C8: every data-plane object key is tenant-namespaced before it
+        // reaches this executor: the S3 IR compiler prepends
+        // `t:<tenant>/p:<project>/` in compile_read/write/delete, and the
+        // dispatch core forces RAW get/put/delete keys under
+        // `__udb_t/<tenant>/` (the typed object RPCs' scheme). An S3 PUT or
+        // GET therefore cannot escape its tenant namespace at the key layer.
         crate::runtime::backend_context::ContextEffect::Enforced {
-            mechanism: "key prefix t:<tenant>/p:<project>/ prepended by compile_read/write/delete"
+            mechanism: "object key prefix: t:<tenant>/p:<project>/ (IR) or __udb_t/<tenant>/ (raw + typed), applied before dispatch"
                 .into(),
         }
     }

@@ -103,6 +103,7 @@ pub(crate) fn note_audit_degraded(reason: &str, event: &AuditEvent) {
     let total = AUDIT_DEGRADED_EVENTS.fetch_add(1, Ordering::Relaxed) + 1;
     let now = unix_now_secs();
     AUDIT_DEGRADED_LAST_UNIX.store(now, Ordering::Relaxed);
+    record_degraded_in_window(now);
     if let Ok(mut slot) = AUDIT_DEGRADED_REASON.lock()
         && *slot != reason
     {
@@ -139,6 +140,101 @@ pub(crate) fn audit_degradation_snapshot() -> Option<(u64, String, i64)> {
         reason,
         AUDIT_DEGRADED_LAST_UNIX.load(Ordering::Relaxed),
     ))
+}
+
+// ── Windowed degradation rate ────────────────────────────────────────────────
+//
+// The lifetime counter above never goes down, so a probe built on it would hold
+// a broker out of rotation forever after ONE transient audit-DB blip (or never
+// fail at all if it only alerted on "ever"). Health needs "is audit degraded
+// NOW": a ring of per-minute buckets gives the count over the trailing window.
+
+/// Width of one ring bucket.
+const AUDIT_WINDOW_BUCKET_SECS: i64 = 60;
+/// Number of buckets; the longest answerable window is `BUCKETS * BUCKET_SECS`.
+const AUDIT_WINDOW_BUCKETS: usize = 10;
+/// Default trailing window the health probe evaluates.
+pub(crate) const AUDIT_DEGRADED_HEALTH_WINDOW_SECS_DEFAULT: u64 = 300;
+
+#[allow(clippy::declare_interior_mutable_const)]
+const EMPTY_BUCKET_ID: AtomicI64 = AtomicI64::new(-1);
+#[allow(clippy::declare_interior_mutable_const)]
+const EMPTY_BUCKET_COUNT: AtomicU64 = AtomicU64::new(0);
+
+/// Lock-free ring of per-minute degraded-event counts.
+struct DegradedWindow {
+    /// Bucket id (unix_secs / BUCKET_SECS) each slot currently holds; -1 = empty.
+    ids: [AtomicI64; AUDIT_WINDOW_BUCKETS],
+    /// Degraded-event count per slot.
+    counts: [AtomicU64; AUDIT_WINDOW_BUCKETS],
+}
+
+impl DegradedWindow {
+    const fn new() -> Self {
+        Self {
+            ids: [EMPTY_BUCKET_ID; AUDIT_WINDOW_BUCKETS],
+            counts: [EMPTY_BUCKET_COUNT; AUDIT_WINDOW_BUCKETS],
+        }
+    }
+
+    fn record(&self, now_unix: i64) {
+        let bucket = now_unix.div_euclid(AUDIT_WINDOW_BUCKET_SECS);
+        let slot = bucket.rem_euclid(AUDIT_WINDOW_BUCKETS as i64) as usize;
+        let held = self.ids[slot].load(Ordering::Relaxed);
+        if held != bucket
+            && self.ids[slot]
+                .compare_exchange(held, bucket, Ordering::AcqRel, Ordering::Relaxed)
+                .is_ok()
+        {
+            // This thread rotated the slot to the new bucket: reset its count.
+            self.counts[slot].store(0, Ordering::Relaxed);
+        }
+        self.counts[slot].fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn count(&self, now_unix: i64, window_secs: u64) -> u64 {
+        let max_window = (AUDIT_WINDOW_BUCKETS as i64) * AUDIT_WINDOW_BUCKET_SECS;
+        let window =
+            (window_secs.min(i64::MAX as u64) as i64).clamp(AUDIT_WINDOW_BUCKET_SECS, max_window);
+        let current = now_unix.div_euclid(AUDIT_WINDOW_BUCKET_SECS);
+        let oldest = current - (window / AUDIT_WINDOW_BUCKET_SECS) + 1;
+        (0..AUDIT_WINDOW_BUCKETS)
+            .filter(|&slot| {
+                let id = self.ids[slot].load(Ordering::Relaxed);
+                id >= oldest && id <= current
+            })
+            .map(|slot| self.counts[slot].load(Ordering::Relaxed))
+            .sum()
+    }
+}
+
+static AUDIT_DEGRADED_WINDOW: DegradedWindow = DegradedWindow::new();
+
+fn record_degraded_in_window(now_unix: i64) {
+    AUDIT_DEGRADED_WINDOW.record(now_unix);
+}
+
+/// Degraded audit events over the trailing `window_secs` (bucketed per
+/// minute, clamped to 1..=10 minutes). Zero means the durable sink has been
+/// healthy for the whole window, even if it degraded earlier in the process.
+pub(crate) fn audit_degraded_events_within(window_secs: u64) -> u64 {
+    AUDIT_DEGRADED_WINDOW.count(unix_now_secs(), window_secs)
+}
+
+/// The health window: `UDB_AUDIT_DEGRADED_HEALTH_WINDOW_SECS` (default 300s).
+pub(crate) fn audit_degraded_health_window_secs() -> u64 {
+    std::env::var("UDB_AUDIT_DEGRADED_HEALTH_WINDOW_SECS")
+        .ok()
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(AUDIT_DEGRADED_HEALTH_WINDOW_SECS_DEFAULT)
+}
+
+/// `true` while the durable audit sink has degraded within the health window.
+/// Feeds the gRPC health probe (DataBroker listener → NOT_SERVING) and the
+/// `GetHealthReport` error channel.
+pub(crate) fn audit_currently_degraded() -> bool {
+    audit_degraded_events_within(audit_degraded_health_window_secs()) > 0
 }
 
 /// Bounded queue depth for the durable Postgres audit writer. Best-effort: on a
@@ -538,6 +634,30 @@ fn append_line(path: &str, line: &str) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The health signal is a WINDOWED rate: degradation inside the window
+    /// counts, degradation older than the window does not (so one transient
+    /// blip cannot hold a broker out of rotation for the process lifetime).
+    /// Uses a private ring so it cannot collide with real events recorded by
+    /// other tests in this process.
+    #[test]
+    fn degraded_window_counts_recent_events_and_forgets_old_ones() {
+        let ring = DegradedWindow::new();
+        let base: i64 = 1_800_000_000 - 1_800_000_000 % AUDIT_WINDOW_BUCKET_SECS;
+        assert_eq!(ring.count(base, 300), 0);
+        ring.record(base);
+        ring.record(base + 5);
+        assert_eq!(ring.count(base + 10, 300), 2);
+        // Still inside a 5-minute window four minutes later.
+        assert_eq!(ring.count(base + 4 * 60, 300), 2);
+        // Aged out once the window has fully passed.
+        assert_eq!(ring.count(base + 6 * 60, 300), 0);
+        // A new event after the gap is counted on its own (slot was rotated).
+        ring.record(base + 10 * 60);
+        assert_eq!(ring.count(base + 10 * 60, 300), 1);
+        // Windows are clamped to the ring: asking for an hour sees <= 10 min.
+        assert_eq!(ring.count(base + 10 * 60, 3600), 1);
+    }
 
     fn sample() -> AuditEvent {
         AuditEvent {

@@ -103,4 +103,25 @@ class WorkflowServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * Acknowledge the outcome of the step the workflow tick dispatched
+     * (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+     * the instance stays RUNNING awaiting this acknowledgement, and a step that is
+     * not acknowledged within the step timeout fails the workflow (compensating
+     * any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+     * the last one); FAILED fails the workflow through the same
+     * failed/compensating path as a timeout.
+     * @param \Udb\Core\Workflow\Services\V1\AckWorkflowStepRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Workflow\Services\V1\AckWorkflowStepResponse>
+     */
+    public function AckWorkflowStep(\Udb\Core\Workflow\Services\V1\AckWorkflowStepRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep',
+        $argument,
+        ['\Udb\Core\Workflow\Services\V1\AckWorkflowStepResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

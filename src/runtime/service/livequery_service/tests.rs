@@ -336,6 +336,25 @@ fn livequery_missing_runtime_capability_carries_typed_detail() {
     assert!(!detail.retryable);
 }
 
+/// The bug: on a broker with no CDC change feed the stream ended cleanly after
+/// the snapshot — indistinguishable from "nothing changed". It now ends with a
+/// typed FailedPrecondition naming the missing capability.
+#[test]
+fn no_delta_feed_terminal_frame_is_a_typed_capability_error() {
+    let err = super::handlers::no_delta_feed_status();
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert!(
+        err.message().contains("CDC change feed"),
+        "{}",
+        err.message()
+    );
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Capability as i32);
+    assert_eq!(detail.backend, "livequery");
+    assert_eq!(detail.operation, "delta_feed");
+    assert_eq!(detail.capability_required, "cdc_change_feed");
+}
+
 /// The single-row IR evaluator gates deltas: only rows still matching the
 /// subscription predicate are yielded.
 #[test]

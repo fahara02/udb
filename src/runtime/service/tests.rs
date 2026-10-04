@@ -877,6 +877,7 @@ fn full_service_descriptor_surface_snapshot() {
         (
             "udb.core.workflow.services.v1.WorkflowService",
             &[
+                "AckWorkflowStep",
                 "CancelWorkflow",
                 "GetWorkflow",
                 "ListWorkflows",
@@ -887,6 +888,7 @@ fn full_service_descriptor_surface_snapshot() {
         (
             "udb.services.v1.DataBroker",
             &[
+                "AbortMultipartUpload",
                 "ActivateCatalog",
                 "AnalyticalQuery",
                 "ApplyMigration",
@@ -898,6 +900,7 @@ fn full_service_descriptor_surface_snapshot() {
                 "CacheGet",
                 "CacheScan",
                 "CacheSet",
+                "CompleteMultipartUpload",
                 "CreateMaterializedView",
                 "Delete",
                 "DeletePolicy",
@@ -1878,23 +1881,23 @@ async fn broker_v2_control_rpc_not_locked_out_by_nonmatching_policy() {
     // control RPC must NOT lock out control/meta RPCs. Control RPCs reach the gate
     // with the WILDCARD message_type ("*", from `authorized_call!`) and are governed
     // by their own coarse `require_admin_scope` gate — NEVER by the data-plane policy
-    // set. Without the carve-out (`service::mod::authorize` returns early on `"*"`),
-    // the FIRST non-matching `PutPolicy` would deny `GetCapabilities`, `PutPolicy`,
-    // `DeletePolicy` and every control RPC, making the cluster unrecoverable without a
-    // broker restart. This test pins that the carve-out holds while data ops stay
-    // deny-by-default.
+    // set. Without the carve-out (the internal `authorize_control` entry point
+    // `authorized_call!` uses), the FIRST non-matching `PutPolicy` would deny
+    // `GetCapabilities`, `PutPolicy`, `DeletePolicy` and every control RPC, making
+    // the cluster unrecoverable without a broker restart. This test pins that the
+    // carve-out holds while data ops stay deny-by-default.
     let svc = v2_service(vec![allow_policy("Select", "udb:read")]); // matches data Select only
     let ctx = billing_ctx(&["udb:admin"]);
     assert!(
-        svc.authorize(&ctx, "*", "GetCapabilities").await.is_ok(),
-        "control RPC (wildcard message_type) must survive a non-matching policy set"
+        svc.authorize_control(&ctx, "GetCapabilities").await.is_ok(),
+        "control RPC must survive a non-matching policy set"
     );
     assert!(
-        svc.authorize(&ctx, "*", "PutPolicy").await.is_ok(),
+        svc.authorize_control(&ctx, "PutPolicy").await.is_ok(),
         "PutPolicy must stay reachable so a bad policy is removable WITHOUT a restart"
     );
     assert!(
-        svc.authorize(&ctx, "*", "DeletePolicy").await.is_ok(),
+        svc.authorize_control(&ctx, "DeletePolicy").await.is_ok(),
         "DeletePolicy must stay reachable so the cluster can recover from a bad policy"
     );
     // A real data op with no matching policy is still deny-by-default — the intended
@@ -1906,6 +1909,40 @@ async fn broker_v2_control_rpc_not_locked_out_by_nonmatching_policy() {
             .code(),
         tonic::Code::PermissionDenied,
         "data ops stay deny-by-default once any policy is present"
+    );
+}
+
+#[tokio::test]
+async fn broker_data_authorize_refuses_caller_supplied_wildcard_message_type() {
+    // A data/store RPC passes a caller-influenced message type into `authorize`.
+    // `"*"` used to select the control carve-out and skip the data policy
+    // entirely; empty named no resource. Both must be refused BEFORE any policy
+    // evaluation — even when no policy at all would match (deny-by-default) and
+    // even for an admin-scoped caller.
+    let svc = v2_service(vec![allow_policy("Select", "udb:read")]);
+    let ctx = billing_ctx(&["udb:admin", "udb:read", "udb:write"]);
+    for message_type in ["*", " * ", "", "   "] {
+        for op in ["Select", "Upsert", "cache.get", "graph.query", "GetObject"] {
+            let err = svc
+                .authorize(&ctx, message_type, op)
+                .await
+                .expect_err("a wildcard/empty data message type must be refused");
+            assert_eq!(
+                err.code(),
+                tonic::Code::InvalidArgument,
+                "message_type {message_type:?} op {op}: {err:?}"
+            );
+        }
+    }
+    // The pattern entry point (CDC topic patterns) evaluates "*" BY the policy:
+    // no `*`-object grant exists here, so it is denied, never bypassed.
+    assert_eq!(
+        svc.authorize_pattern(&ctx, "*", "PublishCDC")
+            .await
+            .unwrap_err()
+            .code(),
+        tonic::Code::PermissionDenied,
+        "a '*' topic pattern must be decided by the data policy"
     );
 }
 

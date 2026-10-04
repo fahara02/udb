@@ -2,6 +2,10 @@ name: Resilience smokes
 
 on:
   workflow_dispatch:
+  # Release tags must carry multi-process HA evidence, not only the weekly run.
+  push:
+    tags:
+      - "v*"
   schedule:
     - cron: "17 3 * * 1"
 

@@ -319,7 +319,10 @@ pub(crate) fn build_embedding_point(
     }
     let payload = crate::runtime::executor_utils::json_to_struct(&payload_json);
     Ok(VectorPointMutation {
-        id: row_pk.to_string(),
+        // The engine id is tenant-scoped: a bare source pk let another tenant's
+        // same-pk upsert replace (or its delete remove) this tenant's vector in a
+        // shared collection. Deletes scope the same way (`delete_points`).
+        id: super::chunking::tenant_scoped_point_id(tenant, row_pk),
         vector,
         payload,
         vector_name: String::new(),

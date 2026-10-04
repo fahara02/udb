@@ -592,3 +592,105 @@ fn storage_project_scope_accepts_opaque_and_uuid_projects() {
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
     assert_eq!(resolve(&"p".repeat(120)).unwrap().len(), 120);
 }
+
+/// The public `PutObject` fallback namespaces keys by the verified tenant; the
+/// native presign does not. Finalize/download/delete consult ONE candidate list
+/// covering both, primary (native) first, so a fallback upload is found and a
+/// delete removes bytes wherever they landed.
+#[test]
+fn file_key_candidates_cover_native_and_put_object_fallback() {
+    use super::presign::{data_plane_object_key, file_object_key_candidates};
+
+    let tenant = "11111111-1111-4111-8111-111111111111";
+    let key = format!("{tenant}/33333333-3333-4333-8333-333333333333/report.pdf");
+    let candidates = file_object_key_candidates(tenant, &key);
+    assert_eq!(candidates.len(), 2);
+    assert_eq!(candidates[0], key, "native presign key is probed first");
+    assert_eq!(
+        candidates[1],
+        format!("__udb_t/{tenant}/{key}"),
+        "second candidate is exactly the key the public PutObject writes"
+    );
+    // The fallback must stay byte-identical to the data-plane namespacing.
+    let ctx = crate::RequestContext {
+        tenant_id: tenant.to_string(),
+        ..crate::RequestContext::default()
+    };
+    assert_eq!(
+        data_plane_object_key(tenant, &key),
+        crate::runtime::executor_utils::tenant_scoped_object_key(&ctx, &key)
+    );
+    // No tenant boundary: both paths use the bare key, so one candidate.
+    assert_eq!(file_object_key_candidates("", &key), vec![key.clone()]);
+    // A key-less (metadata-only) file has nothing to probe or delete.
+    assert!(file_object_key_candidates(tenant, "  ").is_empty());
+}
+
+/// The orphan reaper's DELETE must re-assert the orphan predicate (still
+/// PENDING, still older than the cutoff) and RETURN the ids it removed: a bare
+/// `file_id IN (...)` would hard-delete a file finalized between the reaper's
+/// read and its delete.
+#[test]
+fn orphan_reap_delete_rechecks_pending_and_age_and_returns_ids() {
+    let cutoff = chrono::Utc::now();
+    let delete = super::workers::orphan_reap_delete(["a", "b"], cutoff);
+    assert_eq!(delete.return_fields, vec!["file_id".to_string()]);
+    let LogicalFilter::And(clauses) = &delete.filter else {
+        panic!("reap delete must be a conjunction, got {:?}", delete.filter);
+    };
+    assert!(clauses.iter().any(|c| matches!(
+        c,
+        LogicalFilter::InList { field, values } if field == "file_id" && values.len() == 2
+    )));
+    assert_eq!(
+        comparison_value(&delete.filter, "status"),
+        Some(&LogicalValue::String("PENDING".to_string()))
+    );
+    assert!(clauses.iter().any(|c| matches!(
+        c,
+        LogicalFilter::Comparison { field, op: ComparisonOp::Lt, value: LogicalValue::Timestamp(t) }
+            if field == "created_at" && *t == cutoff
+    )));
+}
+
+/// A SOFT delete whose byte delete failed must not read as "bytes removed": the
+/// response carries an ApiError naming the outcome — GC intent recorded (the
+/// sweep converges) or, if even that failed, orphaned bytes.
+#[test]
+fn soft_delete_byte_failure_is_reported_not_swallowed() {
+    use super::config::OBJECT_DELETE_ORPHANED;
+    use super::errors::api_error_object_bytes_not_removed;
+
+    let recorded = api_error_object_bytes_not_removed("s3 503", true);
+    assert_eq!(recorded.code, OBJECT_DELETE_FAILED);
+    assert!(recorded.message.contains("GC intent was recorded"));
+    assert!(recorded.message.contains("s3 503"));
+    assert!(
+        !recorded.retryable,
+        "the broker owns the retry via the sweep"
+    );
+
+    let orphaned = api_error_object_bytes_not_removed("s3 503", false);
+    assert_eq!(orphaned.code, OBJECT_DELETE_ORPHANED);
+    assert!(orphaned.message.contains("orphaned"));
+}
+
+/// Under a finite tenant quota the declared size IS the reservation the upload
+/// URL is issued against; an undeclared size would hand out an unbounded URL.
+#[test]
+fn register_requires_a_size_reservation_under_a_quota() {
+    use super::handlers::require_quota_reservation;
+
+    assert!(require_quota_reservation(0, 0).is_ok(), "unlimited quota");
+    assert!(require_quota_reservation(0, -1).is_ok(), "unlimited quota");
+    assert!(require_quota_reservation(1024, 10).is_ok());
+    let err = require_quota_reservation(1024, 0).expect_err("no reservation under a quota");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_single_field_violation(
+        &err,
+        "size_bytes",
+        "must be the positive byte size of the upload; it reserves tenant quota before the \
+         upload URL is issued",
+    );
+    assert!(require_quota_reservation(1024, -5).is_err());
+}

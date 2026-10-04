@@ -75,6 +75,10 @@ namespace Udb.Core.Workflow.Services.V1 {
     static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest> __Marshaller_udb_core_workflow_services_v1_SignalWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse> __Marshaller_udb_core_workflow_services_v1_SignalWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest> __Marshaller_udb_core_workflow_services_v1_AckWorkflowStepRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse> __Marshaller_udb_core_workflow_services_v1_AckWorkflowStepResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest, global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse> __Method_StartWorkflow = new grpc::Method<global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest, global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse>(
@@ -115,6 +119,14 @@ namespace Udb.Core.Workflow.Services.V1 {
         "SignalWorkflow",
         __Marshaller_udb_core_workflow_services_v1_SignalWorkflowRequest,
         __Marshaller_udb_core_workflow_services_v1_SignalWorkflowResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest, global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse> __Method_AckWorkflowStep = new grpc::Method<global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest, global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AckWorkflowStep",
+        __Marshaller_udb_core_workflow_services_v1_AckWorkflowStepRequest,
+        __Marshaller_udb_core_workflow_services_v1_AckWorkflowStepResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -186,6 +198,24 @@ namespace Udb.Core.Workflow.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse> SignalWorkflow(global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Acknowledge the outcome of the step the workflow tick dispatched
+      /// (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+      /// the instance stays RUNNING awaiting this acknowledgement, and a step that is
+      /// not acknowledged within the step timeout fails the workflow (compensating
+      /// any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+      /// the last one); FAILED fails the workflow through the same
+      /// failed/compensating path as a timeout.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse> AckWorkflowStep(global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -475,6 +505,78 @@ namespace Udb.Core.Workflow.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_SignalWorkflow, null, options, request);
       }
+      /// <summary>
+      /// Acknowledge the outcome of the step the workflow tick dispatched
+      /// (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+      /// the instance stays RUNNING awaiting this acknowledgement, and a step that is
+      /// not acknowledged within the step timeout fails the workflow (compensating
+      /// any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+      /// the last one); FAILED fails the workflow through the same
+      /// failed/compensating path as a timeout.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse AckWorkflowStep(global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AckWorkflowStep(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Acknowledge the outcome of the step the workflow tick dispatched
+      /// (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+      /// the instance stays RUNNING awaiting this acknowledgement, and a step that is
+      /// not acknowledged within the step timeout fails the workflow (compensating
+      /// any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+      /// the last one); FAILED fails the workflow through the same
+      /// failed/compensating path as a timeout.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse AckWorkflowStep(global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AckWorkflowStep, null, options, request);
+      }
+      /// <summary>
+      /// Acknowledge the outcome of the step the workflow tick dispatched
+      /// (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+      /// the instance stays RUNNING awaiting this acknowledgement, and a step that is
+      /// not acknowledged within the step timeout fails the workflow (compensating
+      /// any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+      /// the last one); FAILED fails the workflow through the same
+      /// failed/compensating path as a timeout.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse> AckWorkflowStepAsync(global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AckWorkflowStepAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Acknowledge the outcome of the step the workflow tick dispatched
+      /// (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+      /// the instance stays RUNNING awaiting this acknowledgement, and a step that is
+      /// not acknowledged within the step timeout fails the workflow (compensating
+      /// any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+      /// the last one); FAILED fails the workflow through the same
+      /// failed/compensating path as a timeout.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse> AckWorkflowStepAsync(global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AckWorkflowStep, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override WorkflowServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -493,7 +595,8 @@ namespace Udb.Core.Workflow.Services.V1 {
           .AddMethod(__Method_GetWorkflow, serviceImpl.GetWorkflow)
           .AddMethod(__Method_ListWorkflows, serviceImpl.ListWorkflows)
           .AddMethod(__Method_CancelWorkflow, serviceImpl.CancelWorkflow)
-          .AddMethod(__Method_SignalWorkflow, serviceImpl.SignalWorkflow).Build();
+          .AddMethod(__Method_SignalWorkflow, serviceImpl.SignalWorkflow)
+          .AddMethod(__Method_AckWorkflowStep, serviceImpl.AckWorkflowStep).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -508,6 +611,7 @@ namespace Udb.Core.Workflow.Services.V1 {
       serviceBinder.AddMethod(__Method_ListWorkflows, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Workflow.Services.V1.ListWorkflowsRequest, global::Udb.Core.Workflow.Services.V1.ListWorkflowsResponse>(serviceImpl.ListWorkflows));
       serviceBinder.AddMethod(__Method_CancelWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest, global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse>(serviceImpl.CancelWorkflow));
       serviceBinder.AddMethod(__Method_SignalWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest, global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse>(serviceImpl.SignalWorkflow));
+      serviceBinder.AddMethod(__Method_AckWorkflowStep, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest, global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse>(serviceImpl.AckWorkflowStep));
     }
 
   }

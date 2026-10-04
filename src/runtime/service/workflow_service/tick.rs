@@ -16,9 +16,10 @@ use crate::runtime::native_catalog::NativeModel;
 
 use super::super::native_helpers::MAX_LIST_ROWS;
 use super::config::{
-    COMPENSATE_EMITTED_KEY, SIGNAL_WAITS_KEY, SIGNALS_KEY, STATUS_COMPENSATED, STATUS_COMPENSATING,
-    STATUS_FAILED, STATUS_WAITING_SIGNAL, TOPIC_COMPENSATE_STEP, TOPIC_COMPENSATED,
-    TOPIC_COMPLETED, TOPIC_FAILED, TOPIC_STEP_ADVANCED, workflow_step_timeout_secs,
+    AWAITING_ACK_KEY, COMPENSATE_EMITTED_KEY, SIGNAL_WAITS_KEY, SIGNALS_KEY, STATUS_COMPENSATED,
+    STATUS_COMPENSATING, STATUS_FAILED, STATUS_WAITING_SIGNAL, TOPIC_COMPENSATE_STEP,
+    TOPIC_COMPENSATED, TOPIC_COMPLETED, TOPIC_FAILED, TOPIC_STEP_ADVANCED, TOPIC_STEP_DISPATCHED,
+    workflow_step_timeout_secs,
 };
 use super::errors::workflow_internal_status;
 use super::events::insert_tick_outbox;
@@ -159,6 +160,92 @@ pub(crate) fn timeout_target_status(current_step: i32) -> &'static str {
     }
 }
 
+/// The step index the tick dispatched and is still waiting to be acknowledged,
+/// read from the instance payload's `awaiting_ack_step` marker. Absent,
+/// malformed, or negative ⇒ `None` (nothing in flight). Pure.
+pub(crate) fn awaiting_ack_step(payload: &serde_json::Value) -> Option<i32> {
+    payload
+        .get(AWAITING_ACK_KEY)
+        .and_then(serde_json::Value::as_i64)
+        .and_then(|v| i32::try_from(v).ok())
+        .filter(|v| *v >= 0)
+}
+
+/// Set (`Some`) or clear (`None`) the in-flight step marker. A non-object
+/// payload (absent / scalar) is replaced by an object first so the marker is
+/// always durable. Pure.
+pub(crate) fn set_awaiting_ack_step(payload: &mut serde_json::Value, step: Option<i32>) {
+    if !payload.is_object() {
+        *payload = serde_json::json!({});
+    }
+    if let Some(obj) = payload.as_object_mut() {
+        match step {
+            Some(index) => {
+                obj.insert(AWAITING_ACK_KEY.to_string(), serde_json::json!(index));
+            }
+            None => {
+                obj.remove(AWAITING_ACK_KEY);
+            }
+        }
+    }
+}
+
+/// What an `AckWorkflowStep` does to an instance. Computed by the pure
+/// [`step_ack_decision`] so the "only the dispatched step can be acknowledged"
+/// contract is unit-testable without Postgres.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum StepAckDecision {
+    /// A repeated SUCCEEDED ack for a step that already advanced — idempotent
+    /// no-op (at-least-once step executors may re-deliver their ack).
+    AlreadyAcknowledged,
+    /// Advance `current_step` to `new_step`; `completed` when it was the last.
+    Advance { new_step: i32, completed: bool },
+    /// The step failed: move to `target_status` (COMPENSATING when completed
+    /// steps stand, else FAILED) — the same path a timeout takes.
+    Fail { target_status: &'static str },
+    /// Rejected with a policy decision id (instance not RUNNING, or the ack is
+    /// for a step that is not the one in flight).
+    Reject(&'static str),
+}
+
+/// Decide an acknowledgement. `status`/`current_step`/`total_steps`/`awaiting`
+/// are the LOCKED row's values; `step_index`/`succeeded` come from the request.
+/// Pure.
+pub(crate) fn step_ack_decision(
+    status: &str,
+    current_step: i32,
+    total_steps: i32,
+    awaiting: Option<i32>,
+    step_index: i32,
+    succeeded: bool,
+) -> StepAckDecision {
+    if succeeded
+        && step_index >= 0
+        && step_index < current_step
+        && awaiting != Some(step_index)
+        && matches!(status, "RUNNING" | "COMPLETED" | STATUS_WAITING_SIGNAL)
+    {
+        return StepAckDecision::AlreadyAcknowledged;
+    }
+    if status != "RUNNING" {
+        return StepAckDecision::Reject("workflow_not_running");
+    }
+    if awaiting != Some(step_index) || step_index != current_step {
+        return StepAckDecision::Reject("workflow_step_not_awaiting_ack");
+    }
+    if succeeded {
+        let new_step = current_step.saturating_add(1);
+        StepAckDecision::Advance {
+            new_step,
+            completed: new_step >= total_steps,
+        }
+    } else {
+        StepAckDecision::Fail {
+            target_status: timeout_target_status(current_step),
+        }
+    }
+}
+
 /// The `SELECT ... FOR UPDATE SKIP LOCKED` statement the tick uses to claim DUE
 /// RUNNING workflow instances. Built from the manifest model so column identifiers
 /// stay single-sourced. Exposed (and unit-tested) so the no-double-advance contract
@@ -282,13 +369,15 @@ fn tick_row_i32(row: &sqlx::postgres::PgRow, column: &str) -> Result<i32, Status
 /// One workflow-tick pass (leader-elected by the caller), three sub-passes in ONE
 /// transaction so state changes and their outbox rows always commit atomically:
 ///
-/// 1. **Forward advance** — claims up to `batch_size` DUE RUNNING instances with
-///    `FOR UPDATE SKIP LOCKED` and advances `current_step`, enqueuing
-///    `step.advanced` (or `completed` on the terminal step). Never double-advances;
-///    every transition is at-least-once via the outbox→CDC pipeline. A step gated
-///    on an external signal (`signal_waits` in the payload) is NOT advanced by the
-///    timer — the instance parks in WAITING_SIGNAL until `SignalWorkflow` delivers
-///    the matching signal (16.3 signal-driven wait), then advances on a later pass.
+/// 1. **Forward dispatch** — claims up to `batch_size` DUE RUNNING instances with
+///    `FOR UPDATE SKIP LOCKED` and DISPATCHES the current step, enqueuing
+///    `step.dispatched`; the instance stays RUNNING awaiting `AckWorkflowStep`
+///    (recorded under the payload's `awaiting_ack_step`). The timer NEVER
+///    completes a step: only the ack advances `current_step` / completes the
+///    workflow. A step already in flight is never re-dispatched. A step gated
+///    on an external signal (`signal_waits` in the payload) is NOT dispatched by
+///    the timer — the instance parks in WAITING_SIGNAL until `SignalWorkflow`
+///    delivers the matching signal (16.3 signal-driven wait).
 /// 2. **Compensation driver (16.3.2)** — for COMPENSATING instances, emits one
 ///    `udb.workflow.compensate.step.v1` event per completed step in REVERSE order
 ///    (application-driven undo; the data-plane `CompensatorRegistry` cannot undo
@@ -301,9 +390,8 @@ fn tick_row_i32(row: &sqlx::postgres::PgRow, column: &str) -> Result<i32, Status
 ///    exceeds the step timeout emit `udb.workflow.failed.v1`; one that had already
 ///    completed forward steps (`current_step > 0`) moves to COMPENSATING (its
 ///    completed steps are undone by pass 2 before it settles COMPENSATED), while
-///    one that timed out before any step completed settles FAILED directly. Step
-///    ADVANCE itself stays timer-driven (`next_run_at`) this wave — a full
-///    step-ack contract needs proto surface (follow-up 16.12.3).
+///    one that timed out before any step completed settles FAILED directly. A dispatched
+///    step that is never acknowledged within the timeout lands here too.
 ///
 /// The tick FIRES EVENTS ONLY; it never runs a payload in-process — it is the
 /// workflow counterpart of the scheduler tick and adds no second orchestration
@@ -347,29 +435,27 @@ pub(crate) async fn run_workflow_tick_once(
 
     let now = Utc::now();
     let mut acted = 0i64;
-    let mut completed_sagas: Vec<Uuid> = Vec::new();
     for row in &rows {
         let workflow_id = tick_row_text(row, "workflow_id")?;
         let tenant_id = tick_row_text(row, "tenant_id")?;
         let project_id = tick_row_text(row, "project_id")?;
         let workflow_type = tick_row_text(row, "workflow_type")?;
         let payload = tick_row_text(row, "payload")?;
-        let saga_id = tick_row_text(row, "saga_id")?;
         let current_step = tick_row_i32(row, "current_step")?;
         let total_steps = tick_row_i32(row, "total_steps")?;
 
         let new_step = current_step.saturating_add(1);
-        let payload_json: serde_json::Value =
+        let mut payload_json: serde_json::Value =
             serde_json::from_str(&payload).unwrap_or(serde_json::Value::Null);
 
         // H9 — honor step outcomes: a step gated on an external signal must NOT be
-        // advanced by the timer. If the step this pass would enter declares a
+        // dispatched by the timer. If the step this pass would enter declares a
         // required signal that has not yet been delivered, park the instance in
         // WAITING_SIGNAL (durable, timer-immune) with that pending signal name and
         // clear next_run_at, WITHOUT advancing current_step. `SignalWorkflow` with
         // the matching name records the signal and resumes the instance to RUNNING;
         // a later pass then re-evaluates this same step, finds the gate cleared,
-        // and advances it. No event is emitted for the pause (no proto wait-topic
+        // and dispatches it. No event is emitted for the pause (no proto wait-topic
         // this wave).
         if let Some(pending) = pending_signal_for_step(&payload_json, new_step) {
             sqlx::query(&format!(
@@ -397,74 +483,76 @@ pub(crate) async fn run_workflow_tick_once(
             continue;
         }
 
-        let completed = new_step >= total_steps;
-        let topic = advance_event_topic(completed);
+        // A step is NEVER completed by the timer. The tick only DISPATCHES the
+        // current step (one `step.dispatched` event) and parks the instance
+        // RUNNING with `next_run_at` cleared, awaiting `AckWorkflowStep`. The
+        // ack advances `current_step` (or completes the workflow); no ack within
+        // the step timeout fails it through the timeout sweep below. An instance
+        // re-armed while its current step is already in flight (e.g. a signal
+        // nudged it) is NOT re-dispatched, and `last_transition_at` is left as-is
+        // so the ack deadline keeps running.
+        if awaiting_ack_step(&payload_json) == Some(current_step) {
+            sqlx::query(&format!(
+                "UPDATE {wf_rel} SET {next_run_at} = NULL WHERE {workflow_id} = $1::UUID",
+                next_run_at = m.q("next_run_at"),
+                workflow_id = m.q("workflow_id"),
+            ))
+            .bind(&workflow_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                workflow_internal_status(
+                    "workflow_tick_rearm_update",
+                    format!("workflow tick re-arm update failed: {e}"),
+                )
+            })?;
+            continue;
+        }
+
         let event_payload = serde_json::json!({
             "workflow_id": workflow_id.clone(),
             "tenant_id": tenant_id.clone(),
             "project_id": project_id.clone(),
             "workflow_type": workflow_type.clone(),
-            "current_step": new_step,
+            "step_index": current_step,
+            "current_step": current_step,
             "total_steps": total_steps,
-            "completed": completed,
-            "payload": payload_json,
-            "advanced_at": now.to_rfc3339(),
+            "is_last_step": new_step >= total_steps,
+            "ack_timeout_secs": workflow_step_timeout_secs(),
+            "payload": payload_json.clone(),
+            "dispatched_at": now.to_rfc3339(),
         });
         insert_tick_outbox(
             &mut tx,
             outbox_rel,
-            topic,
+            TOPIC_STEP_DISPATCHED,
             &tenant_id,
             &project_id,
             &workflow_id,
             event_payload,
-            if completed { "completed" } else { "advanced" },
+            "step_dispatched",
         )
         .await?;
 
-        if completed {
-            sqlx::query(&format!(
-                "UPDATE {wf_rel} SET {status} = 'COMPLETED', {current_step} = $2, \
-                    {next_run_at} = NULL, {last_transition_at} = NOW() WHERE {workflow_id} = $1::UUID",
-                status = m.q("status"),
-                current_step = m.q("current_step"),
-                next_run_at = m.q("next_run_at"),
-                last_transition_at = m.q("last_transition_at"),
-                workflow_id = m.q("workflow_id"),
-            ))
-            .bind(&workflow_id)
-            .bind(new_step)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| {
-                workflow_internal_status(
-                    "workflow_tick_complete_update",
-                    format!("workflow tick complete update failed: {e}"),
-                )
-            })?;
-            if let Ok(saga_uuid) = saga_id.parse::<Uuid>() {
-                completed_sagas.push(saga_uuid);
-            }
-        } else {
-            sqlx::query(&format!(
-                "UPDATE {wf_rel} SET {current_step} = $2, {next_run_at} = NOW(), \
-                    {last_transition_at} = NOW() WHERE {workflow_id} = $1::UUID",
-                current_step = m.q("current_step"),
-                next_run_at = m.q("next_run_at"),
-                last_transition_at = m.q("last_transition_at"),
-                workflow_id = m.q("workflow_id"),
-            ))
-            .bind(&workflow_id)
-            .bind(new_step)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| {
-                workflow_internal_status(
-                    "workflow_tick_advance_update",
-                    format!("workflow tick advance update failed: {e}"),
-                )
-            })?;
-        }
+        set_awaiting_ack_step(&mut payload_json, Some(current_step));
+        sqlx::query(&format!(
+            "UPDATE {wf_rel} SET {payload} = $2::JSONB, {next_run_at} = NULL, \
+                {last_transition_at} = NOW() WHERE {workflow_id} = $1::UUID",
+            payload = m.q("payload"),
+            next_run_at = m.q("next_run_at"),
+            last_transition_at = m.q("last_transition_at"),
+            workflow_id = m.q("workflow_id"),
+        ))
+        .bind(&workflow_id)
+        .bind(payload_json.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            workflow_internal_status(
+                "workflow_tick_dispatch_update",
+                format!("workflow tick dispatch update failed: {e}"),
+            )
+        })?;
         acted += 1;
     }
 
@@ -582,9 +670,9 @@ pub(crate) async fn run_workflow_tick_once(
     }
 
     // ── 16.3.4 — step-timeout sweep: RUNNING → FAILED ───────────────────────────
-    // Guards against instances that stopped transitioning entirely. Step ADVANCE
-    // itself remains event/timer-driven (`next_run_at`) this wave — a full
-    // step-ack contract needs proto surface (follow-up 16.12.3).
+    // Guards against instances that stopped transitioning entirely — chiefly a
+    // dispatched step whose `AckWorkflowStep` never arrived (dispatch stamps
+    // `last_transition_at`, so the ack deadline is the step timeout).
     let timeout_secs = workflow_step_timeout_secs();
     let mut failed_sagas: Vec<Uuid> = Vec::new();
     let stale_rows = sqlx::query(&timed_out_workflows_claim_sql(&m))
@@ -630,7 +718,7 @@ pub(crate) async fn run_workflow_tick_once(
         .bind(&workflow_id)
         .bind(new_status)
         .bind(format!(
-            "workflow step timed out after {timeout_secs}s without a transition"
+            "workflow step timed out after {timeout_secs}s without an acknowledgement"
         ))
         .execute(&mut *tx)
         .await
@@ -682,17 +770,13 @@ pub(crate) async fn run_workflow_tick_once(
 
     // Best-effort, cross-store: settle the linked saga rows on the EXISTING saga
     // engine so they are not left in the `Pending`/`Indeterminate` queues
-    // (completed → Committed, compensated → Compensated, timed-out → Failed;
+    // (compensated → Compensated, timed-out → Failed — completion is settled by
+    // the `AckWorkflowStep` that acknowledges the last step;
     // Failed is NOT recoverable, so no spurious data-plane compensation fires for
     // steps that never ran). A failure here never undoes the durable transitions
     // committed above.
     if let Some(store) = stores {
         for (saga_ids, status, comp_status) in [
-            (
-                completed_sagas,
-                SagaStatus::Committed,
-                CompensationStatus::None,
-            ),
             (
                 compensated_sagas,
                 SagaStatus::Compensated,

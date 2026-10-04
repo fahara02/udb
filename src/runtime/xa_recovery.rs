@@ -1040,6 +1040,30 @@ pub async fn run_xa_recovery_pass(
     Ok((ledger, abandoned.saturating_add(mysql_orphans)))
 }
 
+/// [`run_xa_recovery_pass`] for the lease-gated worker: the singleton
+/// fencing token is verified immediately before EACH phase that issues
+/// `COMMIT PREPARED` / `ROLLBACK PREPARED` / `XA COMMIT|ROLLBACK`. A holder
+/// whose lease was taken over (paused process, partition) stops before
+/// driving a single further participant, instead of racing the new leader
+/// on the same xids. The worker also heartbeats the lease for the whole pass
+/// (see `singleton::run_once_fenced`).
+pub async fn run_xa_recovery_pass_fenced(
+    pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
+    registry: &InDoubtRegistry,
+    recovery: &RecoveryConfig,
+    grace_secs: i64,
+    fence: &crate::runtime::singleton::LeaseFence,
+) -> Result<(u64, u64), String> {
+    fence.check().await?;
+    let ledger = recover_xa_ledger_indoubt_with(pool, config, registry, recovery).await?;
+    fence.check().await?;
+    let abandoned = recover_abandoned_prepared_transactions(pool, config, grace_secs).await?;
+    fence.check().await?;
+    let mysql_orphans = recover_abandoned_mysql_prepared(pool, config, registry).await?;
+    Ok((ledger, abandoned.saturating_add(mysql_orphans)))
+}
+
 async fn mark_xa_ledger_decision(
     pool: &sqlx::PgPool,
     config: &SystemCatalogConfig,

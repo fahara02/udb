@@ -482,22 +482,150 @@ impl QueryExecutor for CassandraExecutor {
     }
 }
 
+/// A plain CQL identifier (keyspace / table / column) that is safe to wrap in
+/// double quotes: a leading ASCII letter or `_`, then ASCII alphanumerics or
+/// `_`, at most 48 characters (Cassandra's table-name limit).
+fn is_plain_cql_identifier(value: &str) -> bool {
+    let mut chars = value.chars();
+    matches!(chars.next(), Some(ch) if ch.is_ascii_alphabetic() || ch == '_')
+        && value.len() <= 48
+        && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+}
+
+/// The typed row-write shape `{"table": "[ks.]t", "rows": [{col: value}, ...]}`
+/// (what the typed TimeSeriesWrite RPC sends when its resource is not a
+/// manifest entity). `None` when the request is the `{"sql": ...}` form.
+fn cassandra_rows_write_spec(req: &str) -> Result<Option<(String, Vec<JsonValue>)>, tonic::Status> {
+    let spec: JsonValue = serde_json::from_str(req).map_err(|e| {
+        invalid_argument_fields(
+            format!("invalid dispatch JSON: {e}"),
+            [("request_json", "must be valid dispatch JSON")],
+        )
+    })?;
+    if spec.get("sql").is_some() {
+        return Ok(None);
+    }
+    let (Some(table), Some(rows)) = (
+        spec.get("table").and_then(JsonValue::as_str),
+        spec.get("rows").and_then(JsonValue::as_array),
+    ) else {
+        return Ok(None);
+    };
+    Ok(Some((table.to_string(), rows.clone())))
+}
+
+/// Render one row of the `{table, rows}` shape as a parameterised INSERT.
+/// Every identifier is allowlisted before it is quoted, so a caller-supplied
+/// table or column name can never break out of the identifier position.
+fn cassandra_row_insert(
+    table: &str,
+    row: &JsonValue,
+) -> Result<(String, Vec<JsonValue>), tonic::Status> {
+    let parts: Vec<&str> = table.split('.').collect();
+    if parts.is_empty() || parts.len() > 2 || !parts.iter().all(|p| is_plain_cql_identifier(p)) {
+        return Err(invalid_argument_fields(
+            format!("invalid cassandra table identifier '{table}'"),
+            [(
+                "table",
+                "must be `table` or `keyspace.table` of plain identifiers",
+            )],
+        ));
+    }
+    let qualified = parts
+        .iter()
+        .map(|p| format!("\"{p}\""))
+        .collect::<Vec<_>>()
+        .join(".");
+    let Some(columns) = row.as_object().filter(|map| !map.is_empty()) else {
+        return Err(invalid_argument_fields(
+            "each cassandra row must be a non-empty object",
+            [(
+                "rows",
+                "every row must be a non-empty {column: value} object",
+            )],
+        ));
+    };
+    let mut names = Vec::with_capacity(columns.len());
+    let mut params = Vec::with_capacity(columns.len());
+    for (column, value) in columns {
+        if !is_plain_cql_identifier(column) {
+            return Err(invalid_argument_fields(
+                format!("invalid cassandra column identifier '{column}'"),
+                [("rows", "column names must be plain identifiers")],
+            ));
+        }
+        names.push(format!("\"{column}\""));
+        params.push(value.clone());
+    }
+    let placeholders = vec!["?"; names.len()].join(", ");
+    Ok((
+        format!(
+            "INSERT INTO {qualified} ({}) VALUES ({placeholders})",
+            names.join(", ")
+        ),
+        params,
+    ))
+}
+
+/// Real affected-row count for a single CQL write, where Cassandra can state
+/// it: a lightweight transaction (`... IF ...`) returns its `[applied]`
+/// boolean; a plain INSERT is an upsert that always writes exactly one row.
+/// A plain UPDATE/DELETE reports nothing, so `None` (no count is invented).
+fn cassandra_affected_rows(cql: &str, first_row_applied: Option<bool>) -> Option<u64> {
+    if let Some(applied) = first_row_applied {
+        return Some(u64::from(applied));
+    }
+    (cql_leading_keyword(cql) == "INSERT").then_some(1)
+}
+
 impl MutationExecutor for CassandraExecutor {
     async fn mutate(&self, req: &str) -> Result<String, tonic::Status> {
+        if let Some((table, rows)) = cassandra_rows_write_spec(req)? {
+            let mut affected: u64 = 0;
+            for row in &rows {
+                let (cql, params_json) = cassandra_row_insert(&table, row)?;
+                let params: Vec<CqlValue> = params_json.iter().map(json_to_cql).collect();
+                self.client
+                    .session
+                    .query(cql.as_str(), &params[..])
+                    .await
+                    .map_err(|e| {
+                        cassandra_internal_status(
+                            "mutate_insert_rows",
+                            format!("cassandra mutate failed: {e}"),
+                        )
+                    })?;
+                affected += 1;
+            }
+            return Ok(serde_json::json!({ "ok": true, "affected_rows": affected }).to_string());
+        }
         let (cql, params_json) = parse_sql_dispatch(req)?;
         validate_cassandra_mutation(&cql, is_compiler_mediated_dispatch(req))?;
         let params: Vec<CqlValue> = params_json.iter().map(json_to_cql).collect();
-        self.client
+        let result = self
+            .client
             .session
             .query(cql.as_str(), &params[..])
             .await
             .map_err(|e| {
                 cassandra_internal_status("mutate", format!("cassandra mutate failed: {e}"))
             })?;
-        // Cassandra doesn't report rows_affected for writes — INSERT /
-        // UPDATE / DELETE are always "applied" at the protocol level
-        // unless LWT (`IF NOT EXISTS`) reports `[applied]: false`.
-        Ok(serde_json::json!({ "ok": true }).to_string())
+        // An LWT (`IF NOT EXISTS` / `IF ...`) answers with an `[applied]`
+        // boolean in the first column of its single row; plain writes return
+        // no rows.
+        let applied = result
+            .rows
+            .as_ref()
+            .and_then(|rows| rows.first())
+            .and_then(|row| row.columns.first())
+            .and_then(|col| col.as_ref())
+            .and_then(CqlValue::as_boolean);
+        match cassandra_affected_rows(&cql, applied) {
+            Some(affected) => {
+                Ok(serde_json::json!({ "ok": true, "affected_rows": affected }).to_string())
+            }
+            None => Ok(serde_json::json!({ "ok": true }).to_string()),
+        }
     }
 }
 
@@ -689,6 +817,63 @@ mod tests {
             "cassandra compiler-mediated mutate does not accept 'CREATE'"
         );
         assert_sql_violation(&err);
+    }
+
+    #[test]
+    fn rows_write_spec_is_accepted_and_rendered_as_parameterised_inserts() {
+        let req = json!({
+            "table": "metrics.cpu",
+            "rows": [{"host": "a", "value": 1.5}, {"host": "b", "value": 2}]
+        })
+        .to_string();
+        let (table, rows) = cassandra_rows_write_spec(&req)
+            .unwrap()
+            .expect("{table, rows} must be recognised");
+        assert_eq!(table, "metrics.cpu");
+        assert_eq!(rows.len(), 2);
+        let (cql, params) = cassandra_row_insert(&table, &rows[0]).unwrap();
+        assert_eq!(
+            cql,
+            "INSERT INTO \"metrics\".\"cpu\" (\"host\", \"value\") VALUES (?, ?)"
+        );
+        assert_eq!(params, vec![json!("a"), json!(1.5)]);
+        // The `{sql}` form is left to the SQL path.
+        assert!(
+            cassandra_rows_write_spec(r#"{"sql":"INSERT INTO t (a) VALUES (?)","params":[1]}"#)
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn rows_write_rejects_unsafe_identifiers() {
+        let bad_table = cassandra_row_insert("t\"; DROP TABLE x", &json!({"a": 1})).unwrap_err();
+        assert_eq!(bad_table.code(), tonic::Code::InvalidArgument);
+        let bad_column = cassandra_row_insert("t", &json!({"a\" = 1 --": 1})).unwrap_err();
+        assert_eq!(bad_column.code(), tonic::Code::InvalidArgument);
+        let empty_row = cassandra_row_insert("t", &json!({})).unwrap_err();
+        assert_eq!(empty_row.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn affected_rows_are_reported_only_when_cassandra_states_them() {
+        assert_eq!(
+            cassandra_affected_rows("INSERT INTO t (a) VALUES (?)", None),
+            Some(1)
+        );
+        assert_eq!(
+            cassandra_affected_rows("INSERT INTO t (a) VALUES (?) IF NOT EXISTS", Some(false)),
+            Some(0)
+        );
+        assert_eq!(
+            cassandra_affected_rows("UPDATE t SET a = ? WHERE id = ? IF a = ?", Some(true)),
+            Some(1)
+        );
+        // A plain UPDATE/DELETE carries no count — none is invented.
+        assert_eq!(
+            cassandra_affected_rows("DELETE FROM t WHERE id = ?", None),
+            None
+        );
     }
 
     #[test]

@@ -313,3 +313,124 @@ async fn object_put_then_cross_tenant_get_is_isolated_live() {
         )
         .await;
 }
+
+/// Multipart end to end: initiate -> HTTP PUT the part to its presigned URL ->
+/// CompleteMultipartUpload assembles the object, readable through GetObject.
+/// Another tenant presenting the SAME upload_id addresses its own namespaced
+/// key and cannot complete it. Abort releases a second upload and is safe to
+/// repeat.
+#[tokio::test]
+#[ignore = "requires live MinIO; run with UDB_LIVE_OBJECT_TESTS=1 ... -- --ignored"]
+async fn multipart_complete_and_abort_are_tenant_scoped_live() {
+    configure_minio_env();
+    let runtime = live_runtime().await;
+    let bucket = storage_bucket();
+    let manifest = object_store_manifest(&bucket);
+    let key = format!("mpu/{}.txt", Uuid::new_v4().simple());
+    let tenant_a = format!("tnt-a-{}", Uuid::new_v4().simple());
+    let tenant_b = format!("tnt-b-{}", Uuid::new_v4().simple());
+    let payload = b"multipart-single-part-payload".to_vec();
+
+    let initiate = |tenant: String| {
+        let runtime = &runtime;
+        let manifest = &manifest;
+        let bucket = bucket.clone();
+        let key = key.clone();
+        async move {
+            runtime
+                .initiate_multipart_upload(
+                    manifest,
+                    crate::proto::MultipartUploadRequest {
+                        context: None,
+                        bucket,
+                        object_key: key,
+                        content_type: "text/plain".to_string(),
+                        part_count: 1,
+                        ttl_seconds: 300,
+                        idempotency_key: String::new(),
+                    },
+                    object_context(&tenant),
+                )
+                .await
+                .expect("multipart init")
+        }
+    };
+
+    let upload = initiate(tenant_a.clone()).await;
+    let resp = reqwest::Client::new()
+        .put(&upload.part_urls[0])
+        .body(payload.clone())
+        .send()
+        .await
+        .expect("HTTP PUT to the part URL");
+    assert!(resp.status().is_success(), "part upload: {}", resp.status());
+    let etag = resp
+        .headers()
+        .get("etag")
+        .and_then(|v| v.to_str().ok())
+        .expect("part upload returns an ETag")
+        .to_string();
+    let complete_req = |upload_id: String| crate::proto::CompleteMultipartUploadRequest {
+        context: None,
+        bucket: bucket.clone(),
+        object_key: key.clone(),
+        upload_id,
+        parts: vec![crate::proto::MultipartUploadPart {
+            part_number: 1,
+            etag: etag.clone(),
+        }],
+        idempotency_key: String::new(),
+    };
+
+    // Tenant B cannot complete tenant A's upload (different namespaced key).
+    assert!(
+        runtime
+            .complete_multipart_upload(
+                &manifest,
+                complete_req(upload.upload_id.clone()),
+                object_context(&tenant_b),
+            )
+            .await
+            .is_err(),
+        "a foreign tenant must not complete another tenant's upload"
+    );
+
+    let done = runtime
+        .complete_multipart_upload(
+            &manifest,
+            complete_req(upload.upload_id.clone()),
+            object_context(&tenant_a),
+        )
+        .await
+        .expect("tenant-A completes its own upload");
+    assert_eq!(done.size_bytes, payload.len() as i64);
+    let bytes = read_object(
+        &runtime,
+        &manifest,
+        &bucket,
+        &key,
+        object_context(&tenant_a),
+    )
+    .await
+    .expect("completed object is readable");
+    assert_eq!(bytes, payload);
+
+    // Abort a second upload; a repeated abort is a safe no-op.
+    let second = initiate(tenant_a.clone()).await;
+    let abort_req = || crate::proto::AbortMultipartUploadRequest {
+        context: None,
+        bucket: bucket.clone(),
+        object_key: key.clone(),
+        upload_id: second.upload_id.clone(),
+        idempotency_key: String::new(),
+    };
+    let aborted = runtime
+        .abort_multipart_upload(&manifest, abort_req(), object_context(&tenant_a))
+        .await
+        .expect("abort");
+    assert!(aborted.aborted);
+    runtime
+        .abort_multipart_upload(&manifest, abort_req(), object_context(&tenant_a))
+        .await
+        .expect("a repeated abort must not error");
+}

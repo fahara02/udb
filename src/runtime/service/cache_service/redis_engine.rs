@@ -11,9 +11,9 @@ use super::config::{
     RECONCILE_NAMESPACES_PER_PASS, SWEEP_COMMAND, SWEEP_COUNT,
 };
 use super::keys::{
-    bytes_counter_key, clamped_scan_count, data_key, data_match, effective_max_bytes, meta_key,
-    meta_match_all, namespace_match_all, parse_meta_key, reconcile_cursor_key, reconciled_sum,
-    strip_data_prefix, would_exceed_budget,
+    BUDGETED_DELETE_LUA, BUDGETED_SET_LUA, bytes_counter_key, clamped_scan_count, data_key,
+    data_match, effective_max_bytes, meta_key, meta_match_all, namespace_match_all, parse_meta_key,
+    reconcile_cursor_key, reconciled_sum, strip_data_prefix, would_exceed_budget,
 };
 
 fn map_err(context: &str, err: redis::RedisError) -> Status {
@@ -119,26 +119,6 @@ pub(crate) async fn set(
     let meta = load_meta(&mut conn, tenant, namespace).await?;
     let max_bytes = effective_max_bytes(meta.max_bytes);
 
-    // Replacing an existing key only charges the size DELTA against the budget.
-    let old_len: i64 = redis::cmd("STRLEN")
-        .arg(&full)
-        .query_async(&mut conn)
-        .await
-        .map_err(|err| map_err("STRLEN", err))?;
-    let new_len = value.len() as i64;
-    let delta = new_len - old_len;
-    let used = read_counter(&mut conn, tenant, namespace).await?;
-    if would_exceed_budget(used, delta, max_bytes) {
-        return Err(crate::runtime::executor_utils::quota_refusal_status(
-            "cache",
-            "namespace byte budget",
-            format!(
-                "cache namespace '{namespace}' byte budget exhausted \
-                 (used {used} + {delta} > max {max_bytes})"
-            ),
-        ));
-    }
-
     // Resolve TTL: explicit request value wins; else the namespace default; else
     // no expiry.
     let ttl = if ttl_seconds > 0 {
@@ -146,26 +126,31 @@ pub(crate) async fn set(
     } else {
         meta.default_ttl_seconds.max(0)
     };
-    let mut set_cmd = redis::cmd("SET");
-    set_cmd.arg(&full).arg(value);
-    if ttl > 0 {
-        set_cmd.arg("EX").arg(ttl);
-    }
-    set_cmd
-        .query_async::<()>(&mut conn)
-        .await
-        .map_err(|err| map_err("SET", err))?;
 
-    let used_after: i64 = if delta != 0 {
-        redis::cmd("INCRBY")
-            .arg(bytes_counter_key(tenant, namespace))
-            .arg(delta)
-            .query_async(&mut conn)
-            .await
-            .map_err(|err| map_err("INCRBY", err))?
-    } else {
-        used
-    };
+    // Size probe, budget gate, write and counter bump run as ONE server-side
+    // script: replacing an existing key only charges the size DELTA, and no
+    // concurrent writer can slip between the gate and the write.
+    let (stored, used_after, delta): (i64, i64, i64) = redis::Script::new(BUDGETED_SET_LUA)
+        .key(&full)
+        .key(bytes_counter_key(tenant, namespace))
+        .arg(value)
+        .arg(max_bytes)
+        .arg(ttl)
+        .invoke_async(&mut conn)
+        .await
+        .map_err(|err| map_err("budgeted SET", err))?;
+    if stored == 0 {
+        // Defensive parity with the pure gate the script mirrors.
+        debug_assert!(would_exceed_budget(used_after, delta, max_bytes));
+        return Err(crate::runtime::executor_utils::quota_refusal_status(
+            "cache",
+            "namespace byte budget",
+            format!(
+                "cache namespace '{namespace}' byte budget exhausted \
+                 (used {used_after} + {delta} > max {max_bytes})"
+            ),
+        ));
+    }
     Ok(SetOutcome {
         used_bytes: used_after.max(0),
         max_bytes,
@@ -180,27 +165,15 @@ pub(crate) async fn delete(
 ) -> Result<(bool, i64), Status> {
     let mut conn = connect(client).await?;
     let full = data_key(tenant, namespace, key);
-    let old_len: i64 = redis::cmd("STRLEN")
-        .arg(&full)
-        .query_async(&mut conn)
+    // STRLEN + DEL + counter release as ONE script so the released length is the
+    // length of the value actually removed (no interleaved overwrite).
+    let (removed, used_after): (i64, i64) = redis::Script::new(BUDGETED_DELETE_LUA)
+        .key(&full)
+        .key(bytes_counter_key(tenant, namespace))
+        .invoke_async(&mut conn)
         .await
-        .map_err(|err| map_err("STRLEN", err))?;
-    let removed: i64 = redis::cmd("DEL")
-        .arg(&full)
-        .query_async(&mut conn)
-        .await
-        .map_err(|err| map_err("DEL", err))?;
-    if removed == 0 {
-        let used = read_counter(&mut conn, tenant, namespace).await?;
-        return Ok((false, used));
-    }
-    let used_after: i64 = redis::cmd("INCRBY")
-        .arg(bytes_counter_key(tenant, namespace))
-        .arg(-old_len)
-        .query_async(&mut conn)
-        .await
-        .map_err(|err| map_err("INCRBY", err))?;
-    Ok((true, used_after.max(0)))
+        .map_err(|err| map_err("budgeted DEL", err))?;
+    Ok((removed != 0, used_after.max(0)))
 }
 
 pub(crate) async fn scan(

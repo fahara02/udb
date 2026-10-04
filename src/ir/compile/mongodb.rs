@@ -37,7 +37,16 @@ impl MongoDbCompiler {
         ctx: &'a CompileContext<'_>,
     ) -> Result<&'a ManifestTable, CompileError> {
         match crate::broker::table_lookup(ctx.manifest, message_type) {
-            crate::broker::TableLookup::Found(table) => Ok(table),
+            // Fail closed on an empty tenant when enforcement is on (the
+            // non-SQL counterpart of the generic-SQL tenant-scope check).
+            crate::broker::TableLookup::Found(table) => {
+                super::util::require_tenant_scope(
+                    table,
+                    ctx,
+                    super::util::TenantScopeKind::Always,
+                )?;
+                Ok(table)
+            }
             // fix_plan §4.1: an ambiguous short name names its candidates so the
             // caller can FQN-qualify — never a silent first-wins misroute.
             crate::broker::TableLookup::Ambiguous { .. } => Err(CompileError::Malformed {

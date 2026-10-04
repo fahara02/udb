@@ -585,7 +585,8 @@ pub(crate) async fn retrieve(
                 max_lag = max_lag.max(now_ms.saturating_sub(indexed_at));
             }
             embedding_pb::RetrieveHit {
-                id: point.id.clone(),
+                // Engine ids are tenant-scoped on write; callers see the logical id.
+                id: super::chunking::strip_tenant_point_id(&tenant_id, &point.id),
                 score: f64::from(point.score),
                 payload_json: public_payload(
                     &point,

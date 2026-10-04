@@ -51,8 +51,9 @@ pub(crate) const REISSUE_REQUIRES_PENDING: &str = "REISSUE_REQUIRES_PENDING";
 /// row (a same-tenant finalize scope must not re-point ownership or escalate
 /// visibility).
 pub(crate) const FINALIZE_IMMUTABLE_MISMATCH: &str = "FINALIZE_IMMUTABLE_MISMATCH";
-/// Soft-delete warn path only (bytes orphaned after a metadata delete) — emitted
-/// on the warn log, NOT part of the RPC error catalog.
+/// SOFT DeleteFile deleted the metadata but neither removed the bytes nor could
+/// record a durable GC intent for them — the bytes are orphaned. Carried as the
+/// `ApiError.code` on the (still OK) delete response so the caller is told.
 pub(crate) const OBJECT_DELETE_ORPHANED: &str = "OBJECT_DELETE_ORPHANED";
 /// HARD DeleteFile replayed an idempotency key that was first claimed by a delete
 /// with a DIFFERENT target (file/mode) — reused fail-closed instead of replaying a

@@ -127,6 +127,45 @@ fn encode_pinecone_response(
     serde_json::to_string(value).map_err(|e| pinecone_internal_status(operation, e.to_string()))
 }
 
+/// Refusal for an index-lifecycle call: the DSN is a data-plane host, and index
+/// lifecycle is a control-plane operation this client is not configured for.
+fn pinecone_control_plane_status(operation: &str, resource_name: &str) -> tonic::Status {
+    capability_status(
+        "pinecone",
+        operation,
+        "pinecone_control_plane",
+        format!(
+            "UDB_UNSUPPORTED_OPERATION: the Pinecone DSN is an index data-plane host; \
+             '{resource_name}' is a logical collection inside that index and index \
+             lifecycle requires the Pinecone control plane"
+        ),
+    )
+}
+
+/// Check that the configured index can hold a logical collection of the
+/// requested `dimension` (`describe_index_stats` reports the index dimension).
+/// No requested dimension, or no reported dimension, is accepted. Pure.
+fn pinecone_index_fits(
+    resource_name: &str,
+    spec: &JsonValue,
+    stats: &JsonValue,
+) -> Result<(), tonic::Status> {
+    let wanted = spec.get("dimension").and_then(JsonValue::as_i64);
+    let actual = stats.get("dimension").and_then(JsonValue::as_i64);
+    match (wanted, actual) {
+        (Some(wanted), Some(actual)) if wanted > 0 && wanted != actual => Err(capability_status(
+            "pinecone",
+            "ensure_resource",
+            "pinecone_index_dimension",
+            format!(
+                "Pinecone index dimension is {actual} but collection '{resource_name}' needs \
+                 {wanted}; point the DSN at an index of that dimension"
+            ),
+        )),
+        _ => Ok(()),
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PineconeExecutor {
     client: PineconeHttpClient,
@@ -200,50 +239,39 @@ impl ObjectExecutor for PineconeExecutor {
 }
 
 impl ResourceAdminExecutor for PineconeExecutor {
+    /// The configured DSN is ONE index's data-plane host; index creation lives
+    /// on the separate control plane (`api.pinecone.io`), which this client is
+    /// not configured for. A logical collection is therefore a metadata
+    /// partition of that index (`_collection`, filtered on every query) inside
+    /// the project namespace, and "ensure" VERIFIES the index can hold it: the
+    /// index must be reachable and its dimension must match the requested one.
+    /// A mismatch fails honestly instead of POSTing `/indexes` to the data plane
+    /// (which never creates anything).
     async fn ensure_resource(
         &self,
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        let mut spec: JsonValue =
+        let spec: JsonValue =
             serde_json::from_str(spec_json).map_err(invalid_ensure_resource_spec_status)?;
-        if let JsonValue::Object(map) = &mut spec {
-            map.entry("name".to_string())
-                .or_insert_with(|| JsonValue::String(resource_name.to_string()));
-            map.entry("dimension".to_string())
-                .or_insert_with(|| serde_json::json!(1536));
-            map.entry("metric".to_string())
-                .or_insert_with(|| JsonValue::String("cosine".to_string()));
-        }
-        self.client
-            .request_json(reqwest::Method::POST, "/indexes", &spec)
-            .await?;
-        Ok(())
-    }
-    async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
-        self.client
+        let stats = self
+            .client
             .request_json(
-                reqwest::Method::DELETE,
-                &format!("/indexes/{resource_name}"),
-                &JsonValue::Null,
+                reqwest::Method::POST,
+                "/describe_index_stats",
+                &serde_json::json!({}),
             )
             .await?;
-        Ok(())
+        pinecone_index_fits(resource_name, &spec, &stats)
+    }
+    async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
+        Err(pinecone_control_plane_status(
+            "drop_resource",
+            resource_name,
+        ))
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
-        let r = self
-            .client
-            .request_json(reqwest::Method::GET, "/indexes", &JsonValue::Null)
-            .await?;
-        let mut out = Vec::new();
-        if let Some(idxs) = r.get("indexes").and_then(|v| v.as_array()) {
-            for idx in idxs {
-                if let Some(name) = idx.get("name").and_then(|v| v.as_str()) {
-                    out.push(name.to_string());
-                }
-            }
-        }
-        Ok(out)
+        Err(pinecone_control_plane_status("list_resources", "*"))
     }
 }
 
@@ -334,6 +362,26 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(exec.enforce(&ctx), ContextEffect::Enforced { .. }));
+    }
+
+    #[test]
+    fn index_dimension_mismatch_fails_honestly() {
+        let stats = serde_json::json!({ "dimension": 768, "namespaces": {} });
+        assert!(
+            pinecone_index_fits("docs", &serde_json::json!({ "dimension": 768 }), &stats).is_ok()
+        );
+        assert!(pinecone_index_fits("docs", &serde_json::json!({}), &stats).is_ok());
+        let err = pinecone_index_fits("docs", &serde_json::json!({ "dimension": 1536 }), &stats)
+            .expect_err("dimension mismatch must refuse");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("768") && err.message().contains("1536"));
+    }
+
+    #[test]
+    fn index_lifecycle_calls_are_refused_not_sent_to_the_data_plane() {
+        let err = pinecone_control_plane_status("drop_resource", "docs");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("control plane"));
     }
 
     #[test]

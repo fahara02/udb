@@ -149,6 +149,13 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
                 .await
                 .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
         }
+        // Per-row ordering lookups (supersede on claim, re-arm on enqueue)
+        // probe "the newest task for this row and target"; index them.
+        let sql = postgres_row_order_index_ddl(rel);
+        sqlx::query(&sql)
+            .execute(self.pg_pool())
+            .await
+            .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
         Ok(())
     }
 
@@ -212,6 +219,20 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
             return Ok(Vec::new());
         }
         let rel = self.projection_relation_ref();
+        // Per-row ordering: before claiming, retire every PENDING/FAILED task
+        // that a NEWER task for the same row and target has superseded. Each
+        // task carries the full row state, so the newest one is the only one
+        // worth applying — and applying an older one after it (a retried
+        // failure, a requeued dead letter) would roll the target back.
+        let supersede_sql = postgres_supersede_sql(rel, filter.project_id.is_some());
+        let mut supersede = sqlx::query(&supersede_sql);
+        if let Some(project_id) = &filter.project_id {
+            supersede = supersede.bind(project_id);
+        }
+        supersede
+            .execute(self.pg_pool())
+            .await
+            .map_err(|e| SystemStoreError::query("postgres", supersede_sql.clone(), e))?;
         let mut next_param = 3;
         let project_filter = if filter.project_id.is_some() {
             let clause = format!("AND project_id = ${next_param}");
@@ -518,10 +539,21 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         // lands; a DEAD_LETTER task never clears, so the fence times out into a
         // ProjectionMissing (the honest "this write can't be read consistently"),
         // never a silent stale-as-fresh clear.
+        //
+        // A requested key with NO task row counts as pending too. The keys come
+        // from this broker's own write responses, so a missing row means the
+        // fence is looking in the wrong ledger (another project's store, a
+        // reset table) — treating that as "0 pending" cleared the fence and
+        // served a stale read as fresh. Counting it keeps the fence closed until
+        // it times out into the honest ProjectionMissing. Superseded tasks are
+        // retired as COMPLETED, never deleted, so they still clear.
         let sql = format!(
-            r#"SELECT COUNT(*)::BIGINT FROM {rel}
-               WHERE idempotency_key = ANY($1)
-                 AND status <> 'COMPLETED'"#
+            r#"SELECT COUNT(*)::BIGINT
+               FROM (SELECT DISTINCT key FROM UNNEST($1::TEXT[]) AS requested(key)) AS k
+               WHERE NOT EXISTS (
+                   SELECT 1 FROM {rel} AS t
+                   WHERE t.idempotency_key = k.key AND t.status = 'COMPLETED'
+               )"#
         );
         let n: i64 = sqlx::query_scalar(&sql)
             .bind(idempotency_keys)
@@ -545,5 +577,93 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
             apply_projection_summary_bucket(&mut s, "postgres", &status, n)?;
         }
         Ok(s)
+    }
+}
+
+/// Index backing the per-row ordering lookups: "is there a newer task for this
+/// (project, source row, target)?". The row key is indexed by its md5 so an
+/// arbitrarily large JSONB key (a delete filter on a table with no primary key)
+/// can never exceed the btree entry limit and fail the enqueue.
+fn postgres_row_order_index_ddl(rel: &str) -> String {
+    format!(
+        r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_row_order"
+                 ON {rel} (project_id, source_table, target_backend, target_instance,
+                           resource_name, md5(source_row_key::text), created_at)"#
+    )
+}
+
+/// Retire (mark COMPLETED, with a `superseded` note) every PENDING/FAILED task
+/// for which a strictly newer task exists for the same row and target. The
+/// ordering key is `created_at`, which the write path stamps with
+/// `clock_timestamp()` while holding the source row's lock (see
+/// `projection_task_insert_sql` in the projection engine), with `task_id` as a
+/// deterministic tie-break. IN_PROGRESS tasks are left to their worker.
+fn postgres_supersede_sql(rel: &str, project_scoped: bool) -> String {
+    let project_filter = if project_scoped {
+        "AND older.project_id = $1"
+    } else {
+        ""
+    };
+    format!(
+        r#"UPDATE {rel} AS older
+           SET status = 'COMPLETED', completed_at = NOW(), next_retry_at = NULL,
+               updated_at = NOW(),
+               last_error = 'superseded by a newer projection task for the same row'
+           WHERE older.status IN ('PENDING', 'FAILED')
+             {project_filter}
+             AND EXISTS (
+                 SELECT 1 FROM {rel} AS newer
+                 WHERE newer.project_id = older.project_id
+                   AND newer.source_table = older.source_table
+                   AND newer.target_backend = older.target_backend
+                   AND newer.target_instance = older.target_instance
+                   AND newer.resource_name = older.resource_name
+                   AND md5(newer.source_row_key::text) = md5(older.source_row_key::text)
+                   AND (newer.created_at, newer.task_id) > (older.created_at, older.task_id))"#
+    )
+}
+
+#[cfg(test)]
+mod row_order_tests {
+    use super::*;
+
+    #[test]
+    fn supersede_retires_only_queued_tasks_older_than_a_sibling() {
+        let sql = postgres_supersede_sql(DEFAULT_REL, false);
+        assert!(
+            sql.contains("older.status IN ('PENDING', 'FAILED')"),
+            "{sql}"
+        );
+        assert!(
+            !sql.contains("IN_PROGRESS"),
+            "in-flight tasks belong to their worker"
+        );
+        // Same row AND same target: a newer Mongo task must not retire a Qdrant one.
+        for column in [
+            "project_id",
+            "source_table",
+            "target_backend",
+            "target_instance",
+            "resource_name",
+        ] {
+            assert!(
+                sql.contains(&format!("newer.{column} = older.{column}")),
+                "{column}: {sql}"
+            );
+        }
+        assert!(sql.contains("md5(newer.source_row_key::text) = md5(older.source_row_key::text)"));
+        assert!(
+            sql.contains("(newer.created_at, newer.task_id) > (older.created_at, older.task_id)")
+        );
+        assert!(!sql.contains("$1"), "unscoped pass binds nothing");
+        let scoped = postgres_supersede_sql(DEFAULT_REL, true);
+        assert!(scoped.contains("AND older.project_id = $1"), "{scoped}");
+    }
+
+    #[test]
+    fn row_order_index_uses_a_bounded_row_key() {
+        let ddl = postgres_row_order_index_ddl(DEFAULT_REL);
+        assert!(ddl.contains("md5(source_row_key::text)"), "{ddl}");
+        assert!(ddl.contains("CREATE INDEX IF NOT EXISTS"), "{ddl}");
     }
 }

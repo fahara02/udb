@@ -566,7 +566,7 @@ async fn process_embedding_teardown_job(
             };
             let count = ids.len() as i64;
             store
-                .delete_points(&effective_collection, ids)
+                .delete_points(&job.tenant_id, &effective_collection, ids)
                 .await
                 .map_err(|err| {
                     format!(
@@ -807,7 +807,11 @@ async fn process_embedding_backfill_job(
                 service
                     .vector_store_for_model(&job.project_id, &model)
                     .map_err(|error| error.to_string())?
-                    .delete_points(&model.active_collection, result.stale_point_ids)
+                    .delete_points(
+                        &job.tenant_id,
+                        &model.active_collection,
+                        result.stale_point_ids,
+                    )
                     .await
                     .map_err(|error| format!("delete stale embedding chunks failed: {error}"))?;
             }
@@ -956,8 +960,11 @@ async fn process_embedding_work_job(
             tracing::warn!(%error, "embedding row filtered delete failed");
             return false;
         }
-        if let Err(error) = store.delete_points(&collection, vec![row_pk.clone()]).await {
-            tracing::warn!(%error, "embedding row legacy point delete failed");
+        if let Err(error) = store
+            .delete_points(event_tenant, &collection, vec![row_pk.clone()])
+            .await
+        {
+            tracing::warn!(%error, "embedding row point delete failed");
             return false;
         }
         service
@@ -983,8 +990,11 @@ async fn process_embedding_work_job(
             tracing::warn!(%error, "embedding empty-row filtered delete failed");
             return false;
         }
-        if let Err(error) = store.delete_points(&collection, vec![row_pk.clone()]).await {
-            tracing::warn!(%error, "embedding empty-row legacy point delete failed");
+        if let Err(error) = store
+            .delete_points(event_tenant, &collection, vec![row_pk.clone()])
+            .await
+        {
+            tracing::warn!(%error, "embedding empty-row point delete failed");
             return false;
         }
         service
@@ -1024,7 +1034,7 @@ async fn process_embedding_work_job(
     };
     if !result.stale_point_ids.is_empty() {
         if let Err(error) = store
-            .delete_points(&collection, result.stale_point_ids)
+            .delete_points(event_tenant, &collection, result.stale_point_ids)
             .await
         {
             tracing::warn!(%error, "embedding stale tail chunk delete failed");

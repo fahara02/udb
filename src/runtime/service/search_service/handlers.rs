@@ -67,10 +67,13 @@ impl SearchServiceImpl {
     }
 
     /// Query one index through the runtime's mediated vector dispatch, returning
-    /// the ranked points (ids + engine payloads). The tenant filter is injected
-    /// server-side from the verified claim; this never hand-builds a raw engine
-    /// query. Returns an empty list for an index whose backend is not
-    /// query-wired here.
+    /// the ranked points (ids + engine payloads). The runtime ANDs the tenant and
+    /// project scope from `context` (the verified claim) into every engine query,
+    /// so no filter is sent from here: a hand-built `_tenant_id` clause would be a
+    /// reserved-key filter the vector plan refuses. The serving route comes from
+    /// the DURABLE index record (`index.backend`), not the process-local
+    /// `EnsureResource` route map, so Search works after a restart and on every
+    /// replica. This never hand-builds a raw engine query.
     pub(crate) async fn query_one_index(
         &self,
         runtime: &DataBrokerRuntime,
@@ -79,9 +82,9 @@ impl SearchServiceImpl {
         index: &StoredIndex,
         req: &search_pb::SearchRequest,
         top_k: i32,
-        tenant_filter: Option<prost_types::Struct>,
     ) -> Result<Vec<VectorPoint>, Status> {
         validate_search_query(req)?;
+        let route = Some(index_vector_route(index));
         let has_vector = !req.query_vector.is_empty();
         let has_text = !req.query_text.trim().is_empty();
         // Mediated FULL-TEXT-ONLY (`SEARCH_MODE_TEXT`): a lexical query with a
@@ -98,13 +101,13 @@ impl SearchServiceImpl {
             if index.backend.as_str() != BACKEND_ELASTICSEARCH {
                 return Err(full_text_only_requires_mediated_ir_status());
             }
-            // Full-text-only carries no query vector; the tenant filter injected
-            // server-side (never the body) remains the isolation boundary.
+            // Full-text-only carries no query vector; the tenant scope the runtime
+            // injects server-side (never the body) remains the isolation boundary.
             let request = VectorSearchRequest {
                 context: None,
                 collection: index.collection(),
                 vector: Vec::new(),
-                filter: tenant_filter,
+                filter: None,
                 limit: top_k,
                 score_threshold: 0.0,
                 with_payload: true,
@@ -132,7 +135,7 @@ impl SearchServiceImpl {
                 collection,
                 vector: req.query_vector.clone(),
                 text_query: req.query_text.clone(),
-                filter: tenant_filter,
+                filter: None,
                 limit: top_k,
                 // Per-modality (dense/sparse) fusion weights for Qdrant's native
                 // hybrid RRF, from the operator `UDB_SEARCH_FUSION_WEIGHTS` knob
@@ -146,7 +149,7 @@ impl SearchServiceImpl {
                 quantization_rescore: false,
             };
             runtime
-                .vector_hybrid_search(manifest, request, context.clone())
+                .vector_hybrid_search_routed(manifest, request, context.clone(), route)
                 .await?
         } else {
             // Vector-only: the mediated vector dispatch routes to the index backend
@@ -156,7 +159,7 @@ impl SearchServiceImpl {
                 context: None,
                 collection,
                 vector: req.query_vector.clone(),
-                filter: tenant_filter,
+                filter: None,
                 limit: top_k,
                 score_threshold: 0.0,
                 with_payload: true,
@@ -165,25 +168,76 @@ impl SearchServiceImpl {
                 quantization_rescore: false,
             };
             runtime
-                .vector_search(manifest, request, context.clone())
+                .vector_search_routed(manifest, request, context.clone(), route)
                 .await?
         };
         Ok(result.points)
     }
 }
 
-/// Build the server-side tenant `must`/term filter as a protobuf `Struct` from
-/// the VERIFIED claim tenant. Stamped onto every engine query so a caller can
-/// never widen past their tenant. The `_tenant_id` payload key is the same one
-/// the Qdrant IR compiler stamps at write time and ANDs into the `must` clause;
-/// the Elasticsearch executor ANDs the equivalent term.
-pub(crate) fn tenant_scope_filter(tenant_id: &str) -> Option<prost_types::Struct> {
-    let body = serde_json::json!({
-        "must": [
-            { "key": TENANT_SCOPE_PAYLOAD_KEY, "match": { "value": tenant_id } }
-        ]
-    });
-    crate::runtime::executor_utils::json_to_struct(&body)
+/// The serving route of a registered index, read from its DURABLE registry
+/// record. Passed to the runtime's routed vector entry points so an index
+/// collection (which is not declared in the catalog manifest) resolves on any
+/// replica and after a restart, without the process-local `EnsureResource`
+/// route map. A manifest-declared collection of the same name keeps its
+/// manifest route (the runtime ignores the override for it).
+pub(crate) fn index_vector_route(
+    index: &StoredIndex,
+) -> crate::runtime::core::ResolvedBackendSelector {
+    crate::runtime::core::ResolvedBackendSelector {
+        backend: index.backend.trim().to_ascii_lowercase(),
+        instance: None,
+    }
+}
+
+/// Page size for enumerating a tenant's search indexes during a tenant purge.
+const TENANT_PURGE_INDEX_PAGE: u32 = 200;
+
+/// Every `(backend, collection)` the tenant's search indexes (in ANY status —
+/// a REINDEXING or DELETED index may still hold points) write to, read from the
+/// durable index registry. The hard tenant purge erases the tenant's points from
+/// each by the `_tenant_id` stamp; it must run BEFORE the relational purge
+/// deletes the registry rows.
+pub(crate) async fn tenant_search_vector_targets(
+    runtime: &DataBrokerRuntime,
+    tenant_id: &str,
+    project_id: &str,
+) -> Result<Vec<(String, String)>, Status> {
+    let context = super::super::native_helpers::native_service_context(
+        &tonic::metadata::MetadataMap::new(),
+        tenant_id,
+        project_id,
+    );
+    let mut targets = Vec::new();
+    let mut offset = 0u64;
+    loop {
+        let read = crate::ir::LogicalRead {
+            message_type: super::config::SEARCH_INDEX_MSG.to_string(),
+            filter: Some(super::store::index_filter(tenant_id, None, None)),
+            projection: Some(super::store::index_projection()),
+            sort: Vec::new(),
+            include: Vec::new(),
+            pagination: Some(crate::ir::LogicalPagination::page(
+                offset,
+                TENANT_PURGE_INDEX_PAGE,
+            )),
+        };
+        let rows = runtime
+            .native_entity_read_for_service("search", &context, read)
+            .await?;
+        for index in rows.iter().map(stored_index_from_json) {
+            let backend = index.backend.trim().to_ascii_lowercase();
+            let collection = index.collection();
+            if !backend.is_empty() && !collection.trim().is_empty() {
+                targets.push((backend, collection));
+            }
+        }
+        if rows.len() < TENANT_PURGE_INDEX_PAGE as usize {
+            break;
+        }
+        offset = offset.saturating_add(u64::from(TENANT_PURGE_INDEX_PAGE));
+    }
+    Ok(targets)
 }
 
 /// Extract the RAW source pk stamped under [`SOURCE_PK_PAYLOAD_KEY`] on the write
@@ -631,9 +685,8 @@ pub(crate) async fn search(
         }));
     }
 
-    // SERVER-SIDE tenant filter built from the VERIFIED claim, injected into
-    // every engine query (Qdrant `must` / ES term). Never from the body.
-    let tenant_filter = tenant_scope_filter(&tenant_id);
+    // The SERVER-SIDE tenant scope comes from the VERIFIED claim in `context`;
+    // the runtime ANDs it into every engine query. Never from the body.
     let state = catalog.active_for(&context.project_id);
     let manifest = &state.manifest;
 
@@ -668,15 +721,7 @@ pub(crate) async fn search(
     let mut last_error: Option<Status> = None;
     for index in &targets {
         let points = match svc
-            .query_one_index(
-                runtime,
-                manifest,
-                &context,
-                index,
-                &req,
-                fetch_depth,
-                tenant_filter.clone(),
-            )
+            .query_one_index(runtime, manifest, &context, index, &req, fetch_depth)
             .await
         {
             Ok(points) => points,
@@ -792,6 +837,26 @@ fn validate_search_mode(
 mod search_mode_tests {
     use super::validate_search_mode;
     use crate::proto::udb::core::search::services::v1::SearchMode;
+
+    #[test]
+    fn index_route_comes_from_the_durable_index_record() {
+        let index = super::StoredIndex {
+            index_id: "i1".to_string(),
+            index_name: "contacts".to_string(),
+            source_message_type: "acme.Contact".to_string(),
+            backend: " Elasticsearch ".to_string(),
+            resource_name: String::new(),
+            vector_dims: 3,
+            tenant_column: "tenant_id".to_string(),
+            source_cdc_topic: String::new(),
+            status: "ACTIVE".to_string(),
+        };
+        let route = super::index_vector_route(&index);
+        assert_eq!(route.backend, "elasticsearch");
+        assert_eq!(route.instance, None);
+        // The routed collection is the index's own collection name.
+        assert_eq!(index.collection(), "contacts");
+    }
 
     #[test]
     fn unspecified_infers_from_inputs() {

@@ -1176,3 +1176,91 @@ fn destroy_sql_shreds_every_non_destroyed_version() {
     // Only versions not already destroyed are touched (idempotent, accurate count).
     assert!(shred.contains("<> 'DESTROYED'"));
 }
+
+/// The leader DB-credential lease reaper's single pass against Postgres: a
+/// STARTING lease whose physical role never appeared past the grace window is
+/// failed out, and a lease discovered under a different project is refused
+/// (marked FAILED), never reconciled through the wrong project's target.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with cargo test --lib live_vault_db_lease_reaper_single_pass -- --ignored --nocapture"]
+async fn live_vault_db_lease_reaper_single_pass() {
+    use crate::runtime::service::live_tests::support::{
+        live_native_service_db_lock, live_pg_dsn, live_pg_pool, migrate_native_service_db,
+    };
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let mut config = crate::runtime::config::UdbConfig::from_env();
+    config.primary.direct_dsn = live_pg_dsn();
+    let runtime = crate::runtime::DataBrokerRuntime::from_config(config).await;
+    let outbox = runtime.config().cdc.outbox_relation();
+    let project = crate::runtime::catalog::DEFAULT_PROJECT_ID;
+    let tenant = uuid::Uuid::new_v4().to_string();
+    let context = crate::RequestContext {
+        tenant_id: tenant.clone(),
+        project_id: project.to_string(),
+        target_backend: "postgres".to_string(),
+        ..crate::RequestContext::default()
+    };
+    let (_, instance) = runtime
+        .native_store_postgres_binding_for_service("vault", true, &context)
+        .expect("vault store binding for the default project");
+    let target_instance = instance.unwrap_or_default();
+
+    let insert = |project_id: &'static str, username: String| {
+        let pool = pool.clone();
+        let tenant = tenant.clone();
+        let target_instance = target_instance.clone();
+        async move {
+            let lease_id = uuid::Uuid::new_v4().to_string();
+            sqlx::query(
+                "INSERT INTO udb_vault.vault_db_credential_leases \
+                    (lease_id, tenant_id, project_id, role_name, username, parent_role, \
+                     issued_at, expires_at, state, target_instance) \
+                 VALUES ($1::UUID, $2, $3, 'live-role', $4, 'udb', \
+                     NOW() - INTERVAL '5 minutes', NOW() + INTERVAL '1 hour', 'STARTING', $5)",
+            )
+            .bind(&lease_id)
+            .bind(&tenant)
+            .bind(project_id)
+            .bind(&username)
+            .bind(&target_instance)
+            .execute(&pool)
+            .await
+            .expect("insert STARTING lease");
+            lease_id
+        }
+    };
+    let suffix = &uuid::Uuid::new_v4().simple().to_string()[..12];
+    let orphan = insert(
+        crate::runtime::catalog::DEFAULT_PROJECT_ID,
+        format!("udb_live_missing_{suffix}"),
+    )
+    .await;
+    let foreign = insert("other-project", format!("udb_live_foreign_{suffix}")).await;
+
+    let reconciled =
+        super::workers::run_vault_db_lease_reaper_once(&runtime, &pool, project, Some(&outbox), 50)
+            .await
+            .expect("lease reaper pass");
+    assert!(
+        reconciled >= 1,
+        "the role-less STARTING lease is reconciled"
+    );
+
+    let state = |lease_id: String| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, String>(
+                "SELECT state FROM udb_vault.vault_db_credential_leases \
+                 WHERE lease_id = $1::UUID",
+            )
+            .bind(&lease_id)
+            .fetch_one(&pool)
+            .await
+            .expect("load lease state")
+        }
+    };
+    assert_eq!(state(orphan).await, "FAILED");
+    assert_eq!(state(foreign).await, "FAILED");
+}

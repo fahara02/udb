@@ -5,6 +5,133 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [Unreleased]
+
+A security and correctness release. A full audit of the native features found
+that the same defect recurred across the codebase: every unit was correct and
+unit-tested, but nothing tested the whole path from a served request through
+the worker to the store and back as a tenant-scoped read. This release fixes
+what that audit found and adds the seam tests that were missing.
+
+### Security
+
+- **Upsert could move another tenant's row into the caller's tenant.** The
+  conflict update had no tenant guard and rewrote the tenant column; Postgres
+  RLS does not stop a table owner. Every upsert (planner, Postgres/MySQL/SQLite/
+  MSSQL IR, BeginTx) now updates only a row in the caller's own tenant/project,
+  never rewrites those columns, and a blocked conflict returns
+  `FAILED_PRECONDITION` instead of success.
+- **A `"*"` message type skipped data-plane authorization.** Data and store
+  RPCs now reject it; control RPCs use a separate internal gate. Typed store RPCs
+  authorize the collection they actually execute.
+- **BeginTx and PutObject were not authorized per resource.** BeginTx now
+  authorizes every streamed mutation before applying any; PutObject authorizes
+  its bucket.
+- **Select fell back to unscoped SQL** for filters the IR could not compile
+  (`$contains`, `$has_key`, …) or with the bridged emitter off. The fallback now
+  binds the verified tenant/project.
+- **CAS and BulkCas read locked rows by primary key only** — a cross-tenant
+  existence/value oracle. Locked reads are tenant-scoped; BulkCas no longer
+  reports `changed` for a zero-row update.
+- **Encrypted and PII columns left the database in plaintext** through CDC
+  events and projections, and **Update wrote encrypted columns in plaintext**.
+  Every write path now encrypts (and refreshes blind-index tokens) before
+  binding, and CDC/projections receive the stored ciphertext with manifest
+  redaction applied. Update no longer projects `***MASKED***` placeholders.
+- **Vector search tenant filters could be bypassed** on Elasticsearch, Weaviate
+  and Pinecone (a `must` object instead of an array; Pinecone `any`). The scope
+  now always wraps the caller filter; system (`_`-prefixed) keys are rejected;
+  untranslatable clauses fail instead of being dropped.
+- **Embedding and projected vector points collided across tenants** (bare row
+  ids). Ids are tenant/project-scoped; Weaviate isolation fields use exact-match
+  tokenization; Pinecone uses project namespaces plus a collection filter.
+- **Projections to Mongo, S3 and Redis were unscoped** (0.5.23 fixed only Qdrant
+  and Neo4j); Redis deletes could wildcard across tenants. All projection targets
+  are now scoped, and deletes carry the verified tenant.
+- **Raw dispatch to S3/Redis/Memcached accepted caller-chosen keys** and could
+  set `compiler_mediated` to unlock DDL. Keys are forced under the caller's
+  tenant prefix and the marker is stripped. Non-SQL IR compilers fail closed on
+  an empty tenant.
+- **Authz:** PutAuthzPolicy enforces the tenant boundary; allow rules honor
+  project scope; CheckAccess ignores caller-supplied roles and identities;
+  `UDB_ABAC_DEFAULT_ALLOW` is refused in production; SAML test mode is refused in
+  production; a policy snapshot older than `UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS`
+  fails closed.
+- **GraphQuery could run writes** under a read permission — it is now read-only.
+- **The TURN secret fell back to the data-at-rest master key.** Production now
+  requires an explicit `UDB_TURN_SECRET`.
+- **Tenant suspension was per-process memory**; the gate now reads the tenant row
+  (5 s cache), so every replica enforces it.
+- **A hard tenant purge left every vector behind** (with embedding chunk text);
+  admin and self-service purges now delete the tenant's vectors first.
+
+### Fixed
+
+- **Workflows were marked COMPLETED on a timer**, whether or not any step ran.
+  Steps now complete only on `AckWorkflowStep`; no ack within the step timeout
+  takes the timeout/compensation path. New event `udb.workflow.step.dispatched.v1`.
+- **Saga crash recovery read a different table than the data plane wrote**, so a
+  crashed cross-backend transaction was never compensated. One relation now, with
+  per-node ownership so a restart no longer marks a peer's sagas indeterminate; a
+  failed `saga_begin` aborts the request.
+- **The projection write path filed tasks under the tenant id**; projection tasks
+  stuck IN_PROGRESS forever; older tasks could overwrite newer ones. Workers now
+  reclaim expired leases, retry completion, and skip superseded tasks.
+- **Read fences cleared on unknown task keys** — they now stay closed.
+- **LiveQuery was silent on non-leader replicas** — every replica now tails the
+  shared CDC journal.
+- **Webhooks:** a new endpoint no longer receives the tenant's entire history; an
+  undecryptable signing secret dead-letters instead of signing with ciphertext.
+- **Typed document/time-series/analytical RPCs** now go through the tenant-scoped
+  IR; Neo4j/ClickHouse/Cassandra report real affected-row counts; Cassandra
+  accepts `{table, rows}` time-series writes.
+- **Neo4j:** IR, projection and DDL share one label resolver; uniqueness is
+  `(id, _tenant_id, _project_id)` instead of a global id.
+- **ClickHouse** reads use `FINAL` on Replacing/Collapsing engines; projections
+  refuse deletes unless the target is declared `append_only`, and `udb lint`
+  says so.
+- **Multi-process HA:** the startup-lock loser now waits instead of exiting, and
+  artifact apply runs under the lock. Leader-only workers check their lease
+  fencing token before acting; audit degradation now marks the gRPC health probe
+  NOT_SERVING.
+- **Storage:** the orphan reaper can no longer delete a file finalized mid-sweep;
+  soft delete records failed byte deletes; the PutObject fallback is found by
+  finalize; quota is reserved at upload-URL time; cache byte budgets are atomic.
+- Scheduler jobs are isolated per job; notifications with no provider fail
+  instead of staying PENDING forever; lock expiry covers every project; keyset
+  pagination handles NULL sort keys; upserting onto a soft-deleted key revives it;
+  the read cache key includes the project.
+- The `data_plane_live` suite (idempotency, soft delete, CAS, BulkCas, lock
+  fencing, BeginTx) now actually runs in CI.
+
+### Added
+
+- `CompleteMultipartUpload` / `AbortMultipartUpload` (S3/MinIO) — multipart
+  uploads could previously be started but never finished.
+- `AckWorkflowStep`.
+- Seam tests that go write → worker → store → tenant-scoped read for projection,
+  plus served deny-path authz tests.
+
+### Changed — read before upgrading
+
+- Projected Qdrant point ids, Redis keys and S3 keys are tenant-scoped, and
+  embedding/Pinecone ids changed: records projected or embedded before this
+  release need a replay or re-embed.
+- `RegisterUpload` requires `size_bytes` when a tenant quota is configured.
+- A migration-approval quorum of 2+ now requires per-approver keys
+  (`UDB_APPROVAL_APPROVER_KEYS`).
+- BeginTx 2PC enrolls a MySQL instance only when it is listed in
+  `UDB_XA_MYSQL_MIRROR_INSTANCES`.
+- `GetExecutorPerformance` / `GetReconciliationAnalytics` return
+  `FAILED_PRECONDITION` ("not collected") instead of empty; `JoinSession` fails
+  with `SFU_NOT_AVAILABLE` in builds without the `webrtc` feature.
+- Compliance evidence export runs only with
+  `UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED=true`.
+- New settings: `UDB_STARTUP_LOCK_WAIT_SECS`, `UDB_NODE_ID`,
+  `UDB_SAGA_STALE_THRESHOLD_SECONDS`, `UDB_AUDIT_DEGRADED_HEALTH_WINDOW_SECS`,
+  `UDB_PROJECTION_TASK_LEASE_SECS`, `UDB_NOTIFICATION_NO_PROVIDER_GRACE_SECS`,
+  `UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS`, `UDB_TURN_SECRET`.
+
 ## [0.5.23] - 2026-10-05
 
 Tenant scoping for projected vector and graph records, projected graph edges,

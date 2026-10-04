@@ -24,7 +24,7 @@ use super::config::{
     webhook_delivery_concurrency, webhook_delivery_timeout,
 };
 #[cfg(feature = "http-client")]
-use super::model::{delivery_model, endpoint_model};
+use super::model::delivery_model;
 #[cfg(feature = "http-client")]
 use super::security::{
     resolve_and_pin_target, sign_webhook_body_with_timestamp, webhook_event_matches_endpoint_scope,
@@ -90,18 +90,21 @@ async fn terminal_delivery_exists(
     Ok(count > 0)
 }
 
-#[cfg(feature = "http-client")]
-async fn load_webhook_delivery_jobs(
-    pool: &PgPool,
-    journal_relation: &str,
-    batch: i64,
-) -> Result<Vec<WebhookDeliveryJob>, String> {
-    let endpoint = endpoint_model();
-    let delivery = delivery_model();
+/// The delivery-job loader query. Bind order: `$1..$3` the webhook service's own
+/// topics (never re-delivered), `$4`/`$5` the terminal statuses, `$6` the batch.
+///
+/// Delivery window: an endpoint receives only journal events published at or
+/// after its own `created_at`. Without that bound a newly created endpoint was
+/// joined against the tenant's ENTIRE retained journal and received its whole
+/// history — every past change, including ones from before the subscriber
+/// existed or consented to receive them.
+#[cfg(any(feature = "http-client", test))]
+pub(super) fn webhook_delivery_jobs_sql(journal_relation: &str) -> String {
+    let endpoint = super::model::endpoint_model();
+    let delivery = super::model::delivery_model();
     let endpoint_rel = endpoint.relation.clone();
     let delivery_rel = delivery.relation.clone();
-    let limit = batch.max(1);
-    let rows = sqlx::query(&format!(
+    format!(
         "SELECT \
             e.{endpoint_id}::TEXT AS endpoint_id, \
             e.{tenant_id}::TEXT AS tenant_id, \
@@ -117,6 +120,7 @@ async fn load_webhook_delivery_jobs(
            ON e.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', '') \
           AND e.{active} = true \
           AND e.{deleted_at} IS NULL \
+          AND j.published_at >= e.{created_at} \
           AND ( \
               e.{topic_pattern} = '*' \
               OR (right(e.{topic_pattern}, 1) = '*' \
@@ -144,19 +148,30 @@ async fn load_webhook_delivery_jobs(
         max_attempts = endpoint.q("max_attempts"),
         active = endpoint.q("active"),
         deleted_at = endpoint.q("deleted_at"),
+        created_at = endpoint.q("created_at"),
         delivery_endpoint_id = delivery.q("endpoint_id"),
         delivery_event_id = delivery.q("event_id"),
         delivery_status = delivery.q("status"),
-    ))
-    .bind(TOPIC_DELIVERY_SUCCEEDED)
-    .bind(TOPIC_DELIVERY_DEAD)
-    .bind(TOPIC_WEBHOOK_DELIVERY_CDC)
-    .bind(STATUS_DELIVERED)
-    .bind(STATUS_DEAD)
-    .bind(limit)
-    .fetch_all(pool)
-    .await
-    .map_err(|err| format!("load webhook delivery jobs failed: {err}"))?;
+    )
+}
+
+#[cfg(feature = "http-client")]
+async fn load_webhook_delivery_jobs(
+    pool: &PgPool,
+    journal_relation: &str,
+    batch: i64,
+) -> Result<Vec<WebhookDeliveryJob>, String> {
+    let limit = batch.max(1);
+    let rows = sqlx::query(&webhook_delivery_jobs_sql(journal_relation))
+        .bind(TOPIC_DELIVERY_SUCCEEDED)
+        .bind(TOPIC_DELIVERY_DEAD)
+        .bind(TOPIC_WEBHOOK_DELIVERY_CDC)
+        .bind(STATUS_DELIVERED)
+        .bind(STATUS_DEAD)
+        .bind(limit)
+        .fetch_all(pool)
+        .await
+        .map_err(|err| format!("load webhook delivery jobs failed: {err}"))?;
 
     let mut jobs = Vec::with_capacity(rows.len());
     for row in rows {
@@ -576,6 +591,96 @@ pub(crate) async fn run_webhook_delivery_once(
     Ok(delivered)
 }
 
+/// The HMAC key a delivery signs with, from the result of decrypting the stored
+/// secret. Refused when decryption failed, or when the "decrypted" value is
+/// still an AEAD envelope (a sealed secret on a broker with no key configured
+/// passes through `decrypt_secret_at_rest` unchanged) — signing with ciphertext
+/// would ship an unverifiable signature keyed by the sealed envelope.
+#[cfg(any(feature = "http-client", test))]
+pub(super) fn resolve_signing_secret(decrypted: Result<String, String>) -> Result<String, String> {
+    let plain =
+        decrypted.map_err(|err| format!("webhook signing secret could not be decrypted: {err}"))?;
+    if crate::runtime::executor_utils::is_ciphertext(&plain) {
+        return Err(
+            "webhook signing secret is sealed at rest but no decryption key is configured"
+                .to_string(),
+        );
+    }
+    if plain.is_empty() {
+        return Err("webhook signing secret is empty".to_string());
+    }
+    Ok(plain)
+}
+
+/// Dead-letter one (endpoint, event) delivery that cannot be signed: journal a
+/// DEAD row with the reason (so the loader stops selecting it and the operator
+/// sees why) and emit the dead-letter event, without any POST.
+#[cfg(feature = "http-client")]
+async fn dead_letter_unsignable(
+    pool: &PgPool,
+    outbox_relation: Option<&str>,
+    job: &WebhookDeliveryJob,
+    reason: &str,
+    metrics: Option<&Arc<dyn MetricsRecorder>>,
+) {
+    let endpoint = &job.target;
+    let event = &job.event;
+    let delivery_event = outbox_relation.and_then(|relation| {
+        match crate::runtime::service::native_helpers::native_transaction_outbox_op(
+            Some(relation),
+            TOPIC_DELIVERY_DEAD,
+            &endpoint.endpoint_id,
+            &endpoint.tenant_id,
+            "",
+            serde_json::json!({
+                "tenant_id": endpoint.tenant_id,
+                "endpoint_id": endpoint.endpoint_id,
+                "event_id": event.event_id,
+                "topic": event.topic,
+                "attempts": 0,
+                "last_error": reason,
+            }),
+            NativeEventContext {
+                operation: "webhook.dead_letter".to_string(),
+                outcome: "failure".to_string(),
+                target_resource: endpoint.endpoint_id.clone(),
+                ..NativeEventContext::default()
+            },
+        ) {
+            Ok(Some(crate::runtime::core::native_store::NativeEntityTransactionOp::Outbox(
+                write,
+            ))) => Some((relation.to_string(), write)),
+            Ok(_) => None,
+            Err(reject) => {
+                tracing::warn!(
+                    topic = TOPIC_DELIVERY_DEAD,
+                    error = %reject,
+                    "refusing to enqueue non-compliant webhook delivery event; the journal row still stands"
+                );
+                if let Some(metrics) = metrics {
+                    metrics.inc_outbox_enqueue_failures_total("native_compliance");
+                }
+                None
+            }
+        }
+    });
+    insert_delivery_journal(
+        pool,
+        &endpoint.tenant_id,
+        &endpoint.endpoint_id,
+        &event.event_id,
+        &event.topic,
+        STATUS_DEAD,
+        0,
+        0,
+        "",
+        reason,
+        &event.payload,
+        delivery_event,
+    )
+    .await;
+}
+
 /// Run one leader-owned worker tick from the durable CDC journal. The loader
 /// returns endpoint/event pairs that still lack a terminal delivery journal row,
 /// so repeated ticks are idempotent and bounded.
@@ -594,14 +699,30 @@ pub(crate) async fn run_webhook_delivery_worker_once(
     metrics: Option<&Arc<dyn MetricsRecorder>>,
     runtime: &crate::runtime::DataBrokerRuntime,
 ) -> Result<i64, String> {
-    let mut jobs = load_webhook_delivery_jobs(pool, journal_relation, batch).await?;
+    let loaded = load_webhook_delivery_jobs(pool, journal_relation, batch).await?;
     // NTF1: the loaded signing_secret is sealed at rest (see create_endpoint);
     // decrypt it to the plaintext HMAC key before signing. `decrypt_secret_at_rest`
     // returns a plaintext value unchanged, so a mixed plaintext/ciphertext rollout
-    // (pre-fix rows + newly-sealed rows) both sign correctly.
-    for job in &mut jobs {
-        if let Ok(plain) = runtime.decrypt_secret_at_rest(&job.target.signing_secret) {
-            job.target.signing_secret = plain;
+    // (pre-fix rows + newly-sealed rows) both sign correctly. A secret that
+    // cannot be decrypted FAILS the delivery (dead-lettered, never POSTed): the
+    // old code kept the ciphertext and signed with it, sending the receiver a
+    // signature it can never verify and the sealed secret's envelope as the key.
+    let mut jobs = Vec::with_capacity(loaded.len());
+    for mut job in loaded {
+        match resolve_signing_secret(runtime.decrypt_secret_at_rest(&job.target.signing_secret)) {
+            Ok(plain) => {
+                job.target.signing_secret = plain;
+                jobs.push(job);
+            }
+            Err(reason) => {
+                tracing::error!(
+                    endpoint_id = %job.target.endpoint_id,
+                    event_id = %job.event.event_id,
+                    error = %reason,
+                    "webhook delivery refused: signing secret unavailable; dead-lettered without sending"
+                );
+                dead_letter_unsignable(pool, outbox_relation, &job, &reason, metrics).await;
+            }
         }
     }
     // Bounded-concurrency fan-out: each job is an independent (endpoint, event)

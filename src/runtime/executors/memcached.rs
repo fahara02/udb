@@ -192,10 +192,15 @@ impl BackendContextEnforcer for MemcachedExecutor {
 
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
         // C7/C8: the Memcached compiler's key template namespaces by
-        // tenant + project (`udb:{project}:{tenant}:<msg>:{pk}`), so
-        // a cross-tenant `get` can't return another tenant's value —
-        // it would have to know the full prefixed key.
-        enforce_with_mechanism(ctx, "key namespace prefix udb:{project}:{tenant}:")
+        // tenant + project (`udb:{project}:{tenant}:<msg>:{pk}`), and the
+        // dispatch core forces every RAW key under the same
+        // `udb:{project}:{tenant}:` namespace before it reaches this
+        // executor, so no data-plane `get`/`set`/`delete` can address
+        // another tenant's key.
+        enforce_with_mechanism(
+            ctx,
+            "key namespace prefix udb:{project}:{tenant}: (IR keys + raw keys forced before dispatch)",
+        )
     }
 }
 

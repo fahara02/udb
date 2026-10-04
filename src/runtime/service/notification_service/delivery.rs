@@ -33,9 +33,10 @@ use crate::runtime::DataBrokerRuntime;
 use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_in_tx};
 #[cfg(feature = "http-client")]
 use super::config::{
-    NOTIFICATION_DELIVERY_PROVIDERS_ENV, TOPIC_NOTIFICATION_DEAD_LETTERED,
-    delivery_exhausted_retries, max_delivery_attempts, notification_backoff_base_secs,
-    notification_backoff_cap_secs,
+    NO_PROVIDER_FAILURE_REASON, NOTIFICATION_DELIVERY_PROVIDERS_ENV,
+    TOPIC_NOTIFICATION_DEAD_LETTERED, delivery_exhausted_retries, max_delivery_attempts,
+    notification_backoff_base_secs, notification_backoff_cap_secs,
+    notification_no_provider_grace_secs,
 };
 #[cfg(feature = "http-client")]
 use super::events::{
@@ -1118,8 +1119,12 @@ pub(crate) async fn run_notification_delivery_once(
 
 /// Run one leader-owned delivery pass from durable `NotificationLog` rows.
 /// Provider config is resolved once from `UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON`.
-/// If no providers are configured, the worker leaves queued intents untouched so a
-/// later sidecar/provider rollout can drain them instead of poisoning attempts.
+/// A queued intent whose channel has NO configured provider is never silently
+/// left PENDING forever: the worker warns (once per channel), flags the service
+/// degraded, and after the no-provider grace window
+/// (`UDB_NOTIFICATION_NO_PROVIDER_GRACE_SECS`) fails it out of the queue as
+/// FAILED with a stated reason. Within the grace window it stays PENDING so a
+/// provider rollout can still drain it.
 #[cfg(feature = "http-client")]
 pub(crate) async fn run_notification_delivery_worker_once(
     http: &reqwest::Client,
@@ -1130,23 +1135,164 @@ pub(crate) async fn run_notification_delivery_worker_once(
     batch: i64,
     metrics: Option<&Arc<dyn MetricsRecorder>>,
 ) -> Result<i64, String> {
-    let providers = notification_delivery_providers();
-    if providers.is_empty() {
+    run_notification_delivery_worker_pass(
+        http,
+        runtime,
+        pool,
+        project_id,
+        outbox_relation,
+        batch,
+        metrics,
+        notification_delivery_providers(),
+        notification_no_provider_grace_secs(),
+    )
+    .await
+}
+
+/// Whether a configured provider can serve this intent's channel, or the
+/// intent is a permanently undeliverable empty-address row the delivery pass
+/// fails out itself. Pure — the routing split is unit-tested on it.
+#[allow(dead_code)]
+pub(crate) fn intent_is_routable(
+    channel: i32,
+    recipient_address: &str,
+    providers: &[NotificationDeliveryProvider],
+) -> bool {
+    missing_recipient_should_fail(channel, recipient_address)
+        || providers.iter().any(|provider| provider.channel == channel)
+}
+
+/// Warn ONCE per channel (per process) that queued notifications have no
+/// delivery provider, so the log is not flooded every pass.
+#[cfg(feature = "http-client")]
+fn warn_no_provider_once(channel_db: &str, project_id: &str) {
+    static WARNED: OnceLock<std::sync::Mutex<std::collections::BTreeSet<String>>> = OnceLock::new();
+    let warned = WARNED.get_or_init(|| std::sync::Mutex::new(std::collections::BTreeSet::new()));
+    let first = warned
+        .lock()
+        .map(|mut set| set.insert(channel_db.to_string()))
+        .unwrap_or(false);
+    if first {
+        tracing::warn!(
+            channel = channel_db,
+            project_id,
+            env = NOTIFICATION_DELIVERY_PROVIDERS_ENV,
+            "notifications are queued for a channel with no delivery provider configured; \
+             they will be FAILED after the no-provider grace window"
+        );
+    }
+}
+
+/// The subset of `log_ids` (within `project_id`) whose row is older than
+/// `grace_secs` — i.e. past the no-provider grace window.
+#[cfg(feature = "http-client")]
+async fn logs_past_grace(
+    pool: &PgPool,
+    project_id: &str,
+    log_ids: &[Uuid],
+    grace_secs: i64,
+) -> Result<std::collections::BTreeSet<Uuid>, String> {
+    if log_ids.is_empty() {
+        return Ok(std::collections::BTreeSet::new());
+    }
+    let log = log_model();
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|err| format!("begin notification grace scan failed: {err}"))?;
+    // Same transaction-local, project-pinned platform scan as the intent loader.
+    sqlx::query(
+        "SELECT set_config('app.platform_admin', 'true', true), \
+                set_config('app.current_project_id', $1, true)",
+    )
+    .bind(project_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|err| format!("set notification grace scan context failed: {err}"))?;
+    let rows: Vec<Uuid> = sqlx::query_scalar(&format!(
+        "SELECT {log_id} FROM {rel} \
+         WHERE {log_id} = ANY($1::UUID[]) AND {project_id} = $2 \
+           AND {created_at} < NOW() - make_interval(secs => $3::DOUBLE PRECISION)",
+        rel = log.relation,
+        log_id = log.q("log_id"),
+        project_id = log.q("project_id"),
+        created_at = log.q("created_at"),
+    ))
+    .bind(log_ids)
+    .bind(project_id)
+    .bind(grace_secs.max(0) as f64)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|err| format!("notification grace scan failed: {err}"))?;
+    tx.commit()
+        .await
+        .map_err(|err| format!("commit notification grace scan failed: {err}"))?;
+    Ok(rows.into_iter().collect())
+}
+
+/// One delivery pass with explicit providers and grace window (the
+/// single-pass seam [`run_notification_delivery_worker_once`] delegates to, and
+/// that live tests drive directly). Returns the count delivered.
+#[cfg(feature = "http-client")]
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn run_notification_delivery_worker_pass(
+    http: &reqwest::Client,
+    runtime: Arc<DataBrokerRuntime>,
+    pool: &PgPool,
+    project_id: &str,
+    outbox_relation: Option<&str>,
+    batch: i64,
+    metrics: Option<&Arc<dyn MetricsRecorder>>,
+    providers: &[NotificationDeliveryProvider],
+    no_provider_grace_secs: i64,
+) -> Result<i64, String> {
+    let intents = load_notification_delivery_intents(pool, project_id, batch).await?;
+    let (deliverable, unroutable): (Vec<_>, Vec<_>) = intents.into_iter().partition(|intent| {
+        intent_is_routable(intent.channel, &intent.recipient_address, providers)
+    });
+
+    if !unroutable.is_empty() {
+        // Provider config is resolved once per process, so this gap persists
+        // until a restart with providers configured: flag it on the health gauge.
+        if let Some(metrics) = metrics {
+            metrics.set_native_service_degraded("notification", true);
+        }
+        for intent in &unroutable {
+            warn_no_provider_once(channel_to_db(intent.channel), project_id);
+        }
+        let ids: Vec<Uuid> = unroutable
+            .iter()
+            .filter_map(|intent| Uuid::parse_str(intent.log_id.trim()).ok())
+            .collect();
+        let expired = logs_past_grace(pool, project_id, &ids, no_provider_grace_secs).await?;
+        for intent in &unroutable {
+            let Ok(notification_id) = Uuid::parse_str(intent.log_id.trim()) else {
+                continue;
+            };
+            if !expired.contains(&notification_id) {
+                continue;
+            }
+            // Permanent for this deployment's configuration: terminal FAILED on
+            // this attempt (attempt row + dead-letter + delivery event, atomically).
+            record_attempt_outcome(
+                pool,
+                outbox_relation,
+                metrics,
+                notification_id,
+                intent,
+                "",
+                "FAILED",
+                NO_PROVIDER_FAILURE_REASON,
+                "",
+                true,
+            )
+            .await;
+        }
+    }
+
+    if deliverable.is_empty() {
         return Ok(0);
     }
-    let intents = load_notification_delivery_intents(pool, project_id, batch).await?;
-    let deliverable = intents
-        .into_iter()
-        .filter(|intent| {
-            // Keep intents a configured provider can serve, PLUS undeliverable
-            // empty-address rows on an address-bearing channel so the worker can
-            // fail them out of the queue instead of leaving them to loop forever.
-            missing_recipient_should_fail(intent.channel, &intent.recipient_address)
-                || providers
-                    .iter()
-                    .any(|provider| provider.channel == intent.channel)
-        })
-        .collect::<Vec<_>>();
     let delivered = run_notification_delivery_once(
         http,
         runtime.as_ref(),

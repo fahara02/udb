@@ -86,3 +86,57 @@ class MultipartUploadResponse(_message.Message):
     part_urls: _containers.RepeatedScalarFieldContainer[str]
     expires_at_unix: int
     def __init__(self, upload_id: _Optional[str] = ..., part_urls: _Optional[_Iterable[str]] = ..., expires_at_unix: _Optional[int] = ...) -> None: ...
+
+class MultipartUploadPart(_message.Message):
+    __slots__ = ("part_number", "etag")
+    PART_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    ETAG_FIELD_NUMBER: _ClassVar[int]
+    part_number: int
+    etag: str
+    def __init__(self, part_number: _Optional[int] = ..., etag: _Optional[str] = ...) -> None: ...
+
+class CompleteMultipartUploadRequest(_message.Message):
+    __slots__ = ("context", "bucket", "object_key", "upload_id", "parts", "idempotency_key")
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    BUCKET_FIELD_NUMBER: _ClassVar[int]
+    OBJECT_KEY_FIELD_NUMBER: _ClassVar[int]
+    UPLOAD_ID_FIELD_NUMBER: _ClassVar[int]
+    PARTS_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    context: _context_pb2.RequestContext
+    bucket: str
+    object_key: str
+    upload_id: str
+    parts: _containers.RepeatedCompositeFieldContainer[MultipartUploadPart]
+    idempotency_key: str
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., bucket: _Optional[str] = ..., object_key: _Optional[str] = ..., upload_id: _Optional[str] = ..., parts: _Optional[_Iterable[_Union[MultipartUploadPart, _Mapping]]] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+
+class CompleteMultipartUploadResponse(_message.Message):
+    __slots__ = ("resource_uri", "etag", "size_bytes")
+    RESOURCE_URI_FIELD_NUMBER: _ClassVar[int]
+    ETAG_FIELD_NUMBER: _ClassVar[int]
+    SIZE_BYTES_FIELD_NUMBER: _ClassVar[int]
+    resource_uri: str
+    etag: str
+    size_bytes: int
+    def __init__(self, resource_uri: _Optional[str] = ..., etag: _Optional[str] = ..., size_bytes: _Optional[int] = ...) -> None: ...
+
+class AbortMultipartUploadRequest(_message.Message):
+    __slots__ = ("context", "bucket", "object_key", "upload_id", "idempotency_key")
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    BUCKET_FIELD_NUMBER: _ClassVar[int]
+    OBJECT_KEY_FIELD_NUMBER: _ClassVar[int]
+    UPLOAD_ID_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    context: _context_pb2.RequestContext
+    bucket: str
+    object_key: str
+    upload_id: str
+    idempotency_key: str
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., bucket: _Optional[str] = ..., object_key: _Optional[str] = ..., upload_id: _Optional[str] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+
+class AbortMultipartUploadResponse(_message.Message):
+    __slots__ = ("aborted",)
+    ABORTED_FIELD_NUMBER: _ClassVar[int]
+    aborted: bool
+    def __init__(self, aborted: bool = ...) -> None: ...

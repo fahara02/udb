@@ -459,10 +459,12 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             'map_err("GET counter", err)',
             'map_err("GET", err)',
             'map_err("TTL", err)',
-            'map_err("SET", err)',
+            # Set/Delete run as one atomic budget script (check + write +
+            # counter), so their transient failures carry these labels.
+            'map_err("budgeted SET", err)',
+            'map_err("budgeted DEL", err)',
             'map_err("SCAN", err)',
             'map_err("DEL", err)',
-            'map_err("INCRBY", err)',
         ),
     ),
     TokenCheck(

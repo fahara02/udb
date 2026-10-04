@@ -20,7 +20,10 @@ use super::config::{
     EVENT_TYPE_PIPELINE_METRIC_RECORDED, EVENT_TYPE_SNAPSHOT_TRIGGERED, MAX_ANALYTICS_READ_ROWS,
     PIPELINE_SUMMARY_PAGE_SIZE, PMS_MSG, SECONDS_PER_HOUR,
 };
-use super::errors::{analytics_internal_status, analytics_required_field, require_platform_admin};
+use super::errors::{
+    analytics_internal_status, analytics_not_collected_status, analytics_required_field,
+    require_platform_admin,
+};
 use super::events::{analytics_event_payload, emit_analytics_event, enqueue_analytics_event_in_tx};
 use super::model::{
     eps_from_json, eps_from_row, eps_model, pms_from_json, pms_from_row, pms_model, ras_from_json,
@@ -259,6 +262,40 @@ pub(crate) async fn get_pipeline_summary(
     }))
 }
 
+/// Which system-global summary an empty read came from: `(operation, label)`.
+type SummaryKind = (&'static str, &'static str);
+const EXECUTOR_PERF: SummaryKind = ("get_executor_performance", "executor performance summaries");
+const RECONCILIATION: SummaryKind = (
+    "get_reconciliation_analytics",
+    "reconciliation analytics summaries",
+);
+
+/// An empty system-global summary read must not masquerade as "no activity":
+/// when the summary table has NEVER been written (nothing in this deployment
+/// collects it), fail with `FailedPrecondition` "not collected". A table that
+/// has rows (an operator/ETL writer exists) keeps the honest empty result for a
+/// window with no data. With no Postgres pool to ask, the empty result stands.
+async fn ensure_summary_collected(
+    svc: &AnalyticsServiceImpl,
+    relation: &str,
+    (operation, label): SummaryKind,
+) -> Result<(), Status> {
+    let Some(pool) = svc.pg_pool.as_ref() else {
+        return Ok(());
+    };
+    let collected: bool = sqlx::query_scalar(&format!("SELECT EXISTS (SELECT 1 FROM {relation})"))
+        .fetch_one(pool)
+        .await
+        .map_err(|err| {
+            analytics_internal_status(operation, format!("{operation} probe failed: {err}"))
+        })?;
+    if collected {
+        Ok(())
+    } else {
+        Err(analytics_not_collected_status(operation, label))
+    }
+}
+
 pub(crate) async fn get_executor_performance(
     svc: &AnalyticsServiceImpl,
     request: Request<ana_pb::GetExecutorPerformanceRequest>,
@@ -292,7 +329,10 @@ pub(crate) async fn get_executor_performance(
         let rows = runtime
             .native_entity_read_for_service("analytics", &context, executor_performance_read(&req))
             .await?;
-        let summaries = rows.iter().map(eps_from_json).collect();
+        let summaries: Vec<_> = rows.iter().map(eps_from_json).collect();
+        if summaries.is_empty() {
+            ensure_summary_collected(svc, &eps_model().relation, EXECUTOR_PERF).await?;
+        }
         return Ok(Response::new(ana_pb::GetExecutorPerformanceResponse {
             summaries,
         }));
@@ -346,7 +386,10 @@ pub(crate) async fn get_executor_performance(
             format!("get executor performance failed: {err}"),
         )
     })?;
-    let summaries = rows.iter().map(eps_from_row).collect();
+    let summaries: Vec<_> = rows.iter().map(eps_from_row).collect();
+    if summaries.is_empty() {
+        ensure_summary_collected(svc, &rel, EXECUTOR_PERF).await?;
+    }
     Ok(Response::new(ana_pb::GetExecutorPerformanceResponse {
         summaries,
     }))
@@ -386,6 +429,9 @@ pub(crate) async fn get_reconciliation_analytics(
             .native_entity_read_for_service("analytics", &context, reconciliation_analytics_read())
             .await?;
         let summaries: Vec<_> = rows.iter().map(ras_from_json).collect();
+        if summaries.is_empty() {
+            ensure_summary_collected(svc, &ras_model().relation, RECONCILIATION).await?;
+        }
         let total_recon: i64 = summaries.iter().map(|s| s.total_reconciliations).sum();
         let total_exact: i64 = summaries.iter().map(|s| s.exact_matches).sum();
         let overall_resolution_rate = if total_recon > 0 {
@@ -448,6 +494,9 @@ pub(crate) async fn get_reconciliation_analytics(
         )
     })?;
     let summaries: Vec<_> = rows.iter().map(ras_from_row).collect();
+    if summaries.is_empty() {
+        ensure_summary_collected(svc, &rel, RECONCILIATION).await?;
+    }
     // Overall resolution rate = Σ exact_matches / Σ total_reconciliations;
     // avg_reconciliation_ms = mean of the per-day averages.
     let total_recon: i64 = summaries.iter().map(|s| s.total_reconciliations).sum();

@@ -364,3 +364,80 @@ async fn live_journal_retention_sweep_removes_only_old_acked_rows() {
         .await
         .expect("clean up live journal rows");
 }
+
+/// The cross-replica LiveQuery tail: `journal_head_event_id` anchors a new
+/// subscriber at the journal head, and `journal_scan_for_scope` then returns
+/// only the subscriber's tenant's LATER events while advancing the cursor past
+/// every scanned row (foreign-tenant rows included), so a busy shared topic
+/// never pins the cursor.
+#[cfg(feature = "kafka")]
+#[tokio::test]
+#[ignore = "requires live Postgres: UDB_LIVE_CDC_TESTS=1 cargo test --lib cdc::live_tests -- --ignored --nocapture"]
+async fn live_journal_tail_anchors_at_head_and_scopes_by_tenant() {
+    let _guard = live_cdc_db_lock().lock().await;
+    let Some(pool) = live_cdc_pool().await else {
+        eprintln!("{LIVE_GATE_HINT}");
+        return;
+    };
+    let dsn = live_pg_dsn().expect("live dsn present when pool connected");
+    let engine = live_engine(pool.clone(), dsn, CdcConfig::default());
+    let topic = format!("udb.cdc.live.tail.{}.v1", Uuid::new_v4().simple());
+
+    async fn journal(pool: &PgPool, topic: &str, tenant: &str, age_secs: f64) -> Uuid {
+        let event_id = Uuid::new_v4();
+        sqlx::query(
+            "INSERT INTO udb_system.udb_cdc_event_journal \
+             (event_id, topic, partition_key, payload, published_at, delivery_state) \
+             VALUES ($1, $2, 'live-test', $3::JSONB, \
+                     NOW() - make_interval(secs => $4), 'published')",
+        )
+        .bind(event_id)
+        .bind(topic)
+        .bind(
+            serde_json::json!({"tenant_id": tenant, "project_id": "default", "payload": {}})
+                .to_string(),
+        )
+        .bind(age_secs)
+        .execute(pool)
+        .await
+        .expect("insert live journal row");
+        event_id
+    }
+
+    // History from before the subscription.
+    let before = journal(&pool, &topic, "tenant-a", 60.0).await;
+    let head = engine
+        .journal_head_event_id(&topic)
+        .await
+        .expect("journal head readable")
+        .expect("topic has a head");
+    assert_eq!(head, before.to_string());
+
+    // After subscribing: one foreign-tenant event, then the subscriber's own.
+    let foreign = journal(&pool, &topic, "tenant-b", 30.0).await;
+    let own = journal(&pool, &topic, "tenant-a", 10.0).await;
+
+    let (events, last_scanned) = engine
+        .journal_scan_for_scope(&topic, "tenant-a", "default", &head, 100)
+        .await;
+    let ids: Vec<_> = events.iter().map(|e| e.event_id.clone()).collect();
+    assert_eq!(
+        ids,
+        vec![own.to_string()],
+        "only tenant-a's post-head event"
+    );
+    assert_eq!(last_scanned, Some(own.to_string()));
+
+    // Polling again from the advanced cursor yields nothing new.
+    let (again, unchanged) = engine
+        .journal_scan_for_scope(&topic, "tenant-a", "default", &own.to_string(), 100)
+        .await;
+    assert!(again.is_empty());
+    assert_eq!(unchanged, None);
+
+    sqlx::query("DELETE FROM udb_system.udb_cdc_event_journal WHERE event_id = ANY($1)")
+        .bind([before, foreign, own].as_slice())
+        .execute(&pool)
+        .await
+        .expect("clean up live journal rows");
+}

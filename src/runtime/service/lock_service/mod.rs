@@ -14,8 +14,10 @@
 //! admission is fair (`native_helpers::admit_on`), state is durable in the
 //! canonical store, and every mutation emits a versioned dot-topic outbox event.
 //!
-//! Lifecycle (16.5.1): the leader-elected expiry reaper ([`run_lock_expiry_once`],
-//! spawned under `WORKER_LOCK_EXPIRY_REAPER`) flips lapsed `HELD` rows to
+//! Lifecycle (16.5.1): the leader-elected expiry reaper
+//! ([`workers::run_lock_expiry_once`], run over every active project's lock
+//! store by [`run_lock_expiry_all_projects`] and spawned under
+//! `WORKER_LOCK_EXPIRY_REAPER`) flips lapsed `HELD` rows to
 //! `EXPIRED` and emits `udb.lock.lock.expired.v1` per lock, transactionally with
 //! the flip; independently, the acquire-time quota count excludes lapsed rows so
 //! an un-released lock never exhausts the tenant budget between sweeps.
@@ -56,7 +58,7 @@ mod workers;
 // Re-exported at the module root for `serve()`, which spawns the expiry-reaper
 // worker under leader election.
 pub(crate) use config::{LOCK_EXPIRY_SWEEP_BATCH, lock_expiry_interval};
-pub(crate) use workers::run_lock_expiry_once;
+pub(crate) use workers::run_lock_expiry_all_projects;
 
 // gate 25 (lock-fencing-at-commit): the DataBroker mutation path reuses the
 // LockService's entity name (to resolve the durable lock table from the native

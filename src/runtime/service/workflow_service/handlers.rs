@@ -1,4 +1,4 @@
-//! The five `WorkflowService` RPCs as free functions taking `&WorkflowServiceImpl`.
+//! The six `WorkflowService` RPCs as free functions taking `&WorkflowServiceImpl`.
 //! `mod.rs`'s `#[tonic::async_trait] impl WorkflowService` delegates one line each
 //! into here. Tenant identity always comes from the VERIFIED claim (never the
 //! request body); state is durable; every mutation and its outbox event commit in
@@ -22,12 +22,12 @@ use super::super::native_helpers::{
 use super::WorkflowServiceImpl;
 use super::config::{
     MAX_COMPENSATIONS_BYTES, MAX_PAYLOAD_BYTES, SIGNALS_KEY, STATUS_CANCELLED, STATUS_COMPENSATED,
-    STATUS_COMPENSATING, TOPIC_CANCELLED, TOPIC_SIGNALED, TOPIC_STARTED,
+    STATUS_COMPENSATING, TOPIC_CANCELLED, TOPIC_FAILED, TOPIC_SIGNALED, TOPIC_STARTED,
 };
 use super::errors::{
-    workflow_cancel_terminal_status, workflow_internal_status, workflow_not_found_status,
-    workflow_required_field, workflow_signal_compensating_status, workflow_signal_terminal_status,
-    workflow_size_field,
+    workflow_ack_rejected_status, workflow_cancel_terminal_status, workflow_internal_status,
+    workflow_not_found_status, workflow_required_field, workflow_signal_compensating_status,
+    workflow_signal_terminal_status, workflow_size_field,
 };
 use super::events::insert_rpc_outbox;
 use super::model::{
@@ -35,7 +35,10 @@ use super::model::{
     workflow_status_filter_to_db,
 };
 use super::store::{workflow_project_bind, workflow_scope_predicate, workflow_select_projection};
-use super::tick::signal_resumes;
+use super::tick::{
+    StepAckDecision, advance_event_topic, awaiting_ack_step, set_awaiting_ack_step, signal_resumes,
+    step_ack_decision,
+};
 
 /// Resolve Workflow project authority claim/header first, falling back to the
 /// StartWorkflow body only when metadata carries no project. The shared binder
@@ -721,5 +724,336 @@ pub(crate) async fn signal_workflow(
     Ok(Response::new(workflow_pb::SignalWorkflowResponse {
         message: "signal delivered".to_string(),
         error: None,
+    }))
+}
+
+/// `AckWorkflowStep` — the ONLY way a dispatched step completes. Locks the
+/// instance row, verifies the ack is for the step in flight
+/// ([`step_ack_decision`]), then — in ONE transaction with its outbox event —
+/// either advances (`step.advanced`, re-arming the tick to dispatch the next
+/// step), completes (`completed`, terminal), or fails the workflow through the
+/// same FAILED/COMPENSATING path as a step timeout (`failed`). Tenant and
+/// project scope come from the verified claim, exactly like `SignalWorkflow`.
+pub(crate) async fn ack_workflow_step(
+    svc: &WorkflowServiceImpl,
+    request: Request<workflow_pb::AckWorkflowStepRequest>,
+) -> Result<Response<workflow_pb::AckWorkflowStepResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    validate_request_scope(&metadata, &req.tenant_id, "")?;
+    let project_id = resolved_workflow_project_scope(&metadata, "")?;
+    let succeeded = match workflow_pb::WorkflowStepOutcome::try_from(req.outcome) {
+        Ok(workflow_pb::WorkflowStepOutcome::Succeeded) => true,
+        Ok(workflow_pb::WorkflowStepOutcome::Failed) => false,
+        _ => {
+            return Err(workflow_required_field(
+                "outcome",
+                "must be WORKFLOW_STEP_OUTCOME_SUCCEEDED or WORKFLOW_STEP_OUTCOME_FAILED",
+                "outcome is required",
+            ));
+        }
+    };
+    if req.step_index < 0 {
+        return Err(workflow_required_field(
+            "step_index",
+            "must be the non-negative index of the dispatched step",
+            "step_index must be non-negative",
+        ));
+    }
+    if req.output.len() > MAX_PAYLOAD_BYTES {
+        return Err(workflow_size_field(
+            "output",
+            MAX_PAYLOAD_BYTES,
+            format!("output exceeds {MAX_PAYLOAD_BYTES} bytes"),
+        ));
+    }
+    if req.error_message.len() > MAX_PAYLOAD_BYTES {
+        return Err(workflow_size_field(
+            "error_message",
+            MAX_PAYLOAD_BYTES,
+            format!("error_message exceeds {MAX_PAYLOAD_BYTES} bytes"),
+        ));
+    }
+    let _admit = native_admit_on(
+        svc.channels.as_ref(),
+        &svc.metrics,
+        "workflow",
+        OperationChannel::Admin,
+        &req.tenant_id,
+        (!project_id.is_empty()).then_some(project_id.as_str()),
+    )
+    .await?;
+    let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+    let workflow_id = parse_uuid("workflow_id", &req.workflow_id)?.to_string();
+    let pool = svc.require_pool()?;
+    let m = workflow_model();
+    let rel = m.relation.clone();
+
+    // Lock the row so a concurrent ack / signal / cancel / tick serializes on it
+    // and two acks for the same step can never both advance.
+    let mut tx = pool.begin().await.map_err(|err| {
+        workflow_internal_status(
+            "ack_workflow_step_begin",
+            format!("ack workflow step begin failed: {err}"),
+        )
+    })?;
+    let row = sqlx::query(&format!(
+        "SELECT {status} AS status, COALESCE({payload}::TEXT, '') AS payload, \
+            COALESCE({project_id_column}::TEXT, '') AS project_id, \
+            {workflow_type} AS workflow_type, COALESCE({saga_id}::TEXT, '') AS saga_id, \
+            {current_step} AS current_step, {total_steps} AS total_steps \
+         FROM {rel} \
+         WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL \
+         FOR UPDATE",
+        status = m.q("status"),
+        payload = m.q("payload"),
+        project_id_column = m.q("project_id"),
+        workflow_type = m.q("workflow_type"),
+        saga_id = m.q("saga_id"),
+        current_step = m.q("current_step"),
+        total_steps = m.q("total_steps"),
+        workflow_id = m.q("workflow_id"),
+        scope = workflow_scope_predicate(&m, "$2", "$3"),
+        deleted = m.q("deleted_at"),
+    ))
+    .bind(&workflow_id)
+    .bind(&tenant_id)
+    .bind(&project_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|err| {
+        workflow_internal_status(
+            "ack_workflow_step_load",
+            format!("ack workflow step load failed: {err}"),
+        )
+    })?
+    .ok_or_else(|| workflow_not_found_status("ack_workflow_step"))?;
+    let decode = |col: &str| -> Result<String, Status> {
+        row.try_get::<String, _>(col).map_err(|e| {
+            workflow_internal_status("ack_workflow_step_decode", format!("decode {col}: {e}"))
+        })
+    };
+    let status = decode("status")?;
+    let payload_text = decode("payload")?;
+    let event_project_id = decode("project_id")?;
+    let workflow_type = decode("workflow_type")?;
+    let saga_id = decode("saga_id")?;
+    let current_step: i32 = row.try_get("current_step").map_err(|e| {
+        workflow_internal_status(
+            "ack_workflow_step_decode",
+            format!("decode current_step: {e}"),
+        )
+    })?;
+    let total_steps: i32 = row.try_get("total_steps").map_err(|e| {
+        workflow_internal_status(
+            "ack_workflow_step_decode",
+            format!("decode total_steps: {e}"),
+        )
+    })?;
+
+    let mut payload_json: serde_json::Value =
+        serde_json::from_str(&payload_text).unwrap_or_else(|_| serde_json::json!({}));
+    if !payload_json.is_object() {
+        payload_json = serde_json::json!({});
+    }
+    let decision = step_ack_decision(
+        &status,
+        current_step,
+        total_steps,
+        awaiting_ack_step(&payload_json),
+        req.step_index,
+        succeeded,
+    );
+    let output: serde_json::Value = if req.output.trim().is_empty() {
+        serde_json::Value::Null
+    } else {
+        serde_json::from_str(req.output.trim())
+            .unwrap_or_else(|_| serde_json::Value::String(req.output.clone()))
+    };
+    let now = Utc::now();
+    set_awaiting_ack_step(&mut payload_json, None);
+
+    let (new_status, topic, operation, event_payload, settle) = match decision {
+        StepAckDecision::AlreadyAcknowledged => {
+            return Ok(Response::new(workflow_pb::AckWorkflowStepResponse {
+                message: "workflow step already acknowledged".to_string(),
+                error: None,
+                status,
+            }));
+        }
+        StepAckDecision::Reject(decision_id) => {
+            return Err(workflow_ack_rejected_status(decision_id));
+        }
+        StepAckDecision::Advance {
+            new_step,
+            completed,
+        } => {
+            let sql = if completed {
+                format!(
+                    "UPDATE {rel} SET {status} = 'COMPLETED', {current_step} = $4, \
+                        {payload} = $5::JSONB, {next_run_at} = NULL, {last_transition_at} = NOW() \
+                     WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
+                    status = m.q("status"),
+                    current_step = m.q("current_step"),
+                    payload = m.q("payload"),
+                    next_run_at = m.q("next_run_at"),
+                    last_transition_at = m.q("last_transition_at"),
+                    workflow_id = m.q("workflow_id"),
+                    scope = workflow_scope_predicate(&m, "$2", "$3"),
+                    deleted = m.q("deleted_at"),
+                )
+            } else {
+                // Re-arm the tick: it dispatches the next step on its next pass.
+                format!(
+                    "UPDATE {rel} SET {current_step} = $4, {payload} = $5::JSONB, \
+                        {next_run_at} = NOW(), {last_transition_at} = NOW() \
+                     WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
+                    current_step = m.q("current_step"),
+                    payload = m.q("payload"),
+                    next_run_at = m.q("next_run_at"),
+                    last_transition_at = m.q("last_transition_at"),
+                    workflow_id = m.q("workflow_id"),
+                    scope = workflow_scope_predicate(&m, "$2", "$3"),
+                    deleted = m.q("deleted_at"),
+                )
+            };
+            sqlx::query(&sql)
+                .bind(&workflow_id)
+                .bind(&tenant_id)
+                .bind(&project_id)
+                .bind(new_step)
+                .bind(payload_json.to_string())
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| {
+                    workflow_internal_status(
+                        "ack_workflow_step",
+                        format!("ack workflow step update failed: {err}"),
+                    )
+                })?;
+            (
+                if completed { "COMPLETED" } else { "RUNNING" },
+                advance_event_topic(completed),
+                if completed { "completed" } else { "advanced" },
+                serde_json::json!({
+                    "workflow_id": workflow_id.clone(),
+                    "tenant_id": tenant_id.clone(),
+                    "project_id": event_project_id.clone(),
+                    "workflow_type": workflow_type.clone(),
+                    "step_index": req.step_index,
+                    "current_step": new_step,
+                    "total_steps": total_steps,
+                    "completed": completed,
+                    "output": output,
+                    "advanced_at": now.to_rfc3339(),
+                }),
+                completed.then_some((SagaStatus::Committed, CompensationStatus::None)),
+            )
+        }
+        StepAckDecision::Fail { target_status } => {
+            let reason = if req.error_message.trim().is_empty() {
+                format!("workflow step {} failed", req.step_index)
+            } else {
+                format!(
+                    "workflow step {} failed: {}",
+                    req.step_index,
+                    req.error_message.trim()
+                )
+            };
+            sqlx::query(&format!(
+                "UPDATE {rel} SET {status} = $4, {payload} = $5::JSONB, {next_run_at} = NULL, \
+                    {last_error} = $6, {last_transition_at} = NOW() \
+                 WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
+                status = m.q("status"),
+                payload = m.q("payload"),
+                next_run_at = m.q("next_run_at"),
+                last_error = m.q("last_error"),
+                last_transition_at = m.q("last_transition_at"),
+                workflow_id = m.q("workflow_id"),
+                scope = workflow_scope_predicate(&m, "$2", "$3"),
+                deleted = m.q("deleted_at"),
+            ))
+            .bind(&workflow_id)
+            .bind(&tenant_id)
+            .bind(&project_id)
+            .bind(target_status)
+            .bind(payload_json.to_string())
+            .bind(&reason)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                workflow_internal_status(
+                    "ack_workflow_step",
+                    format!("ack workflow step update failed: {err}"),
+                )
+            })?;
+            let compensating = target_status == STATUS_COMPENSATING;
+            (
+                target_status,
+                TOPIC_FAILED,
+                "failed",
+                serde_json::json!({
+                    "workflow_id": workflow_id.clone(),
+                    "tenant_id": tenant_id.clone(),
+                    "project_id": event_project_id.clone(),
+                    "workflow_type": workflow_type.clone(),
+                    "current_step": current_step,
+                    "total_steps": total_steps,
+                    "step_index": req.step_index,
+                    "reason": "step_failed",
+                    "error": req.error_message.trim(),
+                    "output": output,
+                    // Completed steps are being rolled back; the tick's
+                    // compensation driver settles the instance COMPENSATED.
+                    "compensating": compensating,
+                    "failed_at": now.to_rfc3339(),
+                }),
+                // When compensating, the compensation driver settles the saga
+                // Compensated once the undo completes — never Failed here.
+                (!compensating).then_some((SagaStatus::Failed, CompensationStatus::None)),
+            )
+        }
+    };
+
+    insert_rpc_outbox(
+        &mut tx,
+        svc.outbox_relation.as_deref(),
+        topic,
+        &workflow_id, // partition key = workflow_id (proto method_event_contract)
+        &tenant_id,
+        &event_project_id,
+        &workflow_id,
+        operation,
+        &workflow_id,
+        "ack_workflow_step",
+        event_payload,
+    )
+    .await?;
+    tx.commit().await.map_err(|err| {
+        workflow_internal_status(
+            "ack_workflow_step_commit",
+            format!("ack workflow step commit failed: {err}"),
+        )
+    })?;
+
+    // Best-effort, cross-store saga settle (same contract as the tick): a failure
+    // never undoes the durable transition committed above.
+    if let Some((saga_status, comp_status)) = settle
+        && let Some(store) = svc.system_stores()
+        && let Ok(saga_uuid) = saga_id.parse::<Uuid>()
+        && let Err(err) =
+            SagaStore::update_saga_status(store.as_ref(), saga_uuid, saga_status, comp_status).await
+    {
+        tracing::debug!(error = %err, saga_id = %saga_uuid, "workflow ack: saga settle failed");
+    }
+
+    Ok(Response::new(workflow_pb::AckWorkflowStepResponse {
+        message: match new_status {
+            "COMPLETED" => "workflow completed".to_string(),
+            "RUNNING" => "workflow step acknowledged".to_string(),
+            _ => "workflow step failed".to_string(),
+        },
+        error: None,
+        status: new_status.to_string(),
     }))
 }

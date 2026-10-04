@@ -190,3 +190,60 @@ pub(crate) async fn run_lock_expiry_once(
     })?;
     Ok(expired)
 }
+
+/// One expiry-reaper pass over EVERY active project (the shape `serve()` spawns
+/// under `WORKER_LOCK_EXPIRY_REAPER`). Locks are written through the
+/// project-scoped native store, so a project bound to its own Postgres instance
+/// keeps its lock rows there — sweeping only the default pool would leave those
+/// leases HELD forever and exhaust the tenant quota. Resolves the `lock` store
+/// for the default project plus each active project, sweeps each DISTINCT
+/// physical instance once, and keeps going past a failing project (the failure
+/// is reported after the others were swept). Returns the total expired.
+pub(crate) async fn run_lock_expiry_all_projects(
+    runtime: &crate::runtime::DataBrokerRuntime,
+    project_ids: Vec<String>,
+    outbox_relation: Option<&str>,
+    batch_size: i64,
+) -> Result<i64, Status> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut expired = 0i64;
+    let mut failures = Vec::new();
+    let mut projects = vec![String::new()];
+    projects.extend(project_ids.into_iter().filter(|p| !p.trim().is_empty()));
+    for project_id in projects {
+        let context = crate::RequestContext {
+            project_id: project_id.clone(),
+            ..crate::RequestContext::default()
+        };
+        match runtime.native_store_postgres_binding_for_service("lock", true, &context) {
+            Ok((pool, instance)) => {
+                if !seen.insert(lock_sweep_instance_key(instance.as_deref())) {
+                    continue;
+                }
+                match run_lock_expiry_once(&pool, outbox_relation, batch_size).await {
+                    Ok(count) => expired += count,
+                    Err(err) => failures.push(format!("{project_id}: {}", err.message())),
+                }
+            }
+            Err(err) => failures.push(format!("{project_id}: {}", err.message())),
+        }
+    }
+    if failures.is_empty() {
+        Ok(expired)
+    } else {
+        Err(lock_internal_status(
+            "lock_expiry_projects",
+            format!("lock expiry project failures: {}", failures.join("; ")),
+        ))
+    }
+}
+
+/// Dedup key for one physical lock store: the bound instance name, or the
+/// shared default pool when the binding names none. Pure.
+pub(crate) fn lock_sweep_instance_key(instance: Option<&str>) -> String {
+    instance
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .unwrap_or("")
+        .to_string()
+}

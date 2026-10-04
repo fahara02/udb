@@ -123,56 +123,21 @@ integration_test!(system_catalog_bootstrap_with_custom_schema, async {
         .expect("drop test schema");
 });
 
-// ── Test 2: Outbox → Kafka CDC delivery ───────────────────────────────────────
+// ── Test 2: Kafka broker reachability ─────────────────────────────────────────
+//
+// Formerly `cdc_outbox_to_kafka_delivery`: it wrote a row into a scratch outbox
+// table that nothing tails and then asserted only that Kafka answered a
+// metadata request — no UDB code ran, yet the name claimed CDC delivery. The
+// real outbox → Kafka → journal path is exercised by the lib live tests that
+// drive `CdcEngine::process_outbox_event` (auth/notification event live tests)
+// and the CDC journal tests in `runtime::cdc::live_tests`. This test now claims
+// only what it checks.
 
-integration_test!(cdc_outbox_to_kafka_delivery, async {
+integration_test!(kafka_broker_metadata_reachable, async {
     use rdkafka::ClientConfig;
     use rdkafka::consumer::{BaseConsumer, Consumer};
 
-    let pool = pg_pool().await;
-    let schema = format!("udb_cdc_{}", Uuid::new_v4().simple());
-    let event_id = Uuid::new_v4().to_string();
     let topic = "document.uploaded.v1";
-
-    // Bootstrap a minimal outbox table.
-    sqlx::raw_sql(&format!(
-        "CREATE SCHEMA IF NOT EXISTS {schema};
-             CREATE TABLE {schema}.udb_outbox_events (
-               event_id UUID PRIMARY KEY,
-               topic VARCHAR(100) NOT NULL,
-               partition_key VARCHAR(100) NOT NULL,
-               payload JSONB NOT NULL,
-               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-             );"
-    ))
-    .execute(&pool)
-    .await
-    .expect("create outbox table");
-
-    // Insert an event.
-    sqlx::query(&format!(
-        "INSERT INTO {schema}.udb_outbox_events (event_id, topic, partition_key, payload)
-             VALUES ($1::uuid, $2, $3, $4::jsonb)"
-    ))
-    .bind(&event_id)
-    .bind(topic)
-    .bind(&event_id)
-    .bind(
-        serde_json::json!({
-            "event_id": event_id,
-            "event_type": topic,
-            "correlation_id": Uuid::new_v4().to_string(),
-            "document_id": event_id,
-            "source_agent": "integration_test",
-            "timestamp": chrono::Utc::now().to_rfc3339(),
-        })
-        .to_string(),
-    )
-    .execute(&pool)
-    .await
-    .expect("insert outbox event");
-
-    // Set up a Kafka consumer and wait for the event.
     let consumer: BaseConsumer = ClientConfig::new()
         .set("bootstrap.servers", kafka_brokers())
         .set(
@@ -183,10 +148,6 @@ integration_test!(cdc_outbox_to_kafka_delivery, async {
         .create()
         .expect("create kafka consumer");
 
-    consumer.subscribe(&[topic]).expect("subscribe to topic");
-
-    // Allow the CDC engine (if running via the `broker` profile) to forward the event.
-    // In unit-mode we just verify Kafka is reachable and the offset table schema is correct.
     let brokers_reachable = consumer
         .fetch_metadata(Some(topic), Duration::from_secs(5))
         .is_ok();
@@ -195,12 +156,6 @@ integration_test!(cdc_outbox_to_kafka_delivery, async {
         "Kafka brokers should be reachable at {}",
         kafka_brokers()
     );
-
-    // Cleanup.
-    sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
-        .execute(&pool)
-        .await
-        .expect("drop test schema");
 });
 
 integration_test!(kafka_period_topic_publish_consume_roundtrip, async {
@@ -281,231 +236,15 @@ integration_test!(kafka_period_topic_publish_consume_roundtrip, async {
     assert!(found, "published event must be consumable from {topic}");
 });
 
-// ── Test 3: DLQ routing — unknown topic produces DLQ envelope ─────────────────
-
-integration_test!(cdc_dlq_routing_for_unknown_topic, async {
-    let pool = pg_pool().await;
-    let schema = format!("udb_dlq_{}", Uuid::new_v4().simple());
-
-    sqlx::raw_sql(&format!(
-        "CREATE SCHEMA IF NOT EXISTS {schema};
-             CREATE TABLE {schema}.udb_cdc_dlq_events (
-               dlq_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-               event_id UUID NOT NULL,
-               topic VARCHAR(100) NOT NULL,
-               payload JSONB NOT NULL,
-               error_type VARCHAR(100) NOT NULL,
-               error_message TEXT NOT NULL,
-               status VARCHAR(40) NOT NULL DEFAULT 'OPEN',
-               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-               updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-             );"
-    ))
-    .execute(&pool)
-    .await
-    .expect("create DLQ table");
-
-    // Simulate a DLQ write (the CDC engine does this for unknown topics).
-    let event_id = Uuid::new_v4();
-    sqlx::query(&format!(
-        "INSERT INTO {schema}.udb_cdc_dlq_events
-             (event_id, topic, payload, error_type, error_message)
-             VALUES ($1, $2, $3, $4, $5)"
-    ))
-    .bind(event_id)
-    .bind("unknown.topic.v99")
-    .bind(serde_json::json!({"raw": "payload"}))
-    .bind("UnknownTopic")
-    .bind("topic not in canonical registry")
-    .execute(&pool)
-    .await
-    .expect("insert DLQ record");
-
-    // Verify it is visible with status OPEN.
-    let (status,): (String,) = sqlx::query_as(&format!(
-        "SELECT status FROM {schema}.udb_cdc_dlq_events WHERE event_id = $1"
-    ))
-    .bind(event_id)
-    .fetch_one(&pool)
-    .await
-    .expect("fetch DLQ record");
-
-    assert_eq!(status, "OPEN");
-
-    sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
-        .execute(&pool)
-        .await
-        .expect("drop test schema");
-});
-
-// ── Test 4: CDC journal replay after outbox row deletion ──────────────────────
-
-integration_test!(cdc_journal_replay_after_outbox_delete, async {
-    let pool = pg_pool().await;
-    let schema = format!("udb_jrn_{}", Uuid::new_v4().simple());
-    let event_id = Uuid::new_v4();
-
-    sqlx::raw_sql(&format!(
-        "CREATE SCHEMA IF NOT EXISTS {schema};
-             CREATE TABLE {schema}.udb_outbox_events (
-               event_id UUID PRIMARY KEY,
-               topic VARCHAR(100) NOT NULL,
-               partition_key VARCHAR(100) NOT NULL,
-               payload JSONB NOT NULL,
-               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-             );
-             CREATE TABLE {schema}.udb_cdc_event_journal (
-               event_id UUID PRIMARY KEY,
-               topic VARCHAR(100) NOT NULL,
-               partition_key VARCHAR(100) NOT NULL,
-               payload JSONB NOT NULL,
-               published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-               kafka_partition INT,
-               kafka_offset BIGINT,
-               schema_uri TEXT,
-               expires_at TIMESTAMPTZ
-             );"
-    ))
-    .execute(&pool)
-    .await
-    .expect("create tables");
-
-    // Insert into outbox, then move to journal (simulating CDC ACK flow).
-    sqlx::query(&format!(
-        "INSERT INTO {schema}.udb_outbox_events
-             (event_id, topic, partition_key, payload)
-             VALUES ($1, 'document.classified.v1', $1::TEXT, '{{}}')"
-    ))
-    .bind(event_id)
-    .execute(&pool)
-    .await
-    .expect("insert outbox");
-
-    sqlx::query(&format!(
-        "INSERT INTO {schema}.udb_cdc_event_journal
-             (event_id, topic, partition_key, payload, kafka_partition, kafka_offset)
-             SELECT event_id, topic, partition_key, payload, 0, 42
-             FROM {schema}.udb_outbox_events WHERE event_id = $1"
-    ))
-    .bind(event_id)
-    .execute(&pool)
-    .await
-    .expect("insert journal");
-
-    sqlx::query(&format!(
-        "DELETE FROM {schema}.udb_outbox_events WHERE event_id = $1"
-    ))
-    .bind(event_id)
-    .execute(&pool)
-    .await
-    .expect("delete from outbox");
-
-    // Verify outbox is empty but journal retains the event.
-    let outbox_count: i64 =
-        sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {schema}.udb_outbox_events"))
-            .fetch_one(&pool)
-            .await
-            .expect("count outbox");
-    assert_eq!(outbox_count, 0, "outbox should be empty after ACK");
-
-    let journal_count: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM {schema}.udb_cdc_event_journal WHERE event_id = $1"
-    ))
-    .bind(event_id)
-    .fetch_one(&pool)
-    .await
-    .expect("count journal");
-    assert_eq!(
-        journal_count, 1,
-        "journal must retain event after outbox delete"
-    );
-
-    sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
-        .execute(&pool)
-        .await
-        .expect("drop test schema");
-});
-
-// ── Test 5: Saga coordinator — stale IN_PROGRESS detection ───────────────────
-
-integration_test!(saga_stale_in_progress_detection, async {
-    let pool = pg_pool().await;
-    let schema = format!("udb_saga_{}", Uuid::new_v4().simple());
-
-    sqlx::raw_sql(&format!(
-        "CREATE SCHEMA IF NOT EXISTS {schema};
-             CREATE TABLE {schema}.udb_saga_coordinator (
-               saga_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-               tx_id TEXT NOT NULL,
-               tenant_id TEXT NOT NULL DEFAULT '',
-               correlation_id TEXT NOT NULL DEFAULT '',
-               steps JSONB NOT NULL DEFAULT '[]',
-               current_step INT NOT NULL DEFAULT 0,
-               status VARCHAR(30) NOT NULL DEFAULT 'IN_PROGRESS',
-               compensations JSONB,
-               last_error TEXT,
-               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-               updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-             );"
-    ))
-    .execute(&pool)
-    .await
-    .expect("create saga table");
-
-    // Insert a saga that has been IN_PROGRESS for longer than the stale threshold.
-    let stale_saga_id: Uuid = sqlx::query_scalar(&format!(
-        "INSERT INTO {schema}.udb_saga_coordinator
-             (tx_id, status, updated_at)
-             VALUES ('tx-stale-001', 'IN_PROGRESS', NOW() - INTERVAL '10 minutes')
-             RETURNING saga_id"
-    ))
-    .fetch_one(&pool)
-    .await
-    .expect("insert stale saga");
-
-    // Simulate what the SagaRecoveryWorker does: fetch stale sagas.
-    let stale_threshold_secs: i64 = 300; // 5 minutes
-    let stale_ids: Vec<Uuid> = sqlx::query_scalar(&format!(
-        "SELECT saga_id FROM {schema}.udb_saga_coordinator
-             WHERE status = 'IN_PROGRESS'
-               AND updated_at < NOW() - ($1 * INTERVAL '1 second')"
-    ))
-    .bind(stale_threshold_secs)
-    .fetch_all(&pool)
-    .await
-    .expect("fetch stale sagas");
-
-    assert!(
-        stale_ids.contains(&stale_saga_id),
-        "stale saga should be detected by recovery query"
-    );
-
-    // Mark it as MANUAL_REVIEW.
-    sqlx::query(&format!(
-        "UPDATE {schema}.udb_saga_coordinator
-             SET status = 'MANUAL_REVIEW', updated_at = NOW()
-             WHERE saga_id = $1"
-    ))
-    .bind(stale_saga_id)
-    .execute(&pool)
-    .await
-    .expect("mark saga for review");
-
-    let (status,): (String,) = sqlx::query_as(&format!(
-        "SELECT status FROM {schema}.udb_saga_coordinator WHERE saga_id = $1"
-    ))
-    .bind(stale_saga_id)
-    .fetch_one(&pool)
-    .await
-    .expect("fetch updated saga");
-
-    assert_eq!(status, "MANUAL_REVIEW");
-
-    sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
-        .execute(&pool)
-        .await
-        .expect("drop test schema");
-});
+// ── Tests 3–5 removed ─────────────────────────────────────────────────────────
+//
+// `cdc_dlq_routing_for_unknown_topic`, `cdc_journal_replay_after_outbox_delete`
+// and `saga_stale_in_progress_detection` created scratch tables, ran hand-written
+// SQL against them and asserted the SQL's own result — no UDB code executed, so
+// they proved nothing about the DLQ, the journal or saga recovery while reading
+// as coverage of all three. The real paths are covered by the lib live tests:
+// `runtime::cdc::live_tests` (`route_to_dlq`, journal retention, the journal
+// tail) against the production system-catalog DDL.
 
 // ── Test 6: Qdrant health probe ───────────────────────────────────────────────
 

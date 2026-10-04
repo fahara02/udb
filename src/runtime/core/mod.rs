@@ -501,6 +501,9 @@ pub struct CacheMetricSnapshot {
     pub udb_cache_hit_total: u64,
     pub udb_cache_miss_total: u64,
     pub udb_cache_invalidation_total: u64,
+    /// Invalidations that FAILED: the matching entries stay cached until their
+    /// TTL, so reads may be stale. Non-zero means writes are not fully visible.
+    pub udb_cache_invalidation_failure_total: u64,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -508,6 +511,7 @@ struct CacheMetrics {
     hit_total: Arc<AtomicU64>,
     miss_total: Arc<AtomicU64>,
     invalidation_total: Arc<AtomicU64>,
+    invalidation_failure_total: Arc<AtomicU64>,
 }
 
 impl CacheMetrics {
@@ -526,11 +530,20 @@ impl CacheMetrics {
         self.invalidation_total.fetch_add(count, Ordering::Relaxed);
     }
 
+    #[cfg(feature = "redis")]
+    pub(crate) fn invalidation_failed(&self) {
+        self.invalidation_failure_total
+            .fetch_add(1, Ordering::Relaxed);
+    }
+
     fn snapshot(&self) -> CacheMetricSnapshot {
         CacheMetricSnapshot {
             udb_cache_hit_total: self.hit_total.load(Ordering::Relaxed),
             udb_cache_miss_total: self.miss_total.load(Ordering::Relaxed),
             udb_cache_invalidation_total: self.invalidation_total.load(Ordering::Relaxed),
+            udb_cache_invalidation_failure_total: self
+                .invalidation_failure_total
+                .load(Ordering::Relaxed),
         }
     }
 }
@@ -2512,6 +2525,34 @@ fn rows_to_record_set(
         records_json,
         ..RecordSet::default()
     })
+}
+
+/// Apply the client-visible PII mask to an already-decoded record — the same
+/// rule [`rows_to_record_set`] applies under [`PiiMasking::ClientVisible`]. For
+/// paths that decode a row ONCE unmasked (because the same row also feeds a
+/// projection or change event, where a `***MASKED***` placeholder would be
+/// data corruption) and then hand the caller the masked view.
+pub(crate) fn mask_record_for_client(
+    table: &ManifestTable,
+    context: &RequestContext,
+    record: &mut serde_json::Map<String, JsonValue>,
+) {
+    let can_read_pii = context
+        .scopes
+        .iter()
+        .any(|scope| scope == "udb:pii:read" || scope == "udb:*" || scope == "*");
+    if can_read_pii {
+        return;
+    }
+    for column in table
+        .columns
+        .iter()
+        .filter(|column| column.security.is_pii || column.security.mask_in_logs)
+    {
+        if let Some(value) = record.get_mut(&column.column_name) {
+            *value = JsonValue::String("***MASKED***".to_string());
+        }
+    }
 }
 
 fn decrypt_record_value(

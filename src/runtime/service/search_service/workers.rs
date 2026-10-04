@@ -363,7 +363,10 @@ fn search_worker_context(
         tenant_id: tenant_id.to_string(),
         project_id: project_id.to_string(),
         purpose: purpose.to_string(),
-        scopes: vec!["udb:read".to_string()],
+        // `udb:read` for the mediated source SELECT; `udb:vector:write` for the
+        // mediated index upsert, whose plan checks the scope (routed index
+        // collections are no longer exempt from it).
+        scopes: vec!["udb:read".to_string(), "udb:vector:write".to_string()],
         service_identity: "udb.search.worker".to_string(),
         ..crate::RequestContext::default()
     }
@@ -562,8 +565,12 @@ async fn apply_search_freshness_job(
         }],
         idempotency_key: String::new(),
     };
+    // Route from the DURABLE index record so the write lands on the index's
+    // backend on any replica / after a restart (the collection is not declared
+    // in the manifest).
+    let route = Some(super::handlers::index_vector_route(&job.index));
     if let Err(err) = runtime
-        .vector_upsert(&state.manifest, request, context)
+        .vector_upsert_routed(&state.manifest, request, context, route)
         .await
     {
         tracing::warn!(
@@ -689,7 +696,7 @@ async fn reindex_source_rows(
         let page_points = points.len() as u64;
         if !points.is_empty() {
             runtime
-                .vector_upsert(
+                .vector_upsert_routed(
                     manifest,
                     VectorUpsertRequest {
                         context: None,
@@ -698,6 +705,7 @@ async fn reindex_source_rows(
                         idempotency_key: String::new(),
                     },
                     context.clone(),
+                    Some(super::handlers::index_vector_route(&job.index)),
                 )
                 .await
                 .map_err(|err| format!("search reindex vector upsert failed: {err}"))?;

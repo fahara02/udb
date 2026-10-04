@@ -44,12 +44,9 @@ mod tenant_purge;
 mod tests;
 
 // Fail-closed request-time tenant-status gate. Re-exported at the module root so
-// the shared method-security tower layer can invoke it on the validated claim
-// tenant before dispatch as `crate::runtime::service::tenant_service::tenant_status_gate`
-// (see `gate::tenant_status_gate` TODO(leader-wire)). `allow(unused_imports)`
-// until that leader-owned call site is wired.
-#[allow(unused_imports)]
-pub(crate) use gate::tenant_status_gate;
+// the shared method-security tower layer awaits the durable gate on the validated
+// claim tenant before dispatch, and synchronous callers use the cache fast path.
+pub(crate) use gate::{tenant_status_gate, tenant_status_gate_durable};
 
 /// Postgres-backed `TenantService` handler.
 pub struct TenantServiceImpl {
@@ -252,6 +249,10 @@ impl DataBrokerService {
                 crate::runtime::security::SecurityConfig::current().jwt_access_ttl_secs,
             )
         });
+        // The request-time tenant-status gate reads suspensions from this same
+        // durable tenant store (cached with a short TTL), so a suspension holds on
+        // every replica and across restarts — not only where it was processed.
+        gate::register_tenant_status_store(pg_pool.clone());
         let service = TenantServiceImpl::new()
             .with_postgres(pg_pool)
             .with_runtime(Some(runtime))

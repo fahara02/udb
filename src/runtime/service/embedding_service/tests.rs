@@ -361,7 +361,15 @@ fn embedding_point_is_tenant_tagged_no_fail_open() {
     // (the latter scopes retention-independent teardown).
     let point = build_embedding_point("row-1", vec![0.1, 0.2], "acme", "orders")
         .expect("verified tenant ok");
-    assert_eq!(point.id, "row-1");
+    // The engine id is tenant-scoped so a foreign tenant's same-pk write cannot
+    // replace this vector; the payload keeps the LOGICAL parent pk.
+    assert_eq!(point.id, "acme:row-1");
+    let other_tenant = build_embedding_point("row-1", vec![0.1, 0.2], "globex", "orders")
+        .expect("verified tenant ok");
+    assert_ne!(
+        point.id, other_tenant.id,
+        "two tenants reusing a source pk must not collide on the engine point id"
+    );
     let payload = point.payload.expect("tenant-tag payload present");
     assert!(
         payload.fields.contains_key("_tenant_id"),
@@ -521,6 +529,29 @@ fn chunk_point_id_round_trips_and_is_backward_compatible() {
     assert_eq!(parse_chunk_point_id("a#chunk:b"), ("a#chunk:b", 0));
     // The LAST sentinel wins, so a parent that legitimately contains one survives.
     assert_eq!(parse_chunk_point_id("a#chunk:x#chunk:2"), ("a#chunk:x", 2));
+}
+
+/// Engine point ids are tenant-scoped and the scope is stripped on the way back
+/// out — only the VERIFIED tenant's exact prefix, so a pk containing ':' and a
+/// foreign/legacy id survive intact.
+#[test]
+fn tenant_scoped_point_ids_round_trip() {
+    use super::chunking::{strip_tenant_point_id, tenant_scoped_point_id};
+    assert_eq!(
+        tenant_scoped_point_id("acme", "row-1#chunk:2"),
+        "acme:row-1#chunk:2"
+    );
+    assert_eq!(tenant_scoped_point_id("  ", "row-1"), "row-1");
+    assert_eq!(
+        strip_tenant_point_id("acme", "acme:row-1#chunk:2"),
+        "row-1#chunk:2"
+    );
+    assert_eq!(strip_tenant_point_id("acme", "acme:a:b"), "a:b");
+    assert_eq!(
+        strip_tenant_point_id("acme", "globex:row-1"),
+        "globex:row-1"
+    );
+    assert_eq!(strip_tenant_point_id("acme", "row-1"), "row-1");
 }
 
 #[test]

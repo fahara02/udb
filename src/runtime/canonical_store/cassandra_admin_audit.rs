@@ -14,12 +14,21 @@
 //!
 //! 1. Read the current `head_hash` (empty when the chain is fresh).
 //! 2. Compute the new row's `current_hash` via the shared hasher.
-//! 3. CAS the head: `UPDATE … SET head_hash=<new> WHERE id='chain' IF
+//! 3. INSERT the audit row FIRST. The head must never point at a hash whose
+//!    row does not exist: advancing the head and then failing (or crashing)
+//!    before the row write would leave a permanent gap that breaks every later
+//!    verify, i.e. an append that "failed" would corrupt the chain.
+//! 4. CAS the head: `UPDATE … SET head_hash=<new> WHERE id='chain' IF
 //!    head_hash=<observed>` (or `INSERT … IF NOT EXISTS` on the very first
-//!    append). On a not-applied CAS another appender advanced the head; re-read
-//!    and retry. This is single-writer chain serialisation without a multi-row
-//!    transaction.
-//! 4. INSERT the audit row (plain write — the head CAS already linearised it).
+//!    append). On a not-applied CAS another appender advanced the head: delete
+//!    the just-written (unlinked) row, re-read and retry. This is single-writer
+//!    chain serialisation without a multi-row transaction.
+//!
+//! A crash between steps 3 and 4 leaves an UNLINKED row: its hash is neither
+//! the head nor any row's `previous_hash`. Verify skips such dead-end rows, but
+//! only while the walk still ends exactly at the head; any other divergence
+//! (deleted, edited or re-linked rows) falls back to the strict walk and is
+//! reported exactly as before.
 //!
 //! ## Schema
 //!
@@ -154,18 +163,31 @@ impl AdminAuditStore for CassandraCanonicalStore {
     }
 
     async fn append_admin_audit(&self, entry: &AdminAuditInsert) -> SystemStoreResult<Uuid> {
-        let audit_id = Uuid::new_v4();
         let head_sql = format!(
             "SELECT head_hash FROM {tbl} WHERE id = ?",
             tbl = self.audit_chain_table(),
         );
         let chain_tbl = self.audit_chain_table();
 
+        let insert = format!(
+            "INSERT INTO {tbl} ( \
+                chain, created_at, audit_id, actor, operation, target, request_json, result, \
+                tenant_id, project_id, correlation_id, previous_hash, current_hash, \
+                signer_key_id, external_anchor \
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            tbl = self.audit_table(),
+        );
+        let delete_unlinked = format!(
+            "DELETE FROM {tbl} WHERE chain = ? AND created_at = ? AND audit_id = ?",
+            tbl = self.audit_table(),
+        );
+
         // ── Chain-head CAS loop ─────────────────────────────────────────────
         // Linearise the chain on the single head row: read head, compute next,
-        // CAS. On a lost CAS another appender advanced the head; re-read + retry.
+        // write the row, CAS the head. On a lost CAS another appender advanced
+        // the head; drop our unlinked row, re-read + retry.
         let mut attempt = 0u32;
-        let (previous_hash, current_hash) = loop {
+        let audit_id = loop {
             attempt += 1;
             if attempt > CHAIN_CAS_MAX_ATTEMPTS {
                 return Err(cass_err(
@@ -173,6 +195,9 @@ impl AdminAuditStore for CassandraCanonicalStore {
                     "chain-head CAS did not converge",
                 ));
             }
+            // Fresh id per attempt, so an undeletable unlinked row from a lost
+            // CAS can never share an id with the row that finally links.
+            let audit_id = Uuid::new_v4();
             let head_rows = self
                 .client()
                 .cql_query_rows(&head_sql, (CHAIN_HEAD_ID,))
@@ -195,6 +220,32 @@ impl AdminAuditStore for CassandraCanonicalStore {
                 &entry.signer_key_id,
                 &entry.external_anchor,
             );
+            // ── Row first: the head may only ever name a persisted row ──────
+            let created_at_ms = now_unix_ms();
+            self.client()
+                .cql_execute(
+                    &insert,
+                    (
+                        CHAIN_PARTITION,
+                        cql_ts(created_at_ms),
+                        audit_id.to_string(),
+                        entry.actor.as_str(),
+                        entry.operation.as_str(),
+                        entry.target.as_str(),
+                        entry.request_json.to_string(),
+                        entry.result.as_str(),
+                        entry.tenant_id.as_str(),
+                        entry.project_id.as_str(),
+                        entry.correlation_id.as_str(),
+                        previous_hash.as_str(),
+                        current_hash.as_str(),
+                        entry.signer_key_id.as_str(),
+                        entry.external_anchor.as_str(),
+                    ),
+                )
+                .await
+                .map_err(|e| cass_err("append_admin_audit insert", e))?;
+            // ── Then link it: CAS the head onto the persisted row ───────────
             let applied = if head_rows.is_empty() {
                 // Fresh chain — seed the head with `INSERT … IF NOT EXISTS`.
                 let seed =
@@ -221,44 +272,26 @@ impl AdminAuditStore for CassandraCanonicalStore {
                     .map_err(|e| cass_err("append_admin_audit cas head", e))?
             };
             if applied {
-                break (previous_hash, current_hash);
+                break audit_id;
             }
-            // Lost the CAS — another appender linked first; re-read and retry.
+            // Lost the CAS — another appender linked first. Our row links to a
+            // stale head: remove it (best-effort; a leftover is an unlinked
+            // dead end that verify tolerates) and retry on the new head.
+            if let Err(e) = self
+                .client()
+                .cql_execute(
+                    &delete_unlinked,
+                    (CHAIN_PARTITION, cql_ts(created_at_ms), audit_id.to_string()),
+                )
+                .await
+            {
+                tracing::warn!(
+                    audit_id = %audit_id,
+                    error = %cass_err("append_admin_audit delete unlinked row", e),
+                    "admin audit: could not delete an unlinked row after a lost head CAS"
+                );
+            }
         };
-
-        // ── Insert the audit row (plain write — head CAS already linearised) ─
-        let now = now_unix_ms();
-        let insert = format!(
-            "INSERT INTO {tbl} ( \
-                chain, created_at, audit_id, actor, operation, target, request_json, result, \
-                tenant_id, project_id, correlation_id, previous_hash, current_hash, \
-                signer_key_id, external_anchor \
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            tbl = self.audit_table(),
-        );
-        self.client()
-            .cql_execute(
-                &insert,
-                (
-                    CHAIN_PARTITION,
-                    cql_ts(now),
-                    audit_id.to_string(),
-                    entry.actor.as_str(),
-                    entry.operation.as_str(),
-                    entry.target.as_str(),
-                    entry.request_json.to_string(),
-                    entry.result.as_str(),
-                    entry.tenant_id.as_str(),
-                    entry.project_id.as_str(),
-                    entry.correlation_id.as_str(),
-                    previous_hash.as_str(),
-                    current_hash.as_str(),
-                    entry.signer_key_id.as_str(),
-                    entry.external_anchor.as_str(),
-                ),
-            )
-            .await
-            .map_err(|e| cass_err("append_admin_audit insert", e))?;
         Ok(audit_id)
     }
 
@@ -332,30 +365,169 @@ impl AdminAuditStore for CassandraCanonicalStore {
             .cql_query_rows(&sql, (CHAIN_PARTITION,))
             .await
             .map_err(|e| cass_err("verify_admin_audit_chain", e))?;
-        let max = match limit {
-            Some(n) if n > 0 => Some(n),
-            _ => None,
-        };
-        let mut previous_hash = String::new();
-        let mut checked: i64 = 0;
-        for row in &rows {
-            if let Some(n) = max {
-                if checked >= n {
-                    break;
-                }
-            }
-            let audit = row_to_audit(row)?;
-            match verify_admin_audit_chain_step(&audit, &previous_hash, checked) {
-                Ok(next) => {
-                    previous_hash = next;
-                    checked += 1;
-                }
-                Err(report) => return Ok(report),
+        let audits = rows
+            .iter()
+            .map(row_to_audit)
+            .collect::<SystemStoreResult<Vec<_>>>()?;
+        let head = self.latest_admin_audit_hash().await?;
+        Ok(verify_chain_tolerating_unlinked(&audits, &head, limit))
+    }
+}
+
+/// Strict forward walk (the shared semantics every backend uses).
+fn verify_chain_strict(audits: &[AdminAuditRow], limit: Option<i64>) -> AdminAuditChainReport {
+    walk_chain(audits.iter(), limit)
+}
+
+fn walk_chain<'a>(
+    audits: impl Iterator<Item = &'a AdminAuditRow>,
+    limit: Option<i64>,
+) -> AdminAuditChainReport {
+    let max = match limit {
+        Some(n) if n > 0 => Some(n),
+        _ => None,
+    };
+    let mut previous_hash = String::new();
+    let mut checked: i64 = 0;
+    for audit in audits {
+        if let Some(n) = max {
+            if checked >= n {
+                break;
             }
         }
-        Ok(AdminAuditChainReport::Passed {
-            checked_count: checked,
-            last_hash: previous_hash,
-        })
+        match verify_admin_audit_chain_step(audit, &previous_hash, checked) {
+            Ok(next) => {
+                previous_hash = next;
+                checked += 1;
+            }
+            Err(report) => return report,
+        }
+    }
+    AdminAuditChainReport::Passed {
+        checked_count: checked,
+        last_hash: previous_hash,
+    }
+}
+
+/// Verify the chain, skipping rows left UNLINKED by an append that wrote its
+/// row but never won the head CAS (crash, or an undeletable loser row): such a
+/// row's hash is neither the head nor any row's `previous_hash`.
+///
+/// The tolerant walk is accepted ONLY when it passes and (for a full walk)
+/// ends exactly at the chain head. Any other outcome — a deleted, edited or
+/// re-linked row — returns the strict walk's report, so tamper detection and
+/// the reported break are unchanged from the strict semantics.
+fn verify_chain_tolerating_unlinked(
+    audits: &[AdminAuditRow],
+    head: &str,
+    limit: Option<i64>,
+) -> AdminAuditChainReport {
+    if head.is_empty() {
+        return verify_chain_strict(audits, limit);
+    }
+    let referenced: std::collections::HashSet<&str> =
+        audits.iter().map(|a| a.previous_hash.as_str()).collect();
+    let linked = audits
+        .iter()
+        .filter(|a| a.current_hash == head || referenced.contains(a.current_hash.as_str()));
+    let tolerant = walk_chain(linked, limit);
+    let limited = matches!(limit, Some(n) if n > 0);
+    match &tolerant {
+        AdminAuditChainReport::Passed { last_hash, .. } if limited || last_hash == head => tolerant,
+        _ => verify_chain_strict(audits, limit),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(previous_hash: &str, actor: &str) -> AdminAuditRow {
+        let request_json = serde_json::json!({"k": actor});
+        let current_hash = compute_admin_audit_hash(
+            previous_hash,
+            actor,
+            "op",
+            "target",
+            &request_json,
+            "ok",
+            "tenant",
+            "project",
+            "corr",
+            "",
+            "",
+        );
+        AdminAuditRow {
+            audit_id: Uuid::new_v4(),
+            actor: actor.to_string(),
+            operation: "op".to_string(),
+            target: "target".to_string(),
+            request_json,
+            result: "ok".to_string(),
+            tenant_id: "tenant".to_string(),
+            project_id: "project".to_string(),
+            correlation_id: "corr".to_string(),
+            previous_hash: previous_hash.to_string(),
+            current_hash,
+            signer_key_id: String::new(),
+            external_anchor: String::new(),
+            created_at: chrono::Utc::now(),
+        }
+    }
+
+    #[test]
+    fn unlinked_row_from_a_crashed_append_does_not_break_verify() {
+        let a = row("", "a");
+        // Crashed append: row written on head=a, head never advanced to it.
+        let orphan = row(&a.current_hash, "orphan");
+        // The next append linked on the same head.
+        let b = row(&a.current_hash, "b");
+        let head = b.current_hash.clone();
+        let audits = vec![a.clone(), orphan, b.clone()];
+        // The strict walk alone would report a break at `b`.
+        assert!(!verify_chain_strict(&audits, None).is_passed());
+        let report = verify_chain_tolerating_unlinked(&audits, &head, None);
+        assert!(report.is_passed(), "{report:?}");
+        assert_eq!(report.checked_count(), 2);
+    }
+
+    #[test]
+    fn trailing_unlinked_row_is_not_reported_as_the_tip() {
+        let a = row("", "a");
+        let orphan = row(&a.current_hash, "orphan");
+        let head = a.current_hash.clone();
+        let report = verify_chain_tolerating_unlinked(&[a, orphan], &head, None);
+        match report {
+            AdminAuditChainReport::Passed {
+                last_hash,
+                checked_count,
+            } => {
+                assert_eq!(last_hash, head);
+                assert_eq!(checked_count, 1);
+            }
+            other => panic!("expected pass, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn tampering_still_fails_with_strict_semantics() {
+        let a = row("", "a");
+        let b = row(&a.current_hash, "b");
+        let c = row(&b.current_hash, "c");
+        let head = c.current_hash.clone();
+        // Deleted middle row: never tolerated.
+        let gap = vec![a.clone(), c.clone()];
+        assert_eq!(
+            verify_chain_tolerating_unlinked(&gap, &head, None),
+            verify_chain_strict(&gap, None)
+        );
+        assert!(!verify_chain_tolerating_unlinked(&gap, &head, None).is_passed());
+        // Edited tip hash: the walk no longer ends at the head → strict report.
+        let mut forged = c.clone();
+        forged.current_hash = "f".repeat(64);
+        let edited = vec![a, b, forged];
+        let report = verify_chain_tolerating_unlinked(&edited, &head, None);
+        assert!(!report.is_passed(), "{report:?}");
+        assert_eq!(report, verify_chain_strict(&edited, None));
     }
 }

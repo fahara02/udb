@@ -461,6 +461,333 @@ func (x *MultipartUploadResponse) GetExpiresAtUnix() int64 {
 	return 0
 }
 
+// One uploaded part of a multipart upload: the 1-based part number the part
+// URL was issued for, and the ETag the object store returned for that PUT.
+type MultipartUploadPart struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PartNumber    int32                  `protobuf:"varint,1,opt,name=part_number,json=partNumber,proto3" json:"part_number,omitempty"`
+	Etag          string                 `protobuf:"bytes,2,opt,name=etag,proto3" json:"etag,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MultipartUploadPart) Reset() {
+	*x = MultipartUploadPart{}
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MultipartUploadPart) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MultipartUploadPart) ProtoMessage() {}
+
+func (x *MultipartUploadPart) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MultipartUploadPart.ProtoReflect.Descriptor instead.
+func (*MultipartUploadPart) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_blob_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *MultipartUploadPart) GetPartNumber() int32 {
+	if x != nil {
+		return x.PartNumber
+	}
+	return 0
+}
+
+func (x *MultipartUploadPart) GetEtag() string {
+	if x != nil {
+		return x.Etag
+	}
+	return ""
+}
+
+// Finish a multipart upload started by InitiateMultipartUpload. bucket +
+// object_key must be the ones the upload was initiated with; the key is scoped
+// to the caller's tenant exactly as on initiate, so an upload_id can only be
+// completed by the tenant that started it. parts must be in strictly ascending
+// part_number order.
+type CompleteMultipartUploadRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Context        *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Bucket         string                 `protobuf:"bytes,2,opt,name=bucket,proto3" json:"bucket,omitempty"`
+	ObjectKey      string                 `protobuf:"bytes,3,opt,name=object_key,json=objectKey,proto3" json:"object_key,omitempty"`
+	UploadId       string                 `protobuf:"bytes,4,opt,name=upload_id,json=uploadId,proto3" json:"upload_id,omitempty"`
+	Parts          []*MultipartUploadPart `protobuf:"bytes,5,rep,name=parts,proto3" json:"parts,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CompleteMultipartUploadRequest) Reset() {
+	*x = CompleteMultipartUploadRequest{}
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteMultipartUploadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteMultipartUploadRequest) ProtoMessage() {}
+
+func (x *CompleteMultipartUploadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteMultipartUploadRequest.ProtoReflect.Descriptor instead.
+func (*CompleteMultipartUploadRequest) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_blob_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CompleteMultipartUploadRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *CompleteMultipartUploadRequest) GetBucket() string {
+	if x != nil {
+		return x.Bucket
+	}
+	return ""
+}
+
+func (x *CompleteMultipartUploadRequest) GetObjectKey() string {
+	if x != nil {
+		return x.ObjectKey
+	}
+	return ""
+}
+
+func (x *CompleteMultipartUploadRequest) GetUploadId() string {
+	if x != nil {
+		return x.UploadId
+	}
+	return ""
+}
+
+func (x *CompleteMultipartUploadRequest) GetParts() []*MultipartUploadPart {
+	if x != nil {
+		return x.Parts
+	}
+	return nil
+}
+
+func (x *CompleteMultipartUploadRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type CompleteMultipartUploadResponse struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	ResourceUri string                 `protobuf:"bytes,1,opt,name=resource_uri,json=resourceUri,proto3" json:"resource_uri,omitempty"`
+	// ETag of the assembled object as reported by the object store.
+	Etag string `protobuf:"bytes,2,opt,name=etag,proto3" json:"etag,omitempty"`
+	// Total bytes of the assembled object (sum of the completed parts).
+	SizeBytes     int64 `protobuf:"varint,3,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteMultipartUploadResponse) Reset() {
+	*x = CompleteMultipartUploadResponse{}
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteMultipartUploadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteMultipartUploadResponse) ProtoMessage() {}
+
+func (x *CompleteMultipartUploadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteMultipartUploadResponse.ProtoReflect.Descriptor instead.
+func (*CompleteMultipartUploadResponse) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_blob_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CompleteMultipartUploadResponse) GetResourceUri() string {
+	if x != nil {
+		return x.ResourceUri
+	}
+	return ""
+}
+
+func (x *CompleteMultipartUploadResponse) GetEtag() string {
+	if x != nil {
+		return x.Etag
+	}
+	return ""
+}
+
+func (x *CompleteMultipartUploadResponse) GetSizeBytes() int64 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
+}
+
+// Cancel a multipart upload and release the parts already uploaded. Same
+// tenant-scoped key rule as CompleteMultipartUploadRequest.
+type AbortMultipartUploadRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Context        *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Bucket         string                 `protobuf:"bytes,2,opt,name=bucket,proto3" json:"bucket,omitempty"`
+	ObjectKey      string                 `protobuf:"bytes,3,opt,name=object_key,json=objectKey,proto3" json:"object_key,omitempty"`
+	UploadId       string                 `protobuf:"bytes,4,opt,name=upload_id,json=uploadId,proto3" json:"upload_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *AbortMultipartUploadRequest) Reset() {
+	*x = AbortMultipartUploadRequest{}
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AbortMultipartUploadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AbortMultipartUploadRequest) ProtoMessage() {}
+
+func (x *AbortMultipartUploadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AbortMultipartUploadRequest.ProtoReflect.Descriptor instead.
+func (*AbortMultipartUploadRequest) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_blob_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AbortMultipartUploadRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *AbortMultipartUploadRequest) GetBucket() string {
+	if x != nil {
+		return x.Bucket
+	}
+	return ""
+}
+
+func (x *AbortMultipartUploadRequest) GetObjectKey() string {
+	if x != nil {
+		return x.ObjectKey
+	}
+	return ""
+}
+
+func (x *AbortMultipartUploadRequest) GetUploadId() string {
+	if x != nil {
+		return x.UploadId
+	}
+	return ""
+}
+
+func (x *AbortMultipartUploadRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type AbortMultipartUploadResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Aborted       bool                   `protobuf:"varint,1,opt,name=aborted,proto3" json:"aborted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AbortMultipartUploadResponse) Reset() {
+	*x = AbortMultipartUploadResponse{}
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AbortMultipartUploadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AbortMultipartUploadResponse) ProtoMessage() {}
+
+func (x *AbortMultipartUploadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_blob_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AbortMultipartUploadResponse.ProtoReflect.Descriptor instead.
+func (*AbortMultipartUploadResponse) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_blob_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AbortMultipartUploadResponse) GetAborted() bool {
+	if x != nil {
+		return x.Aborted
+	}
+	return false
+}
+
 var File_udb_entity_v1_blob_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_blob_proto_rawDesc = "" +
@@ -508,7 +835,33 @@ const file_udb_entity_v1_blob_proto_rawDesc = "" +
 	"\x17MultipartUploadResponse\x12\x1b\n" +
 	"\tupload_id\x18\x01 \x01(\tR\buploadId\x12\x1b\n" +
 	"\tpart_urls\x18\x02 \x03(\tR\bpartUrls\x12&\n" +
-	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnixB\xaf\x01\n" +
+	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix\"J\n" +
+	"\x13MultipartUploadPart\x12\x1f\n" +
+	"\vpart_number\x18\x01 \x01(\x05R\n" +
+	"partNumber\x12\x12\n" +
+	"\x04etag\x18\x02 \x01(\tR\x04etag\"\x90\x02\n" +
+	"\x1eCompleteMultipartUploadRequest\x127\n" +
+	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x16\n" +
+	"\x06bucket\x18\x02 \x01(\tR\x06bucket\x12\x1d\n" +
+	"\n" +
+	"object_key\x18\x03 \x01(\tR\tobjectKey\x12\x1b\n" +
+	"\tupload_id\x18\x04 \x01(\tR\buploadId\x128\n" +
+	"\x05parts\x18\x05 \x03(\v2\".udb.entity.v1.MultipartUploadPartR\x05parts\x12'\n" +
+	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey\"w\n" +
+	"\x1fCompleteMultipartUploadResponse\x12!\n" +
+	"\fresource_uri\x18\x01 \x01(\tR\vresourceUri\x12\x12\n" +
+	"\x04etag\x18\x02 \x01(\tR\x04etag\x12\x1d\n" +
+	"\n" +
+	"size_bytes\x18\x03 \x01(\x03R\tsizeBytes\"\xd3\x01\n" +
+	"\x1bAbortMultipartUploadRequest\x127\n" +
+	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x16\n" +
+	"\x06bucket\x18\x02 \x01(\tR\x06bucket\x12\x1d\n" +
+	"\n" +
+	"object_key\x18\x03 \x01(\tR\tobjectKey\x12\x1b\n" +
+	"\tupload_id\x18\x04 \x01(\tR\buploadId\x12'\n" +
+	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\"8\n" +
+	"\x1cAbortMultipartUploadResponse\x12\x18\n" +
+	"\aaborted\x18\x01 \x01(\bR\aabortedB\xaf\x01\n" +
 	"\x11com.udb.entity.v1B\tBlobProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3"
 
 var (
@@ -523,26 +876,34 @@ func file_udb_entity_v1_blob_proto_rawDescGZIP() []byte {
 	return file_udb_entity_v1_blob_proto_rawDescData
 }
 
-var file_udb_entity_v1_blob_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_udb_entity_v1_blob_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_udb_entity_v1_blob_proto_goTypes = []any{
-	(*Chunk)(nil),                   // 0: udb.entity.v1.Chunk
-	(*ObjectRequest)(nil),           // 1: udb.entity.v1.ObjectRequest
-	(*UrlRequest)(nil),              // 2: udb.entity.v1.UrlRequest
-	(*UrlResponse)(nil),             // 3: udb.entity.v1.UrlResponse
-	(*MultipartUploadRequest)(nil),  // 4: udb.entity.v1.MultipartUploadRequest
-	(*MultipartUploadResponse)(nil), // 5: udb.entity.v1.MultipartUploadResponse
-	(*RequestContext)(nil),          // 6: udb.entity.v1.RequestContext
+	(*Chunk)(nil),                           // 0: udb.entity.v1.Chunk
+	(*ObjectRequest)(nil),                   // 1: udb.entity.v1.ObjectRequest
+	(*UrlRequest)(nil),                      // 2: udb.entity.v1.UrlRequest
+	(*UrlResponse)(nil),                     // 3: udb.entity.v1.UrlResponse
+	(*MultipartUploadRequest)(nil),          // 4: udb.entity.v1.MultipartUploadRequest
+	(*MultipartUploadResponse)(nil),         // 5: udb.entity.v1.MultipartUploadResponse
+	(*MultipartUploadPart)(nil),             // 6: udb.entity.v1.MultipartUploadPart
+	(*CompleteMultipartUploadRequest)(nil),  // 7: udb.entity.v1.CompleteMultipartUploadRequest
+	(*CompleteMultipartUploadResponse)(nil), // 8: udb.entity.v1.CompleteMultipartUploadResponse
+	(*AbortMultipartUploadRequest)(nil),     // 9: udb.entity.v1.AbortMultipartUploadRequest
+	(*AbortMultipartUploadResponse)(nil),    // 10: udb.entity.v1.AbortMultipartUploadResponse
+	(*RequestContext)(nil),                  // 11: udb.entity.v1.RequestContext
 }
 var file_udb_entity_v1_blob_proto_depIdxs = []int32{
-	6, // 0: udb.entity.v1.Chunk.context:type_name -> udb.entity.v1.RequestContext
-	6, // 1: udb.entity.v1.ObjectRequest.context:type_name -> udb.entity.v1.RequestContext
-	6, // 2: udb.entity.v1.UrlRequest.context:type_name -> udb.entity.v1.RequestContext
-	6, // 3: udb.entity.v1.MultipartUploadRequest.context:type_name -> udb.entity.v1.RequestContext
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	11, // 0: udb.entity.v1.Chunk.context:type_name -> udb.entity.v1.RequestContext
+	11, // 1: udb.entity.v1.ObjectRequest.context:type_name -> udb.entity.v1.RequestContext
+	11, // 2: udb.entity.v1.UrlRequest.context:type_name -> udb.entity.v1.RequestContext
+	11, // 3: udb.entity.v1.MultipartUploadRequest.context:type_name -> udb.entity.v1.RequestContext
+	11, // 4: udb.entity.v1.CompleteMultipartUploadRequest.context:type_name -> udb.entity.v1.RequestContext
+	6,  // 5: udb.entity.v1.CompleteMultipartUploadRequest.parts:type_name -> udb.entity.v1.MultipartUploadPart
+	11, // 6: udb.entity.v1.AbortMultipartUploadRequest.context:type_name -> udb.entity.v1.RequestContext
+	7,  // [7:7] is the sub-list for method output_type
+	7,  // [7:7] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_blob_proto_init() }
@@ -557,7 +918,7 @@ func file_udb_entity_v1_blob_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_blob_proto_rawDesc), len(file_udb_entity_v1_blob_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

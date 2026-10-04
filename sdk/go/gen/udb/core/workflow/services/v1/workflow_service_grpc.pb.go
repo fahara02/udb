@@ -19,11 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	WorkflowService_StartWorkflow_FullMethodName  = "/udb.core.workflow.services.v1.WorkflowService/StartWorkflow"
-	WorkflowService_GetWorkflow_FullMethodName    = "/udb.core.workflow.services.v1.WorkflowService/GetWorkflow"
-	WorkflowService_ListWorkflows_FullMethodName  = "/udb.core.workflow.services.v1.WorkflowService/ListWorkflows"
-	WorkflowService_CancelWorkflow_FullMethodName = "/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow"
-	WorkflowService_SignalWorkflow_FullMethodName = "/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow"
+	WorkflowService_StartWorkflow_FullMethodName   = "/udb.core.workflow.services.v1.WorkflowService/StartWorkflow"
+	WorkflowService_GetWorkflow_FullMethodName     = "/udb.core.workflow.services.v1.WorkflowService/GetWorkflow"
+	WorkflowService_ListWorkflows_FullMethodName   = "/udb.core.workflow.services.v1.WorkflowService/ListWorkflows"
+	WorkflowService_CancelWorkflow_FullMethodName  = "/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow"
+	WorkflowService_SignalWorkflow_FullMethodName  = "/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow"
+	WorkflowService_AckWorkflowStep_FullMethodName = "/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep"
 )
 
 // WorkflowServiceClient is the client API for WorkflowService service.
@@ -53,6 +54,14 @@ type WorkflowServiceClient interface {
 	// Deliver an external signal to a waiting workflow step, resuming forward
 	// progress (the durable equivalent of completing a blocked step).
 	SignalWorkflow(ctx context.Context, in *SignalWorkflowRequest, opts ...grpc.CallOption) (*SignalWorkflowResponse, error)
+	// Acknowledge the outcome of the step the workflow tick dispatched
+	// (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+	// the instance stays RUNNING awaiting this acknowledgement, and a step that is
+	// not acknowledged within the step timeout fails the workflow (compensating
+	// any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+	// the last one); FAILED fails the workflow through the same
+	// failed/compensating path as a timeout.
+	AckWorkflowStep(ctx context.Context, in *AckWorkflowStepRequest, opts ...grpc.CallOption) (*AckWorkflowStepResponse, error)
 }
 
 type workflowServiceClient struct {
@@ -113,6 +122,16 @@ func (c *workflowServiceClient) SignalWorkflow(ctx context.Context, in *SignalWo
 	return out, nil
 }
 
+func (c *workflowServiceClient) AckWorkflowStep(ctx context.Context, in *AckWorkflowStepRequest, opts ...grpc.CallOption) (*AckWorkflowStepResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AckWorkflowStepResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_AckWorkflowStep_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WorkflowServiceServer is the server API for WorkflowService service.
 // All implementations should embed UnimplementedWorkflowServiceServer
 // for forward compatibility.
@@ -140,6 +159,14 @@ type WorkflowServiceServer interface {
 	// Deliver an external signal to a waiting workflow step, resuming forward
 	// progress (the durable equivalent of completing a blocked step).
 	SignalWorkflow(context.Context, *SignalWorkflowRequest) (*SignalWorkflowResponse, error)
+	// Acknowledge the outcome of the step the workflow tick dispatched
+	// (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+	// the instance stays RUNNING awaiting this acknowledgement, and a step that is
+	// not acknowledged within the step timeout fails the workflow (compensating
+	// any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+	// the last one); FAILED fails the workflow through the same
+	// failed/compensating path as a timeout.
+	AckWorkflowStep(context.Context, *AckWorkflowStepRequest) (*AckWorkflowStepResponse, error)
 }
 
 // UnimplementedWorkflowServiceServer should be embedded to have
@@ -163,6 +190,9 @@ func (UnimplementedWorkflowServiceServer) CancelWorkflow(context.Context, *Cance
 }
 func (UnimplementedWorkflowServiceServer) SignalWorkflow(context.Context, *SignalWorkflowRequest) (*SignalWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SignalWorkflow not implemented")
+}
+func (UnimplementedWorkflowServiceServer) AckWorkflowStep(context.Context, *AckWorkflowStepRequest) (*AckWorkflowStepResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AckWorkflowStep not implemented")
 }
 func (UnimplementedWorkflowServiceServer) testEmbeddedByValue() {}
 
@@ -274,6 +304,24 @@ func _WorkflowService_SignalWorkflow_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorkflowService_AckWorkflowStep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AckWorkflowStepRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).AckWorkflowStep(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_AckWorkflowStep_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).AckWorkflowStep(ctx, req.(*AckWorkflowStepRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WorkflowService_ServiceDesc is the grpc.ServiceDesc for WorkflowService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -300,6 +348,10 @@ var WorkflowService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SignalWorkflow",
 			Handler:    _WorkflowService_SignalWorkflow_Handler,
+		},
+		{
+			MethodName: "AckWorkflowStep",
+			Handler:    _WorkflowService_AckWorkflowStep_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

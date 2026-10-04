@@ -19,11 +19,13 @@
 //! tenant's system rows are best-effort deleted at the end.
 //!
 //! ## Env gating
-//! Skipped (runtime `return`) unless one of `UDB_LIVE_NATIVE_PG_DSN` /
-//! `UDB_LIVE_AUTH_PG_DSN` / `UDB_INTEGRATION_PG_DSN` / `UDB_PG_DSN` is set, so the
-//! default `cargo test --lib` stays green with zero external dependencies while CI
-//! / docker (which export the DSN) RUNS them. Mirrors the sibling native
-//! `live_tests` modules and `canonical_store::conformance_live_tests`.
+//! Every test is `#[ignore]`d, so the default `cargo test --lib` stays green with
+//! zero external dependencies, and the CI live step (which runs `--ignored` with
+//! `UDB_INTEGRATION_PG_DSN` exported) RUNS them. A self-skip without a DSN would
+//! otherwise make them run nowhere: the unit job has no DSN and the live step
+//! only picks up ignored tests. Each test still returns early unless one of
+//! `UDB_LIVE_NATIVE_PG_DSN` / `UDB_LIVE_AUTH_PG_DSN` / `UDB_INTEGRATION_PG_DSN` /
+//! `UDB_PG_DSN` is set, for a local `--ignored` run without a database.
 
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -262,6 +264,7 @@ async fn served_select_rows(
 /// Revert-proof: reverting `prost_value_to_json` to `JsonValue::from(f64)`
 /// makes the `attempts: 0` Update fail with `expected integer, got 0.0`.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_update_accepts_protobuf_integer_number_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping protobuf integer Update");
@@ -365,6 +368,7 @@ async fn served_update_accepts_protobuf_integer_number_live() {
 /// committed point through PostGIS, so a unit-only type-classifier fix cannot
 /// make the regression green.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_update_binds_geography_as_text_not_integer_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping geography Update");
@@ -499,6 +503,7 @@ async fn served_update_binds_geography_as_text_not_integer_live() {
 /// `mutation_response_from_idempotency_json_for_claim` → returns `Ok(success)`,
 /// so the `FAILED_PRECONDITION` assertions below fail.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_idempotency_key_reuse_with_different_input_is_refused_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping idempotency-input-mismatch (#6)");
@@ -637,6 +642,7 @@ async fn served_idempotency_key_reuse_with_different_input_is_refused_live() {
 /// evaluates `expected` against the deleted row → `FAILED_PRECONDITION`, so the
 /// `Ok(replay)` assertion below fails.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_keyed_conditional_delete_replays_after_row_gone_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping delete-cas-replay-order (#1)");
@@ -735,6 +741,7 @@ async fn served_keyed_conditional_delete_replays_after_row_gone_live() {
 /// injects `deleted_at IS NULL`; revert that and the tombstoned row leaks into the
 /// served list/get, failing the exclusion + count assertions.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_soft_delete_tombstones_and_reads_exclude_it_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping soft-delete (#3)/read-scope (#4)");
@@ -875,6 +882,7 @@ async fn served_soft_delete_tombstones_and_reads_exclude_it_live() {
 /// the enforce and the STALE update SUCCEEDS and both concurrent updaters win —
 /// each of which fails an assertion below.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_row_revision_cas_gates_updates_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping row-revision CAS (#5)");
@@ -1150,6 +1158,7 @@ fn lock_request<T>(message: T, tenant: &str) -> Request<T> {
 /// the field-mismatched `r2` + the stale-revision `r4` would change to "B" — the
 /// `changed == 2` count and the "r2/r4 unchanged" served reads both fail.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_bulk_cas_applies_only_passing_items_and_is_tenant_scoped_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping bulk-CAS per-item (gate 23)");
@@ -1333,9 +1342,21 @@ async fn served_bulk_cas_applies_only_passing_items_and_is_tenant_scoped_live() 
         None,
         "",
     )];
-    let _ = served_bulk_cas(&svc, &tenant, MSG, attack, "", 0)
+    let attack_resp = served_bulk_cas(&svc, &tenant, MSG, attack, "", 0)
         .await
         .expect("cross-tenant bulk cas call");
+    // The locked read is tenant-scoped, so the foreign row reads exactly like an
+    // absent one: not matched, not changed, counted as a conflict.
+    assert_eq!(
+        (
+            attack_resp.matched,
+            attack_resp.changed,
+            attack_resp.conflicted
+        ),
+        (0, 0, 1),
+        "a foreign row must look absent to the caller's BulkCas"
+    );
+    assert!(!attack_resp.results[0].matched && !attack_resp.results[0].changed);
     assert_eq!(
         served_status_of(&svc, &foreign_tenant, MSG, &r_foreign)
             .await
@@ -1356,6 +1377,7 @@ async fn served_bulk_cas_applies_only_passing_items_and_is_tenant_scoped_live() 
 /// dedup and the keyed replay re-runs the item, bumping the row revision a second
 /// time — the `rev_after_replay == rev_after_first` assertion fails.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_bulk_cas_is_bounded_and_request_hash_idempotent_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping bulk-CAS bound/idempotency (gate 23)");
@@ -1485,6 +1507,7 @@ async fn served_bulk_cas_is_bounded_and_request_hash_idempotent_live() {
 /// unchanged", the "revision unchanged", and the "no idempotency claim" assertions
 /// all fail.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_mutation_fences_stale_lock_token_with_no_side_effect_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping lock-fencing-at-commit (gate 25)");
@@ -1753,6 +1776,7 @@ async fn drive_begin_tx(
 /// the mismatched update applies + the tx commits — `committed` is true, no error
 /// is surfaced, and the served read shows "B". All three assertions fail.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_begin_tx_expected_cas_mismatch_aborts_with_nothing_applied_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping BeginTx expected-CAS (#8.1)");
@@ -1832,6 +1856,7 @@ async fn served_begin_tx_expected_cas_mismatch_aborts_with_nothing_applied_live(
 /// the update applies + the tx commits — `committed` is true, no `cdc_required`
 /// error is surfaced, and the served read shows "C". The assertions fail.
 #[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_begin_tx_cdc_required_fails_closed_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         eprintln!("data-plane live DSN unset — skipping BeginTx cdc_required (#8.2)");
@@ -1902,5 +1927,299 @@ async fn served_begin_tx_cdc_required_fails_closed_live() {
 
     let _ = shutdown.send(());
     let _ = handle.await;
+    teardown(&pool, &schema, &tenant).await;
+}
+
+// ── cross-tenant isolation on Upsert / fallback Select / soft-delete revive ───
+
+/// Raw privileged read of one row's `(tenant_id, status)`, bypassing every
+/// served scope, so a test can prove what physically happened to a victim row.
+async fn raw_tenant_and_status(
+    pool: &sqlx::PgPool,
+    schema: &str,
+    table: &str,
+    id: &str,
+) -> Option<(String, Option<String>)> {
+    sqlx::query(&format!(
+        "SELECT tenant_id, status FROM \"{schema}\".\"{table}\" WHERE id = $1"
+    ))
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .expect("raw privileged row read")
+    .map(|row| (row.get("tenant_id"), row.get("status")))
+}
+
+/// Tenant A upserting a record that names tenant B's primary key must not take
+/// the row over. The served Upsert (unary AND BeginTx) is refused, and B's row
+/// keeps its tenant and its values.
+///
+/// Revert-proof: drop the conflict guard from the upsert emitters and the unary
+/// call succeeds with `affected_rows = 1` while the raw read shows the row moved
+/// into tenant A with status "PWNED" — every assertion below fails.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn served_upsert_cannot_take_over_a_foreign_tenant_row_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        eprintln!("data-plane live DSN unset — skipping cross-tenant upsert takeover");
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool)
+        .await
+        .expect("bootstrap system catalog");
+
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    let attacker = Uuid::new_v4().to_string();
+    let victim = Uuid::new_v4().to_string();
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".widgets \
+         (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, status TEXT)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create widgets");
+    const MSG: &str = "acme.dp.v1.Widget";
+    let svc = dp_service(&dsn, widget_manifest(&schema, "widgets", "Widget", false)).await;
+
+    let victim_id = format!("victim-{}", Uuid::new_v4().simple());
+    served_upsert(
+        &svc,
+        &victim,
+        MSG,
+        json!({"id": victim_id, "tenant_id": victim, "status": "ORIGINAL"}),
+        "",
+    )
+    .await
+    .expect("seed victim row");
+
+    // Same-tenant upsert onto its own row still works (the guard admits it).
+    let own = served_upsert(
+        &svc,
+        &victim,
+        MSG,
+        json!({"id": victim_id, "tenant_id": victim, "status": "ORIGINAL"}),
+        "",
+    )
+    .await
+    .expect("same-tenant upsert onto its own row");
+    assert_eq!(own.affected_rows, 1);
+
+    // Unary takeover attempt.
+    let err = served_upsert(
+        &svc,
+        &attacker,
+        MSG,
+        json!({"id": victim_id, "tenant_id": attacker, "status": "PWNED"}),
+        "",
+    )
+    .await
+    .expect_err("a cross-tenant upsert must be refused, not reported as success");
+    assert_eq!(err.code(), Code::FailedPrecondition, "{err:?}");
+    assert_eq!(
+        raw_tenant_and_status(&pool, &schema, "widgets", &victim_id).await,
+        Some((victim.clone(), Some("ORIGINAL".to_string()))),
+        "the victim row must keep its tenant and values"
+    );
+
+    // BeginTx takeover attempt (planner SQL path).
+    let server_svc = dp_service(&dsn, widget_manifest(&schema, "widgets", "Widget", false)).await;
+    let (mut client, shutdown, handle) = serve_data_broker(server_svc).await;
+    let mutations = vec![Mutation {
+        message_type: MSG.to_string(),
+        operation: "upsert".to_string(),
+        record_json: serde_json::to_vec(
+            &json!({"id": victim_id, "tenant_id": attacker, "status": "PWNED"}),
+        )
+        .unwrap(),
+        commit: true,
+        tx_id: Uuid::new_v4().to_string(),
+        ..Mutation::default()
+    }];
+    let (committed, error) = drive_begin_tx(&mut client, &attacker, mutations).await;
+    assert!(!committed, "a cross-tenant BeginTx upsert must not commit");
+    assert!(
+        error.is_some(),
+        "the refused BeginTx upsert must surface an error"
+    );
+    assert_eq!(
+        raw_tenant_and_status(&pool, &schema, "widgets", &victim_id).await,
+        Some((victim.clone(), Some("ORIGINAL".to_string()))),
+        "a BeginTx upsert must not take over the victim row either"
+    );
+
+    let _ = shutdown.send(());
+    let _ = handle.await;
+    teardown(&pool, &schema, &attacker).await;
+    teardown(&pool, &schema, &victim).await;
+}
+
+/// A filter shape the bridged emitter declines (`$contains` on JSONB) is served
+/// from the planner SQL. That SQL must bind the VERIFIED caller tenant, so a
+/// filter naming another tenant returns nothing, while the caller's own rows
+/// still match the same shape.
+///
+/// Revert-proof: drop `append_verified_scope_predicates` from the select plan and
+/// the attacker's read returns the victim's row.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn served_select_fallback_cannot_read_a_foreign_tenant_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        eprintln!("data-plane live DSN unset — skipping fallback-select tenant scope");
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool)
+        .await
+        .expect("bootstrap system catalog");
+
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    let attacker = Uuid::new_v4().to_string();
+    let victim = Uuid::new_v4().to_string();
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".docs \
+         (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, status TEXT, payload JSONB)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create docs");
+    for (id, tenant) in [("victim-doc", &victim), ("attacker-doc", &attacker)] {
+        sqlx::query(&format!(
+            "INSERT INTO \"{schema}\".docs (id, tenant_id, status, payload) \
+             VALUES ($1, $2, 'LIVE', $3::jsonb)"
+        ))
+        .bind(format!("{id}-{}", Uuid::new_v4().simple()))
+        .bind(tenant)
+        .bind(r#"{"kind": "secret"}"#)
+        .execute(&pool)
+        .await
+        .expect("seed doc");
+    }
+    const MSG: &str = "acme.dp.v1.Doc";
+    let mut manifest = widget_manifest(&schema, "docs", "Doc", false);
+    manifest.tables[0]
+        .columns
+        .push(col("payload", "JSONB", false));
+    let svc = dp_service(&dsn, manifest).await;
+
+    let foreign = served_select_rows(
+        &svc,
+        &attacker,
+        MSG,
+        json!({"tenant_id": victim, "payload": {"$contains": {"kind": "secret"}}}),
+        false,
+    )
+    .await;
+    assert!(
+        foreign.records_json.is_empty(),
+        "a fallback-SQL read naming another tenant must return nothing"
+    );
+
+    let own = served_select_rows(
+        &svc,
+        &attacker,
+        MSG,
+        json!({"tenant_id": attacker, "payload": {"$contains": {"kind": "secret"}}}),
+        false,
+    )
+    .await;
+    assert_eq!(
+        own.records_json.len(),
+        1,
+        "the same filter shape still reads the caller's own row"
+    );
+
+    teardown(&pool, &schema, &attacker).await;
+    teardown(&pool, &schema, &victim).await;
+}
+
+/// Upserting onto a tombstoned key revives the row instead of reporting
+/// `affected = 1` on a row every read hides.
+///
+/// Revert-proof: drop the `<soft_delete_column> = NULL` revive from the upsert
+/// plan and the row stays tombstoned, so the served read returns nothing.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn served_upsert_onto_tombstoned_key_revives_the_row_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        eprintln!("data-plane live DSN unset — skipping soft-delete upsert revive");
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool)
+        .await
+        .expect("bootstrap system catalog");
+
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    let tenant = Uuid::new_v4().to_string();
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".sd_widgets \
+         (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, status TEXT, deleted_at TIMESTAMPTZ)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create sd_widgets");
+    const MSG: &str = "acme.dp.v1.SoftWidget";
+    let svc = dp_service(
+        &dsn,
+        widget_manifest(&schema, "sd_widgets", "SoftWidget", true),
+    )
+    .await;
+
+    let id = format!("sd-{}", Uuid::new_v4().simple());
+    served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant, "status": "ONE"}),
+        "",
+    )
+    .await
+    .expect("seed row");
+    svc.delete(with_ctx(
+        DeleteRequest {
+            message_type: MSG.to_string(),
+            filter: json_to_struct(&json!({"id": id, "tenant_id": tenant})),
+            ..DeleteRequest::default()
+        },
+        &tenant,
+    ))
+    .await
+    .expect("tombstone the row");
+
+    let revived = served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant, "status": "TWO"}),
+        "",
+    )
+    .await
+    .expect("upsert onto the tombstoned key");
+    assert_eq!(revived.affected_rows, 1);
+    let rows = served_select_rows(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant}),
+        false,
+    )
+    .await;
+    assert_eq!(
+        rows.records_json.len(),
+        1,
+        "the revived row must be visible"
+    );
+    assert_eq!(record_status(&rows.records_json[0]).as_deref(), Some("TWO"));
+
     teardown(&pool, &schema, &tenant).await;
 }

@@ -198,18 +198,7 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
             // Optionally emit the equivalent version-controllable offline policy
             // file (the `udb policy-seed` / lint shape) so the seed is reproducible.
             if !emit.trim().is_empty() {
-                let mut rows: Vec<serde_json::Value> = Vec::new();
-                for object in &objects {
-                    for action in &actions {
-                        rows.push(serde_json::json!({
-                            "effect": "allow",
-                            "subject": format!("role:{role}"),
-                            "tenant": tenant.as_str(),
-                            "resource": object.as_str(),
-                            "action": action.as_str(),
-                        }));
-                    }
-                }
+                let rows = seed_emit_policies(&tenant, &project, &role, &objects, &actions);
                 std::fs::write(
                     emit.trim(),
                     serde_json::to_string_pretty(&rows).unwrap_or_default(),
@@ -233,6 +222,40 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
             }))
         }
     }
+}
+
+/// The `--emit` file for `udb authz seed`: the SAME rows the seed writes to
+/// `udb_authz.policy_rules`, as `AuthzPolicy` records (the shape `udb
+/// policy-seed` / `udb policy-lint` read via `UDB_ABAC_POLICY_FILE`). The seed
+/// stores an EMPTY subject with the role carried separately (so binding a user
+/// or a service account to the role grants both) plus the project scope —
+/// re-seeding from this file reproduces exactly that, not a `role:<r>` subject
+/// that no principal ever carries.
+fn seed_emit_policies(
+    tenant: &str,
+    project: &str,
+    role: &str,
+    objects: &[String],
+    actions: &[String],
+) -> Vec<udb::runtime::authz::AuthzPolicy> {
+    let mut rows = Vec::new();
+    for object in objects {
+        for action in actions {
+            rows.push(udb::runtime::authz::AuthzPolicy {
+                id: format!("udb-authz-seed:{tenant}:{project}:{role}:{object}:{action}"),
+                enabled: true,
+                effect: udb::runtime::authz::Effect::Allow,
+                tenant: tenant.to_string(),
+                project: project.to_string(),
+                subject: String::new(),
+                role: role.to_string(),
+                action: action.clone(),
+                resource: object.clone(),
+                ..Default::default()
+            });
+        }
+    }
+    rows
 }
 
 /// Render a [`SimulatePolicyResponse`] into the CLI diff view: a per-case
@@ -664,6 +687,36 @@ fn default_true() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn seed_emit_matches_the_stored_policy_shape_and_round_trips() {
+        let tenant = "9f1c2d3e-0000-4000-8000-000000000001";
+        let rows = seed_emit_policies(
+            tenant,
+            "billing",
+            "app_rw",
+            &["*".to_string()],
+            &["Select".to_string(), "Upsert".to_string()],
+        );
+        assert_eq!(rows.len(), 2);
+        for row in &rows {
+            // Same shape the seed writes: empty subject, role carried separately,
+            // tenant + project scope, allow, enabled.
+            assert!(row.subject.is_empty(), "no synthetic `role:` subject");
+            assert_eq!(row.role, "app_rw");
+            assert_eq!(row.tenant, tenant);
+            assert_eq!(row.project, "billing");
+            assert_eq!(row.resource, "*");
+            assert_eq!(row.effect, udb::runtime::authz::Effect::Allow);
+            assert!(row.enabled);
+            assert!(!row.id.is_empty());
+        }
+        // The file is read back by `policy-seed` / `policy-lint` as AuthzPolicy.
+        let json = serde_json::to_string(&rows).expect("serializes");
+        let back: Vec<udb::runtime::authz::AuthzPolicy> =
+            serde_json::from_str(&json).expect("round-trips as AuthzPolicy");
+        assert_eq!(back, rows);
+    }
 
     #[test]
     fn parse_bundle_maps_candidate_and_cases() {

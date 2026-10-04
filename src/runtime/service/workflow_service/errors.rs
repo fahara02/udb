@@ -83,3 +83,15 @@ pub(crate) fn workflow_signal_compensating_status() -> Status {
         "workflow is compensating and cannot be signalled",
     )
 }
+
+/// An `AckWorkflowStep` that cannot apply: the instance is not RUNNING
+/// (`workflow_not_running`) or the ack names a step other than the one in
+/// flight (`workflow_step_not_awaiting_ack`) — a stale, duplicate-failure, or
+/// misrouted ack must never move the workflow.
+pub(crate) fn workflow_ack_rejected_status(decision_id: &'static str) -> Status {
+    let message = match decision_id {
+        "workflow_not_running" => "workflow is not running; the step cannot be acknowledged",
+        _ => "the acknowledged step is not the step awaiting acknowledgement",
+    };
+    workflow_policy_status("ack_workflow_step", decision_id, message)
+}

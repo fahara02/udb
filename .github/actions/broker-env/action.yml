@@ -183,8 +183,8 @@ runs:
         echo "UDB_ABAC_DEFAULT_ALLOW=true" >> "$env_file"
 
         # Background workers off for the bench (deterministic harness).
-        echo "UDB_PROJECTION_WORKER_ENABLED=false" >> "$env_file"
-        echo "UDB_RECONCILIATION_ENABLED=false" >> "$env_file"
+        echo "UDB_PROJECTION_ENABLED=false" >> "$env_file"
+        echo "UDB_PROJECTION_RECONCILE_ENABLED=false" >> "$env_file"
         echo "UDB_SAGA_RECOVERY_ENABLED=false" >> "$env_file"
         echo "UDB_STARTUP_FORCE_SYNC=true" >> "$env_file"
 

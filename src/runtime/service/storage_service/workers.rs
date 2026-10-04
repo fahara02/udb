@@ -1,9 +1,8 @@
 //! The periodic orphan reaper for the native `StorageService`: the bounded,
 //! oldest-first hard-delete of `PENDING` files that were registered but never
-//! finalized, plus their abandoned object bytes. Extracted verbatim from the
-//! former god file — the cross-tenant system-context sweep and the by-primary-key
-//! batch delete are byte-for-byte identical. Spawned under leader election by
-//! `build_storage_service`.
+//! finalized, plus their abandoned object bytes. The batch delete re-asserts the
+//! orphan predicate and uses RETURNING, so a file finalized mid-sweep is never
+//! reaped. Spawned under leader election by `build_storage_service`.
 
 use tonic::Status;
 
@@ -17,6 +16,33 @@ use super::StorageServiceImpl;
 use super::config::FILE_MSG;
 use super::model::file_from_json;
 use super::store::{file_eq, file_projection, logical_string};
+
+/// The orphan reaper's DELETE for a previously-read batch: by primary key AND
+/// still `status = 'PENDING'` AND still older than `cutoff`, returning the ids of
+/// the rows it actually removed. Re-asserting the orphan predicate in the delete
+/// itself is what makes the read-then-delete safe against a concurrent finalize
+/// (a file that became ACTIVE in between no longer matches and survives).
+pub(crate) fn orphan_reap_delete<'a>(
+    file_ids: impl IntoIterator<Item = &'a str>,
+    cutoff: chrono::DateTime<chrono::Utc>,
+) -> LogicalDelete {
+    LogicalDelete {
+        message_type: FILE_MSG.to_string(),
+        filter: LogicalFilter::And(vec![
+            LogicalFilter::InList {
+                field: "file_id".to_string(),
+                values: file_ids.into_iter().map(logical_string).collect(),
+            },
+            file_eq("status", "PENDING"),
+            LogicalFilter::Comparison {
+                field: "created_at".to_string(),
+                op: ComparisonOp::Lt,
+                value: LogicalValue::Timestamp(cutoff),
+            },
+        ]),
+        return_fields: vec!["file_id".to_string()],
+    }
+}
 
 impl StorageServiceImpl {
     /// Hard-DELETE orphaned `PENDING` files older than `older_than_minutes`
@@ -75,27 +101,68 @@ impl StorageServiceImpl {
         if doomed.is_empty() {
             return Ok(0);
         }
-        // 2) Hard-DELETE exactly that batch by primary key (UUID `file_id`).
-        let delete = LogicalDelete {
-            message_type: FILE_MSG.to_string(),
-            filter: LogicalFilter::InList {
-                field: "file_id".to_string(),
-                values: doomed
-                    .iter()
-                    .map(|f| logical_string(f.file_id.as_str()))
-                    .collect(),
-            },
-            return_fields: Vec::new(),
-        };
-        runtime
-            .native_entity_delete_for_service("storage", &context, delete)
+        // 2) Hard-DELETE that batch by primary key, RE-ASSERTING the orphan
+        //    predicate (`status = 'PENDING'` AND older than the cutoff) in the SAME
+        //    statement. Between the read above and this delete a client may finalize
+        //    one of these files (PENDING -> ACTIVE); a bare `file_id IN (...)`
+        //    delete would then hard-delete a live, just-finalized file and its
+        //    bytes. RETURNING tells us exactly which rows were still orphans.
+        let deleted_rows = runtime
+            .native_entity_delete_rows_for_service(
+                "storage",
+                &context,
+                orphan_reap_delete(doomed.iter().map(|f| f.file_id.as_str()), cutoff),
+            )
             .await?;
-        // 3) Best-effort: remove the now-orphaned object bytes too.
-        for file in &doomed {
-            self.delete_object_bytes(&file.project_id, &file.object_key)
-                .await;
+        let deleted_ids: std::collections::HashSet<String> = deleted_rows
+            .iter()
+            .filter_map(|row| row.get("file_id").and_then(serde_json::Value::as_str))
+            .map(|id| id.to_ascii_lowercase())
+            .collect();
+        // 3) Remove the object bytes ONLY for rows this statement actually deleted.
+        //    A failed byte delete records a durable GC intent (the sweep converges
+        //    it) instead of being logged and forgotten.
+        let mut reaped = 0u64;
+        for file in doomed
+            .iter()
+            .filter(|f| deleted_ids.contains(&f.file_id.to_ascii_lowercase()))
+        {
+            reaped += 1;
+            let (backend, bucket) = self.file_object_location(file);
+            if let Err(err) = self
+                .try_delete_object_bytes(
+                    &backend,
+                    &bucket,
+                    &file.tenant_id,
+                    &file.project_id,
+                    &file.object_key,
+                )
+                .await
+            {
+                if let Err(intent_err) = self
+                    .insert_gc_intent(
+                        &file.tenant_id,
+                        &file.file_id,
+                        &file.project_id,
+                        &backend,
+                        &bucket,
+                        &file.object_key,
+                        "REAP",
+                        "orphaned pending upload",
+                        err.message(),
+                    )
+                    .await
+                {
+                    tracing::warn!(
+                        error = %err,
+                        intent_error = %intent_err,
+                        file_id = %file.file_id,
+                        "storage orphan reaper: byte delete failed and no GC intent could be recorded; bytes orphaned"
+                    );
+                }
+            }
         }
-        Ok(doomed.len() as u64)
+        Ok(reaped)
     }
 
     /// Drive PENDING durable object-GC intents (recorded by HARD `DeleteFile`) to
@@ -121,6 +188,7 @@ impl StorageServiceImpl {
                 .try_delete_object_bytes(
                     &intent.backend,
                     &intent.bucket,
+                    &intent.tenant_id,
                     &intent.project_id,
                     &intent.object_key,
                 )

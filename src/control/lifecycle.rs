@@ -583,22 +583,18 @@ async fn run_startup_lifecycle_core(
     // GAP 33: Acquire a PostgreSQL advisory lock before any schema modification
     // to prevent concurrent UDB instances racing during startup.
     //
-    // We use pg_try_advisory_xact_lock (transaction-level) scoped narrowly:
-    // the lock is acquired, the tracker DDL and system catalog bootstrap run
-    // within the same transaction, and the transaction is COMMITted before any
-    // SQL artifact execution begins.  This is intentional — the advisory lock
-    // only needs to protect the ledger bootstrap phase, not the artifact apply
-    // phase.  Holding an open xact (with AccessExclusiveLock from ALTER TABLE
-    // on schema_migrations) across the apply phase would cause pool connections
-    // in apply_sql_artifact to block indefinitely waiting for the row-level
-    // update lock on the same table, producing a deadlock on the 2nd run.
-    //
-    // The session-level variant pg_try_advisory_lock is used here because:
-    //   1. We release it explicitly with pg_advisory_unlock after the bootstrap
-    //      transaction commits, so the PgBouncer session-leak risk is avoided.
-    //   2. A session-level lock held on a dedicated connection is more robust
-    //      than an xact-level lock when the surrounding transaction touches
-    //      DDL-heavy tables like schema_migrations.
+    // The SESSION-level pg_try_advisory_lock is taken on a dedicated connection
+    // and held from ledger bootstrap through the end of artifact apply (H4), so
+    // two instances can never apply SQL artifacts concurrently. It is NOT an
+    // xact-level lock: holding an open transaction (with AccessExclusiveLock
+    // from ALTER TABLE on schema_migrations) across the apply phase would make
+    // the apply connections block on the same table and deadlock. The holder
+    // connection runs autocommit statements only and then sits idle, so it
+    // holds the advisory lock and nothing else. It is released with
+    // pg_advisory_unlock on success and closed (not pooled) on any early
+    // return, so the lock can never be stranded on a pooled backend.
+    // H4: the startup advisory-lock holder connection, kept until apply ends.
+    let mut startup_lock: Option<sqlx::pool::PoolConnection<sqlx::Postgres>> = None;
     if dry_run {
         report.step(
             FsmState::Initialising,
@@ -636,44 +632,43 @@ async fn run_startup_lifecycle_core(
             .acquire()
             .await
             .map_err(|err| fail(runtime, &mut report, "advisory_lock_conn", err.to_string()))?;
-        // When force_sync is active (admin override), retry pg_try_advisory_lock
-        // in a tight loop for up to 10 seconds. This handles stale session-level
-        // locks left by crashed/orphaned UDB processes whose server-side PgBouncer
-        // session is still alive but being recycled:
+        // H3: BOTH paths poll `pg_try_advisory_lock` with a bounded deadline.
+        // A concurrent replica (HA pair, rolling restart) that loses the race
+        // WAITS for the holder to finish bootstrap + apply and then runs its
+        // own (idempotent) lifecycle, instead of exiting and relying on an
+        // orchestrator restart. `force_sync` keeps its own tunable deadline;
+        // a normal start waits up to `UDB_STARTUP_LOCK_WAIT_SECS` (default
+        // 600s; 0 = fail fast after one attempt, the pre-fix behaviour).
         //   - pg_advisory_lock (blocking) is not safe with PgBouncer transaction
         //     pooling because SET lock_timeout is transaction-scoped and advisory
         //     locks are session-scoped, leading to unpredictable behaviour.
         //   - A retry loop with pg_try_advisory_lock is portable across all PG
         //     versions and pooling modes.
-        //
-        // For normal (non-force_sync) startup we keep a single pg_try_advisory_lock
-        // so two concurrent service instances fail fast without waiting.
-        let lock_acquired: bool = if force_sync {
-            // NW-universal: deadline + poll interval are operator-tunable
-            // via `UDB_FORCE_SYNC_LOCK_TIMEOUT_SECS` (default 10, range
-            // 1-3600) and `UDB_FORCE_SYNC_LOCK_POLL_MS` (default 500,
-            // range 50-30_000). Pre-fix these were hardcoded — slow
-            // networks or genuinely long-running migrations had no way
-            // to extend the wait without recompiling.
-            let timeout_secs = force_sync_lock_timeout_secs();
-            let poll_ms = force_sync_lock_poll_ms();
-            // We distinguish three outcomes from each poll:
-            //   Ok(true)  → lock acquired, proceed
-            //   Ok(false) → lock held by another session, retry after sleep
-            //   Err(_)    → DB-level failure (network, auth, etc.), abort immediately
-            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs);
-            let mut acquired = false;
-            'retry: loop {
-                if std::time::Instant::now() >= deadline {
-                    break 'retry;
-                }
-                match sqlx::query_scalar::<_, bool>("SELECT pg_try_advisory_lock($1)")
-                    .bind(PG_ADVISORY_LOCK_KEY)
-                    .fetch_one(&mut *conn)
-                    .await
-                {
-                    Ok(true) => {
-                        acquired = true;
+        // NW-universal: deadline + poll interval are operator-tunable via
+        // `UDB_FORCE_SYNC_LOCK_TIMEOUT_SECS` / `UDB_STARTUP_LOCK_WAIT_SECS` and
+        // `UDB_FORCE_SYNC_LOCK_POLL_MS` (default 500, range 50-30_000).
+        let timeout_secs = if force_sync {
+            force_sync_lock_timeout_secs()
+        } else {
+            startup_lock_wait_secs()
+        };
+        let poll_ms = force_sync_lock_poll_ms();
+        // We distinguish three outcomes from each poll:
+        //   Ok(true)  → lock acquired, proceed
+        //   Ok(false) → lock held by another session, retry after sleep
+        //   Err(_)    → DB-level failure (network, auth, etc.), abort immediately
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs);
+        let mut lock_acquired = false;
+        let mut announced_wait = false;
+        loop {
+            match sqlx::query_scalar::<_, bool>("SELECT pg_try_advisory_lock($1)")
+                .bind(PG_ADVISORY_LOCK_KEY)
+                .fetch_one(&mut *conn)
+                .await
+            {
+                Ok(true) => {
+                    lock_acquired = true;
+                    if force_sync {
                         report.step(
                             FsmState::Initialising,
                             format!(
@@ -681,58 +676,46 @@ async fn run_startup_lifecycle_core(
                                 PG_ADVISORY_LOCK_KEY
                             ),
                         );
-                        break 'retry;
                     }
-                    Ok(false) => {
-                        // Lock held by another session — wait and retry.
-                        tokio::time::sleep(std::time::Duration::from_millis(poll_ms)).await;
+                    break;
+                }
+                Ok(false) => {
+                    if std::time::Instant::now() >= deadline {
+                        break;
                     }
-                    Err(err) => {
-                        // Distinct from "lock held" — this is a real DB error.
-                        let message = format!(
-                            "force_sync: database error while polling advisory lock ({:#x}): {err}",
+                    if !announced_wait {
+                        announced_wait = true;
+                        let note = format!(
+                            "startup advisory lock ({:#x}) held by another UDB instance; \
+                             waiting up to {timeout_secs}s for it to finish bootstrap/apply",
                             PG_ADVISORY_LOCK_KEY
                         );
-                        report.errors.push(message.clone());
-                        return Err(report_failure_json(&report, message));
+                        tracing::info!("{note}");
+                        report.step(FsmState::Initialising, note);
                     }
+                    // Lock held by another session — wait and retry.
+                    tokio::time::sleep(std::time::Duration::from_millis(poll_ms)).await;
                 }
-            }
-            if !acquired {
-                let message = format!(
-                    "force_sync: timed out ({timeout_secs}s) waiting for advisory lock ({:#x}) — \
-                     a UDB instance is actively running. Stop it first, or extend the wait \
-                     via UDB_FORCE_SYNC_LOCK_TIMEOUT_SECS.",
-                    PG_ADVISORY_LOCK_KEY
-                );
-                report.errors.push(message.clone());
-                return Err(report_failure_json(&report, message));
-            }
-            acquired
-        } else {
-            // Non-force_sync: fail fast — don't wait if another instance is running.
-            match sqlx::query_scalar::<_, bool>("SELECT pg_try_advisory_lock($1)")
-                .bind(PG_ADVISORY_LOCK_KEY)
-                .fetch_one(&mut *conn)
-                .await
-            {
-                Ok(got) => got,
                 Err(err) => {
-                    let message = format!(
-                        "database error acquiring startup advisory lock ({:#x}): {err}",
-                        PG_ADVISORY_LOCK_KEY
-                    );
+                    // Distinct from "lock held" — this is a real DB error.
+                    let message = if force_sync {
+                        format!(
+                            "force_sync: database error while polling advisory lock ({:#x}): {err}",
+                            PG_ADVISORY_LOCK_KEY
+                        )
+                    } else {
+                        format!(
+                            "database error acquiring startup advisory lock ({:#x}): {err}",
+                            PG_ADVISORY_LOCK_KEY
+                        )
+                    };
                     report.errors.push(message.clone());
                     return Err(report_failure_json(&report, message));
                 }
             }
-        };
+        }
         if !lock_acquired {
-            let message = format!(
-                "another UDB instance holds the startup advisory lock \
-                 (key={:#x}); this instance exits to avoid concurrent schema modification",
-                PG_ADVISORY_LOCK_KEY
-            );
+            let message = startup_lock_timeout_message(force_sync, timeout_secs);
             report.errors.push(message.clone());
             return Err(report_failure_json(&report, message));
         }
@@ -783,25 +766,20 @@ async fn run_startup_lifecycle_core(
                 ));
             }
         }
-        // Release the advisory lock on the same connection that holds it.
-        // A failed unlock is self-healing (PostgreSQL drops session-level
-        // advisory locks when the backend disconnects), but record it so an
-        // operator can see it rather than having it vanish silently.
-        if let Err(err) = sqlx::query("SELECT pg_advisory_unlock($1)")
-            .bind(PG_ADVISORY_LOCK_KEY)
-            .execute(&mut *conn)
-            .await
-        {
-            report.warnings.push(format!(
-                "failed to release startup advisory session-lock ({:#x}): {err} \
-                 (PostgreSQL will free it on backend disconnect)",
-                PG_ADVISORY_LOCK_KEY
-            ));
-        }
+        // H4: keep holding the session lock through SQL-artifact apply, delta
+        // apply, seeding and auto-alter, so two instances can never apply
+        // artifacts concurrently. The holder connection is idle (autocommit, no
+        // open transaction), so it holds no table locks and cannot deadlock the
+        // apply connections. `close_on_drop` makes every early return (`?`)
+        // CLOSE the backend instead of returning it to the pool, which releases
+        // the session lock server-side rather than stranding it on a pooled
+        // connection. The success path unlocks explicitly before `Completed`.
+        conn.close_on_drop();
+        startup_lock = Some(conn);
         report.step(
             FsmState::Initialising,
             format!(
-                "released startup advisory session-lock ({:#x})",
+                "holding startup advisory session-lock ({:#x}) through artifact apply",
                 PG_ADVISORY_LOCK_KEY
             ),
         );
@@ -2136,6 +2114,7 @@ async fn run_startup_lifecycle_core(
         }
     }
 
+    release_startup_lock(startup_lock.take(), &mut report).await;
     transition(
         &mut engine,
         &mut report,
@@ -2366,6 +2345,72 @@ fn force_sync_lock_timeout_secs() -> u64 {
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(10)
         .clamp(1, 3600)
+}
+
+/// H3: how long a normal (non-`force_sync`) start waits for a concurrent
+/// instance's startup advisory lock before giving up. Default 600s covers a
+/// full first-boot apply over a remote database; 0 restores fail-fast.
+fn startup_lock_wait_secs() -> u64 {
+    parse_startup_lock_wait_secs(std::env::var("UDB_STARTUP_LOCK_WAIT_SECS").ok().as_deref())
+}
+
+fn parse_startup_lock_wait_secs(raw: Option<&str>) -> u64 {
+    raw.and_then(|value| value.trim().parse::<u64>().ok())
+        .unwrap_or(600)
+        .min(3600)
+}
+
+fn startup_lock_timeout_message(force_sync: bool, timeout_secs: u64) -> String {
+    use crate::engine::PG_ADVISORY_LOCK_KEY;
+    if force_sync {
+        format!(
+            "force_sync: timed out ({timeout_secs}s) waiting for advisory lock ({:#x}) — \
+             a UDB instance is actively running. Stop it first, or extend the wait \
+             via UDB_FORCE_SYNC_LOCK_TIMEOUT_SECS.",
+            PG_ADVISORY_LOCK_KEY
+        )
+    } else {
+        format!(
+            "another UDB instance held the startup advisory lock (key={:#x}) for longer \
+             than {timeout_secs}s; giving up to avoid concurrent schema modification \
+             (extend via UDB_STARTUP_LOCK_WAIT_SECS, or clear a stranded lock with \
+             `udb admin release-lock`)",
+            PG_ADVISORY_LOCK_KEY
+        )
+    }
+}
+
+/// H4: release the startup advisory session-lock held across artifact apply.
+/// The connection was marked `close_on_drop`, so even a failed unlock is
+/// self-healing (closing the backend frees session locks); record it so an
+/// operator can see it rather than having it vanish silently.
+async fn release_startup_lock(
+    lock: Option<sqlx::pool::PoolConnection<sqlx::Postgres>>,
+    report: &mut StartupLifecycleReport,
+) {
+    use crate::engine::PG_ADVISORY_LOCK_KEY;
+    let Some(mut conn) = lock else {
+        return;
+    };
+    match sqlx::query("SELECT pg_advisory_unlock($1)")
+        .bind(PG_ADVISORY_LOCK_KEY)
+        .execute(&mut *conn)
+        .await
+    {
+        // Recorded under the CURRENT state: the FSM has not transitioned yet.
+        Ok(_) => {
+            let state = report.state.clone();
+            report.steps.push(format!(
+                "{state}: released startup advisory session-lock ({:#x})",
+                PG_ADVISORY_LOCK_KEY
+            ));
+        }
+        Err(err) => report.warnings.push(format!(
+            "failed to release startup advisory session-lock ({:#x}): {err} \
+             (the holder connection is closed, which frees it)",
+            PG_ADVISORY_LOCK_KEY
+        )),
+    }
 }
 
 /// NW-universal: operator-tunable poll interval between
@@ -2647,6 +2692,29 @@ fn parse_seed_identity(file_name: &str) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn startup_lock_loser_waits_by_default_and_is_bounded() {
+        // Default: a normal start WAITS for a concurrent holder (HA pair)
+        // instead of exiting on the first failed try.
+        assert_eq!(parse_startup_lock_wait_secs(None), 600);
+        assert_eq!(parse_startup_lock_wait_secs(Some("garbage")), 600);
+        // 0 restores the old fail-fast behaviour (one attempt, no wait).
+        assert_eq!(parse_startup_lock_wait_secs(Some("0")), 0);
+        assert_eq!(parse_startup_lock_wait_secs(Some(" 45 ")), 45);
+        // Bounded: never an unbounded wait.
+        assert_eq!(parse_startup_lock_wait_secs(Some("999999")), 3600);
+    }
+
+    #[test]
+    fn startup_lock_timeout_message_names_the_right_knob() {
+        let normal = startup_lock_timeout_message(false, 600);
+        assert!(normal.contains("UDB_STARTUP_LOCK_WAIT_SECS"));
+        assert!(normal.contains("600s"));
+        assert!(normal.contains("udb admin release-lock"));
+        let forced = startup_lock_timeout_message(true, 10);
+        assert!(forced.contains("UDB_FORCE_SYNC_LOCK_TIMEOUT_SECS"));
+    }
 
     #[test]
     fn migration_replay_requires_explicit_admin_mode_and_current_latest_ledger() {
@@ -2960,6 +3028,7 @@ mod tests {
             allowed_roles: Vec::new(),
             expiry: std::time::Duration::from_secs(3600),
             signing_key: Vec::new(),
+            approver_keys: std::collections::BTreeMap::new(),
         };
 
         assert!(!approval_policy_requires_signed_plan(&config, false));

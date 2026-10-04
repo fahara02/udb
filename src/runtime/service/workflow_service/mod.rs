@@ -25,6 +25,11 @@
 //!     matching `SignalWorkflow` records the signal and returns it to RUNNING so a
 //!     later tick advances it. A COMPENSATING instance is non-signalable (a signal
 //!     never reverts an in-flight compensation).
+//!   * Steps complete ONLY on acknowledgement: the tick dispatches the current
+//!     step (`udb.workflow.step.dispatched.v1`) and the instance waits RUNNING
+//!     until `AckWorkflowStep` reports SUCCEEDED (advance / complete) or FAILED
+//!     (fail / compensate). An unacknowledged step times out through the sweep
+//!     below — a timer never marks a step done.
 //!   * The leader-elected tick fires transition events ONLY (it never executes a
 //!     payload in-process), exactly like the scheduler tick. It also sweeps
 //!     RUNNING instances whose last transition exceeded the step timeout: one with
@@ -40,7 +45,7 @@
 //! Module layout (no god file): [`config`] statics + once-resolved knobs,
 //! [`errors`] typed statuses, [`model`] the manifest model + enum<->db + row
 //! mapping, [`store`] the scope predicate + projection builders, [`events`] the
-//! transactional-outbox writers, [`handlers`] the five RPCs, [`tick`] the
+//! transactional-outbox writers, [`handlers`] the six RPCs, [`tick`] the
 //! leader-elected worker — `mod.rs` keeps only the struct, the builders, and the
 //! one-line trait delegators.
 
@@ -217,6 +222,13 @@ impl WorkflowService for WorkflowServiceImpl {
         request: Request<workflow_pb::SignalWorkflowRequest>,
     ) -> Result<Response<workflow_pb::SignalWorkflowResponse>, Status> {
         handlers::signal_workflow(self, request).await
+    }
+
+    async fn ack_workflow_step(
+        &self,
+        request: Request<workflow_pb::AckWorkflowStepRequest>,
+    ) -> Result<Response<workflow_pb::AckWorkflowStepResponse>, Status> {
+        handlers::ack_workflow_step(self, request).await
     }
 }
 

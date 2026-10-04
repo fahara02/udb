@@ -252,6 +252,34 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * @param \Udb\Entity\V1\CompleteMultipartUploadRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\CompleteMultipartUploadResponse>
+     */
+    public function CompleteMultipartUpload(\Udb\Entity\V1\CompleteMultipartUploadRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/CompleteMultipartUpload',
+        $argument,
+        ['\Udb\Entity\V1\CompleteMultipartUploadResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\AbortMultipartUploadRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\AbortMultipartUploadResponse>
+     */
+    public function AbortMultipartUpload(\Udb\Entity\V1\AbortMultipartUploadRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/AbortMultipartUpload',
+        $argument,
+        ['\Udb\Entity\V1\AbortMultipartUploadResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── Cache / KV ─────────────────────────────────────────────────────────────
      * @param \Udb\Entity\V1\CacheGetRequest $argument input argument
      * @param array $metadata metadata

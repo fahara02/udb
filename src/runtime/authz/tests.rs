@@ -1,5 +1,28 @@
 use super::*;
 
+#[test]
+fn snapshot_staleness_bound_fails_closed_only_past_the_limit() {
+    // Never loaded from the durable store: no bound (in-memory/dev snapshot).
+    assert_eq!(snapshot_staleness(0, 10_000, 600), None);
+    // Fresh enough.
+    assert_eq!(snapshot_staleness(10_000, 10_600, 600), None);
+    // Past the bound: reports the age.
+    assert_eq!(snapshot_staleness(10_000, 10_601, 600), Some(601));
+    // Bound disabled.
+    assert_eq!(snapshot_staleness(10_000, 99_999, 0), None);
+    // Config parsing: default, explicit, disabled, garbage.
+    assert_eq!(
+        resolve_snapshot_max_staleness_secs(None),
+        DEFAULT_SNAPSHOT_MAX_STALENESS_SECS
+    );
+    assert_eq!(resolve_snapshot_max_staleness_secs(Some(" 120 ")), 120);
+    assert_eq!(resolve_snapshot_max_staleness_secs(Some("0")), 0);
+    assert_eq!(
+        resolve_snapshot_max_staleness_secs(Some("ten")),
+        DEFAULT_SNAPSHOT_MAX_STALENESS_SECS
+    );
+}
+
 fn principal(subject: &str, tenant: &str, scopes: &[&str], roles: &[&str]) -> Principal {
     Principal {
         principal_id: subject.to_string(),

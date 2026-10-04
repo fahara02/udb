@@ -37,6 +37,8 @@ const (
 	DataBroker_GetObject_FullMethodName               = "/udb.services.v1.DataBroker/GetObject"
 	DataBroker_GeneratePresignedUrl_FullMethodName    = "/udb.services.v1.DataBroker/GeneratePresignedUrl"
 	DataBroker_InitiateMultipartUpload_FullMethodName = "/udb.services.v1.DataBroker/InitiateMultipartUpload"
+	DataBroker_CompleteMultipartUpload_FullMethodName = "/udb.services.v1.DataBroker/CompleteMultipartUpload"
+	DataBroker_AbortMultipartUpload_FullMethodName    = "/udb.services.v1.DataBroker/AbortMultipartUpload"
 	DataBroker_CacheGet_FullMethodName                = "/udb.services.v1.DataBroker/CacheGet"
 	DataBroker_CacheSet_FullMethodName                = "/udb.services.v1.DataBroker/CacheSet"
 	DataBroker_CacheDelete_FullMethodName             = "/udb.services.v1.DataBroker/CacheDelete"
@@ -146,6 +148,8 @@ type DataBrokerClient interface {
 	GetObject(ctx context.Context, in *v1.ObjectRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.Chunk], error)
 	GeneratePresignedUrl(ctx context.Context, in *v1.UrlRequest, opts ...grpc.CallOption) (*v1.UrlResponse, error)
 	InitiateMultipartUpload(ctx context.Context, in *v1.MultipartUploadRequest, opts ...grpc.CallOption) (*v1.MultipartUploadResponse, error)
+	CompleteMultipartUpload(ctx context.Context, in *v1.CompleteMultipartUploadRequest, opts ...grpc.CallOption) (*v1.CompleteMultipartUploadResponse, error)
+	AbortMultipartUpload(ctx context.Context, in *v1.AbortMultipartUploadRequest, opts ...grpc.CallOption) (*v1.AbortMultipartUploadResponse, error)
 	// ── Cache / KV ─────────────────────────────────────────────────────────────
 	CacheGet(ctx context.Context, in *v1.CacheGetRequest, opts ...grpc.CallOption) (*v1.CacheGetResponse, error)
 	CacheSet(ctx context.Context, in *v1.CacheSetRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
@@ -461,6 +465,26 @@ func (c *dataBrokerClient) InitiateMultipartUpload(ctx context.Context, in *v1.M
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.MultipartUploadResponse)
 	err := c.cc.Invoke(ctx, DataBroker_InitiateMultipartUpload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) CompleteMultipartUpload(ctx context.Context, in *v1.CompleteMultipartUploadRequest, opts ...grpc.CallOption) (*v1.CompleteMultipartUploadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CompleteMultipartUploadResponse)
+	err := c.cc.Invoke(ctx, DataBroker_CompleteMultipartUpload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) AbortMultipartUpload(ctx context.Context, in *v1.AbortMultipartUploadRequest, opts ...grpc.CallOption) (*v1.AbortMultipartUploadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AbortMultipartUploadResponse)
+	err := c.cc.Invoke(ctx, DataBroker_AbortMultipartUpload_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1153,6 +1177,8 @@ type DataBrokerServer interface {
 	GetObject(*v1.ObjectRequest, grpc.ServerStreamingServer[v1.Chunk]) error
 	GeneratePresignedUrl(context.Context, *v1.UrlRequest) (*v1.UrlResponse, error)
 	InitiateMultipartUpload(context.Context, *v1.MultipartUploadRequest) (*v1.MultipartUploadResponse, error)
+	CompleteMultipartUpload(context.Context, *v1.CompleteMultipartUploadRequest) (*v1.CompleteMultipartUploadResponse, error)
+	AbortMultipartUpload(context.Context, *v1.AbortMultipartUploadRequest) (*v1.AbortMultipartUploadResponse, error)
 	// ── Cache / KV ─────────────────────────────────────────────────────────────
 	CacheGet(context.Context, *v1.CacheGetRequest) (*v1.CacheGetResponse, error)
 	CacheSet(context.Context, *v1.CacheSetRequest) (*v1.MutationResponse, error)
@@ -1330,6 +1356,12 @@ func (UnimplementedDataBrokerServer) GeneratePresignedUrl(context.Context, *v1.U
 }
 func (UnimplementedDataBrokerServer) InitiateMultipartUpload(context.Context, *v1.MultipartUploadRequest) (*v1.MultipartUploadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method InitiateMultipartUpload not implemented")
+}
+func (UnimplementedDataBrokerServer) CompleteMultipartUpload(context.Context, *v1.CompleteMultipartUploadRequest) (*v1.CompleteMultipartUploadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CompleteMultipartUpload not implemented")
+}
+func (UnimplementedDataBrokerServer) AbortMultipartUpload(context.Context, *v1.AbortMultipartUploadRequest) (*v1.AbortMultipartUploadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AbortMultipartUpload not implemented")
 }
 func (UnimplementedDataBrokerServer) CacheGet(context.Context, *v1.CacheGetRequest) (*v1.CacheGetResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CacheGet not implemented")
@@ -1766,6 +1798,42 @@ func _DataBroker_InitiateMultipartUpload_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataBrokerServer).InitiateMultipartUpload(ctx, req.(*v1.MultipartUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_CompleteMultipartUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CompleteMultipartUploadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).CompleteMultipartUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_CompleteMultipartUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).CompleteMultipartUpload(ctx, req.(*v1.CompleteMultipartUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_AbortMultipartUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.AbortMultipartUploadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).AbortMultipartUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_AbortMultipartUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).AbortMultipartUpload(ctx, req.(*v1.AbortMultipartUploadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2932,6 +3000,14 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InitiateMultipartUpload",
 			Handler:    _DataBroker_InitiateMultipartUpload_Handler,
+		},
+		{
+			MethodName: "CompleteMultipartUpload",
+			Handler:    _DataBroker_CompleteMultipartUpload_Handler,
+		},
+		{
+			MethodName: "AbortMultipartUpload",
+			Handler:    _DataBroker_AbortMultipartUpload_Handler,
 		},
 		{
 			MethodName: "CacheGet",

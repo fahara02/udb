@@ -9,6 +9,7 @@ mod asset_trigger_live;
 #[cfg(feature = "http-client")]
 mod asset_vector_live;
 mod audit_sink_live;
+mod authz_deny_path_live;
 mod backup_live;
 mod catalog_authority_live;
 mod data_plane_live;

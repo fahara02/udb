@@ -187,7 +187,8 @@ impl RuntimeTargetChecksumProbe {
             "postgres" | "mysql" | "sqlite" | "mssql" | "mongodb" | "clickhouse"
             | "elasticsearch" => None,
             _ => Some(format!(
-                "projection drift probe is not implemented for backend '{}' resource '{}'",
+                "NOT PROBED: projection drift probe is not implemented for backend '{}' \
+                 resource '{}'; its drift is unknown, not zero",
                 target.backend, target.resource_name
             )),
         }
@@ -253,8 +254,8 @@ impl TargetChecksumProbe for RuntimeTargetChecksumProbe {
             .map_err(|err| format!("drift probe query failed for {}: {err}", target.backend))?;
         let response_json: serde_json::Value = serde_json::from_str(&response)
             .map_err(|err| format!("drift probe response was not JSON: {err}"))?;
-        let target_checksum =
-            first_payload(&response_json).map(|payload| checksum_of_payload(&payload));
+        let target_checksum = first_payload(&response_json)
+            .map(|payload| checksum_of_payload(&strip_projection_scope_stamp(payload)));
         Ok(TargetObservation {
             row_key: row_key.clone(),
             target_checksum,
@@ -266,6 +267,10 @@ impl TargetChecksumProbe for RuntimeTargetChecksumProbe {
 pub struct DriftScanTargetResult {
     pub report: DriftReport,
     pub warnings: Vec<String>,
+    /// Whether the target was actually compared against the source. A target
+    /// with no drift probe (qdrant, neo4j, redis, object stores, …) reports
+    /// `false` and an empty report — NOT "no drift".
+    pub probed: bool,
 }
 
 pub struct DriftScannerWorker {
@@ -297,6 +302,7 @@ impl DriftScannerWorker {
                     warnings: vec![
                         "projection drift scan requires a non-empty project_id".to_string(),
                     ],
+                    probed: false,
                 })
                 .collect();
         }
@@ -306,6 +312,7 @@ impl DriftScannerWorker {
                 results.push(DriftScanTargetResult {
                     report: empty_report(target),
                     warnings: vec![warning],
+                    probed: false,
                 });
                 continue;
             }
@@ -313,10 +320,12 @@ impl DriftScannerWorker {
                 Ok(report) => results.push(DriftScanTargetResult {
                     report,
                     warnings: Vec::new(),
+                    probed: true,
                 }),
                 Err(err) => results.push(DriftScanTargetResult {
                     report: empty_report(target),
-                    warnings: vec![err],
+                    warnings: vec![format!("NOT PROBED: {err}")],
+                    probed: false,
                 }),
             }
         }
@@ -491,6 +500,18 @@ fn first_payload(response: &serde_json::Value) -> Option<serde_json::Value> {
         }
         _ => None,
     }
+}
+
+/// The projection worker stamps `_tenant_id` / `_project_id` onto projected
+/// documents; the canonical source row has no such keys. Remove them before
+/// checksumming so a correctly projected row is not reported as drifted.
+fn strip_projection_scope_stamp(mut payload: serde_json::Value) -> serde_json::Value {
+    if let serde_json::Value::Object(map) = &mut payload {
+        for key in ["_tenant_id", "_project_id"] {
+            map.remove(key);
+        }
+    }
+    payload
 }
 
 fn unwrap_elastic_hit(value: &serde_json::Value) -> serde_json::Value {
@@ -910,6 +931,46 @@ mod tests {
         let results = worker.scan_plan(&plan, &[]).await;
         assert_eq!(results.len(), 1);
         assert!(results[0].warnings[0].contains("non-empty project_id"));
+        assert!(!results[0].probed);
+    }
+
+    /// A target with no drift probe must say it was not probed — an empty
+    /// report alone reads as "no drift".
+    #[tokio::test]
+    async fn unprobed_targets_are_reported_as_not_probed() {
+        for backend in ["qdrant", "neo4j", "redis", "s3"] {
+            let plan = ProjectionPlan {
+                message_type: "acme.Invoice".into(),
+                source_schema: "public".into(),
+                source_table: "invoices".into(),
+                primary_key_columns: vec!["id".into()],
+                manifest_checksum: "catalog".into(),
+                targets: vec![target(backend)],
+            };
+            let worker = DriftScannerWorker::new(
+                Arc::new(DataBrokerRuntime::planning_only()),
+                "billing".into(),
+                ScanMode::Full,
+            );
+            let results = worker.scan_plan(&plan, &[]).await;
+            assert!(!results[0].probed, "{backend}");
+            assert!(
+                results[0].warnings[0].starts_with("NOT PROBED"),
+                "{backend}"
+            );
+        }
+    }
+
+    /// Projected documents carry the worker's scope stamp; the source row does
+    /// not. The stamp must not register as drift.
+    #[test]
+    fn scope_stamp_is_not_drift() {
+        let source = json!({"id": "i1", "amount": 3});
+        let projected = json!({"id": "i1", "amount": 3, "_tenant_id": "t1", "_project_id": "p"});
+        assert_eq!(
+            checksum_of_payload(&source),
+            checksum_of_payload(&strip_projection_scope_stamp(projected))
+        );
     }
 
     /// The payload checksum is canonical — different field ordering or

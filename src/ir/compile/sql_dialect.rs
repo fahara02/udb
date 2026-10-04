@@ -154,6 +154,81 @@ impl<D: SqlDialect> SqlCompiler<D> {
         D::placeholder(params.len())
     }
 
+    /// The table's resolved tenant and project columns (tenant first), the
+    /// isolation columns an upsert must never reassign on conflict.
+    pub(super) fn upsert_isolation_columns(table: &ManifestTable) -> Vec<&str> {
+        let mut columns = Vec::with_capacity(2);
+        for column in [
+            super::util::resolve_tenant_column(table),
+            super::util::resolve_project_column(table),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            if !columns.contains(&column) {
+                columns.push(column);
+            }
+        }
+        columns
+    }
+
+    /// Cross-tenant takeover guard for an upsert's conflict branch.
+    ///
+    /// The conflict arbiter (usually the primary key) is unique across every
+    /// tenant, so an unguarded `DO UPDATE` / `WHEN MATCHED` lets a caller that
+    /// names another tenant's key rewrite that row — including its tenant column.
+    /// This renders the condition under which the conflicting row may be
+    /// updated: for each isolation column the caller INSERTED, the existing
+    /// value must equal the incoming one (null-safe, so platform-global NULL
+    /// rows still upsert onto themselves); for an isolation column the record
+    /// omits, the existing value must equal the server-authenticated context
+    /// value. Returns `None` when the table has no isolation column or nothing
+    /// is known to compare against (internal/admin compiles with no context).
+    ///
+    /// `existing` renders a reference to the conflicting row's column,
+    /// `incoming` the value the INSERT would have written, and `null_safe_eq`
+    /// the dialect's null-safe equality. Params pushed here number after the
+    /// VALUES params, which precede the conflict clause in every dialect.
+    pub(super) fn upsert_scope_guard(
+        table: &ManifestTable,
+        ctx: &super::CompileContext<'_>,
+        inserted_columns: &[&str],
+        params: &mut Vec<LogicalValue>,
+        existing: impl Fn(&str) -> String,
+        incoming: impl Fn(&str) -> String,
+        null_safe_eq: impl Fn(&str, &str) -> String,
+    ) -> Option<String> {
+        let tenant = super::util::resolve_tenant_column(table);
+        let mut parts = Vec::new();
+        for column in Self::upsert_isolation_columns(table) {
+            if inserted_columns.contains(&column) {
+                parts.push(null_safe_eq(&existing(column), &incoming(column)));
+                continue;
+            }
+            let context_value = if Some(column) == tenant {
+                ctx.tenant_id
+            } else {
+                ctx.project_id
+            };
+            let Some(value) = context_value.map(str::trim).filter(|v| !v.is_empty()) else {
+                continue;
+            };
+            let placeholder = Self::push_param(params, LogicalValue::String(value.to_string()));
+            let placeholder = table
+                .columns
+                .iter()
+                .find(|c| c.column_name == column)
+                .map(|c| D::cast_compare_placeholder(&c.sql_type, &placeholder))
+                .unwrap_or(placeholder);
+            parts.push(format!("{} = {placeholder}", existing(column)));
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" AND "))
+        }
+    }
+
     /// Tenant/project context predicates AND'd into a statement WHERE for
     /// compiler-layer scoping (the A2 posture already used by ClickHouse and
     /// Cassandra via `util::append_context_predicates`): aggregate reads have

@@ -225,6 +225,13 @@ const TURN_NOT_CONFIGURED_MESSAGE: &str =
 /// SFU backend configured but unable to mint/control a join.
 #[cfg(feature = "webrtc")]
 const SFU_BACKEND_UNAVAILABLE: &str = "SFU_BACKEND_UNAVAILABLE";
+/// This binary was built without the `webrtc` feature: there is no SFU at all,
+/// so a media session cannot be joined.
+#[cfg_attr(feature = "webrtc", allow(dead_code))]
+const SFU_NOT_AVAILABLE: &str = "SFU_NOT_AVAILABLE";
+#[cfg_attr(feature = "webrtc", allow(dead_code))]
+const SFU_NOT_AVAILABLE_MESSAGE: &str = "WebRTC SFU is not available: this UDB binary was built \
+     without the `webrtc` feature, so media sessions cannot be joined";
 /// Egress requested but the operator has not enabled it (`UDB_WEBRTC_EGRESS_ENABLED` unset).
 const EGRESS_NOT_ENABLED: &str = "EGRESS_NOT_ENABLED";
 const EGRESS_NOT_ENABLED_MESSAGE: &str =
@@ -600,6 +607,28 @@ fn turn_secret_not_configured_status(operation: &'static str) -> Status {
         TURN_NOT_CONFIGURED_MESSAGE,
         TURN_NOT_CONFIGURED,
     )
+}
+
+/// Fail-closed SFU preflight for media-session RPCs. A build without the
+/// `webrtc` feature has NO SFU, so reporting a joined session would be a
+/// capability lie: it returns `FailedPrecondition` + `SFU_NOT_AVAILABLE` naming
+/// the missing SFU. With the feature compiled in it passes (the SFU bridge, if
+/// any, is consulted by the join itself).
+fn require_sfu_available(operation: &'static str) -> Result<(), Status> {
+    #[cfg(feature = "webrtc")]
+    {
+        let _ = operation;
+        Ok(())
+    }
+    #[cfg(not(feature = "webrtc"))]
+    {
+        Err(webrtc_capability_status_with_reason(
+            operation,
+            "webrtc_sfu",
+            SFU_NOT_AVAILABLE_MESSAGE,
+            SFU_NOT_AVAILABLE,
+        ))
+    }
 }
 
 fn egress_not_enabled_status(operation: &'static str) -> Status {
@@ -2746,6 +2775,9 @@ impl PeerService for WebrtcServiceImpl {
             .secret
             .clone()
             .ok_or_else(|| turn_secret_not_configured_status("join_session"))?;
+        // Same preflight for the SFU: a binary built without it must not commit a
+        // durable join and report a media session that cannot carry media.
+        require_sfu_available("join_session")?;
         // Run the SAME atomic join (capacity-CAS + insert + reload + signal +
         // event) as join_room. Over-full/closed/foreign rooms reject here with
         // FailedPrecondition + ROOM_FULL.
@@ -4437,6 +4469,40 @@ mod tenant_scope_tests {
                 .map(|value| value.to_str().unwrap()),
             Some(TURN_NOT_CONFIGURED)
         );
+    }
+
+    /// A build without the `webrtc` feature has no SFU: JoinSession must fail
+    /// `FailedPrecondition` + `SFU_NOT_AVAILABLE` naming the missing SFU, before
+    /// any durable join work (no pool is configured here), instead of reporting
+    /// a joined media session with no SFU behind it.
+    #[cfg(not(feature = "webrtc"))]
+    #[tokio::test]
+    async fn join_session_without_sfu_feature_fails_precondition() {
+        let mut svc = WebrtcServiceImpl::new();
+        svc.turn.secret = Some(b"coturn-shared".to_vec());
+        let mut request = Request::new(webrtc_pb::JoinSessionRequest {
+            tenant_id: "tenant-a".to_string(),
+            room_id: "room-a".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+
+        let err = svc
+            .join_session(request)
+            .await
+            .expect_err("no SFU in this build must fail the join");
+
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("SFU"), "{err}");
+        assert_eq!(
+            err.metadata()
+                .get("error-reason")
+                .map(|value| value.to_str().unwrap()),
+            Some(SFU_NOT_AVAILABLE)
+        );
+        assert_eq!(decode_detail(&err).capability_required, "webrtc_sfu");
     }
 
     // ── Egress (master-plan 5.5) ─────────────────────────────────────────────

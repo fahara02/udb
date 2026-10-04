@@ -1809,8 +1809,44 @@ where
                 // post-decode handlers can enforce body-tenant-vs-claim (D1) and
                 // per-action authz (D2) against the VERIFIED identity. Nested so the
                 // claim context is live wherever the principal is.
+                let gate_tenant = claim_ctx
+                    .authenticated
+                    .then(|| claim_ctx.tenant_id.trim().to_string())
+                    .filter(|tenant| !tenant.is_empty());
                 let fut = scope_claim_context(claim_ctx, self.inner.call(req));
-                Box::pin(crate::runtime::otel::scope_principal(principal, fut))
+                let fut = crate::runtime::otel::scope_principal(principal, fut);
+                let Some(gate_tenant) = gate_tenant else {
+                    return Box::pin(fut);
+                };
+                // Durable tenant-status gate on the caller's OWN claim tenant: the
+                // synchronous check inside `enforce` only knows statuses this node
+                // observed; this awaited check reads the tenant row (short-TTL
+                // cache) so a suspension made on another replica, or before this
+                // process started, is enforced too. The handler future is only
+                // polled once the gate passes.
+                let metrics = self.metrics.clone();
+                Box::pin(async move {
+                    if let Err(status) =
+                        crate::runtime::service::tenant_service::tenant_status_gate_durable(
+                            &gate_tenant,
+                        )
+                        .await
+                    {
+                        if let Some(metrics) = metrics.as_ref() {
+                            metrics.inc_method_security_denial(deny_reason::TENANT_SUSPENDED);
+                        }
+                        tracing::warn!(
+                            target: "udb.audit.authz",
+                            method = %path,
+                            outcome = "deny",
+                            reason = deny_reason::TENANT_SUSPENDED,
+                            tenant_id = %gate_tenant,
+                            "native method authorization denied by tenant status"
+                        );
+                        return Ok(status.into_http());
+                    }
+                    fut.await
+                })
             }
             Err((status, reason)) => {
                 // Phase 10: count the denial by reason, and the tenant-mismatch

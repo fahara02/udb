@@ -279,6 +279,67 @@ impl ProjectionScope {
         }
         stamped
     }
+
+    /// `key` namespaced by the scope: `t:{tenant}/p:{project}/{key}`, each
+    /// segment present only when known. Key-addressed targets (Redis keys,
+    /// object keys, vector point ids) use it so two tenants — or two projects —
+    /// whose rows share a primary key never overwrite or delete each other's
+    /// record. A `/` inside a tenant or project id is escaped so a crafted id
+    /// cannot forge another scope's prefix.
+    fn scoped_key(&self, key: &str) -> String {
+        let escape = |value: &str| value.replace('%', "%25").replace('/', "%2F");
+        let mut scoped = String::new();
+        if let Some(tenant_id) = &self.tenant_id {
+            scoped.push_str("t:");
+            scoped.push_str(&escape(tenant_id));
+            scoped.push('/');
+        }
+        if let Some(project_id) = &self.project_id {
+            scoped.push_str("p:");
+            scoped.push_str(&escape(project_id));
+            scoped.push('/');
+        }
+        scoped.push_str(key);
+        scoped
+    }
+}
+
+/// The source payload a projected DELETE carries: the caller's filter with its
+/// keys resolved to physical column names (what projected rows are keyed by),
+/// and the table's tenant column set to the VERIFIED tenant the delete ran
+/// under. The raw filter alone may omit the tenant (it was enforced by the
+/// write path's own predicate) or carry it as an operator, and then the worker
+/// cannot resolve which tenant's projected record to remove — it must refuse
+/// rather than widen the delete to every tenant.
+pub(crate) fn scoped_delete_payload(
+    manifest: &CatalogManifest,
+    message_type: &str,
+    filter: &serde_json::Value,
+    verified_tenant_id: &str,
+) -> serde_json::Value {
+    let Some(table) = manifest
+        .tables
+        .iter()
+        .find(|table| message_type_matches(&table.message_name, message_type))
+    else {
+        return filter.clone();
+    };
+    let mut payload = crate::planning::broker::normalize_filter_keys(
+        &crate::planning::broker::column_resolver(table),
+        filter,
+    );
+    let tenant_id = verified_tenant_id.trim();
+    if let (Some(tenant_column), serde_json::Value::Object(map)) = (
+        crate::generation::sql::resolve_tenant_column(table),
+        &mut payload,
+    ) && !tenant_id.is_empty()
+    {
+        map.insert(
+            tenant_column.to_string(),
+            serde_json::Value::String(tenant_id.to_string()),
+        );
+    }
+    payload
 }
 
 /// Backends [`render_projection_mutation`] renders a mutation for.
@@ -295,6 +356,12 @@ pub fn projection_target_supported(p: &crate::generation::manifest::ManifestProj
     }
     let backend = normalize_backend(&p.backend);
     let kind = p.projection_kind.trim();
+    if backend == "clickhouse" {
+        // The worker cannot project a delete onto ClickHouse; only a target
+        // that declares itself append-only is an honest fit.
+        let options = serde_json::to_value(&p.options).unwrap_or(serde_json::Value::Null);
+        return clickhouse_append_only(&options);
+    }
     backend == "redis"
         || kind.eq_ignore_ascii_case("cache")
         || backend == "s3"
@@ -305,7 +372,13 @@ pub fn projection_target_supported(p: &crate::generation::manifest::ManifestProj
 /// The backends the projection worker materializes, for diagnostics.
 pub fn supported_projection_backends() -> String {
     let mut backends = vec!["redis (cache)", "s3/minio (object)"];
-    backends.extend(RENDERED_PROJECTION_BACKENDS);
+    backends.extend(
+        RENDERED_PROJECTION_BACKENDS
+            .iter()
+            .copied()
+            .filter(|backend| *backend != "clickhouse"),
+    );
+    backends.push("clickhouse (append_only=true only; source deletes are not projected)");
     backends.join(", ")
 }
 
@@ -814,22 +887,7 @@ where
 {
     let rel = config.projection_tasks_relation();
     let target_options = serde_json::to_value(target_options).unwrap_or(serde_json::Value::Null);
-    let sql = format!(
-        "WITH inserted AS (
-             INSERT INTO {rel}
-             (idempotency_key, project_id, manifest_checksum, message_type,
-              source_schema, source_table, source_row_key, operation, target_backend,
-              target_instance, projection_kind, resource_name, target_options,
-              source_payload, source_checksum)
-             VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15)
-             ON CONFLICT (idempotency_key) DO NOTHING
-             RETURNING task_id
-         )
-         SELECT task_id::TEXT FROM inserted
-         UNION ALL
-         SELECT task_id::TEXT FROM {rel} WHERE idempotency_key = $1
-         LIMIT 1"
-    );
+    let sql = projection_task_insert_sql(&rel);
     sqlx::query_scalar::<_, String>(&sql)
         .bind(idempotency_key)
         .bind(project_id)
@@ -851,7 +909,66 @@ where
         .map_err(|err| format!("insert projection task: {err}"))
 }
 
+/// The task INSERT, and the per-row ORDERING contract the worker relies on.
+///
+/// Ordering key: `created_at`, stamped with `clock_timestamp()` — NOT the
+/// column default `NOW()`, which is the enclosing transaction's START time.
+/// The live write path inserts its task inside the writer's transaction AFTER
+/// the row write, i.e. while holding that row's lock, so for two committed
+/// writes to the same row the later writer's `clock_timestamp()` is strictly
+/// later. (`NOW()` is not: a transaction that began first but acquired the
+/// row lock second would sort first.) `source_checksum` cannot order tasks —
+/// it is a content hash — and a separate revision column would need a schema
+/// change on every system-store dialect.
+///
+/// The PostgreSQL claim (`postgres_projection.rs`) retires a PENDING/FAILED
+/// task once a NEWER task for the same row and target exists, so a retried
+/// stale task can never be applied over a newer one.
+///
+/// Re-arm on conflict: the idempotency key hashes the row CONTENT, so a row
+/// that returns to an earlier value (v1 → v2 → v1) maps onto v1's
+/// already-COMPLETED task. `DO NOTHING` would then leave the target at v2.
+/// When the conflicting task is COMPLETED and a newer task exists for the row,
+/// it is re-armed as PENDING with a fresh ordering stamp. A replay of an
+/// unchanged row (its task is the newest) stays deduplicated.
+fn projection_task_insert_sql(rel: &str) -> String {
+    format!(
+        "WITH inserted AS (
+             INSERT INTO {rel} AS existing
+             (idempotency_key, project_id, manifest_checksum, message_type,
+              source_schema, source_table, source_row_key, operation, target_backend,
+              target_instance, projection_kind, resource_name, target_options,
+              source_payload, source_checksum, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15,
+                     clock_timestamp())
+             ON CONFLICT (idempotency_key) DO UPDATE
+                 SET status = 'PENDING', retry_count = 0, last_error = '',
+                     next_retry_at = NULL, completed_at = NULL,
+                     created_at = clock_timestamp(), updated_at = NOW()
+                 WHERE existing.status = 'COMPLETED'
+                   AND EXISTS (
+                       SELECT 1 FROM {rel} AS newer
+                       WHERE newer.project_id = existing.project_id
+                         AND newer.source_table = existing.source_table
+                         AND md5(newer.source_row_key::text) = md5(existing.source_row_key::text)
+                         AND newer.target_backend = existing.target_backend
+                         AND newer.target_instance = existing.target_instance
+                         AND newer.resource_name = existing.resource_name
+                         AND newer.created_at > existing.created_at)
+             RETURNING task_id
+         )
+         SELECT task_id::TEXT FROM inserted
+         UNION ALL
+         SELECT task_id::TEXT FROM {rel} WHERE idempotency_key = $1
+         LIMIT 1"
+    )
+}
+
 // ── ProjectionWorker ──────────────────────────────────────────────────────────
+
+/// How many times the worker tries to record a successful apply before
+/// leaving the task to its claim lease.
+const MARK_COMPLETED_ATTEMPTS: u32 = 3;
 
 /// Settings for the projection worker, populated from environment variables.
 #[derive(Debug, Clone)]
@@ -861,7 +978,15 @@ pub struct ProjectionWorkerSettings {
     pub batch_size: i64,
     pub max_retries: i32,
     pub project_id: Option<String>,
+    /// Claim lease: a task IN_PROGRESS for longer than this is presumed
+    /// abandoned (its worker crashed or lost leadership) and is returned to
+    /// PENDING by the worker's next pass (`UDB_PROJECTION_TASK_LEASE_SECS`).
+    /// Must exceed the slowest single batch, or a live batch is re-run.
+    pub task_lease_secs: u64,
 }
+
+/// Floor for [`ProjectionWorkerSettings::task_lease_secs`].
+const MIN_TASK_LEASE_SECS: u64 = 30;
 
 impl Default for ProjectionWorkerSettings {
     fn default() -> Self {
@@ -871,6 +996,7 @@ impl Default for ProjectionWorkerSettings {
             batch_size: 50,
             max_retries: 5,
             project_id: None,
+            task_lease_secs: 300,
         }
     }
 }
@@ -897,6 +1023,11 @@ impl ProjectionWorkerSettings {
         if let Ok(val) = std::env::var("UDB_PROJECTION_MAX_RETRIES") {
             if let Ok(n) = val.parse::<i32>() {
                 s.max_retries = n.max(0);
+            }
+        }
+        if let Ok(val) = std::env::var("UDB_PROJECTION_TASK_LEASE_SECS") {
+            if let Ok(n) = val.parse::<u64>() {
+                s.task_lease_secs = n.max(MIN_TASK_LEASE_SECS);
             }
         }
         s.project_id = std::env::var("UDB_PROJECTION_PROJECT_ID")
@@ -1003,6 +1134,29 @@ impl ProjectionWorker {
             return (0, 0);
         }
         self.refresh_pending_metrics().await;
+        // Claim lease: a task left IN_PROGRESS by a worker that crashed (or
+        // lost leadership) mid-batch is reclaimed here, by the worker itself,
+        // once its lease expires — not only by the opt-in reconciliation
+        // worker, which is off by default. Re-running such a task is safe:
+        // every projected mutation is an idempotent upsert/delete by key.
+        match ProjectionTaskStore::reset_stale_in_progress_tasks(
+            self.store.as_ref(),
+            Duration::from_secs(self.settings.task_lease_secs),
+        )
+        .await
+        {
+            Ok(reclaimed) if reclaimed > 0 => {
+                tracing::warn!(
+                    reclaimed,
+                    lease_secs = self.settings.task_lease_secs,
+                    "projection worker reclaimed tasks whose claim lease expired"
+                );
+            }
+            Ok(_) => {}
+            Err(err) => {
+                tracing::warn!(error = %err, "projection worker: expired-lease reset failed");
+            }
+        }
         let filter = ProjectionClaimFilter {
             batch_size: self.settings.batch_size,
             max_retries: self.settings.max_retries,
@@ -1072,7 +1226,27 @@ impl ProjectionWorker {
 
             match result {
                 Ok(_) => {
-                    let _ = self.mark_completed(task_id).await;
+                    if let Err(err) = self.mark_completed_with_retry(task_id).await {
+                        // The target was written but the ledger still says
+                        // IN_PROGRESS. Do not report success: the claim lease
+                        // reclaims the task and the idempotent mutation is
+                        // re-applied, so the read fence never clears on a
+                        // task whose completion was never recorded.
+                        tracing::error!(
+                            task_id = %task_id,
+                            project_id = %project_id,
+                            backend = %target_backend,
+                            error = %err,
+                            "projection task applied but could not be marked COMPLETED; it will be re-applied after its claim lease expires",
+                        );
+                        self.metrics.inc_projection_tasks_failed_total(
+                            &target_backend,
+                            &target_instance,
+                            &projection_kind,
+                        );
+                        failed += 1;
+                        continue;
+                    }
                     self.metrics.inc_projection_tasks_completed_total(
                         &target_backend,
                         &target_instance,
@@ -1098,7 +1272,15 @@ impl ProjectionWorker {
                     } else {
                         ProjectionTaskStatus::Failed
                     };
-                    let _ = self.mark_failed(task_id, new_retry, new_status, &err).await;
+                    if let Err(mark_err) =
+                        self.mark_failed(task_id, new_retry, new_status, &err).await
+                    {
+                        tracing::error!(
+                            task_id = %task_id,
+                            error = %mark_err,
+                            "projection task failure could not be recorded; it will be retried after its claim lease expires",
+                        );
+                    }
                     self.metrics.inc_projection_tasks_failed_total(
                         &target_backend,
                         &target_instance,
@@ -1169,6 +1351,15 @@ impl ProjectionWorker {
         source_payload: &serde_json::Value,
     ) -> Result<(), String> {
         let normalized_backend = normalize_backend(backend);
+        // Every target is scoped — resolve the scope BEFORE dispatching, so no
+        // backend can be reached with a record whose tenant is unknown. A
+        // record that names a tenant field without a scalar value (a delete
+        // filter carrying the tenant as an operator, say) is refused: writing
+        // or deleting it unscoped would reach every tenant's records.
+        let scope = ProjectionScope::resolve(project_id, target_options, source_payload);
+        scope.require_tenant(&format!(
+            "{normalized_backend} projection '{resource_name}'"
+        ))?;
         if normalized_backend == "redis" || projection_kind.eq_ignore_ascii_case("cache") {
             return self
                 .execute_redis_projection(
@@ -1179,6 +1370,7 @@ impl ProjectionWorker {
                     source_row_key,
                     target_options,
                     source_payload,
+                    &scope,
                 )
                 .await;
         }
@@ -1196,11 +1388,11 @@ impl ProjectionWorker {
                     source_row_key,
                     target_options,
                     source_payload,
+                    &scope,
                 )
                 .await;
         }
 
-        let scope = ProjectionScope::resolve(project_id, target_options, source_payload);
         let request = render_projection_mutation(
             &normalized_backend,
             projection_kind,
@@ -1211,6 +1403,11 @@ impl ProjectionWorker {
             source_payload,
             &scope,
         )?;
+        if request.is_null() {
+            // The renderer decided this operation has nothing to apply on the
+            // target (a delete on an append-only analytical table).
+            return Ok(());
+        }
         self.runtime
             .mutate_backend_target_for_project(
                 &normalized_backend,
@@ -1232,6 +1429,7 @@ impl ProjectionWorker {
         source_row_key: &serde_json::Value,
         target_options: &serde_json::Value,
         source_payload: &serde_json::Value,
+        scope: &ProjectionScope,
     ) -> Result<(), String> {
         let ttl = option_value(target_options, "ttl_seconds")
             .and_then(|v| v.parse::<u64>().ok())
@@ -1239,14 +1437,18 @@ impl ProjectionWorker {
         let pattern = option_value(target_options, "key_pattern")
             .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| resource_name.to_string());
-        let key = render_key_pattern(&pattern, source_row_key, source_payload);
+        let key = redis_projection_key(&pattern, source_row_key, source_payload, scope)?;
         if operation.eq_ignore_ascii_case("delete") {
+            // The cache delete primitive matches a SCAN pattern; escape the
+            // glob metacharacters so it removes exactly this key and a `*` in
+            // a row value can never widen the delete to other records.
             self.runtime
-                .projection_cache_delete_for_project(instance, project_id, &key)
+                .projection_cache_delete_for_project(instance, project_id, &redis_glob_escape(&key))
                 .await?;
             return Ok(());
         }
-        let bytes = serde_json::to_vec(source_payload).map_err(|err| err.to_string())?;
+        let bytes =
+            serde_json::to_vec(&scope.stamp(source_payload)).map_err(|err| err.to_string())?;
         self.runtime
             .projection_cache_set_for_project(instance, project_id, &key, &[bytes], ttl)
             .await
@@ -1262,14 +1464,10 @@ impl ProjectionWorker {
         source_row_key: &serde_json::Value,
         target_options: &serde_json::Value,
         source_payload: &serde_json::Value,
+        scope: &ProjectionScope,
     ) -> Result<(), String> {
-        let key_prefix = option_value(target_options, "key_prefix").unwrap_or_default();
-        let id = row_identity(source_row_key, source_payload, target_options)?;
-        let object_key = if key_prefix.trim().is_empty() {
-            format!("{id}.json")
-        } else {
-            format!("{}/{}.json", key_prefix.trim_matches('/'), id)
-        };
+        let object_key =
+            object_projection_key(source_row_key, source_payload, target_options, scope)?;
         let target = self
             .runtime
             .resolve_projection_write_target_for_project(backend, instance, project_id)
@@ -1295,7 +1493,7 @@ impl ProjectionWorker {
         let body = serde_json::to_vec(&serde_json::json!({
             "operation": operation,
             "source_row_key": source_row_key,
-            "payload": source_payload,
+            "payload": scope.stamp(source_payload),
         }))
         .map_err(|err| err.to_string())?;
         let request = serde_json::json!({
@@ -1321,6 +1519,23 @@ impl ProjectionWorker {
         ProjectionTaskStore::mark_projection_task_completed(self.store.as_ref(), task_id)
             .await
             .map_err(|e| e.to_string())
+    }
+
+    /// [`Self::mark_completed`] with a short bounded retry: a transient ledger
+    /// error right after a successful apply should not cost a full lease
+    /// period and a re-application.
+    async fn mark_completed_with_retry(&self, task_id: Uuid) -> Result<(), String> {
+        let mut last_error = String::new();
+        for attempt in 0..MARK_COMPLETED_ATTEMPTS {
+            match self.mark_completed(task_id).await {
+                Ok(()) => return Ok(()),
+                Err(err) => last_error = err,
+            }
+            if attempt + 1 < MARK_COMPLETED_ATTEMPTS {
+                tokio::time::sleep(Duration::from_millis(100u64 << attempt)).await;
+            }
+        }
+        Err(last_error)
     }
 
     async fn mark_failed(
@@ -1467,6 +1682,72 @@ fn render_key_pattern(
     rendered
 }
 
+/// The Redis key a cache projection writes: the rendered `key_pattern`,
+/// namespaced by tenant/project. A pattern placeholder the record does not
+/// fill is an error — the literal `{field}` would make every such row share
+/// (and overwrite) one key.
+fn redis_projection_key(
+    pattern: &str,
+    source_row_key: &serde_json::Value,
+    source_payload: &serde_json::Value,
+    scope: &ProjectionScope,
+) -> Result<String, String> {
+    let rendered = render_key_pattern(pattern, source_row_key, source_payload);
+    if let Some(start) = rendered.find('{')
+        && rendered[start..].contains('}')
+    {
+        return Err(format!(
+            "cache projection key pattern '{pattern}' has a placeholder the record does not fill (rendered '{rendered}')"
+        ));
+    }
+    Ok(scope.scoped_key(&rendered))
+}
+
+/// Escape Redis glob metacharacters (`*`, `?`, `[`, `]`, `\`) so a SCAN
+/// `MATCH` pattern matches exactly one literal key.
+fn redis_glob_escape(key: &str) -> String {
+    let mut escaped = String::with_capacity(key.len());
+    for ch in key.chars() {
+        if matches!(ch, '*' | '?' | '[' | ']' | '\\') {
+            escaped.push('\\');
+        }
+        escaped.push(ch);
+    }
+    escaped
+}
+
+/// The object key an object projection writes:
+/// `t:{tenant}/p:{project}/{key_prefix}/{id}.json`.
+fn object_projection_key(
+    source_row_key: &serde_json::Value,
+    source_payload: &serde_json::Value,
+    target_options: &serde_json::Value,
+    scope: &ProjectionScope,
+) -> Result<String, String> {
+    let key_prefix = option_value(target_options, "key_prefix").unwrap_or_default();
+    let id = row_identity(source_row_key, source_payload, target_options)?;
+    let object_key = if key_prefix.trim().trim_matches('/').is_empty() {
+        format!("{id}.json")
+    } else {
+        format!("{}/{}.json", key_prefix.trim().trim_matches('/'), id)
+    };
+    Ok(scope.scoped_key(&object_key))
+}
+
+/// Whether a ClickHouse projection target is declared append-only
+/// (`append_only` / `insert_only` = true): rows are inserted, and source
+/// deletes are deliberately not projected.
+fn clickhouse_append_only(options: &serde_json::Value) -> bool {
+    ["append_only", "insert_only"].iter().any(|key| {
+        option_value(options, key).is_some_and(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 fn render_projection_mutation(
     backend: &str,
@@ -1485,6 +1766,7 @@ fn render_projection_mutation(
             source_row_key,
             target_options,
             source_payload,
+            scope,
         ),
         "qdrant" => render_qdrant_projection(
             resource_name,
@@ -1502,7 +1784,9 @@ fn render_projection_mutation(
             source_payload,
             scope,
         ),
-        "clickhouse" => render_clickhouse_projection(resource_name, operation, source_payload),
+        "clickhouse" => {
+            render_clickhouse_projection(resource_name, operation, target_options, source_payload)
+        }
         "postgres" => render_postgres_projection(resource_name, operation, source_payload),
         other => Err(format!(
             "projection backend '{other}' is not supported for kind '{projection_kind}'"
@@ -1516,18 +1800,23 @@ fn render_mongodb_projection(
     source_row_key: &serde_json::Value,
     target_options: &serde_json::Value,
     source_payload: &serde_json::Value,
+    scope: &ProjectionScope,
 ) -> Result<serde_json::Value, String> {
     let id_field = option_value(target_options, "id_field")
         .or_else(|| option_value(target_options, "partition_key"))
         .unwrap_or_else(|| "id".to_string());
+    // Documents are stamped with `_tenant_id`/`_project_id`, and every filter
+    // (the upsert key and the delete filter) carries them, so two tenants'
+    // rows that share an id are two documents and neither can replace or
+    // delete the other's.
     if operation.eq_ignore_ascii_case("delete") {
         let filter = if let Some(map) = source_payload.as_object()
             && !map.is_empty()
         {
-            serde_json::Value::Object(map.clone())
+            scope.stamp(&serde_json::Value::Object(map.clone()))
         } else {
             let id = row_identity(source_row_key, source_payload, target_options)?;
-            serde_json::json!({ id_field: id })
+            scope.stamp(&serde_json::json!({ id_field: id }))
         };
         return Ok(serde_json::json!({
             "operation": "delete",
@@ -1536,8 +1825,8 @@ fn render_mongodb_projection(
         }));
     }
     let id = row_identity(source_row_key, source_payload, target_options)?;
-    let filter = serde_json::json!({ id_field.clone(): id });
-    let mut document = source_payload.clone();
+    let filter = scope.stamp(&serde_json::json!({ id_field.clone(): id }));
+    let mut document = scope.stamp(source_payload);
     if let serde_json::Value::Object(map) = &mut document {
         map.entry(id_field).or_insert(serde_json::Value::String(id));
     }
@@ -1557,7 +1846,15 @@ fn render_qdrant_projection(
     source_payload: &serde_json::Value,
     scope: &ProjectionScope,
 ) -> Result<serde_json::Value, String> {
-    let id = row_identity(source_row_key, source_payload, target_options)?;
+    // The point id is the row id namespaced by tenant/project (the executor
+    // hashes any non-UUID, non-integer id into a stable UUID), so two
+    // tenants' rows with the same primary key are two points: neither tenant's
+    // upsert replaces, nor its delete removes, the other's vector.
+    let id = scope.scoped_key(&row_identity(
+        source_row_key,
+        source_payload,
+        target_options,
+    )?);
     if operation.eq_ignore_ascii_case("delete") {
         return Ok(serde_json::json!({
             "operation": "delete",
@@ -1594,9 +1891,16 @@ fn render_neo4j_projection(
     source_payload: &serde_json::Value,
     scope: &ProjectionScope,
 ) -> Result<serde_json::Value, String> {
-    let label = option_value(target_options, "node_label")
-        .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| resource_name.to_string());
+    // THE label resolver the DDL generator and the IR compiler use, so all
+    // three address the same nodes.
+    let label_override = crate::generation::backends::neo4j::NEO4J_LABEL_OPTION_KEYS
+        .iter()
+        .find_map(|key| option_value(target_options, key))
+        .filter(|value| !value.trim().is_empty());
+    let label = crate::generation::backends::neo4j::resolve_neo4j_label(
+        resource_name,
+        label_override.as_deref(),
+    );
     let id = row_identity(source_row_key, source_payload, target_options)?;
     scope.require_tenant(&format!("graph projection '{label}' record '{id}'"))?;
     let scope_fields = serde_json::Value::Object(scope.fields());
@@ -1629,7 +1933,7 @@ fn render_neo4j_projection(
                         )
                     })
             };
-            Ok(serde_json::json!({
+            let mut edge = serde_json::json!({
                 "operation": "upsert_edge",
                 "rel_type": label,
                 "id": id,
@@ -1637,7 +1941,27 @@ fn render_neo4j_projection(
                 "to_id": endpoint(&target_field)?,
                 "properties": scope.stamp(source_payload),
                 "scope": scope_fields,
-            }))
+            });
+            // Endpoint labels, when declared, let the executor's edge MATCH
+            // use the label index instead of scanning every node.
+            for (option_keys, field) in [
+                (["edge_source_label", "from_label"], "from_label"),
+                (["edge_target_label", "to_label"], "to_label"),
+            ] {
+                if let Some(endpoint_label) = option_keys
+                    .iter()
+                    .find_map(|key| option_value(target_options, key))
+                    .filter(|value| !value.trim().is_empty())
+                {
+                    edge[field] = serde_json::Value::String(
+                        crate::generation::backends::neo4j::resolve_neo4j_label(
+                            &endpoint_label,
+                            None,
+                        ),
+                    );
+                }
+            }
+            Ok(edge)
         }
         (None, None) => {
             if delete {
@@ -1662,15 +1986,26 @@ fn render_neo4j_projection(
     }
 }
 
+/// ClickHouse targets are append-only: the worker inserts rows and has no
+/// delete it can apply (a `DELETE` mutation is asynchronous and a tombstone
+/// needs a table-specific version/sign column the manifest does not declare).
+/// A target must therefore say `append_only = true`, which makes a source
+/// delete a deliberate no-op (returned as `Null`); without it a delete is
+/// refused as unsupported, and `udb lint` rejects the projection up front.
 fn render_clickhouse_projection(
     table: &str,
     operation: &str,
+    target_options: &serde_json::Value,
     source_payload: &serde_json::Value,
 ) -> Result<serde_json::Value, String> {
     if operation.eq_ignore_ascii_case("delete") {
-        return Err(
-            "ClickHouse projection deletes require a replacing/collapsing table policy".to_string(),
-        );
+        if clickhouse_append_only(target_options) {
+            return Ok(serde_json::Value::Null);
+        }
+        return Err(format!(
+            "projection backend 'clickhouse' is not supported for deletes on '{table}': \
+             declare the target append_only=true (deletes are then not projected)"
+        ));
     }
     Ok(serde_json::json!({
         "table": table,
@@ -1999,6 +2334,9 @@ fn active_reconciliation_catalogs(catalog: &CatalogManager) -> Vec<(String, Arc<
         .collect()
 }
 
+#[cfg(all(test, feature = "postgres", feature = "qdrant"))]
+mod live_tests;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2252,24 +2590,313 @@ mod tests {
                 fanout_policy: "async_projection".to_string(),
                 ..ManifestProjection::default()
             };
-            let rendered = render_projection_mutation(
-                backend,
-                "vector",
-                "r",
-                "upsert",
-                &json!({"id":"p1"}),
-                &options,
-                &payload,
-                &ProjectionScope::default(),
-            );
-            let unsupported = matches!(&rendered, Err(e) if e.contains("is not supported")
-                || e.contains("must be handled by the canonical write path"));
+            // A target is supported only if the worker can apply BOTH an upsert
+            // and a delete onto it.
+            let rendered = ["upsert", "delete"].map(|operation| {
+                render_projection_mutation(
+                    backend,
+                    "vector",
+                    "r",
+                    operation,
+                    &json!({"id":"p1"}),
+                    &options,
+                    &payload,
+                    &ProjectionScope::default(),
+                )
+            });
+            let unsupported = rendered.iter().any(|r| {
+                matches!(r, Err(e) if e.contains("is not supported")
+                    || e.contains("must be handled by the canonical write path"))
+            });
             assert_eq!(
                 projection_target_supported(&projection),
                 !unsupported,
                 "{backend}: {rendered:?}"
             );
         }
+    }
+
+    /// ClickHouse cannot apply a projected delete. Only a target declared
+    /// append-only is supported (lint), and then a delete is a no-op rather
+    /// than a dead letter.
+    #[test]
+    fn clickhouse_projection_is_supported_only_when_append_only() {
+        let projection = |options: Vec<ManifestStoreOption>| ManifestProjection {
+            projection_kind: "columnar".to_string(),
+            backend: "clickhouse".to_string(),
+            write_policy: "projection".to_string(),
+            fanout_policy: "async_projection".to_string(),
+            options,
+            ..ManifestProjection::default()
+        };
+        assert!(!projection_target_supported(&projection(vec![])));
+        assert!(projection_target_supported(&projection(vec![opt(
+            "append_only",
+            "true"
+        )])));
+        assert!(supported_projection_backends().contains("append_only"));
+
+        let payload = json!({"id":"p1","amount":3});
+        let key = json!({"id":"p1"});
+        let scope = ProjectionScope::default();
+        let err = render_projection_mutation(
+            "clickhouse",
+            "columnar",
+            "events",
+            "delete",
+            &key,
+            &json!([]),
+            &key,
+            &scope,
+        )
+        .unwrap_err();
+        assert!(err.contains("is not supported"), "{err}");
+        let append_only = json!([{"key":"append_only","value":"true"}]);
+        let noop = render_projection_mutation(
+            "clickhouse",
+            "columnar",
+            "events",
+            "delete",
+            &key,
+            &append_only,
+            &key,
+            &scope,
+        )
+        .unwrap();
+        assert!(noop.is_null(), "{noop}");
+        let insert = render_projection_mutation(
+            "clickhouse",
+            "columnar",
+            "events",
+            "upsert",
+            &key,
+            &append_only,
+            &payload,
+            &scope,
+        )
+        .unwrap();
+        assert_eq!(insert["rows"][0]["amount"], 3);
+    }
+
+    fn tenant_scope(tenant: &str) -> (serde_json::Value, ProjectionScope) {
+        let options = json!([{"key":"tenant_field","value":"tenant_id"}]);
+        let scope = ProjectionScope::resolve("proj-a", &options, &json!({"tenant_id": tenant}));
+        (options, scope)
+    }
+
+    /// The bug: Mongo documents were keyed by the bare row id, so tenant B's
+    /// row with A's id replaced A's document, and B's delete removed it.
+    #[test]
+    fn mongodb_projection_keys_and_stamps_documents_by_scope() {
+        let (options, scope) = tenant_scope("t1");
+        let payload = json!({"id":"p1","tenant_id":"t1","name":"Ada"});
+        let key = json!({"id":"p1"});
+        let upsert = render_projection_mutation(
+            "mongodb", "document", "patients", "upsert", &key, &options, &payload, &scope,
+        )
+        .unwrap();
+        assert_eq!(
+            upsert["filter"],
+            json!({"id":"p1","_tenant_id":"t1","_project_id":"proj-a"})
+        );
+        assert_eq!(upsert["document"]["_tenant_id"], "t1");
+        assert_eq!(upsert["document"]["_project_id"], "proj-a");
+        let delete_payload = json!({"id":"p1","tenant_id":"t1"});
+        let delete = render_projection_mutation(
+            "mongodb",
+            "document",
+            "patients",
+            "delete",
+            &key,
+            &options,
+            &delete_payload,
+            &scope,
+        )
+        .unwrap();
+        assert_eq!(delete["filter"]["_tenant_id"], "t1");
+        assert_eq!(delete["filter"]["_project_id"], "proj-a");
+        assert_eq!(delete["filter"]["id"], "p1");
+    }
+
+    /// The bug: Qdrant point ids were the bare row id, so two tenants' rows with
+    /// the same primary key collided on one point.
+    #[test]
+    fn qdrant_projection_point_id_is_scoped_by_tenant_and_project() {
+        let payload = |tenant: &str| json!({"id":"p1","tenant_id":tenant,"vector":[0.1]});
+        let key = json!({"id":"p1"});
+        let point_id = |tenant: &str, operation: &str| {
+            let (options, scope) = tenant_scope(tenant);
+            let rendered = render_projection_mutation(
+                "qdrant",
+                "vector",
+                "docs",
+                operation,
+                &key,
+                &options,
+                &payload(tenant),
+                &scope,
+            )
+            .unwrap();
+            if operation == "delete" {
+                rendered["point_ids"][0].clone()
+            } else {
+                rendered["points"][0]["id"].clone()
+            }
+        };
+        assert_eq!(point_id("t1", "upsert"), json!("t:t1/p:proj-a/p1"));
+        assert_ne!(point_id("t1", "upsert"), point_id("t2", "upsert"));
+        // A delete addresses exactly the point its own tenant's upsert wrote.
+        assert_eq!(point_id("t1", "upsert"), point_id("t1", "delete"));
+    }
+
+    #[test]
+    fn scoped_key_escapes_separators_in_scope_ids() {
+        let scope = ProjectionScope {
+            tenant_id: Some("a/p:x".to_string()),
+            project_id: Some("proj".to_string()),
+            unresolved_tenant_field: None,
+        };
+        assert_eq!(scope.scoped_key("k"), "t:a%2Fp:x/p:proj/k");
+        assert_eq!(ProjectionScope::default().scoped_key("k"), "k");
+    }
+
+    /// The bug: Redis keys were the bare rendered pattern (shared by every
+    /// tenant) and the delete ran it as a SCAN MATCH glob.
+    #[test]
+    fn redis_projection_key_is_scoped_and_delete_is_exact() {
+        let (_, scope) = tenant_scope("t1");
+        let key = redis_projection_key(
+            "patient:{id}",
+            &json!({"id":"p*"}),
+            &json!({"id":"p*","tenant_id":"t1"}),
+            &scope,
+        )
+        .unwrap();
+        assert_eq!(key, "t:t1/p:proj-a/patient:p*");
+        assert_eq!(redis_glob_escape(&key), "t:t1/p:proj-a/patient:p\\*");
+        assert_eq!(redis_glob_escape("a?[b]\\"), "a\\?\\[b\\]\\\\");
+        // An unfilled placeholder would make every such row share one key.
+        let err = redis_projection_key("patient:{id}", &json!({}), &json!({}), &scope).unwrap_err();
+        assert!(err.contains("placeholder"), "{err}");
+    }
+
+    /// The bug: object keys were `{prefix}/{id}.json` for every tenant.
+    #[test]
+    fn object_projection_key_is_prefixed_by_scope() {
+        let (_, scope) = tenant_scope("t1");
+        let options = json!([{"key":"key_prefix","value":"/v1/customers/"}]);
+        let key = object_projection_key(
+            &json!({"id":"c1"}),
+            &json!({"id":"c1","tenant_id":"t1"}),
+            &options,
+            &scope,
+        )
+        .unwrap();
+        assert_eq!(key, "t:t1/p:proj-a/v1/customers/c1.json");
+        let bare =
+            object_projection_key(&json!({"id":"c1"}), &json!({"id":"c1"}), &json!([]), &scope)
+                .unwrap();
+        assert_eq!(bare, "t:t1/p:proj-a/c1.json");
+    }
+
+    /// D7: a projected delete carries the verified tenant, so a scoped
+    /// delete resolves even when the caller's filter named no tenant (or
+    /// named it through an operator).
+    #[test]
+    fn scoped_delete_payload_carries_the_verified_tenant() {
+        let manifest = tenanted_vector_manifest("delete-scope", vec![]);
+        let payload =
+            scoped_delete_payload(&manifest, "Document", &json!({"id":"d1"}), "t-verified");
+        assert_eq!(payload, json!({"id":"d1","tenant_id":"t-verified"}));
+        // A filter naming the tenant through an operator is overwritten with the
+        // verified scalar (the delete itself ran under the verified tenant).
+        let payload = scoped_delete_payload(
+            &manifest,
+            "Document",
+            &json!({"id":"d1","tenant_id":{"$eq":"t-other"}}),
+            "t-verified",
+        );
+        assert_eq!(payload["tenant_id"], "t-verified");
+        let plans = ProjectionPlan::from_manifest(&manifest);
+        let options = serde_json::to_value(&plans[0].targets[0].options).unwrap();
+        let scope = ProjectionScope::resolve("proj-a", &options, &payload);
+        assert_eq!(scope.tenant_id.as_deref(), Some("t-verified"));
+        assert!(scope.require_tenant("delete").is_ok());
+        // No verified tenant: the filter is passed through unchanged.
+        assert_eq!(
+            scoped_delete_payload(&manifest, "Document", &json!({"id":"d1"}), " "),
+            json!({"id":"d1"})
+        );
+    }
+
+    #[test]
+    fn worker_settings_default_to_a_bounded_claim_lease() {
+        let settings = ProjectionWorkerSettings::default();
+        assert!(settings.task_lease_secs >= MIN_TASK_LEASE_SECS);
+    }
+
+    /// D9: tasks are ordered by a stamp taken while the writer holds the row
+    /// lock, and a row returning to an earlier value re-arms that value's task.
+    #[test]
+    fn task_insert_orders_by_clock_timestamp_and_rearms_aba_rows() {
+        let sql = projection_task_insert_sql("\"udb_system\".\"udb_projection_tasks\"");
+        assert!(sql.contains("source_checksum, created_at)"), "{sql}");
+        assert!(sql.contains("clock_timestamp())"), "{sql}");
+        assert!(
+            sql.contains("ON CONFLICT (idempotency_key) DO UPDATE"),
+            "{sql}"
+        );
+        assert!(sql.contains("WHERE existing.status = 'COMPLETED'"), "{sql}");
+        assert!(
+            sql.contains("newer.created_at > existing.created_at"),
+            "{sql}"
+        );
+        assert!(!sql.contains("DO NOTHING"), "{sql}");
+    }
+
+    /// Projection, IR and DDL must agree on the node label; declared endpoint
+    /// labels ride on the edge so its MATCH is label-indexed.
+    #[test]
+    fn graph_projection_uses_the_shared_label_resolver_and_endpoint_labels() {
+        let payload = json!({"id":"e1","doctor_id":"d1","patient_id":"p1"});
+        let key = json!({"id":"e1"});
+        let scope = ProjectionScope::default();
+        let node = render_projection_mutation(
+            "neo4j",
+            "graph",
+            "clinic.patients",
+            "upsert",
+            &key,
+            &json!([]),
+            &payload,
+            &scope,
+        )
+        .unwrap();
+        assert_eq!(
+            node["label"],
+            crate::generation::backends::neo4j::resolve_neo4j_label("clinic.patients", None)
+        );
+        let options = json!([
+            {"key":"udb.neo4j_label","value":"TREATS"},
+            {"key":"edge_source_field","value":"doctor_id"},
+            {"key":"edge_target_field","value":"patient_id"},
+            {"key":"edge_source_label","value":"Doctor"},
+            {"key":"edge_target_label","value":"Patient"}
+        ]);
+        let edge = render_projection_mutation(
+            "neo4j",
+            "graph",
+            "treatments",
+            "upsert",
+            &key,
+            &options,
+            &payload,
+            &scope,
+        )
+        .unwrap();
+        assert_eq!(edge["rel_type"], "TREATS");
+        assert_eq!(edge["from_label"], "Doctor");
+        assert_eq!(edge["to_label"], "Patient");
     }
 
     #[test]

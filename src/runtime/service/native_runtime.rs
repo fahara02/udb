@@ -49,12 +49,26 @@ impl NativeWorkerHost {
             loop {
                 ticker.tick().await;
                 let fut = task();
-                match crate::runtime::singleton::run_while_leader(
+                // Verify the lease's fencing token immediately before the task's
+                // side effects: a node that lost the lease between acquire and
+                // run (GC pause, slow heartbeat) must not act as a second leader.
+                match crate::runtime::singleton::run_while_leader_fenced(
                     &pool,
                     &relation,
                     worker_name,
                     crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-                    move || fut,
+                    move |fence| async move {
+                        if let Err(err) = fence.check().await {
+                            tracing::warn!(
+                                worker = worker_name,
+                                error = %err,
+                                "{}: lease fence lost before run; skipped",
+                                label
+                            );
+                            return Ok(0);
+                        }
+                        fut.await
+                    },
                 )
                 .await
                 {

@@ -3,12 +3,22 @@ from udb.core.common.v1 import dto_pb2 as _dto_pb2
 from udb.core.common.v1 import security_pb2 as _security_pb2
 from udb.core.workflow.entity.v1 import workflow_instance_pb2 as _workflow_instance_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class WorkflowStepOutcome(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    WORKFLOW_STEP_OUTCOME_UNSPECIFIED: _ClassVar[WorkflowStepOutcome]
+    WORKFLOW_STEP_OUTCOME_SUCCEEDED: _ClassVar[WorkflowStepOutcome]
+    WORKFLOW_STEP_OUTCOME_FAILED: _ClassVar[WorkflowStepOutcome]
+WORKFLOW_STEP_OUTCOME_UNSPECIFIED: WorkflowStepOutcome
+WORKFLOW_STEP_OUTCOME_SUCCEEDED: WorkflowStepOutcome
+WORKFLOW_STEP_OUTCOME_FAILED: WorkflowStepOutcome
 
 class StartWorkflowRequest(_message.Message):
     __slots__ = ("tenant_id", "project_id", "workflow_type", "total_steps", "payload", "compensations", "correlation_id")
@@ -117,3 +127,29 @@ class SignalWorkflowResponse(_message.Message):
     message: str
     error: _dto_pb2.ApiError
     def __init__(self, message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class AckWorkflowStepRequest(_message.Message):
+    __slots__ = ("tenant_id", "workflow_id", "step_index", "outcome", "output", "error_message")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
+    STEP_INDEX_FIELD_NUMBER: _ClassVar[int]
+    OUTCOME_FIELD_NUMBER: _ClassVar[int]
+    OUTPUT_FIELD_NUMBER: _ClassVar[int]
+    ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    workflow_id: str
+    step_index: int
+    outcome: WorkflowStepOutcome
+    output: str
+    error_message: str
+    def __init__(self, tenant_id: _Optional[str] = ..., workflow_id: _Optional[str] = ..., step_index: _Optional[int] = ..., outcome: _Optional[_Union[WorkflowStepOutcome, str]] = ..., output: _Optional[str] = ..., error_message: _Optional[str] = ...) -> None: ...
+
+class AckWorkflowStepResponse(_message.Message):
+    __slots__ = ("message", "error", "status")
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    error: _dto_pb2.ApiError
+    status: str
+    def __init__(self, message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., status: _Optional[str] = ...) -> None: ...

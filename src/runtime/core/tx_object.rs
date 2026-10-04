@@ -97,6 +97,64 @@ fn xa_unsupported_participants_status(unsupported: &[String]) -> tonic::Status {
     )
 }
 
+// ── 2PC MySQL participant selection ──────────────────────────────────────────
+//
+// MIRROR SEMANTICS: a MySQL XA participant does not receive its own mutations;
+// it REPLAYS the PostgreSQL plan statements of this transaction (translated to
+// MySQL dialect) between `XA START`/`XA END`, so the same rows land in both
+// stores atomically. That is only correct for a MySQL instance that actually
+// holds a mirror of those tables. Replaying into every configured MySQL
+// instance implicitly (the previous behaviour) wrote PG-shaped rows into
+// unrelated databases, so participation is now an explicit opt-in mapping.
+
+/// Env var naming the MySQL instances that mirror the relational tables and
+/// therefore join `BeginTx` 2PC as replay participants (comma-separated
+/// instance names, e.g. `primary,reporting`). Unset/empty = no MySQL
+/// participant: 2PC covers PostgreSQL only.
+const MYSQL_XA_MIRROR_INSTANCES_ENV: &str = "UDB_XA_MYSQL_MIRROR_INSTANCES";
+
+/// Parse the explicit mirror list: trimmed, de-duplicated, sorted (stable
+/// participant order for the XA ledger).
+#[cfg_attr(not(feature = "mysql"), allow(dead_code))]
+fn parse_mysql_xa_mirror_instances(raw: Option<&str>) -> Vec<String> {
+    let mut names: Vec<String> = raw
+        .unwrap_or("")
+        .split(',')
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .map(str::to_string)
+        .collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
+#[cfg_attr(not(feature = "mysql"), allow(dead_code))]
+fn mysql_xa_mirror_instances() -> Vec<String> {
+    parse_mysql_xa_mirror_instances(std::env::var(MYSQL_XA_MIRROR_INSTANCES_ENV).ok().as_deref())
+}
+
+/// Resolve the explicit mirror list against the configured MySQL instances.
+/// `Err(missing)` names every mapped instance that is not configured — the
+/// 2PC is refused before any side effect rather than silently dropping a
+/// participant the operator declared.
+#[cfg_attr(not(feature = "mysql"), allow(dead_code))]
+fn resolve_mysql_xa_mirrors<'a>(
+    selected: &'a [String],
+    is_configured: impl Fn(&str) -> bool,
+) -> Result<&'a [String], Vec<String>> {
+    let missing: Vec<String> = selected
+        .iter()
+        .filter(|name| !is_configured(name))
+        .map(|name| format!("mysql:{name} (not configured)"))
+        .collect();
+    if missing.is_empty() {
+        Ok(selected)
+    } else {
+        Err(missing)
+    }
+}
+
 fn record_encryption_key_missing_status(schema: &str, table: &str) -> tonic::Status {
     crate::runtime::executor_utils::capability_status(
         "encryption",
@@ -230,6 +288,28 @@ impl DataBrokerRuntime {
         mut stream: tonic::Streaming<Mutation>,
         metadata_context: RequestContext,
     ) -> Vec<Result<TxStatus, tonic::Status>> {
+        let mut mutations = Vec::new();
+        while let Some(item) = stream.next().await {
+            match item {
+                Ok(mutation) => mutations.push(mutation),
+                Err(err) => return vec![Err(err)],
+            }
+        }
+        self.begin_tx_buffered(manifest, mutations, metadata_context)
+            .await
+    }
+
+    /// Authorization hook seam: apply an ALREADY-DRAINED transaction stream.
+    /// The served BeginTx handler drains the stream itself so it can authorize
+    /// every mutation (message type + operation, same action tokens as the
+    /// unary verbs) BEFORE anything is applied, then calls this. Behavior is
+    /// otherwise identical to [`Self::begin_tx`].
+    pub async fn begin_tx_buffered(
+        &self,
+        manifest: &CatalogManifest,
+        mutations: Vec<Mutation>,
+        metadata_context: RequestContext,
+    ) -> Vec<Result<TxStatus, tonic::Status>> {
         let Some(pool) = &self.pg_pool else {
             return vec![Err(crate::runtime::executor_utils::capability_status(
                 "postgres",
@@ -238,13 +318,6 @@ impl DataBrokerRuntime {
                 "PostgreSQL backend is not configured",
             ))];
         };
-        let mut mutations = Vec::new();
-        while let Some(item) = stream.next().await {
-            match item {
-                Ok(mutation) => mutations.push(mutation),
-                Err(err) => return vec![Err(err)],
-            }
-        }
         if mutations.is_empty() {
             return vec![Err(tx_object_invalid_field(
                 "mutations",
@@ -281,8 +354,11 @@ impl DataBrokerRuntime {
             .filter(|m| !m.commit && !m.rollback)
             .count();
 
-        // Persist saga state before opening the PG transaction (saga tracking is best-effort).
-        let saga_id = self
+        // Persist saga state before opening the PG transaction. A failed saga
+        // ledger write aborts the request: running cross-backend side effects
+        // without a durable saga row would leave nothing for crash recovery
+        // to compensate.
+        let saga_id = match self
             .saga_begin(
                 &tx_id,
                 mutation_count,
@@ -291,7 +367,11 @@ impl DataBrokerRuntime {
                 classify_tx_semantics(&mutations).as_str(),
                 tx_backend_instance(&mutations).unwrap_or_default().as_str(),
             )
-            .await;
+            .await
+        {
+            Ok(saga_id) => saga_id,
+            Err(status) => return vec![Err(status)],
+        };
 
         let mut tx = match pool.begin().await {
             Ok(tx) => tx,
@@ -328,14 +408,18 @@ impl DataBrokerRuntime {
         // mutation that changed nothing (audit integrity — see build_audit_event).
         let mut audit_affected: Vec<u64> = vec![0; tx_mutations.len()];
         // Item 23: when this transaction will commit via live 2PC and MySQL
-        // instances are configured, capture every executed plan statement so
-        // `XaMysqlParticipant` can replay it (translated to MySQL dialect)
-        // between `XA START` and `XA END` on each MySQL participant.
+        // MIRROR instances are explicitly mapped (UDB_XA_MYSQL_MIRROR_INSTANCES),
+        // capture every executed plan statement so `XaMysqlParticipant` can
+        // replay it (translated to MySQL dialect) between `XA START` and
+        // `XA END` on each mapped mirror. Merely configuring a MySQL instance
+        // no longer enrols it (no implicit replay into every MySQL database).
+        #[cfg(feature = "mysql")]
+        let mysql_xa_mirrors = mysql_xa_mirror_instances();
         #[cfg(feature = "mysql")]
         let mysql_xa_capture = commit
             && strategy == TxStrategy::TwoPhase
             && super::two_phase_runtime_enabled()
-            && !self.mysql_instances.is_empty();
+            && !mysql_xa_mirrors.is_empty();
         #[cfg(feature = "mysql")]
         let mut mysql_xa_statements: Vec<(String, Vec<JsonValue>)> = Vec::new();
         for (mutation_index, mutation) in tx_mutations.iter().enumerate() {
@@ -350,9 +434,30 @@ impl DataBrokerRuntime {
             // failure arm below turns into a full-transaction rollback + compensation
             // exactly like any other mutation failure — so a stale precondition
             // aborts the whole tx with nothing written.
-            let cas_check = self
-                .enforce_tx_cas_precondition(&mut tx, manifest, mutation, &operation, &context)
-                .await;
+            // Install THIS mutation's request context (tenant/project/purpose
+            // GUCs) as transaction-local settings before any of its SQL runs, as
+            // every unary write does. Each mutation re-installs its own context,
+            // so a later mutation never runs under an earlier one's scope, and a
+            // non-owner/FORCE-RLS deployment's row policies see the right tenant.
+            let relational_target = if matches!(operation.as_str(), "upsert" | "update" | "delete")
+            {
+                super::setup_data::typed_relational_backend_guard(&context, "begin_tx")
+            } else {
+                Ok(())
+            };
+            let installed = match relational_target {
+                Ok(()) => set_request_local_settings(&mut tx, &context).await,
+                Err(err) => Err(err),
+            };
+            let cas_check = match installed {
+                Ok(()) => {
+                    self.enforce_tx_cas_precondition(
+                        &mut tx, manifest, mutation, &operation, &context,
+                    )
+                    .await
+                }
+                Err(err) => Err(err),
+            };
             let result = if let Err(err) = cas_check {
                 Err(err)
             } else if operation == "upsert" {
@@ -366,7 +471,11 @@ impl DataBrokerRuntime {
                                     // physical column_names before encrypt + bind.
                                     let record =
                                         crate::broker::normalize_record_keys(table, &record);
-                                    self.encrypt_record_for_table(table, &record)
+                                    crate::runtime::executor_utils::validate_client_encrypted_write(
+                                        &table.columns,
+                                        &record,
+                                    )
+                                    .and_then(|()| self.encrypt_record_for_table(table, &record))
                                 }
                                 Err(error) => Err(tx_object_invalid_field(
                                     "message_type",
@@ -405,7 +514,17 @@ impl DataBrokerRuntime {
                                             mysql_xa_statements
                                                 .push((plan.sql.clone(), bind_values.clone()));
                                         }
-                                        if affected == 0 {
+                                        // A guarded DO UPDATE that touched 0 rows hit
+                                        // another tenant's/project's row: fail this
+                                        // mutation so the whole tx rolls back.
+                                        if let Some(status) =
+                                            super::setup_data::upsert_scope_guard_refusal(
+                                                &plan.sql,
+                                                affected as i64,
+                                            )
+                                        {
+                                            Err(status)
+                                        } else if affected == 0 {
                                             Ok(affected)
                                         } else if let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                                                 &mut tx,
@@ -413,7 +532,10 @@ impl DataBrokerRuntime {
                                                 crate::runtime::projection::task_project_id(&context.project_id),
                                                 &mutation.message_type,
                                                 "upsert",
-                                                &record,
+                                                // Encrypted + column-keyed: the
+                                                // bytes the row holds (no
+                                                // plaintext leaves the DB).
+                                                &encrypted_record,
                                                 &projection_plans,
                                             )
                                             .await
@@ -436,7 +558,7 @@ impl DataBrokerRuntime {
                                                 manifest,
                                                 &mutation.message_type,
                                                 "upsert",
-                                                &record,
+                                                &encrypted_record,
                                                 &context,
                                                 mutation.cdc_required,
                                             )
@@ -470,9 +592,10 @@ impl DataBrokerRuntime {
                     },
                 );
                 // This apply loop executes planner SQL directly — it never
-                // consults the bridged neutral-IR emitter and never installs the
-                // request GUC — so the plan's verified tenant/project predicates
-                // are this path's ONLY isolation boundary. Without binding them a
+                // consults the bridged neutral-IR emitter, and the request GUC it
+                // installs is decorative on an owner connection — so the plan's
+                // verified tenant/project predicates are this path's isolation
+                // boundary. Without binding them a
                 // BeginTx delete naming a foreign tenant deletes that tenant's
                 // rows and reports success.
                 let mut bind_values = filter_bind_values(&filter);
@@ -506,7 +629,14 @@ impl DataBrokerRuntime {
                                 crate::runtime::projection::task_project_id(&context.project_id),
                                 &mutation.message_type,
                                 "delete",
-                                &filter,
+                                // Filter + the VERIFIED tenant, so the worker's
+                                // scoped delete resolves to this tenant only.
+                                &crate::runtime::projection::scoped_delete_payload(
+                                    manifest,
+                                    &mutation.message_type,
+                                    &filter,
+                                    &context.tenant_id,
+                                ),
                                 &projection_plans,
                             )
                             .await
@@ -858,13 +988,26 @@ impl DataBrokerRuntime {
                         statuses.push(Err(mysql_xa_plan_replay_status(err)));
                         return statuses;
                     }
-                    let mut instance_names: Vec<String> =
-                        self.mysql_instances.keys().cloned().collect();
-                    instance_names.sort();
-                    instance_names
-                        .into_iter()
+                    // Only the explicitly mapped mirrors participate; a mapped
+                    // instance that is not configured refuses the 2PC here,
+                    // before any PREPARE.
+                    let mirrors = match resolve_mysql_xa_mirrors(&mysql_xa_mirrors, |name| {
+                        self.mysql_instances.contains_key(name)
+                    }) {
+                        Ok(mirrors) => mirrors,
+                        Err(missing) => {
+                            let _ = tx.rollback().await;
+                            if let Some(ref sid) = saga_id {
+                                self.saga_set_status(sid, "failed").await;
+                            }
+                            statuses.push(Err(xa_unsupported_participants_status(&missing)));
+                            return statuses;
+                        }
+                    };
+                    mirrors
+                        .iter()
                         .filter_map(|name| {
-                            self.mysql_instances.get(&name).map(|mysql_pool| {
+                            self.mysql_instances.get(name).map(|mysql_pool| {
                                 Box::new(crate::runtime::xa::XaMysqlParticipant::new(
                                     name.clone(),
                                     mysql_pool.clone(),
@@ -1789,8 +1932,27 @@ impl DataBrokerRuntime {
         Ok(())
     }
 
+    /// Best-effort read-cache invalidation after a committed write. Callers do
+    /// not fail the (already committed) write on an invalidation error, so the
+    /// failure is logged here — once, for every caller — instead of vanishing:
+    /// until the stale entries' TTL lapses, reads of `pattern` may be served
+    /// from the cache.
     #[cfg(feature = "redis")]
     pub(crate) async fn cache_delete_pattern(&self, pattern: &str) -> Result<(), String> {
+        let result = self.cache_delete_pattern_scan(pattern).await;
+        if let Err(err) = &result {
+            self.cache_metrics.invalidation_failed();
+            tracing::warn!(
+                pattern = %pattern,
+                error = %err,
+                "read-cache invalidation failed; matching entries stay cached until their TTL expires"
+            );
+        }
+        result
+    }
+
+    #[cfg(feature = "redis")]
+    async fn cache_delete_pattern_scan(&self, pattern: &str) -> Result<(), String> {
         let Some(client) = &self.redis else {
             return Ok(());
         };
@@ -1810,11 +1972,13 @@ impl DataBrokerRuntime {
                 .await
                 .map_err(|e| e.to_string())?;
             if !keys.is_empty() {
+                // A failed DEL leaves stale entries behind exactly like a failed
+                // SCAN; surface it rather than counting it as 0 invalidations.
                 let deleted = redis::cmd("DEL")
                     .arg(&keys)
                     .query_async::<u64>(&mut conn)
                     .await
-                    .unwrap_or_default();
+                    .map_err(|e| e.to_string())?;
                 self.cache_metrics.invalidated(deleted);
             }
             if next == 0 {
@@ -2026,6 +2190,48 @@ impl DataBrokerRuntime {
                     ));
                 }
             }
+        }
+        Ok(JsonValue::Object(encrypted))
+    }
+
+    /// Encrypt an UPDATE's `changes` the way [`Self::encrypt_record_for_table`]
+    /// encrypts an upsert record, so an update never writes an encrypted column
+    /// in plaintext. Changes rarely carry the tenant column, but the blind-index
+    /// token is tenant-scoped, so the VERIFIED request tenant is supplied for the
+    /// token and then removed again: the tenant column is never part of an
+    /// update's SET list. Keys come back as physical column names, and a
+    /// refreshed `<col>_idx` sibling is included so equality lookups keep working
+    /// after the value changes.
+    pub(crate) fn encrypt_update_changes(
+        &self,
+        table: &ManifestTable,
+        changes: &JsonValue,
+        context: &RequestContext,
+    ) -> Result<JsonValue, tonic::Status> {
+        if !table.columns.iter().any(is_encrypted_column) {
+            return Ok(changes.clone());
+        }
+        let normalized = crate::broker::normalize_record_keys(table, changes);
+        let Some(object) = normalized.as_object() else {
+            return Ok(normalized);
+        };
+        let mut probe = object.clone();
+        let tenant_column = table.table_security.tenant_column.trim().to_string();
+        let injected_tenant = !tenant_column.is_empty()
+            && !probe.contains_key(&tenant_column)
+            && !context.tenant_id.trim().is_empty();
+        if injected_tenant {
+            probe.insert(
+                tenant_column.clone(),
+                JsonValue::String(context.tenant_id.clone()),
+            );
+        }
+        let mut encrypted = match self.encrypt_record_for_table(table, &JsonValue::Object(probe))? {
+            JsonValue::Object(map) => map,
+            other => return Ok(other),
+        };
+        if injected_tenant {
+            encrypted.remove(&tenant_column);
         }
         Ok(JsonValue::Object(encrypted))
     }
@@ -2577,6 +2783,39 @@ mod materialized_view_refresh_tests {
             "operation",
             "must be one of upsert, update, delete, vector_upsert, put_object, or enqueue_outbox_event",
         );
+    }
+
+    /// 2PC MySQL participation is an explicit mirror mapping: no mapping means
+    /// no MySQL participant (never an implicit replay into every configured
+    /// MySQL instance), and a mapped-but-unconfigured instance refuses.
+    #[test]
+    fn mysql_xa_participants_require_an_explicit_mirror_mapping() {
+        assert!(parse_mysql_xa_mirror_instances(None).is_empty());
+        assert!(parse_mysql_xa_mirror_instances(Some(" , ")).is_empty());
+        assert_eq!(
+            parse_mysql_xa_mirror_instances(Some("reporting, primary ,reporting")),
+            vec!["primary".to_string(), "reporting".to_string()]
+        );
+
+        let configured = ["primary", "analytics"];
+        let is_configured = |name: &str| configured.contains(&name);
+        // Only the mapped instance participates — "analytics" is configured
+        // but NOT mapped, so it is not enrolled.
+        let selected = parse_mysql_xa_mirror_instances(Some("primary"));
+        assert_eq!(
+            resolve_mysql_xa_mirrors(&selected, is_configured).unwrap(),
+            &["primary".to_string()][..]
+        );
+        // Nothing mapped → nothing enrolled, whatever is configured.
+        assert!(
+            resolve_mysql_xa_mirrors(&[], is_configured)
+                .unwrap()
+                .is_empty()
+        );
+        // A mapped instance that does not exist refuses the 2PC.
+        let selected = parse_mysql_xa_mirror_instances(Some("primary,ghost"));
+        let missing = resolve_mysql_xa_mirrors(&selected, is_configured).unwrap_err();
+        assert_eq!(missing, vec!["mysql:ghost (not configured)".to_string()]);
     }
 
     #[test]

@@ -139,6 +139,67 @@ pub(crate) async fn register_derived_file(
     Ok(())
 }
 
+/// Pure tenant-quota gate shared with storage's register/finalize semantics:
+/// `quota <= 0` is unlimited; otherwise `used + add` must not exceed it.
+pub(crate) fn derived_quota_allows(used: i64, add: i64, quota: i64) -> bool {
+    quota <= 0 || used.saturating_add(add.max(0)) <= quota
+}
+
+/// Charge a derived object against the tenant's storage byte quota BEFORE it is
+/// stored. Derived files are registered as ordinary `udb_storage.files` rows, so
+/// they already count toward the tenant's usage SUM, but nothing checked the
+/// quota before writing them — a pipeline could push a tenant arbitrarily past
+/// its quota. Same quota knob (`UDB_STORAGE_TENANT_QUOTA_BYTES`, 0 = unlimited)
+/// and the same RLS-scoped SUM the storage service uses. `Err` = refuse the step.
+pub(crate) async fn check_derived_quota(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    add_bytes: i64,
+) -> Result<(), String> {
+    let quota: i64 = std::env::var("UDB_STORAGE_TENANT_QUOTA_BYTES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+    if quota <= 0 {
+        return Ok(());
+    }
+    let m = native_model(
+        "udb.core.storage.entity.v1.File",
+        &["file_id", "object_key"],
+    );
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| format!("derived quota tx begin failed: {e}"))?;
+    sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+        .bind(tenant_id.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| format!("derived quota tenant scope failed: {e}"))?;
+    let used: i64 = sqlx::query_scalar(&format!(
+        "SELECT COALESCE(SUM({sz}), 0)::bigint FROM {rel} \
+         WHERE {tid} = $1::UUID AND {del} IS NULL",
+        sz = m.q("size_bytes"),
+        rel = m.relation,
+        tid = m.q("tenant_id"),
+        del = m.q("deleted_at"),
+    ))
+    .bind(tenant_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| format!("derived quota usage sum failed: {e}"))?;
+    tx.commit()
+        .await
+        .map_err(|e| format!("derived quota tx commit failed: {e}"))?;
+    if derived_quota_allows(used, add_bytes, quota) {
+        Ok(())
+    } else {
+        Err(format!(
+            "tenant storage quota exceeded by derived object: {used}+{add_bytes} > {quota}"
+        ))
+    }
+}
+
 /// Transform parameters parsed from a pipeline step; the byte-step executor
 /// fetches object bytes separately before applying these settings.
 pub(crate) struct StepContext<'a> {
@@ -175,7 +236,15 @@ fn embed_text(text: &str, dim: usize) -> Vec<f32> {
     v
 }
 
-/// EMBED: signed feature-hashing embedding over `asset_name + metadata`.
+/// Identifier of the vector scheme the EMBED step produces, carried on every
+/// step result so no consumer mistakes it for a semantic/content embedding.
+pub(crate) const EMBED_STEP_MODEL: &str = "metadata_feature_hash_v1";
+
+/// EMBED: a 64-dim signed feature-hashing vector over the asset's NAME and
+/// METADATA text — NOT over the asset's content bytes, and NOT a neural/semantic
+/// model. It is useful for exact-ish metadata similarity only. The step result
+/// says so explicitly (`embedding_model`, `embedding_input`, `semantic: false`);
+/// a content embedding belongs to the `EmbeddingService`.
 struct EmbedStepExecutor;
 impl AssetStepExecutor for EmbedStepExecutor {
     fn step_type(&self) -> i32 {
@@ -184,7 +253,13 @@ impl AssetStepExecutor for EmbedStepExecutor {
     fn execute(&self, ctx: &StepContext) -> StepOutcome {
         let text = format!("{} {}", ctx.asset_name, ctx.metadata_json);
         let emb = embed_text(&text, 64);
-        StepOutcome::Completed(serde_json::json!({ "embedding": emb, "dim": 64 }))
+        StepOutcome::Completed(serde_json::json!({
+            "embedding": emb,
+            "dim": 64,
+            "embedding_model": EMBED_STEP_MODEL,
+            "embedding_input": "asset_name+metadata",
+            "semantic": false,
+        }))
     }
 }
 

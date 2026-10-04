@@ -84,6 +84,35 @@ pub(crate) fn chunk_point_id(parent_pk: &str, seq: u32, chunk_count: usize) -> S
     }
 }
 
+/// The ENGINE point id for a logical (chunk) point id: namespaced by the verified
+/// tenant so two tenants that share a collection and reuse the same source
+/// primary key cannot overwrite or delete each other's vectors. Same scheme as
+/// the search-index point ids (`{tenant}:{id}`). The logical id (what the durable
+/// work items, journal events and `_parent_pk`/`_chunk_seq` payload carry) is
+/// unchanged; only the id handed to the engine is scoped, on write AND delete.
+/// A blank tenant is returned unscoped (callers refuse blank tenants upstream).
+pub(crate) fn tenant_scoped_point_id(tenant_id: &str, point_id: &str) -> String {
+    let tenant = tenant_id.trim();
+    if tenant.is_empty() {
+        point_id.to_string()
+    } else {
+        format!("{tenant}:{point_id}")
+    }
+}
+
+/// Inverse of [`tenant_scoped_point_id`] for a returned hit id: strip exactly the
+/// verified tenant's `"{tenant}:"` prefix so callers see the logical id. Any
+/// other id (a legacy unscoped point, or an engine-hashed id) is returned as-is.
+pub(crate) fn strip_tenant_point_id(tenant_id: &str, id: &str) -> String {
+    let tenant = tenant_id.trim();
+    if tenant.is_empty() {
+        return id.to_string();
+    }
+    id.strip_prefix(&format!("{tenant}:"))
+        .map(str::to_string)
+        .unwrap_or_else(|| id.to_string())
+}
+
 /// Recover `(parent_pk, chunk_seq)` from a point id. A bare id (no sentinel, or a
 /// non-numeric suffix — e.g. a real pk that happens to contain the separator
 /// followed by non-digits) is treated as a single-chunk / legacy point at seq 0.

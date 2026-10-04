@@ -26,6 +26,9 @@ pub(crate) fn endpoint_model() -> NativeModel {
             "metadata_json",
             "deleted_at",
             "deleted_by",
+            // The delivery window's lower bound: an endpoint receives only
+            // events published after it was created.
+            "created_at",
         ],
     )
 }

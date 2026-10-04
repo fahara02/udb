@@ -66,6 +66,183 @@ fn validate_neo4j_identifier(id: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Transaction access mode for the HTTP API's `access-mode` header.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Neo4jAccessMode {
+    Read,
+    Write,
+}
+
+/// Cypher clauses / commands that write data or schema, or administer the
+/// DBMS. A read (`query`) statement containing any of them as a bare keyword
+/// is refused before it reaches the server.
+const CYPHER_WRITE_KEYWORDS: &[&str] = &[
+    "CREATE",
+    "MERGE",
+    "SET",
+    "DELETE",
+    "DETACH",
+    "REMOVE",
+    "DROP",
+    "FOREACH",
+    "LOAD",
+    "ALTER",
+    "GRANT",
+    "DENY",
+    "REVOKE",
+    "START",
+    "STOP",
+    "TERMINATE",
+    "ENABLE",
+    "RENAME",
+];
+
+/// Procedures a read statement may `CALL`: read-only index queries and schema
+/// introspection. Any other procedure (APOC writers, `dbms.*`, ...) can
+/// mutate, so it is refused on the read path.
+const CYPHER_READ_PROCEDURE_PREFIXES: &[&str] = &[
+    "db.index.fulltext.querynodes",
+    "db.index.fulltext.queryrelationships",
+    "db.index.vector.querynodes",
+    "db.index.vector.queryrelationships",
+    "db.labels",
+    "db.relationshiptypes",
+    "db.propertykeys",
+    "db.schema.",
+];
+
+/// Conservative read-only check for a Cypher statement run on the query path.
+/// Lexes the text (skipping string literals, backtick identifiers, comments,
+/// parameters `$x`, property access `n.x` and labels/map keys `:x`) and
+/// rejects any write keyword or a `CALL` of a procedure outside the read-only
+/// allowlist. A `CALL { ... }` subquery is allowed: its body is lexed like
+/// everything else, so a write inside it is still caught. The server-side
+/// READ access mode is the second line of defence.
+fn cypher_write_clause(cypher: &str) -> Option<String> {
+    let chars: Vec<char> = cypher.chars().collect();
+    let mut i = 0;
+    let mut prev_sig: Option<char> = None;
+    while i < chars.len() {
+        let ch = chars[i];
+        match ch {
+            '\'' | '"' => {
+                let quote = ch;
+                i += 1;
+                while i < chars.len() && chars[i] != quote {
+                    if chars[i] == '\\' {
+                        i += 1;
+                    }
+                    i += 1;
+                }
+                i += 1;
+                prev_sig = Some(quote);
+            }
+            '`' => {
+                i += 1;
+                while i < chars.len() && chars[i] != '`' {
+                    i += 1;
+                }
+                i += 1;
+                prev_sig = Some('`');
+            }
+            '/' if chars.get(i + 1) == Some(&'/') => {
+                while i < chars.len() && chars[i] != '\n' {
+                    i += 1;
+                }
+            }
+            '/' if chars.get(i + 1) == Some(&'*') => {
+                i += 2;
+                while i + 1 < chars.len() && !(chars[i] == '*' && chars[i + 1] == '/') {
+                    i += 1;
+                }
+                i += 2;
+            }
+            c if c.is_ascii_alphabetic() || c == '_' => {
+                let start = i;
+                while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                    i += 1;
+                }
+                let word: String = chars[start..i].iter().collect();
+                let upper = word.to_ascii_uppercase();
+                // `n.set`, `$delete`, `:Create` (label / map key) are names,
+                // not clauses.
+                let is_name = matches!(prev_sig, Some('.') | Some('$') | Some(':'));
+                let mut j = i;
+                while j < chars.len() && chars[j].is_whitespace() {
+                    j += 1;
+                }
+                let is_map_key = chars.get(j) == Some(&':');
+                if !is_name && !is_map_key {
+                    if CYPHER_WRITE_KEYWORDS.contains(&upper.as_str()) {
+                        return Some(upper);
+                    }
+                    if upper == "CALL" && chars.get(j) != Some(&'{') {
+                        // Read the dotted procedure name that follows.
+                        let mut k = j;
+                        while k < chars.len()
+                            && (chars[k].is_ascii_alphanumeric()
+                                || chars[k] == '_'
+                                || chars[k] == '.')
+                        {
+                            k += 1;
+                        }
+                        let procedure: String =
+                            chars[j..k].iter().collect::<String>().to_ascii_lowercase();
+                        if !CYPHER_READ_PROCEDURE_PREFIXES
+                            .iter()
+                            .any(|allowed| procedure.starts_with(allowed))
+                        {
+                            return Some(format!("CALL {procedure}"));
+                        }
+                    }
+                }
+                prev_sig = Some('a');
+            }
+            c if c.is_whitespace() => {
+                i += 1;
+            }
+            other => {
+                prev_sig = Some(other);
+                i += 1;
+            }
+        }
+    }
+    None
+}
+
+/// Real affected count from a statement's `includeStats` counters plus its
+/// returned rows: nodes/relationships created or deleted, or — for a pure
+/// property update (`MATCH ... SET ... RETURN n`) where the counters carry no
+/// entity count — the number of rows the statement returned. Zero when the
+/// statement changed nothing.
+fn neo4j_affected_rows(stats: Option<&Json>, returned_rows: usize) -> u64 {
+    let Some(stats) = stats else {
+        return 0;
+    };
+    let counter = |key: &str| stats.get(key).and_then(Json::as_u64).unwrap_or(0);
+    let entities = counter("nodes_created")
+        + counter("nodes_deleted")
+        + counter("relationships_created")
+        + counter("relationship_deleted")
+        + counter("relationships_deleted");
+    let contains_updates = stats
+        .get("contains_updates")
+        .and_then(Json::as_bool)
+        .unwrap_or(entities > 0 || counter("properties_set") > 0);
+    if !contains_updates {
+        return 0;
+    }
+    entities.max(returned_rows as u64)
+}
+
+/// The `affected` column of a `... RETURN count(*) AS affected` statement.
+fn affected_from_count_rows(rows: &[Json]) -> u64 {
+    rows.first()
+        .and_then(|row| row.get("affected"))
+        .and_then(Json::as_u64)
+        .unwrap_or(0)
+}
+
 fn neo4j_invalid_field_status(
     field: impl Into<String>,
     description: impl Into<String>,
@@ -330,14 +507,31 @@ impl Neo4jExecutor {
             .iter()
             .map(|(text, params)| json!({ "statement": text, "parameters": params }))
             .collect();
+        self.post_statements(stmt_array, Neo4jAccessMode::Write)
+            .await
+    }
+
+    /// POST a statement list to the auto-commit transaction endpoint.
+    /// `access_mode` is sent as the HTTP API's `access-mode` header, so a
+    /// READ transaction is refused by the server if any statement writes.
+    async fn post_statements(
+        &self,
+        stmt_array: Vec<Json>,
+        access_mode: Neo4jAccessMode,
+    ) -> Result<Vec<Json>, String> {
         let body = json!({ "statements": stmt_array });
 
-        let resp = self
+        let mut request = self
             .http
             .post(self.tx_url())
             .basic_auth(&self.config.username, Some(&self.config.password))
             .header("Content-Type", "application/json")
-            .header("Accept", "application/json;charset=UTF-8")
+            .header("Accept", "application/json;charset=UTF-8");
+        // WRITE is the server default, so the header is only sent for reads.
+        if matches!(access_mode, Neo4jAccessMode::Read) {
+            request = request.header("access-mode", "READ");
+        }
+        let resp = request
             .json(&body)
             .send()
             .await
@@ -482,13 +676,21 @@ impl Neo4jExecutor {
         self.run_single(&cypher, json!({ "f": filter })).await
     }
 
-    /// Update a node (merge properties onto it).
-    pub async fn update_node(&self, label: &str, id: &str, properties: Json) -> Result<(), String> {
+    /// Update a node (merge properties onto it). Returns how many nodes the
+    /// MATCH found and updated (0 when the id does not exist).
+    pub async fn update_node(
+        &self,
+        label: &str,
+        id: &str,
+        properties: Json,
+    ) -> Result<u64, String> {
         validate_neo4j_identifier(label)?;
-        let cypher = format!("MATCH (n:{label} {{id: $id}}) SET n += $props RETURN n");
-        self.run_single(&cypher, json!({ "id": id, "props": properties }))
+        let cypher =
+            format!("MATCH (n:{label} {{id: $id}}) SET n += $props RETURN count(n) AS affected");
+        let rows = self
+            .run_single(&cypher, json!({ "id": id, "props": properties }))
             .await?;
-        Ok(())
+        Ok(affected_from_count_rows(&rows))
     }
 
     /// Delete a node by id (DETACH DELETE removes all relationships).
@@ -508,20 +710,21 @@ impl Neo4jExecutor {
         to_id: &str,
         rel_type: &str,
         properties: Json,
-    ) -> Result<(), String> {
+    ) -> Result<u64, String> {
         validate_neo4j_identifier(from_label)?;
         validate_neo4j_identifier(to_label)?;
         validate_neo4j_identifier(rel_type)?;
         let cypher = format!(
             "MATCH (a:{from_label} {{id: $from_id}}), (b:{to_label} {{id: $to_id}}) \
-             MERGE (a)-[r:{rel_type}]->(b) SET r += $props RETURN r"
+             MERGE (a)-[r:{rel_type}]->(b) SET r += $props RETURN count(r) AS affected"
         );
-        self.run_single(
-            &cypher,
-            json!({ "from_id": from_id, "to_id": to_id, "props": properties }),
-        )
-        .await?;
-        Ok(())
+        let rows = self
+            .run_single(
+                &cypher,
+                json!({ "from_id": from_id, "to_id": to_id, "props": properties }),
+            )
+            .await?;
+        Ok(affected_from_count_rows(&rows))
     }
 
     /// Tenant/project-scoped node upsert: the MERGE key is `{id}` plus the
@@ -555,15 +758,16 @@ impl Neo4jExecutor {
         label: &str,
         id: &str,
         scope: &GraphScope,
-    ) -> Result<(), String> {
+    ) -> Result<u64, String> {
         validate_neo4j_identifier(label)?;
         let cypher = format!(
-            "MATCH (n:{label} {{id: $id{key}}}) DETACH DELETE n",
+            "MATCH (n:{label} {{id: $id{key}}}) DETACH DELETE n RETURN count(*) AS affected",
             key = scope.key_clause()
         );
-        self.run_single(&cypher, scope.params(json!({ "id": id })))
+        let rows = self
+            .run_single(&cypher, scope.params(json!({ "id": id })))
             .await?;
-        Ok(())
+        Ok(affected_from_count_rows(&rows))
     }
 
     /// Upsert the edge identified by `id`, from the node whose `id` is
@@ -605,15 +809,16 @@ impl Neo4jExecutor {
         rel_type: &str,
         id: &str,
         scope: &GraphScope,
-    ) -> Result<(), String> {
+    ) -> Result<u64, String> {
         validate_neo4j_identifier(rel_type)?;
         let cypher = format!(
-            "MATCH ()-[r:{rel_type} {{id: $id{key}}}]->() DELETE r",
+            "MATCH ()-[r:{rel_type} {{id: $id{key}}}]->() DELETE r RETURN count(*) AS affected",
             key = scope.key_clause()
         );
-        self.run_single(&cypher, scope.params(json!({ "id": id })))
+        let rows = self
+            .run_single(&cypher, scope.params(json!({ "id": id })))
             .await?;
-        Ok(())
+        Ok(affected_from_count_rows(&rows))
     }
 }
 
@@ -701,6 +906,38 @@ pub struct GraphEdge {
     pub properties: Json,
 }
 
+/// Cypher for a label's tenant-composite uniqueness: nodes are unique on
+/// `(prop, _tenant_id, _project_id)` — the same key the IR compiler and the
+/// scoped projection MERGE on — never on `prop` alone.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ScopedUniquenessStatements {
+    drop_legacy: String,
+    composite_unique: String,
+    fallback_index: String,
+    drop_composite: String,
+    drop_fallback_index: String,
+}
+
+/// `label` and `prop` must already be validated identifiers.
+fn scoped_uniqueness_statements(label: &str, prop: &str) -> ScopedUniquenessStatements {
+    let legacy = format!("udb_{label}_{prop}_unique");
+    let composite = format!("udb_{label}_{prop}_scope_unique");
+    let index = format!("udb_{label}_{prop}_scope_idx");
+    ScopedUniquenessStatements {
+        drop_legacy: format!("DROP CONSTRAINT {legacy} IF EXISTS"),
+        composite_unique: format!(
+            "CREATE CONSTRAINT {composite} IF NOT EXISTS \
+             FOR (n:{label}) REQUIRE (n.{prop}, n._tenant_id, n._project_id) IS UNIQUE"
+        ),
+        fallback_index: format!(
+            "CREATE INDEX {index} IF NOT EXISTS \
+             FOR (n:{label}) ON (n.{prop}, n._tenant_id, n._project_id)"
+        ),
+        drop_composite: format!("DROP CONSTRAINT {composite} IF EXISTS"),
+        drop_fallback_index: format!("DROP INDEX {index} IF EXISTS"),
+    }
+}
+
 /// `(adopt legacy node, scoped MERGE)` statements for [`Neo4jExecutor::upsert_scoped_node`].
 fn scoped_node_upsert_cypher(label: &str, scope: &GraphScope) -> (String, String) {
     let unscoped = GRAPH_SCOPE_FIELDS
@@ -762,10 +999,28 @@ impl QueryExecutor for Neo4jExecutor {
         let spec: Json =
             serde_json::from_str(request_json).map_err(invalid_neo4j_request_json_status)?;
         let rows = if let Some(cypher) = spec.get("cypher").and_then(Json::as_str) {
+            // The query path is read-only: refuse a write clause up front and
+            // run the statement in a READ transaction so the server refuses
+            // any write the lexical check could not see.
+            if let Some(clause) = cypher_write_clause(cypher) {
+                return Err(neo4j_invalid_field_status(
+                    "cypher",
+                    "query (read) Cypher must not contain write clauses or write procedures; use a mutation",
+                    format!("Neo4j query refused: read statement contains write clause '{clause}'"),
+                ));
+            }
             let params = spec.get("parameters").cloned().unwrap_or_else(|| json!({}));
-            self.run_single(cypher, params)
+            let results = self
+                .post_statements(
+                    vec![json!({ "statement": cypher, "parameters": params })],
+                    Neo4jAccessMode::Read,
+                )
                 .await
-                .map_err(|err| neo4j_internal_status("query_cypher", err))?
+                .map_err(|err| neo4j_internal_status("query_cypher", err))?;
+            results
+                .first()
+                .map(Self::rows_from_result)
+                .unwrap_or_default()
         } else {
             let label = spec
                 .get("label")
@@ -803,11 +1058,29 @@ impl MutationExecutor for Neo4jExecutor {
             "cypher" => {
                 let cypher = req_str("cypher")?;
                 let params = spec.get("parameters").cloned().unwrap_or_else(|| json!({}));
-                let rows = self
-                    .cypher(&[(&cypher, params)])
+                // `includeStats` makes the server report what the statement
+                // changed, so the affected count is real rather than assumed.
+                let results = self
+                    .post_statements(
+                        vec![json!({
+                            "statement": cypher,
+                            "parameters": params,
+                            "includeStats": true,
+                        })],
+                        Neo4jAccessMode::Write,
+                    )
                     .await
                     .map_err(|err| neo4j_internal_status("mutate_cypher", err))?;
-                encode_neo4j_response(&rows, "mutate_response_encode")
+                let first = results.first();
+                let rows = first.map(Self::rows_from_result).unwrap_or_default();
+                let stats = first.and_then(|result| result.get("stats"));
+                let affected = neo4j_affected_rows(stats, rows.len());
+                serde_json::to_string(&json!({
+                    "affected_rows": affected,
+                    "stats": stats.cloned().unwrap_or(Json::Null),
+                    "results": results,
+                }))
+                .map_err(|err| neo4j_internal_status("mutate_response_encode", err.to_string()))
             }
             "create_node" | "upsert_node" => {
                 let label = req_str("label")?;
@@ -827,19 +1100,21 @@ impl MutationExecutor for Neo4jExecutor {
                 let label = req_str("label")?;
                 let id = req_str("id")?;
                 let properties = spec.get("properties").cloned().unwrap_or_else(|| json!({}));
-                self.update_node(&label, &id, properties)
+                let affected = self
+                    .update_node(&label, &id, properties)
                     .await
                     .map_err(|err| neo4j_internal_status("update_node", err))?;
-                Ok(r#"{"affected_rows":1}"#.to_string())
+                Ok(json!({ "affected_rows": affected }).to_string())
             }
             "delete_node" => {
                 let label = req_str("label")?;
                 let id = req_str("id")?;
                 let scope = request_scope(&spec)?;
-                self.delete_scoped_node(&label, &id, &scope)
+                let affected = self
+                    .delete_scoped_node(&label, &id, &scope)
                     .await
                     .map_err(|err| neo4j_internal_status("delete_node", err))?;
-                Ok(r#"{"affected_rows":1}"#.to_string())
+                Ok(json!({ "affected_rows": affected }).to_string())
             }
             "upsert_edge" => {
                 let opt_str = |key: &str| {
@@ -866,10 +1141,11 @@ impl MutationExecutor for Neo4jExecutor {
                 let rel_type = req_str("rel_type")?;
                 let id = req_str("id")?;
                 let scope = request_scope(&spec)?;
-                self.delete_scoped_edge(&rel_type, &id, &scope)
+                let affected = self
+                    .delete_scoped_edge(&rel_type, &id, &scope)
                     .await
                     .map_err(|err| neo4j_internal_status("delete_edge", err))?;
-                Ok(r#"{"affected_rows":1}"#.to_string())
+                Ok(json!({ "affected_rows": affected }).to_string())
             }
             "create_relationship" | "upsert_relationship" => {
                 let from_label = req_str("from_label")?;
@@ -878,17 +1154,18 @@ impl MutationExecutor for Neo4jExecutor {
                 let to_id = req_str("to_id")?;
                 let rel_type = req_str("rel_type")?;
                 let properties = spec.get("properties").cloned().unwrap_or_else(|| json!({}));
-                self.create_relationship(
-                    &from_label,
-                    &from_id,
-                    &to_label,
-                    &to_id,
-                    &rel_type,
-                    properties,
-                )
-                .await
-                .map_err(|err| neo4j_internal_status("create_relationship", err))?;
-                Ok(r#"{"affected_rows":1}"#.to_string())
+                let affected = self
+                    .create_relationship(
+                        &from_label,
+                        &from_id,
+                        &to_label,
+                        &to_id,
+                        &rel_type,
+                        properties,
+                    )
+                    .await
+                    .map_err(|err| neo4j_internal_status("create_relationship", err))?;
+                Ok(json!({ "affected_rows": affected }).to_string())
             }
             other => Err(unsupported_neo4j_operation_status(other)),
         }
@@ -944,24 +1221,51 @@ impl ResourceAdminExecutor for Neo4jExecutor {
             .unwrap_or("id");
         validate_neo4j_identifier(prop)
             .map_err(|err| neo4j_identifier_status("constraint_property", err))?;
-        let constraint_name = format!("udb_{resource_name}_{prop}_unique");
-        let cypher = format!(
-            "CREATE CONSTRAINT {constraint_name} IF NOT EXISTS \
-             FOR (n:{resource_name}) REQUIRE n.{prop} IS UNIQUE"
-        );
-        self.run_single(&cypher, json!({}))
+        let statements = scoped_uniqueness_statements(resource_name, prop);
+        // A global `id` constraint from an earlier release would reject a
+        // second tenant's node with the same id; drop it first.
+        self.run_single(&statements.drop_legacy, json!({}))
             .await
-            .map(|_| ())
-            .map_err(|err| neo4j_internal_status("ensure_resource", err))
+            .map_err(|err| neo4j_internal_status("ensure_resource", err))?;
+        match self
+            .run_single(&statements.composite_unique, json!({}))
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                // Composite property uniqueness needs Neo4j 5 (Community or
+                // Enterprise). On an older server keep the scoped MERGE key
+                // as the only dedup guard and index the composite key so
+                // scoped lookups stay indexed; never fall back to a global
+                // `id` constraint, which would break multi-tenant writes.
+                tracing::warn!(
+                    resource = %resource_name,
+                    error = %err,
+                    "Neo4j rejected the tenant-composite uniqueness constraint; \
+                     falling back to a composite index (uniqueness is then enforced \
+                     only by the scoped MERGE key)"
+                );
+                self.run_single(&statements.fallback_index, json!({}))
+                    .await
+                    .map(|_| ())
+                    .map_err(|err| neo4j_internal_status("ensure_resource", err))
+            }
+        }
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
         validate_neo4j_identifier(resource_name)
             .map_err(|err| neo4j_identifier_status("resource_name", err))?;
-        let cypher = format!("DROP CONSTRAINT udb_{resource_name}_id_unique IF EXISTS");
-        self.run_single(&cypher, json!({}))
-            .await
-            .map(|_| ())
-            .map_err(|err| neo4j_internal_status("drop_resource", err))
+        let statements = scoped_uniqueness_statements(resource_name, "id");
+        for cypher in [
+            statements.drop_legacy,
+            statements.drop_composite,
+            statements.drop_fallback_index,
+        ] {
+            self.run_single(&cypher, json!({}))
+                .await
+                .map_err(|err| neo4j_internal_status("drop_resource", err))?;
+        }
+        Ok(())
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
         let rows = self
@@ -1044,6 +1348,97 @@ mod tests {
     fn tenant_scope() -> GraphScope {
         GraphScope::from_request(Some(&json!({"_tenant_id": "t1", "_project_id": "p1"})))
             .expect("valid scope")
+    }
+
+    #[test]
+    fn read_gate_rejects_write_clauses_and_write_procedures() {
+        for write in [
+            "CREATE (n:Customer {id: 1})",
+            "MATCH (n) DETACH DELETE n",
+            "match (n) set n.x = 1 return n",
+            "MERGE (n:A {id: $id}) RETURN n",
+            "MATCH (n) REMOVE n:Label",
+            "DROP CONSTRAINT c IF EXISTS",
+            "MATCH (n) CALL { WITH n DELETE n } RETURN 1",
+            "CALL apoc.create.node(['A'], {}) YIELD node RETURN node",
+            "CALL dbms.security.createUser('x', 'y', false)",
+            "LOAD CSV FROM 'file:///x.csv' AS row RETURN row",
+            "MATCH (n) FOREACH (x IN [1] | SET n.y = x)",
+        ] {
+            assert!(
+                cypher_write_clause(write).is_some(),
+                "write statement must be refused on the read path: {write}"
+            );
+        }
+        for read in [
+            "MATCH (n:Customer) WHERE n.`_tenant_id` = $p0 RETURN n",
+            // Write words inside strings, comments, backticks, properties,
+            // parameters, labels and map keys are names, not clauses.
+            "MATCH (n) WHERE n.name = 'CREATE something; DELETE' RETURN n.set, $delete",
+            "MATCH (n:`MERGE`) // DELETE everything\n RETURN n {set: n.x}",
+            "MATCH (n) RETURN n.created_at /* SET */ AS created",
+            "CALL db.index.fulltext.queryNodes('Customer_fulltext', $p0) YIELD node, score RETURN node",
+            "CALL db.labels() YIELD label RETURN label",
+            "MATCH (n) CALL { WITH n RETURN count(*) AS c } RETURN c",
+        ] {
+            assert_eq!(
+                cypher_write_clause(read),
+                None,
+                "read statement refused: {read}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn query_path_refuses_write_cypher_before_any_io() {
+        let exec = test_executor();
+        let err = QueryExecutor::query(
+            &exec,
+            &json!({"cypher": "MATCH (n) DETACH DELETE n", "parameters": {}}).to_string(),
+        )
+        .await
+        .expect_err("a write on the read path must be refused");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_single_field(&err, "cypher");
+    }
+
+    #[test]
+    fn affected_rows_come_from_server_counters_and_returned_rows() {
+        // Pure property update: counters carry no entity count, rows do.
+        let update = json!({"contains_updates": true, "properties_set": 2});
+        assert_eq!(neo4j_affected_rows(Some(&update), 1), 1);
+        // Deletes report through the counters (DETACH DELETE returns no row).
+        let delete =
+            json!({"contains_updates": true, "nodes_deleted": 3, "relationship_deleted": 2});
+        assert_eq!(neo4j_affected_rows(Some(&delete), 0), 5);
+        // A statement that changed nothing is 0, even when it returned rows.
+        let noop = json!({"contains_updates": false});
+        assert_eq!(neo4j_affected_rows(Some(&noop), 4), 0);
+        assert_eq!(neo4j_affected_rows(None, 4), 0);
+        assert_eq!(affected_from_count_rows(&[json!({"affected": 0})]), 0);
+        assert_eq!(affected_from_count_rows(&[json!({"affected": 2})]), 2);
+        assert_eq!(affected_from_count_rows(&[]), 0);
+    }
+
+    #[test]
+    fn ensure_resource_uniqueness_is_tenant_composite() {
+        let s = scoped_uniqueness_statements("Customer", "id");
+        assert_eq!(
+            s.drop_legacy,
+            "DROP CONSTRAINT udb_Customer_id_unique IF EXISTS"
+        );
+        assert!(
+            s.composite_unique.ends_with(
+                "FOR (n:Customer) REQUIRE (n.id, n._tenant_id, n._project_id) IS UNIQUE"
+            ),
+            "{}",
+            s.composite_unique
+        );
+        assert!(!s.composite_unique.contains("REQUIRE n.id IS UNIQUE"));
+        assert!(
+            s.fallback_index
+                .contains("ON (n.id, n._tenant_id, n._project_id)")
+        );
     }
 
     #[test]

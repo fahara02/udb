@@ -551,15 +551,45 @@ impl Compiler for PostgresCompiler {
                     ConflictStrategy::Replace => columns.clone(),
                     _ => unreachable!(),
                 };
-                let set_clause = target_cols
+                // Cross-tenant takeover guard: never reassign the tenant/project
+                // columns on conflict, and only update a conflicting row that
+                // already belongs to the scope being written (0 rows otherwise).
+                let isolation = Pg::upsert_isolation_columns(table);
+                let target_table = table.table.as_str();
+                let guard = Pg::upsert_scope_guard(
+                    table,
+                    ctx,
+                    &columns,
+                    &mut params,
+                    |c| format!("\"{target_table}\".\"{c}\""),
+                    |c| format!("EXCLUDED.\"{c}\""),
+                    |a, b| format!("{a} IS NOT DISTINCT FROM {b}"),
+                );
+                let mut assignments = target_cols
                     .iter()
+                    .filter(|c| !isolation.contains(c))
                     .map(|c| format!("\"{c}\" = EXCLUDED.\"{c}\""))
-                    .collect::<Vec<_>>()
-                    .join(", ");
+                    .collect::<Vec<_>>();
+                if assignments.is_empty()
+                    && guard.is_some()
+                    && let Some(c) = isolation.first()
+                {
+                    // No-op assignment (equal under the guard) keeps DO UPDATE so
+                    // a same-scope conflict still reports its row.
+                    assignments.push(if columns.contains(c) {
+                        format!("\"{c}\" = EXCLUDED.\"{c}\"")
+                    } else {
+                        format!("\"{c}\" = \"{target_table}\".\"{c}\"")
+                    });
+                }
+                let set_clause = assignments.join(", ");
                 sql.push_str(&format!(
                     " ON CONFLICT ({}) DO UPDATE SET {set_clause}",
                     pk_cols.join(", ")
                 ));
+                if let Some(guard) = guard {
+                    sql.push_str(&format!(" WHERE {guard}"));
+                }
             }
         }
 
@@ -1680,6 +1710,79 @@ mod tests {
         assert!(sql.contains("ON CONFLICT (\"id\") DO UPDATE SET \"name\" = EXCLUDED.\"name\""));
         assert!(sql.ends_with("RETURNING \"id\""));
         assert_eq!(params.len(), 2);
+    }
+
+    fn tenant_fixture_manifest() -> CatalogManifest {
+        let mut m = fixture_manifest();
+        m.tables[0].columns.push(ManifestColumn {
+            field_name: "tenant_id".into(),
+            column_name: "tenant_id".into(),
+            proto_type: "string".into(),
+            sql_type: "uuid".into(),
+            is_tenant_column: true,
+            ..Default::default()
+        });
+        m
+    }
+
+    /// Cross-tenant takeover: a primary-key conflict on another tenant's row
+    /// must neither rewrite it nor reassign its tenant column. The tenant column
+    /// leaves the SET list and DO UPDATE is guarded by the existing row's tenant.
+    #[test]
+    fn upsert_guards_conflict_update_by_tenant() {
+        let m = tenant_fixture_manifest();
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let mut rec = crate::ir::operations::LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        rec.insert("name".into(), LogicalValue::String("Alice".into()));
+        rec.insert("tenant_id".into(), LogicalValue::String("t1".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::update(vec!["name".into(), "tenant_id".into()]),
+            return_fields: vec![],
+        };
+        let (sql, params) = extract_sql(
+            PostgresCompiler
+                .compile_write(&write, &ctx)
+                .expect("compile"),
+        );
+        assert!(
+            sql.ends_with(
+                "ON CONFLICT (\"id\") DO UPDATE SET \"name\" = EXCLUDED.\"name\" \
+                 WHERE \"customers\".\"tenant_id\" IS NOT DISTINCT FROM EXCLUDED.\"tenant_id\""
+            ),
+            "{sql}"
+        );
+        assert_eq!(params.len(), 3, "the EXCLUDED guard binds nothing");
+    }
+
+    /// A record that omits the tenant column is guarded by the verified context
+    /// tenant, bound after the VALUES params and cast for the uuid column.
+    #[test]
+    fn upsert_guard_binds_context_tenant_when_record_omits_it() {
+        let m = tenant_fixture_manifest();
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let mut rec = crate::ir::operations::LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::Replace,
+            return_fields: vec![],
+        };
+        let (sql, params) = extract_sql(
+            PostgresCompiler
+                .compile_write(&write, &ctx)
+                .expect("compile"),
+        );
+        assert!(
+            sql.contains(
+                "DO UPDATE SET \"id\" = EXCLUDED.\"id\" WHERE \"customers\".\"tenant_id\" = $2::UUID"
+            ),
+            "{sql}"
+        );
+        assert_eq!(params.last(), Some(&LogicalValue::String("t1".into())));
     }
 
     #[test]

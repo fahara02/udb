@@ -217,6 +217,15 @@ services:
     <<: *udb-broker-base
     profiles: ["broker-ha"]
     hostname: udb-ha-b
+    # Start ordering: ha-b boots only after ha-a is healthy, so the two never
+    # race the startup schema lock on a cold database. (The broker also waits
+    # for a held startup lock — UDB_STARTUP_LOCK_WAIT_SECS — rather than
+    # exiting.) No restart policy: the smokes SIGKILL a broker and assert it
+    # stays down.
+    depends_on:
+      <<: *udb-broker-depends
+      udb-ha-a:
+        condition: service_healthy
     environment:
       <<: *udb-broker-env
       UDB_PROJECTION_ENABLED: "true"

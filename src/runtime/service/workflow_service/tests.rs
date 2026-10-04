@@ -675,3 +675,313 @@ fn signal_resumes_only_on_exact_pending_match() {
     // A running (non-waiting) instance is simply nudged forward by any signal.
     assert!(signal_resumes("RUNNING", "", "anything"));
 }
+
+/// Step acknowledgement contract: a step completes ONLY on `AckWorkflowStep`,
+/// never on the tick timer.
+mod step_ack {
+    use super::super::WorkflowServiceImpl;
+    use super::super::config::{
+        AWAITING_ACK_KEY, STATUS_COMPENSATING, STATUS_FAILED, TOPIC_STEP_DISPATCHED,
+        workflow_step_timeout_secs,
+    };
+    use super::super::tick::{
+        StepAckDecision, awaiting_ack_step, run_workflow_tick_once, set_awaiting_ack_step,
+        step_ack_decision,
+    };
+    use crate::proto::udb::core::workflow::services::v1 as workflow_pb;
+    use crate::proto::udb::core::workflow::services::v1::workflow_service_server::WorkflowService;
+    use tonic::{Code, Request};
+
+    #[test]
+    fn awaiting_marker_round_trips_and_tolerates_garbage() {
+        let mut payload = serde_json::Value::Null;
+        assert_eq!(awaiting_ack_step(&payload), None);
+        set_awaiting_ack_step(&mut payload, Some(3));
+        assert_eq!(payload[AWAITING_ACK_KEY], serde_json::json!(3));
+        assert_eq!(awaiting_ack_step(&payload), Some(3));
+        set_awaiting_ack_step(&mut payload, None);
+        assert_eq!(awaiting_ack_step(&payload), None);
+        assert!(payload.is_object(), "clearing keeps an object payload");
+        assert_eq!(
+            awaiting_ack_step(&serde_json::json!({ AWAITING_ACK_KEY: -1 })),
+            None
+        );
+        assert_eq!(
+            awaiting_ack_step(&serde_json::json!({ AWAITING_ACK_KEY: "1" })),
+            None
+        );
+        assert_eq!(TOPIC_STEP_DISPATCHED, "udb.workflow.step.dispatched.v1");
+    }
+
+    #[test]
+    fn only_the_dispatched_step_can_be_acknowledged() {
+        // Not dispatched yet (no marker): an ack can never advance the workflow.
+        assert_eq!(
+            step_ack_decision("RUNNING", 0, 2, None, 0, true),
+            StepAckDecision::Reject("workflow_step_not_awaiting_ack")
+        );
+        // Wrong step index.
+        assert_eq!(
+            step_ack_decision("RUNNING", 0, 2, Some(0), 1, true),
+            StepAckDecision::Reject("workflow_step_not_awaiting_ack")
+        );
+        // Not RUNNING.
+        assert_eq!(
+            step_ack_decision("WAITING_SIGNAL", 0, 2, Some(0), 0, true),
+            StepAckDecision::Reject("workflow_not_running")
+        );
+        assert_eq!(
+            step_ack_decision("CANCELLED", 1, 2, Some(1), 1, true),
+            StepAckDecision::Reject("workflow_not_running")
+        );
+        // Intermediate success advances; the last success completes.
+        assert_eq!(
+            step_ack_decision("RUNNING", 0, 2, Some(0), 0, true),
+            StepAckDecision::Advance {
+                new_step: 1,
+                completed: false
+            }
+        );
+        assert_eq!(
+            step_ack_decision("RUNNING", 1, 2, Some(1), 1, true),
+            StepAckDecision::Advance {
+                new_step: 2,
+                completed: true
+            }
+        );
+        // Failure: nothing completed => FAILED; completed steps stand => COMPENSATING.
+        assert_eq!(
+            step_ack_decision("RUNNING", 0, 2, Some(0), 0, false),
+            StepAckDecision::Fail {
+                target_status: STATUS_FAILED
+            }
+        );
+        assert_eq!(
+            step_ack_decision("RUNNING", 1, 2, Some(1), 1, false),
+            StepAckDecision::Fail {
+                target_status: STATUS_COMPENSATING
+            }
+        );
+        // A re-delivered success ack for an already-advanced step is idempotent,
+        // including after the workflow completed; a stale FAILURE is rejected.
+        assert_eq!(
+            step_ack_decision("RUNNING", 1, 2, None, 0, true),
+            StepAckDecision::AlreadyAcknowledged
+        );
+        assert_eq!(
+            step_ack_decision("COMPLETED", 2, 2, None, 1, true),
+            StepAckDecision::AlreadyAcknowledged
+        );
+        assert_eq!(
+            step_ack_decision("RUNNING", 1, 2, Some(1), 0, false),
+            StepAckDecision::Reject("workflow_step_not_awaiting_ack")
+        );
+    }
+
+    fn scoped<T>(message: T, tenant: &str) -> Request<T> {
+        let mut request = Request::new(message);
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", tenant.parse().expect("tenant metadata"));
+        request
+    }
+
+    #[tokio::test]
+    async fn ack_rejects_unspecified_outcome_before_pool_access() {
+        let svc = WorkflowServiceImpl::new();
+        let tenant = uuid::Uuid::new_v4().to_string();
+        let status = svc
+            .ack_workflow_step(scoped(
+                workflow_pb::AckWorkflowStepRequest {
+                    tenant_id: tenant.clone(),
+                    workflow_id: uuid::Uuid::new_v4().to_string(),
+                    step_index: 0,
+                    outcome: workflow_pb::WorkflowStepOutcome::Unspecified as i32,
+                    ..Default::default()
+                },
+                &tenant,
+            ))
+            .await
+            .expect_err("unspecified outcome must be rejected");
+        assert_eq!(status.code(), Code::InvalidArgument, "{status}");
+    }
+
+    async fn status_of(pool: &sqlx::PgPool, workflow_id: &str) -> (String, i32, String) {
+        sqlx::query_as::<_, (String, i32, String)>(
+            "SELECT status, current_step, COALESCE(last_error, '') \
+             FROM udb_workflow.workflow_instances WHERE workflow_id = $1::UUID",
+        )
+        .bind(workflow_id)
+        .fetch_one(pool)
+        .await
+        .expect("load workflow status")
+    }
+
+    async fn dispatch_count(pool: &sqlx::PgPool, outbox: &str, workflow_id: &str) -> i64 {
+        sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {outbox} \
+             WHERE topic = $1 AND payload->'payload'->>'workflow_id' = $2"
+        ))
+        .bind(TOPIC_STEP_DISPATCHED)
+        .bind(workflow_id)
+        .fetch_one(pool)
+        .await
+        .expect("count dispatch events")
+    }
+
+    async fn start(svc: &WorkflowServiceImpl, tenant: &str, steps: i32) -> String {
+        svc.start_workflow(scoped(
+            workflow_pb::StartWorkflowRequest {
+                tenant_id: tenant.to_string(),
+                workflow_type: "live.step.ack".to_string(),
+                total_steps: steps,
+                payload: "{}".to_string(),
+                compensations: "[]".to_string(),
+                ..Default::default()
+            },
+            tenant,
+        ))
+        .await
+        .expect("start workflow")
+        .into_inner()
+        .workflow_id
+    }
+
+    async fn ack(
+        svc: &WorkflowServiceImpl,
+        tenant: &str,
+        workflow_id: &str,
+        step_index: i32,
+        outcome: workflow_pb::WorkflowStepOutcome,
+    ) -> Result<String, tonic::Status> {
+        svc.ack_workflow_step(scoped(
+            workflow_pb::AckWorkflowStepRequest {
+                tenant_id: tenant.to_string(),
+                workflow_id: workflow_id.to_string(),
+                step_index,
+                outcome: outcome as i32,
+                output: "{\"ok\":true}".to_string(),
+                error_message: "boom".to_string(),
+            },
+            tenant,
+        ))
+        .await
+        .map(|r| r.into_inner().status)
+    }
+
+    async fn tick(pool: &sqlx::PgPool, outbox: &str) {
+        run_workflow_tick_once(pool, Some(outbox), None, 50)
+            .await
+            .expect("workflow tick");
+    }
+
+    /// The real tick + the real ack RPC against Postgres: the tick only
+    /// dispatches, never completes; the ack advances/completes/fails; an
+    /// unacknowledged step times out to FAILED.
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with cargo test --lib live_workflow_tick_waits_for_step_ack -- --ignored --nocapture"]
+    async fn live_workflow_tick_waits_for_step_ack() {
+        use crate::runtime::service::live_tests::support::{
+            live_native_service_db_lock, live_pg_pool, migrate_native_service_db,
+        };
+        let _guard = live_native_service_db_lock().lock().await;
+        let pool = live_pg_pool().await;
+        migrate_native_service_db(&pool).await;
+        let outbox = crate::runtime::config::UdbConfig::from_env()
+            .cdc
+            .outbox_relation();
+        let svc = WorkflowServiceImpl::new()
+            .with_postgres(Some(pool.clone()))
+            .with_outbox(Some(outbox.clone()));
+        let tenant = uuid::Uuid::new_v4().to_string();
+        use workflow_pb::WorkflowStepOutcome::{Failed, Succeeded};
+
+        // Happy path: two steps, each completed only by its ack.
+        let wf = start(&svc, &tenant, 2).await;
+        tick(&pool, &outbox).await;
+        let (status, step, _) = status_of(&pool, &wf).await;
+        assert_eq!(status, "RUNNING");
+        assert_eq!(step, 0, "the timer must not advance a step");
+        assert_eq!(dispatch_count(&pool, &outbox, &wf).await, 1);
+        // Re-arm while the step is in flight: no re-dispatch, still step 0.
+        sqlx::query(
+            "UPDATE udb_workflow.workflow_instances SET next_run_at = NOW() \
+             WHERE workflow_id = $1::UUID",
+        )
+        .bind(&wf)
+        .execute(&pool)
+        .await
+        .expect("re-arm");
+        tick(&pool, &outbox).await;
+        assert_eq!(dispatch_count(&pool, &outbox, &wf).await, 1);
+        assert_eq!(status_of(&pool, &wf).await.1, 0);
+        // An ack for a step that is not in flight is rejected.
+        let err = ack(&svc, &tenant, &wf, 1, Succeeded)
+            .await
+            .expect_err("ack for a step not in flight");
+        assert_eq!(err.code(), Code::FailedPrecondition, "{err}");
+        assert_eq!(
+            ack(&svc, &tenant, &wf, 0, Succeeded)
+                .await
+                .expect("ack step 0"),
+            "RUNNING"
+        );
+        assert_eq!(status_of(&pool, &wf).await.1, 1);
+        tick(&pool, &outbox).await;
+        assert_eq!(dispatch_count(&pool, &outbox, &wf).await, 2);
+        assert_eq!(status_of(&pool, &wf).await.0, "RUNNING");
+        assert_eq!(
+            ack(&svc, &tenant, &wf, 1, Succeeded)
+                .await
+                .expect("ack step 1"),
+            "COMPLETED"
+        );
+        assert_eq!(
+            status_of(&pool, &wf).await,
+            ("COMPLETED".to_string(), 2, String::new())
+        );
+        // A re-delivered success ack is idempotent.
+        assert_eq!(
+            ack(&svc, &tenant, &wf, 1, Succeeded)
+                .await
+                .expect("duplicate ack"),
+            "COMPLETED"
+        );
+
+        // Failure ack on the first step: nothing to undo => FAILED.
+        let failing = start(&svc, &tenant, 2).await;
+        tick(&pool, &outbox).await;
+        assert_eq!(
+            ack(&svc, &tenant, &failing, 0, Failed)
+                .await
+                .expect("failure ack"),
+            STATUS_FAILED
+        );
+        let (status, _, last_error) = status_of(&pool, &failing).await;
+        assert_eq!(status, STATUS_FAILED);
+        assert!(last_error.contains("boom"), "{last_error}");
+
+        // No ack within the step timeout => the timeout sweep fails it.
+        let stalled = start(&svc, &tenant, 2).await;
+        tick(&pool, &outbox).await;
+        sqlx::query(
+            "UPDATE udb_workflow.workflow_instances \
+             SET last_transition_at = NOW() - make_interval(secs => $2::DOUBLE PRECISION) \
+             WHERE workflow_id = $1::UUID",
+        )
+        .bind(&stalled)
+        .bind((workflow_step_timeout_secs() + 60) as f64)
+        .execute(&pool)
+        .await
+        .expect("age the dispatched step");
+        tick(&pool, &outbox).await;
+        let (status, step, last_error) = status_of(&pool, &stalled).await;
+        assert_eq!(status, STATUS_FAILED);
+        assert_eq!(step, 0, "an unacknowledged step never counts as completed");
+        assert!(last_error.contains("acknowledgement"), "{last_error}");
+        let err = ack(&svc, &tenant, &stalled, 0, Succeeded)
+            .await
+            .expect_err("a late ack cannot resurrect a timed-out workflow");
+        assert_eq!(err.code(), Code::FailedPrecondition, "{err}");
+    }
+}

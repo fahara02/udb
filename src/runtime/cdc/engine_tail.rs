@@ -1233,8 +1233,45 @@ impl CdcEngine {
         cursor_event_id: &str,
         limit: i64,
     ) -> Vec<CdcEnvelope> {
+        self.journal_scan_for_scope(topic, tenant_scope, project_scope, cursor_event_id, limit)
+            .await
+            .0
+    }
+
+    /// The newest journalled event id for `topic` (the journal's canonical
+    /// `(published_at, event_id)` order); `Ok(None)` when the topic has none.
+    /// A live subscriber that tails the journal anchors here so it receives
+    /// only changes committed after it subscribed.
+    pub(crate) async fn journal_head_event_id(
+        &self,
+        topic: &str,
+    ) -> Result<Option<String>, String> {
+        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
+        sqlx::query_scalar::<_, String>(&format!(
+            "SELECT event_id::TEXT FROM {journal_relation} WHERE topic = $1 \
+             ORDER BY published_at DESC, event_id::TEXT DESC LIMIT 1"
+        ))
+        .bind(topic)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|err| format!("journal head read failed: {err}"))
+    }
+
+    /// [`Self::journal_replay_for_scope`], also returning the id of the LAST
+    /// journal row scanned (in scope or not). A caller that polls the journal
+    /// repeatedly (the cross-replica LiveQuery tail) advances its cursor to that
+    /// id, so foreign-tenant rows already scanned are never re-scanned and a
+    /// busy shared topic cannot pin the cursor below the scan ceiling forever.
+    pub(crate) async fn journal_scan_for_scope(
+        &self,
+        topic: &str,
+        tenant_scope: &str,
+        project_scope: &str,
+        cursor_event_id: &str,
+        limit: i64,
+    ) -> (Vec<CdcEnvelope>, Option<String>) {
         if topic.trim().is_empty() || limit <= 0 {
-            return Vec::new();
+            return (Vec::new(), None);
         }
         let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
         // Genesis floor for an unresolvable cursor: the Unix epoch, a valid
@@ -1370,7 +1407,8 @@ impl CdcEngine {
                 break;
             }
         }
-        out
+        let last_scanned = (scanned > 0).then_some(cursor_id);
+        (out, last_scanned)
     }
 
     /// U21 step 2: sweep in-doubt `publishing` rows from prior epochs.

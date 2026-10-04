@@ -3,7 +3,9 @@
 // Gap 17 (legacy_sql): before applying any changes, verify that the current
 // proto diff exactly matches a previously exported and approved plan file.
 //
-// This provides a four-eyes / change-management gate for production migrations:
+// This provides a change-management gate for production migrations (a real
+// four-eyes quorum additionally requires per-approver keys — see
+// `ApprovalConfig::approver_keys`; a shared signing key is single-party):
 //   1. Engineer runs `udb plan proto/ > db/migration_plan.json`.
 //   2. Tech lead reviews and approves the JSON file (e.g. via Git PR).
 //   3. On the next deploy, the engine loads `require_approval_plan` and calls
@@ -361,9 +363,10 @@ pub struct ApprovalSignature {
     pub reason: String,
     /// HMAC-SHA256 of
     ///   `plan.operations_hash || "\x00" || approver_id || "\x00" || reason`
-    /// keyed by the operator's `signing_key`. `verify()` checks every
-    /// signature against the same key — a key rotation invalidates
-    /// older approvals.
+    /// keyed by THIS approver's own key (`ApprovalConfig::approver_keys`), or
+    /// by the shared `signing_key` in single-signer mode. `verify()` checks
+    /// every signature against its approver's key — rotating a key
+    /// invalidates that approver's outstanding approvals.
     pub signature: String,
 }
 
@@ -397,10 +400,17 @@ pub struct ApprovalConfig {
     pub allowed_roles: Vec<String>,
     /// How long an approval stays valid after the last signature.
     pub expiry: std::time::Duration,
-    /// HMAC key for signature computation + verification. The
-    /// operator rotates this to invalidate all outstanding
-    /// approvals.
+    /// Shared HMAC key — SINGLE-PARTY mode only. Whoever holds it can mint
+    /// a valid signature for ANY approver id, so it proves "someone with the
+    /// key approved", never "N distinct people approved". It is therefore
+    /// honoured only when `quorum_size == 1` and no per-approver keys are
+    /// configured. Rotate it to invalidate all outstanding approvals.
     pub signing_key: Vec<u8>,
+    /// Per-approver HMAC keys (`approver_id → key`). Required for a real
+    /// four-eyes quorum (`quorum_size >= 2`): each signature must verify
+    /// under ITS OWN approver's key, so no single key holder can satisfy the
+    /// quorum alone. When non-empty, approvers not listed here are rejected.
+    pub approver_keys: std::collections::BTreeMap<String, Vec<u8>>,
 }
 
 impl Default for ApprovalConfig {
@@ -408,9 +418,12 @@ impl Default for ApprovalConfig {
     ///   - `UDB_APPROVAL_QUORUM_SIZE` (default 1)
     ///   - `UDB_APPROVAL_EXPIRY_SECS` (default 86400 = 24h)
     ///   - `UDB_APPROVAL_ALLOWED_ROLES` (default empty = any role)
-    ///   - `UDB_APPROVAL_SIGNING_KEY` (default empty — operators
-    ///     MUST set this for production; default makes signatures
-    ///     trivially forgeable so tests can run without secrets)
+    ///   - `UDB_APPROVAL_SIGNING_KEY` (default empty — single-party mode
+    ///     only; default makes signatures trivially forgeable so tests can
+    ///     run without secrets)
+    ///   - `UDB_APPROVAL_APPROVER_KEYS` (default empty) —
+    ///     `approver_id=key,approver_id=key` per-approver HMAC keys; REQUIRED
+    ///     when `UDB_APPROVAL_QUORUM_SIZE >= 2`
     fn default() -> Self {
         let quorum = std::env::var("UDB_APPROVAL_QUORUM_SIZE")
             .ok()
@@ -435,13 +448,33 @@ impl Default for ApprovalConfig {
             .ok()
             .map(|s| s.into_bytes())
             .unwrap_or_default();
+        let approver_keys = parse_approver_keys(
+            std::env::var("UDB_APPROVAL_APPROVER_KEYS")
+                .ok()
+                .as_deref()
+                .unwrap_or(""),
+        );
         Self {
             quorum_size: quorum,
             allowed_roles,
             expiry: std::time::Duration::from_secs(expiry_secs),
             signing_key,
+            approver_keys,
         }
     }
+}
+
+/// Parse `approver_id=key,approver_id=key`. Entries without `=`, or with an
+/// empty id or key, are ignored (a key cannot be empty: an empty HMAC key is
+/// forgeable).
+fn parse_approver_keys(raw: &str) -> std::collections::BTreeMap<String, Vec<u8>> {
+    raw.split(',')
+        .filter_map(|entry| {
+            let (id, key) = entry.split_once('=')?;
+            let (id, key) = (id.trim(), key.trim());
+            (!id.is_empty() && !key.is_empty()).then(|| (id.to_string(), key.as_bytes().to_vec()))
+        })
+        .collect()
 }
 
 impl ApprovalConfig {
@@ -454,7 +487,18 @@ impl ApprovalConfig {
     /// fingerprint matching if the configured plan file is not a signed
     /// `ApprovedPlan`.
     pub fn requires_signed_plan(&self) -> bool {
-        self.quorum_size > 1 || !self.signing_key.is_empty()
+        self.quorum_size > 1 || !self.signing_key.is_empty() || !self.approver_keys.is_empty()
+    }
+
+    /// The key a given approver's signature must verify under: their own
+    /// per-approver key when any are configured (unknown approver → `None`),
+    /// else the shared single-party key.
+    pub fn key_for(&self, approver_id: &str) -> Option<&[u8]> {
+        if self.approver_keys.is_empty() {
+            Some(self.signing_key.as_slice())
+        } else {
+            self.approver_keys.get(approver_id).map(Vec::as_slice)
+        }
     }
 }
 
@@ -475,6 +519,12 @@ pub enum ApprovalError {
     /// (a) signing key rotation, (b) tampering, or (c) the approver
     /// computing the HMAC with a different key.
     BadSignature { approver_id: String },
+    /// Per-approver keys are configured and this approver has none.
+    UnknownApprover { approver_id: String },
+    /// A quorum of `required >= 2` was requested without per-approver keys.
+    /// A shared key cannot distinguish approvers (its holder can sign as
+    /// anyone), so such a "quorum" would be a single party; refused.
+    QuorumRequiresPerApproverKeys { required: u32 },
     /// `seal` doesn't match the expected SHA-256 of plan + signatures.
     /// Indicates downstream tampering.
     SealMismatch,
@@ -507,6 +557,17 @@ impl std::fmt::Display for ApprovalError {
             Self::BadSignature { approver_id } => write!(
                 f,
                 "approval rejected: HMAC signature for '{approver_id}' failed verification"
+            ),
+            Self::UnknownApprover { approver_id } => write!(
+                f,
+                "approval rejected: approver '{approver_id}' has no key in \
+                 UDB_APPROVAL_APPROVER_KEYS"
+            ),
+            Self::QuorumRequiresPerApproverKeys { required } => write!(
+                f,
+                "approval rejected: a quorum of {required} requires per-approver keys \
+                 (UDB_APPROVAL_APPROVER_KEYS); a shared UDB_APPROVAL_SIGNING_KEY proves only \
+                 single-party approval"
             ),
             Self::SealMismatch => f.write_str(
                 "approval rejected: seal does not match plan + signatures (tampered or corrupted)",
@@ -590,6 +651,14 @@ fn validate_signature_policy(
     signatures: &[ApprovalSignature],
     config: &ApprovalConfig,
 ) -> Result<(), ApprovalError> {
+    // Four-eyes needs distinct, individually-keyed approvers. With one shared
+    // key, any holder can sign as every "approver", so N signatures prove one
+    // party — refuse the quorum claim instead of silently granting it.
+    if config.quorum_size > 1 && config.approver_keys.is_empty() {
+        return Err(ApprovalError::QuorumRequiresPerApproverKeys {
+            required: config.quorum_size,
+        });
+    }
     let mut seen_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
     for sig in signatures {
         if sig.reason.trim().is_empty() {
@@ -609,11 +678,16 @@ fn validate_signature_policy(
                 role: sig.approver_role.clone(),
             });
         }
+        let Some(approver_key) = config.key_for(&sig.approver_id) else {
+            return Err(ApprovalError::UnknownApprover {
+                approver_id: sig.approver_id.clone(),
+            });
+        };
         let expected = compute_signature(
             &plan.operations_hash,
             &sig.approver_id,
             &sig.reason,
-            &config.signing_key,
+            approver_key,
         );
         // Constant-time-ish compare via fixed-length string equality
         // - HMAC outputs are fixed length so naive `==` is fine
@@ -889,12 +963,26 @@ mod tests {
 
     // ── NW-universal: approval workflow ───────────────────────────────
 
+    /// Quorum configs (>= 2) carry per-approver keys — the only mode in which
+    /// a quorum is accepted. Single-signer configs use the shared key.
     fn approval_config(quorum: u32, roles: Vec<&str>) -> ApprovalConfig {
+        let approver_keys = if quorum > 1 {
+            [
+                ("alice", "alice-key-.........."),
+                ("bob", "bob-key-............"),
+            ]
+            .into_iter()
+            .map(|(id, key)| (id.to_string(), key.as_bytes().to_vec()))
+            .collect()
+        } else {
+            std::collections::BTreeMap::new()
+        };
         ApprovalConfig {
             quorum_size: quorum,
             allowed_roles: roles.into_iter().map(str::to_string).collect(),
             expiry: std::time::Duration::from_secs(3600),
             signing_key: b"test-signing-key-32-bytes-..........".to_vec(),
+            approver_keys,
         }
     }
 
@@ -918,7 +1006,9 @@ mod tests {
             &plan.operations_hash,
             approver_id,
             reason,
-            &config.signing_key,
+            config
+                .key_for(approver_id)
+                .unwrap_or(&b"no-key-for-approver"[..]),
         );
         ApprovalSignature {
             approver_id: approver_id.to_string(),
@@ -936,6 +1026,7 @@ mod tests {
             allowed_roles: Vec::new(),
             expiry: std::time::Duration::from_secs(3600),
             signing_key: Vec::new(),
+            approver_keys: std::collections::BTreeMap::new(),
         };
 
         assert!(!base.requires_signed_plan());
@@ -1042,8 +1133,12 @@ mod tests {
         let plan = sample_plan();
         let sig = signed(&plan, "alice", "sre", "single signer", &cfg_one);
         let approved = ApprovedPlan::create(plan, vec![sig], &cfg_one, 0).unwrap();
+        // Same alice key, now under a 2-person quorum (per-approver keys).
         let cfg_two = ApprovalConfig {
             quorum_size: 2,
+            approver_keys: [("alice".to_string(), cfg_one.signing_key.clone())]
+                .into_iter()
+                .collect(),
             ..cfg_one
         };
 
@@ -1180,6 +1275,67 @@ mod tests {
             .ready_to_apply(&cfg_b, &manifest, &changes, 100)
             .unwrap_err();
         assert!(matches!(err, ApprovalError::BadSignature { .. }));
+    }
+
+    #[test]
+    fn quorum_with_only_a_shared_key_is_refused() {
+        // One shared key: its holder can sign as "alice" AND "bob", so two
+        // signatures prove a single party. Never accepted as a quorum.
+        let shared = ApprovalConfig {
+            approver_keys: std::collections::BTreeMap::new(),
+            ..approval_config(2, vec![])
+        };
+        let plan = sample_plan();
+        let sig_a = signed(&plan, "alice", "sre", "ok", &shared);
+        let sig_b = signed(&plan, "bob", "dba", "ok", &shared);
+        let err = ApprovedPlan::create(plan, vec![sig_a, sig_b], &shared, 0).unwrap_err();
+        assert_eq!(
+            err,
+            ApprovalError::QuorumRequiresPerApproverKeys { required: 2 }
+        );
+    }
+
+    #[test]
+    fn quorum_signature_must_verify_under_the_approvers_own_key() {
+        let cfg = approval_config(2, vec![]);
+        let plan = sample_plan();
+        let sig_a = signed(&plan, "alice", "sre", "ok", &cfg);
+        // Alice forges Bob's vote with HER key: rejected.
+        let forged_b = ApprovalSignature {
+            approver_id: "bob".to_string(),
+            approver_role: "dba".to_string(),
+            approved_at_unix_ms: 1_000,
+            reason: "ok".to_string(),
+            signature: compute_signature(
+                &plan.operations_hash,
+                "bob",
+                "ok",
+                cfg.key_for("alice").unwrap(),
+            ),
+        };
+        let err =
+            ApprovedPlan::create(plan.clone(), vec![sig_a.clone(), forged_b], &cfg, 0).unwrap_err();
+        assert!(
+            matches!(err, ApprovalError::BadSignature { ref approver_id } if approver_id == "bob")
+        );
+        // An approver without a configured key is rejected outright.
+        let mallory = signed(&plan, "mallory", "sre", "ok", &cfg);
+        let err = ApprovedPlan::create(plan, vec![sig_a, mallory], &cfg, 0).unwrap_err();
+        assert!(matches!(err, ApprovalError::UnknownApprover { .. }));
+    }
+
+    #[test]
+    fn approver_keys_parse_from_env_format() {
+        let keys = parse_approver_keys(" alice=k1 , bob = k2 ,bad,=nokey,noval=, ");
+        assert_eq!(keys.len(), 2);
+        assert_eq!(keys.get("alice").map(Vec::as_slice), Some(&b"k1"[..]));
+        assert_eq!(keys.get("bob").map(Vec::as_slice), Some(&b"k2"[..]));
+        let cfg = ApprovalConfig {
+            approver_keys: keys,
+            ..approval_config(1, vec![])
+        };
+        assert!(cfg.requires_signed_plan());
+        assert!(cfg.key_for("carol").is_none());
     }
 
     #[test]

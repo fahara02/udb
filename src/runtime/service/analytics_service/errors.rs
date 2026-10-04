@@ -66,3 +66,22 @@ pub(crate) fn require_platform_admin(operation: &'static str) -> Result<(), Stat
     let claim = crate::runtime::service::method_security::current_claim_context();
     platform_admin_guard(&claim, operation)
 }
+
+/// A system-global summary RPC whose table nothing in this deployment writes
+/// (no collector populates executor-performance / reconciliation summaries).
+/// An empty success would read as "nothing happened"; instead the caller is
+/// told the metric is not collected (`FailedPrecondition`).
+pub(crate) fn analytics_not_collected_status(
+    operation: &'static str,
+    what: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        "analytics",
+        operation,
+        "analytics_collection",
+        format!(
+            "{what} are not collected by this deployment (no writer populates them); \
+             an empty result would be misleading"
+        ),
+    )
+}

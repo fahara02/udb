@@ -178,6 +178,76 @@ fn guard_cdc_response_stream(
     })
 }
 
+/// The data-policy object + action a transactional mutation is authorized
+/// against: exactly the tokens the equivalent unary RPC uses (`Upsert` /
+/// `Update` / `Delete` on the message type, `VectorUpsert` on the collection,
+/// `PutObject` on the bucket, `EnqueueOutboxEvent` on the topic). The operation
+/// is matched the way the transaction executor matches it, so nothing can be
+/// applied under a different token than it was authorized under; an operation
+/// the executor does not support is refused here (fail closed).
+fn tx_mutation_authz_target(mutation: &Mutation) -> Result<(&str, &'static str), Status> {
+    let operation = mutation.operation.to_ascii_lowercase();
+    let target = match operation.as_str() {
+        "upsert" => (mutation.message_type.as_str(), "Upsert"),
+        "update" => (mutation.message_type.as_str(), "Update"),
+        "delete" => (mutation.message_type.as_str(), "Delete"),
+        "vector_upsert" => (mutation.collection.as_str(), "VectorUpsert"),
+        "put_object" => (mutation.bucket.as_str(), "PutObject"),
+        "enqueue_outbox_event" => (
+            if mutation.collection.trim().is_empty() {
+                mutation.message_type.as_str()
+            } else {
+                mutation.collection.as_str()
+            },
+            "EnqueueOutboxEvent",
+        ),
+        other => {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                format!("BeginTx: unsupported transaction operation '{other}'"),
+                [(
+                    "operation",
+                    "must be one of upsert, update, delete, vector_upsert, put_object, enqueue_outbox_event",
+                )],
+            ));
+        }
+    };
+    Ok(target)
+}
+
+/// Authorize every mutation of a transaction (skipping pure commit markers,
+/// which the executor never applies) before ANY is applied. Uses the per-item
+/// decision core the batch RPCs use, so one transaction costs one rate-limit
+/// token (the `BeginTx` gate) rather than one per mutation.
+async fn authorize_tx_mutations(
+    snapshot: &AuthzSnapshot,
+    security: &SecurityContext,
+    mutations: &[Mutation],
+) -> Result<(), Status> {
+    for mutation in mutations.iter().filter(|mutation| !mutation.commit) {
+        if mutation.rollback && mutation.operation.trim().is_empty() {
+            // A bare rollback marker writes nothing.
+            continue;
+        }
+        let (object, action) = tx_mutation_authz_target(mutation)?;
+        super::reject_wildcard_data_message_type(object, action)?;
+        DataBrokerService::authorize_message_item(snapshot, security, object, action).await?;
+    }
+    Ok(())
+}
+
+async fn drain_and_authorize_tx_mutations(
+    mut stream: tonic::Streaming<Mutation>,
+    snapshot: &AuthzSnapshot,
+    security: &SecurityContext,
+) -> Result<Vec<Mutation>, Status> {
+    let mut mutations = Vec::new();
+    while let Some(item) = stream.next().await {
+        mutations.push(item?);
+    }
+    authorize_tx_mutations(snapshot, security, &mutations).await?;
+    Ok(mutations)
+}
+
 impl DataBrokerService {
     pub(crate) async fn begin_tx_inner(
         &self,
@@ -188,12 +258,24 @@ impl DataBrokerService {
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context();
         let response_context = metadata_context.clone();
+        // `BeginTx` itself is only the control gate; every streamed mutation is
+        // then authorized against the data policy for the resource it writes,
+        // with the SAME action tokens the unary verbs use, BEFORE anything is
+        // applied. One denied mutation refuses the whole transaction.
+        let authz_snapshot = self.current_authz_snapshot();
+        let authz_security = security.clone();
         let result = self
             .execute_with_channel(
                 crate::runtime::channels::OperationChannel::Transaction,
                 || async move {
+                    let mutations = drain_and_authorize_tx_mutations(
+                        request.into_inner(),
+                        authz_snapshot.as_ref(),
+                        &authz_security,
+                    )
+                    .await?;
                     Ok(runtime
-                        .begin_tx(manifest, request.into_inner(), metadata_context)
+                        .begin_tx_buffered(manifest, mutations, metadata_context)
                         .await)
                 },
             )
@@ -242,8 +324,11 @@ impl DataBrokerService {
             );
         }
         let request = request.into_inner();
+        // The topic pattern is a PATTERN: "*"/empty means "every topic" and is
+        // evaluated BY the data policy (only a `*`-object grant allows it) —
+        // the same object the in-stream recheck below re-authorizes.
         if let Err(err) = self
-            .authorize(&security, &request.topic_pattern, "PublishCDC")
+            .authorize_pattern(&security, &request.topic_pattern, "PublishCDC")
             .await
         {
             return self.record_grpc("PublishCDC", started, Err(err));
@@ -535,6 +620,124 @@ mod tests {
             .expect("non-expiring credential still has a bounded authorization age");
         assert_eq!(budget, Duration::from_secs(30));
         assert_eq!(reason, CdcStreamDeadlineReason::ReauthenticationRequired);
+    }
+
+    fn tx_security() -> SecurityContext {
+        SecurityContext {
+            tenant_id: "acme".to_string(),
+            purpose: "billing".to_string(),
+            service_identity: "svc:billing".to_string(),
+            scopes: vec!["udb:write".to_string()],
+            ..SecurityContext::default()
+        }
+    }
+
+    fn tx_snapshot() -> AuthzSnapshot {
+        AuthzSnapshot {
+            version: "v1".to_string(),
+            policies: vec![crate::runtime::authz::AuthzPolicy {
+                id: "invoice-upsert".to_string(),
+                effect: crate::runtime::authz::Effect::Allow,
+                subject: "svc:billing".to_string(),
+                tenant: "acme".to_string(),
+                action: "Upsert".to_string(),
+                resource: "acme.billing.v1.Invoice".to_string(),
+                ..Default::default()
+            }],
+            ..AuthzSnapshot::default()
+        }
+    }
+
+    fn mutation(operation: &str, message_type: &str) -> Mutation {
+        Mutation {
+            operation: operation.to_string(),
+            message_type: message_type.to_string(),
+            ..Mutation::default()
+        }
+    }
+
+    #[test]
+    fn tx_mutation_authz_target_uses_unary_action_tokens() {
+        let m = mutation("UPSERT", "acme.billing.v1.Invoice");
+        assert_eq!(
+            tx_mutation_authz_target(&m).unwrap(),
+            ("acme.billing.v1.Invoice", "Upsert")
+        );
+        assert_eq!(
+            tx_mutation_authz_target(&mutation("update", "T"))
+                .unwrap()
+                .1,
+            "Update"
+        );
+        assert_eq!(
+            tx_mutation_authz_target(&mutation("delete", "T"))
+                .unwrap()
+                .1,
+            "Delete"
+        );
+        let put = Mutation {
+            operation: "put_object".to_string(),
+            bucket: "invoices".to_string(),
+            ..Mutation::default()
+        };
+        assert_eq!(
+            tx_mutation_authz_target(&put).unwrap(),
+            ("invoices", "PutObject")
+        );
+        let err = tx_mutation_authz_target(&mutation("drop_table", "T"))
+            .expect_err("unsupported operations fail closed");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn begin_tx_authorizes_every_mutation_before_apply() {
+        let snapshot = tx_snapshot();
+        let security = tx_security();
+        // Allowed: the policy grants Upsert on Invoice.
+        authorize_tx_mutations(
+            &snapshot,
+            &security,
+            &[
+                mutation("upsert", "acme.billing.v1.Invoice"),
+                Mutation {
+                    commit: true,
+                    ..Mutation::default()
+                },
+            ],
+        )
+        .await
+        .expect("a granted mutation set is allowed");
+
+        // One ungranted mutation (Delete is not granted) refuses the whole tx.
+        let err = authorize_tx_mutations(
+            &snapshot,
+            &security,
+            &[
+                mutation("upsert", "acme.billing.v1.Invoice"),
+                mutation("delete", "acme.billing.v1.Invoice"),
+            ],
+        )
+        .await
+        .expect_err("an ungranted mutation must refuse the transaction");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+
+        // A different table is not covered by the Invoice grant.
+        let err = authorize_tx_mutations(
+            &snapshot,
+            &security,
+            &[mutation("upsert", "acme.hr.v1.Salary")],
+        )
+        .await
+        .expect_err("a table outside the grant must be denied");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+
+        // A caller-supplied wildcard message type never bypasses the policy.
+        for wildcard in ["*", ""] {
+            let err = authorize_tx_mutations(&snapshot, &security, &[mutation("upsert", wildcard)])
+                .await
+                .expect_err("a wildcard/empty tx message type must be refused");
+            assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        }
     }
 
     #[test]

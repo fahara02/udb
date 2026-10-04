@@ -578,15 +578,30 @@ impl DataBrokerService {
         // mechanisms, because nothing here ever asked. Now it does, so any FUTURE
         // mechanism surfaces without needing its own wiring. Recorded on the
         // metrics recorder too, so it alerts without anyone reading the report.
+        // The fault is evaluated over a trailing WINDOW (not the lifetime
+        // total), so the report — and the gRPC health probe, which reads the
+        // same signal — recovers once the sink is durable again; an older,
+        // recovered degradation is kept visible as a warning.
         if let Some((degraded_events, reason, last_unix)) =
             crate::runtime::core::audit::audit_degradation_snapshot()
         {
-            self.metrics.record_audit_sink_failure("data_plane_audit");
-            errors.push(format!(
-                "durable audit sink is DEGRADED: {degraded_events} audit event(s) could not be \
-                 durably stored (most recent reason: {reason}, at unix {last_unix}). Audit \
-                 events are going to stdout and are NOT retained"
-            ));
+            let window_secs = crate::runtime::core::audit::audit_degraded_health_window_secs();
+            let recent = crate::runtime::core::audit::audit_degraded_events_within(window_secs);
+            if recent > 0 {
+                self.metrics.record_audit_sink_failure("data_plane_audit");
+                errors.push(format!(
+                    "durable audit sink is DEGRADED: {recent} audit event(s) in the last \
+                     {window_secs}s ({degraded_events} since start) could not be durably stored \
+                     (most recent reason: {reason}, at unix {last_unix}). Audit events are going \
+                     to stdout and are NOT retained"
+                ));
+            } else {
+                warnings.push(format!(
+                    "durable audit sink recovered: {degraded_events} audit event(s) earlier in \
+                     this process could not be durably stored (last reason: {reason}, at unix \
+                     {last_unix}); none in the last {window_secs}s"
+                ));
+            }
         }
 
         let probes_json = serde_json::to_vec(&probes).unwrap_or_default();
@@ -952,14 +967,21 @@ pub async fn build_listener_health_service(
                 // Downgrade only after a short run of failures (do not flap on one
                 // transient blip); recover immediately once the probe succeeds.
                 let live_ok = pg_ok || consecutive_failures < READINESS_FAILURE_GRACE;
-                let want_ready = boot_ready && live_ok;
+                // Durable data-plane audit degraded within the health window →
+                // the DataBroker listener is NOT_SERVING, so load balancers stop
+                // routing writes that would go unaudited. Windowed, so it
+                // recovers once the sink has been durable for the whole window.
+                let audit_ok = audit_health_ok(plane);
+                let want_ready = boot_ready && live_ok && audit_ok;
                 if want_ready != last_marked {
                     mark_listener_health(&mut reporter, plane, &statuses, want_ready).await;
                     last_marked = want_ready;
                     tracing::warn!(
                         plane = ?plane,
                         serving = want_ready,
-                        "listener readiness changed from live PostgreSQL probe",
+                        postgres_ok = live_ok,
+                        audit_ok,
+                        "listener readiness changed from live PostgreSQL/audit probe",
                     );
                 }
             }
@@ -971,6 +993,20 @@ pub async fn build_listener_health_service(
 
 /// How often the live readiness-refresh task (A8) re-probes PostgreSQL.
 const READINESS_REFRESH_INTERVAL_SECS: u64 = 5;
+
+/// Audit gate for the live readiness task: only the DataBroker listener
+/// carries the data-plane audit trail, so only it is taken out of rotation
+/// while durable audit is degraded within the health window.
+fn audit_health_ok(plane: HealthPlane) -> bool {
+    audit_health_ok_with(
+        plane,
+        crate::runtime::core::audit::audit_currently_degraded(),
+    )
+}
+
+fn audit_health_ok_with(plane: HealthPlane, audit_degraded: bool) -> bool {
+    !(matches!(plane, HealthPlane::DataBroker) && audit_degraded)
+}
 /// Consecutive failed probes tolerated before a listener is marked NotServing —
 /// so a single transient blip does not flap the serving status.
 const READINESS_FAILURE_GRACE: u32 = 2;
@@ -1077,6 +1113,16 @@ fn message_descriptor_to_proto(
 #[cfg(test)]
 mod health_cache_tests {
     use super::*;
+
+    /// Durable-audit degradation must reach the gRPC health probe the load
+    /// balancer reads — on the DataBroker listener only.
+    #[test]
+    fn audit_degradation_takes_only_the_databroker_listener_out_of_rotation() {
+        assert!(!audit_health_ok_with(HealthPlane::DataBroker, true));
+        assert!(audit_health_ok_with(HealthPlane::DataBroker, false));
+        assert!(audit_health_ok_with(HealthPlane::NativeControlPlane, true));
+        assert!(audit_health_ok_with(HealthPlane::WebRtcPeer, true));
+    }
 
     /// B2 (capability-lie guard): the report cache TTL must stay tiny so a
     /// newly-failing required fact (bad signing key, missing PG/store) cannot be

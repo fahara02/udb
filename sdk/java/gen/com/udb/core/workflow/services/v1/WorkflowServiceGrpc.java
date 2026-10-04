@@ -177,6 +177,37 @@ public final class WorkflowServiceGrpc {
     return getSignalWorkflowMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.workflow.services.v1.AckWorkflowStepRequest,
+      com.udb.core.workflow.services.v1.AckWorkflowStepResponse> getAckWorkflowStepMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AckWorkflowStep",
+      requestType = com.udb.core.workflow.services.v1.AckWorkflowStepRequest.class,
+      responseType = com.udb.core.workflow.services.v1.AckWorkflowStepResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.workflow.services.v1.AckWorkflowStepRequest,
+      com.udb.core.workflow.services.v1.AckWorkflowStepResponse> getAckWorkflowStepMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.workflow.services.v1.AckWorkflowStepRequest, com.udb.core.workflow.services.v1.AckWorkflowStepResponse> getAckWorkflowStepMethod;
+    if ((getAckWorkflowStepMethod = WorkflowServiceGrpc.getAckWorkflowStepMethod) == null) {
+      synchronized (WorkflowServiceGrpc.class) {
+        if ((getAckWorkflowStepMethod = WorkflowServiceGrpc.getAckWorkflowStepMethod) == null) {
+          WorkflowServiceGrpc.getAckWorkflowStepMethod = getAckWorkflowStepMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.workflow.services.v1.AckWorkflowStepRequest, com.udb.core.workflow.services.v1.AckWorkflowStepResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AckWorkflowStep"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.workflow.services.v1.AckWorkflowStepRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.workflow.services.v1.AckWorkflowStepResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new WorkflowServiceMethodDescriptorSupplier("AckWorkflowStep"))
+              .build();
+        }
+      }
+    }
+    return getAckWorkflowStepMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -303,6 +334,22 @@ public final class WorkflowServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.workflow.services.v1.SignalWorkflowResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSignalWorkflowMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * Acknowledge the outcome of the step the workflow tick dispatched
+     * (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+     * the instance stays RUNNING awaiting this acknowledgement, and a step that is
+     * not acknowledged within the step timeout fails the workflow (compensating
+     * any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+     * the last one); FAILED fails the workflow through the same
+     * failed/compensating path as a timeout.
+     * </pre>
+     */
+    default void ackWorkflowStep(com.udb.core.workflow.services.v1.AckWorkflowStepRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.workflow.services.v1.AckWorkflowStepResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAckWorkflowStepMethod(), responseObserver);
+    }
   }
 
   /**
@@ -410,6 +457,23 @@ public final class WorkflowServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getSignalWorkflowMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * Acknowledge the outcome of the step the workflow tick dispatched
+     * (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+     * the instance stays RUNNING awaiting this acknowledgement, and a step that is
+     * not acknowledged within the step timeout fails the workflow (compensating
+     * any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+     * the last one); FAILED fails the workflow through the same
+     * failed/compensating path as a timeout.
+     * </pre>
+     */
+    public void ackWorkflowStep(com.udb.core.workflow.services.v1.AckWorkflowStepRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.workflow.services.v1.AckWorkflowStepResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAckWorkflowStepMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -491,6 +555,22 @@ public final class WorkflowServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getSignalWorkflowMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Acknowledge the outcome of the step the workflow tick dispatched
+     * (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+     * the instance stays RUNNING awaiting this acknowledgement, and a step that is
+     * not acknowledged within the step timeout fails the workflow (compensating
+     * any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+     * the last one); FAILED fails the workflow through the same
+     * failed/compensating path as a timeout.
+     * </pre>
+     */
+    public com.udb.core.workflow.services.v1.AckWorkflowStepResponse ackWorkflowStep(com.udb.core.workflow.services.v1.AckWorkflowStepRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAckWorkflowStepMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -571,6 +651,22 @@ public final class WorkflowServiceGrpc {
     public com.udb.core.workflow.services.v1.SignalWorkflowResponse signalWorkflow(com.udb.core.workflow.services.v1.SignalWorkflowRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getSignalWorkflowMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Acknowledge the outcome of the step the workflow tick dispatched
+     * (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+     * the instance stays RUNNING awaiting this acknowledgement, and a step that is
+     * not acknowledged within the step timeout fails the workflow (compensating
+     * any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+     * the last one); FAILED fails the workflow through the same
+     * failed/compensating path as a timeout.
+     * </pre>
+     */
+    public com.udb.core.workflow.services.v1.AckWorkflowStepResponse ackWorkflowStep(com.udb.core.workflow.services.v1.AckWorkflowStepRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAckWorkflowStepMethod(), getCallOptions(), request);
     }
   }
 
@@ -658,6 +754,23 @@ public final class WorkflowServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getSignalWorkflowMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * Acknowledge the outcome of the step the workflow tick dispatched
+     * (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+     * the instance stays RUNNING awaiting this acknowledgement, and a step that is
+     * not acknowledged within the step timeout fails the workflow (compensating
+     * any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+     * the last one); FAILED fails the workflow through the same
+     * failed/compensating path as a timeout.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.workflow.services.v1.AckWorkflowStepResponse> ackWorkflowStep(
+        com.udb.core.workflow.services.v1.AckWorkflowStepRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAckWorkflowStepMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_START_WORKFLOW = 0;
@@ -665,6 +778,7 @@ public final class WorkflowServiceGrpc {
   private static final int METHODID_LIST_WORKFLOWS = 2;
   private static final int METHODID_CANCEL_WORKFLOW = 3;
   private static final int METHODID_SIGNAL_WORKFLOW = 4;
+  private static final int METHODID_ACK_WORKFLOW_STEP = 5;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -702,6 +816,10 @@ public final class WorkflowServiceGrpc {
         case METHODID_SIGNAL_WORKFLOW:
           serviceImpl.signalWorkflow((com.udb.core.workflow.services.v1.SignalWorkflowRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.workflow.services.v1.SignalWorkflowResponse>) responseObserver);
+          break;
+        case METHODID_ACK_WORKFLOW_STEP:
+          serviceImpl.ackWorkflowStep((com.udb.core.workflow.services.v1.AckWorkflowStepRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.workflow.services.v1.AckWorkflowStepResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -756,6 +874,13 @@ public final class WorkflowServiceGrpc {
               com.udb.core.workflow.services.v1.SignalWorkflowRequest,
               com.udb.core.workflow.services.v1.SignalWorkflowResponse>(
                 service, METHODID_SIGNAL_WORKFLOW)))
+        .addMethod(
+          getAckWorkflowStepMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.workflow.services.v1.AckWorkflowStepRequest,
+              com.udb.core.workflow.services.v1.AckWorkflowStepResponse>(
+                service, METHODID_ACK_WORKFLOW_STEP)))
         .build();
   }
 
@@ -809,6 +934,7 @@ public final class WorkflowServiceGrpc {
               .addMethod(getListWorkflowsMethod())
               .addMethod(getCancelWorkflowMethod())
               .addMethod(getSignalWorkflowMethod())
+              .addMethod(getAckWorkflowStepMethod())
               .build();
         }
       }

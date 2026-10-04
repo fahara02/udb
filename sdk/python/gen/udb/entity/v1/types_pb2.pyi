@@ -46,6 +46,11 @@ from udb.entity.v1.blob_pb2 import UrlRequest as UrlRequest
 from udb.entity.v1.blob_pb2 import UrlResponse as UrlResponse
 from udb.entity.v1.blob_pb2 import MultipartUploadRequest as MultipartUploadRequest
 from udb.entity.v1.blob_pb2 import MultipartUploadResponse as MultipartUploadResponse
+from udb.entity.v1.blob_pb2 import MultipartUploadPart as MultipartUploadPart
+from udb.entity.v1.blob_pb2 import CompleteMultipartUploadRequest as CompleteMultipartUploadRequest
+from udb.entity.v1.blob_pb2 import CompleteMultipartUploadResponse as CompleteMultipartUploadResponse
+from udb.entity.v1.blob_pb2 import AbortMultipartUploadRequest as AbortMultipartUploadRequest
+from udb.entity.v1.blob_pb2 import AbortMultipartUploadResponse as AbortMultipartUploadResponse
 from udb.entity.v1.stores_pb2 import CacheGetRequest as CacheGetRequest
 from udb.entity.v1.stores_pb2 import CacheGetResponse as CacheGetResponse
 from udb.entity.v1.stores_pb2 import CacheSetRequest as CacheSetRequest

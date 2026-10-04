@@ -638,3 +638,134 @@ async fn create_job_rejects_invalid_timezone() {
     assert_eq!(detail.kind, ErrorKind::Validation as i32);
     assert_eq!(detail.field_violations[0].field, "timezone");
 }
+
+/// Per-job isolation in the scheduler tick: one failing job is rolled back to
+/// its own savepoint and recorded, the rest of the batch still commits.
+mod tick_isolation {
+    use super::super::config::{TOPIC_JOB_DEAD, TOPIC_JOB_FIRED};
+    use super::super::tick::{run_scheduler_tick_once, tick_failure_outcome};
+
+    #[test]
+    fn failing_job_backs_off_then_dead_letters() {
+        // Attempts left: bump + exponential backoff (base * 2^(n-1)).
+        assert_eq!(tick_failure_outcome(0, 3, 10), (1, Some(10)));
+        assert_eq!(tick_failure_outcome(1, 3, 10), (2, Some(20)));
+        // Exhausted: dead-letter (no delay).
+        assert_eq!(tick_failure_outcome(2, 3, 10), (3, None));
+        // A non-positive max_attempts is treated as one attempt (never loops).
+        assert_eq!(tick_failure_outcome(0, 0, 10), (1, None));
+        // Backoff is capped at one hour.
+        assert_eq!(tick_failure_outcome(14, 100, 60), (15, Some(3600)));
+    }
+
+    async fn insert_due_job(
+        pool: &sqlx::PgPool,
+        tenant: &str,
+        name: &str,
+        max_attempts: i32,
+    ) -> String {
+        let job_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query(
+            "INSERT INTO udb_scheduler.scheduled_jobs \
+                (job_id, tenant_id, name, schedule_type, payload, target_topic, status, \
+                 next_fire_at, max_attempts, attempt_count, backoff_seconds) \
+             VALUES ($1::UUID, $2::UUID, $3, 'ONE_SHOT', '{}'::JSONB, 'live.topic', 'ACTIVE', \
+                 NOW() - INTERVAL '1 minute', $4, 0, 1)",
+        )
+        .bind(&job_id)
+        .bind(tenant)
+        .bind(name)
+        .bind(max_attempts)
+        .execute(pool)
+        .await
+        .unwrap_or_else(|err| panic!("insert job {name}: {err}"));
+        job_id
+    }
+
+    async fn job_state(pool: &sqlx::PgPool, job_id: &str) -> (String, i32) {
+        sqlx::query_as::<_, (String, i32)>(
+            "SELECT status, attempt_count FROM udb_scheduler.scheduled_jobs \
+             WHERE job_id = $1::UUID",
+        )
+        .bind(job_id)
+        .fetch_one(pool)
+        .await
+        .expect("load job state")
+    }
+
+    async fn event_count(pool: &sqlx::PgPool, outbox: &str, topic: &str, job_id: &str) -> i64 {
+        sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {outbox} \
+             WHERE topic = $1 AND payload->'payload'->>'job_id' = $2"
+        ))
+        .bind(topic)
+        .bind(job_id)
+        .fetch_one(pool)
+        .await
+        .expect("count job events")
+    }
+
+    /// The real tick against Postgres: a poison job (its fire UPDATE raises via a
+    /// test trigger) does NOT roll back the healthy job claimed in the same batch;
+    /// the poison job is dead-lettered with a `job.dead` event instead of failing
+    /// every pass forever.
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with cargo test --lib live_scheduler_tick_isolates_failing_job -- --ignored --nocapture"]
+    async fn live_scheduler_tick_isolates_failing_job() {
+        use crate::runtime::service::live_tests::support::{
+            live_native_service_db_lock, live_pg_pool, migrate_native_service_db,
+        };
+        let _guard = live_native_service_db_lock().lock().await;
+        let pool = live_pg_pool().await;
+        migrate_native_service_db(&pool).await;
+        let outbox = crate::runtime::config::UdbConfig::from_env()
+            .cdc
+            .outbox_relation();
+        // Poison: completing a job named `poison` raises; dead-lettering it does not.
+        sqlx::raw_sql(
+            "CREATE OR REPLACE FUNCTION udb_scheduler.live_poison_guard() RETURNS trigger \
+             LANGUAGE plpgsql AS $$ BEGIN \
+               IF NEW.name = 'poison' AND NEW.status = 'COMPLETED' THEN \
+                 RAISE EXCEPTION 'poison job'; \
+               END IF; \
+               RETURN NEW; \
+             END $$; \
+             CREATE TRIGGER live_poison_guard BEFORE UPDATE ON udb_scheduler.scheduled_jobs \
+               FOR EACH ROW EXECUTE FUNCTION udb_scheduler.live_poison_guard();",
+        )
+        .execute(&pool)
+        .await
+        .expect("install poison trigger");
+
+        let tenant = uuid::Uuid::new_v4().to_string();
+        let poison = insert_due_job(&pool, &tenant, "poison", 1).await;
+        let healthy = insert_due_job(&pool, &tenant, "healthy", 3).await;
+
+        let acted = run_scheduler_tick_once(&pool, Some(&outbox), 50)
+            .await
+            .expect("a failing job must not fail the tick");
+        assert_eq!(acted, 1, "only the healthy job fired");
+        assert_eq!(job_state(&pool, &healthy).await.0, "COMPLETED");
+        assert_eq!(
+            event_count(&pool, &outbox, TOPIC_JOB_FIRED, &healthy).await,
+            1
+        );
+        assert_eq!(job_state(&pool, &poison).await, ("DEAD".to_string(), 1));
+        assert_eq!(
+            event_count(&pool, &outbox, TOPIC_JOB_FIRED, &poison).await,
+            0
+        );
+        assert_eq!(
+            event_count(&pool, &outbox, TOPIC_JOB_DEAD, &poison).await,
+            1
+        );
+
+        sqlx::raw_sql(
+            "DROP TRIGGER IF EXISTS live_poison_guard ON udb_scheduler.scheduled_jobs; \
+             DROP FUNCTION IF EXISTS udb_scheduler.live_poison_guard();",
+        )
+        .execute(&pool)
+        .await
+        .expect("drop poison trigger");
+    }
+}

@@ -730,3 +730,112 @@ fn backup_missing_setup_capabilities_carry_typed_detail() {
         assert!(!detail.retryable);
     }
 }
+
+/// The leader backup-maintenance single passes against Postgres + MinIO: the
+/// scheduled-backup pass fires a due policy through the real backup routine,
+/// and the retention pass prunes the run that exceeds `max_retained_backups`.
+#[tokio::test]
+#[ignore = "requires live Postgres + MinIO; run with cargo test --lib live_backup_scheduled_and_retention_passes -- --ignored --nocapture"]
+async fn live_backup_scheduled_and_retention_passes() {
+    use super::retention::{run_backup_retention_once, run_scheduled_backups_once};
+    use crate::proto::udb::core::backup::services::v1 as backup_pb;
+    use crate::proto::udb::core::backup::services::v1::backup_service_server::BackupService;
+    use crate::runtime::service::live_tests::support::{
+        live_native_service_db_lock, live_pg_dsn, live_pg_pool, migrate_native_service_db,
+    };
+
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+
+    let tenant_id = uuid::Uuid::new_v4().to_string();
+    let project_id = uuid::Uuid::new_v4().to_string();
+    let mut config = crate::runtime::config::UdbConfig::from_env();
+    config.primary.direct_dsn = live_pg_dsn();
+    let broker = crate::runtime::service::DataBrokerService::with_runtime(
+        crate::runtime::native_catalog::native_manifest().clone(),
+        crate::runtime::DataBrokerRuntime::from_config(config).await,
+    );
+    let checksum = broker
+        .catalog
+        .stage_catalog(
+            broker.manifest.clone(),
+            project_id.clone(),
+            "backup-live-maintenance".to_string(),
+            "exact".to_string(),
+        )
+        .await
+        .expect("stage backup catalog");
+    broker
+        .catalog
+        .activate_catalog_for(&project_id, &checksum)
+        .await
+        .expect("activate backup catalog");
+    let svc = broker.build_backup_service();
+
+    fn scoped<T>(message: T, tenant_id: &str, project_id: &str) -> tonic::Request<T> {
+        let mut request = tonic::Request::new(message);
+        request.metadata_mut().insert(
+            "x-tenant-id",
+            tenant_id.parse().expect("valid tenant metadata"),
+        );
+        request.metadata_mut().insert(
+            "x-udb-project-id",
+            project_id.parse().expect("valid project metadata"),
+        );
+        request
+    }
+    let request =
+        |message: backup_pb::PutBackupPolicyRequest| scoped(message, &tenant_id, &project_id);
+    let start_request =
+        |message: backup_pb::StartTenantBackupRequest| scoped(message, &tenant_id, &project_id);
+    let list_request =
+        |message: backup_pb::ListBackupsRequest| scoped(message, &tenant_id, &project_id);
+    svc.put_backup_policy(request(backup_pb::PutBackupPolicyRequest {
+        tenant_id: tenant_id.clone(),
+        policy_name: "every-minute".to_string(),
+        schedule_cron: "* * * * *".to_string(),
+        retention_days: 0,
+        max_retained_backups: 1,
+        enabled: true,
+        object_backend: "minio".to_string(),
+        object_bucket: "udb-storage".to_string(),
+        metadata_json: "{}".to_string(),
+    }))
+    .await
+    .expect("put backup policy");
+
+    let fired = run_scheduled_backups_once(
+        &svc,
+        crate::runtime::service::scheduler_service::cron::next_cron_after,
+    )
+    .await
+    .expect("scheduled backup pass");
+    assert_eq!(fired, 1, "the never-backed-up due policy fires once");
+
+    // A second, operator-triggered run puts the tenant over max_retained_backups.
+    svc.start_tenant_backup(start_request(backup_pb::StartTenantBackupRequest {
+        tenant_id: tenant_id.clone(),
+        object_backend: "minio".to_string(),
+        object_bucket: "udb-storage".to_string(),
+        ..Default::default()
+    }))
+    .await
+    .expect("manual backup run");
+
+    let pruned = run_backup_retention_once(&svc)
+        .await
+        .expect("retention pass");
+    assert_eq!(pruned, 1, "the run beyond max_retained_backups is pruned");
+    let remaining = svc
+        .list_backups(list_request(backup_pb::ListBackupsRequest {
+            tenant_id: tenant_id.clone(),
+            kind: "BACKUP".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("list backups")
+        .into_inner();
+    let backups = remaining.backups.len();
+    assert_eq!(backups, 1, "exactly the newest backup run is retained");
+}

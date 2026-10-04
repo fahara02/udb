@@ -650,18 +650,36 @@ KLhovYU9JhQ7ZbrQUOf7zrx243CdlDgFxw3rKZQgilG15Jtdj/zd389aeDNCh0b3\n\
 const DEV_IDP_CERT_DER_B64: &str = "MIIDEzCCAfugAwIBAgIUbx65hlvb7IxFZfBkI6sCI2bVY4swDQYJKoZIhvcNAQELBQAwGDEWMBQGA1UEAwwNc2FtbC10ZXN0LWlkcDAgFw0yNjA2MDkxNzAwMTBaGA8yMTI2MDUxNjE3MDAxMFowGDEWMBQGA1UEAwwNc2FtbC10ZXN0LWlkcDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALWCE3a5wX/uf0FSFDs7NyryNT+eDBd4enq6a8ZGNp1+o5oDkw6jLplzWYUsdM6InDnykcz6gUHsFGg4ogz8VxN0aEODolfbZLFeFF7HsxiON6VK13QlEqPPMmziVXvCtdSEKgMJ4V+0ZLGPPEsNz92SzGGMEYdeWNxu8sNSXVl7MHmgsgtV9UjulF9aXZjAQ2jEeF0Im6swzlrZr9ruFE6KEaU0qA+KNKdNp3Nb0Q+CCCsI5Vv2kQZ9aFmcmYdatXf2M/hJ0eh0zYOtRve7tj73O0noMJF+eMAr8VqnRG+mmbwbSFlTueGYnl4r+/oyBLZrRkhizxg76Ou132M4NKkCAwEAAaNTMFEwHQYDVR0OBBYEFMX5JzOA3JOYu33vV95SFBRGLyD8MB8GA1UdIwQYMBaAFMX5JzOA3JOYu33vV95SFBRGLyD8MA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAGkBjr+d8sYYZtg5NYrcQLTV2vqYn8/FTwXLfr7W+QtjKSfe1oWHssaDowMIb4TV9Lzb8tAOLzqXhVglBflY5LV8SZ7GlM11nMmwCX1PS5gYWENW38TZV7zwOOJTHGgmUm/VL7JIxF5BVp6zQLoT3x7g8yBYVbpVS8LSBuPyQNjLdBHY364B+eIm+UW/ke+7jCxqE46NDGEyoZp2MNBmRrF5BGmyVdjS4+hdPiX9Sc+FtrTeX0PK6QbVAjXLHZlu4lrGQRCoYkYHQxImVtj88dk3EhlsHgJtDOIfBJDtOudkLKcY+wgeaTaKNHU21p954mhk+q5nuZ8kCzqVmzkI4fU=";
 
 /// Whether the dev self-asserted SAML path is enabled (resolved once).
-/// Fail-closed default: production never sets `UDB_SAML_TEST_MODE`.
+/// Fail-closed: `UDB_SAML_TEST_MODE` is REFUSED in a production posture (same
+/// stance as the WebAuthn soft-authenticator) — the dev IdP stays disabled and
+/// the refusal is logged at error level.
 pub fn dev_test_mode_enabled() -> bool {
     use std::sync::OnceLock;
     static ENABLED: OnceLock<bool> = OnceLock::new();
     *ENABLED.get_or_init(|| {
-        std::env::var("UDB_SAML_TEST_MODE")
+        let requested = std::env::var("UDB_SAML_TEST_MODE")
             .map(|v| {
                 let v = v.trim();
                 v == "1" || v.eq_ignore_ascii_case("true") || v.eq_ignore_ascii_case("yes")
             })
-            .unwrap_or(false)
+            .unwrap_or(false);
+        resolve_dev_test_mode(
+            requested,
+            crate::runtime::security::SecurityConfig::current().is_production(),
+        )
     })
+}
+
+/// Pure gate for [`dev_test_mode_enabled`]: production never runs the dev IdP.
+fn resolve_dev_test_mode(requested: bool, production: bool) -> bool {
+    if requested && production {
+        tracing::error!(
+            "UDB_SAML_TEST_MODE is set in production; the dev self-asserted SAML IdP is refused \
+             and stays disabled (unset UDB_SAML_TEST_MODE)"
+        );
+        return false;
+    }
+    requested
 }
 
 /// Sign a SAMLResponse that contains a `__SIG__` placeholder immediately after the
@@ -961,6 +979,20 @@ fn xml_escape(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn saml_test_mode_is_refused_in_production() {
+        assert!(
+            resolve_dev_test_mode(true, false),
+            "dev posture honors the flag"
+        );
+        assert!(
+            !resolve_dev_test_mode(true, true),
+            "production must refuse the dev self-asserted IdP"
+        );
+        assert!(!resolve_dev_test_mode(false, true));
+        assert!(!resolve_dev_test_mode(false, false));
+    }
 
     const METADATA: &str = r#"<?xml version="1.0"?>
 <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://idp.example.com/meta">

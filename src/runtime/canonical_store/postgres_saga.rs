@@ -41,6 +41,48 @@ impl PostgresCanonicalStore {
     }
 }
 
+/// Upgrade carry-over: before the store and the data plane shared one
+/// relation, store-recorded sagas (workflow sagas, admin retries) lived in
+/// the default `"udb_system"."udb_sagas"`. Copy the still-actionable ones
+/// (every non-terminal status) into the shared relation so recovery and the
+/// workflow engine keep seeing them. Idempotent (`ON CONFLICT DO NOTHING`)
+/// and a no-op when the legacy table does not exist; terminal history stays
+/// queryable in the legacy table.
+fn legacy_saga_carry_over_sql(rel: &str) -> String {
+    const COLS: &str = "saga_id, tx_id, tenant_id, correlation_id, status, backend_instance, \
+                        operation, current_step, retry_count, recovery_attempts, \
+                        compensation_status, steps, compensations, last_error, created_at, \
+                        updated_at";
+    format!(
+        "DO $udb_saga_carry$
+         BEGIN
+             IF to_regclass('{legacy}') IS NOT NULL
+                AND to_regclass('{legacy}') IS DISTINCT FROM to_regclass('{rel_lit}') THEN
+                 INSERT INTO {rel} ({COLS})
+                 SELECT {COLS} FROM {legacy}
+                 WHERE status NOT IN ('committed', 'compensated')
+                 ON CONFLICT (saga_id) DO NOTHING;
+             END IF;
+         END $udb_saga_carry$",
+        legacy = DEFAULT_REL.replace('\'', "''"),
+        rel_lit = rel.replace('\'', "''"),
+    )
+}
+
+/// The relation is shared with the BeginTx data plane, whose terminal-status
+/// writer historically stamped `compensation_status = 'failed'` alongside
+/// `status = 'failed_compensation'`. That token is not a `CompensationStatus`
+/// variant; an unparseable row would fail the WHOLE list/claim query and blind
+/// recovery to every saga. The status column already carries the failure, so
+/// the legacy token reads as `None` (no successful compensation recorded).
+/// An empty value (pre-column rows) reads the same way.
+fn parse_pg_compensation_status(token: &str) -> Option<CompensationStatus> {
+    match token {
+        "" | "failed" => Some(CompensationStatus::None),
+        other => CompensationStatus::parse(other),
+    }
+}
+
 fn row_to_saga(row: sqlx::postgres::PgRow) -> SystemStoreResult<SagaRow> {
     let saga_id: Uuid = row
         .try_get("saga_id")
@@ -52,7 +94,7 @@ fn row_to_saga(row: sqlx::postgres::PgRow) -> SystemStoreResult<SagaRow> {
         SystemStoreError::InvalidInput(format!("unknown saga status '{status_str}' in PG row"))
     })?;
     let comp_status_str: String = row.try_get("compensation_status").unwrap_or_default();
-    let compensation_status = CompensationStatus::parse(&comp_status_str).ok_or_else(|| {
+    let compensation_status = parse_pg_compensation_status(&comp_status_str).ok_or_else(|| {
         SystemStoreError::InvalidInput(format!(
             "unknown compensation_status '{comp_status_str}' in PG row"
         ))
@@ -97,7 +139,18 @@ impl SagaStore for PostgresCanonicalStore {
         // B.7: DDL strings come from the shared `sql_schema` renderer (single
         // source of truth across SQL backends); the execute/error-handling
         // loop below is unchanged.
-        let stmts = super::sql_schema::postgres_sagas_ddl(rel);
+        let mut stmts = super::sql_schema::postgres_sagas_ddl(rel);
+        // The production store shares its relation with the BeginTx data
+        // plane, which stamps the owning node on every in-progress saga so the
+        // startup crash sweep only touches this node's sagas. Additive +
+        // idempotent, so a pre-existing table (either shape) is upgraded.
+        stmts.push(crate::runtime::saga::saga_owner_column_ddl(rel));
+        // Only the production wiring (store pointed at the data-plane saga
+        // relation) inherits the legacy store's open sagas; scratch relations
+        // (conformance tests, isolated schemas) never do.
+        if rel != DEFAULT_REL && rel == crate::runtime::saga::data_plane_saga_relation() {
+            stmts.push(legacy_saga_carry_over_sql(rel));
+        }
         for sql in stmts.iter() {
             sqlx::query(sql)
                 .execute(self.pg_pool())
@@ -404,5 +457,167 @@ impl SagaStore for PostgresCanonicalStore {
             apply_saga_summary_bucket(&mut s, "postgres", &status, n)?;
         }
         Ok(s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::saga::{
+        data_plane_saga_begin_sql, data_plane_saga_relation, saga_owner_column_ddl,
+        startup_mark_indeterminate_sql,
+    };
+
+    #[test]
+    fn legacy_data_plane_compensation_tokens_do_not_poison_reads() {
+        assert_eq!(
+            parse_pg_compensation_status("failed"),
+            Some(CompensationStatus::None)
+        );
+        assert_eq!(
+            parse_pg_compensation_status(""),
+            Some(CompensationStatus::None)
+        );
+        assert_eq!(
+            parse_pg_compensation_status("completed"),
+            Some(CompensationStatus::Completed)
+        );
+        assert_eq!(parse_pg_compensation_status("bogus"), None);
+    }
+
+    #[test]
+    fn data_plane_and_store_name_the_same_relation() {
+        // The production store is built with this relation; the data-plane
+        // SQL builders interpolate it verbatim.
+        let rel = data_plane_saga_relation();
+        assert!(data_plane_saga_begin_sql(&rel).contains(&format!("INSERT INTO {rel}")));
+        assert!(startup_mark_indeterminate_sql(&rel).contains(&format!("UPDATE {rel}")));
+        assert!(saga_owner_column_ddl(&rel).starts_with(&format!("ALTER TABLE {rel}")));
+    }
+
+    #[test]
+    fn legacy_carry_over_copies_only_actionable_sagas_idempotently() {
+        let sql = legacy_saga_carry_over_sql(r#""udb_system"."udb_saga_coordinator""#);
+        assert!(sql.contains(r#"INSERT INTO "udb_system"."udb_saga_coordinator""#));
+        assert!(sql.contains(&format!("FROM {DEFAULT_REL}")));
+        assert!(sql.contains("ON CONFLICT (saga_id) DO NOTHING"));
+        assert!(sql.contains("status NOT IN ('committed', 'compensated')"));
+        assert!(
+            sql.contains("to_regclass"),
+            "no-op when the legacy table is absent"
+        );
+    }
+
+    fn live_pg_dsn() -> Option<String> {
+        std::env::var("UDB_LIVE_SAGA_PG_DSN")
+            .or_else(|_| std::env::var("UDB_INTEGRATION_PG_DSN"))
+            .ok()
+    }
+
+    async fn live_store() -> Option<(sqlx::PgPool, PostgresCanonicalStore)> {
+        let dsn = live_pg_dsn()?;
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(4)
+            .acquire_timeout(Duration::from_secs(10))
+            .connect(&dsn)
+            .await
+            .unwrap_or_else(|err| panic!("connect live saga postgres at {dsn}: {err}"));
+        crate::runtime::system::ensure_system_catalog(&pool)
+            .await
+            .expect("ensure live UDB system catalog");
+        let store = PostgresCanonicalStore::new(pool.clone(), "primary", "")
+            .with_saga_relation(data_plane_saga_relation());
+        SagaStore::ensure_saga_tables(&store)
+            .await
+            .expect("ensure saga tables on the shared relation");
+        Some((pool, store))
+    }
+
+    async fn data_plane_begin(pool: &sqlx::PgPool, tx_id: &str, owner: &str) -> Uuid {
+        let saga_id = Uuid::new_v4();
+        sqlx::query(&data_plane_saga_begin_sql(&data_plane_saga_relation()))
+            .bind(saga_id.to_string())
+            .bind(tx_id)
+            .bind("tenant-live-saga")
+            .bind("corr-live-saga")
+            .bind("primary")
+            .bind("upsert")
+            .bind(owner)
+            .execute(pool)
+            .await
+            .expect("data-plane saga_begin insert");
+        saga_id
+    }
+
+    /// A saga written through the BeginTx data-plane SQL is visible to the
+    /// recovery store (list + claim), i.e. both sides share one relation.
+    #[tokio::test]
+    #[ignore = "requires Postgres; set UDB_INTEGRATION_PG_DSN (or UDB_LIVE_SAGA_PG_DSN) and run with --ignored"]
+    async fn data_plane_saga_is_listed_by_recovery_store() {
+        let Some((pool, store)) = live_store().await else {
+            eprintln!("skipped: set UDB_INTEGRATION_PG_DSN or UDB_LIVE_SAGA_PG_DSN");
+            return;
+        };
+        let tx_id = format!("live-saga-{}", Uuid::new_v4());
+        let saga_id = data_plane_begin(&pool, &tx_id, "live-node-a").await;
+
+        let listed = SagaStore::list_sagas(
+            &store,
+            &SagaListFilter {
+                tx_id: Some(tx_id.clone()),
+                ..SagaListFilter::default()
+            },
+        )
+        .await
+        .expect("recovery store lists data-plane sagas");
+        assert_eq!(
+            listed.len(),
+            1,
+            "data-plane saga must be visible to recovery"
+        );
+        assert_eq!(listed[0].saga_id, saga_id);
+        assert_eq!(listed[0].status, SagaStatus::InProgress);
+
+        // Once the owner's startup sweep flags it, the recovery claim sees it.
+        let sweep = startup_mark_indeterminate_sql(&data_plane_saga_relation());
+        sqlx::query(&sweep)
+            .bind("live-node-a")
+            .bind(86_400.0_f64)
+            .execute(&pool)
+            .await
+            .expect("owner startup sweep");
+        let row = SagaStore::get_saga(&store, saga_id)
+            .await
+            .expect("get saga")
+            .expect("saga present");
+        assert_eq!(row.status, SagaStatus::Indeterminate);
+    }
+
+    /// The startup sweep never flips a peer node's fresh in-flight saga.
+    #[tokio::test]
+    #[ignore = "requires Postgres; set UDB_INTEGRATION_PG_DSN (or UDB_LIVE_SAGA_PG_DSN) and run with --ignored"]
+    async fn startup_sweep_leaves_peer_node_in_flight_sagas_alone() {
+        let Some((pool, store)) = live_store().await else {
+            eprintln!("skipped: set UDB_INTEGRATION_PG_DSN or UDB_LIVE_SAGA_PG_DSN");
+            return;
+        };
+        let peer =
+            data_plane_begin(&pool, &format!("live-peer-{}", Uuid::new_v4()), "peer-node").await;
+        let sweep = startup_mark_indeterminate_sql(&data_plane_saga_relation());
+        sqlx::query(&sweep)
+            .bind("restarting-node")
+            .bind(86_400.0_f64)
+            .execute(&pool)
+            .await
+            .expect("startup sweep");
+        let row = SagaStore::get_saga(&store, peer)
+            .await
+            .expect("get saga")
+            .expect("saga present");
+        assert_eq!(
+            row.status,
+            SagaStatus::InProgress,
+            "a peer's fresh in-flight saga must not be marked indeterminate"
+        );
     }
 }

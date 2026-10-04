@@ -385,3 +385,90 @@ fn lock_inventory_read_applies_status_filter_sort_and_pagination() {
         "tenant filter must be present"
     );
 }
+
+/// Expiry reaper: sweeps every distinct project store, and its single pass
+/// really flips lapsed HELD rows with the expired event.
+mod expiry_reaper {
+    use super::super::config::{STATUS_EXPIRED, TOPIC_EXPIRED};
+    use super::super::workers::{
+        lock_sweep_instance_key, run_lock_expiry_all_projects, run_lock_expiry_once,
+    };
+
+    #[test]
+    fn instance_key_dedupes_the_default_pool() {
+        assert_eq!(lock_sweep_instance_key(None), "");
+        assert_eq!(lock_sweep_instance_key(Some("  ")), "");
+        assert_eq!(lock_sweep_instance_key(Some("primary")), "primary");
+        assert_eq!(lock_sweep_instance_key(Some(" project-a ")), "project-a");
+    }
+
+    async fn insert_lapsed_lock(pool: &sqlx::PgPool, tenant: &str, name: &str) -> String {
+        let lock_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query(
+            "INSERT INTO udb_lock.locks \
+                (lock_id, tenant_id, lock_name, owner_id, fencing_token, status, \
+                 acquired_at, expires_at) \
+             VALUES ($1::UUID, $2, $3, 'owner-live', 7, 'HELD', \
+                 NOW() - INTERVAL '2 minutes', NOW() - INTERVAL '1 minute')",
+        )
+        .bind(&lock_id)
+        .bind(tenant)
+        .bind(name)
+        .execute(pool)
+        .await
+        .unwrap_or_else(|err| panic!("insert lapsed lock {name}: {err}"));
+        lock_id
+    }
+
+    async fn lock_status(pool: &sqlx::PgPool, lock_id: &str) -> String {
+        sqlx::query_scalar("SELECT status FROM udb_lock.locks WHERE lock_id = $1::UUID")
+            .bind(lock_id)
+            .fetch_one(pool)
+            .await
+            .expect("load lock status")
+    }
+
+    /// The real reaper against Postgres: the single pass flips a lapsed HELD lock
+    /// to EXPIRED with its `lock.expired` outbox row, and the all-projects pass
+    /// (what `serve()` runs) reaches the default store through the store binding.
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with cargo test --lib live_lock_expiry_reaper_flips_lapsed_locks -- --ignored --nocapture"]
+    async fn live_lock_expiry_reaper_flips_lapsed_locks() {
+        use crate::runtime::service::live_tests::support::{
+            live_native_service_db_lock, live_pg_dsn, live_pg_pool, migrate_native_service_db,
+        };
+
+        let _guard = live_native_service_db_lock().lock().await;
+        let pool = live_pg_pool().await;
+        migrate_native_service_db(&pool).await;
+        let mut config = crate::runtime::config::UdbConfig::from_env();
+        config.primary.direct_dsn = live_pg_dsn();
+        let runtime = crate::runtime::DataBrokerRuntime::from_config(config).await;
+        let outbox = runtime.config().cdc.outbox_relation();
+        let tenant = uuid::Uuid::new_v4().to_string();
+
+        let first = insert_lapsed_lock(&pool, &tenant, "live-reaper-a").await;
+        let expired = run_lock_expiry_once(&pool, Some(&outbox), 100)
+            .await
+            .expect("single expiry pass");
+        assert!(expired >= 1, "the lapsed lock must expire");
+        assert_eq!(lock_status(&pool, &first).await, STATUS_EXPIRED);
+        let events: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {outbox} \
+             WHERE topic = $1 AND payload->'payload'->>'tenant_id' = $2 \
+               AND payload->'payload'->>'lock_name' = 'live-reaper-a'"
+        ))
+        .bind(TOPIC_EXPIRED)
+        .bind(&tenant)
+        .fetch_one(&pool)
+        .await
+        .expect("count expired events");
+        assert_eq!(events, 1, "exactly one expired event per flipped lock");
+
+        let second = insert_lapsed_lock(&pool, &tenant, "live-reaper-b").await;
+        run_lock_expiry_all_projects(&runtime, Vec::new(), Some(&outbox), 100)
+            .await
+            .expect("all-projects expiry pass");
+        assert_eq!(lock_status(&pool, &second).await, STATUS_EXPIRED);
+    }
+}

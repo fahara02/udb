@@ -573,6 +573,92 @@ pub(super) fn enforce_authz_body_scope(tenant_id: &str, project_id: &str) -> Res
     )
 }
 
+/// Pure tenant-boundary rule for a policy WRITE. `caller_tenant` is the scope
+/// from [`authz_record_tenant_scope`]: `None` = cross-tenant admin or the
+/// in-process path (unrestricted); `Some(t)` = a tenant-bound caller.
+///
+/// A tenant-bound caller may only write policies for its own tenant. An empty
+/// or `*` policy tenant is a wildcard domain (the Casbin matcher applies it to
+/// EVERY tenant), so only a cross-tenant admin may write one.
+fn check_policy_tenant_boundary(
+    caller_tenant: Option<&str>,
+    policy_tenant: &str,
+    operation: &'static str,
+) -> Result<(), Status> {
+    let Some(caller) = caller_tenant else {
+        return Ok(());
+    };
+    let policy_tenant = policy_tenant.trim();
+    if policy_tenant.is_empty() || policy_tenant == "*" {
+        return Err(authz_attribution_policy_status(
+            operation,
+            "policy_tenant_wildcard_requires_platform_admin",
+            "a policy with an empty or '*' tenant applies to every tenant and requires a cross-tenant admin",
+        ));
+    }
+    let caller = caller.trim();
+    if caller.is_empty() || caller != policy_tenant {
+        return Err(authz_attribution_policy_status(
+            operation,
+            "policy_tenant_mismatch",
+            "the policy tenant must equal the caller's verified tenant",
+        ));
+    }
+    Ok(())
+}
+
+/// Pure overwrite rule: a tenant-bound caller may not replace a policy id that
+/// already belongs to another tenant (`existing_tenant` is the stored row's
+/// tenant, `None` when the id is new).
+fn check_policy_overwrite_boundary(
+    caller_tenant: Option<&str>,
+    existing_tenant: Option<&str>,
+    operation: &'static str,
+) -> Result<(), Status> {
+    match (caller_tenant, existing_tenant) {
+        (Some(caller), Some(existing)) if existing.trim() != caller.trim() => {
+            Err(authz_attribution_policy_status(
+                operation,
+                "policy_id_owned_by_another_tenant",
+                "policy id is already in use outside the caller's tenant",
+            ))
+        }
+        _ => Ok(()),
+    }
+}
+
+/// The tenant a policy rule is STORED under. `tenant_id` wins; otherwise a
+/// `tenant:<id>` domain is stored as the bare `<id>` so the snapshot loader
+/// (which reads `tenant_id`) and the Casbin domain token see the same value the
+/// caller's verified tenant carries. Any other domain shape is kept verbatim.
+fn normalized_policy_tenant(tenant_id: &str, domain: &str) -> String {
+    if !tenant_id.trim().is_empty() {
+        return tenant_id.trim().to_string();
+    }
+    match domain.trim().split_once(':') {
+        Some(("tenant", suffix)) if !suffix.trim().is_empty() => suffix.trim().to_string(),
+        _ => domain.to_string(),
+    }
+}
+
+/// Non-admin principal binding for the decision RPCs (Authorize/CheckAccess):
+/// every identity field AND the role set come from the verified claim/binding
+/// snapshot — never from the body. Roles are cleared so `effective_roles`
+/// derives them from durable role bindings, exactly as the data plane does
+/// (`Principal::from_security_context(.., Vec::new())`).
+fn bind_principal_to_claim(base: Principal) -> Principal {
+    let principal_id = if base.subject.trim().is_empty() {
+        base.principal_id.clone()
+    } else {
+        base.subject.clone()
+    };
+    Principal {
+        principal_id,
+        roles: Vec::new(),
+        ..base
+    }
+}
+
 fn tenant_from_domain(tenant_id: &str, domain: &str) -> String {
     if !tenant_id.trim().is_empty() {
         tenant_id.to_string()
@@ -1773,6 +1859,9 @@ impl AuthzServiceImpl {
             if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
                 *guard = Some(Instant::now());
             }
+            // Staleness bound: the data plane fails closed once the last good
+            // durable load is older than UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS.
+            crate::runtime::authz::record_snapshot_reload_success();
             return Ok(self.snapshot.load_full());
         }
         self.require_snapshot_fallback()?;
@@ -1879,14 +1968,10 @@ impl AuthzService for AuthzServiceImpl {
                 &req.project_id,
             )?;
             if !ctx.is_cross_tenant_admin() {
-                let base = ctx.to_principal();
-                principal.subject = base.subject;
-                principal.tenant_id = base.tenant_id;
-                principal.project_id = base.project_id;
-                principal.scopes = base.scopes;
-                if principal.principal_id.trim().is_empty() {
-                    principal.principal_id = principal.subject.clone();
-                }
+                // Every identity field (incl. user_id / service_identity /
+                // principal_id) and the role set come from the claim + binding
+                // snapshot; a body-supplied role or identity must not widen it.
+                principal = bind_principal_to_claim(ctx.to_principal());
             }
         }
         let mut resource = req
@@ -2026,6 +2111,15 @@ impl AuthzService for AuthzServiceImpl {
                 "must include an authz policy",
             )
         })?;
+        // Tenant boundary (same rule as CreatePolicyRule): settled before field
+        // validation. The body tenant/project must match the verified claim, and
+        // an empty/`*` tenant (every tenant) needs a cross-tenant admin.
+        enforce_authz_body_scope(&p.tenant, &p.project)?;
+        check_policy_tenant_boundary(
+            authz_record_tenant_scope().as_deref(),
+            &p.tenant,
+            "put_authz_policy",
+        )?;
         if p.id.trim().is_empty() {
             return Err(authz_required_field(
                 "policy id is required",
@@ -2073,6 +2167,33 @@ impl AuthzService for AuthzServiceImpl {
                 )
             })?;
             let policy_id = parse_uuid_field("policy.id", &policy.id)?;
+            // The write below is an upsert on `policy_id`: refuse to replace a
+            // row another tenant owns (a tenant-bound caller who learned a
+            // foreign policy id must not rewrite or re-home it).
+            let caller_scope = authz_record_tenant_scope();
+            if let (Some(_), Some(pool)) = (caller_scope.as_ref(), self.pg_pool.as_ref()) {
+                let policy_model = self.policies_model();
+                let existing: Option<String> = sqlx::query_scalar(&format!(
+                    "SELECT COALESCE({tenant_id}, '') FROM {rel} WHERE {policy_id} = $1::UUID LIMIT 1",
+                    tenant_id = policy_model.q("tenant_id"),
+                    rel = &policy_model.relation,
+                    policy_id = policy_model.q("policy_id"),
+                ))
+                .bind(policy_id)
+                .fetch_optional(pool)
+                .await
+                .map_err(|err| {
+                    authz_internal_status(
+                        "store_authz_policy",
+                        format!("policy ownership lookup failed: {err}"),
+                    )
+                })?;
+                check_policy_overwrite_boundary(
+                    caller_scope.as_deref(),
+                    existing.as_deref(),
+                    "put_authz_policy",
+                )?;
+            }
             let mut attributes = serde_json::Map::new();
             for (key, value) in &policy.conditions {
                 attributes.insert(key.clone(), serde_json::Value::String(value.clone()));
@@ -2281,15 +2402,11 @@ impl AuthzService for AuthzServiceImpl {
                 &req.project_id,
             )?;
             if !ctx.is_cross_tenant_admin() {
-                let base = ctx.to_principal();
-                principal.subject = base.subject;
-                principal.user_id = base.user_id;
-                principal.tenant_id = base.tenant_id;
-                principal.project_id = base.project_id;
-                principal.scopes = base.scopes;
-                if principal.principal_id.trim().is_empty() {
-                    principal.principal_id = principal.subject.clone();
-                }
+                // Roles, service_identity and principal_id are NOT taken from the
+                // body: a non-admin could otherwise inject `roles: ["admin"]` or
+                // another principal_id and have the PDP answer as that identity.
+                // Roles come from the binding snapshot, same as the data plane.
+                principal = bind_principal_to_claim(ctx.to_principal());
             }
         }
 
@@ -2975,6 +3092,16 @@ impl AuthzService for AuthzServiceImpl {
             &tenant_from_domain(&req.tenant_id, &req.domain),
             &req.project_id,
         )?;
+        // The tenant the rule is STORED under: `tenant:<uuid>` is normalized to
+        // the bare id the snapshot loader and the caller's claim both carry.
+        let stored_tenant = normalized_policy_tenant(&req.tenant_id, &req.domain);
+        if !req.domain.trim().is_empty() || !req.tenant_id.trim().is_empty() {
+            check_policy_tenant_boundary(
+                authz_record_tenant_scope().as_deref(),
+                &stored_tenant,
+                "create_policy_rule",
+            )?;
+        }
         if req.subject.trim().is_empty() {
             return Err(authz_required_field(
                 "subject is required",
@@ -3034,11 +3161,7 @@ impl AuthzService for AuthzServiceImpl {
             priority: 0,
             enabled: true,
             effect,
-            tenant: if req.tenant_id.trim().is_empty() {
-                req.domain.clone()
-            } else {
-                req.tenant_id.clone()
-            },
+            tenant: stored_tenant,
             project: req.project_id.clone(),
             subject: req.subject.clone(),
             role: String::new(),
@@ -3550,13 +3673,21 @@ impl AuthzService for AuthzServiceImpl {
             .context
             .map(|ctx| ctx.attributes.into_iter().collect())
             .unwrap_or_default();
-        let principal = Principal {
+        let mut principal = Principal {
             principal_id: req.user_id.clone(),
             subject: req.user_id.clone(),
             user_id: req.user_id.clone(),
             tenant_id: req.domain.clone(),
             ..Default::default()
         };
+        // Same claim binding as CheckAccess: a non-admin caller may only ask
+        // about itself, in its own tenant, with roles from the binding snapshot.
+        if crate::runtime::service::method_security::claim_context_present() {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
+            if !ctx.is_cross_tenant_admin() {
+                principal = bind_principal_to_claim(ctx.to_principal());
+            }
+        }
         // Tier-0 #1: acquire ONE per-tenant fair-admission permit for the whole
         // batch (bounded cost) — not per-check — keyed by the resolved tenant.
         // Held across all checks in the batch (same backpressure on exhaustion).
@@ -5593,6 +5724,205 @@ mod validation_tests {
                 "tenant_id",
                 "must be a non-empty tenant id for a policy bundle",
             )],
+        );
+    }
+
+    #[test]
+    fn policy_tenant_boundary_refuses_wildcard_and_foreign_tenants() {
+        // Unrestricted (cross-tenant admin / in-process) may write any tenant.
+        assert!(check_policy_tenant_boundary(None, "*", "put_authz_policy").is_ok());
+        assert!(check_policy_tenant_boundary(None, "", "put_authz_policy").is_ok());
+        // A tenant-bound caller writes only its own tenant.
+        assert!(
+            check_policy_tenant_boundary(Some("tenant-a"), "tenant-a", "put_authz_policy").is_ok()
+        );
+        for bad in ["", "  ", "*", "tenant-b"] {
+            let err = check_policy_tenant_boundary(Some("tenant-a"), bad, "put_authz_policy")
+                .expect_err("tenant-bound caller must not write a wildcard/foreign tenant policy");
+            assert_eq!(err.code(), Code::PermissionDenied, "tenant {bad:?}");
+        }
+        // A claim without a tenant fails closed.
+        assert!(check_policy_tenant_boundary(Some(""), "tenant-a", "put_authz_policy").is_err());
+    }
+
+    #[test]
+    fn policy_overwrite_boundary_refuses_foreign_owned_ids() {
+        assert!(
+            check_policy_overwrite_boundary(Some("tenant-a"), None, "put_authz_policy").is_ok()
+        );
+        assert!(
+            check_policy_overwrite_boundary(Some("tenant-a"), Some("tenant-a"), "put_authz_policy")
+                .is_ok()
+        );
+        let err =
+            check_policy_overwrite_boundary(Some("tenant-a"), Some("tenant-b"), "put_authz_policy")
+                .expect_err("a foreign-owned policy id must not be overwritten");
+        assert_permission_policy_detail(
+            &err,
+            "put_authz_policy",
+            "policy_id_owned_by_another_tenant",
+            "policy id is already in use outside the caller's tenant",
+        );
+        // A global (empty-tenant) row is not the caller's either.
+        assert!(
+            check_policy_overwrite_boundary(Some("tenant-a"), Some(""), "put_authz_policy")
+                .is_err()
+        );
+        assert!(
+            check_policy_overwrite_boundary(None, Some("tenant-b"), "put_authz_policy").is_ok()
+        );
+    }
+
+    #[test]
+    fn create_policy_rule_tenant_domain_is_stored_normalized() {
+        let id = "9f1c2d3e-0000-4000-8000-000000000001";
+        assert_eq!(normalized_policy_tenant("", &format!("tenant:{id}")), id);
+        assert_eq!(normalized_policy_tenant("", &format!(" tenant: {id} ")), id);
+        assert_eq!(normalized_policy_tenant(id, "tenant:other"), id);
+        assert_eq!(normalized_policy_tenant("", id), id);
+        // Other domain shapes are not reinterpreted as a tenant.
+        assert_eq!(
+            normalized_policy_tenant("", "project:billing"),
+            "project:billing"
+        );
+    }
+
+    #[tokio::test]
+    async fn put_authz_policy_refuses_wildcard_tenant_for_tenant_bound_caller() {
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "policy-admin",
+            "tenant-a",
+            "",
+            &["udb:authz:admin"],
+            &[],
+        );
+        for tenant in ["", "*"] {
+            let req = Request::new(authz_pb::PutAuthzPolicyRequest {
+                policy: Some(authz_pb::AuthzPolicyRecord {
+                    id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                    enabled: true,
+                    effect: "allow".to_string(),
+                    tenant: tenant.to_string(),
+                    resource: "*".to_string(),
+                    action: "*".to_string(),
+                    ..Default::default()
+                }),
+            });
+            let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+                ctx.clone(),
+                svc().put_authz_policy(req),
+            )
+            .await
+            .expect_err("a tenant-bound caller must not write an every-tenant policy");
+            assert_eq!(err.code(), Code::PermissionDenied, "tenant {tenant:?}");
+        }
+        let req = Request::new(authz_pb::PutAuthzPolicyRequest {
+            policy: Some(authz_pb::AuthzPolicyRecord {
+                id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                enabled: true,
+                effect: "allow".to_string(),
+                tenant: "tenant-b".to_string(),
+                ..Default::default()
+            }),
+        });
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            ctx,
+            svc().put_authz_policy(req),
+        )
+        .await
+        .expect_err("a tenant-bound caller must not write another tenant's policy");
+        assert_eq!(err.code(), Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn create_policy_rule_refuses_wildcard_domain_for_tenant_bound_caller() {
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "policy-admin",
+            "tenant-a",
+            "",
+            &["udb:authz:admin"],
+            &[],
+        );
+        let req = Request::new(authz_pb::CreatePolicyRuleRequest {
+            subject: "*".to_string(),
+            domain: "*".to_string(),
+            object: "*".to_string(),
+            action: "*".to_string(),
+            effect: authz_entity_pb::PolicyEffect::Allow as i32,
+            ..Default::default()
+        });
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            ctx,
+            svc().create_policy_rule(req),
+        )
+        .await
+        .expect_err("a '*' domain applies to every tenant");
+        assert_eq!(err.code(), Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn check_access_principal_ignores_body_roles_and_identity() {
+        // A policy granting the `admin` role delete on invoices in tenant-a.
+        let mut snap = AuthzSnapshot::default();
+        snap.version = "v1".to_string();
+        snap.policies.push(AuthzPolicy {
+            id: "admin-delete".to_string(),
+            effect: Effect::Allow,
+            tenant: "tenant-a".to_string(),
+            role: "admin".to_string(),
+            action: "Delete".to_string(),
+            resource: "invoice".to_string(),
+            ..Default::default()
+        });
+        snap.policies.push(AuthzPolicy {
+            id: "victim-direct".to_string(),
+            effect: Effect::Allow,
+            tenant: "tenant-a".to_string(),
+            subject: "victim".to_string(),
+            action: "Delete".to_string(),
+            resource: "invoice".to_string(),
+            ..Default::default()
+        });
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "mallory",
+            "tenant-a",
+            "",
+            &["udb:read"],
+            &[],
+        );
+        // What a forged body would have produced before the fix.
+        let forged = Principal {
+            principal_id: "victim".to_string(),
+            subject: "mallory".to_string(),
+            service_identity: "victim".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            roles: vec!["admin".to_string()],
+            ..Default::default()
+        };
+        let bound = bind_principal_to_claim(ctx.to_principal());
+        assert!(
+            bound.roles.is_empty(),
+            "roles come from the binding snapshot"
+        );
+        assert_eq!(bound.principal_id, "mallory");
+        assert!(bound.service_identity.is_empty());
+
+        let service = svc();
+        let resource = ResourceRef::message("invoice");
+        let attrs = BTreeMap::new();
+        assert!(
+            service
+                .decide_with_snapshot(&snap, &forged, &resource, "Delete", "", &attrs)
+                .await
+                .allowed,
+            "control: the forged principal would have been allowed"
+        );
+        assert!(
+            !service
+                .decide_with_snapshot(&snap, &bound, &resource, "Delete", "", &attrs)
+                .await
+                .allowed,
+            "the claim-bound principal must not inherit body roles or identities"
         );
     }
 }

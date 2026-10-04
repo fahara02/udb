@@ -1100,3 +1100,111 @@ fn suppress_only_moves_pending_logs_tenant_scoped() {
         "{sql}"
     );
 }
+
+/// No-provider handling: a channel with no configured delivery provider is
+/// never left PENDING forever.
+mod no_provider {
+    use super::super::delivery::intent_is_routable;
+    use crate::proto::udb::core::notification::entity::v1::NotificationChannel as C;
+
+    #[test]
+    fn unconfigured_channel_is_unroutable_but_missing_address_is_handled() {
+        // No providers at all: an addressed EMAIL is unroutable (handled by the
+        // grace-window failure path), an EMAIL with no address is still routed to
+        // the pass that fails it permanently.
+        assert!(!intent_is_routable(C::Email as i32, "a@example.test", &[]));
+        assert!(intent_is_routable(C::Email as i32, "", &[]));
+        // IN_APP never needs an address, so without a provider it is unroutable.
+        assert!(!intent_is_routable(C::InApp as i32, "", &[]));
+    }
+
+    /// The real worker pass against Postgres with NO providers: a notification
+    /// queued longer than the grace window is FAILED with the stated reason; a
+    /// fresh one stays PENDING.
+    #[cfg(feature = "http-client")]
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with cargo test --lib live_notification_without_provider_fails_after_grace -- --ignored --nocapture"]
+    async fn live_notification_without_provider_fails_after_grace() {
+        use super::super::config::NO_PROVIDER_FAILURE_REASON;
+        use super::super::delivery::run_notification_delivery_worker_pass;
+        use crate::runtime::service::live_tests::support::{
+            live_native_service_db_lock, live_pg_dsn, live_pg_pool, migrate_native_service_db,
+        };
+        use std::sync::Arc;
+
+        let _guard = live_native_service_db_lock().lock().await;
+        let pool = live_pg_pool().await;
+        migrate_native_service_db(&pool).await;
+        let mut config = crate::runtime::config::UdbConfig::from_env();
+        config.primary.direct_dsn = live_pg_dsn();
+        let runtime = Arc::new(crate::runtime::DataBrokerRuntime::from_config(config).await);
+        let outbox = runtime.config().cdc.outbox_relation();
+        let tenant = uuid::Uuid::new_v4().to_string();
+        let project = "notification-no-provider-live";
+
+        let insert = |age_secs: f64| {
+            let pool = pool.clone();
+            let tenant = tenant.clone();
+            async move {
+                let log_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    "INSERT INTO udb_notification.notification_logs \
+                        (log_id, event_type, channel, recipient_address, tenant_id, project_id, \
+                         status, rendered_subject, rendered_body, created_at) \
+                     VALUES ($1::UUID, 'live.no.provider', 'EMAIL', 'ops@example.test', $2, $3, \
+                         'PENDING', 's', 'b', NOW() - make_interval(secs => $4::DOUBLE PRECISION))",
+                )
+                .bind(&log_id)
+                .bind(&tenant)
+                .bind(project)
+                .bind(age_secs)
+                .execute(&pool)
+                .await
+                .expect("insert queued notification");
+                log_id
+            }
+        };
+        let stale = insert(7200.0).await;
+        let fresh = insert(0.0).await;
+
+        let http = reqwest::Client::new();
+        run_notification_delivery_worker_pass(
+            &http,
+            runtime.clone(),
+            &pool,
+            project,
+            Some(&outbox),
+            50,
+            None,
+            &[],
+            3600,
+        )
+        .await
+        .expect("worker pass");
+
+        let state = |log_id: String| {
+            let pool = pool.clone();
+            async move {
+                sqlx::query_scalar::<_, String>(
+                    "SELECT status FROM udb_notification.notification_logs \
+                     WHERE log_id = $1::UUID",
+                )
+                .bind(&log_id)
+                .fetch_one(&pool)
+                .await
+                .expect("load notification status")
+            }
+        };
+        assert_eq!(state(stale.clone()).await, "FAILED");
+        assert_eq!(state(fresh).await, "PENDING");
+        let last_error: String = sqlx::query_scalar(
+            "SELECT COALESCE(last_error, '') FROM udb_notification.notification_delivery_attempts \
+             WHERE notification_id = $1::UUID",
+        )
+        .bind(&stale)
+        .fetch_one(&pool)
+        .await
+        .expect("load failure attempt");
+        assert_eq!(last_error, NO_PROVIDER_FAILURE_REASON);
+    }
+}

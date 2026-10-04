@@ -391,6 +391,11 @@ impl DataBrokerRuntime {
     }
 
     /// Persist saga state at the start of a `BeginTx` call and return the saga_id.
+    ///
+    /// `Ok(None)` only when no PostgreSQL pool is configured (BeginTx refuses
+    /// that case itself). A failed ledger write is an `Err`: the caller MUST
+    /// abort the transaction, because continuing would run cross-backend side
+    /// effects that crash recovery can never see or compensate.
     pub(crate) async fn saga_begin(
         &self,
         tx_id: &str,
@@ -399,19 +404,17 @@ impl DataBrokerRuntime {
         correlation_id: &str,
         operation: &str,
         backend_instance: &str,
-    ) -> Option<String> {
-        let pool = self.pg_pool.as_ref()?;
-        let config = crate::runtime::system::SystemCatalogConfig::default();
+    ) -> Result<Option<String>, tonic::Status> {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Ok(None);
+        };
         let saga_id = Uuid::new_v4().to_string();
-        let saga_relation = format!("\"{}\".\"{}\"", config.cdc.system_schema, config.saga_table);
+        // Same relation the production recovery store reads (single source).
+        let saga_relation = crate::runtime::saga::data_plane_saga_relation();
         // Store tenant_id and correlation_id so the saga index on (tenant_id, status)
-        // can serve operational queries without a full table scan.
-        let sql = format!(
-            "INSERT INTO {saga_relation} \
-             (saga_id, tx_id, tenant_id, correlation_id, backend_instance, operation, retry_count, compensation_status, steps, current_step, status, compensations, created_at) \
-             VALUES ($1::UUID, $2, $3, $4, $5, $6, 0, 'none', '[]'::JSONB, 0, 'in_progress', '[]'::JSONB, NOW()) \
-             ON CONFLICT (saga_id) DO NOTHING"
-        );
+        // can serve operational queries without a full table scan. The owner
+        // node scopes the startup crash sweep to this node's own sagas.
+        let sql = crate::runtime::saga::data_plane_saga_begin_sql(&saga_relation);
         match sqlx::query(&sql)
             .bind(&saga_id)
             .bind(tx_id)
@@ -419,6 +422,7 @@ impl DataBrokerRuntime {
             .bind(correlation_id)
             .bind(backend_instance)
             .bind(operation)
+            .bind(crate::runtime::saga::local_saga_owner())
             .execute(pool)
             .await
         {
@@ -429,11 +433,20 @@ impl DataBrokerRuntime {
                     mutation_count = mutation_count,
                     "saga started"
                 );
-                Some(saga_id)
+                Ok(Some(saga_id))
             }
             Err(e) => {
-                tracing::warn!(tx_id = tx_id, error = %e, "failed to persist saga state; continuing without saga tracking");
-                None
+                tracing::error!(
+                    tx_id = tx_id,
+                    error = %e,
+                    "failed to persist saga state; aborting transaction (no untracked side effects)"
+                );
+                Err(crate::runtime::executor_utils::retryable_status(
+                    "postgres",
+                    "saga_begin",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    "saga ledger write failed; transaction was not started".to_string(),
+                ))
             }
         }
     }
@@ -451,8 +464,8 @@ impl DataBrokerRuntime {
             Some(p) => p,
             None => return,
         };
-        let config = crate::runtime::system::SystemCatalogConfig::default();
-        let saga_relation = format!("\"{}\".\"{}\"", config.cdc.system_schema, config.saga_table);
+        // One relation for every saga writer AND the recovery store.
+        let saga_relation = crate::runtime::saga::data_plane_saga_relation();
         let compensation_value = serde_json::from_str::<serde_json::Value>(compensation)
             .unwrap_or_else(|_| serde_json::json!({"legacy_descriptor": compensation}));
         let compensation_backend = compensation_value
@@ -507,11 +520,13 @@ impl DataBrokerRuntime {
             Some(p) => p,
             None => return,
         };
-        let config = crate::runtime::system::SystemCatalogConfig::default();
-        let saga_relation = format!("\"{}\".\"{}\"", config.cdc.system_schema, config.saga_table);
+        // One relation for every saga writer AND the recovery store.
+        let saga_relation = crate::runtime::saga::data_plane_saga_relation();
         let compensation_status = match status {
             "compensated" => "completed",
-            "failed_compensation" => "failed",
+            // A compensation that failed needs a human: `manual_review` is the
+            // value the shared saga store's CHECK and the recovery worker know.
+            "failed_compensation" => "manual_review",
             "manual_review" => "manual_review",
             _ => "none",
         };
@@ -531,18 +546,47 @@ impl DataBrokerRuntime {
         }
     }
 
-    /// On startup: mark any sagas left IN_PROGRESS from a previous crash as INDETERMINATE.
+    /// On startup: mark this node's sagas left IN_PROGRESS by a previous crash
+    /// (plus any idle past the stale threshold) as INDETERMINATE.
+    ///
+    /// The stale threshold comes from the loaded `UdbConfig.saga`
+    /// (`UDB_SAGA_STALE_THRESHOLD_SECONDS`), the same knob the recovery worker
+    /// uses to claim stale in-progress sagas.
     pub async fn mark_indeterminate_sagas(&self) {
+        let settings = self.config().saga.clone();
+        self.mark_indeterminate_sagas_with(&settings).await;
+    }
+
+    /// Startup crash sweep scoped to THIS node: only `in_progress` sagas this
+    /// node opened (a previous incarnation crashed mid-flight), or sagas idle
+    /// past `stale_threshold_secs` (their owner is gone), are flipped to
+    /// INDETERMINATE. A peer node's live in-flight saga is never touched —
+    /// marking it would let the recovery worker compensate a transaction that
+    /// is still running.
+    pub async fn mark_indeterminate_sagas_with(
+        &self,
+        settings: &crate::runtime::config::SagaSettings,
+    ) {
         let pool = match &self.pg_pool {
             Some(p) => p,
             None => return,
         };
-        let config = crate::runtime::system::SystemCatalogConfig::default();
-        let saga_relation = format!("\"{}\".\"{}\"", config.cdc.system_schema, config.saga_table);
-        let sql = format!(
-            "UPDATE {saga_relation} SET status = 'indeterminate', updated_at = NOW() WHERE status = 'in_progress'"
-        );
-        match sqlx::query(&sql).execute(pool).await {
+        let saga_relation = crate::runtime::saga::data_plane_saga_relation();
+        // Idempotent: older tables predate the owner column.
+        if let Err(e) = sqlx::query(&crate::runtime::saga::saga_owner_column_ddl(&saga_relation))
+            .execute(pool)
+            .await
+        {
+            tracing::warn!(error = %e, "failed to ensure saga owner column on startup");
+        }
+        let sql = crate::runtime::saga::startup_mark_indeterminate_sql(&saga_relation);
+        let stale_after_secs = settings.stale_threshold_secs.max(1) as f64;
+        match sqlx::query(&sql)
+            .bind(crate::runtime::saga::local_saga_owner())
+            .bind(stale_after_secs)
+            .execute(pool)
+            .await
+        {
             Ok(result) => {
                 let count = result.rows_affected();
                 if count > 0 {

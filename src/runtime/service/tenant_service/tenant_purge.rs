@@ -22,6 +22,8 @@
 //!     with different inputs is a conflict), and it writes an immutable
 //!     audit/outcome record (the ledger row + the compliance outbox event).
 
+use std::collections::BTreeSet;
+
 use sqlx::Row;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -29,6 +31,7 @@ use uuid::Uuid;
 use crate::generation::CatalogManifest;
 use crate::proto::udb::core::tenant::services::v1 as tenant_pb;
 use crate::runtime::channels::OperationChannel;
+use crate::runtime::core::ResolvedBackendSelector;
 use crate::runtime::executor_utils::{
     failed_precondition_fields, policy_status_with_code, qi_runtime, retryable_aborted_status,
 };
@@ -40,7 +43,11 @@ use crate::runtime::tenant_movement::{
     validate_tenant_movement_scope,
 };
 
+use super::super::embedding_service::{
+    TenantVectorTarget, purge_tenant_vectors, tenant_embedding_vector_targets,
+};
 use super::super::native_helpers::{admit_on as native_admit_on, parse_uuid};
+use super::super::search_service::tenant_search_vector_targets;
 use super::TenantServiceImpl;
 use super::config::{
     ACTION_TENANT_ADMIN_PURGE, ADMIN_PURGE_LEDGER_SCHEMA, ADMIN_PURGE_LEDGER_TABLE,
@@ -650,6 +657,9 @@ async fn execute_hard_purge(
     target: &str,
     now_unix: u64,
 ) -> Result<AdminPurgeExecOutcome, Status> {
+    // Vectors FIRST: the embedding/search registries that name the tenant's
+    // collections are relational rows the ripple below deletes.
+    let vectors = purge_tenant_vector_stores(svc, manifest, target).await;
     let report = {
         #[cfg(feature = "redis")]
         {
@@ -697,6 +707,10 @@ async fn execute_hard_purge(
             })
         })
         .collect();
+    let mut purged = purged;
+    let mut excluded = excluded;
+    purged.extend(vectors.purged);
+    excluded.extend(vectors.excluded);
     Ok(AdminPurgeExecOutcome {
         purged,
         excluded,
@@ -705,6 +719,141 @@ async fn execute_hard_purge(
         principals_denylisted: report.principals_denylisted as u32,
         soft_deactivated: false,
     })
+}
+
+/// Report of the vector-store leg of a hard tenant purge, in the same JSON shape
+/// as the relational `purged` / `excluded` entries.
+#[derive(Debug, Default)]
+pub(crate) struct TenantVectorPurgeReport {
+    pub(crate) purged: Vec<serde_json::Value>,
+    pub(crate) excluded: Vec<serde_json::Value>,
+}
+
+/// Erase the tenant's vectors from every vector collection it may occupy: the
+/// manifest's vector stores, the tenant's embedding-model collections and
+/// search-index collections (read from their durable registries, so this MUST
+/// run before the relational ripple deletes those rows), and the process-local
+/// `EnsureResource` collections. Points are deleted by the server-stamped
+/// `_tenant_id` payload tag, which also removes embedding chunk text stored with
+/// them.
+///
+/// A target that cannot be purged (unreachable engine, unwired backend) is
+/// REPORTED under `excluded` with the reason — never silently skipped — so the
+/// operator sees exactly which vectors remain. A successful filtered delete is
+/// reported under `purged` with `tenant_column: "_tenant_id"`; vector engines do
+/// not return a deleted count, so `deleted` is 0 there.
+pub(crate) async fn purge_tenant_vector_stores(
+    svc: &TenantServiceImpl,
+    manifest: &CatalogManifest,
+    tenant_id: &str,
+) -> TenantVectorPurgeReport {
+    let mut report = TenantVectorPurgeReport::default();
+    let Some(runtime) = svc.runtime.as_ref() else {
+        report.excluded.push(serde_json::json!({
+            "schema": "vector",
+            "table": "*",
+            "reason": "vector purge skipped: no runtime vector dispatch is wired",
+        }));
+        return report;
+    };
+    let routes = runtime.vector_resource_route_snapshot();
+    let mut targets = tenant_vector_purge_targets(manifest, &routes);
+    // Registries are read per project the broker knows of (the default project
+    // plus every project an ad-hoc route was registered under).
+    let mut projects: BTreeSet<String> = routes
+        .iter()
+        .map(|(project, _, _)| project.clone())
+        .collect();
+    projects.insert(String::new());
+    for project in &projects {
+        match tenant_embedding_vector_targets(runtime, tenant_id, project).await {
+            Ok(found) => targets.extend(found),
+            Err(err) => report.excluded.push(vector_enumeration_failure(
+                "embedding_models",
+                project,
+                &err,
+            )),
+        }
+        match tenant_search_vector_targets(runtime, tenant_id, project).await {
+            Ok(found) => {
+                for (backend, collection) in found {
+                    if let Some(target) =
+                        TenantVectorTarget::new(project, &backend, "", &collection)
+                    {
+                        targets.insert(target);
+                    }
+                }
+            }
+            Err(err) => {
+                report
+                    .excluded
+                    .push(vector_enumeration_failure("search_indexes", project, &err))
+            }
+        }
+    }
+    for (target, outcome) in purge_tenant_vectors(runtime, tenant_id, &targets).await {
+        let schema = format!("vector:{}", target.backend);
+        match outcome {
+            Ok(()) => report.purged.push(serde_json::json!({
+                "schema": schema,
+                "table": target.collection,
+                "tenant_column": "_tenant_id",
+                "deleted": 0,
+            })),
+            Err(message) => {
+                tracing::warn!(
+                    backend = %target.backend,
+                    collection = %target.collection,
+                    error = %message,
+                    "tenant purge: vector delete failed; the tenant's vectors remain"
+                );
+                report.excluded.push(serde_json::json!({
+                    "schema": schema,
+                    "table": target.collection,
+                    "reason": format!("vector purge failed (tenant vectors remain): {message}"),
+                }));
+            }
+        }
+    }
+    report
+}
+
+fn vector_enumeration_failure(registry: &str, project: &str, err: &Status) -> serde_json::Value {
+    serde_json::json!({
+        "schema": "vector",
+        "table": registry,
+        "reason": format!(
+            "vector purge could not enumerate {registry} collections (project '{project}'): {}",
+            err.message()
+        ),
+    })
+}
+
+/// The vector collections known without a registry read: the manifest's vector
+/// stores and the ad-hoc `EnsureResource` routes. Pure.
+fn tenant_vector_purge_targets(
+    manifest: &CatalogManifest,
+    routes: &[(String, String, ResolvedBackendSelector)],
+) -> BTreeSet<TenantVectorTarget> {
+    let mut targets = BTreeSet::new();
+    let stores = manifest
+        .stores
+        .iter()
+        .filter(|store| store.store_kind == "vector");
+    for store in stores {
+        if let Some(target) = TenantVectorTarget::new("", &store.backend, "", &store.resource_name)
+        {
+            targets.insert(target);
+        }
+    }
+    for (project, collection, route) in routes {
+        let instance = route.instance.as_deref().unwrap_or_default();
+        if let Some(target) = TenantVectorTarget::new(project, &route.backend, instance, collection)
+        {
+            targets.insert(target);
+        }
+    }
+    targets
 }
 
 /// SOFT: no physical deletes. Deactivate the tenant control record (soft-delete +
@@ -997,6 +1146,65 @@ mod tests {
         assert_eq!(
             admin_purge_ledger_relation(),
             "\"udb_tenant\".\"tenant_admin_purge_outcomes\""
+        );
+    }
+
+    #[test]
+    fn vector_purge_targets_cover_manifest_stores_and_adhoc_routes() {
+        use crate::generation::manifest::ManifestStore;
+        let manifest = CatalogManifest {
+            stores: vec![
+                ManifestStore {
+                    store_kind: "vector".to_string(),
+                    backend: "Qdrant".to_string(),
+                    resource_name: "docs".to_string(),
+                    ..ManifestStore::default()
+                },
+                // A non-vector store is not a vector purge target.
+                ManifestStore {
+                    store_kind: "object".to_string(),
+                    backend: "s3".to_string(),
+                    resource_name: "blobs".to_string(),
+                    ..ManifestStore::default()
+                },
+            ],
+            ..CatalogManifest::default()
+        };
+        let routes = vec![(
+            "p1".to_string(),
+            "adhoc".to_string(),
+            ResolvedBackendSelector {
+                backend: "elasticsearch".to_string(),
+                instance: Some("es-a".to_string()),
+            },
+        )];
+        let targets = tenant_vector_purge_targets(&manifest, &routes);
+        assert_eq!(targets.len(), 2, "{targets:?}");
+        assert!(targets.contains(
+            &TenantVectorTarget::new("", "qdrant", "", "docs").expect("manifest target")
+        ));
+        assert!(targets.contains(
+            &TenantVectorTarget::new("p1", "elasticsearch", "es-a", "adhoc").expect("route target")
+        ));
+    }
+
+    #[test]
+    fn vector_enumeration_failure_is_reported_not_dropped() {
+        let entry = vector_enumeration_failure(
+            "embedding_models",
+            "p1",
+            &crate::runtime::executor_utils::internal_status(
+                "tenant",
+                "vector_enumeration",
+                "store down",
+            ),
+        );
+        assert_eq!(entry["schema"], "vector");
+        assert_eq!(entry["table"], "embedding_models");
+        let reason = entry["reason"].as_str().expect("reason");
+        assert!(
+            reason.contains("p1") && reason.contains("store down"),
+            "{reason}"
         );
     }
 }

@@ -137,6 +137,14 @@ service DataBroker {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "initiate_multipart_upload" rest_operation_id: "initiateMultipartUpload" };
   }
+  rpc CompleteMultipartUpload(udb.entity.v1.CompleteMultipartUploadRequest) returns (udb.entity.v1.CompleteMultipartUploadResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "complete_multipart_upload" rest_operation_id: "completeMultipartUpload" };
+  }
+  rpc AbortMultipartUpload(udb.entity.v1.AbortMultipartUploadRequest) returns (udb.entity.v1.AbortMultipartUploadResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "abort_multipart_upload" rest_operation_id: "abortMultipartUpload" };
+  }
 
   // ── Cache / KV ─────────────────────────────────────────────────────────────
   rpc CacheGet(udb.entity.v1.CacheGetRequest) returns (udb.entity.v1.CacheGetResponse) {

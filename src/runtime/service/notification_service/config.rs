@@ -50,6 +50,20 @@ pub(crate) const NOTIFICATION_BACKOFF_BASE_SECS_ENV: &str = "UDB_NOTIFICATION_BA
 /// `DEFAULT_NOTIFICATION_BACKOFF_CAP_SECS` (1800 = 30 min).
 pub(crate) const DEFAULT_NOTIFICATION_BACKOFF_CAP_SECS: i64 = 1800;
 pub(crate) const NOTIFICATION_BACKOFF_CAP_SECS_ENV: &str = "UDB_NOTIFICATION_BACKOFF_CAP_SECS";
+/// How long a queued notification whose channel has NO configured delivery
+/// provider may stay PENDING (so an operator can still configure one) before the
+/// worker fails it out of the queue as FAILED with a stated reason instead of
+/// leaving it pending forever. Reads `UDB_NOTIFICATION_NO_PROVIDER_GRACE_SECS`,
+/// default `DEFAULT_NOTIFICATION_NO_PROVIDER_GRACE_SECS` (3600 = 1 hour).
+#[cfg_attr(not(feature = "http-client"), allow(dead_code))]
+pub(crate) const DEFAULT_NOTIFICATION_NO_PROVIDER_GRACE_SECS: i64 = 3600;
+#[cfg_attr(not(feature = "http-client"), allow(dead_code))]
+pub(crate) const NOTIFICATION_NO_PROVIDER_GRACE_SECS_ENV: &str =
+    "UDB_NOTIFICATION_NO_PROVIDER_GRACE_SECS";
+/// The `last_error` / dead-letter reason recorded for a notification failed out
+/// of the queue because no delivery provider serves its channel.
+#[cfg_attr(not(feature = "http-client"), allow(dead_code))]
+pub(crate) const NO_PROVIDER_FAILURE_REASON: &str = "no delivery provider configured for channel";
 
 // Stable machine-readable error reasons (google.rpc.ErrorInfo-style `reason`),
 // attached to the returned `Status` metadata under `error-reason` so SDK clients
@@ -226,6 +240,21 @@ pub(crate) fn notification_backoff_cap_secs() -> i64 {
                 .ok()
                 .as_deref(),
             DEFAULT_NOTIFICATION_BACKOFF_CAP_SECS,
+        )
+    })
+}
+
+/// Grace window (seconds) before a provider-less notification is failed out of
+/// the queue, resolved once from `UDB_NOTIFICATION_NO_PROVIDER_GRACE_SECS`.
+#[cfg_attr(not(feature = "http-client"), allow(dead_code))]
+pub(crate) fn notification_no_provider_grace_secs() -> i64 {
+    static GRACE: OnceLock<i64> = OnceLock::new();
+    *GRACE.get_or_init(|| {
+        parse_positive_i64(
+            std::env::var(NOTIFICATION_NO_PROVIDER_GRACE_SECS_ENV)
+                .ok()
+                .as_deref(),
+            DEFAULT_NOTIFICATION_NO_PROVIDER_GRACE_SECS,
         )
     })
 }

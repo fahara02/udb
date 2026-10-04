@@ -71,6 +71,8 @@ pub(crate) use config::{
     search_reindex_interval,
 };
 pub(crate) use workers::{run_index_freshness_consumer, run_search_reindex_once};
+// The hard tenant purge reads the tenant's index collections from the registry.
+pub(crate) use handlers::tenant_search_vector_targets;
 
 /// Postgres-backed `SearchService` handler.
 pub struct SearchServiceImpl {

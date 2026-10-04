@@ -76,6 +76,16 @@ public final class WorkflowServiceProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_workflow_services_v1_SignalWorkflowResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_workflow_services_v1_AckWorkflowStepRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_workflow_services_v1_AckWorkflowStepRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_workflow_services_v1_AckWorkflowStepResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_workflow_services_v1_AckWorkflowStepResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -136,79 +146,106 @@ public final class WorkflowServiceProto {
       "wP\001\"\207\001\n\026SignalWorkflowResponse\022\030\n\007messag" +
       "e\030\001 \001(\tR\007message\0222\n\005error\030\002 \001(\0132\034.udb.co" +
       "re.common.v1.ApiErrorR\005error:\037\232\262\031\033\010\001\032\003ud" +
-      "b(\260\352\0010\003@\001J\010workflowP\0012\210\024\n\017WorkflowServic" +
-      "e\022\322\003\n\rStartWorkflow\0223.udb.core.workflow." +
-      "services.v1.StartWorkflowRequest\0324.udb.c" +
-      "ore.workflow.services.v1.StartWorkflowRe" +
-      "sponse\"\325\002\312\363\030@\010\002\032\033udb:workflow:start-work" +
-      "flow \001J\002\001\002j\026workflow.StartWorkflow\220\001\001\322\363\030" +
-      "\006\010\001\020\001 \001\332\363\030:\010\001\022\016start_workflow\032\003udb(\260\352\0010\003" +
-      "@\001J\010workflowP\001Z\rstartWorkflow\352\363\030]\n\026workf" +
-      "low.StartWorkflow\022\027udb.workflow.started." +
-      "v1\032\ttenant_id\"\010standard*\rat_least_once2\006" +
-      "stable\362\363\030B\n\010workflow\032\010postgres2\033UDB_NATI" +
-      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002" +
-      "\202\323\344\223\002\030\"\023/v1/workflows:start:\001*\022\350\002\n\013GetWo" +
-      "rkflow\0221.udb.core.workflow.services.v1.G" +
-      "etWorkflowRequest\0322.udb.core.workflow.se" +
-      "rvices.v1.GetWorkflowResponse\"\361\001\312\363\030<\010\002\032\031" +
-      "udb:workflow:get-workflow \001J\002\001\002j\024workflo" +
-      "w.GetWorkflow\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\014get_wo" +
-      "rkflow\032\003udb(\260\352\0010\003@\001J\010workflowP\001Z\013getWork" +
-      "flow\362\363\030B\n\010workflow\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323" +
-      "\344\223\002\035\022\033/v1/workflows/{workflow_id}\022\350\002\n\rLi" +
-      "stWorkflows\0223.udb.core.workflow.services" +
-      ".v1.ListWorkflowsRequest\0324.udb.core.work" +
-      "flow.services.v1.ListWorkflowsResponse\"\353" +
-      "\001\312\363\030@\010\002\032\033udb:workflow:list-workflows \001J\002" +
-      "\001\002j\026workflow.ListWorkflows\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
-      "\363\030:\010\001\022\016list_workflows\032\003udb(\260\352\0010\003@\001J\010work" +
-      "flowP\001Z\rlistWorkflows\362\363\030B\n\010workflow\032\010pos" +
-      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
-      "GRPC_TARGET\370\363\030\001\202\323\344\223\002\017\022\r/v1/workflows\022\355\003\n" +
-      "\016CancelWorkflow\0224.udb.core.workflow.serv" +
-      "ices.v1.CancelWorkflowRequest\0325.udb.core" +
-      ".workflow.services.v1.CancelWorkflowResp" +
-      "onse\"\355\002\312\363\030B\010\002\032\034udb:workflow:cancel-workf" +
-      "low \001J\002\001\002j\027workflow.CancelWorkflow\220\001\001\322\363\030" +
-      "\006\010\001\020\001 \001\332\363\030<\010\001\022\017cancel_workflow\032\003udb(\260\352\0010" +
-      "\003@\001J\010workflowP\001Z\016cancelWorkflow\352\363\030b\n\027wor" +
-      "kflow.CancelWorkflow\022\031udb.workflow.cance" +
-      "lled.v1\032\013workflow_id\"\010standard*\rat_least" +
-      "_once2\006stable\362\363\030B\n\010workflow\032\010postgres2\033U" +
-      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\370\363\030\003\202\323\344\223\002\'\"\"/v1/workflows/{workflow_i" +
-      "d}:cancel:\001*\022\354\003\n\016SignalWorkflow\0224.udb.co" +
-      "re.workflow.services.v1.SignalWorkflowRe" +
-      "quest\0325.udb.core.workflow.services.v1.Si" +
-      "gnalWorkflowResponse\"\354\002\312\363\030B\010\002\032\034udb:workf" +
-      "low:signal-workflow \001J\002\001\002j\027workflow.Sign" +
-      "alWorkflow\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\017signal_wo" +
-      "rkflow\032\003udb(\260\352\0010\003@\001J\010workflowP\001Z\016signalW" +
-      "orkflow\352\363\030a\n\027workflow.SignalWorkflow\022\030ud" +
-      "b.workflow.signaled.v1\032\013workflow_id\"\010sta" +
-      "ndard*\rat_least_once2\006stable\362\363\030B\n\010workfl" +
-      "ow\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLE" +
-      "D2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\'\"\"/v1/workfl" +
-      "ows/{workflow_id}:signal:\001*\032\352\002\312\360\031k\n\010work" +
-      "flow\022\010workflow\032\010workflow\"\tWorkflows*\010wor" +
-      "kflow0\0018\001h\001z\010workflow\202\001\010workflow\212\001\010workf" +
-      "low\222\001\017native.workflow\322\360\031\033\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\010workflowP\001\332\360\031\221\001\n\010workflow\022\023udb/native/" +
-      "workflow\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
-      "DB_GRPC_TARGET\"\032udb.native.workflow.conf" +
-      "ig:\010workflowJ\013UDB_API_KEYZ\017udb native li" +
-      "nt\342\360\031B\n\010workflow\032\010postgres2\033UDB_NATIVE_S" +
-      "ERVICES_ENABLED2\017UDB_GRPC_TARGETB\237\002\n!com" +
-      ".udb.core.workflow.services.v1B\024Workflow" +
-      "ServiceProtoP\001ZKgithub.com/fahara02/udb/" +
-      "sdk/go/gen/udb/core/workflow/services/v1" +
-      ";servicesv1\242\002\004UCWS\252\002\035Udb.Core.Workflow.S" +
-      "ervices.V1\312\002\035Udb\\Core\\Workflow\\Services\\" +
-      "V1\342\002)Udb\\GPBMetadata\\Core\\Workflow\\Servi" +
-      "ces\\V1\352\002!Udb::Core::Workflow::Services::" +
-      "V1b\006proto3"
+      "b(\260\352\0010\003@\001J\010workflowP\001\"\241\002\n\026AckWorkflowSte" +
+      "pRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n" +
+      "\013workflow_id\030\002 \001(\tR\nworkflowId\022\035\n\nstep_i" +
+      "ndex\030\003 \001(\005R\tstepIndex\022L\n\007outcome\030\004 \001(\01622" +
+      ".udb.core.workflow.services.v1.WorkflowS" +
+      "tepOutcomeR\007outcome\022\026\n\006output\030\005 \001(\tR\006out" +
+      "put\022#\n\rerror_message\030\006 \001(\tR\014errorMessage" +
+      ":\037\232\262\031\033\010\001\032\003udb(\260\352\0010\003@\001J\010workflowP\001\"\240\001\n\027Ac" +
+      "kWorkflowStepResponse\022\030\n\007message\030\001 \001(\tR\007" +
+      "message\0222\n\005error\030\002 \001(\0132\034.udb.core.common" +
+      ".v1.ApiErrorR\005error\022\026\n\006status\030\003 \001(\tR\006sta" +
+      "tus:\037\232\262\031\033\010\001\032\003udb(\260\352\0010\003@\001J\010workflowP\001*\203\001\n" +
+      "\023WorkflowStepOutcome\022%\n!WORKFLOW_STEP_OU" +
+      "TCOME_UNSPECIFIED\020\000\022#\n\037WORKFLOW_STEP_OUT" +
+      "COME_SUCCEEDED\020\001\022 \n\034WORKFLOW_STEP_OUTCOM" +
+      "E_FAILED\020\0022\210\030\n\017WorkflowService\022\322\003\n\rStart" +
+      "Workflow\0223.udb.core.workflow.services.v1" +
+      ".StartWorkflowRequest\0324.udb.core.workflo" +
+      "w.services.v1.StartWorkflowResponse\"\325\002\312\363" +
+      "\030@\010\002\032\033udb:workflow:start-workflow \001J\002\001\002j" +
+      "\026workflow.StartWorkflow\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:" +
+      "\010\001\022\016start_workflow\032\003udb(\260\352\0010\003@\001J\010workflo" +
+      "wP\001Z\rstartWorkflow\352\363\030]\n\026workflow.StartWo" +
+      "rkflow\022\027udb.workflow.started.v1\032\ttenant_" +
+      "id\"\010standard*\rat_least_once2\006stable\362\363\030B\n" +
+      "\010workflow\032\010postgres2\033UDB_NATIVE_SERVICES" +
+      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\030\"\023/v1" +
+      "/workflows:start:\001*\022\350\002\n\013GetWorkflow\0221.ud" +
+      "b.core.workflow.services.v1.GetWorkflowR" +
+      "equest\0322.udb.core.workflow.services.v1.G" +
+      "etWorkflowResponse\"\361\001\312\363\030<\010\002\032\031udb:workflo" +
+      "w:get-workflow \001J\002\001\002j\024workflow.GetWorkfl" +
+      "ow\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\014get_workflow\032\003udb" +
+      "(\260\352\0010\003@\001J\010workflowP\001Z\013getWorkflow\362\363\030B\n\010w" +
+      "orkflow\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/w" +
+      "orkflows/{workflow_id}\022\350\002\n\rListWorkflows" +
+      "\0223.udb.core.workflow.services.v1.ListWor" +
+      "kflowsRequest\0324.udb.core.workflow.servic" +
+      "es.v1.ListWorkflowsResponse\"\353\001\312\363\030@\010\002\032\033ud" +
+      "b:workflow:list-workflows \001J\002\001\002j\026workflo" +
+      "w.ListWorkflows\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\016list" +
+      "_workflows\032\003udb(\260\352\0010\003@\001J\010workflowP\001Z\rlis" +
+      "tWorkflows\362\363\030B\n\010workflow\032\010postgres2\033UDB_" +
+      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
+      "\370\363\030\001\202\323\344\223\002\017\022\r/v1/workflows\022\355\003\n\016CancelWork" +
+      "flow\0224.udb.core.workflow.services.v1.Can" +
+      "celWorkflowRequest\0325.udb.core.workflow.s" +
+      "ervices.v1.CancelWorkflowResponse\"\355\002\312\363\030B" +
+      "\010\002\032\034udb:workflow:cancel-workflow \001J\002\001\002j\027" +
+      "workflow.CancelWorkflow\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<" +
+      "\010\001\022\017cancel_workflow\032\003udb(\260\352\0010\003@\001J\010workfl" +
+      "owP\001Z\016cancelWorkflow\352\363\030b\n\027workflow.Cance" +
+      "lWorkflow\022\031udb.workflow.cancelled.v1\032\013wo" +
+      "rkflow_id\"\010standard*\rat_least_once2\006stab" +
+      "le\362\363\030B\n\010workflow\032\010postgres2\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223" +
+      "\002\'\"\"/v1/workflows/{workflow_id}:cancel:\001" +
+      "*\022\354\003\n\016SignalWorkflow\0224.udb.core.workflow" +
+      ".services.v1.SignalWorkflowRequest\0325.udb" +
+      ".core.workflow.services.v1.SignalWorkflo" +
+      "wResponse\"\354\002\312\363\030B\010\002\032\034udb:workflow:signal-" +
+      "workflow \001J\002\001\002j\027workflow.SignalWorkflow\220" +
+      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\017signal_workflow\032\003udb" +
+      "(\260\352\0010\003@\001J\010workflowP\001Z\016signalWorkflow\352\363\030a" +
+      "\n\027workflow.SignalWorkflow\022\030udb.workflow." +
+      "signaled.v1\032\013workflow_id\"\010standard*\rat_l" +
+      "east_once2\006stable\362\363\030B\n\010workflow\032\010postgre" +
+      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
+      "_TARGET\370\363\030\002\202\323\344\223\002\'\"\"/v1/workflows/{workfl" +
+      "ow_id}:signal:\001*\022\375\003\n\017AckWorkflowStep\0225.u" +
+      "db.core.workflow.services.v1.AckWorkflow" +
+      "StepRequest\0326.udb.core.workflow.services" +
+      ".v1.AckWorkflowStepResponse\"\372\002\312\363\030E\010\002\032\036ud" +
+      "b:workflow:ack-workflow-step \001J\002\001\002j\030work" +
+      "flow.AckWorkflowStep\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030?\010\001\022" +
+      "\021ack_workflow_step\032\003udb(\260\352\0010\003@\001J\010workflo" +
+      "wP\001Z\017ackWorkflowStep\352\363\030g\n\030workflow.AckWo" +
+      "rkflowStep\022\035udb.workflow.step.advanced.v" +
+      "1\032\013workflow_id\"\010standard*\rat_least_once2" +
+      "\006stable\362\363\030B\n\010workflow\032\010postgres2\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
+      "\002\202\323\344\223\002)\"$/v1/workflows/{workflow_id}:ack" +
+      "-step:\001*\032\352\002\312\360\031k\n\010workflow\022\010workflow\032\010wor" +
+      "kflow\"\tWorkflows*\010workflow0\0018\001h\001z\010workfl" +
+      "ow\202\001\010workflow\212\001\010workflow\222\001\017native.workfl" +
+      "ow\322\360\031\033\010\001\032\003udb(\260\352\0010\003@\001J\010workflowP\001\332\360\031\221\001\n\010" +
+      "workflow\022\023udb/native/workflow\032\033UDB_NATIV" +
+      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\032udb" +
+      ".native.workflow.config:\010workflowJ\013UDB_A" +
+      "PI_KEYZ\017udb native lint\342\360\031B\n\010workflow\032\010p" +
+      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
+      "B_GRPC_TARGETB\237\002\n!com.udb.core.workflow." +
+      "services.v1B\024WorkflowServiceProtoP\001ZKgit" +
+      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
+      "/workflow/services/v1;servicesv1\242\002\004UCWS\252" +
+      "\002\035Udb.Core.Workflow.Services.V1\312\002\035Udb\\Co" +
+      "re\\Workflow\\Services\\V1\342\002)Udb\\GPBMetadat" +
+      "a\\Core\\Workflow\\Services\\V1\352\002!Udb::Core:" +
+      ":Workflow::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -278,6 +315,18 @@ public final class WorkflowServiceProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_workflow_services_v1_SignalWorkflowResponse_descriptor,
         new java.lang.String[] { "Message", "Error", });
+    internal_static_udb_core_workflow_services_v1_AckWorkflowStepRequest_descriptor =
+      getDescriptor().getMessageTypes().get(10);
+    internal_static_udb_core_workflow_services_v1_AckWorkflowStepRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_workflow_services_v1_AckWorkflowStepRequest_descriptor,
+        new java.lang.String[] { "TenantId", "WorkflowId", "StepIndex", "Outcome", "Output", "ErrorMessage", });
+    internal_static_udb_core_workflow_services_v1_AckWorkflowStepResponse_descriptor =
+      getDescriptor().getMessageTypes().get(11);
+    internal_static_udb_core_workflow_services_v1_AckWorkflowStepResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_workflow_services_v1_AckWorkflowStepResponse_descriptor,
+        new java.lang.String[] { "Message", "Error", "Status", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.api.AnnotationsProto.getDescriptor();
     com.udb.core.common.v1.DtoProto.getDescriptor();

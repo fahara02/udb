@@ -115,3 +115,52 @@ pub(crate) fn effective_max_bytes(declared: i64) -> i64 {
 pub(crate) fn would_exceed_budget(used: i64, delta: i64, max_bytes: i64) -> bool {
     delta > 0 && used.saturating_add(delta) > max_bytes
 }
+
+/// Atomic budgeted write, run server-side as ONE Lua script so the size probe,
+/// the budget gate, the write, and the counter bump cannot interleave with a
+/// concurrent writer. Issuing them as separate round-trips let N concurrent
+/// writers each read the same `used`, each pass the gate, and together overrun
+/// the namespace budget by up to N-1 values.
+///
+/// `KEYS[1]` = data key, `KEYS[2]` = byte counter.
+/// `ARGV[1]` = value, `ARGV[2]` = effective max bytes, `ARGV[3]` = TTL seconds
+/// (`<= 0` = no expiry).
+/// Returns `{stored(0|1), used_bytes, delta}`; on refusal `used_bytes` is the
+/// unchanged counter and nothing was written. The gate mirrors
+/// [`would_exceed_budget`] exactly (only a positive delta can exceed).
+#[cfg_attr(not(feature = "redis"), allow(dead_code))]
+pub(crate) const BUDGETED_SET_LUA: &str = "\
+local old = redis.call('STRLEN', KEYS[1]) \
+local delta = string.len(ARGV[1]) - old \
+local used = tonumber(redis.call('GET', KEYS[2]) or '0') or 0 \
+if used < 0 then used = 0 end \
+if delta > 0 and used + delta > tonumber(ARGV[2]) then \
+  return {0, used, delta} \
+end \
+local ttl = tonumber(ARGV[3]) or 0 \
+if ttl > 0 then \
+  redis.call('SET', KEYS[1], ARGV[1], 'EX', ttl) \
+else \
+  redis.call('SET', KEYS[1], ARGV[1]) \
+end \
+local after = used \
+if delta ~= 0 then after = redis.call('INCRBY', KEYS[2], delta) end \
+return {1, after, delta}";
+
+/// Atomic delete + counter release (same single-script rationale as
+/// [`BUDGETED_SET_LUA`]): the released length is the length of the value that
+/// was actually removed, so a concurrent overwrite between a separate STRLEN
+/// and DEL can no longer leak or double-release counter bytes.
+///
+/// `KEYS[1]` = data key, `KEYS[2]` = byte counter. Returns
+/// `{removed(0|1), used_bytes}`.
+#[cfg_attr(not(feature = "redis"), allow(dead_code))]
+pub(crate) const BUDGETED_DELETE_LUA: &str = "\
+local old = redis.call('STRLEN', KEYS[1]) \
+local removed = redis.call('DEL', KEYS[1]) \
+if removed == 0 then \
+  local used = tonumber(redis.call('GET', KEYS[2]) or '0') or 0 \
+  return {0, used} \
+end \
+local after = redis.call('INCRBY', KEYS[2], -old) \
+return {1, after}";

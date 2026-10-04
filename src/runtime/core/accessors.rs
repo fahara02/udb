@@ -1273,10 +1273,12 @@ impl DataBrokerRuntime {
         format!(
             "# TYPE udb_cache_hit_total counter\nudb_cache_hit_total {}\n\
              # TYPE udb_cache_miss_total counter\nudb_cache_miss_total {}\n\
-             # TYPE udb_cache_invalidation_total counter\nudb_cache_invalidation_total {}\n",
+             # TYPE udb_cache_invalidation_total counter\nudb_cache_invalidation_total {}\n\
+             # TYPE udb_cache_invalidation_failure_total counter\nudb_cache_invalidation_failure_total {}\n",
             snapshot.udb_cache_hit_total,
             snapshot.udb_cache_miss_total,
-            snapshot.udb_cache_invalidation_total
+            snapshot.udb_cache_invalidation_total,
+            snapshot.udb_cache_invalidation_failure_total
         )
     }
 

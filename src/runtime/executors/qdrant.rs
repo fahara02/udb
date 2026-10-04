@@ -897,23 +897,11 @@ impl QdrantHttpClient {
             if !request.vector_name.trim().is_empty() {
                 dense_prefetch["using"] = json!(request.vector_name);
             }
-            let mut prefetch = vec![dense_prefetch];
-
-            // Add a text-match prefetch if text_query is provided so Qdrant can
-            // also score by lexical relevance in collections that have a
-            // payload text index set up.
-            if !text_query.is_empty() {
-                prefetch.push(json!({
-                    "query": request.vector,
-                    "filter": {
-                        "must": [{
-                            "key": "_full_text",
-                            "match": { "text": text_query }
-                        }]
-                    },
-                    "limit": prefetch_limit
-                }));
-            }
+            // Dense candidates only. The lexical leg is the local re-rank below:
+            // nothing writes a dedicated full-text payload field, so a server-side
+            // text-match prefetch over one would always be empty while looking
+            // like a working lexical stage.
+            let prefetch = vec![dense_prefetch];
 
             let fusion = match request.fusion_strategy {
                 3 => "dbsf",
@@ -938,21 +926,44 @@ impl QdrantHttpClient {
                 self.base_url,
                 encode_collection(&request.collection)
             );
-            if let Ok(resp) = self
+            let tier1 = match self
                 .auth(self.http.post(&url))
                 .json(&query_body)
                 .send()
                 .await
-                && resp.status().is_success()
-                && let Ok(payload) = resp.json::<JsonValue>().await
             {
-                let points = query_result_points(payload);
-                let reranked = if text_query.is_empty() {
-                    points.into_iter().take(limit).collect()
-                } else {
-                    rerank_with_text(points, &text_query, dense_weight, sparse_weight, limit)
-                };
-                return Ok(VectorSet { points: reranked });
+                Ok(resp) if resp.status().is_success() => resp
+                    .json::<JsonValue>()
+                    .await
+                    .map_err(|err| format!("query response decode failed: {err}")),
+                Ok(resp) => Err(format!("query endpoint returned HTTP {}", resp.status())),
+                Err(err) => Err(format!("query request failed: {err}")),
+            };
+            match tier1 {
+                Ok(payload) => {
+                    let points = query_result_points(payload);
+                    let reranked = if text_query.is_empty() {
+                        points.into_iter().take(limit).collect()
+                    } else {
+                        rerank_with_text(points, &text_query, dense_weight, sparse_weight, limit)
+                    };
+                    return Ok(VectorSet { points: reranked });
+                }
+                // The downgrade to plain dense search is LOUD: the caller gets a
+                // result either way, so the operator must be able to see that the
+                // native fusion stage is not serving (old Qdrant without
+                // `/points/query`, a bad `using` name, an outage).
+                Err(reason) => {
+                    QDRANT_HYBRID_FALLBACKS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    tracing::warn!(
+                        collection = %request.collection,
+                        reason = %reason,
+                        fallbacks_total = QDRANT_HYBRID_FALLBACKS
+                            .load(std::sync::atomic::Ordering::Relaxed),
+                        "qdrant hybrid search: native fusion query failed; degrading to dense \
+                         search with local lexical re-rank"
+                    );
+                }
             }
         }
 
@@ -1010,6 +1021,10 @@ impl QdrantHttpClient {
 }
 
 // ── Hybrid search helpers ─────────────────────────────────────────────────────
+
+/// Process-wide count of hybrid searches that fell back from the native fusion
+/// query to dense search + local re-rank (reported with every fallback warning).
+static QDRANT_HYBRID_FALLBACKS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 /// Re-rank `points` by combining the normalised dense vector score with a
 /// lexical text score computed against `text_query`.
@@ -1616,6 +1631,33 @@ mod tests {
         assert_eq!(points.len(), 1);
         assert_eq!(points[0].vector_name, "body");
         assert_eq!(points[0].vector, vec![0.1, 0.2, 0.3]);
+    }
+
+    #[tokio::test]
+    async fn hybrid_tier1_failure_is_counted_not_silent() {
+        // Nothing listens on port 1: the native fusion query fails, the fallback
+        // is recorded (and warned), and the dense fallback's own failure surfaces
+        // as an error rather than an empty "successful" result.
+        let client = QdrantHttpClient {
+            base_url: "http://127.0.0.1:1".to_string(),
+            api_key: None,
+            http: reqwest::Client::new(),
+        };
+        let before = QDRANT_HYBRID_FALLBACKS.load(std::sync::atomic::Ordering::Relaxed);
+        let request = VectorHybridSearchRequest {
+            collection: "items".to_string(),
+            vector: vec![0.1, 0.2],
+            text_query: "hello".to_string(),
+            limit: 5,
+            ..VectorHybridSearchRequest::default()
+        };
+        assert!(
+            client
+                .hybrid_search(&request, JsonValue::Null)
+                .await
+                .is_err()
+        );
+        assert!(QDRANT_HYBRID_FALLBACKS.load(std::sync::atomic::Ordering::Relaxed) > before);
     }
 
     #[tokio::test]

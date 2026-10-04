@@ -3,8 +3,10 @@
 //! survivors as `Change` frames over a BOUNDED channel and closing the stream
 //! with `resource_exhausted` on broadcast lag or a saturated subscriber.
 
+use std::collections::{HashSet, VecDeque};
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use tokio::sync::{broadcast, mpsc};
 use tokio::time::{Instant, Interval, MissedTickBehavior, interval_at};
@@ -40,6 +42,63 @@ async fn next_keepalive_tick(keepalive: &mut Option<Interval>) {
 pub(crate) type LiveQueryStream =
     Pin<Box<dyn Stream<Item = Result<lq_pb::SubscribeResponse, Status>> + Send + 'static>>;
 
+/// How often the forwarder polls the durable CDC journal.
+const JOURNAL_TAIL_POLL: Duration = Duration::from_millis(500);
+
+/// How many event ids the forwarder remembers to de-duplicate the broadcast
+/// fast path against the journal backstop.
+const DEDUP_WINDOW: usize = 16_384;
+
+/// The cross-replica delta source. The in-process broadcast is fed ONLY on the
+/// replica that holds the CDC tailer lease; every other replica's broadcast is
+/// silent, so a subscriber connected there used to receive its snapshot and
+/// then nothing. The tailer journals every event (in shared Postgres) BEFORE
+/// broadcasting it, so tailing the journal delivers the same deltas on every
+/// replica. The broadcast stays as the low-latency fast path; the two are
+/// de-duplicated by `event_id`.
+pub(crate) struct JournalTail {
+    pub(crate) cdc: Arc<crate::cdc::CdcEngine>,
+    /// Last journal event id scanned; the next poll continues strictly after it.
+    pub(crate) cursor: String,
+    /// In-scope rows per poll (bounded scan, see `journal_scan_for_scope`).
+    pub(crate) batch: i64,
+}
+
+/// Bounded FIFO set of delivered event ids.
+#[derive(Default)]
+pub(crate) struct SeenEvents {
+    ids: HashSet<String>,
+    order: VecDeque<String>,
+}
+
+impl SeenEvents {
+    /// `true` the first time `event_id` is offered, `false` for a repeat.
+    pub(crate) fn first_sighting(&mut self, event_id: &str) -> bool {
+        if event_id.is_empty() {
+            // Nothing to de-duplicate on; deliver.
+            return true;
+        }
+        if !self.ids.insert(event_id.to_string()) {
+            return false;
+        }
+        self.order.push_back(event_id.to_string());
+        while self.order.len() > DEDUP_WINDOW {
+            if let Some(evicted) = self.order.pop_front() {
+                self.ids.remove(&evicted);
+            }
+        }
+        true
+    }
+}
+
+/// Outcome of offering one event to the subscriber.
+enum Forwarded {
+    /// Delivered, filtered out, or skipped — keep streaming.
+    Continue,
+    /// The subscriber is gone or the stream was closed with an error.
+    Stop,
+}
+
 /// Drive the bounded delta forwarder: subscribe to the CDC broadcast feed, drop
 /// every event that fails the fail-closed tenant re-check or the IR predicate,
 /// and forward survivors as `Change` frames. Closes the stream with
@@ -65,10 +124,14 @@ pub(crate) async fn run_delta_forward(
     // of this task — normal break, error close, abort) releases this
     // subscription's per-tenant active-stream budget slot.
     stream_slot: StreamSlot,
+    // Cross-replica journal backstop (None when the journal head could not be
+    // read; the broadcast fast path still runs).
+    mut journal_tail: Option<JournalTail>,
 ) {
     // Reflect this newly-active stream in the per-tenant gauge (the acquirer
     // already counted the slot before this task was spawned).
     metrics.set_livequery_active_streams(&tenant_id, active_stream_count(&tenant_id) as i64);
+    let mut seen = SeenEvents::default();
 
     // Durable resume: replay the missed journalled deltas first. Uses the
     // backpressure-aware async send (not the live loop's close-on-Full) so a large
@@ -77,6 +140,14 @@ pub(crate) async fn run_delta_forward(
     // dedups it against the snapshot / live feed and can advance its resume cursor.
     let mut ended = false;
     for envelope in resume_replay {
+        // The journal tail continues after the backlog, and a replayed event
+        // the broadcast also carries is delivered once.
+        if let Some(tail) = journal_tail.as_mut() {
+            tail.cursor = envelope.event_id.clone();
+        }
+        if !seen.first_sighting(&envelope.event_id) {
+            continue;
+        }
         let payload = match serde_json::from_str::<serde_json::Value>(&envelope.payload_json) {
             Ok(value) => value,
             // Fail closed: an opaque journal payload cannot be proven in-scope.
@@ -120,6 +191,8 @@ pub(crate) async fn run_delta_forward(
             &masked_columns,
             user_filter.as_ref(),
             metrics.as_ref(),
+            journal_tail,
+            &mut seen,
         )
         .await;
     }
@@ -130,8 +203,12 @@ pub(crate) async fn run_delta_forward(
     metrics.set_livequery_active_streams(&tenant_id, active_stream_count(&tenant_id) as i64);
 }
 
-/// The live broadcast-forward loop, split out so [`run_delta_forward`] owns the
-/// resume replay + slot/gauge lifecycle while this owns the per-event fan-out.
+/// The live forward loop, split out so [`run_delta_forward`] owns the resume
+/// replay + slot/gauge lifecycle while this owns the per-event fan-out. Events
+/// arrive from two sources — the in-process broadcast (fast path, fed only on
+/// the CDC leader) and the durable journal tail (every replica) — and are
+/// de-duplicated by `event_id` before the shared scope/filter/forward path.
+#[allow(clippy::too_many_arguments)]
 async fn run_live_loop(
     rx: &mut broadcast::Receiver<crate::cdc::CdcEnvelope>,
     tx: &mpsc::Sender<Result<lq_pb::SubscribeResponse, Status>>,
@@ -141,6 +218,8 @@ async fn run_live_loop(
     masked_columns: &[String],
     user_filter: Option<&LogicalFilter>,
     metrics: &dyn MetricsRecorder,
+    mut journal_tail: Option<JournalTail>,
+    seen: &mut SeenEvents,
 ) {
     // Optional idle-stream keepalive: on a busy stream real deltas keep the
     // connection warm and the timer just resets; on a silent stream this puts a
@@ -153,6 +232,14 @@ async fn run_live_loop(
         ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
         ticker
     });
+    let mut journal_poll: Option<Interval> = journal_tail.as_ref().map(|_| {
+        let mut ticker = interval_at(Instant::now() + JOURNAL_TAIL_POLL, JOURNAL_TAIL_POLL);
+        ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
+        ticker
+    });
+    // Once the broadcast closes (or lags) the journal tail alone carries the
+    // stream when it is configured.
+    let mut broadcast_open = true;
     loop {
         // Wake on subscriber hang-up too: without `tx.closed()` a disconnected
         // client whose source entity never mutates would park this task (and
@@ -169,58 +256,57 @@ async fn run_live_loop(
                     Err(mpsc::error::TrySendError::Closed(_)) => break,
                 }
             }
-            received = rx.recv() => received,
+            _ = next_keepalive_tick(&mut journal_poll), if journal_poll.is_some() => {
+                match poll_journal_tail(
+                    journal_tail.as_mut(),
+                    seen,
+                    tx,
+                    tenant_id,
+                    project_id,
+                    cdc_topic,
+                    masked_columns,
+                    user_filter,
+                    metrics,
+                )
+                .await
+                {
+                    Forwarded::Continue => continue,
+                    Forwarded::Stop => break,
+                }
+            }
+            received = rx.recv(), if broadcast_open => received,
         };
         // Delta-path metrics: per-outcome counters recorded at each labelled site
-        // below (forwarded / dropped-by-scope / dropped-by-filter / backpressure /
+        // (forwarded / dropped-by-scope / dropped-by-filter / backpressure /
         // lag). The per-tenant active-stream gauge is owned by `run_delta_forward`.
         match received {
             Ok(envelope) => {
-                if !topic_matches_source(&envelope.topic, cdc_topic) {
-                    // Not this subscription's source entity — feed noise from another
-                    // entity on the shared broadcast, not a dropped matching delta.
+                if !seen.first_sighting(&envelope.event_id) {
                     continue;
                 }
-                // Fail closed if the payload cannot be inspected: an opaque event
-                // cannot be proven to belong to this tenant (a scope failure).
-                let payload =
-                    match serde_json::from_str::<serde_json::Value>(&envelope.payload_json) {
-                        Ok(value) => value,
-                        Err(_) => {
-                            metrics.record_livequery_delta_dropped(tenant_id, "scope");
-                            continue;
-                        }
-                    };
-                // SECURITY: per-event tenant-scope re-check — a tenant-less or
-                // foreign event is dropped here, never streamed.
-                if !event_matches_tenant_scope(&envelope.topic, &payload, tenant_id, project_id) {
-                    metrics.record_livequery_delta_dropped(tenant_id, "scope");
-                    continue;
-                }
-                let row = change_row(&payload);
-                if let Some(filter) = user_filter {
-                    if !filter_matches_row(filter, &row) {
-                        metrics.record_livequery_delta_dropped(tenant_id, "filter");
-                        continue;
-                    }
-                }
-                match tx.try_send(Ok(change_frame(&envelope, &payload, masked_columns))) {
-                    Ok(()) => metrics.record_livequery_delta_forwarded(tenant_id),
-                    Err(mpsc::error::TrySendError::Full(_)) => {
-                        metrics.record_livequery_delta_dropped(tenant_id, "backpressure");
-                        let _ = tx
-                            .send(Err(livequery_backpressure_status(
-                                "subscriber_channel",
-                                "live query subscriber too slow; stream closed",
-                            )))
-                            .await;
-                        break;
-                    }
-                    Err(mpsc::error::TrySendError::Closed(_)) => break,
+                if let Forwarded::Stop = forward_event(
+                    &envelope,
+                    tx,
+                    tenant_id,
+                    project_id,
+                    cdc_topic,
+                    masked_columns,
+                    user_filter,
+                    metrics,
+                )
+                .await
+                {
+                    break;
                 }
             }
             Err(broadcast::error::RecvError::Lagged(_)) => {
                 metrics.record_livequery_delta_dropped(tenant_id, "lag");
+                if journal_tail.is_some() {
+                    // The journal tail backfills whatever the bounded broadcast
+                    // dropped; keep streaming from it alone.
+                    broadcast_open = false;
+                    continue;
+                }
                 let _ = tx
                     .send(Err(livequery_backpressure_status(
                         "delta feed lag",
@@ -229,7 +315,150 @@ async fn run_live_loop(
                     .await;
                 break;
             }
-            Err(broadcast::error::RecvError::Closed) => break,
+            Err(broadcast::error::RecvError::Closed) => {
+                if journal_tail.is_some() {
+                    broadcast_open = false;
+                    continue;
+                }
+                break;
+            }
         }
+    }
+}
+
+/// One journal-tail poll: scan past the cursor (tenant/project re-checked by
+/// the scan), advance the cursor to the last row scanned, and forward each
+/// event not already delivered by the broadcast.
+#[allow(clippy::too_many_arguments)]
+async fn poll_journal_tail(
+    journal_tail: Option<&mut JournalTail>,
+    seen: &mut SeenEvents,
+    tx: &mpsc::Sender<Result<lq_pb::SubscribeResponse, Status>>,
+    tenant_id: &str,
+    project_id: &str,
+    cdc_topic: &str,
+    masked_columns: &[String],
+    user_filter: Option<&LogicalFilter>,
+    metrics: &dyn MetricsRecorder,
+) -> Forwarded {
+    let Some(tail) = journal_tail else {
+        return Forwarded::Continue;
+    };
+    let (events, last_scanned) = tail
+        .cdc
+        .journal_scan_for_scope(cdc_topic, tenant_id, project_id, &tail.cursor, tail.batch)
+        .await;
+    if let Some(last_scanned) = last_scanned {
+        tail.cursor = last_scanned;
+    }
+    for envelope in events {
+        if !seen.first_sighting(&envelope.event_id) {
+            continue;
+        }
+        if let Forwarded::Stop = forward_event(
+            &envelope,
+            tx,
+            tenant_id,
+            project_id,
+            cdc_topic,
+            masked_columns,
+            user_filter,
+            metrics,
+        )
+        .await
+        {
+            return Forwarded::Stop;
+        }
+    }
+    Forwarded::Continue
+}
+
+/// Scope-check, filter and forward one change event (shared by the broadcast
+/// and journal paths).
+#[allow(clippy::too_many_arguments)]
+async fn forward_event(
+    envelope: &crate::cdc::CdcEnvelope,
+    tx: &mpsc::Sender<Result<lq_pb::SubscribeResponse, Status>>,
+    tenant_id: &str,
+    project_id: &str,
+    cdc_topic: &str,
+    masked_columns: &[String],
+    user_filter: Option<&LogicalFilter>,
+    metrics: &dyn MetricsRecorder,
+) -> Forwarded {
+    if !topic_matches_source(&envelope.topic, cdc_topic) {
+        // Not this subscription's source entity — feed noise from another
+        // entity on the shared broadcast, not a dropped matching delta.
+        return Forwarded::Continue;
+    }
+    // Fail closed if the payload cannot be inspected: an opaque event cannot be
+    // proven to belong to this tenant (a scope failure).
+    let payload = match serde_json::from_str::<serde_json::Value>(&envelope.payload_json) {
+        Ok(value) => value,
+        Err(_) => {
+            metrics.record_livequery_delta_dropped(tenant_id, "scope");
+            return Forwarded::Continue;
+        }
+    };
+    // SECURITY: per-event tenant-scope re-check — a tenant-less or foreign event
+    // is dropped here, never streamed.
+    if !event_matches_tenant_scope(&envelope.topic, &payload, tenant_id, project_id) {
+        metrics.record_livequery_delta_dropped(tenant_id, "scope");
+        return Forwarded::Continue;
+    }
+    let row = change_row(&payload);
+    if let Some(filter) = user_filter {
+        if !filter_matches_row(filter, &row) {
+            metrics.record_livequery_delta_dropped(tenant_id, "filter");
+            return Forwarded::Continue;
+        }
+    }
+    match tx.try_send(Ok(change_frame(envelope, &payload, masked_columns))) {
+        Ok(()) => {
+            metrics.record_livequery_delta_forwarded(tenant_id);
+            Forwarded::Continue
+        }
+        Err(mpsc::error::TrySendError::Full(_)) => {
+            metrics.record_livequery_delta_dropped(tenant_id, "backpressure");
+            let _ = tx
+                .send(Err(livequery_backpressure_status(
+                    "subscriber_channel",
+                    "live query subscriber too slow; stream closed",
+                )))
+                .await;
+            Forwarded::Stop
+        }
+        Err(mpsc::error::TrySendError::Closed(_)) => Forwarded::Stop,
+    }
+}
+
+#[cfg(test)]
+mod dedup_tests {
+    use super::SeenEvents;
+
+    /// The broadcast fast path and the journal backstop carry the same events;
+    /// each must reach the subscriber exactly once.
+    #[test]
+    fn seen_events_delivers_each_event_once() {
+        let mut seen = SeenEvents::default();
+        assert!(seen.first_sighting("e1"));
+        assert!(!seen.first_sighting("e1"));
+        assert!(seen.first_sighting("e2"));
+        // An id-less event cannot be de-duplicated; it is delivered.
+        assert!(seen.first_sighting(""));
+        assert!(seen.first_sighting(""));
+    }
+
+    #[test]
+    fn seen_events_window_is_bounded() {
+        let mut seen = SeenEvents::default();
+        for i in 0..(super::DEDUP_WINDOW + 10) {
+            assert!(seen.first_sighting(&format!("e{i}")));
+        }
+        assert!(seen.ids.len() <= super::DEDUP_WINDOW);
+        assert_eq!(seen.ids.len(), seen.order.len());
+        // The newest ids are still remembered.
+        let newest = format!("e{}", super::DEDUP_WINDOW + 9);
+        assert!(!seen.first_sighting(&newest));
     }
 }

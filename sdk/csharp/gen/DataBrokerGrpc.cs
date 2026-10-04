@@ -88,6 +88,14 @@ namespace Udb.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.MultipartUploadResponse> __Marshaller_udb_entity_v1_MultipartUploadResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.MultipartUploadResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.CompleteMultipartUploadRequest> __Marshaller_udb_entity_v1_CompleteMultipartUploadRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.CompleteMultipartUploadRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.CompleteMultipartUploadResponse> __Marshaller_udb_entity_v1_CompleteMultipartUploadResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.CompleteMultipartUploadResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.AbortMultipartUploadRequest> __Marshaller_udb_entity_v1_AbortMultipartUploadRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.AbortMultipartUploadRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.AbortMultipartUploadResponse> __Marshaller_udb_entity_v1_AbortMultipartUploadResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.AbortMultipartUploadResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.CacheGetRequest> __Marshaller_udb_entity_v1_CacheGetRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.CacheGetRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.CacheGetResponse> __Marshaller_udb_entity_v1_CacheGetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.CacheGetResponse.Parser));
@@ -381,6 +389,22 @@ namespace Udb.Services.V1 {
         "InitiateMultipartUpload",
         __Marshaller_udb_entity_v1_MultipartUploadRequest,
         __Marshaller_udb_entity_v1_MultipartUploadResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.CompleteMultipartUploadRequest, global::Udb.Entity.V1.CompleteMultipartUploadResponse> __Method_CompleteMultipartUpload = new grpc::Method<global::Udb.Entity.V1.CompleteMultipartUploadRequest, global::Udb.Entity.V1.CompleteMultipartUploadResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "CompleteMultipartUpload",
+        __Marshaller_udb_entity_v1_CompleteMultipartUploadRequest,
+        __Marshaller_udb_entity_v1_CompleteMultipartUploadResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.AbortMultipartUploadRequest, global::Udb.Entity.V1.AbortMultipartUploadResponse> __Method_AbortMultipartUpload = new grpc::Method<global::Udb.Entity.V1.AbortMultipartUploadRequest, global::Udb.Entity.V1.AbortMultipartUploadResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AbortMultipartUpload",
+        __Marshaller_udb_entity_v1_AbortMultipartUploadRequest,
+        __Marshaller_udb_entity_v1_AbortMultipartUploadResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.CacheGetRequest, global::Udb.Entity.V1.CacheGetResponse> __Method_CacheGet = new grpc::Method<global::Udb.Entity.V1.CacheGetRequest, global::Udb.Entity.V1.CacheGetResponse>(
@@ -1045,6 +1069,18 @@ namespace Udb.Services.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.MultipartUploadResponse> InitiateMultipartUpload(global::Udb.Entity.V1.MultipartUploadRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.CompleteMultipartUploadResponse> CompleteMultipartUpload(global::Udb.Entity.V1.CompleteMultipartUploadRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.AbortMultipartUploadResponse> AbortMultipartUpload(global::Udb.Entity.V1.AbortMultipartUploadRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -2147,6 +2183,46 @@ namespace Udb.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MultipartUploadResponse> InitiateMultipartUploadAsync(global::Udb.Entity.V1.MultipartUploadRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_InitiateMultipartUpload, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.CompleteMultipartUploadResponse CompleteMultipartUpload(global::Udb.Entity.V1.CompleteMultipartUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CompleteMultipartUpload(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.CompleteMultipartUploadResponse CompleteMultipartUpload(global::Udb.Entity.V1.CompleteMultipartUploadRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_CompleteMultipartUpload, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.CompleteMultipartUploadResponse> CompleteMultipartUploadAsync(global::Udb.Entity.V1.CompleteMultipartUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CompleteMultipartUploadAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.CompleteMultipartUploadResponse> CompleteMultipartUploadAsync(global::Udb.Entity.V1.CompleteMultipartUploadRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_CompleteMultipartUpload, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.AbortMultipartUploadResponse AbortMultipartUpload(global::Udb.Entity.V1.AbortMultipartUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AbortMultipartUpload(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.AbortMultipartUploadResponse AbortMultipartUpload(global::Udb.Entity.V1.AbortMultipartUploadRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AbortMultipartUpload, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.AbortMultipartUploadResponse> AbortMultipartUploadAsync(global::Udb.Entity.V1.AbortMultipartUploadRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AbortMultipartUploadAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.AbortMultipartUploadResponse> AbortMultipartUploadAsync(global::Udb.Entity.V1.AbortMultipartUploadRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AbortMultipartUpload, null, options, request);
       }
       /// <summary>
       /// ── Cache / KV ─────────────────────────────────────────────────────────────
@@ -4378,6 +4454,8 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_GetObject, serviceImpl.GetObject)
           .AddMethod(__Method_GeneratePresignedUrl, serviceImpl.GeneratePresignedUrl)
           .AddMethod(__Method_InitiateMultipartUpload, serviceImpl.InitiateMultipartUpload)
+          .AddMethod(__Method_CompleteMultipartUpload, serviceImpl.CompleteMultipartUpload)
+          .AddMethod(__Method_AbortMultipartUpload, serviceImpl.AbortMultipartUpload)
           .AddMethod(__Method_CacheGet, serviceImpl.CacheGet)
           .AddMethod(__Method_CacheSet, serviceImpl.CacheSet)
           .AddMethod(__Method_CacheDelete, serviceImpl.CacheDelete)
@@ -4466,6 +4544,8 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_GetObject, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Udb.Entity.V1.ObjectRequest, global::Udb.Entity.V1.Chunk>(serviceImpl.GetObject));
       serviceBinder.AddMethod(__Method_GeneratePresignedUrl, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.UrlRequest, global::Udb.Entity.V1.UrlResponse>(serviceImpl.GeneratePresignedUrl));
       serviceBinder.AddMethod(__Method_InitiateMultipartUpload, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.MultipartUploadRequest, global::Udb.Entity.V1.MultipartUploadResponse>(serviceImpl.InitiateMultipartUpload));
+      serviceBinder.AddMethod(__Method_CompleteMultipartUpload, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CompleteMultipartUploadRequest, global::Udb.Entity.V1.CompleteMultipartUploadResponse>(serviceImpl.CompleteMultipartUpload));
+      serviceBinder.AddMethod(__Method_AbortMultipartUpload, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.AbortMultipartUploadRequest, global::Udb.Entity.V1.AbortMultipartUploadResponse>(serviceImpl.AbortMultipartUpload));
       serviceBinder.AddMethod(__Method_CacheGet, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CacheGetRequest, global::Udb.Entity.V1.CacheGetResponse>(serviceImpl.CacheGet));
       serviceBinder.AddMethod(__Method_CacheSet, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CacheSetRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.CacheSet));
       serviceBinder.AddMethod(__Method_CacheDelete, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CacheDeleteRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.CacheDelete));

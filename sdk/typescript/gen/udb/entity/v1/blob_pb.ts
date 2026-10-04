@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/blob.proto.
  */
 export const file_udb_entity_v1_blob: GenFile = /*@__PURE__*/
-  fileDesc("Chh1ZGIvZW50aXR5L3YxL2Jsb2IucHJvdG8SDXVkYi5lbnRpdHkudjEirQEKBUNodW5rEi4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBmJ1Y2tldBgCIAEoCRISCgpvYmplY3Rfa2V5GAMgASgJEgwKBGRhdGEYBCABKAwSEwoLZmluYWxfY2h1bmsYBSABKAgSFAoMY29udGVudF90eXBlGAYgASgJEhcKD2lkZW1wb3RlbmN5X2tleRgHIAEoCSJjCg1PYmplY3RSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBmJ1Y2tldBgCIAEoCRISCgpvYmplY3Rfa2V5GAMgASgJIpsBCgpVcmxSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBmJ1Y2tldBgCIAEoCRISCgpvYmplY3Rfa2V5GAMgASgJEg4KBm1ldGhvZBgEIAEoCRITCgt0dGxfc2Vjb25kcxgFIAEoBRIUCgxjb250ZW50X3R5cGUYBiABKAkiMwoLVXJsUmVzcG9uc2USCwoDdXJsGAEgASgJEhcKD2V4cGlyZXNfYXRfdW5peBgCIAEoAyLEAQoWTXVsdGlwYXJ0VXBsb2FkUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIOCgZidWNrZXQYAiABKAkSEgoKb2JqZWN0X2tleRgDIAEoCRIUCgxjb250ZW50X3R5cGUYBCABKAkSEgoKcGFydF9jb3VudBgFIAEoBRITCgt0dGxfc2Vjb25kcxgGIAEoBRIXCg9pZGVtcG90ZW5jeV9rZXkYByABKAkiWAoXTXVsdGlwYXJ0VXBsb2FkUmVzcG9uc2USEQoJdXBsb2FkX2lkGAEgASgJEhEKCXBhcnRfdXJscxgCIAMoCRIXCg9leHBpcmVzX2F0X3VuaXgYAyABKANCrwEKEWNvbS51ZGIuZW50aXR5LnYxQglCbG9iUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_udb_entity_v1_context]);
+  fileDesc("Chh1ZGIvZW50aXR5L3YxL2Jsb2IucHJvdG8SDXVkYi5lbnRpdHkudjEirQEKBUNodW5rEi4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBmJ1Y2tldBgCIAEoCRISCgpvYmplY3Rfa2V5GAMgASgJEgwKBGRhdGEYBCABKAwSEwoLZmluYWxfY2h1bmsYBSABKAgSFAoMY29udGVudF90eXBlGAYgASgJEhcKD2lkZW1wb3RlbmN5X2tleRgHIAEoCSJjCg1PYmplY3RSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBmJ1Y2tldBgCIAEoCRISCgpvYmplY3Rfa2V5GAMgASgJIpsBCgpVcmxSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBmJ1Y2tldBgCIAEoCRISCgpvYmplY3Rfa2V5GAMgASgJEg4KBm1ldGhvZBgEIAEoCRITCgt0dGxfc2Vjb25kcxgFIAEoBRIUCgxjb250ZW50X3R5cGUYBiABKAkiMwoLVXJsUmVzcG9uc2USCwoDdXJsGAEgASgJEhcKD2V4cGlyZXNfYXRfdW5peBgCIAEoAyLEAQoWTXVsdGlwYXJ0VXBsb2FkUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIOCgZidWNrZXQYAiABKAkSEgoKb2JqZWN0X2tleRgDIAEoCRIUCgxjb250ZW50X3R5cGUYBCABKAkSEgoKcGFydF9jb3VudBgFIAEoBRITCgt0dGxfc2Vjb25kcxgGIAEoBRIXCg9pZGVtcG90ZW5jeV9rZXkYByABKAkiWAoXTXVsdGlwYXJ0VXBsb2FkUmVzcG9uc2USEQoJdXBsb2FkX2lkGAEgASgJEhEKCXBhcnRfdXJscxgCIAMoCRIXCg9leHBpcmVzX2F0X3VuaXgYAyABKAMiOAoTTXVsdGlwYXJ0VXBsb2FkUGFydBITCgtwYXJ0X251bWJlchgBIAEoBRIMCgRldGFnGAIgASgJItMBCh5Db21wbGV0ZU11bHRpcGFydFVwbG9hZFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSDgoGYnVja2V0GAIgASgJEhIKCm9iamVjdF9rZXkYAyABKAkSEQoJdXBsb2FkX2lkGAQgASgJEjEKBXBhcnRzGAUgAygLMiIudWRiLmVudGl0eS52MS5NdWx0aXBhcnRVcGxvYWRQYXJ0EhcKD2lkZW1wb3RlbmN5X2tleRgGIAEoCSJZCh9Db21wbGV0ZU11bHRpcGFydFVwbG9hZFJlc3BvbnNlEhQKDHJlc291cmNlX3VyaRgBIAEoCRIMCgRldGFnGAIgASgJEhIKCnNpemVfYnl0ZXMYAyABKAMinQEKG0Fib3J0TXVsdGlwYXJ0VXBsb2FkUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIOCgZidWNrZXQYAiABKAkSEgoKb2JqZWN0X2tleRgDIAEoCRIRCgl1cGxvYWRfaWQYBCABKAkSFwoPaWRlbXBvdGVuY3lfa2V5GAUgASgJIi8KHEFib3J0TXVsdGlwYXJ0VXBsb2FkUmVzcG9uc2USDwoHYWJvcnRlZBgBIAEoCEKvAQoRY29tLnVkYi5lbnRpdHkudjFCCUJsb2JQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_udb_entity_v1_context]);
 
 /**
  * @generated from message udb.entity.v1.Chunk
@@ -225,3 +225,164 @@ export type MultipartUploadResponse = Message<"udb.entity.v1.MultipartUploadResp
  */
 export const MultipartUploadResponseSchema: GenMessage<MultipartUploadResponse> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_blob, 5);
+
+/**
+ * One uploaded part of a multipart upload: the 1-based part number the part
+ * URL was issued for, and the ETag the object store returned for that PUT.
+ *
+ * @generated from message udb.entity.v1.MultipartUploadPart
+ */
+export type MultipartUploadPart = Message<"udb.entity.v1.MultipartUploadPart"> & {
+  /**
+   * @generated from field: int32 part_number = 1;
+   */
+  partNumber: number;
+
+  /**
+   * @generated from field: string etag = 2;
+   */
+  etag: string;
+};
+
+/**
+ * Describes the message udb.entity.v1.MultipartUploadPart.
+ * Use `create(MultipartUploadPartSchema)` to create a new message.
+ */
+export const MultipartUploadPartSchema: GenMessage<MultipartUploadPart> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_blob, 6);
+
+/**
+ * Finish a multipart upload started by InitiateMultipartUpload. bucket +
+ * object_key must be the ones the upload was initiated with; the key is scoped
+ * to the caller's tenant exactly as on initiate, so an upload_id can only be
+ * completed by the tenant that started it. parts must be in strictly ascending
+ * part_number order.
+ *
+ * @generated from message udb.entity.v1.CompleteMultipartUploadRequest
+ */
+export type CompleteMultipartUploadRequest = Message<"udb.entity.v1.CompleteMultipartUploadRequest"> & {
+  /**
+   * @generated from field: udb.entity.v1.RequestContext context = 1;
+   */
+  context?: RequestContext | undefined;
+
+  /**
+   * @generated from field: string bucket = 2;
+   */
+  bucket: string;
+
+  /**
+   * @generated from field: string object_key = 3;
+   */
+  objectKey: string;
+
+  /**
+   * @generated from field: string upload_id = 4;
+   */
+  uploadId: string;
+
+  /**
+   * @generated from field: repeated udb.entity.v1.MultipartUploadPart parts = 5;
+   */
+  parts: MultipartUploadPart[];
+
+  /**
+   * @generated from field: string idempotency_key = 6;
+   */
+  idempotencyKey: string;
+};
+
+/**
+ * Describes the message udb.entity.v1.CompleteMultipartUploadRequest.
+ * Use `create(CompleteMultipartUploadRequestSchema)` to create a new message.
+ */
+export const CompleteMultipartUploadRequestSchema: GenMessage<CompleteMultipartUploadRequest> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_blob, 7);
+
+/**
+ * @generated from message udb.entity.v1.CompleteMultipartUploadResponse
+ */
+export type CompleteMultipartUploadResponse = Message<"udb.entity.v1.CompleteMultipartUploadResponse"> & {
+  /**
+   * @generated from field: string resource_uri = 1;
+   */
+  resourceUri: string;
+
+  /**
+   * ETag of the assembled object as reported by the object store.
+   *
+   * @generated from field: string etag = 2;
+   */
+  etag: string;
+
+  /**
+   * Total bytes of the assembled object (sum of the completed parts).
+   *
+   * @generated from field: int64 size_bytes = 3;
+   */
+  sizeBytes: bigint;
+};
+
+/**
+ * Describes the message udb.entity.v1.CompleteMultipartUploadResponse.
+ * Use `create(CompleteMultipartUploadResponseSchema)` to create a new message.
+ */
+export const CompleteMultipartUploadResponseSchema: GenMessage<CompleteMultipartUploadResponse> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_blob, 8);
+
+/**
+ * Cancel a multipart upload and release the parts already uploaded. Same
+ * tenant-scoped key rule as CompleteMultipartUploadRequest.
+ *
+ * @generated from message udb.entity.v1.AbortMultipartUploadRequest
+ */
+export type AbortMultipartUploadRequest = Message<"udb.entity.v1.AbortMultipartUploadRequest"> & {
+  /**
+   * @generated from field: udb.entity.v1.RequestContext context = 1;
+   */
+  context?: RequestContext | undefined;
+
+  /**
+   * @generated from field: string bucket = 2;
+   */
+  bucket: string;
+
+  /**
+   * @generated from field: string object_key = 3;
+   */
+  objectKey: string;
+
+  /**
+   * @generated from field: string upload_id = 4;
+   */
+  uploadId: string;
+
+  /**
+   * @generated from field: string idempotency_key = 5;
+   */
+  idempotencyKey: string;
+};
+
+/**
+ * Describes the message udb.entity.v1.AbortMultipartUploadRequest.
+ * Use `create(AbortMultipartUploadRequestSchema)` to create a new message.
+ */
+export const AbortMultipartUploadRequestSchema: GenMessage<AbortMultipartUploadRequest> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_blob, 9);
+
+/**
+ * @generated from message udb.entity.v1.AbortMultipartUploadResponse
+ */
+export type AbortMultipartUploadResponse = Message<"udb.entity.v1.AbortMultipartUploadResponse"> & {
+  /**
+   * @generated from field: bool aborted = 1;
+   */
+  aborted: boolean;
+};
+
+/**
+ * Describes the message udb.entity.v1.AbortMultipartUploadResponse.
+ * Use `create(AbortMultipartUploadResponseSchema)` to create a new message.
+ */
+export const AbortMultipartUploadResponseSchema: GenMessage<AbortMultipartUploadResponse> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_blob, 10);

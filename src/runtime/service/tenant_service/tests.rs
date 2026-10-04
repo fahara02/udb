@@ -719,3 +719,82 @@ async fn admin_purge_rejects_forged_delegated_actor() {
         "delegated_actor_mismatch"
     );
 }
+
+/// Durable tenant-status gate: suspension is read from the tenant row, so it
+/// holds on replicas that never processed the transition and across restarts.
+mod durable_gate {
+    use super::super::gate::{
+        mark_tenant_status, register_tenant_status_store, tenant_status_gate_durable,
+    };
+
+    #[tokio::test]
+    async fn durable_gate_applies_observed_status_without_a_store() {
+        // No registered store: the cache-only path still denies an observed
+        // suspension and never gates an empty tenant.
+        let tenant = "acme.durable.gate.cache-only.9a1d";
+        mark_tenant_status(tenant, "SUSPENDED");
+        let err = tenant_status_gate_durable(tenant)
+            .await
+            .expect_err("observed suspension is enforced");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        tenant_status_gate_durable("")
+            .await
+            .expect("empty tenant is not gated");
+    }
+
+    async fn insert_tenant(pool: &sqlx::PgPool, status: &str, deleted: bool) -> String {
+        let tenant_id = uuid::Uuid::new_v4().to_string();
+        let code = format!("gate-{}", &tenant_id[..8]);
+        sqlx::query(
+            "INSERT INTO udb_tenant.tenants (tenant_id, code, name, type, status, deleted_at) \
+             VALUES ($1::UUID, $2, 'gate live', 'ORGANIZATION', $3, \
+                 CASE WHEN $4 THEN NOW() ELSE NULL END)",
+        )
+        .bind(&tenant_id)
+        .bind(&code)
+        .bind(status)
+        .bind(deleted)
+        .execute(pool)
+        .await
+        .expect("insert tenant row");
+        tenant_id
+    }
+
+    /// The gate reads the row: a tenant suspended in the database (as another
+    /// replica would have left it) is denied on a node that never observed the
+    /// transition; an ACTIVE row passes; a soft-deleted row is denied; a tenant
+    /// id with no row is not a suspension.
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with cargo test --lib live_tenant_status_gate_reads_the_durable_row -- --ignored --nocapture"]
+    async fn live_tenant_status_gate_reads_the_durable_row() {
+        use crate::runtime::service::live_tests::support::{
+            live_native_service_db_lock, live_pg_pool, migrate_native_service_db,
+        };
+        let _guard = live_native_service_db_lock().lock().await;
+        let pool = live_pg_pool().await;
+        migrate_native_service_db(&pool).await;
+        register_tenant_status_store(Some(pool.clone()));
+
+        let suspended = insert_tenant(&pool, "SUSPENDED", false).await;
+        let err = tenant_status_gate_durable(&suspended)
+            .await
+            .expect_err("a suspension written elsewhere must be enforced here");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+
+        let active = insert_tenant(&pool, "ACTIVE", false).await;
+        tenant_status_gate_durable(&active)
+            .await
+            .expect("an active tenant passes");
+
+        let deleted = insert_tenant(&pool, "ACTIVE", true).await;
+        tenant_status_gate_durable(&deleted)
+            .await
+            .expect_err("a soft-deleted tenant is never serviceable");
+
+        tenant_status_gate_durable(&uuid::Uuid::new_v4().to_string())
+            .await
+            .expect("a tenant id with no row is not a suspension");
+
+        register_tenant_status_store(None);
+    }
+}

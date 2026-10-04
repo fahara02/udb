@@ -238,7 +238,9 @@ fn startup_bool_env(key: &str) -> bool {
 
 /// Fold the uniform RPC prologue shared by ~46 handlers: start the timing
 /// clock, extract the [`SecurityContext`] from request metadata, and run the
-/// standard `authorize(security, "*", method)` gate. On any failure it returns
+/// standard control gate (`authorize_control(security, method)`, which skips
+/// the data policy — see [`DataBrokerService::authorize_control`]). On any
+/// failure it returns
 /// from the enclosing handler via `self.record_grpc(method, started, Err(..))`
 /// so per-method gRPC metrics stay accurate.
 ///
@@ -249,8 +251,9 @@ fn startup_bool_env(key: &str) -> bool {
 /// ```
 ///
 /// Only applicable to handlers whose prologue is exactly this triple. Handlers
-/// that need the `authorize` decision id, a non-`"*"` message type, or other
-/// bespoke setup (e.g. `delete_inner`) must keep their hand-written prologue.
+/// that need the `authorize` decision id, a data-policy check on a message
+/// type, or other bespoke setup (e.g. `delete_inner`) must keep their
+/// hand-written prologue.
 macro_rules! authorized_call {
     ($self:expr, $request:expr, $method:literal) => {{
         let started = Instant::now();
@@ -258,11 +261,60 @@ macro_rules! authorized_call {
             Ok(s) => s,
             Err(e) => return $self.record_grpc($method, started, Err(e)),
         };
-        if let Err(err) = $self.authorize(&security, "*", $method).await {
+        if let Err(err) = $self.authorize_control(&security, $method).await {
             return $self.record_grpc($method, started, Err(err));
         }
         (started, security)
     }};
+}
+
+/// Data-plane message types are caller-influenced. The wildcard `"*"` and the
+/// empty string name no executable resource; accepting them would either skip
+/// the data policy (the old control bypass) or authorize something other than
+/// what runs. Refuse both before any policy evaluation.
+pub(crate) fn reject_wildcard_data_message_type(
+    message_type: &str,
+    operation: &str,
+) -> Result<(), Status> {
+    let trimmed = message_type.trim();
+    if trimmed.is_empty() || trimmed == "*" {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            format!(
+                "{operation}: message_type must name a concrete resource; '*' and empty are not accepted on data RPCs"
+            ),
+            [(
+                "message_type",
+                "must name a concrete message type / resource, not '*' or empty",
+            )],
+        ));
+    }
+    Ok(())
+}
+
+/// Data-plane staleness bound: a last-good policy snapshot older than
+/// `UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS` (default 600s, `0` disables) fails
+/// the decision closed (retryable) instead of honoring possibly-revoked grants
+/// while the durable policy store is unreachable.
+pub(crate) fn ensure_authz_snapshot_fresh(operation: &str) -> Result<(), Status> {
+    match crate::runtime::authz::snapshot_stale_age_secs() {
+        None => Ok(()),
+        Some(age) => {
+            tracing::error!(
+                target: "udb.audit.authz",
+                snapshot_age_secs = age,
+                operation,
+                "authz policy snapshot exceeded its staleness bound; failing closed until a reload succeeds"
+            );
+            Err(crate::runtime::executor_utils::retryable_status(
+                "authz",
+                "authz_snapshot_stale",
+                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                format!(
+                    "authorization policy snapshot is {age}s old (past UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS); request refused until the policy store reload succeeds"
+                ),
+            ))
+        }
+    }
 }
 
 /// `redis::aio::ConnectionManager` does not implement `Debug`, and
@@ -348,6 +400,8 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "GetObject",
     "GeneratePresignedUrl",
     "InitiateMultipartUpload",
+    "CompleteMultipartUpload",
+    "AbortMultipartUpload",
     "BeginTx",
     "PublishCDC",
     "EnqueueOutboxEvent",
@@ -557,14 +611,67 @@ impl DataBrokerService {
         }
     }
 
-    /// Authorize a broker RPC. On allow, returns the decision id (empty under
-    /// the legacy path) so callers can stamp it into the backend context
+    /// Authorize a DATA-plane RPC against the data policy for `message_type`
+    /// (the resource the handler will actually execute against). On allow,
+    /// returns the decision id so callers can stamp it into the backend context
     /// (`app.current_decision_id`) for row-level audit correlation. On deny,
     /// returns a `permission_denied`/`unauthenticated` status.
+    ///
+    /// `message_type` is caller-influenced on every data RPC, so the wildcard
+    /// `"*"` and the empty string are REFUSED here with `InvalidArgument`: they
+    /// used to select the control-plane bypass and skip the data policy
+    /// entirely. Control RPCs use [`Self::authorize_control`] (via
+    /// `authorized_call!`), never this entry point.
     pub(crate) async fn authorize(
         &self,
         security: &SecurityContext,
         message_type: &str,
+        operation: &str,
+    ) -> Result<String, Status> {
+        reject_wildcard_data_message_type(message_type, operation)?;
+        self.authorize_gate(security, Some(message_type), operation)
+            .await
+    }
+
+    /// Control/meta RPC gate (`authorized_call!`). Runs readiness, catalog
+    /// authority/compatibility and rate limiting but NOT the data policy:
+    /// control RPCs are governed by their own `require_admin_scope` /
+    /// method-security gates, and subjecting them to data policy would lock the
+    /// cluster out after the first policy insert.
+    pub(crate) async fn authorize_control(
+        &self,
+        security: &SecurityContext,
+        operation: &str,
+    ) -> Result<String, Status> {
+        self.authorize_gate(security, None, operation).await
+    }
+
+    /// Data-policy gate for a caller-supplied PATTERN object (a CDC topic
+    /// pattern). Unlike [`Self::authorize`] the literal `"*"` is a legitimate
+    /// value here ("every topic"), and it is evaluated BY the data policy: only
+    /// a policy whose object is itself `*` grants it. It never selects the
+    /// control bypass.
+    pub(crate) async fn authorize_pattern(
+        &self,
+        security: &SecurityContext,
+        pattern: &str,
+        operation: &str,
+    ) -> Result<String, Status> {
+        let pattern = if pattern.trim().is_empty() {
+            "*"
+        } else {
+            pattern
+        };
+        self.authorize_gate(security, Some(pattern), operation)
+            .await
+    }
+
+    /// Shared authorization core. `message_type: None` = control RPC (no data
+    /// policy); `Some(object)` = data policy evaluated for that exact object.
+    async fn authorize_gate(
+        &self,
+        security: &SecurityContext,
+        message_type: Option<&str>,
         operation: &str,
     ) -> Result<String, Status> {
         self.ensure_ready()?;
@@ -691,22 +798,24 @@ impl DataBrokerService {
             tenant_id = safe.tenant_id,
             purpose = safe.purpose,
             service_identity = safe.service_identity,
-            message_type = message_type,
+            message_type = message_type.unwrap_or("<control>"),
             operation = operation,
             "authorizing UDB request"
         );
-        // #5 lockout fix — control/meta RPCs reach this gate with a WILDCARD
-        // message type ("*", from `authorized_call!`); data operations pass their
-        // real message type. Control RPCs are authorized by their own coarse
-        // `require_admin_scope` gate, and the auth listener keeps the public
-        // routes (Login/Authenticate/RefreshToken) open — NEITHER is governed by
-        // the data-plane policy set. Subjecting the wildcard gate to
+        // #5 lockout fix — control/meta RPCs reach this gate WITHOUT a message
+        // type (`authorize_control`, from `authorized_call!`); data operations
+        // pass the resource they execute. Control RPCs are authorized by their
+        // own coarse `require_admin_scope` gate, and the auth listener keeps the
+        // public routes (Login/Authenticate/RefreshToken) open — NEITHER is
+        // governed by the data-plane policy set. Subjecting control RPCs to
         // policy-match-or-deny means the FIRST user policy insert (matching no
         // control method) would deny `GetCapabilities` and every control RPC,
         // locking out the cluster. Deny-by-default governs ONLY real data ops.
-        if message_type == "*" {
+        // The bypass is selected by the call site (an internal entry point),
+        // never by a caller-supplied string.
+        let Some(message_type) = message_type else {
             return Ok(Uuid::new_v4().to_string());
-        }
+        };
         // Block 2 (auth_fix.md) — the data plane decides through the SAME Casbin
         // engine the native AuthzService uses (`casbin_authorize`): no hand-rolled
         // matcher, no legacy `evaluate_abac`, no v2 flag. Deny-by-default. A data
@@ -724,6 +833,7 @@ impl DataBrokerService {
         let principal = Principal::from_security_context(security, Vec::new());
         let resource = ResourceRef::message(message_type);
         let attributes = std::collections::BTreeMap::new();
+        ensure_authz_snapshot_fresh("data_plane_authorize")?;
         let snapshot = self.current_authz_snapshot();
         let decision = snapshot
             .casbin_authorize(&AuthzQuery {
@@ -778,6 +888,7 @@ impl DataBrokerService {
         let principal = Principal::from_security_context(security, Vec::new());
         let resource = ResourceRef::message(message_type);
         let attributes = std::collections::BTreeMap::new();
+        ensure_authz_snapshot_fresh("data_plane_authorize_item")?;
         let decision = snapshot
             .casbin_authorize(&AuthzQuery {
                 principal: &principal,
@@ -2026,20 +2137,27 @@ pub async fn serve(
                 // The first tick completes immediately, preserving the
                 // startup-recovery semantics of the old one-shot call.
                 interval.tick().await;
-                match crate::runtime::singleton::run_once(
+                // Fenced + heartbeated: the pass re-verifies the lease's
+                // fencing token before each phase that drives prepared xids.
+                match crate::runtime::singleton::run_once_fenced(
                     &pg_pool,
                     &singleton_relation,
                     crate::runtime::singleton::WORKER_XA_RECOVERY,
                     xa_recovery_lease_ttl,
-                    || async {
-                        crate::runtime::xa_recovery::run_xa_recovery_pass(
-                            &pg_pool,
-                            &sys_config,
-                            &registry,
-                            &recovery_config,
-                            grace,
-                        )
-                        .await
+                    |fence| {
+                        let (pool, sys_config, registry, recovery_config) =
+                            (&pg_pool, &sys_config, &registry, &recovery_config);
+                        async move {
+                            crate::runtime::xa_recovery::run_xa_recovery_pass_fenced(
+                                pool,
+                                sys_config,
+                                registry,
+                                recovery_config,
+                                grace,
+                                &fence,
+                            )
+                            .await
+                        }
                     },
                 )
                 .await
@@ -2959,25 +3077,29 @@ pub async fn serve(
     }
     // 16.5.1: leader-elected lock expiry reaper — flips lapsed HELD locks to
     // EXPIRED (FOR UPDATE SKIP LOCKED) with the expired event in the same
-    // transaction, so lapsed leases stop exhausting tenant quotas.
+    // transaction, so lapsed leases stop exhausting tenant quotas. Every pass
+    // sweeps the lock store of EVERY active project (project-bound instances
+    // included), not just the default pool.
     {
         let lock_runtime = service.runtime.load_full();
         if let Ok(lock_pool) = lock_runtime.native_store_pool_for_service("lock", true, "") {
             let singleton_relation = lock_runtime.config().cdc.lock_log_relation();
             let outbox_relation = lock_runtime.config().cdc.outbox_relation();
-            let lease_pool = lock_pool.clone();
+            let lock_catalog = service.catalog.clone();
             crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
                 crate::runtime::singleton::WORKER_LOCK_EXPIRY_REAPER,
                 "lock expiry reaper flipped lapsed leases",
-                lease_pool,
+                lock_pool,
                 singleton_relation,
                 crate::runtime::service::lock_service::lock_expiry_interval(),
                 move || {
-                    let pool = lock_pool.clone();
+                    let runtime = lock_runtime.clone();
+                    let catalog = lock_catalog.clone();
                     let outbox = outbox_relation.clone();
                     async move {
-                        crate::runtime::service::lock_service::run_lock_expiry_once(
-                            &pool,
+                        crate::runtime::service::lock_service::run_lock_expiry_all_projects(
+                            runtime.as_ref(),
+                            catalog.active_project_ids(),
                             Some(&outbox),
                             crate::runtime::service::lock_service::LOCK_EXPIRY_SWEEP_BATCH,
                         )
@@ -3262,7 +3384,9 @@ pub async fn serve(
     // 4.4: leader-elected compliance-evidence export — periodically writes the
     // audit window as chain-hashed JSONL (tamper-evident) to the compliance bucket
     // through the object-store helper. One winner cluster-wide via the singleton
-    // lease (mirrors the scheduler tick). Off unless a compliance store resolves.
+    // lease (mirrors the scheduler tick). Off unless explicitly enabled
+    // (`UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED`) AND a compliance store resolves;
+    // exports the auth audit log plus the general Postgres audit sink table.
     {
         let evidence_runtime = service.runtime.load_full();
         if let Ok(evidence_pool) =
@@ -4272,6 +4396,20 @@ impl DataBroker for DataBrokerService {
         request: Request<MultipartUploadRequest>,
     ) -> Result<Response<MultipartUploadResponse>, Status> {
         self.initiate_multipart_upload_inner(request).await
+    }
+
+    async fn complete_multipart_upload(
+        &self,
+        request: Request<crate::proto::CompleteMultipartUploadRequest>,
+    ) -> Result<Response<crate::proto::CompleteMultipartUploadResponse>, Status> {
+        self.complete_multipart_upload_inner(request).await
+    }
+
+    async fn abort_multipart_upload(
+        &self,
+        request: Request<crate::proto::AbortMultipartUploadRequest>,
+    ) -> Result<Response<crate::proto::AbortMultipartUploadResponse>, Status> {
+        self.abort_multipart_upload_inner(request).await
     }
 
     async fn begin_tx(

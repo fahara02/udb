@@ -56,6 +56,31 @@ public final class BlobProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_MultipartUploadResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_MultipartUploadPart_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_MultipartUploadPart_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_CompleteMultipartUploadRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_CompleteMultipartUploadRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_CompleteMultipartUploadResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_CompleteMultipartUploadResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_AbortMultipartUploadRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_AbortMultipartUploadRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_AbortMultipartUploadResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_AbortMultipartUploadResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -93,12 +118,30 @@ public final class BlobProto {
       "\007 \001(\tR\016idempotencyKey\"{\n\027MultipartUpload" +
       "Response\022\033\n\tupload_id\030\001 \001(\tR\010uploadId\022\033\n" +
       "\tpart_urls\030\002 \003(\tR\010partUrls\022&\n\017expires_at" +
-      "_unix\030\003 \001(\003R\rexpiresAtUnixB\257\001\n\021com.udb.e" +
-      "ntity.v1B\tBlobProtoP\001Z9github.com/fahara" +
-      "02/udb/sdk/go/gen/udb/entity/v1;entityv1" +
-      "\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002" +
-      "\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity" +
-      "::V1b\006proto3"
+      "_unix\030\003 \001(\003R\rexpiresAtUnix\"J\n\023MultipartU" +
+      "ploadPart\022\037\n\013part_number\030\001 \001(\005R\npartNumb" +
+      "er\022\022\n\004etag\030\002 \001(\tR\004etag\"\220\002\n\036CompleteMulti" +
+      "partUploadRequest\0227\n\007context\030\001 \001(\0132\035.udb" +
+      ".entity.v1.RequestContextR\007context\022\026\n\006bu" +
+      "cket\030\002 \001(\tR\006bucket\022\035\n\nobject_key\030\003 \001(\tR\t" +
+      "objectKey\022\033\n\tupload_id\030\004 \001(\tR\010uploadId\0228" +
+      "\n\005parts\030\005 \003(\0132\".udb.entity.v1.MultipartU" +
+      "ploadPartR\005parts\022\'\n\017idempotency_key\030\006 \001(" +
+      "\tR\016idempotencyKey\"w\n\037CompleteMultipartUp" +
+      "loadResponse\022!\n\014resource_uri\030\001 \001(\tR\013reso" +
+      "urceUri\022\022\n\004etag\030\002 \001(\tR\004etag\022\035\n\nsize_byte" +
+      "s\030\003 \001(\003R\tsizeBytes\"\323\001\n\033AbortMultipartUpl" +
+      "oadRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity" +
+      ".v1.RequestContextR\007context\022\026\n\006bucket\030\002 " +
+      "\001(\tR\006bucket\022\035\n\nobject_key\030\003 \001(\tR\tobjectK" +
+      "ey\022\033\n\tupload_id\030\004 \001(\tR\010uploadId\022\'\n\017idemp" +
+      "otency_key\030\005 \001(\tR\016idempotencyKey\"8\n\034Abor" +
+      "tMultipartUploadResponse\022\030\n\007aborted\030\001 \001(" +
+      "\010R\007abortedB\257\001\n\021com.udb.entity.v1B\tBlobPr" +
+      "otoP\001Z9github.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Ent" +
+      "ity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata" +
+      "\\Entity\\V1\352\002\017Udb::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -141,6 +184,36 @@ public final class BlobProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MultipartUploadResponse_descriptor,
         new java.lang.String[] { "UploadId", "PartUrls", "ExpiresAtUnix", });
+    internal_static_udb_entity_v1_MultipartUploadPart_descriptor =
+      getDescriptor().getMessageTypes().get(6);
+    internal_static_udb_entity_v1_MultipartUploadPart_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_MultipartUploadPart_descriptor,
+        new java.lang.String[] { "PartNumber", "Etag", });
+    internal_static_udb_entity_v1_CompleteMultipartUploadRequest_descriptor =
+      getDescriptor().getMessageTypes().get(7);
+    internal_static_udb_entity_v1_CompleteMultipartUploadRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_CompleteMultipartUploadRequest_descriptor,
+        new java.lang.String[] { "Context", "Bucket", "ObjectKey", "UploadId", "Parts", "IdempotencyKey", });
+    internal_static_udb_entity_v1_CompleteMultipartUploadResponse_descriptor =
+      getDescriptor().getMessageTypes().get(8);
+    internal_static_udb_entity_v1_CompleteMultipartUploadResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_CompleteMultipartUploadResponse_descriptor,
+        new java.lang.String[] { "ResourceUri", "Etag", "SizeBytes", });
+    internal_static_udb_entity_v1_AbortMultipartUploadRequest_descriptor =
+      getDescriptor().getMessageTypes().get(9);
+    internal_static_udb_entity_v1_AbortMultipartUploadRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_AbortMultipartUploadRequest_descriptor,
+        new java.lang.String[] { "Context", "Bucket", "ObjectKey", "UploadId", "IdempotencyKey", });
+    internal_static_udb_entity_v1_AbortMultipartUploadResponse_descriptor =
+      getDescriptor().getMessageTypes().get(10);
+    internal_static_udb_entity_v1_AbortMultipartUploadResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_AbortMultipartUploadResponse_descriptor,
+        new java.lang.String[] { "Aborted", });
     descriptor.resolveAllFeaturesImmutable();
     com.udb.entity.v1.ContextProto.getDescriptor();
   }

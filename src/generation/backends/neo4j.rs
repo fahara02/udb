@@ -13,7 +13,14 @@
 //! | Key | Default | Description |
 //! |-----|---------|-------------|
 //! | `udb.neo4j_database` | `neo4j` | Database name override |
-//! | `udb.neo4j_label` | `<resource_name>` | Node label override |
+//! | `udb.neo4j_label` / `node_label` | `<resource_name>` | Node label override |
+//!
+//! The node label is resolved by ONE function, [`resolve_neo4j_label`], shared
+//! by this DDL generator, the Neo4j IR compiler and the graph projection
+//! worker, so constraints, compiled reads/writes and projected nodes always
+//! agree on the label. Node uniqueness is tenant-composite
+//! (`(id, _tenant_id, _project_id)`): two tenants may own a node with the same
+//! id without one write dead-lettering on a global unique constraint.
 
 use crate::generation::backend_safety::generated_at_unix;
 
@@ -21,7 +28,7 @@ use crate::generation::GeneratedArtifact;
 use crate::generation::backend_safety::{
     safe_comment_value, safe_identifier, safe_resource_name, store_opt_str_any,
 };
-use crate::generation::manifest::{CatalogManifest, ManifestStore};
+use crate::generation::manifest::{CatalogManifest, ManifestStore, ManifestTable};
 use crate::generation::sql::SqlGenerationConfig;
 
 /// Generate Neo4j Cypher constraint/index artifacts from the proto AST.
@@ -38,7 +45,7 @@ pub fn generate_neo4j_artifacts(
             continue;
         }
         let database = safe_identifier(&neo4j_database(store), "neo4j");
-        let label = safe_identifier(&node_label(store), "Node");
+        let label = node_label(store);
         let id_field = safe_identifier(
             store_opt_str_any(store, &["udb.neo4j_id_field", "id_field"]).unwrap_or("id"),
             "id",
@@ -48,8 +55,29 @@ pub fn generate_neo4j_artifacts(
                 .unwrap_or("tenant_id"),
             "tenant_id",
         );
-        let id_constraint =
-            safe_identifier(&format!("{label}_{id_field}_unique"), "node_id_unique");
+        // Earlier generators made `id` globally unique per label (and named
+        // the label in PascalCase). Drop those so a second tenant's node with
+        // the same id is not rejected; uniqueness is tenant-composite below.
+        let mut legacy_constraints = vec![safe_identifier(
+            &format!("{label}_{id_field}_unique"),
+            "node_id_unique",
+        )];
+        let legacy_label = safe_identifier(&legacy_pascal_label(store), "Node");
+        let legacy_name = safe_identifier(
+            &format!("{legacy_label}_{id_field}_unique"),
+            "node_id_unique",
+        );
+        if !legacy_constraints.contains(&legacy_name) {
+            legacy_constraints.push(legacy_name);
+        }
+        let drop_legacy: String = legacy_constraints
+            .iter()
+            .map(|name| format!("DROP CONSTRAINT {name} IF EXISTS;\n\n"))
+            .collect();
+        let id_constraint = safe_identifier(
+            &format!("{label}_{id_field}_scope_unique"),
+            "node_id_scope_unique",
+        );
         let tenant_index = safe_identifier(&format!("{label}_{tenant_field}"), "node_tenant");
         // Projected and IR-written nodes are keyed (and every scoped read is
         // filtered) on the `_tenant_id` / `_project_id` system properties,
@@ -66,8 +94,9 @@ pub fn generate_neo4j_artifacts(
              // UDB:generator=udb\n\
              // UDB:generated_at={ts}\n\
              \n\
+             {drop_legacy}\
              CREATE CONSTRAINT {id_constraint} IF NOT EXISTS\n\
-             {indent}FOR (n:{label}) REQUIRE n.{id_field} IS UNIQUE;\n\
+             {indent}FOR (n:{label}) REQUIRE (n.{id_field}, n._tenant_id, n._project_id) IS UNIQUE;\n\
              \n\
              CREATE INDEX {tenant_index} IF NOT EXISTS\n\
              {indent}FOR (n:{label}) ON (n.{tenant_field});\n\
@@ -119,11 +148,60 @@ fn neo4j_database(store: &ManifestStore) -> String {
         })
 }
 
+/// Store option keys that override a graph store's node label (first wins).
+pub const NEO4J_LABEL_OPTION_KEYS: &[&str] = &["udb.neo4j_label", "node_label"];
+
+/// THE Neo4j node label for a graph store: the label override option when
+/// set, else the store's resource name verbatim, sanitised to a plain
+/// identifier. Shared by the DDL generator, the IR compiler
+/// ([`neo4j_label_for_table`]) and the projection worker so all three address
+/// the same nodes.
+pub fn resolve_neo4j_label(resource_name: &str, label_override: Option<&str>) -> String {
+    let raw = label_override
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| resource_name.trim());
+    safe_identifier(raw, "Node")
+}
+
+/// [`resolve_neo4j_label`] for a manifest store (resource name, falling back
+/// to the owner table).
+pub fn neo4j_store_label(store: &ManifestStore) -> String {
+    let resource = if store.resource_name.trim().is_empty() {
+        &store.owner_table
+    } else {
+        &store.resource_name
+    };
+    resolve_neo4j_label(resource, store_opt_str_any(store, NEO4J_LABEL_OPTION_KEYS))
+}
+
+/// The node label the IR compiler uses for a manifest table: the label of the
+/// graph store that table owns (matched by owner table, or by resource name),
+/// else the table name itself through the same resolver.
+pub fn neo4j_label_for_table(manifest: &CatalogManifest, table: &ManifestTable) -> String {
+    manifest
+        .stores
+        .iter()
+        .filter(|store| is_neo4j_store(store))
+        .find(|store| {
+            (store.owner_table == table.table
+                && (store.owner_schema.trim().is_empty() || store.owner_schema == table.schema))
+                || store.resource_name == table.table
+        })
+        .map(neo4j_store_label)
+        .unwrap_or_else(|| resolve_neo4j_label(&table.table, None))
+}
+
 fn node_label(store: &ManifestStore) -> String {
-    store_opt_str_any(store, &["udb.neo4j_label", "node_label"])
+    neo4j_store_label(store)
+}
+
+/// The PascalCase label earlier generators derived by default; used only to
+/// name the legacy global-id constraint that the DDL now drops.
+fn legacy_pascal_label(store: &ManifestStore) -> String {
+    store_opt_str_any(store, NEO4J_LABEL_OPTION_KEYS)
         .map(ToOwned::to_owned)
         .unwrap_or_else(|| {
-            // Convert snake_case resource name to PascalCase label.
             to_pascal_case(if !store.resource_name.is_empty() {
                 &store.resource_name
             } else {
@@ -187,10 +265,57 @@ mod tests {
 
     #[test]
     fn neo4j_node_label_from_resource() {
+        // The label is the resource name verbatim — the same label the IR
+        // compiler and the projection worker write — not a PascalCase variant.
         let store = make_store("example_document", &[]);
-        assert_eq!(node_label(&store), "ExampleDocument");
+        assert_eq!(node_label(&store), "example_document");
         let store2 = make_store("ocr_document", &[]);
-        assert_eq!(node_label(&store2), "OcrDocument");
+        assert_eq!(node_label(&store2), "ocr_document");
+        assert_eq!(legacy_pascal_label(&store), "ExampleDocument");
+    }
+
+    #[test]
+    fn neo4j_label_resolver_is_shared_and_honours_both_override_keys() {
+        assert_eq!(resolve_neo4j_label("patients", None), "patients");
+        assert_eq!(resolve_neo4j_label("patients", Some("Patient")), "Patient");
+        assert_eq!(resolve_neo4j_label("patients", Some("  ")), "patients");
+        let store = make_store("patients", &[("node_label", "Patient")]);
+        assert_eq!(neo4j_store_label(&store), "Patient");
+
+        let mut manifest = CatalogManifest::default();
+        let mut owned = make_store("patient_graph", &[("udb.neo4j_label", "Patient")]);
+        owned.owner_table = "patients".to_string();
+        manifest.stores.push(owned);
+        let table = ManifestTable {
+            table: "patients".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(neo4j_label_for_table(&manifest, &table), "Patient");
+        let other = ManifestTable {
+            table: "visits".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(neo4j_label_for_table(&manifest, &other), "visits");
+    }
+
+    #[test]
+    fn neo4j_ddl_uniqueness_is_tenant_composite_and_drops_global_id_constraint() {
+        let mut manifest = CatalogManifest::default();
+        manifest.stores.push(make_store("example_document", &[]));
+        let artifacts =
+            generate_neo4j_artifacts(&manifest, &SqlGenerationConfig::default()).unwrap();
+        assert_eq!(artifacts.len(), 1);
+        let cypher = &artifacts[0].content;
+        assert!(
+            cypher.contains(
+                "FOR (n:example_document) REQUIRE (n.id, n._tenant_id, n._project_id) IS UNIQUE;"
+            ),
+            "{cypher}"
+        );
+        assert!(cypher.contains("DROP CONSTRAINT example_document_id_unique IF EXISTS;"));
+        assert!(cypher.contains("DROP CONSTRAINT ExampleDocument_id_unique IF EXISTS;"));
+        assert!(!cypher.contains("REQUIRE n.id IS UNIQUE"));
+        assert_eq!(artifacts[0].table, "example_document");
     }
 
     #[test]

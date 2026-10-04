@@ -276,15 +276,40 @@ impl Compiler for SqliteCompiler {
                     ConflictStrategy::Replace => columns.clone(),
                     _ => unreachable!(),
                 };
-                let set_clause = target_cols
+                // Cross-tenant takeover guard: never reassign the tenant/project
+                // columns on conflict, and only update a conflicting row that
+                // already belongs to the scope being written (`IS` is SQLite's
+                // null-safe equality).
+                let isolation = Sl::upsert_isolation_columns(table);
+                let target_table = table.table.as_str();
+                let guard = Sl::upsert_scope_guard(
+                    table,
+                    ctx,
+                    &columns,
+                    &mut params,
+                    |c| format!("\"{target_table}\".\"{c}\""),
+                    |c| format!("excluded.\"{c}\""),
+                    |a, b| format!("{a} IS {b}"),
+                );
+                let mut assignments = target_cols
                     .iter()
+                    .filter(|c| !isolation.contains(c))
                     .map(|c| format!("\"{c}\" = excluded.\"{c}\""))
-                    .collect::<Vec<_>>()
-                    .join(", ");
+                    .collect::<Vec<_>>();
+                if assignments.is_empty()
+                    && guard.is_some()
+                    && let Some(c) = isolation.first()
+                {
+                    assignments.push(format!("\"{c}\" = \"{target_table}\".\"{c}\""));
+                }
+                let set_clause = assignments.join(", ");
                 sql.push_str(&format!(
                     " ON CONFLICT ({}) DO UPDATE SET {set_clause}",
                     pk_cols.join(", ")
                 ));
+                if let Some(guard) = guard {
+                    sql.push_str(&format!(" WHERE {guard}"));
+                }
             }
         }
 
@@ -1113,5 +1138,40 @@ mod tests {
                 .iter()
                 .any(|p| matches!(p, LogicalValue::String(s) if s == "t1"))
         );
+    }
+
+    /// Cross-tenant takeover: the conflict branch only updates a row that
+    /// already belongs to the written tenant, and never reassigns the tenant.
+    #[test]
+    fn upsert_guards_conflict_update_by_tenant() {
+        let mut m = fixture();
+        m.tables[0].columns.push(ManifestColumn {
+            field_name: "tenant_id".into(),
+            column_name: "tenant_id".into(),
+            proto_type: "string".into(),
+            sql_type: "TEXT".into(),
+            is_tenant_column: true,
+            ..Default::default()
+        });
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let mut rec = LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        rec.insert("tenant_id".into(), LogicalValue::String("t1".into()));
+        rec.insert("title".into(), LogicalValue::String("Hello".into()));
+        let write = LogicalWrite {
+            message_type: "acme.notes.v1.Note".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::update(vec!["tenant_id".into(), "title".into()]),
+            return_fields: vec![],
+        };
+        let (statement, params) = sql(SqliteCompiler.compile_write(&write, &ctx).unwrap());
+        assert!(
+            statement.ends_with(
+                "DO UPDATE SET \"title\" = excluded.\"title\" \
+                 WHERE \"notes\".\"tenant_id\" IS excluded.\"tenant_id\""
+            ),
+            "{statement}"
+        );
+        assert_eq!(params.len(), 3);
     }
 }

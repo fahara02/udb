@@ -18,6 +18,13 @@
 //! [`crate::runtime::singleton::WORKER_EVIDENCE_EXPORT`] lease guarantees exactly
 //! one exporter cluster-wide.
 //!
+//! The export is OFF unless explicitly enabled
+//! (`UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED=true`). Besides the auth audit log it
+//! also exports the general data-plane audit table when the durable Postgres
+//! audit sink is configured (`UDB_AUDIT_SINK=postgres` + `UDB_AUDIT_PG_TABLE`),
+//! as a second, independently watermarked and chained stream under
+//! `<prefix>/data-audit/`.
+//!
 //! The operator-driven one-shot equivalent is `udb compliance evidence`
 //! (`src/cli/evidence.rs`), which reads the same durable relation and writes
 //! through the same object helper; this worker is the unattended scheduled path.
@@ -84,6 +91,19 @@ pub struct EvidenceExportConfig {
     pub batch_limit: i64,
     /// Export cadence.
     pub interval: Duration,
+    /// Whether the scheduled export runs at all. OFF unless explicitly enabled
+    /// (`UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED=true`): the export writes the
+    /// whole audit history into an object bucket, which an operator must opt
+    /// into — it must never start just because an object backend resolves.
+    pub enabled: bool,
+}
+
+/// Whether an env flag value means "on".
+fn flag_enabled(value: Option<&str>) -> bool {
+    matches!(
+        value.map(|v| v.trim().to_ascii_lowercase()).as_deref(),
+        Some("1" | "true" | "yes" | "on")
+    )
 }
 
 impl EvidenceExportConfig {
@@ -120,6 +140,7 @@ impl EvidenceExportConfig {
                 .filter(|value| *value > 0)
                 .unwrap_or(DEFAULT_INTERVAL_SECS),
         );
+        let enabled = flag_enabled(read("UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED").as_deref());
         Self {
             backend,
             bucket,
@@ -127,8 +148,76 @@ impl EvidenceExportConfig {
             project,
             batch_limit,
             interval,
+            enabled,
         }
     }
+}
+
+/// Which durable audit relation an evidence source drains.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EvidenceSourceKind {
+    /// The auth/security audit log (`udb_system.auth_audit_log`).
+    AuthAudit,
+    /// The general data-plane audit sink table (`UDB_AUDIT_PG_TABLE`).
+    DataAudit,
+}
+
+/// One exported audit stream: its relation, its OWN watermark row in the state
+/// table, and its own object-key prefix, so each stream is an independent,
+/// continuous tamper-evident chain.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct EvidenceSource {
+    kind: EvidenceSourceKind,
+    relation: String,
+    state_key: String,
+    key_prefix: String,
+}
+
+/// Validate a `schema.table` (or bare `table`) identifier before interpolating
+/// it into SQL: ASCII identifiers only, at most two segments.
+fn safe_relation(relation: &str) -> Option<String> {
+    let parts: Vec<&str> = relation.trim().split('.').collect();
+    if parts.is_empty() || parts.len() > 2 {
+        return None;
+    }
+    let is_ident = |s: &str| {
+        !s.is_empty()
+            && s.len() <= 63
+            && s.chars()
+                .next()
+                .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+            && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    };
+    parts
+        .iter()
+        .all(|part| is_ident(part))
+        .then(|| parts.join("."))
+}
+
+/// The audit streams to export: always the auth audit log, plus the general
+/// data-plane audit table when the durable Postgres audit sink is configured
+/// (`data_audit_table`). Pure — unit-tested.
+fn evidence_sources(prefix: &str, data_audit_table: Option<&str>) -> Vec<EvidenceSource> {
+    let mut sources = vec![EvidenceSource {
+        kind: EvidenceSourceKind::AuthAudit,
+        relation: AUTH_AUDIT_LOG_RELATION.to_string(),
+        state_key: crate::runtime::singleton::WORKER_EVIDENCE_EXPORT.to_string(),
+        key_prefix: prefix.to_string(),
+    }];
+    if let Some(relation) = data_audit_table.and_then(safe_relation)
+        && relation != AUTH_AUDIT_LOG_RELATION
+    {
+        sources.push(EvidenceSource {
+            kind: EvidenceSourceKind::DataAudit,
+            relation,
+            state_key: format!(
+                "{}:data_audit",
+                crate::runtime::singleton::WORKER_EVIDENCE_EXPORT
+            ),
+            key_prefix: format!("{prefix}/data-audit"),
+        });
+    }
+    sources
 }
 
 /// One exported audit record. The field set mirrors the queryable columns the
@@ -294,6 +383,7 @@ fn evidence_object_slug(from: &str, to: &str, generated_at: &str) -> String {
 #[allow(clippy::too_many_arguments)]
 fn render_evidence_manifest(
     config: &EvidenceExportConfig,
+    source_relation: &str,
     prev_head: &str,
     chain_head: &str,
     record_count: usize,
@@ -308,7 +398,7 @@ fn render_evidence_manifest(
         "schema_version": EVIDENCE_MANIFEST_SCHEMA_VERSION,
         "kind": EVIDENCE_MANIFEST_KIND,
         "generated_at": generated_at,
-        "source_relation": AUTH_AUDIT_LOG_RELATION,
+        "source_relation": source_relation,
         "worker": crate::runtime::singleton::WORKER_EVIDENCE_EXPORT,
         "window": { "from_exclusive": window_from, "to_inclusive": window_to },
         "record_count": record_count,
@@ -360,16 +450,16 @@ async fn ensure_state_table(pool: &PgPool) -> Result<(), String> {
         .map_err(|err| format!("ensure {EVIDENCE_STATE_RELATION} failed: {err}"))
 }
 
-/// Load the high-water mark + carried chain head. A missing row (first run) yields
-/// the genesis/epoch default.
-async fn load_state(pool: &PgPool) -> Result<EvidenceState, String> {
+/// Load a source's high-water mark + carried chain head. A missing row (first
+/// run) yields the genesis/epoch default.
+async fn load_state(pool: &PgPool, state_key: &str) -> Result<EvidenceState, String> {
     let sql = format!(
         "SELECT last_event_id, last_occurred_at::text AS last_occurred_at, chain_head \
          FROM {rel} WHERE worker = $1",
         rel = EVIDENCE_STATE_RELATION
     );
     let row = sqlx::query(&sql)
-        .bind(crate::runtime::singleton::WORKER_EVIDENCE_EXPORT)
+        .bind(state_key)
         .fetch_optional(pool)
         .await
         .map_err(|err| format!("load evidence-export state failed: {err}"))?;
@@ -389,10 +479,11 @@ async fn load_state(pool: &PgPool) -> Result<EvidenceState, String> {
     })
 }
 
-/// Persist the advanced watermark + new chain head after a successful object
-/// write, accumulating the exported-row counter.
+/// Persist a source's advanced watermark + new chain head after a successful
+/// object write, accumulating the exported-row counter.
 async fn save_state(
     pool: &PgPool,
+    state_key: &str,
     last_event_id: &str,
     last_occurred_at: &str,
     chain_head: &str,
@@ -411,7 +502,7 @@ async fn save_state(
         rel = EVIDENCE_STATE_RELATION
     );
     sqlx::query(&sql)
-        .bind(crate::runtime::singleton::WORKER_EVIDENCE_EXPORT)
+        .bind(state_key)
         .bind(last_event_id)
         .bind(last_occurred_at)
         .bind(chain_head)
@@ -422,33 +513,56 @@ async fn save_state(
         .map_err(|err| format!("save evidence-export state failed: {err}"))
 }
 
-/// Drain the audit window past `state`'s watermark, reusing the canonical
-/// envelope for each row. Stable `(occurred_at, event_id)` ordering keeps the
-/// chain reproducible.
+/// The window query for one source. The auth log is keyed by a UUID `event_id`
+/// (text tie-break); the general audit table by its BIGSERIAL `audit_id`
+/// (numeric tie-break), with its columns mapped onto the evidence record shape
+/// (`user_id` → actor, `resource_uri` → target, `purpose` → operation). Stable
+/// `(occurred_at, id)` ordering keeps the chain reproducible. `relation` is
+/// pre-validated. Pure — unit-tested.
+fn audit_window_sql(kind: EvidenceSourceKind, relation: &str) -> String {
+    match kind {
+        EvidenceSourceKind::AuthAudit => format!(
+            "SELECT event_id::text AS event_id, event_type, tenant_id, actor, \
+                    target_resource, operation, outcome, reason_code, \
+                    occurred_at::text AS occurred_at, envelope::text AS envelope \
+             FROM {relation} \
+             WHERE occurred_at > $1::timestamptz \
+                OR (occurred_at = $1::timestamptz AND event_id::text > $2) \
+             ORDER BY occurred_at ASC, event_id ASC \
+             LIMIT $3"
+        ),
+        EvidenceSourceKind::DataAudit => format!(
+            "SELECT audit_id::text AS event_id, event_type, tenant_id, user_id AS actor, \
+                    resource_uri AS target_resource, purpose AS operation, \
+                    '' AS outcome, '' AS reason_code, \
+                    occurred_at::text AS occurred_at, '' AS envelope \
+             FROM {relation} \
+             WHERE occurred_at > $1::timestamptz \
+                OR (occurred_at = $1::timestamptz \
+                    AND audit_id > COALESCE(NULLIF($2, '')::BIGINT, 0)) \
+             ORDER BY occurred_at ASC, audit_id ASC \
+             LIMIT $3"
+        ),
+    }
+}
+
+/// Drain one source's audit window past `state`'s watermark, reusing the
+/// canonical envelope for each row.
 async fn collect_records(
     pool: &PgPool,
+    source: &EvidenceSource,
     state: &EvidenceState,
     project: &str,
     limit: i64,
 ) -> Result<Vec<EvidenceRecord>, String> {
-    let sql = format!(
-        "SELECT event_id::text AS event_id, event_type, tenant_id, actor, \
-                target_resource, operation, outcome, reason_code, \
-                occurred_at::text AS occurred_at, envelope::text AS envelope \
-         FROM {rel} \
-         WHERE occurred_at > $1::timestamptz \
-            OR (occurred_at = $1::timestamptz AND event_id::text > $2) \
-         ORDER BY occurred_at ASC, event_id ASC \
-         LIMIT $3",
-        rel = AUTH_AUDIT_LOG_RELATION
-    );
+    let sql = audit_window_sql(source.kind, &source.relation);
     let rows = sqlx::query(&sql)
         .bind(&state.last_occurred_at)
         .bind(&state.last_event_id)
         .bind(limit)
         .fetch_all(pool)
         .await
-        .map_err(|err| format!("query audit window failed: {err}"))?;
+        .map_err(|err| format!("query audit window {} failed: {err}", source.relation))?;
     let mut out = Vec::with_capacity(rows.len());
     for row in rows {
         let get = |key: &str| -> String { row.try_get::<String, _>(key).unwrap_or_default() };
@@ -490,39 +604,68 @@ async fn collect_records(
     Ok(out)
 }
 
-/// Run one export tick: drain the audit window past the durable watermark, write a
-/// chain-hashed JSONL bundle + manifest THROUGH the object helper, and advance the
-/// watermark/chain head. Returns the number of records exported (0 when the window
-/// is empty or the audit relation does not yet exist). Idempotent-ish: if the
-/// object write succeeds but the state update fails, the next tick re-exports the
-/// same window under a deterministic key range and overwrites.
-///
-/// `#[allow(dead_code)]`: the only production caller is the deferred leader spawn
-/// in `serve()` (see [`spawn_evidence_export_worker`]); the worker is unit-tested
-/// through its pure helpers.
-#[allow(dead_code)]
+/// Run one export tick over every audit stream (the auth audit log, plus the
+/// general data-plane audit table when the durable Postgres audit sink is
+/// configured). Each stream drains past its own durable watermark into its own
+/// chain-hashed JSONL bundle + manifest written THROUGH the object helper. A
+/// failing stream does not stop the others; its error is returned after they
+/// ran. Returns the number of records exported across streams. Does nothing
+/// unless the export is explicitly enabled.
 pub async fn run_evidence_export_once(
     runtime: &DataBrokerRuntime,
     pool: &PgPool,
     config: &EvidenceExportConfig,
 ) -> Result<i64, String> {
+    if !config.enabled {
+        return Ok(0);
+    }
     ensure_state_table(pool).await?;
+    let audit_sink = &runtime.config().audit_sink;
+    let data_audit_table = (audit_sink.kind == crate::runtime::config::AuditSinkKind::Postgres)
+        .then(|| audit_sink.pg_table.as_deref())
+        .flatten();
+    let mut exported = 0i64;
+    let mut failures = Vec::new();
+    for source in evidence_sources(&config.prefix, data_audit_table) {
+        match export_source_once(runtime, pool, config, &source).await {
+            Ok(count) => exported += count,
+            Err(err) => failures.push(err),
+        }
+    }
+    if failures.is_empty() {
+        Ok(exported)
+    } else {
+        Err(failures.join("; "))
+    }
+}
 
-    // Tolerate a pre-audit broker: the sink creates auth_audit_log lazily on the
-    // first security event, so an export that runs before any auth activity finds
-    // no relation. `to_regclass` returns NULL rather than erroring.
-    let exists: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT to_regclass('{AUTH_AUDIT_LOG_RELATION}')::text"
-    ))
-    .fetch_one(pool)
-    .await
-    .map_err(|err| format!("probe audit relation failed: {err}"))?;
+/// Export one stream: drain the window past its durable watermark, write a
+/// chain-hashed JSONL bundle + manifest THROUGH the object helper, and advance
+/// its watermark/chain head. Returns the number of records exported (0 when the
+/// window is empty or the relation does not yet exist). Idempotent-ish: if the
+/// object write succeeds but the state update fails, the next tick re-exports
+/// the same window under a deterministic key range and overwrites.
+async fn export_source_once(
+    runtime: &DataBrokerRuntime,
+    pool: &PgPool,
+    config: &EvidenceExportConfig,
+    source: &EvidenceSource,
+) -> Result<i64, String> {
+    // Tolerate a pre-audit broker: the sinks create their relations lazily on the
+    // first event, so an export that runs before any activity finds no relation.
+    // `to_regclass` returns NULL rather than erroring.
+    let exists: Option<String> = sqlx::query_scalar("SELECT to_regclass($1)::text")
+        .bind(&source.relation)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| format!("probe audit relation {} failed: {err}", source.relation))?;
     if exists.is_none() {
         return Ok(0);
     }
 
-    let state = load_state(pool).await?;
-    let records = collect_records(pool, &state, &config.project, config.batch_limit).await?;
+    let state = load_state(pool, &source.state_key).await?;
+    let records =
+        collect_records(pool, source, &state, &config.project, config.batch_limit).await?;
     if records.is_empty() {
         return Ok(0);
     }
@@ -533,11 +676,12 @@ pub async fn run_evidence_export_once(
     let last_event_id = records[records.len() - 1].event_id.clone();
     let generated_at = chrono::Utc::now().to_rfc3339();
     let slug = evidence_object_slug(&window_from, &window_to, &generated_at);
-    let evidence_key = format!("{}/evidence-{slug}.jsonl", config.prefix);
-    let manifest_key = format!("{}/evidence-{slug}.manifest.json", config.prefix);
+    let evidence_key = format!("{}/evidence-{slug}.jsonl", source.key_prefix);
+    let manifest_key = format!("{}/evidence-{slug}.manifest.json", source.key_prefix);
 
     let manifest = render_evidence_manifest(
         config,
+        &source.relation,
         &state.chain_head,
         &new_head,
         records.len(),
@@ -581,6 +725,7 @@ pub async fn run_evidence_export_once(
 
     save_state(
         pool,
+        &source.state_key,
         &last_event_id,
         &window_to,
         &new_head,
@@ -593,35 +738,22 @@ pub async fn run_evidence_export_once(
 /// Spawn the leader-elected evidence-export worker. Mirrors the scheduler-tick
 /// spawn: the singleton lease ([`WORKER_EVIDENCE_EXPORT`]) guarantees exactly one
 /// exporter cluster-wide; the closure clones the runtime/pool/config per tick.
-///
-/// Call this from `serve()` after the runtime + native store pool are available
-/// (the exact call site is noted in the module docs / the 4.4 plan):
-///
-/// ```ignore
-/// let evidence_runtime = service.runtime.load_full();
-/// if let Ok(evidence_pool) =
-///     evidence_runtime.native_store_pool_for_service("compliance", true, "")
-/// {
-///     let singleton_relation = evidence_runtime.config().cdc.lock_log_relation();
-///     let config = crate::runtime::evidence_export::EvidenceExportConfig::from_env();
-///     crate::runtime::evidence_export::spawn_evidence_export_worker(
-///         evidence_runtime,
-///         evidence_pool,
-///         singleton_relation,
-///         config,
-///     );
-/// }
-/// ```
-///
-/// `#[allow(dead_code)]` until the `serve()` call site is wired (deferred per the
-/// edit-only lane).
-#[allow(dead_code)]
+/// `serve()` calls this after the runtime + compliance store pool resolve; it
+/// spawns NOTHING unless the export is explicitly enabled
+/// (`UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED`).
 pub fn spawn_evidence_export_worker(
     runtime: Arc<DataBrokerRuntime>,
     pool: PgPool,
     singleton_relation: String,
     config: EvidenceExportConfig,
 ) {
+    if !config.enabled {
+        tracing::info!(
+            "compliance evidence export is disabled \
+             (set UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED=true to enable)"
+        );
+        return;
+    }
     let interval = config.interval;
     crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
         crate::runtime::singleton::WORKER_EVIDENCE_EXPORT,
@@ -807,9 +939,11 @@ mod tests {
             project: "default".to_string(),
             batch_limit: 500,
             interval: Duration::from_secs(300),
+            enabled: true,
         };
         let manifest = render_evidence_manifest(
             &config,
+            AUTH_AUDIT_LOG_RELATION,
             EVIDENCE_CHAIN_GENESIS,
             "deadbeef",
             3,
@@ -853,5 +987,133 @@ mod tests {
         assert_eq!(req["container"], json!("b"));
         assert_eq!(req["object_key"], json!("k"));
         assert_eq!(req["key"], json!("k"));
+    }
+
+    #[test]
+    fn export_is_off_unless_explicitly_enabled() {
+        assert!(!flag_enabled(None));
+        assert!(!flag_enabled(Some("")));
+        assert!(!flag_enabled(Some("false")));
+        assert!(!flag_enabled(Some("0")));
+        assert!(flag_enabled(Some("true")));
+        assert!(flag_enabled(Some(" TRUE ")));
+        assert!(flag_enabled(Some("1")));
+    }
+
+    #[test]
+    fn sources_include_the_general_audit_table_when_configured() {
+        let only_auth = evidence_sources("compliance-evidence", None);
+        assert_eq!(only_auth.len(), 1);
+        assert_eq!(only_auth[0].kind, EvidenceSourceKind::AuthAudit);
+        assert_eq!(only_auth[0].relation, AUTH_AUDIT_LOG_RELATION);
+
+        let both = evidence_sources("compliance-evidence", Some("udb_system.audit_log"));
+        assert_eq!(both.len(), 2);
+        assert_eq!(both[1].kind, EvidenceSourceKind::DataAudit);
+        assert_eq!(both[1].relation, "udb_system.audit_log");
+        assert_ne!(
+            both[0].state_key, both[1].state_key,
+            "each stream keeps its own watermark"
+        );
+        assert_eq!(both[1].key_prefix, "compliance-evidence/data-audit");
+
+        // An unsafe identifier is never interpolated; the auth table is not
+        // exported twice.
+        assert_eq!(evidence_sources("p", Some("audit; DROP TABLE x")).len(), 1);
+        assert_eq!(
+            evidence_sources("p", Some(AUTH_AUDIT_LOG_RELATION)).len(),
+            1
+        );
+    }
+
+    #[test]
+    fn data_audit_window_maps_the_sink_columns() {
+        let sql = audit_window_sql(EvidenceSourceKind::DataAudit, "udb_system.audit_log");
+        assert!(sql.contains("FROM udb_system.audit_log"));
+        assert!(sql.contains("user_id AS actor"));
+        assert!(sql.contains("resource_uri AS target_resource"));
+        assert!(sql.contains("ORDER BY occurred_at ASC, audit_id ASC"));
+        let auth = audit_window_sql(EvidenceSourceKind::AuthAudit, AUTH_AUDIT_LOG_RELATION);
+        assert!(auth.contains("ORDER BY occurred_at ASC, event_id ASC"));
+    }
+
+    /// The general-audit stream against Postgres: rows the durable audit sink
+    /// wrote are drained in order past a persisted watermark, and the watermark
+    /// round-trips so the next pass resumes after the last exported row.
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with cargo test --lib live_evidence_export_drains_the_general_audit_table -- --ignored --nocapture"]
+    async fn live_evidence_export_drains_the_general_audit_table() {
+        use crate::runtime::service::live_tests::support::{
+            live_native_service_db_lock, live_pg_pool,
+        };
+        let _guard = live_native_service_db_lock().lock().await;
+        let pool = live_pg_pool().await;
+        let relation = "udb_system.evidence_live_audit";
+        sqlx::raw_sql(
+            "CREATE SCHEMA IF NOT EXISTS udb_system; \
+             DROP TABLE IF EXISTS udb_system.evidence_live_audit; \
+             CREATE TABLE udb_system.evidence_live_audit ( \
+                 audit_id BIGSERIAL PRIMARY KEY, \
+                 event_type VARCHAR(80) NOT NULL DEFAULT '', \
+                 tenant_id VARCHAR(64) NOT NULL DEFAULT '', \
+                 user_id VARCHAR(200) NOT NULL DEFAULT '', \
+                 correlation_id VARCHAR(120) NOT NULL DEFAULT '', \
+                 purpose VARCHAR(120) NOT NULL DEFAULT '', \
+                 resource_uri VARCHAR(400) NOT NULL DEFAULT '', \
+                 checksum_sha256 VARCHAR(80) NOT NULL DEFAULT '', \
+                 occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()); \
+             INSERT INTO udb_system.evidence_live_audit \
+                 (event_type, tenant_id, user_id, purpose, resource_uri, occurred_at) VALUES \
+                 ('data.upsert', 't1', 'u1', 'write', 'udb://t1/a', '2026-01-01T00:00:00Z'), \
+                 ('data.delete', 't1', 'u2', 'erase', 'udb://t1/b', '2026-01-01T00:00:00Z'), \
+                 ('data.select', 't2', 'u3', 'read', 'udb://t2/c', '2026-01-01T00:00:01Z');",
+        )
+        .execute(&pool)
+        .await
+        .expect("create general audit table");
+        ensure_state_table(&pool).await.expect("state table");
+        let source = evidence_sources("p", Some(relation))
+            .pop()
+            .expect("data audit source");
+        sqlx::query("DELETE FROM udb_system.evidence_export_state WHERE worker = $1")
+            .bind(&source.state_key)
+            .execute(&pool)
+            .await
+            .expect("reset watermark");
+
+        let state = load_state(&pool, &source.state_key).await.expect("state");
+        let first = collect_records(&pool, &source, &state, "default", 2)
+            .await
+            .expect("first window");
+        assert_eq!(first.len(), 2);
+        assert_eq!(first[0].operation, "write");
+        assert_eq!(first[0].actor, "u1");
+        assert_eq!(first[0].target_resource, "udb://t1/a");
+        assert_eq!(first[1].operation, "erase");
+        assert!(first[0].envelope.is_object(), "canonical envelope is built");
+
+        let (_, head) = append_chain(&state.chain_head, &first).expect("chain");
+        save_state(
+            &pool,
+            &source.state_key,
+            &first[1].event_id,
+            &first[1].occurred_at,
+            &head,
+            2,
+        )
+        .await
+        .expect("save watermark");
+        let resumed = load_state(&pool, &source.state_key).await.expect("state");
+        assert_eq!(resumed.chain_head, head);
+        let rest = collect_records(&pool, &source, &resumed, "default", 10)
+            .await
+            .expect("second window");
+        assert_eq!(rest.len(), 1, "resumes after the last exported row");
+        assert_eq!(rest[0].operation, "read");
+
+        sqlx::raw_sql("DROP TABLE IF EXISTS udb_system.evidence_live_audit")
+            .execute(&pool)
+            .await
+            .expect("drop general audit table");
     }
 }

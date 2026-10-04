@@ -23,18 +23,19 @@ use super::super::native_helpers::{
 };
 use super::StorageServiceImpl;
 use super::config::{
-    FILE_MSG, STORAGE_QUOTA_EXCEEDED, TOPIC_FILE_DELETED, TOPIC_FILE_FINALIZED,
-    TOPIC_FILE_METADATA_UPDATED, TOPIC_FILE_SCAN_VERDICT_SET, TOPIC_UPLOAD_URL_ISSUED,
-    UNSUPPORTED_OBJECT_BACKEND,
+    FILE_MSG, OBJECT_DELETE_ORPHANED, STORAGE_QUOTA_EXCEEDED, TOPIC_FILE_DELETED,
+    TOPIC_FILE_FINALIZED, TOPIC_FILE_METADATA_UPDATED, TOPIC_FILE_SCAN_VERDICT_SET,
+    TOPIC_UPLOAD_URL_ISSUED, UNSUPPORTED_OBJECT_BACKEND,
 };
 use super::errors::{
-    api_error_upload_url_unavailable, delete_expected_status_mismatch_status,
-    file_object_bytes_missing_status, finalize_immutable_mismatch_status,
-    object_delete_failed_status, object_store_bytes_missing_status,
-    object_stream_requires_store_status, reissue_requires_pending_status, status_with_reason,
-    storage_capability_status, storage_file_not_found_status, storage_idempotency_conflict_status,
-    storage_internal_status, upload_already_finalized_status, upload_etag_mismatch_status,
-    upload_size_mismatch_status, uploaded_object_missing_status, validate_object_key_filename,
+    api_error_object_bytes_not_removed, api_error_upload_url_unavailable,
+    delete_expected_status_mismatch_status, file_object_bytes_missing_status,
+    finalize_immutable_mismatch_status, object_delete_failed_status,
+    object_store_bytes_missing_status, object_stream_requires_store_status,
+    reissue_requires_pending_status, status_with_reason, storage_capability_status,
+    storage_file_not_found_status, storage_idempotency_conflict_status, storage_internal_status,
+    upload_already_finalized_status, upload_etag_mismatch_status, upload_size_mismatch_status,
+    uploaded_object_missing_status, validate_object_key_filename,
     validate_register_upload_required_fields,
 };
 use super::model::{
@@ -101,6 +102,23 @@ pub(super) fn resolved_storage_project_scope(
     Ok(project_id.to_string())
 }
 
+/// Under a finite tenant quota (`quota > 0`) an upload must declare a positive
+/// `size_bytes`: that declaration is the reservation the upload URL is issued
+/// against. `quota == 0` (unlimited) accepts any declaration.
+pub(super) fn require_quota_reservation(quota: i64, declared_size: i64) -> Result<(), Status> {
+    if quota > 0 && declared_size <= 0 {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "size_bytes is required when a tenant storage quota is configured",
+            [(
+                "size_bytes",
+                "must be the positive byte size of the upload; it reserves tenant quota before \
+                 the upload URL is issued",
+            )],
+        ));
+    }
+    Ok(())
+}
+
 /// Register a new upload's metadata row in `PENDING` state and mint the
 /// canonical `object_key`.
 ///
@@ -133,6 +151,12 @@ pub(crate) async fn register_upload(
     // accurate even before finalize replaces it with the actual uploaded size.
     let declared_size = req.size_bytes.max(0);
     let quota = StorageServiceImpl::tenant_quota_bytes();
+    // The PENDING row's declared size IS the quota reservation the presigned
+    // upload URL below is issued against. Under a finite quota an undeclared
+    // size would reserve nothing and hand out an unbounded upload URL, so it is
+    // refused before any row or URL exists (finalize still re-checks the
+    // object-store size against the quota).
+    require_quota_reservation(quota, req.size_bytes)?;
     // Real per-tenant byte quota pre-check (0 = unlimited), serialized per
     // tenant by the canonical advisory lease so concurrent registers can't
     // race past the gate (the backend-agnostic analog of the old
@@ -346,9 +370,12 @@ pub(crate) async fn finalize_upload(
         ObjectCheck::Absent => {
             return Err(uploaded_object_missing_status());
         }
+        // `object_exists` probes BOTH physical locations (native presign key and
+        // the public PutObject fallback key), so a fallback upload finalizes too.
         ObjectCheck::Present {
             size: head_size,
             etag: head_etag,
+            ..
         } => {
             if let Some(etag) = req.etag.as_deref().map(str::trim).filter(|e| !e.is_empty()) {
                 if normalize_etag(etag) != normalize_etag(head_etag) {
@@ -620,7 +647,18 @@ pub(crate) async fn get_download_url(
     // it is used outside the broker, so the verdict must be checked BEFORE it is
     // handed out, not when it is redeemed.
     super::scan::enforce_scan_gate(file.scan_verdict, &file.file_id, "get_download_url")?;
-    let object_key = file.object_key;
+    // Presign the physical key the bytes actually live under: a file uploaded via
+    // the public PutObject fallback is not at the bare `object_key`. A probe
+    // failure (or metadata-only mode) keeps the historical bare-key URL rather
+    // than failing the RPC.
+    let object_key = match svc.object_exists(&file).await {
+        Ok(ObjectCheck::Present { key, .. }) => key,
+        Ok(ObjectCheck::Absent | ObjectCheck::Unchecked) => file.object_key.clone(),
+        Err(err) => {
+            tracing::warn!(error = %err, file_id = %file.file_id, "storage download presence probe failed; presigning the registered key");
+            file.object_key.clone()
+        }
+    };
     let object_project_id = file.project_id;
     let minutes = if req.expires_in_minutes > 0 {
         req.expires_in_minutes.min(1440)
@@ -788,8 +826,8 @@ pub(crate) async fn download_file(
     // Confirm the bytes are present (and capture first-chunk metadata) via the
     // SAME HEAD primitive finalize uses. Metadata-only mode (no runtime/object
     // store) cannot stream bytes → fail closed.
-    let (head_size, head_etag) = match svc.object_exists(&file).await? {
-        ObjectCheck::Present { size, etag } => (size, etag),
+    let (head_size, head_etag, physical_key) = match svc.object_exists(&file).await? {
+        ObjectCheck::Present { size, etag, key } => (size, etag, key),
         ObjectCheck::Absent => {
             return Err(object_store_bytes_missing_status());
         }
@@ -809,8 +847,10 @@ pub(crate) async fn download_file(
     } else {
         file.bucket.clone()
     };
+    // Stream from the physical key the HEAD found the bytes under (native
+    // presign key or the public PutObject fallback key).
     let request_json =
-        crate::runtime::core::setup_data::object_request_json("get", &bucket, &file.object_key, "");
+        crate::runtime::core::setup_data::object_request_json("get", &bucket, &physical_key, "");
     let runtime = svc.runtime.clone().ok_or_else(|| {
         storage_capability_status(
             "object_stream",
@@ -1311,13 +1351,55 @@ async fn delete_file_soft(
             ConflictStrategy::update(vec!["deleted_at".to_string(), "status".to_string()]),
         )
         .await?;
-    // Remove the bytes (best-effort; metadata stays soft-deleted on failure).
-    svc.delete_object_bytes(&prior.project_id, &prior.object_key)
-        .await;
+    // Remove the bytes. The metadata tombstone above is committed and stays; a
+    // byte-delete failure is NOT swallowed: it records a durable GC intent the
+    // sweep converges, and the response says the bytes were not removed.
+    let (backend, bucket) = svc.file_object_location(&prior);
+    let error = match svc
+        .try_delete_object_bytes(
+            &backend,
+            &bucket,
+            tenant_id,
+            &prior.project_id,
+            &prior.object_key,
+        )
+        .await
+    {
+        Ok(()) => None,
+        Err(err) => {
+            let message = err.message().to_string();
+            let recorded = svc
+                .insert_gc_intent(
+                    tenant_id,
+                    file_id,
+                    &prior.project_id,
+                    &backend,
+                    &bucket,
+                    &prior.object_key,
+                    "SOFT",
+                    req.reason.trim(),
+                    &message,
+                )
+                .await;
+            if let Err(intent_err) = &recorded {
+                tracing::warn!(
+                    error = %err,
+                    intent_error = %intent_err,
+                    file_id,
+                    code = OBJECT_DELETE_ORPHANED,
+                    "storage soft delete: byte delete failed and no GC intent could be recorded; bytes orphaned"
+                );
+            }
+            Some(api_error_object_bytes_not_removed(
+                message,
+                recorded.is_ok(),
+            ))
+        }
+    };
     emit_file_deleted_event(svc, req, &prior.project_id).await;
     Ok(Response::new(storage_pb::DeleteFileResponse {
         success: true,
-        error: None,
+        error,
     }))
 }
 
@@ -1423,6 +1505,7 @@ async fn delete_file_hard(
         &intent_id,
         &backend,
         &bucket,
+        tenant_id,
         &prior.project_id,
         &prior.object_key,
         max_attempts,
@@ -1455,6 +1538,7 @@ async fn resolve_replayed_gc_intent(
         &intent.intent_id,
         &intent.backend,
         &intent.bucket,
+        &intent.tenant_id,
         &intent.project_id,
         &intent.object_key,
         max_attempts,
@@ -1473,12 +1557,13 @@ async fn converge_gc_intent(
     intent_id: &str,
     backend: &str,
     bucket: &str,
+    tenant_id: &str,
     project_id: &str,
     object_key: &str,
     max_attempts: i64,
 ) -> Result<Response<storage_pb::DeleteFileResponse>, Status> {
     match svc
-        .try_delete_object_bytes(backend, bucket, project_id, object_key)
+        .try_delete_object_bytes(backend, bucket, tenant_id, project_id, object_key)
         .await
     {
         Ok(()) => {

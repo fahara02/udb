@@ -371,11 +371,11 @@ fn check_outbox_table(hardened: bool) -> AuthReadinessCheck {
 
 /// 8. Policy-snapshot load posture. The authz Casbin *model* parse is already
 /// covered by `casbin_model`; this probe checks the *snapshot* posture: the
-/// authz snapshot must evaluate off a parseable model and is built deny-by-default
-/// (`AuthzSnapshot { default_allow: false, .. }` everywhere it is constructed in
-/// `auth_service::authz`). Reusing the model validator here means a snapshot whose
-/// model cannot even parse fails readiness too, since the snapshot evaluates off
-/// that same Casbin model.
+/// authz snapshot must evaluate off a parseable model, and it reports the REAL
+/// default-allow value the snapshot is built with (`UDB_ABAC_DEFAULT_ALLOW`,
+/// which the data plane and the AuthzService both read). Default-allow in a
+/// hardened (production / fail-closed) posture fails readiness — startup
+/// refuses it too.
 async fn check_policy_snapshot() -> AuthReadinessCheck {
     if let Err(e) = crate::runtime::authz::validate_casbin_model().await {
         return AuthReadinessCheck::fail(
@@ -383,11 +383,32 @@ async fn check_policy_snapshot() -> AuthReadinessCheck {
             format!("authz policy snapshot cannot load (model parse failed): {e}"),
         );
     }
-    AuthReadinessCheck::pass(
-        "policy_snapshot",
-        "authz policy snapshot loads off a valid Casbin model; deny-by-default posture \
-         (snapshot default_allow is false)",
-    )
+    let hardened =
+        SecurityConfig::current().is_production() || crate::runtime::security::fail_closed_mode();
+    policy_snapshot_posture(env_on("UDB_ABAC_DEFAULT_ALLOW"), hardened)
+}
+
+/// Pure default-allow posture for [`check_policy_snapshot`].
+fn policy_snapshot_posture(default_allow: bool, hardened: bool) -> AuthReadinessCheck {
+    match (default_allow, hardened) {
+        (false, _) => AuthReadinessCheck::pass(
+            "policy_snapshot",
+            "authz policy snapshot loads off a valid Casbin model; deny-by-default posture \
+             (snapshot default_allow is false)",
+        ),
+        (true, true) => AuthReadinessCheck::fail(
+            "policy_snapshot",
+            "UDB_ABAC_DEFAULT_ALLOW is set in a production/fail-closed posture: the snapshot \
+             would ALLOW every request while zero policy rows exist. Unset it and seed policy \
+             (`udb authz seed`).",
+        ),
+        (true, false) => AuthReadinessCheck::pass(
+            "policy_snapshot",
+            "authz policy snapshot loads off a valid Casbin model; snapshot default_allow is \
+             TRUE (UDB_ABAC_DEFAULT_ALLOW dev bootstrap): every request is allowed while zero \
+             policy rows exist — refused in production",
+        ),
+    }
 }
 
 /// 9. Signing-key registry ACTIVE-key posture. The DB-backed signing-key registry
@@ -721,6 +742,28 @@ mod tests {
                 check.detail
             );
         }
+    }
+
+    #[test]
+    fn policy_snapshot_reports_the_real_default_allow_value() {
+        let deny = policy_snapshot_posture(false, true);
+        assert!(deny.ok);
+        assert!(deny.detail.contains("default_allow is false"));
+
+        let dev = policy_snapshot_posture(true, false);
+        assert!(
+            dev.ok,
+            "dev bootstrap default-allow is permitted outside production"
+        );
+        assert!(
+            dev.detail.contains("default_allow is TRUE"),
+            "readiness must not claim deny-by-default when default-allow is on: {}",
+            dev.detail
+        );
+
+        let prod = policy_snapshot_posture(true, true);
+        assert!(!prod.ok, "default-allow must fail readiness in production");
+        assert!(prod.detail.contains("UDB_ABAC_DEFAULT_ALLOW"));
     }
 
     #[test]

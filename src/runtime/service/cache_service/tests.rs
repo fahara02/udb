@@ -19,9 +19,9 @@ use super::config::{
 };
 use super::errors::{redis_capability_status, require_field, validate_namespace};
 use super::keys::{
-    bytes_counter_key, clamped_scan_count, data_key, data_match, effective_max_bytes, meta_key,
-    meta_match_all, namespace_match_all, parse_meta_key, reconcile_cursor_key, reconciled_sum,
-    would_exceed_budget,
+    BUDGETED_DELETE_LUA, BUDGETED_SET_LUA, bytes_counter_key, clamped_scan_count, data_key,
+    data_match, effective_max_bytes, meta_key, meta_match_all, namespace_match_all, parse_meta_key,
+    reconcile_cursor_key, reconciled_sum, would_exceed_budget,
 };
 use super::worker::{
     invalidation_source_from_payload, invalidation_tenant_scope, namespace_for_source_table,
@@ -155,6 +155,34 @@ fn over_budget_is_rejected() {
     // Unconfigured namespace falls back to the positive default bound.
     assert_eq!(effective_max_bytes(0), DEFAULT_NAMESPACE_MAX_BYTES);
     assert_eq!(effective_max_bytes(2048), 2048);
+}
+
+/// The budget gate, the write and the counter bump must be ONE server-side
+/// script: separate STRLEN/GET/SET/INCRBY round-trips let concurrent writers
+/// each pass the gate on the same stale `used` and jointly overrun the budget.
+/// Guard the script shape: it probes, gates on a positive delta exactly like
+/// `would_exceed_budget`, refuses before writing, and only then SETs + INCRBYs.
+#[test]
+fn budgeted_set_and_delete_are_single_atomic_scripts() {
+    let set = BUDGETED_SET_LUA;
+    let probe = set
+        .find("STRLEN")
+        .expect("set script probes the old length");
+    let gate = set
+        .find("delta > 0 and used + delta > tonumber(ARGV[2])")
+        .expect("set script gates on a positive delta against the budget");
+    let refuse = set.find("return {0, used, delta}").expect("refusal arm");
+    let write = set.find("redis.call('SET', KEYS[1]").expect("write arm");
+    let bump = set.find("INCRBY").expect("counter bump");
+    assert!(probe < gate && gate < refuse && refuse < write && write < bump);
+    assert!(!set.contains("KEYS'"), "never the KEYS command");
+
+    let del = BUDGETED_DELETE_LUA;
+    let probe = del.find("STRLEN").expect("delete script probes the length");
+    let remove = del.find("DEL").expect("delete script removes the key");
+    let release = del.find("INCRBY").expect("delete script releases bytes");
+    assert!(probe < remove && remove < release);
+    assert!(del.contains("-old"), "releases exactly the removed length");
 }
 
 /// Prefix sweeps MUST use SCAN, never KEYS, and the data-key match pattern is

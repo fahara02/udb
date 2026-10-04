@@ -512,6 +512,68 @@ public final class DataBrokerGrpc {
     return getInitiateMultipartUploadMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.CompleteMultipartUploadRequest,
+      com.udb.entity.v1.CompleteMultipartUploadResponse> getCompleteMultipartUploadMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CompleteMultipartUpload",
+      requestType = com.udb.entity.v1.CompleteMultipartUploadRequest.class,
+      responseType = com.udb.entity.v1.CompleteMultipartUploadResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.entity.v1.CompleteMultipartUploadRequest,
+      com.udb.entity.v1.CompleteMultipartUploadResponse> getCompleteMultipartUploadMethod() {
+    io.grpc.MethodDescriptor<com.udb.entity.v1.CompleteMultipartUploadRequest, com.udb.entity.v1.CompleteMultipartUploadResponse> getCompleteMultipartUploadMethod;
+    if ((getCompleteMultipartUploadMethod = DataBrokerGrpc.getCompleteMultipartUploadMethod) == null) {
+      synchronized (DataBrokerGrpc.class) {
+        if ((getCompleteMultipartUploadMethod = DataBrokerGrpc.getCompleteMultipartUploadMethod) == null) {
+          DataBrokerGrpc.getCompleteMultipartUploadMethod = getCompleteMultipartUploadMethod =
+              io.grpc.MethodDescriptor.<com.udb.entity.v1.CompleteMultipartUploadRequest, com.udb.entity.v1.CompleteMultipartUploadResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CompleteMultipartUpload"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.CompleteMultipartUploadRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.CompleteMultipartUploadResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DataBrokerMethodDescriptorSupplier("CompleteMultipartUpload"))
+              .build();
+        }
+      }
+    }
+    return getCompleteMultipartUploadMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.AbortMultipartUploadRequest,
+      com.udb.entity.v1.AbortMultipartUploadResponse> getAbortMultipartUploadMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AbortMultipartUpload",
+      requestType = com.udb.entity.v1.AbortMultipartUploadRequest.class,
+      responseType = com.udb.entity.v1.AbortMultipartUploadResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.entity.v1.AbortMultipartUploadRequest,
+      com.udb.entity.v1.AbortMultipartUploadResponse> getAbortMultipartUploadMethod() {
+    io.grpc.MethodDescriptor<com.udb.entity.v1.AbortMultipartUploadRequest, com.udb.entity.v1.AbortMultipartUploadResponse> getAbortMultipartUploadMethod;
+    if ((getAbortMultipartUploadMethod = DataBrokerGrpc.getAbortMultipartUploadMethod) == null) {
+      synchronized (DataBrokerGrpc.class) {
+        if ((getAbortMultipartUploadMethod = DataBrokerGrpc.getAbortMultipartUploadMethod) == null) {
+          DataBrokerGrpc.getAbortMultipartUploadMethod = getAbortMultipartUploadMethod =
+              io.grpc.MethodDescriptor.<com.udb.entity.v1.AbortMultipartUploadRequest, com.udb.entity.v1.AbortMultipartUploadResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AbortMultipartUpload"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.AbortMultipartUploadRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.AbortMultipartUploadResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DataBrokerMethodDescriptorSupplier("AbortMultipartUpload"))
+              .build();
+        }
+      }
+    }
+    return getAbortMultipartUploadMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.CacheGetRequest,
       com.udb.entity.v1.CacheGetResponse> getCacheGetMethod;
 
@@ -2680,6 +2742,20 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     */
+    default void completeMultipartUpload(com.udb.entity.v1.CompleteMultipartUploadRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.CompleteMultipartUploadResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCompleteMultipartUploadMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void abortMultipartUpload(com.udb.entity.v1.AbortMultipartUploadRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.AbortMultipartUploadResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAbortMultipartUploadMethod(), responseObserver);
+    }
+
+    /**
      * <pre>
      * ── Cache / KV ─────────────────────────────────────────────────────────────
      * </pre>
@@ -3437,6 +3513,22 @@ public final class DataBrokerGrpc {
         io.grpc.stub.StreamObserver<com.udb.entity.v1.MultipartUploadResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getInitiateMultipartUploadMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void completeMultipartUpload(com.udb.entity.v1.CompleteMultipartUploadRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.CompleteMultipartUploadResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCompleteMultipartUploadMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void abortMultipartUpload(com.udb.entity.v1.AbortMultipartUploadRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.AbortMultipartUploadResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAbortMultipartUploadMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -4244,6 +4336,20 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     */
+    public com.udb.entity.v1.CompleteMultipartUploadResponse completeMultipartUpload(com.udb.entity.v1.CompleteMultipartUploadRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCompleteMultipartUploadMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.entity.v1.AbortMultipartUploadResponse abortMultipartUpload(com.udb.entity.v1.AbortMultipartUploadRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAbortMultipartUploadMethod(), getCallOptions(), request);
+    }
+
+    /**
      * <pre>
      * ── Cache / KV ─────────────────────────────────────────────────────────────
      * </pre>
@@ -4948,6 +5054,20 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     */
+    public com.udb.entity.v1.CompleteMultipartUploadResponse completeMultipartUpload(com.udb.entity.v1.CompleteMultipartUploadRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCompleteMultipartUploadMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.entity.v1.AbortMultipartUploadResponse abortMultipartUpload(com.udb.entity.v1.AbortMultipartUploadRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAbortMultipartUploadMethod(), getCallOptions(), request);
+    }
+
+    /**
      * <pre>
      * ── Cache / KV ─────────────────────────────────────────────────────────────
      * </pre>
@@ -5628,6 +5748,22 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.CompleteMultipartUploadResponse> completeMultipartUpload(
+        com.udb.entity.v1.CompleteMultipartUploadRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCompleteMultipartUploadMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.AbortMultipartUploadResponse> abortMultipartUpload(
+        com.udb.entity.v1.AbortMultipartUploadRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAbortMultipartUploadMethod(), getCallOptions()), request);
+    }
+
+    /**
      * <pre>
      * ── Cache / KV ─────────────────────────────────────────────────────────────
      * </pre>
@@ -6245,73 +6381,75 @@ public final class DataBrokerGrpc {
   private static final int METHODID_GET_OBJECT = 9;
   private static final int METHODID_GENERATE_PRESIGNED_URL = 10;
   private static final int METHODID_INITIATE_MULTIPART_UPLOAD = 11;
-  private static final int METHODID_CACHE_GET = 12;
-  private static final int METHODID_CACHE_SET = 13;
-  private static final int METHODID_CACHE_DELETE = 14;
-  private static final int METHODID_CACHE_SCAN = 15;
-  private static final int METHODID_DOCUMENT_GET = 16;
-  private static final int METHODID_DOCUMENT_FIND = 17;
-  private static final int METHODID_DOCUMENT_UPSERT = 18;
-  private static final int METHODID_DOCUMENT_DELETE = 19;
-  private static final int METHODID_GRAPH_QUERY = 20;
-  private static final int METHODID_GRAPH_MUTATE = 21;
-  private static final int METHODID_TIME_SERIES_WRITE = 22;
-  private static final int METHODID_TIME_SERIES_QUERY = 23;
-  private static final int METHODID_ANALYTICAL_QUERY = 24;
-  private static final int METHODID_PUBLISH_CDC = 25;
-  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 26;
-  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 27;
-  private static final int METHODID_GENERIC_DISPATCH = 28;
-  private static final int METHODID_ENSURE_RESOURCE = 29;
-  private static final int METHODID_DROP_RESOURCE = 30;
-  private static final int METHODID_LIST_RESOURCES = 31;
-  private static final int METHODID_STAGE_CATALOG = 32;
-  private static final int METHODID_ACTIVATE_CATALOG = 33;
-  private static final int METHODID_ROLLBACK_CATALOG = 34;
-  private static final int METHODID_VALIDATE_CATALOG = 35;
-  private static final int METHODID_GET_CATALOG_VERSIONS = 36;
-  private static final int METHODID_GET_CATALOG_VERSION = 37;
-  private static final int METHODID_PLAN_MIGRATION = 38;
-  private static final int METHODID_APPLY_MIGRATION = 39;
-  private static final int METHODID_GET_MIGRATION_STATUS = 40;
-  private static final int METHODID_LIST_MIGRATION_RUNS = 41;
-  private static final int METHODID_APPROVE_MIGRATION_PLAN = 42;
-  private static final int METHODID_LIST_DLQ_EVENTS = 43;
-  private static final int METHODID_GET_DLQ_EVENT = 44;
-  private static final int METHODID_REPLAY_DLQ_EVENT = 45;
-  private static final int METHODID_DISMISS_DLQ_EVENT = 46;
-  private static final int METHODID_QUARANTINE_DLQ_EVENT = 47;
-  private static final int METHODID_GET_CDC_STATUS = 48;
-  private static final int METHODID_PAUSE_CDC = 49;
-  private static final int METHODID_RESUME_CDC = 50;
-  private static final int METHODID_STEP_DOWN_CDC_LEADER = 51;
-  private static final int METHODID_PREVIEW_CDC_REDACTION = 52;
-  private static final int METHODID_SCAN_PROJECTION_DRIFT = 53;
-  private static final int METHODID_LIST_SAGAS = 54;
-  private static final int METHODID_GET_SAGA = 55;
-  private static final int METHODID_RETRY_SAGA_COMPENSATION = 56;
-  private static final int METHODID_MARK_SAGA_REVIEWED = 57;
-  private static final int METHODID_ENSURE_BASELINE = 58;
-  private static final int METHODID_LIST_POLICIES = 59;
-  private static final int METHODID_PUT_POLICY = 60;
-  private static final int METHODID_DELETE_POLICY = 61;
-  private static final int METHODID_RELOAD_POLICIES = 62;
-  private static final int METHODID_LINT_POLICIES = 63;
-  private static final int METHODID_GET_CAPABILITIES = 64;
-  private static final int METHODID_GET_CATALOG_MANIFEST = 65;
-  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 66;
-  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 67;
-  private static final int METHODID_GET_HEALTH_REPORT = 68;
-  private static final int METHODID_ENSURE_PROJECT = 69;
-  private static final int METHODID_LIST_PROJECTS = 70;
-  private static final int METHODID_GET_ADMIN_SUMMARY = 71;
-  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 72;
-  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 73;
-  private static final int METHODID_BATCH_SELECT = 74;
-  private static final int METHODID_BATCH_UPSERT = 75;
-  private static final int METHODID_VECTOR_BATCH_UPSERT = 76;
-  private static final int METHODID_PUT_OBJECT = 77;
-  private static final int METHODID_BEGIN_TX = 78;
+  private static final int METHODID_COMPLETE_MULTIPART_UPLOAD = 12;
+  private static final int METHODID_ABORT_MULTIPART_UPLOAD = 13;
+  private static final int METHODID_CACHE_GET = 14;
+  private static final int METHODID_CACHE_SET = 15;
+  private static final int METHODID_CACHE_DELETE = 16;
+  private static final int METHODID_CACHE_SCAN = 17;
+  private static final int METHODID_DOCUMENT_GET = 18;
+  private static final int METHODID_DOCUMENT_FIND = 19;
+  private static final int METHODID_DOCUMENT_UPSERT = 20;
+  private static final int METHODID_DOCUMENT_DELETE = 21;
+  private static final int METHODID_GRAPH_QUERY = 22;
+  private static final int METHODID_GRAPH_MUTATE = 23;
+  private static final int METHODID_TIME_SERIES_WRITE = 24;
+  private static final int METHODID_TIME_SERIES_QUERY = 25;
+  private static final int METHODID_ANALYTICAL_QUERY = 26;
+  private static final int METHODID_PUBLISH_CDC = 27;
+  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 28;
+  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 29;
+  private static final int METHODID_GENERIC_DISPATCH = 30;
+  private static final int METHODID_ENSURE_RESOURCE = 31;
+  private static final int METHODID_DROP_RESOURCE = 32;
+  private static final int METHODID_LIST_RESOURCES = 33;
+  private static final int METHODID_STAGE_CATALOG = 34;
+  private static final int METHODID_ACTIVATE_CATALOG = 35;
+  private static final int METHODID_ROLLBACK_CATALOG = 36;
+  private static final int METHODID_VALIDATE_CATALOG = 37;
+  private static final int METHODID_GET_CATALOG_VERSIONS = 38;
+  private static final int METHODID_GET_CATALOG_VERSION = 39;
+  private static final int METHODID_PLAN_MIGRATION = 40;
+  private static final int METHODID_APPLY_MIGRATION = 41;
+  private static final int METHODID_GET_MIGRATION_STATUS = 42;
+  private static final int METHODID_LIST_MIGRATION_RUNS = 43;
+  private static final int METHODID_APPROVE_MIGRATION_PLAN = 44;
+  private static final int METHODID_LIST_DLQ_EVENTS = 45;
+  private static final int METHODID_GET_DLQ_EVENT = 46;
+  private static final int METHODID_REPLAY_DLQ_EVENT = 47;
+  private static final int METHODID_DISMISS_DLQ_EVENT = 48;
+  private static final int METHODID_QUARANTINE_DLQ_EVENT = 49;
+  private static final int METHODID_GET_CDC_STATUS = 50;
+  private static final int METHODID_PAUSE_CDC = 51;
+  private static final int METHODID_RESUME_CDC = 52;
+  private static final int METHODID_STEP_DOWN_CDC_LEADER = 53;
+  private static final int METHODID_PREVIEW_CDC_REDACTION = 54;
+  private static final int METHODID_SCAN_PROJECTION_DRIFT = 55;
+  private static final int METHODID_LIST_SAGAS = 56;
+  private static final int METHODID_GET_SAGA = 57;
+  private static final int METHODID_RETRY_SAGA_COMPENSATION = 58;
+  private static final int METHODID_MARK_SAGA_REVIEWED = 59;
+  private static final int METHODID_ENSURE_BASELINE = 60;
+  private static final int METHODID_LIST_POLICIES = 61;
+  private static final int METHODID_PUT_POLICY = 62;
+  private static final int METHODID_DELETE_POLICY = 63;
+  private static final int METHODID_RELOAD_POLICIES = 64;
+  private static final int METHODID_LINT_POLICIES = 65;
+  private static final int METHODID_GET_CAPABILITIES = 66;
+  private static final int METHODID_GET_CATALOG_MANIFEST = 67;
+  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 68;
+  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 69;
+  private static final int METHODID_GET_HEALTH_REPORT = 70;
+  private static final int METHODID_ENSURE_PROJECT = 71;
+  private static final int METHODID_LIST_PROJECTS = 72;
+  private static final int METHODID_GET_ADMIN_SUMMARY = 73;
+  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 74;
+  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 75;
+  private static final int METHODID_BATCH_SELECT = 76;
+  private static final int METHODID_BATCH_UPSERT = 77;
+  private static final int METHODID_VECTOR_BATCH_UPSERT = 78;
+  private static final int METHODID_PUT_OBJECT = 79;
+  private static final int METHODID_BEGIN_TX = 80;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -6377,6 +6515,14 @@ public final class DataBrokerGrpc {
         case METHODID_INITIATE_MULTIPART_UPLOAD:
           serviceImpl.initiateMultipartUpload((com.udb.entity.v1.MultipartUploadRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.entity.v1.MultipartUploadResponse>) responseObserver);
+          break;
+        case METHODID_COMPLETE_MULTIPART_UPLOAD:
+          serviceImpl.completeMultipartUpload((com.udb.entity.v1.CompleteMultipartUploadRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.entity.v1.CompleteMultipartUploadResponse>) responseObserver);
+          break;
+        case METHODID_ABORT_MULTIPART_UPLOAD:
+          serviceImpl.abortMultipartUpload((com.udb.entity.v1.AbortMultipartUploadRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.entity.v1.AbortMultipartUploadResponse>) responseObserver);
           break;
         case METHODID_CACHE_GET:
           serviceImpl.cacheGet((com.udb.entity.v1.CacheGetRequest) request,
@@ -6771,6 +6917,20 @@ public final class DataBrokerGrpc {
               com.udb.entity.v1.MultipartUploadRequest,
               com.udb.entity.v1.MultipartUploadResponse>(
                 service, METHODID_INITIATE_MULTIPART_UPLOAD)))
+        .addMethod(
+          getCompleteMultipartUploadMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.entity.v1.CompleteMultipartUploadRequest,
+              com.udb.entity.v1.CompleteMultipartUploadResponse>(
+                service, METHODID_COMPLETE_MULTIPART_UPLOAD)))
+        .addMethod(
+          getAbortMultipartUploadMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.entity.v1.AbortMultipartUploadRequest,
+              com.udb.entity.v1.AbortMultipartUploadResponse>(
+                service, METHODID_ABORT_MULTIPART_UPLOAD)))
         .addMethod(
           getCacheGetMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -7276,6 +7436,8 @@ public final class DataBrokerGrpc {
               .addMethod(getGetObjectMethod())
               .addMethod(getGeneratePresignedUrlMethod())
               .addMethod(getInitiateMultipartUploadMethod())
+              .addMethod(getCompleteMultipartUploadMethod())
+              .addMethod(getAbortMultipartUploadMethod())
               .addMethod(getCacheGetMethod())
               .addMethod(getCacheSetMethod())
               .addMethod(getCacheDeleteMethod())

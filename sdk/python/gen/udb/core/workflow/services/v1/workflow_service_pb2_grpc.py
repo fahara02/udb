@@ -47,6 +47,11 @@ class WorkflowServiceStub(object):
                 request_serializer=udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.SignalWorkflowRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.SignalWorkflowResponse.FromString,
                 _registered_method=True)
+        self.AckWorkflowStep = channel.unary_unary(
+                '/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep',
+                request_serializer=udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.AckWorkflowStepRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.AckWorkflowStepResponse.FromString,
+                _registered_method=True)
 
 
 class WorkflowServiceServicer(object):
@@ -99,6 +104,19 @@ class WorkflowServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AckWorkflowStep(self, request, context):
+        """Acknowledge the outcome of the step the workflow tick dispatched
+        (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+        the instance stays RUNNING awaiting this acknowledgement, and a step that is
+        not acknowledged within the step timeout fails the workflow (compensating
+        any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+        the last one); FAILED fails the workflow through the same
+        failed/compensating path as a timeout.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_WorkflowServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -126,6 +144,11 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     servicer.SignalWorkflow,
                     request_deserializer=udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.SignalWorkflowRequest.FromString,
                     response_serializer=udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.SignalWorkflowResponse.SerializeToString,
+            ),
+            'AckWorkflowStep': grpc.unary_unary_rpc_method_handler(
+                    servicer.AckWorkflowStep,
+                    request_deserializer=udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.AckWorkflowStepRequest.FromString,
+                    response_serializer=udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.AckWorkflowStepResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -271,6 +294,33 @@ class WorkflowService(object):
             '/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow',
             udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.SignalWorkflowRequest.SerializeToString,
             udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.SignalWorkflowResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AckWorkflowStep(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep',
+            udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.AckWorkflowStepRequest.SerializeToString,
+            udb_dot_core_dot_workflow_dot_services_dot_v1_dot_workflow__service__pb2.AckWorkflowStepResponse.FromString,
             options,
             channel_credentials,
             insecure,

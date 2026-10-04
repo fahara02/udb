@@ -16,6 +16,9 @@ pub(crate) const TOPIC_CANCELLED: &str = "udb.workflow.cancelled.v1";
 pub(crate) const TOPIC_COMPENSATE_STEP: &str = "udb.workflow.compensate.step.v1";
 pub(crate) const TOPIC_COMPENSATED: &str = "udb.workflow.compensated.v1";
 pub(crate) const TOPIC_FAILED: &str = "udb.workflow.failed.v1";
+/// The tick dispatched a step for execution; the instance then waits (RUNNING)
+/// for `AckWorkflowStep` — a step is never completed by the timer.
+pub(crate) const TOPIC_STEP_DISPATCHED: &str = "udb.workflow.step.dispatched.v1";
 
 // ── stored status tokens (VARCHAR, short form) ─────────────────────────────────
 // RUNNING/COMPLETED are written as SQL literals in the tick's forward UPDATEs;
@@ -38,6 +41,11 @@ pub(crate) const SIGNAL_WAITS_KEY: &str = "signal_waits";
 /// written by `SignalWorkflow` and read by the tick to know a gated step's signal
 /// has arrived.
 pub(crate) const SIGNALS_KEY: &str = "signals";
+/// Zero-based index of the step the tick dispatched and is waiting to be
+/// acknowledged via `AckWorkflowStep`. Present only while a step is in flight;
+/// a re-claim of an instance already awaiting an ack for its current step
+/// never re-dispatches it, and an ack for any other index is rejected.
+pub(crate) const AWAITING_ACK_KEY: &str = "awaiting_ack_step";
 
 /// Upper bound on forward steps per workflow (master-plan 9.12: ≤20 steps). A
 /// request beyond this is clamped down rather than rejected.

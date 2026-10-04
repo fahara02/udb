@@ -107,6 +107,16 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_blob__pb2.MultipartUploadRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_blob__pb2.MultipartUploadResponse.FromString,
                 _registered_method=True)
+        self.CompleteMultipartUpload = channel.unary_unary(
+                '/udb.services.v1.DataBroker/CompleteMultipartUpload',
+                request_serializer=udb_dot_entity_dot_v1_dot_blob__pb2.CompleteMultipartUploadRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_blob__pb2.CompleteMultipartUploadResponse.FromString,
+                _registered_method=True)
+        self.AbortMultipartUpload = channel.unary_unary(
+                '/udb.services.v1.DataBroker/AbortMultipartUpload',
+                request_serializer=udb_dot_entity_dot_v1_dot_blob__pb2.AbortMultipartUploadRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_blob__pb2.AbortMultipartUploadResponse.FromString,
+                _registered_method=True)
         self.CacheGet = channel.unary_unary(
                 '/udb.services.v1.DataBroker/CacheGet',
                 request_serializer=udb_dot_entity_dot_v1_dot_stores__pb2.CacheGetRequest.SerializeToString,
@@ -541,6 +551,18 @@ class DataBrokerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def InitiateMultipartUpload(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CompleteMultipartUpload(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AbortMultipartUpload(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -1064,6 +1086,16 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     servicer.InitiateMultipartUpload,
                     request_deserializer=udb_dot_entity_dot_v1_dot_blob__pb2.MultipartUploadRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_blob__pb2.MultipartUploadResponse.SerializeToString,
+            ),
+            'CompleteMultipartUpload': grpc.unary_unary_rpc_method_handler(
+                    servicer.CompleteMultipartUpload,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_blob__pb2.CompleteMultipartUploadRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_blob__pb2.CompleteMultipartUploadResponse.SerializeToString,
+            ),
+            'AbortMultipartUpload': grpc.unary_unary_rpc_method_handler(
+                    servicer.AbortMultipartUpload,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_blob__pb2.AbortMultipartUploadRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_blob__pb2.AbortMultipartUploadResponse.SerializeToString,
             ),
             'CacheGet': grpc.unary_unary_rpc_method_handler(
                     servicer.CacheGet,
@@ -1815,6 +1847,60 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/InitiateMultipartUpload',
             udb_dot_entity_dot_v1_dot_blob__pb2.MultipartUploadRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_blob__pb2.MultipartUploadResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CompleteMultipartUpload(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/CompleteMultipartUpload',
+            udb_dot_entity_dot_v1_dot_blob__pb2.CompleteMultipartUploadRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_blob__pb2.CompleteMultipartUploadResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AbortMultipartUpload(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/AbortMultipartUpload',
+            udb_dot_entity_dot_v1_dot_blob__pb2.AbortMultipartUploadRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_blob__pb2.AbortMultipartUploadResponse.FromString,
             options,
             channel_credentials,
             insecure,

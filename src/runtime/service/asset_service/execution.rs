@@ -29,7 +29,9 @@ use super::steps::image::{
     apply_image_transform, check_image_pixels, check_input_bytes, resolve_output_format,
 };
 use super::steps::transcode::run_ffmpeg_transcode;
-use super::steps::{ByteStepParams, StepOutcome, derived_object_key, register_derived_file};
+use super::steps::{
+    ByteStepParams, StepOutcome, check_derived_quota, derived_object_key, register_derived_file,
+};
 
 /// Build the object-store PUT request for a derived object, mirroring the
 /// data-plane object PUT's server-side-encryption enforcement: when the native
@@ -377,15 +379,15 @@ impl AssetServiceImpl {
             .unwrap_or(asset_entity_pb::StepType::Unspecified);
 
         if matches!(step_type, asset_entity_pb::StepType::Transcode) {
-            let get_req = crate::runtime::core::setup_data::object_request_json(
-                "get",
+            let bytes = match fetch_source_bytes(
+                runtime,
+                &backend,
                 &bucket,
+                tenant_id,
+                project_id,
                 &object_key,
-                "",
-            );
-            let bytes = match runtime
-                .get_object_backend_target_for_project(&backend, None, project_id, &get_req)
-                .await
+            )
+            .await
             {
                 Ok(b) => b,
                 Err(err) => {
@@ -397,6 +399,10 @@ impl AssetServiceImpl {
                 Err(reason) => return StepOutcome::Failed(reason),
             };
             let out_len = out_bytes.len();
+            // Charge the derived object against the tenant quota BEFORE storing it.
+            if let Err(reason) = check_derived_quota(pool, tenant_id, out_len as i64).await {
+                return StepOutcome::Failed(reason);
+            }
             let derived_key = derived_object_key(&object_key, step_type, ext);
             let put_req = derived_put_request_json(&bucket, &derived_key, content_type);
             if let Err(err) = runtime
@@ -449,15 +455,15 @@ impl AssetServiceImpl {
             use asset_entity_pb::StepType as T;
             let step_type = T::try_from(step_type_i32).unwrap_or(T::Unspecified);
 
-            let get_req = crate::runtime::core::setup_data::object_request_json(
-                "get",
+            let bytes = match fetch_source_bytes(
+                runtime,
+                &backend,
                 &bucket,
+                tenant_id,
+                project_id,
                 &object_key,
-                "",
-            );
-            let bytes = match runtime
-                .get_object_backend_target_for_project(&backend, None, project_id, &get_req)
-                .await
+            )
+            .await
             {
                 Ok(b) => b,
                 Err(err) => {
@@ -515,7 +521,11 @@ impl AssetServiceImpl {
             let out_len = out_bytes.len();
             let (out_w, out_h) = (transformed.width(), transformed.height());
 
-            // (6) store under the `derived/` namespace (no source-key collision).
+            // (6) charge the derived object against the tenant quota, then store it
+            //     under the `derived/` namespace (no source-key collision).
+            if let Err(reason) = check_derived_quota(pool, tenant_id, out_len as i64).await {
+                return StepOutcome::Failed(reason);
+            }
             let derived_key = derived_object_key(&object_key, step_type, ext);
             let put_req = derived_put_request_json(&bucket, &derived_key, content_type);
             if let Err(err) = runtime
@@ -552,6 +562,45 @@ impl AssetServiceImpl {
             }))
         }
     }
+}
+
+/// Fetch a storage file's source bytes for a byte step, trying every physical
+/// location the bytes may occupy (the native presign key first, then the
+/// tenant-namespaced key the public `PutObject` fallback writes). The first
+/// successful read wins; when none succeeds the FIRST location's error is
+/// returned (the primary location's failure is the meaningful one).
+async fn fetch_source_bytes(
+    runtime: &crate::runtime::DataBrokerRuntime,
+    backend: &str,
+    bucket: &str,
+    tenant_id: Uuid,
+    project_id: &str,
+    object_key: &str,
+) -> Result<Vec<u8>, Status> {
+    let mut first_err: Option<Status> = None;
+    for key in super::super::storage_service::file_object_key_candidates(
+        &tenant_id.to_string(),
+        object_key,
+    ) {
+        let get_req =
+            crate::runtime::core::setup_data::object_request_json("get", bucket, &key, "");
+        match runtime
+            .get_object_backend_target_for_project(backend, None, project_id, &get_req)
+            .await
+        {
+            Ok(bytes) => return Ok(bytes),
+            Err(err) => {
+                first_err.get_or_insert(err);
+            }
+        }
+    }
+    Err(first_err.unwrap_or_else(|| {
+        super::errors::asset_schema_not_found_status(
+            "fetch_source_bytes",
+            "source_object_key_missing",
+            "source file has no object key to read bytes from",
+        )
+    }))
 }
 
 /// Compensating terminal-state advance for a pipeline instance whose INLINE

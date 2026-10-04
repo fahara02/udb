@@ -185,6 +185,23 @@ impl PostgresSingletonLease {
         self.fencing_token
     }
 
+    /// A cheap, cloneable handle a singleton task uses to verify — immediately
+    /// before each externally visible side effect — that this lease is still
+    /// the current one (same holder, same fencing token, not expired). A paused
+    /// or partitioned holder whose lease was taken over fails the check and
+    /// must abandon the side effect instead of racing the new leader.
+    pub fn fence(&self) -> LeaseFence {
+        LeaseFence {
+            pool: self.pool.clone(),
+            relation: self.relation.clone(),
+            worker_name: self.worker_name.clone(),
+            lock_key: self.lock_key,
+            owner_id: self.owner_id.clone(),
+            fencing_token: self.fencing_token,
+            ttl: self.ttl,
+        }
+    }
+
     pub async fn heartbeat(&self) -> Result<bool, String> {
         let sql = heartbeat_sql(&self.relation);
         let result = sqlx::query(&sql)
@@ -216,6 +233,65 @@ impl PostgresSingletonLease {
     }
 }
 
+/// Fencing handle for a held singleton lease (see [`PostgresSingletonLease::fence`]).
+#[derive(Debug, Clone)]
+pub struct LeaseFence {
+    pool: PgPool,
+    relation: String,
+    worker_name: String,
+    lock_key: i64,
+    owner_id: String,
+    fencing_token: i64,
+    ttl: Duration,
+}
+
+impl LeaseFence {
+    pub fn fencing_token(&self) -> i64 {
+        self.fencing_token
+    }
+
+    pub fn worker_name(&self) -> &str {
+        &self.worker_name
+    }
+
+    /// `Ok(())` only while this holder's fencing token is still the current
+    /// one and the lease has not expired. Read-only (does not extend the
+    /// lease). Call it right before every side effect a superseded leader
+    /// must not perform.
+    pub async fn check(&self) -> Result<(), String> {
+        let sql = fence_check_sql(&self.relation);
+        let current: Option<i32> = sqlx::query_scalar(&sql)
+            .bind(self.lock_key)
+            .bind(&self.owner_id)
+            .bind(self.fencing_token)
+            .bind(self.ttl.as_secs_f64())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|err| {
+                format!(
+                    "fencing check for singleton lease {} failed: {err}",
+                    self.worker_name
+                )
+            })?;
+        if current.is_some() {
+            Ok(())
+        } else {
+            Err(fence_lost_message(&self.worker_name, self.fencing_token))
+        }
+    }
+}
+
+fn fence_lost_message(worker_name: &str, fencing_token: i64) -> String {
+    format!(
+        "singleton lease {worker_name} superseded (fencing token {fencing_token} is no longer \
+         current); side effect abandoned"
+    )
+}
+
+/// Run `task` once under the singleton lease. The lease is heartbeated while
+/// the task runs (a long pass must not let the lease lapse and a peer take
+/// over mid-pass); if the heartbeat finds the lease lost, the task is dropped
+/// and an error is returned. Returns `Ok(None)` when a peer holds the lease.
 pub async fn run_once<T, F, Fut>(
     pool: &PgPool,
     relation: &str,
@@ -225,6 +301,22 @@ pub async fn run_once<T, F, Fut>(
 ) -> Result<Option<T>, String>
 where
     F: FnOnce() -> Fut,
+    Fut: Future<Output = T>,
+{
+    run_once_fenced(pool, relation, worker_name, ttl, |_fence| task()).await
+}
+
+/// [`run_once`] that hands the task a [`LeaseFence`], so the task can verify
+/// its fencing token immediately before each side effect.
+pub async fn run_once_fenced<T, F, Fut>(
+    pool: &PgPool,
+    relation: &str,
+    worker_name: &str,
+    ttl: Duration,
+    task: F,
+) -> Result<Option<T>, String>
+where
+    F: FnOnce(LeaseFence) -> Fut,
     Fut: Future<Output = T>,
 {
     let Some(lease) =
@@ -239,11 +331,43 @@ where
         fencing_token = lease.fencing_token(),
         "singleton worker lease acquired"
     );
-    let output = task().await;
+    let fence = lease.fence();
+    let output = drive_with_heartbeat(&lease, ttl, task(fence)).await;
     if let Err(err) = lease.release().await {
         tracing::warn!(worker = worker_name, error = %err, "singleton worker lease release failed");
     }
-    Ok(Some(output))
+    output.map(Some)
+}
+
+/// Poll `task` to completion while heartbeating `lease` every `ttl/3`
+/// (clamped 1..=10s). A failed or lost heartbeat drops the task future and
+/// returns an error: a holder that can no longer prove ownership must stop.
+async fn drive_with_heartbeat<T, Fut>(
+    lease: &PostgresSingletonLease,
+    ttl: Duration,
+    task: Fut,
+) -> Result<T, String>
+where
+    Fut: Future<Output = T>,
+{
+    let mut heartbeat = tokio::time::interval(heartbeat_period(ttl));
+    // The first tick fires immediately; the lease was just acquired.
+    heartbeat.tick().await;
+    let mut task = Box::pin(task);
+    loop {
+        tokio::select! {
+            result = &mut task => return Ok(result),
+            _ = heartbeat.tick() => {
+                if !lease.heartbeat().await? {
+                    return Err(format!("singleton lease lost for {}", lease.worker_name()));
+                }
+            }
+        }
+    }
+}
+
+fn heartbeat_period(ttl: Duration) -> Duration {
+    Duration::from_secs((normalized_ttl(ttl).as_secs() / 3).clamp(1, 10))
 }
 
 pub async fn run_while_leader<T, F, Fut>(
@@ -255,6 +379,22 @@ pub async fn run_while_leader<T, F, Fut>(
 ) -> Result<Option<T>, String>
 where
     F: FnOnce() -> Fut,
+    Fut: Future<Output = T>,
+{
+    run_while_leader_fenced(pool, relation, worker_name, ttl, |_fence| task()).await
+}
+
+/// [`run_while_leader`] that hands the task a [`LeaseFence`] to verify before
+/// each side effect.
+pub async fn run_while_leader_fenced<T, F, Fut>(
+    pool: &PgPool,
+    relation: &str,
+    worker_name: &str,
+    ttl: Duration,
+    task: F,
+) -> Result<Option<T>, String>
+where
+    F: FnOnce(LeaseFence) -> Fut,
     Fut: Future<Output = T>,
 {
     let Some(lease) =
@@ -269,19 +409,10 @@ where
         fencing_token = lease.fencing_token(),
         "singleton worker lease acquired"
     );
-    let heartbeat_secs = (normalized_ttl(ttl).as_secs() / 3).clamp(1, 10);
-    let mut heartbeat = tokio::time::interval(Duration::from_secs(heartbeat_secs));
-    let mut task = Box::pin(task());
-    let output = loop {
-        tokio::select! {
-            result = &mut task => break result,
-            _ = heartbeat.tick() => {
-                if !lease.heartbeat().await? {
-                    return Err(format!("singleton lease lost for {worker_name}"));
-                }
-            }
-        }
-    };
+    let fence = lease.fence();
+    // A lost lease returns early WITHOUT releasing: the row now belongs to the
+    // new holder (release is fenced on our token anyway).
+    let output = drive_with_heartbeat(&lease, ttl, task(fence)).await?;
     if let Err(err) = lease.release().await {
         tracing::warn!(worker = worker_name, error = %err, "singleton worker lease release failed");
     }
@@ -325,6 +456,16 @@ fn heartbeat_sql(relation: &str) -> String {
     format!(
         "UPDATE {relation}
          SET acquired_at = NOW()
+         WHERE lock_key = $1
+           AND holder_host = $2
+           AND fencing_token = $3
+           AND acquired_at >= NOW() - make_interval(secs => $4::DOUBLE PRECISION)"
+    )
+}
+
+fn fence_check_sql(relation: &str) -> String {
+    format!(
+        "SELECT 1::INT4 FROM {relation}
          WHERE lock_key = $1
            AND holder_host = $2
            AND fencing_token = $3
@@ -452,6 +593,91 @@ mod tests {
         let release = release_sql("udb_system.cdc_lock_log");
         assert!(release.contains("holder_host = $2"));
         assert!(release.contains("fencing_token = $3"));
+    }
+
+    #[test]
+    fn fence_check_is_read_only_and_rejects_superseded_or_expired_holders() {
+        let sql = fence_check_sql("udb_system.cdc_lock_log");
+        assert!(
+            sql.trim_start().starts_with("SELECT"),
+            "fence check must not mutate"
+        );
+        assert!(!sql.contains("UPDATE"));
+        assert!(sql.contains("holder_host = $2"));
+        assert!(
+            sql.contains("fencing_token = $3"),
+            "a takeover advances the token, so the old holder's check fails"
+        );
+        assert!(
+            sql.contains("acquired_at >= NOW() - make_interval"),
+            "an expired lease must fail the check even before takeover"
+        );
+        let msg = fence_lost_message(WORKER_XA_RECOVERY, 7);
+        assert!(msg.contains("superseded") && msg.contains('7'));
+    }
+
+    #[test]
+    fn heartbeat_period_is_a_third_of_ttl_and_clamped() {
+        assert_eq!(heartbeat_period(Duration::from_secs(30)).as_secs(), 10);
+        assert_eq!(heartbeat_period(Duration::from_secs(12)).as_secs(), 4);
+        // Floor: TTL is normalized to >= 5s, period never below 1s.
+        assert_eq!(heartbeat_period(Duration::from_secs(0)).as_secs(), 1);
+        // Ceiling: long TTLs still heartbeat at least every 10s.
+        assert_eq!(heartbeat_period(Duration::from_secs(600)).as_secs(), 10);
+    }
+
+    #[tokio::test]
+    #[ignore = "requires Postgres; set UDB_INTEGRATION_PG_DSN and run with --ignored"]
+    async fn fence_check_fails_after_takeover_live() {
+        let Ok(dsn) = std::env::var("UDB_INTEGRATION_PG_DSN") else {
+            eprintln!("skipped: set UDB_INTEGRATION_PG_DSN");
+            return;
+        };
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&dsn)
+            .await
+            .expect("connect live postgres");
+        crate::runtime::system::ensure_system_catalog(&pool)
+            .await
+            .expect("ensure system catalog");
+        let relation = crate::runtime::cdc::CdcConfig::current().lock_log_relation();
+        let worker = format!("udb:test:fence:{}", uuid::Uuid::new_v4());
+        let lease = PostgresSingletonLease::try_acquire(
+            pool.clone(),
+            relation.clone(),
+            worker.clone(),
+            Duration::from_secs(5),
+        )
+        .await
+        .expect("acquire")
+        .expect("free lease");
+        let fence = lease.fence();
+        fence.check().await.expect("fresh holder passes the fence");
+        // Simulate expiry + takeover by a peer: the token advances.
+        sqlx::query(&format!(
+            "UPDATE {relation} SET acquired_at = NOW() - INTERVAL '1 hour' WHERE lock_key = $1"
+        ))
+        .bind(worker_lock_key(&worker))
+        .execute(&pool)
+        .await
+        .expect("age lease");
+        let peer = PostgresSingletonLease::try_acquire(
+            pool.clone(),
+            relation.clone(),
+            worker.clone(),
+            Duration::from_secs(5),
+        )
+        .await
+        .expect("peer acquire")
+        .expect("expired lease is taken over");
+        assert!(peer.fencing_token() > lease.fencing_token());
+        let err = fence
+            .check()
+            .await
+            .expect_err("superseded holder must fail");
+        assert!(err.contains("superseded"), "{err}");
+        peer.release().await.expect("release");
     }
 
     #[test]

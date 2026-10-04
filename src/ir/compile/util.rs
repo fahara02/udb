@@ -175,6 +175,48 @@ pub(super) fn tenant_system_field(table: &ManifestTable) -> &str {
     resolve_tenant_column(table).unwrap_or("_tenant_id")
 }
 
+/// How a non-SQL compiler scopes a table to the active tenant, which decides
+/// when the fail-closed tenant check (see [`require_tenant_scope`]) applies.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum TenantScopeKind {
+    /// Document / graph / search / key-value / object stores: the compiler
+    /// ALWAYS stamps and filters a tenant system field or key prefix (falling
+    /// back to `_tenant_id`), so every table is tenant-scoped.
+    Always,
+    /// Columnar stores (ClickHouse, Cassandra): only tables that DECLARE a
+    /// tenant column are scoped; the compiler never references an undeclared
+    /// column.
+    DeclaredColumn,
+}
+
+/// Fail-closed tenant scope for the non-SQL compilers — the counterpart of the
+/// generic-SQL check in `sql_dialect::context_predicates`. When the context
+/// enables enforcement (`CompileContext::enforce_tenant_scope`, set at the
+/// over-the-wire seams for authenticated non-admin callers) and the table is
+/// tenant-scoped for this backend, an empty tenant id is a hard
+/// `TenantScopeRequired` error instead of a silently unscoped
+/// read/write/delete (every compiler skips the tenant predicate / falls back
+/// to a shared `default` key prefix when the tenant is empty).
+pub(super) fn require_tenant_scope(
+    table: &ManifestTable,
+    ctx: &CompileContext<'_>,
+    kind: TenantScopeKind,
+) -> Result<(), CompileError> {
+    if !ctx.enforce_tenant_scope {
+        return Ok(());
+    }
+    let scoped = match kind {
+        TenantScopeKind::Always => true,
+        TenantScopeKind::DeclaredColumn => resolve_tenant_column(table).is_some(),
+    };
+    if scoped && ctx.tenant_id.is_none_or(|t| t.trim().is_empty()) {
+        return Err(CompileError::TenantScopeRequired {
+            message_type: table.message_name.clone(),
+        });
+    }
+    Ok(())
+}
+
 /// Project system-field counterpart of [`tenant_system_field`]; falls back to
 /// `_project_id`.
 pub(super) fn project_system_field(table: &ManifestTable) -> &str {

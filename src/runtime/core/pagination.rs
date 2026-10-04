@@ -14,11 +14,13 @@
 use base64::Engine as _;
 use serde_json::{Value as JsonValue, json};
 
-/// One ordered key participating in the cursor: physical column + direction.
+/// One ordered key participating in the cursor: physical column + direction,
+/// plus whether the column can hold NULL (see [`build_cursor_predicate`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CursorKey {
     pub column: String,
     pub descending: bool,
+    pub nullable: bool,
 }
 
 /// Version tag for the query-shape digest carried in a page token. Bump this to
@@ -144,15 +146,13 @@ pub(crate) fn decode_page_token(
             .first()
             .and_then(JsonValue::as_str)
             .ok_or_else(|| "page_token is malformed".to_string())?;
+        // A NULL component is a legitimate position on a nullable sort key;
+        // `build_cursor_predicate` renders it with IS NULL / IS NOT NULL, never
+        // as a `col < NULL` comparison.
         let value = arr
             .get(1)
             .cloned()
             .ok_or_else(|| "page_token is malformed".to_string())?;
-        // A NULL cursor component would compile to `col < NULL` → UNKNOWN → zero
-        // rows silently. Reject it: nullable columns are not valid cursor keys.
-        if value.is_null() {
-            return Err("page_token contains a null cursor value".to_string());
-        }
         out.push((column.to_string(), value));
     }
     Ok(out)
@@ -168,32 +168,86 @@ pub(crate) fn decode_page_token(
 /// ```
 ///
 /// A descending key uses `<` instead of `>`. `keys` and `values` must be the same
-/// length and aligned; the caller guarantees non-null values (see `decode`).
-/// The result is combined with the caller filter under `$and`, keeping the tenant
-/// predicate in the top-level conjunction (X-4).
+/// length and aligned. The result is combined with the caller filter under
+/// `$and`, keeping the tenant predicate in the top-level conjunction (X-4).
+///
+/// NULL sort keys follow Postgres' default ordering (the ORDER BY emits no NULLS
+/// clause): NULL sorts as the LARGEST value — last when ascending, first when
+/// descending. So for a `nullable` key:
+/// - ascending, cursor value `v`: after = `k > v OR k IS NULL`;
+/// - ascending, cursor NULL: nothing on this key sorts after it (branch omitted);
+/// - descending, cursor `v`: after = `k < v` (the NULLs came first);
+/// - descending, cursor NULL: after = `k IS NOT NULL`;
+/// - a NULL prefix component matches with `IS NULL`, never `= NULL`.
+///
+/// Without this, a full page ending on a NULL key could mint no cursor (silently
+/// ending the walk) and an ascending walk never reached the NULL rows at all.
 pub(crate) fn build_cursor_predicate(keys: &[CursorKey], values: &[JsonValue]) -> JsonValue {
     let mut branches = Vec::with_capacity(keys.len());
     for i in 0..keys.len().min(values.len()) {
         let mut clause = serde_json::Map::new();
         for j in 0..i {
-            clause.insert(keys[j].column.clone(), json!({ "$eq": values[j].clone() }));
+            let prefix = if values[j].is_null() {
+                json!({ "$is_null": true })
+            } else {
+                json!({ "$eq": values[j].clone() })
+            };
+            clause.insert(keys[j].column.clone(), prefix);
         }
-        let op = if keys[i].descending { "$lt" } else { "$gt" };
-        clause.insert(keys[i].column.clone(), json!({ op: values[i].clone() }));
+        let key = &keys[i];
+        let value = &values[i];
+        match (key.descending, value.is_null()) {
+            // Ascending past NULL: NULL is the largest value, nothing follows.
+            (false, true) => continue,
+            (true, true) => {
+                clause.insert(key.column.clone(), json!({ "$not_null": true }));
+            }
+            (false, false) if key.nullable => {
+                clause.insert(
+                    "$or".to_string(),
+                    json!([
+                        { key.column.clone(): { "$gt": value.clone() } },
+                        { key.column.clone(): { "$is_null": true } },
+                    ]),
+                );
+            }
+            (descending, false) => {
+                let op = if descending { "$lt" } else { "$gt" };
+                clause.insert(key.column.clone(), json!({ op: value.clone() }));
+            }
+        }
         branches.push(JsonValue::Object(clause));
     }
     json!({ "$or": branches })
+}
+
+/// Refine the nullability of each cursor key from the table's column metadata:
+/// a key is nullable unless `non_null(column)` says the column can never hold
+/// NULL (declared NOT NULL or part of the primary key).
+pub(crate) fn with_nullability(
+    keys: Vec<CursorKey>,
+    non_null: impl Fn(&str) -> bool,
+) -> Vec<CursorKey> {
+    keys.into_iter()
+        .map(|key| CursorKey {
+            nullable: key.nullable && !non_null(&key.column),
+            ..key
+        })
+        .collect()
 }
 
 /// Resolve `(physical_column, descending)` sort keys into cursor keys, then append
 /// any primary-key columns not already present as ascending tiebreakers, so the
 /// order is TOTAL — required for a stable cursor (no two rows share a position).
 pub(crate) fn total_order_keys(sort: &[(String, bool)], primary_key: &[String]) -> Vec<CursorKey> {
+    // A caller sort key is conservatively nullable unless it is a primary-key
+    // column; `with_nullability` refines it from the manifest.
     let mut keys: Vec<CursorKey> = sort
         .iter()
         .map(|(col, desc)| CursorKey {
             column: col.clone(),
             descending: *desc,
+            nullable: !primary_key.contains(col),
         })
         .collect();
     for pk in primary_key {
@@ -201,6 +255,7 @@ pub(crate) fn total_order_keys(sort: &[(String, bool)], primary_key: &[String]) 
             keys.push(CursorKey {
                 column: pk.clone(),
                 descending: false,
+                nullable: false,
             });
         }
     }
@@ -227,8 +282,9 @@ pub(crate) fn cursor_values_for_keys(
 }
 
 /// Extract the next-cursor `(column, value)` pairs (aligned to `keys`) from a
-/// decoded row object. Returns `None` if any key column is absent or null, so the
-/// caller omits the token rather than mint a broken cursor.
+/// decoded row object. A NULL value is a valid position (see
+/// [`build_cursor_predicate`]); returns `None` only when a key column is absent
+/// from the row.
 pub(crate) fn cursor_values_from_row(
     keys: &[CursorKey],
     row: &serde_json::Map<String, JsonValue>,
@@ -236,17 +292,116 @@ pub(crate) fn cursor_values_from_row(
     let mut out = Vec::with_capacity(keys.len());
     for key in keys {
         let value = row.get(&key.column)?;
-        if value.is_null() {
-            return None;
-        }
         out.push((key.column.clone(), value.clone()));
     }
     Some(out)
 }
 
+/// The cursor for the page AFTER a FULL page whose last row is `row`.
+///
+/// A full page means more rows may follow, so a missing cursor must never be
+/// read as "last page" (an empty token): that would silently truncate the walk.
+/// The read forces every key column into its projection, so an absent key is a
+/// broken invariant and is refused, naming the column.
+pub(crate) fn next_page_cursor(
+    keys: &[CursorKey],
+    row: &serde_json::Map<String, JsonValue>,
+) -> Result<Vec<(String, JsonValue)>, String> {
+    cursor_values_from_row(keys, row).ok_or_else(|| {
+        let column = keys
+            .iter()
+            .find(|key| !row.contains_key(&key.column))
+            .map(|key| key.column.as_str())
+            .unwrap_or_default();
+        format!(
+            "cannot mint the next page token: sort key '{column}' is missing from the \
+             returned row"
+        )
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // A full page ending on a NULL sort key still mints a cursor (the walk does
+    // not silently end); only a key absent from the row is refused.
+    #[test]
+    fn next_page_cursor_keeps_walking_past_a_null_sort_key() {
+        let keys = total_order_keys(&[("ts".to_string(), false)], &["id".to_string()]);
+        let row_null: serde_json::Map<String, JsonValue> =
+            serde_json::from_value(json!({"ts": null, "id": "r1"})).unwrap();
+        assert_eq!(
+            next_page_cursor(&keys, &row_null).unwrap(),
+            vec![
+                ("ts".to_string(), JsonValue::Null),
+                ("id".to_string(), json!("r1"))
+            ]
+        );
+        let row_missing: serde_json::Map<String, JsonValue> =
+            serde_json::from_value(json!({"id": "r1"})).unwrap();
+        let err = next_page_cursor(&keys, &row_missing).expect_err("absent key");
+        assert!(err.contains("sort key 'ts' is missing"), "{err}");
+    }
+
+    // Ascending nullable key: NULLs sort last, so a non-null cursor must still
+    // reach them, and a NULL cursor continues only within the NULL run.
+    #[test]
+    fn ascending_nullable_key_predicate_reaches_and_walks_the_null_rows() {
+        let keys = total_order_keys(&[("ts".to_string(), false)], &["id".to_string()]);
+        assert!(keys[0].nullable && !keys[1].nullable);
+        let after_value = build_cursor_predicate(&keys, &[json!("2026"), json!("r1")]);
+        assert_eq!(
+            after_value,
+            json!({ "$or": [
+                { "$or": [ { "ts": { "$gt": "2026" } }, { "ts": { "$is_null": true } } ] },
+                { "ts": { "$eq": "2026" }, "id": { "$gt": "r1" } },
+            ] })
+        );
+        let after_null = build_cursor_predicate(&keys, &[JsonValue::Null, json!("r1")]);
+        assert_eq!(
+            after_null,
+            json!({ "$or": [ { "ts": { "$is_null": true }, "id": { "$gt": "r1" } } ] })
+        );
+    }
+
+    // Descending nullable key: NULLs sort first, so a NULL cursor continues with
+    // the rest of the NULL run and then every non-null row.
+    #[test]
+    fn descending_nullable_key_predicate_leaves_the_null_run_first() {
+        let keys = total_order_keys(&[("ts".to_string(), true)], &["id".to_string()]);
+        let after_null = build_cursor_predicate(&keys, &[JsonValue::Null, json!("r1")]);
+        assert_eq!(
+            after_null,
+            json!({ "$or": [
+                { "ts": { "$not_null": true } },
+                { "ts": { "$is_null": true }, "id": { "$gt": "r1" } },
+            ] })
+        );
+        let after_value = build_cursor_predicate(&keys, &[json!("2026"), json!("r1")]);
+        assert_eq!(
+            after_value,
+            json!({ "$or": [
+                { "ts": { "$lt": "2026" } },
+                { "ts": { "$eq": "2026" }, "id": { "$gt": "r1" } },
+            ] })
+        );
+    }
+
+    #[test]
+    fn with_nullability_marks_not_null_columns() {
+        let keys = total_order_keys(&[("ts".to_string(), false)], &["id".to_string()]);
+        let keys = with_nullability(keys, |column| column == "ts");
+        assert!(!keys[0].nullable, "a NOT NULL sort column is not nullable");
+        let pred = build_cursor_predicate(&keys, &[json!(1), json!(2)]);
+        assert_eq!(
+            pred,
+            json!({ "$or": [
+                { "ts": { "$gt": 1 } },
+                { "ts": { "$eq": 1 }, "id": { "$gt": 2 } },
+            ] })
+        );
+    }
 
     #[test]
     fn token_round_trips_and_is_tenant_and_entity_bound() {
@@ -313,10 +468,15 @@ mod tests {
     }
 
     #[test]
-    fn null_cursor_value_is_rejected() {
-        let token = encode_page_token("t", "E", "q", &[("c".to_string(), JsonValue::Null)]);
-        let err = decode_page_token(&token, "t", "E", "q").unwrap_err();
-        assert!(err.contains("null"), "got: {err}");
+    fn null_cursor_value_round_trips() {
+        // A NULL component is a valid position on a nullable sort key; the
+        // predicate renders it with IS NULL, never `col < NULL`.
+        let keys = vec![
+            ("c".to_string(), JsonValue::Null),
+            ("id".to_string(), json!(1)),
+        ];
+        let token = encode_page_token("t", "E", "q", &keys);
+        assert_eq!(decode_page_token(&token, "t", "E", "q").unwrap(), keys);
     }
 
     #[test]
@@ -327,11 +487,13 @@ mod tests {
             vec![
                 CursorKey {
                     column: "created_at".to_string(),
-                    descending: true
+                    descending: true,
+                    nullable: true,
                 },
                 CursorKey {
                     column: "id".to_string(),
-                    descending: false
+                    descending: false,
+                    nullable: false,
                 },
             ]
         );
@@ -368,10 +530,17 @@ mod tests {
                 ("id".to_string(), json!("r1"))
             ]
         );
-        // A null key value → None (don't mint a broken cursor).
+        // A null key value is a valid cursor position (kept as NULL).
         let row_null: serde_json::Map<String, JsonValue> =
             serde_json::from_value(json!({"ts": null, "id": "r1"})).unwrap();
-        assert!(cursor_values_from_row(&keys, &row_null).is_none());
+        assert_eq!(
+            cursor_values_from_row(&keys, &row_null).unwrap()[0],
+            ("ts".to_string(), JsonValue::Null)
+        );
+        // An absent key column → None.
+        let row_missing: serde_json::Map<String, JsonValue> =
+            serde_json::from_value(json!({"id": "r1"})).unwrap();
+        assert!(cursor_values_from_row(&keys, &row_missing).is_none());
     }
 
     #[test]
@@ -379,6 +548,7 @@ mod tests {
         let keys = vec![CursorKey {
             column: "id".to_string(),
             descending: false,
+            nullable: false,
         }];
         let pred = build_cursor_predicate(&keys, &[json!(10)]);
         assert_eq!(pred, json!({ "$or": [ { "id": { "$gt": 10 } } ] }));
@@ -390,10 +560,12 @@ mod tests {
             CursorKey {
                 column: "created_at".to_string(),
                 descending: false,
+                nullable: false,
             },
             CursorKey {
                 column: "id".to_string(),
                 descending: true,
+                nullable: false,
             },
         ];
         let pred = build_cursor_predicate(&keys, &[json!("2026"), json!(5)]);

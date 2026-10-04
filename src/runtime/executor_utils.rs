@@ -1508,9 +1508,11 @@ pub(crate) fn cache_key(
     // a cache entry (X-1 — the planner memo key `select_plan_cache_key` already
     // folds these in; the two caches previously disagreed on query identity).
     // Appended at the END so `cache_invalidation_pattern`'s trailing `:*` still
-    // globs the whole tail.
+    // globs the whole tail. The project is part of a read's identity too: two
+    // projects of one tenant read different rows for the same filter, so they
+    // must never share an entry (appended last for the same glob reason).
     format!(
-        "udb:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
+        "udb:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
         kind,
         sanitize_cache_part(&context.tenant_id),
         sanitize_cache_part(&context.purpose),
@@ -1521,6 +1523,7 @@ pub(crate) fn cache_key(
         checksum_str(&fields.join(",")),
         limit,
         checksum_str(sort_repr),
+        checksum_str(&context.project_id),
     )
 }
 
@@ -1597,6 +1600,60 @@ pub(crate) fn json_is_ciphertext(value: &JsonValue) -> bool {
 
 pub(crate) fn is_ciphertext(value: &str) -> bool {
     value.starts_with("udb-aead:v")
+}
+
+/// Refuse client-supplied write values that would bypass field encryption.
+///
+/// `record` must be keyed by PHYSICAL column name (after
+/// `normalize_record_keys`). Two shapes are refused:
+/// - a ciphertext-shaped string (`udb-aead:v…`) for an encrypted column: the
+///   encryptor skips values that already look encrypted, so a caller could plant
+///   an arbitrary (e.g. another row's) ciphertext that later decrypts as if the
+///   broker had written it;
+/// - any value for a blind-index column (`is_blind_index`, the `<col>_idx`
+///   sibling): the broker derives it from the plaintext with the tenant-scoped
+///   HMAC key, and a caller-chosen token would make equality lookups match rows
+///   whose plaintext differs.
+///
+/// Internal re-encryption of rows read back from the database (projection
+/// payloads) must NOT go through this check — those rows legitimately carry
+/// broker-written ciphertext and blind-index tokens.
+pub(crate) fn validate_client_encrypted_write(
+    columns: &[ManifestColumn],
+    record: &JsonValue,
+) -> Result<(), tonic::Status> {
+    let Some(object) = record.as_object() else {
+        return Ok(());
+    };
+    let mut violations: Vec<(String, String)> = Vec::new();
+    for column in columns {
+        let Some(value) = object.get(&column.column_name) else {
+            continue;
+        };
+        if column.security.is_blind_index && !value.is_null() {
+            violations.push((
+                column.column_name.clone(),
+                "blind-index columns are derived by the broker from the plaintext; \
+                 omit this field"
+                    .to_string(),
+            ));
+        } else if is_encrypted_column(column) && json_is_ciphertext(value) {
+            violations.push((
+                column.column_name.clone(),
+                "encrypted columns must be written as plaintext; ciphertext-shaped \
+                 input is refused"
+                    .to_string(),
+            ));
+        }
+    }
+    if violations.is_empty() {
+        Ok(())
+    } else {
+        Err(invalid_argument_fields(
+            "write refused: a field would bypass field-level encryption",
+            violations,
+        ))
+    }
 }
 
 // ── Time helpers ──────────────────────────────────────────────────────────────
@@ -3900,6 +3957,115 @@ mod merge_context_scope_authority_tests {
         assert_ne!(
             key_with, key_sort_desc,
             "different sort direction must not share a cache entry"
+        );
+        // The project is part of the key: two projects of one tenant read
+        // different rows, so they must not share a cache entry.
+        let mut other_project = with_body.clone();
+        other_project.project_id = "project-b".to_string();
+        let key_other_project = cache_key(
+            "select",
+            "udb.Person",
+            &other_project,
+            "chk",
+            &filter,
+            &fields,
+            100,
+            "id:false",
+        );
+        assert_ne!(
+            key_with, key_other_project,
+            "different projects must not share a cache entry"
+        );
+        // The invalidation glob (Redis `*` matches any run, `:` included) still
+        // covers every project's entries.
+        fn glob_matches(pattern: &str, key: &str) -> bool {
+            let parts: Vec<&str> = pattern.split('*').collect();
+            let mut rest = key;
+            for (idx, part) in parts.iter().enumerate() {
+                if idx == 0 {
+                    let Some(stripped) = rest.strip_prefix(part) else {
+                        return false;
+                    };
+                    rest = stripped;
+                } else if let Some(pos) = rest.find(part) {
+                    rest = &rest[pos + part.len()..];
+                } else {
+                    return false;
+                }
+            }
+            parts.last().is_some_and(|last| last.is_empty()) || rest.is_empty()
+        }
+        let pattern = cache_invalidation_pattern("select", "udb.Person");
+        assert!(glob_matches(&pattern, &key_with), "{pattern} vs {key_with}");
+        assert!(
+            glob_matches(&pattern, &key_other_project),
+            "{pattern} vs {key_other_project}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod client_encrypted_write_tests {
+    use super::validate_client_encrypted_write;
+    use crate::generation::{ManifestColumn, ManifestColumnSecurity};
+    use serde_json::json;
+
+    fn columns() -> Vec<ManifestColumn> {
+        vec![
+            ManifestColumn {
+                column_name: "ssn".to_string(),
+                security: ManifestColumnSecurity {
+                    is_encrypted: true,
+                    ..ManifestColumnSecurity::default()
+                },
+                ..ManifestColumn::default()
+            },
+            ManifestColumn {
+                column_name: "ssn_idx".to_string(),
+                security: ManifestColumnSecurity {
+                    is_blind_index: true,
+                    ..ManifestColumnSecurity::default()
+                },
+                ..ManifestColumn::default()
+            },
+            ManifestColumn {
+                column_name: "name".to_string(),
+                ..ManifestColumn::default()
+            },
+        ]
+    }
+
+    #[test]
+    fn plaintext_writes_are_admitted() {
+        assert!(
+            validate_client_encrypted_write(&columns(), &json!({"ssn": "123", "name": "a"}))
+                .is_ok()
+        );
+        assert!(validate_client_encrypted_write(&columns(), &json!({"ssn_idx": null})).is_ok());
+    }
+
+    #[test]
+    fn ciphertext_shaped_input_for_an_encrypted_column_is_refused() {
+        let status =
+            validate_client_encrypted_write(&columns(), &json!({"ssn": "udb-aead:v1:planted"}))
+                .expect_err("planted ciphertext");
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn caller_supplied_blind_index_is_refused() {
+        let status = validate_client_encrypted_write(
+            &columns(),
+            &json!({"ssn": "123", "ssn_idx": "hmac-of-someone-else"}),
+        )
+        .expect_err("caller-chosen blind index");
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn ciphertext_shaped_text_in_a_plain_column_is_not_this_checks_concern() {
+        assert!(
+            validate_client_encrypted_write(&columns(), &json!({"name": "udb-aead:v1:x"})).is_ok()
         );
     }
 }

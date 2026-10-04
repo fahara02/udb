@@ -20,7 +20,18 @@ use super::errors::livequery_required_field;
 use super::predicate::{
     build_user_filter, parse_resume_cursor, resolve_source, row_object, snapshot_filter,
 };
-use super::stream::{LiveQueryStream, run_delta_forward};
+use super::stream::{JournalTail, LiveQueryStream, run_delta_forward};
+
+/// The terminal frame of a subscription on a broker with no CDC change feed:
+/// the snapshot was delivered, but no delta ever will be.
+pub(super) fn no_delta_feed_status() -> Status {
+    super::errors::livequery_capability_status(
+        "delta_feed",
+        "cdc_change_feed",
+        "live query deltas require the CDC change feed (UDB_CDC_ENABLED with Kafka); \
+         this broker has none, so the stream ends after the snapshot",
+    )
+}
 
 /// Request-metadata header carrying the durable-resume cursor: the client's
 /// last-delivered `LiveQueryChange.event_id`. Metadata (not a proto field) so
@@ -84,6 +95,25 @@ pub(crate) async fn subscribe(
     // the subscribe→read gap); any overlap with snapshot rows is de-duplicated
     // client-side by event_id.
     let delta_rx = svc.cdc_engine.as_ref().map(|cdc| cdc.subscribe());
+    // Cross-replica delta source: the broadcast above is fed only on the
+    // replica holding the CDC tailer lease, so anchor a durable-journal tail at
+    // the journal head NOW (also before the snapshot) — every replica then
+    // streams the deltas committed after this point. A journal that cannot be
+    // read leaves the broadcast as the only source (logged, not silent).
+    let journal_head = match svc.cdc_engine.as_ref() {
+        Some(cdc) => match cdc.journal_head_event_id(&source.cdc_topic).await {
+            Ok(head) => Some((cdc.clone(), head.unwrap_or_default())),
+            Err(err) => {
+                tracing::warn!(
+                    topic = %source.cdc_topic,
+                    error = %err,
+                    "live query journal tail unavailable; deltas reach this subscriber only if this replica leads the CDC tailer"
+                );
+                None
+            }
+        },
+        None => None,
+    };
 
     // Durable resume: when the client presented a resume cursor AND a live CDC
     // feed exists, read the missed change events from the durable CDC journal
@@ -181,6 +211,11 @@ pub(crate) async fn subscribe(
     // exits); without a live feed the stream is snapshot-only and ends
     // immediately, so the slot is released right here.
     if let Some(rx_delta) = delta_rx {
+        let journal_tail = journal_head.map(|(cdc, cursor)| JournalTail {
+            cdc,
+            cursor,
+            batch: i64::from(resume_replay_limit()),
+        });
         tokio::spawn(run_delta_forward(
             rx_delta,
             tx,
@@ -192,8 +227,13 @@ pub(crate) async fn subscribe(
             resume_replay,
             svc.metrics.clone(),
             stream_slot,
+            journal_tail,
         ));
     } else {
+        // No change feed exists on this broker, so no delta can ever arrive.
+        // Say so on the stream (after the snapshot) instead of ending it
+        // cleanly, which a client cannot tell apart from "nothing changed".
+        let _ = tx.try_send(Err(no_delta_feed_status()));
         drop(tx);
         drop(stream_slot);
     }

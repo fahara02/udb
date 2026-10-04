@@ -58,7 +58,16 @@ impl Neo4jCompiler {
         ctx: &'a CompileContext<'_>,
     ) -> Result<&'a ManifestTable, CompileError> {
         match crate::broker::table_lookup(ctx.manifest, message_type) {
-            crate::broker::TableLookup::Found(table) => Ok(table),
+            // Fail closed on an empty tenant when enforcement is on (the
+            // non-SQL counterpart of the generic-SQL tenant-scope check).
+            crate::broker::TableLookup::Found(table) => {
+                super::util::require_tenant_scope(
+                    table,
+                    ctx,
+                    super::util::TenantScopeKind::Always,
+                )?;
+                Ok(table)
+            }
             // fix_plan §4.1: an ambiguous short name names its candidates so the
             // caller can FQN-qualify — never a silent first-wins misroute.
             crate::broker::TableLookup::Ambiguous { .. } => Err(CompileError::Malformed {
@@ -183,11 +192,13 @@ impl Neo4jCompiler {
         }
     }
 
-    fn label_for(table: &ManifestTable) -> &str {
-        // Manifest's `table` is the storage-side label for graph stores.
-        // We could also drive from a future `node_label` field; today this
-        // mirrors how Neo4jExecutor names labels in resource-op specs.
-        &table.table
+    /// The node label for a manifest table — resolved by the single label
+    /// resolver shared with the Neo4j DDL generator and the graph projection
+    /// worker (the owning graph store's `node_label` override, else its
+    /// resource name), so compiled reads/writes address the same nodes the
+    /// DDL constrains and the projection writes.
+    fn label_for(ctx: &CompileContext<'_>, table: &ManifestTable) -> String {
+        crate::generation::backends::neo4j::neo4j_label_for_table(ctx.manifest, table)
     }
 
     fn render_cypher(statement: String, bind: CypherBind) -> CompiledRendering {
@@ -216,7 +227,7 @@ impl Compiler for Neo4jCompiler {
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
         let table = self.resolve_table(&op.message_type, ctx)?;
-        let label = Self::label_for(table);
+        let label = Self::label_for(ctx, table);
         let mut bind = CypherBind::new();
 
         let mut cypher = format!("MATCH (n:`{label}`)");
@@ -328,7 +339,7 @@ impl Compiler for Neo4jCompiler {
                 ),
             });
         }
-        let label = Self::label_for(table);
+        let label = Self::label_for(ctx, table);
         let record = &op.records[0];
         let mut bind = CypherBind::new();
 
@@ -405,7 +416,7 @@ impl Compiler for Neo4jCompiler {
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
         let table = self.resolve_table(&op.message_type, ctx)?;
-        let label = Self::label_for(table);
+        let label = Self::label_for(ctx, table);
         let mut bind = CypherBind::new();
         let user_body = self.render_filter(&op.filter, table, &op.message_type, &mut bind)?;
         if user_body == "true" || user_body == "false" {
@@ -471,7 +482,7 @@ impl Compiler for Neo4jCompiler {
             .map(|f| self.field_for(table, f, &op.message_type))
             .collect::<Result<Vec<_>, _>>()?;
         super::util::validate_no_groupby_alias_collision(&group_names, &op.aggregates)?;
-        let label = Self::label_for(table);
+        let label = Self::label_for(ctx, table);
         let mut bind = CypherBind::new();
 
         let mut cypher = format!("MATCH (n:`{label}`)");
@@ -575,7 +586,7 @@ impl Compiler for Neo4jCompiler {
         // `db.index.vector.queryNodes` — for portability we fall through
         // to fulltext when only text_query is set.
         let table = self.resolve_table(&op.message_type, ctx)?;
-        let label = Self::label_for(table);
+        let label = Self::label_for(ctx, table);
 
         if let Some(vector) = &op.vector {
             // Vector index name convention: `<label>_vector`.
@@ -1184,5 +1195,33 @@ mod tests {
         assert!(statement.contains("n.`_project_id` = $p1"));
         assert_eq!(params["p0"], "acme");
         assert_eq!(params["p1"], "p1");
+    }
+
+    /// Fail closed: with tenant enforcement on, an empty tenant must be a
+    /// `TenantScopeRequired` error, never a label-wide MATCH across tenants.
+    #[test]
+    fn enforced_empty_tenant_fails_closed() {
+        let m = fixture();
+        let read = LogicalRead::message("acme.billing.v1.Customer");
+        for ctx in [
+            CompileContext::new(&m).enforcing_tenant_scope(true),
+            CompileContext::new(&m)
+                .with_tenant("  ")
+                .enforcing_tenant_scope(true),
+        ] {
+            let err = Neo4jCompiler.compile_read(&read, &ctx).unwrap_err();
+            assert_eq!(err.code(), "tenant_scope_required");
+        }
+        // Enforcement off (internal/admin seams) keeps the legacy behaviour.
+        assert!(
+            Neo4jCompiler
+                .compile_read(&read, &CompileContext::new(&m))
+                .is_ok()
+        );
+        // A concrete tenant compiles under enforcement.
+        let ctx = CompileContext::new(&m)
+            .with_tenant("acme")
+            .enforcing_tenant_scope(true);
+        assert!(Neo4jCompiler.compile_read(&read, &ctx).is_ok());
     }
 }

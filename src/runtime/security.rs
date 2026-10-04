@@ -434,10 +434,25 @@ impl SecurityConfig {
     /// Postgres audit sink) and delegates to the pure [`validate_production_with`],
     /// which is unit-tested without touching the process environment.
     pub fn validate_production(&self) -> Result<(), Vec<String>> {
-        self.validate_production_with(
-            trusted_transport_acknowledged(),
-            durable_audit_sink_declared(),
-        )
+        let mut errors = self
+            .validate_production_with(
+                trusted_transport_acknowledged(),
+                durable_audit_sink_declared(),
+            )
+            .err()
+            .unwrap_or_default();
+        // The dev default-allow escape hatch is an explicit misconfiguration in
+        // production: refuse it (startup aborts via `hardened_startup_violations`)
+        // rather than silently ignoring the operator's flag.
+        if let Some(violation) = default_allow_production_violation(abac_default_allow_requested())
+        {
+            errors.push(violation);
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
     }
 
     /// Pure production-readiness check: `trusted_transport` and `durable_audit` are
@@ -696,6 +711,32 @@ pub fn udb_env_is_production() -> bool {
             )
         })
         .unwrap_or(false)
+}
+
+/// Whether the operator asked for the dev default-allow escape hatch
+/// (`UDB_ABAC_DEFAULT_ALLOW`, which `services.yaml` `system.abac_default_allow`
+/// is also mapped onto). Same truthiness the runtime config uses.
+pub fn abac_default_allow_requested() -> bool {
+    std::env::var("UDB_ABAC_DEFAULT_ALLOW")
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
+/// Pure production rule for default-allow: when requested it is a violation
+/// (the validate-production list is only enforced in a production/fail-closed
+/// posture, so dev bootstrap keeps working).
+pub(crate) fn default_allow_production_violation(default_allow: bool) -> Option<String> {
+    default_allow.then(|| {
+        "UDB_ABAC_DEFAULT_ALLOW must not be set in production: it allows EVERY request while \
+         zero policy rows exist. Unset it and seed policy (`udb authz seed --tenant <uuid> \
+         --role app_rw`)."
+            .to_string()
+    })
 }
 
 pub fn fail_closed_mode() -> bool {
@@ -2810,32 +2851,34 @@ pub fn turn_rest_credential(secret: &[u8], principal: &str, expiry_unix: i64) ->
     (username, credential)
 }
 
-/// Resolve the shared coturn secret used to mint TURN REST credentials, in order:
-/// `UDB_TURN_SECRET`, then `UDB_ENCRYPTION_KEY`. **Fails closed in production**
-/// (`UDB_ENV=prod`/`production`): a missing secret returns `None`, so callers
-/// advertise STUN only / reject credential minting rather than leaking a
-/// well-known dev secret. Outside production a fixed dev secret is used (with a
-/// warning) so local flows work without configuration. Shared by the native
-/// WebRTC `TurnService` and the ws:// signalling bridge.
+/// Resolve the shared coturn secret used to mint TURN REST credentials from its
+/// OWN dedicated `UDB_TURN_SECRET` — never the data-at-rest master key
+/// (`UDB_ENCRYPTION_KEY`): the TURN secret is shared with the coturn server, so
+/// reusing the master key would hand it to a third component. **Fails closed in
+/// production** ([`SecurityConfig::is_production`], i.e. `UDB_ENV=production`
+/// or the hardened TLS + service-identity posture): a missing secret returns
+/// `None`, so callers advertise STUN only / reject credential minting rather
+/// than minting against a well-known dev secret. Outside production a fixed dev
+/// secret is used (with a warning) so local flows work without configuration.
+/// Shared by the native WebRTC `TurnService` and the ws:// signalling bridge.
 pub fn resolve_turn_secret() -> Option<Vec<u8>> {
-    if let Some(s) = std::env::var("UDB_TURN_SECRET")
-        .ok()
-        .filter(|s| !s.trim().is_empty())
-    {
-        return Some(s.into_bytes());
+    resolve_turn_secret_with(
+        std::env::var("UDB_TURN_SECRET").ok().as_deref(),
+        SecurityConfig::current().is_production(),
+    )
+}
+
+/// The pure TURN-secret decision behind [`resolve_turn_secret`]: an explicit
+/// non-blank `turn_secret` wins; otherwise production yields `None` (fail
+/// closed) and non-production the dev fallback. There is deliberately no
+/// master-key fallback. Unit-tested without touching the process environment.
+pub(crate) fn resolve_turn_secret_with(
+    turn_secret: Option<&str>,
+    is_production: bool,
+) -> Option<Vec<u8>> {
+    if let Some(secret) = turn_secret.filter(|s| !s.trim().is_empty()) {
+        return Some(secret.trim().as_bytes().to_vec());
     }
-    if let Some(s) = std::env::var("UDB_ENCRYPTION_KEY")
-        .ok()
-        .filter(|s| !s.trim().is_empty())
-    {
-        return Some(s.into_bytes());
-    }
-    let is_production = std::env::var("UDB_ENV")
-        .map(|v| {
-            let v = v.to_ascii_lowercase();
-            v == "production" || v == "prod"
-        })
-        .unwrap_or(false);
     if is_production {
         tracing::warn!(
             "no TURN secret configured (set UDB_TURN_SECRET); TURN credential minting \
@@ -2845,9 +2888,36 @@ pub fn resolve_turn_secret() -> Option<Vec<u8>> {
     } else {
         tracing::warn!(
             "no TURN secret configured; using a non-production dev fallback secret \
-             (set UDB_TURN_SECRET, or UDB_ENV=production to fail closed)"
+             (set UDB_TURN_SECRET; production fails closed)"
         );
         Some(b"udb-dev-turn-secret".to_vec())
+    }
+}
+
+#[cfg(test)]
+mod turn_secret_tests {
+    use super::resolve_turn_secret_with;
+
+    #[test]
+    fn production_requires_an_explicit_turn_secret() {
+        assert_eq!(resolve_turn_secret_with(None, true), None);
+        assert_eq!(resolve_turn_secret_with(Some("   "), true), None);
+        assert_eq!(
+            resolve_turn_secret_with(Some("coturn-shared"), true),
+            Some(b"coturn-shared".to_vec())
+        );
+    }
+
+    #[test]
+    fn non_production_uses_the_explicit_secret_or_the_dev_fallback() {
+        assert_eq!(
+            resolve_turn_secret_with(Some("coturn-shared"), false),
+            Some(b"coturn-shared".to_vec())
+        );
+        assert_eq!(
+            resolve_turn_secret_with(None, false),
+            Some(b"udb-dev-turn-secret".to_vec())
+        );
     }
 }
 
@@ -3018,6 +3088,15 @@ mod tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+
+    #[test]
+    fn default_allow_is_a_production_violation() {
+        assert!(default_allow_production_violation(false).is_none());
+        let violation =
+            default_allow_production_violation(true).expect("default-allow must be refused");
+        assert!(violation.contains("UDB_ABAC_DEFAULT_ALLOW"));
+        assert!(violation.contains("production"));
+    }
 
     fn decode_detail(status: &Status) -> ErrorDetail {
         let raw = status

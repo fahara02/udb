@@ -353,6 +353,12 @@ pub struct QueryPlan {
     pub cache_key_pattern: String,
     pub sql: String,
     pub parameter_columns: Vec<String>,
+    /// VERIFIED caller-context values for the isolation predicates this plan
+    /// appended to its own WHERE clause, in the order their columns were pushed
+    /// onto `parameter_columns`. Executors MUST bind these after the caller's
+    /// own filter values — see [`append_verified_scope_predicates`].
+    #[serde(default)]
+    pub context_parameter_values: Vec<String>,
     pub errors: Vec<String>,
 }
 
@@ -630,7 +636,7 @@ fn build_select_query_plan_uncached(
     let mut parameter_columns = Vec::new();
     let backend_kind = effective_sql_backend(&request.context);
     let encrypted = encrypted_filter_columns(table);
-    let compiled_filter = compile_filter_predicates(
+    let mut compiled_filter = compile_filter_predicates(
         &filter,
         &allowed,
         &encrypted,
@@ -681,6 +687,18 @@ fn build_select_query_plan_uncached(
     // fails closed via the pushed error rather than leaking deleted rows.
     let soft_delete_predicate = resolve_soft_delete_column(table, &allowed, &mut errors)
         .map(|column| format!("{} IS NULL", qi(&column)));
+    // The checks above only prove the caller MENTIONED the isolation columns;
+    // the values are caller-supplied. This SQL is served whenever the bridged
+    // emitter declines a filter shape (`$contains`, `$has_key`, …) or is
+    // switched off, so it must carry the verified scope itself, exactly as
+    // Update/Delete do — otherwise `{tenant_id: <victim>}` reads that tenant.
+    let context_parameter_values = append_verified_scope_predicates(
+        &mut compiled_filter.sql,
+        &mut parameter_columns,
+        &tenant_column,
+        &project_column,
+        &request.context,
+    );
 
     let mut sql = format!(
         "SELECT {} FROM {}.{}",
@@ -739,6 +757,7 @@ fn build_select_query_plan_uncached(
         cache_key_pattern: cache_key_pattern(manifest, table),
         sql,
         parameter_columns,
+        context_parameter_values,
         errors,
     }
 }
@@ -863,10 +882,24 @@ pub fn build_upsert_plan(
         &conflict_columns,
     ));
 
+    // Cross-tenant takeover guard. The conflict arbiter is usually the primary
+    // key, which is unique across ALL tenants, so without a guard an upsert
+    // naming another tenant's id would rewrite that row (including its tenant
+    // column) into the caller's tenant. The tenant/project columns are never
+    // reassigned on conflict, and DO UPDATE only fires when the conflicting row
+    // already belongs to the scope being written; otherwise it affects 0 rows
+    // and the runtime refuses the write (see `upsert_scope_guard_refusal`).
+    let isolation_columns = [tenant.as_str(), project.as_str()]
+        .into_iter()
+        .filter(|column| !column.is_empty() && parameter_columns.iter().any(|p| p == column))
+        .map(str::to_string)
+        .collect::<Vec<_>>();
     let update_columns = parameter_columns
         .iter()
         .filter(|column| {
-            !conflict_columns.contains(column) && !is_update_excluded_column(table, column)
+            !conflict_columns.contains(column)
+                && !is_update_excluded_column(table, column)
+                && !isolation_columns.contains(column)
         })
         .cloned()
         .collect::<Vec<_>>();
@@ -874,15 +907,49 @@ pub fn build_upsert_plan(
         .map(|idx| format!("${idx}"))
         .collect::<Vec<_>>()
         .join(", ");
-    let assignments = update_columns
+    let mut assignments = update_columns
         .iter()
         .map(|column| format!("{} = EXCLUDED.{}", qi(column), qi(column)))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let on_conflict = if update_columns.is_empty() {
+        .collect::<Vec<_>>();
+    // Soft-delete tables: an upsert onto a tombstoned key revives the row. The
+    // conflict arbiter still matches the tombstoned row, so without clearing the
+    // tombstone the write would report `affected=1` on a row every read hides.
+    // A caller that writes the tombstone column explicitly keeps its own value.
+    if table.soft_delete
+        && let Some(soft_delete_column) = resolve_soft_delete_column(table, &allowed, &mut errors)
+        && !parameter_columns.contains(&soft_delete_column)
+    {
+        assignments.push(format!("{} = NULL", qi(&soft_delete_column)));
+    }
+    let scope_guard = isolation_columns
+        .iter()
+        .map(|column| {
+            format!(
+                "{}.{} IS NOT DISTINCT FROM EXCLUDED.{}",
+                qi(&table.table),
+                qi(column),
+                qi(column)
+            )
+        })
+        .collect::<Vec<_>>();
+    if assignments.is_empty()
+        && let Some(column) = isolation_columns.first()
+    {
+        // Nothing else to update: a no-op assignment (equal under the guard)
+        // keeps DO UPDATE so a same-scope replay still reports its row and a
+        // foreign-scope conflict still affects 0 rows.
+        assignments.push(format!("{} = EXCLUDED.{}", qi(column), qi(column)));
+    }
+    let on_conflict = if assignments.is_empty() {
         "DO NOTHING".to_string()
+    } else if scope_guard.is_empty() {
+        format!("DO UPDATE SET {}", assignments.join(", "))
     } else {
-        format!("DO UPDATE SET {assignments}")
+        format!(
+            "DO UPDATE SET {} WHERE {}",
+            assignments.join(", "),
+            scope_guard.join(" AND ")
+        )
     };
     let returning = if request.return_record {
         " RETURNING *"
@@ -930,6 +997,17 @@ pub(crate) fn build_upsert_logical_write(
 ) -> Result<LogicalWrite, Vec<String>> {
     let table = resolve_table_for_message(manifest, &request.message_type)
         .map_err(|error| vec![error.to_string()])?;
+    // A soft-delete table must clear the tombstone when an upsert lands on a
+    // tombstoned key (see `build_upsert_plan`); neutral IR has no assignment for
+    // a column the record does not carry, so decline and let the planner SQL
+    // (which the served path falls back to) emit the revive.
+    if table.soft_delete {
+        return Err(vec![format!(
+            "soft-delete table {}.{} does not lower to a neutral upsert; \
+             the planner upsert revives a tombstoned row instead",
+            table.schema, table.table
+        )]);
+    }
 
     let mut errors = validate_write_context(&request.context);
     // C22: per-table ABAC on the write path.
@@ -1083,9 +1161,9 @@ pub(crate) fn build_upsert_logical_write(
 /// are `enable_rls` but NOT `force_rls` by default and the broker connects as
 /// the table owner, so DB row-level security is bypassed at runtime. Planner
 /// SQL never passes through `ir::compile`, and several served paths reach it —
-/// the BeginTx apply loop (which does not even install the request GUC), the
-/// soft-delete fallback the bridged emitter declines, and Update, which has no
-/// bridged emitter at all. Each of those must therefore carry the scope itself,
+/// the BeginTx apply loop, the soft-delete fallback the bridged emitter
+/// declines, Select filter shapes the bridged emitter declines, and Update,
+/// which has no bridged emitter at all. Each must therefore carry the scope itself,
 /// so a cross-tenant or cross-project filter matches ZERO rows.
 ///
 /// Returns the values to bind, in the order their columns were appended to
@@ -1646,15 +1724,24 @@ pub fn build_vector_search_plan(
     if !has_scope(&request.context, "udb:vector:read") {
         errors.push("scope udb:vector:read is required".to_string());
     }
+    // Validate the caller filter BEFORE the collection lookup so an ad-hoc
+    // (routed, manifest-undeclared) collection still gets the reserved-key and
+    // raw-key checks.
+    let filter_fields = vector_filter_fields(&request.filter, &mut errors);
 
     let Some(store) = manifest
         .stores
         .iter()
         .find(|store| store.store_kind == "vector" && store.resource_name == request.collection)
     else {
+        // Keep the tenant/scope/filter errors gathered above: the runtime only
+        // waives the "unknown vector collection" error for a routed ad-hoc
+        // collection, so every other check must survive this early return.
+        errors.push(format!("unknown vector collection {}", request.collection));
         return VectorQueryPlan {
             collection: request.collection.clone(),
-            errors: vec![format!("unknown vector collection {}", request.collection)],
+            filter_fields,
+            errors,
             ..VectorQueryPlan::default()
         };
     };
@@ -1676,7 +1763,7 @@ pub fn build_vector_search_plan(
         collection: request.collection.clone(),
         backend: store.backend.clone(),
         expected_dimension,
-        filter_fields: vector_filter_fields(&request.filter, &mut errors),
+        filter_fields,
         errors,
     }
 }
@@ -1701,9 +1788,12 @@ pub fn build_vector_upsert_plan(
         .iter()
         .find(|store| store.store_kind == "vector" && store.resource_name == request.collection)
     else {
+        // Keep the tenant/scope/point-count errors gathered above: the runtime
+        // only waives "unknown vector collection" for a routed ad-hoc collection.
+        errors.push(format!("unknown vector collection {}", request.collection));
         return VectorUpsertPlan {
             collection: request.collection.clone(),
-            errors: vec![format!("unknown vector collection {}", request.collection)],
+            errors,
             ..VectorUpsertPlan::default()
         };
     };
@@ -2166,11 +2256,26 @@ fn has_scope(context: &RequestContext, required: &str) -> bool {
 }
 
 fn vector_filter_fields(value: &Value, errors: &mut Vec<String>) -> Vec<String> {
+    // The runtime ANDs the tenant/project scope around the caller filter, which
+    // it can only do for a filter OBJECT; any other top-level shape would be
+    // dropped (silently widening the query), so it is refused here.
+    if !matches!(value, Value::Null | Value::Object(_)) {
+        errors.push("vector filter must be a JSON object".to_string());
+        return Vec::new();
+    }
     let mut fields = Vec::new();
     collect_vector_filter_fields(value, errors, &mut fields);
     fields.sort();
     fields.dedup();
     fields
+}
+
+/// `_`-prefixed payload keys (`_tenant_id`, `_project_id`, `_source`, …) are the
+/// server-stamped isolation/provenance namespace. A caller filter must never
+/// address them: an `OR`/`any` on `_tenant_id` could widen past the scope the
+/// runtime ANDs in on backends whose filter language merges keys.
+fn reserved_vector_filter_key(key: &str) -> bool {
+    key.trim_start().starts_with('_')
 }
 
 fn collect_vector_filter_fields(value: &Value, errors: &mut Vec<String>, out: &mut Vec<String>) {
@@ -2180,6 +2285,24 @@ fn collect_vector_filter_fields(value: &Value, errors: &mut Vec<String>, out: &m
                 let normalized = key.to_ascii_lowercase();
                 if matches!(normalized.as_str(), "$raw" | "raw" | "sql" | "where_sql") {
                     errors.push(format!("raw vector filter key '{}' is not allowed", key));
+                    continue;
+                }
+                if reserved_vector_filter_key(key) {
+                    errors.push(format!(
+                        "vector filter key '{key}' is reserved (tenant/project isolation is \
+                         server-enforced)"
+                    ));
+                    continue;
+                }
+                // Qdrant-style condition: `{"key": "<payload field>", "match": …}`.
+                if normalized == "key"
+                    && let Some(field) = nested.as_str()
+                    && reserved_vector_filter_key(field)
+                {
+                    errors.push(format!(
+                        "vector filter key '{field}' is reserved (tenant/project isolation is \
+                         server-enforced)"
+                    ));
                     continue;
                 }
                 if !normalized.starts_with('$') {
@@ -2194,6 +2317,107 @@ fn collect_vector_filter_fields(value: &Value, errors: &mut Vec<String>, out: &m
             }
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod vector_plan_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn search_request(scopes: &[&str], tenant: &str, filter: Value) -> VectorSearchPlanRequest {
+        VectorSearchPlanRequest {
+            context: RequestContext {
+                tenant_id: tenant.to_string(),
+                scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
+                ..RequestContext::default()
+            },
+            collection: "adhoc_collection".to_string(),
+            vector_dimension: 3,
+            filter,
+            limit: 5,
+        }
+    }
+
+    #[test]
+    fn unknown_collection_keeps_tenant_and_scope_errors() {
+        // A routed ad-hoc collection waives ONLY the unknown-collection error, so
+        // the missing tenant and scope must still be reported.
+        let plan = build_vector_search_plan(
+            &CatalogManifest::default(),
+            &search_request(&[], "", Value::Null),
+        );
+        assert!(plan.errors.iter().any(|e| e == "tenant_id is required"));
+        assert!(plan.errors.iter().any(|e| e.contains("udb:vector:read")));
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.starts_with("unknown vector collection "))
+        );
+    }
+
+    #[test]
+    fn unknown_collection_upsert_keeps_tenant_and_scope_errors() {
+        let plan = build_vector_upsert_plan(
+            &CatalogManifest::default(),
+            &VectorUpsertPlanRequest {
+                context: RequestContext::default(),
+                collection: "adhoc_collection".to_string(),
+                point_dimensions: vec![3],
+                payloads: vec![Value::Null],
+            },
+        );
+        assert!(plan.errors.iter().any(|e| e == "tenant_id is required"));
+        assert!(plan.errors.iter().any(|e| e.contains("udb:vector:write")));
+    }
+
+    #[test]
+    fn reserved_underscore_filter_keys_are_rejected() {
+        for filter in [
+            json!({"should": [{"key": "_tenant_id", "match": {"value": "other"}}]}),
+            json!({"must": [{"must": [{"key": "_project_id", "match": {"any": ["p"]}}]}]}),
+            json!({"_tenant_id": {"$eq": "other"}}),
+        ] {
+            let plan = build_vector_search_plan(
+                &CatalogManifest::default(),
+                &search_request(&["udb:vector:read"], "t1", filter.clone()),
+            );
+            assert!(
+                plan.errors.iter().any(|e| e.contains("is reserved")),
+                "reserved key not rejected for {filter}: {:?}",
+                plan.errors
+            );
+        }
+    }
+
+    #[test]
+    fn ordinary_filter_keys_and_values_are_accepted() {
+        // An `_`-prefixed VALUE (not a key) is ordinary data.
+        let plan = build_vector_search_plan(
+            &CatalogManifest::default(),
+            &search_request(
+                &["udb:vector:read"],
+                "t1",
+                json!({"must": [{"key": "kind", "match": {"value": "_draft"}}]}),
+            ),
+        );
+        assert_eq!(
+            plan.errors,
+            vec!["unknown vector collection adhoc_collection".to_string()]
+        );
+    }
+
+    #[test]
+    fn non_object_filter_is_rejected() {
+        let plan = build_vector_search_plan(
+            &CatalogManifest::default(),
+            &search_request(&["udb:vector:read"], "t1", json!(["kind"])),
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("must be a JSON object"))
+        );
     }
 }
 
@@ -3454,13 +3678,191 @@ mod tests {
             },
         );
         assert_eq!(plan.errors, Vec::<String>::new());
+        // `$2` is the verified caller tenant appended after the caller filter.
         assert!(
-            plan.sql
-                .ends_with("WHERE \"tenant_id\" = $1 AND \"deleted_at\" IS NULL"),
+            plan.sql.ends_with(
+                "WHERE \"tenant_id\" = $1 AND \"tenant_id\" = $2 AND \"deleted_at\" IS NULL"
+            ),
             "{}",
             plan.sql
         );
-        assert_eq!(plan.parameter_columns, ["tenant_id"]);
+        assert_eq!(plan.parameter_columns, ["tenant_id", "tenant_id"]);
+        assert_eq!(plan.context_parameter_values, ["tenant-a"]);
+    }
+
+    // The fallback select SQL (served when the bridged emitter declines a filter
+    // shape such as `$contains`, or is switched off) must bind the VERIFIED
+    // caller tenant, not trust the tenant value named in the caller's filter.
+    #[test]
+    fn select_plan_fallback_binds_verified_tenant_not_filter_value() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let mut manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("payload")],
+            ..ManifestTable::default()
+        });
+        manifest.checksum_sha256 = "select-verified-scope".to_string();
+        let plan = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({
+                    "tenant_id": "tenant-victim",
+                    "payload": {"$contains": {"kind": "invoice"}},
+                }),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        let backstop = format!("AND \"tenant_id\" = ${}", plan.parameter_columns.len());
+        assert!(plan.sql.contains(&backstop), "{}", plan.sql);
+        assert_eq!(
+            plan.parameter_columns.last().map(String::as_str),
+            Some("tenant_id")
+        );
+        assert_eq!(
+            plan.context_parameter_values,
+            ["tenant-a"],
+            "the bound value is the verified context tenant, never the filter's"
+        );
+    }
+
+    // Project isolation mirrors tenant on the fallback select.
+    #[test]
+    fn select_plan_fallback_binds_verified_project() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let mut project = test_column("project_id");
+        project.is_project_column = true;
+        let mut manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, project],
+            ..ManifestTable::default()
+        });
+        manifest.checksum_sha256 = "select-verified-project".to_string();
+        let mut context = read_context();
+        context.project_id = "project-a".to_string();
+        let plan = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context,
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({"tenant_id": "tenant-a", "project_id": "project-victim"}),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert!(
+            plan.sql
+                .ends_with("AND \"tenant_id\" = $3 AND \"project_id\" = $4"),
+            "{}",
+            plan.sql
+        );
+        assert_eq!(plan.context_parameter_values, ["tenant-a", "project-a"]);
+    }
+
+    fn upsert_scope_manifest() -> CatalogManifest {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("status")],
+            ..ManifestTable::default()
+        })
+    }
+
+    // Cross-tenant takeover: the conflict branch never reassigns the tenant
+    // column and only fires for a conflicting row already in the caller's tenant.
+    #[test]
+    fn upsert_plan_guards_conflict_update_by_tenant() {
+        let manifest = upsert_scope_manifest();
+        let plan = build_upsert_plan(
+            &manifest,
+            &UpsertPlanRequest {
+                context: write_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                record: json!({"id": "w1", "tenant_id": "tenant-a", "status": "open"}),
+                ..UpsertPlanRequest::default()
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert_eq!(
+            plan.sql,
+            "INSERT INTO \"public\".\"widgets\" (\"id\", \"status\", \"tenant_id\") \
+             VALUES ($1, $2, $3) ON CONFLICT (\"id\") DO UPDATE SET \"status\" = EXCLUDED.\"status\" \
+             WHERE \"widgets\".\"tenant_id\" IS NOT DISTINCT FROM EXCLUDED.\"tenant_id\""
+        );
+        assert!(
+            !plan.sql.contains("\"tenant_id\" = EXCLUDED"),
+            "tenant column must never be reassigned: {}",
+            plan.sql
+        );
+    }
+
+    // A record carrying only key + tenant keeps a guarded no-op DO UPDATE, so a
+    // same-tenant replay still reports its row and a foreign one affects 0.
+    #[test]
+    fn upsert_plan_isolation_only_record_keeps_guarded_no_op_update() {
+        let manifest = upsert_scope_manifest();
+        let plan = build_upsert_plan(
+            &manifest,
+            &UpsertPlanRequest {
+                context: write_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                record: json!({"id": "w1", "tenant_id": "tenant-a"}),
+                ..UpsertPlanRequest::default()
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert!(
+            plan.sql.ends_with(
+                "DO UPDATE SET \"tenant_id\" = EXCLUDED.\"tenant_id\" \
+                 WHERE \"widgets\".\"tenant_id\" IS NOT DISTINCT FROM EXCLUDED.\"tenant_id\""
+            ),
+            "{}",
+            plan.sql
+        );
+    }
+
+    // Soft-delete: an upsert onto a tombstoned key revives it instead of
+    // reporting `affected=1` on a row every read hides.
+    #[test]
+    fn upsert_plan_soft_delete_revives_tombstoned_row() {
+        let mut manifest = soft_delete_test_manifest();
+        manifest.tables[0].primary_key = vec!["id".to_string()];
+        let plan = build_upsert_plan(
+            &manifest,
+            &UpsertPlanRequest {
+                context: write_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                record: json!({"id": "w1", "tenant_id": "tenant-a", "status": "open"}),
+                ..UpsertPlanRequest::default()
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert!(
+            plan.sql.contains(
+                "DO UPDATE SET \"status\" = EXCLUDED.\"status\", \"deleted_at\" = NULL WHERE "
+            ),
+            "{}",
+            plan.sql
+        );
+        // The neutral IR cannot express the revive, so the bridge declines.
+        let errors = build_upsert_logical_write(
+            &manifest,
+            &UpsertPlanRequest {
+                context: write_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                record: json!({"id": "w1", "tenant_id": "tenant-a", "status": "open"}),
+                ..UpsertPlanRequest::default()
+            },
+        )
+        .expect_err("soft-delete upsert stays on the planner");
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("does not lower to a neutral upsert")),
+            "{errors:?}"
+        );
     }
 
     // #4: the injected predicate composes with a top-level $or (already
@@ -3973,9 +4375,9 @@ mod tests {
             compile_pg_sql(&manifest, &context, CompileOperation::Read(&read));
 
         // The neutral-IR bridge is the SERVED-DEFAULT emitter and carries F6/RLS1's
-        // defense-in-depth tenant backstop (`AND "tenant_id" = $N`) that the legacy
-        // fallback planner omits — it is intentionally MORE tenant-scoped, not
-        // byte-identical. Assert the safe-subset relationship instead of equality:
+        // defense-in-depth tenant backstop (`AND "tenant_id" = $N`); the fallback
+        // planner now appends the same verified backstop, but the two are not
+        // byte-identical (parenthesization, casts). Assert the relationship instead of equality:
         // the IR keeps the caller's predicates, appends exactly the tenant backstop
         // as one extra positional param, and preserves projection/order/limit.
         //
@@ -4006,9 +4408,20 @@ mod tests {
         param_cols.sort();
         assert_eq!(
             param_cols,
-            vec!["status".to_string(), "tenant_id".to_string()],
-            "legacy planner filters on exactly the caller columns (inter-column order is a map-iteration artifact)"
+            vec![
+                "status".to_string(),
+                "tenant_id".to_string(),
+                "tenant_id".to_string()
+            ],
+            "legacy planner filters on the caller columns plus the verified tenant backstop \
+             (inter-column order is a map-iteration artifact)"
         );
+        assert_eq!(
+            legacy_plan.parameter_columns.last().map(String::as_str),
+            Some("tenant_id"),
+            "the verified tenant backstop is the planner's last positional param"
+        );
+        assert_eq!(legacy_plan.context_parameter_values, ["tenant-a"]);
         // Caller's 2 params + the 1 tenant backstop.
         assert_eq!(
             compiled_params.len(),

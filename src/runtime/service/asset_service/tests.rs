@@ -5,8 +5,52 @@
 
 #[cfg(test)]
 mod step_executor_tests {
-    use super::super::steps::{StepContext, StepOutcome, StepRegistry, is_byte_step};
+    use super::super::steps::{
+        EMBED_STEP_MODEL, StepContext, StepOutcome, StepRegistry, derived_quota_allows,
+        is_byte_step,
+    };
     use crate::proto::udb::core::asset::entity::v1::StepType as T;
+
+    /// The EMBED step is a metadata feature hash, not a content/semantic
+    /// embedding. Its result must say so, so no consumer treats it as one.
+    #[test]
+    fn embed_step_result_names_its_metadata_feature_hash_honestly() {
+        let registry = StepRegistry::default_registry();
+        let ctx = StepContext {
+            asset_name: "report",
+            metadata_json: "{}",
+        };
+        let StepOutcome::Completed(v) = registry.run(T::Embed as i32, &ctx) else {
+            panic!("EMBED should complete");
+        };
+        assert_eq!(v["embedding_model"], EMBED_STEP_MODEL);
+        assert_eq!(v["embedding_input"], "asset_name+metadata");
+        assert_eq!(v["semantic"], false);
+        assert!(EMBED_STEP_MODEL.contains("feature_hash"));
+    }
+
+    /// Derived asset objects are charged against the tenant storage quota before
+    /// they are stored: 0 = unlimited, otherwise used + add must fit.
+    #[test]
+    fn derived_objects_are_gated_by_the_tenant_quota() {
+        assert!(derived_quota_allows(10_000, 10_000, 0), "0 = unlimited");
+        assert!(
+            derived_quota_allows(900, 100, 1000),
+            "exactly at quota fits"
+        );
+        assert!(
+            !derived_quota_allows(901, 100, 1000),
+            "one byte over refuses"
+        );
+        assert!(
+            derived_quota_allows(1000, -5, 1000),
+            "negative add never charges"
+        );
+        assert!(
+            !derived_quota_allows(i64::MAX, 1, 1000),
+            "saturates, never wraps"
+        );
+    }
 
     #[test]
     fn registry_dispatches_embed_extract_and_fails_unknown_metadata_step() {

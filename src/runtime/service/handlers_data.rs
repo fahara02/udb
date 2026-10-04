@@ -826,9 +826,15 @@ impl DataBrokerService {
         // straight to the executor with no tenant/predicate injection. For backends
         // that HAVE a neutral-IR compiler this raw fall-through is now the gated
         // exception: blocked (fail-closed) in production, counted in dev.
-        if compiled_dispatch.is_none() {
+        let spec_json = if compiled_dispatch.is_none() {
             enforce_raw_dispatch_gate(&resolved_backend.backend, self.metrics.as_ref())?;
-        }
+            // Raw specs never carry the broker-internal `compiler_mediated`
+            // marker, and raw KV/object keys are forced under the caller's
+            // tenant namespace (the same scheme as the IR / typed paths).
+            harden_raw_dispatch_spec(&resolved_backend.backend, &operation, context, spec_json)?
+        } else {
+            spec_json
+        };
         let operation = compiled_dispatch
             .as_ref()
             .map(|compiled| compiled.operation.clone())
@@ -1075,9 +1081,139 @@ fn raw_dispatch_decision(
     if is_production {
         return Err(raw_dispatch_disabled_status(kind));
     }
-    // Dev mode: permit the raw path but record the drift.
+    // Dev mode: permit the raw path but never silently — a raw spec carries
+    // no broker-injected tenant/project scope, so record the drift AND warn.
     metrics.inc_raw_dispatch_total(kind.as_str());
+    tracing::warn!(
+        backend = %kind.as_str(),
+        "raw (un-mediated) dispatch executed without broker tenant scoping; \
+         blocked in production unless the per-backend opt-out is set — send an \
+         `ir` envelope (or a typed store RPC on a manifest entity) instead"
+    );
     Ok(())
+}
+
+/// Hardening applied to every RAW (un-compiled) dispatch spec before it
+/// reaches an executor:
+///
+/// * `compiler_mediated` is stripped. It is a broker-internal marker that only
+///   the IR compilation path sets; executors use it to admit compiler-shaped
+///   DDL/mutations (e.g. Cassandra CREATE/DROP, ClickHouse compiled
+///   mutations), so a caller must never be able to assert it.
+/// * Redis / Memcached keys (`key`, `keys`, `pattern`) are forced under the
+///   caller's `udb:{project}:{tenant}:` namespace — the same namespace the
+///   KV IR compilers write under.
+/// * S3 / MinIO object keys (`key`, `object_key`) are forced under
+///   `__udb_t/{tenant}/` — the same scheme as the typed object RPCs.
+///
+/// KV/object scoping fails closed (`tenant_scope_required`) for an
+/// authenticated non-admin caller whose verified tenant is empty, instead of
+/// falling back to a shared namespace.
+fn harden_raw_dispatch_spec(
+    backend: &str,
+    operation: &str,
+    context: &crate::RequestContext,
+    spec_json: String,
+) -> Result<String, Status> {
+    let enforce_tenant = crate::runtime::service::method_security::claim_context_present()
+        && !crate::runtime::service::method_security::current_claim_context()
+            .is_cross_tenant_admin();
+    harden_raw_dispatch_spec_with(backend, operation, context, enforce_tenant, spec_json)
+}
+
+/// Pure core of [`harden_raw_dispatch_spec`] (the claim-context read is
+/// lifted out so the policy is unit-testable).
+fn harden_raw_dispatch_spec_with(
+    backend: &str,
+    operation: &str,
+    context: &crate::RequestContext,
+    enforce_tenant: bool,
+    spec_json: String,
+) -> Result<String, Status> {
+    use crate::backend::BackendKind;
+    let kind = BackendKind::from_token(backend);
+    let kv = matches!(kind, Some(BackendKind::Redis | BackendKind::Memcached));
+    let object = matches!(kind, Some(BackendKind::S3 | BackendKind::Minio))
+        && matches!(operation, "get_object" | "put_object" | "delete_object");
+    if !kv && !object && !spec_json.contains("compiler_mediated") {
+        return Ok(spec_json);
+    }
+    let mut spec: serde_json::Value = serde_json::from_str(&spec_json).map_err(|err| {
+        handlers_data_invalid_field(
+            "spec_json",
+            "must be valid dispatch JSON",
+            format!("invalid spec_json: {err}"),
+        )
+    })?;
+    let serde_json::Value::Object(map) = &mut spec else {
+        // Not an object: there is nothing to scope or strip; the executor
+        // rejects the shape itself.
+        return Ok(spec_json);
+    };
+    map.remove("compiler_mediated");
+    if kv || object {
+        if enforce_tenant && context.tenant_id.trim().is_empty() {
+            return Err(crate::runtime::executor_utils::policy_status(
+                "generic_dispatch_raw_dispatch",
+                "tenant_scope_required",
+                format!(
+                    "raw {backend} dispatch requires a verified tenant: keys are tenant-namespaced \
+                     and an empty tenant would address a shared namespace"
+                ),
+            ));
+        }
+        if kv {
+            let namespace = raw_kv_namespace(&context.project_id, &context.tenant_id);
+            for field in ["key", "pattern"] {
+                if let Some(serde_json::Value::String(raw)) = map.get_mut(field) {
+                    let scoped = scope_raw_kv_key(&namespace, raw);
+                    *raw = scoped;
+                }
+            }
+            if let Some(serde_json::Value::Array(keys)) = map.get_mut("keys") {
+                for key in keys.iter_mut() {
+                    if let serde_json::Value::String(raw) = key {
+                        let scoped = scope_raw_kv_key(&namespace, raw);
+                        *raw = scoped;
+                    }
+                }
+            }
+        } else {
+            for field in ["key", "object_key"] {
+                if let Some(serde_json::Value::String(raw)) = map.get_mut(field) {
+                    let scoped =
+                        crate::runtime::executor_utils::tenant_scoped_object_key(context, raw);
+                    *raw = scoped;
+                }
+            }
+        }
+    }
+    Ok(spec.to_string())
+}
+
+/// `udb:{project}:{tenant}:` — the key namespace the Redis / Memcached IR
+/// compilers emit (empty ids fall back to `default`, as the compilers do).
+fn raw_kv_namespace(project_id: &str, tenant_id: &str) -> String {
+    let or_default = |value: &str| {
+        if value.trim().is_empty() {
+            "default".to_string()
+        } else {
+            value.to_string()
+        }
+    };
+    format!("udb:{}:{}:", or_default(project_id), or_default(tenant_id))
+}
+
+/// Force a raw KV key (or SCAN pattern) under `namespace`. A key already in
+/// the namespace is unchanged (idempotent); any other key — including one
+/// naming another tenant's namespace — is nested beneath ours, so it can only
+/// ever address the caller's own keys.
+fn scope_raw_kv_key(namespace: &str, key: &str) -> String {
+    if key.starts_with(namespace) {
+        key.to_string()
+    } else {
+        format!("{namespace}{key}")
+    }
 }
 
 fn compile_neutral_ir_dispatch(
@@ -2453,6 +2589,116 @@ mod tests {
         assert!(!crate::backend::plugin::compiler_mediated_runtime_path_wired(&redis));
         raw_dispatch_decision(&redis, true, false, &noop)
             .expect("non-data-plane-mediated backend must never be gated");
+    }
+
+    fn raw_ctx(tenant: &str, project: &str) -> crate::RequestContext {
+        crate::RequestContext {
+            tenant_id: tenant.into(),
+            project_id: project.into(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn raw_dispatch_strips_caller_compiler_mediated_marker() {
+        let ctx = raw_ctx("t1", "p1");
+        for backend in ["cassandra", "clickhouse", "neo4j", "mongodb"] {
+            let spec = serde_json::json!({
+                "sql": "CREATE TABLE IF NOT EXISTS \"ks\".\"t\" (id text PRIMARY KEY)",
+                "compiler_mediated": true,
+            });
+            let out =
+                harden_raw_dispatch_spec_with(backend, "mutate", &ctx, false, spec.to_string())
+                    .unwrap();
+            let out: serde_json::Value = serde_json::from_str(&out).unwrap();
+            assert!(
+                out.get("compiler_mediated").is_none(),
+                "{backend}: caller-asserted compiler_mediated must be stripped: {out}"
+            );
+            assert_eq!(out["sql"], spec["sql"]);
+        }
+        // A spec that never mentions the marker passes through byte-for-byte.
+        let untouched = r#"{"cypher":"MATCH (n) RETURN n"}"#;
+        assert_eq!(
+            harden_raw_dispatch_spec_with("neo4j", "query", &ctx, true, untouched.into()).unwrap(),
+            untouched
+        );
+    }
+
+    #[test]
+    fn raw_kv_and_object_keys_are_forced_under_the_tenant_namespace() {
+        let ctx = raw_ctx("t1", "p1");
+        let redis = harden_raw_dispatch_spec_with(
+            "redis",
+            "query",
+            &ctx,
+            true,
+            serde_json::json!({"operation": "scan", "pattern": "udb:p2:t2:*", "keys": ["a", "udb:p1:t1:b"], "key": "k"})
+                .to_string(),
+        )
+        .unwrap();
+        let redis: serde_json::Value = serde_json::from_str(&redis).unwrap();
+        assert_eq!(redis["key"], "udb:p1:t1:k");
+        // A cross-tenant pattern is nested under ours, never honoured.
+        assert_eq!(redis["pattern"], "udb:p1:t1:udb:p2:t2:*");
+        assert_eq!(
+            redis["keys"],
+            serde_json::json!(["udb:p1:t1:a", "udb:p1:t1:b"])
+        );
+
+        let memcached = harden_raw_dispatch_spec_with(
+            "memcached",
+            "mutate",
+            &ctx,
+            true,
+            serde_json::json!({"op": "set", "key": "session", "value": "v"}).to_string(),
+        )
+        .unwrap();
+        let memcached: serde_json::Value = serde_json::from_str(&memcached).unwrap();
+        assert_eq!(memcached["key"], "udb:p1:t1:session");
+
+        let s3 = harden_raw_dispatch_spec_with(
+            "s3",
+            "get_object",
+            &ctx,
+            true,
+            serde_json::json!({"bucket": "b", "key": "docs/a.pdf", "object_key": "docs/a.pdf"})
+                .to_string(),
+        )
+        .unwrap();
+        let s3: serde_json::Value = serde_json::from_str(&s3).unwrap();
+        assert_eq!(s3["key"], "__udb_t/t1/docs/a.pdf");
+        assert_eq!(s3["object_key"], "__udb_t/t1/docs/a.pdf");
+        assert_eq!(s3["bucket"], "b");
+    }
+
+    #[test]
+    fn raw_kv_dispatch_fails_closed_without_a_tenant_under_enforcement() {
+        let err = harden_raw_dispatch_spec_with(
+            "redis",
+            "query",
+            &raw_ctx("", "p1"),
+            true,
+            serde_json::json!({"operation": "get", "key": "k"}).to_string(),
+        )
+        .expect_err("empty tenant must not address the shared default namespace");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_policy_detail(
+            &err,
+            "generic_dispatch_raw_dispatch",
+            "tenant_scope_required",
+        );
+        // Without enforcement (internal / single-tenant) the default namespace
+        // is used, matching the KV IR compilers.
+        let out = harden_raw_dispatch_spec_with(
+            "redis",
+            "query",
+            &raw_ctx("", ""),
+            false,
+            serde_json::json!({"operation": "get", "key": "k"}).to_string(),
+        )
+        .unwrap();
+        assert!(out.contains("udb:default:default:k"), "{out}");
     }
 
     #[test]

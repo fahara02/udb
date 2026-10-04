@@ -220,6 +220,50 @@ impl ObjectExecutor for WeaviateExecutor {
     }
 }
 
+/// Server-stamped isolation / provenance keys that must match EXACTLY. Under
+/// Weaviate's default `word` tokenization an `Equal` on a text property matches
+/// any object sharing a token (a tenant id `acme-eu` would match `acme`), so a
+/// tenant filter would leak across tenants; `field` tokenization compares the
+/// whole trimmed value.
+const WEAVIATE_EXACT_MATCH_PROPERTIES: &[&str] = &[
+    "_tenant_id",
+    "_project_id",
+    "_source",
+    "_parent_pk",
+    "_point_id",
+    "_source_pk",
+    "_chunk_hash",
+    "_document_id",
+    "_doc_version",
+    "_model_id",
+];
+
+/// The class schema a vector collection is ensured with: the exact-match
+/// stamp keys above (`tokenization: field`), the numeric chunk provenance, and
+/// the searchable chunk text. Declaring them up front also lets the search
+/// GraphQL select them on a class no object has been written to yet. Pure.
+pub(crate) fn weaviate_vector_class_schema(resource_name: &str) -> JsonValue {
+    let mut properties = vec![serde_json::json!({ "name": "tag", "dataType": ["text"] })];
+    for name in WEAVIATE_EXACT_MATCH_PROPERTIES {
+        properties.push(serde_json::json!({
+            "name": name,
+            "dataType": ["text"],
+            "tokenization": "field"
+        }));
+    }
+    properties.push(serde_json::json!({ "name": "_chunk_seq", "dataType": ["int"] }));
+    properties.push(serde_json::json!({ "name": "_chunk_text", "dataType": ["text"] }));
+    properties.push(serde_json::json!({
+        "name": "_indexed_at_unix_ms",
+        "dataType": ["number"]
+    }));
+    serde_json::json!({
+        "class": weaviate_class_name(resource_name),
+        "vectorizer": "none",
+        "properties": properties
+    })
+}
+
 impl ResourceAdminExecutor for WeaviateExecutor {
     async fn ensure_resource(
         &self,
@@ -228,15 +272,7 @@ impl ResourceAdminExecutor for WeaviateExecutor {
     ) -> Result<(), tonic::Status> {
         let _spec: JsonValue =
             serde_json::from_str(spec_json).map_err(invalid_ensure_resource_spec_status)?;
-        let spec = serde_json::json!({
-            "class": weaviate_class_name(resource_name),
-            "vectorizer": "none",
-            "properties": [
-                { "name": "tag", "dataType": ["text"] },
-                { "name": "_tenant_id", "dataType": ["text"] },
-                { "name": "_project_id", "dataType": ["text"] }
-            ]
-        });
+        let spec = weaviate_vector_class_schema(resource_name);
         self.client
             .request_json(reqwest::Method::POST, "/v1/schema", &spec)
             .await?;
@@ -353,6 +389,34 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(exec.enforce(&ctx), ContextEffect::Enforced { .. }));
+    }
+
+    #[test]
+    fn vector_class_schema_declares_field_tokenized_isolation_keys() {
+        let schema = weaviate_vector_class_schema("docs");
+        assert_eq!(schema["class"], weaviate_class_name("docs"));
+        let properties = schema["properties"].as_array().expect("properties");
+        for key in [
+            "_tenant_id",
+            "_project_id",
+            "_source",
+            "_parent_pk",
+            "_point_id",
+        ] {
+            let property = properties
+                .iter()
+                .find(|property| property["name"] == key)
+                .unwrap_or_else(|| panic!("{key} must be declared"));
+            assert_eq!(
+                property["tokenization"], "field",
+                "{key} must match exactly, not by word token"
+            );
+        }
+        let seq = properties
+            .iter()
+            .find(|property| property["name"] == "_chunk_seq")
+            .expect("_chunk_seq declared");
+        assert_eq!(seq["dataType"], serde_json::json!(["int"]));
     }
 
     #[test]

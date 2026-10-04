@@ -39,7 +39,16 @@ impl ClickHouseCompiler {
         ctx: &'a CompileContext<'_>,
     ) -> Result<&'a ManifestTable, CompileError> {
         match crate::broker::table_lookup(ctx.manifest, message_type) {
-            crate::broker::TableLookup::Found(table) => Ok(table),
+            // Fail closed on an empty tenant when enforcement is on (the
+            // non-SQL counterpart of the generic-SQL tenant-scope check).
+            crate::broker::TableLookup::Found(table) => {
+                super::util::require_tenant_scope(
+                    table,
+                    ctx,
+                    super::util::TenantScopeKind::DeclaredColumn,
+                )?;
+                Ok(table)
+            }
             // fix_plan §4.1: an ambiguous short name names its candidates so the
             // caller can FQN-qualify — never a silent first-wins misroute.
             crate::broker::TableLookup::Ambiguous { .. } => Err(CompileError::Malformed {
@@ -207,9 +216,10 @@ impl Compiler for ClickHouseCompiler {
 
         // ClickHouse: `database`.`table`. Reuse manifest's `schema` as DB.
         let mut sql = format!(
-            "SELECT {select} FROM `{db}`.`{table}`",
+            "SELECT {select} FROM `{db}`.`{table}`{final_}",
             db = table.schema,
             table = table.table,
+            final_ = final_modifier(table, ctx),
         );
 
         let user_body: Option<String> = if let Some(filter) = &op.filter {
@@ -457,10 +467,11 @@ impl Compiler for ClickHouseCompiler {
             select_parts.push(render_ch_aggregate(agg, table, &op.message_type)?);
         }
         let mut sql = format!(
-            "SELECT {sel} FROM `{db}`.`{table}`",
+            "SELECT {sel} FROM `{db}`.`{table}`{final_}",
             sel = select_parts.join(", "),
             db = table.schema,
             table = table.table,
+            final_ = final_modifier(table, ctx),
         );
 
         let user_body: Option<String> = if let Some(filter) = &op.filter {
@@ -575,10 +586,11 @@ impl Compiler for ClickHouseCompiler {
         }
         let score_expr = score_parts.join(" + ");
         let mut sql = format!(
-            "SELECT *, ({score_expr}) AS _score FROM `{db}`.`{table}` WHERE ({})",
+            "SELECT *, ({score_expr}) AS _score FROM `{db}`.`{table}`{final_} WHERE ({})",
             where_parts.join(" OR "),
             db = table.schema,
             table = table.table,
+            final_ = final_modifier(table, ctx),
         );
 
         if let Some(filter) = &op.filter {
@@ -857,6 +869,37 @@ fn resolve_ch_column<'a>(
         })
 }
 
+/// ` FINAL` when the table's ClickHouse store uses an engine that only
+/// collapses rows at background-merge time (`ReplacingMergeTree` — the
+/// generator default — and the `Collapsing` family). Without it a read or
+/// aggregate sees every version of an updated row until a merge happens to run,
+/// so counts and sums include stale versions. Tables with no ClickHouse store in
+/// the manifest keep a plain `FROM`.
+fn final_modifier(table: &ManifestTable, ctx: &CompileContext<'_>) -> &'static str {
+    let engine = ctx
+        .manifest
+        .stores
+        .iter()
+        .find(|store| {
+            store.backend.eq_ignore_ascii_case("clickhouse")
+                && store.owner_schema == table.schema
+                && store.owner_table == table.table
+        })
+        .map(|store| {
+            store
+                .options
+                .iter()
+                .find(|option| option.key == "udb.ch_engine" || option.key == "engine")
+                .map(|option| option.value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| "ReplacingMergeTree".to_string())
+        });
+    match engine {
+        Some(engine) if engine.contains("Replacing") || engine.contains("Collapsing") => " FINAL",
+        _ => "",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1057,6 +1100,22 @@ mod tests {
         let (statement, params) = sql(ClickHouseCompiler.compile_read(&read, &ctx).unwrap());
         assert_eq!(statement, "SELECT * FROM `analytics`.`events`");
         assert!(params.is_empty());
+    }
+
+    /// Fail closed: a table that declares a tenant column refuses an empty
+    /// tenant under enforcement; a table without one is unaffected (the
+    /// columnar compiler never references an undeclared column).
+    #[test]
+    fn enforced_empty_tenant_fails_closed_only_for_tenant_tables() {
+        let read = LogicalRead::message("acme.billing.v1.Event");
+        let m = tenant_fixture();
+        let ctx = CompileContext::new(&m).enforcing_tenant_scope(true);
+        let err = ClickHouseCompiler.compile_read(&read, &ctx).unwrap_err();
+        assert_eq!(err.code(), "tenant_scope_required");
+
+        let plain = fixture();
+        let ctx = CompileContext::new(&plain).enforcing_tenant_scope(true);
+        assert!(ClickHouseCompiler.compile_read(&read, &ctx).is_ok());
     }
 
     #[test]

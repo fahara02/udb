@@ -24,6 +24,58 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Outcome reported by AckWorkflowStep for the dispatched step.
+type WorkflowStepOutcome int32
+
+const (
+	WorkflowStepOutcome_WORKFLOW_STEP_OUTCOME_UNSPECIFIED WorkflowStepOutcome = 0
+	// The step's side effects completed; the workflow advances.
+	WorkflowStepOutcome_WORKFLOW_STEP_OUTCOME_SUCCEEDED WorkflowStepOutcome = 1
+	// The step failed; the workflow fails (compensating completed steps).
+	WorkflowStepOutcome_WORKFLOW_STEP_OUTCOME_FAILED WorkflowStepOutcome = 2
+)
+
+// Enum value maps for WorkflowStepOutcome.
+var (
+	WorkflowStepOutcome_name = map[int32]string{
+		0: "WORKFLOW_STEP_OUTCOME_UNSPECIFIED",
+		1: "WORKFLOW_STEP_OUTCOME_SUCCEEDED",
+		2: "WORKFLOW_STEP_OUTCOME_FAILED",
+	}
+	WorkflowStepOutcome_value = map[string]int32{
+		"WORKFLOW_STEP_OUTCOME_UNSPECIFIED": 0,
+		"WORKFLOW_STEP_OUTCOME_SUCCEEDED":   1,
+		"WORKFLOW_STEP_OUTCOME_FAILED":      2,
+	}
+)
+
+func (x WorkflowStepOutcome) Enum() *WorkflowStepOutcome {
+	p := new(WorkflowStepOutcome)
+	*p = x
+	return p
+}
+
+func (x WorkflowStepOutcome) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WorkflowStepOutcome) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_workflow_services_v1_workflow_service_proto_enumTypes[0].Descriptor()
+}
+
+func (WorkflowStepOutcome) Type() protoreflect.EnumType {
+	return &file_udb_core_workflow_services_v1_workflow_service_proto_enumTypes[0]
+}
+
+func (x WorkflowStepOutcome) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WorkflowStepOutcome.Descriptor instead.
+func (WorkflowStepOutcome) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_workflow_services_v1_workflow_service_proto_rawDescGZIP(), []int{0}
+}
+
 type StartWorkflowRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Verified against the bearer/claim tenant; cross-tenant values are rejected.
@@ -664,6 +716,159 @@ func (x *SignalWorkflowResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+type AckWorkflowStepRequest struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	TenantId   string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	WorkflowId string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	// Zero-based index of the dispatched step being acknowledged (the
+	// `step_index` carried by `udb.workflow.step.dispatched.v1`). An ack for any
+	// other step is rejected, so a stale or misrouted ack can never advance the
+	// workflow.
+	StepIndex int32               `protobuf:"varint,3,opt,name=step_index,json=stepIndex,proto3" json:"step_index,omitempty"`
+	Outcome   WorkflowStepOutcome `protobuf:"varint,4,opt,name=outcome,proto3,enum=udb.core.workflow.services.v1.WorkflowStepOutcome" json:"outcome,omitempty"`
+	// Optional step output (JSON or text, bounded) carried on the resulting
+	// transition event.
+	Output string `protobuf:"bytes,5,opt,name=output,proto3" json:"output,omitempty"`
+	// Failure reason when outcome is FAILED; recorded as the workflow last_error.
+	ErrorMessage  string `protobuf:"bytes,6,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AckWorkflowStepRequest) Reset() {
+	*x = AckWorkflowStepRequest{}
+	mi := &file_udb_core_workflow_services_v1_workflow_service_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AckWorkflowStepRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AckWorkflowStepRequest) ProtoMessage() {}
+
+func (x *AckWorkflowStepRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_workflow_services_v1_workflow_service_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AckWorkflowStepRequest.ProtoReflect.Descriptor instead.
+func (*AckWorkflowStepRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_workflow_services_v1_workflow_service_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AckWorkflowStepRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *AckWorkflowStepRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *AckWorkflowStepRequest) GetStepIndex() int32 {
+	if x != nil {
+		return x.StepIndex
+	}
+	return 0
+}
+
+func (x *AckWorkflowStepRequest) GetOutcome() WorkflowStepOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return WorkflowStepOutcome_WORKFLOW_STEP_OUTCOME_UNSPECIFIED
+}
+
+func (x *AckWorkflowStepRequest) GetOutput() string {
+	if x != nil {
+		return x.Output
+	}
+	return ""
+}
+
+func (x *AckWorkflowStepRequest) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+type AckWorkflowStepResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Message string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Error   *v1.ApiError           `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	// Workflow status after the acknowledgement (e.g. "RUNNING", "COMPLETED",
+	// "COMPENSATING", "FAILED").
+	Status        string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AckWorkflowStepResponse) Reset() {
+	*x = AckWorkflowStepResponse{}
+	mi := &file_udb_core_workflow_services_v1_workflow_service_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AckWorkflowStepResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AckWorkflowStepResponse) ProtoMessage() {}
+
+func (x *AckWorkflowStepResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_workflow_services_v1_workflow_service_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AckWorkflowStepResponse.ProtoReflect.Descriptor instead.
+func (*AckWorkflowStepResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_workflow_services_v1_workflow_service_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *AckWorkflowStepResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *AckWorkflowStepResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+func (x *AckWorkflowStepResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 var File_udb_core_workflow_services_v1_workflow_service_proto protoreflect.FileDescriptor
 
 const file_udb_core_workflow_services_v1_workflow_service_proto_rawDesc = "" +
@@ -721,7 +926,24 @@ const file_udb_core_workflow_services_v1_workflow_service_proto_rawDesc = "" +
 	"\x0esignal_payload\x18\x04 \x01(\tR\rsignalPayload:\x1f\x9a\xb2\x19\x1b\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x01\"\x87\x01\n" +
 	"\x16SignalWorkflowResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1f\x9a\xb2\x19\x1b\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x012\x88\x14\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1f\x9a\xb2\x19\x1b\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x01\"\xa1\x02\n" +
+	"\x16AckWorkflowStepRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
+	"\vworkflow_id\x18\x02 \x01(\tR\n" +
+	"workflowId\x12\x1d\n" +
+	"\n" +
+	"step_index\x18\x03 \x01(\x05R\tstepIndex\x12L\n" +
+	"\aoutcome\x18\x04 \x01(\x0e22.udb.core.workflow.services.v1.WorkflowStepOutcomeR\aoutcome\x12\x16\n" +
+	"\x06output\x18\x05 \x01(\tR\x06output\x12#\n" +
+	"\rerror_message\x18\x06 \x01(\tR\ferrorMessage:\x1f\x9a\xb2\x19\x1b\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x01\"\xa0\x01\n" +
+	"\x17AckWorkflowStepResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status:\x1f\x9a\xb2\x19\x1b\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x01*\x83\x01\n" +
+	"\x13WorkflowStepOutcome\x12%\n" +
+	"!WORKFLOW_STEP_OUTCOME_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fWORKFLOW_STEP_OUTCOME_SUCCEEDED\x10\x01\x12 \n" +
+	"\x1cWORKFLOW_STEP_OUTCOME_FAILED\x10\x022\x88\x18\n" +
 	"\x0fWorkflowService\x12\xd2\x03\n" +
 	"\rStartWorkflow\x123.udb.core.workflow.services.v1.StartWorkflowRequest\x1a4.udb.core.workflow.services.v1.StartWorkflowResponse\"\xd5\x02\xca\xf3\x18@\b\x02\x1a\x1budb:workflow:start-workflow \x01J\x02\x01\x02j\x16workflow.StartWorkflow\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18:\b\x01\x12\x0estart_workflow\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x01Z\rstartWorkflow\xea\xf3\x18]\n" +
 	"\x16workflow.StartWorkflow\x12\x17udb.workflow.started.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18B\n" +
@@ -735,7 +957,10 @@ const file_udb_core_workflow_services_v1_workflow_service_proto_rawDesc = "" +
 	"\bworkflow\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/workflows/{workflow_id}:cancel\x12\xec\x03\n" +
 	"\x0eSignalWorkflow\x124.udb.core.workflow.services.v1.SignalWorkflowRequest\x1a5.udb.core.workflow.services.v1.SignalWorkflowResponse\"\xec\x02\xca\xf3\x18B\b\x02\x1a\x1cudb:workflow:signal-workflow \x01J\x02\x01\x02j\x17workflow.SignalWorkflow\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x0fsignal_workflow\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x01Z\x0esignalWorkflow\xea\xf3\x18a\n" +
 	"\x17workflow.SignalWorkflow\x12\x18udb.workflow.signaled.v1\x1a\vworkflow_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18B\n" +
-	"\bworkflow\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/workflows/{workflow_id}:signal\x1a\xea\x02\xca\xf0\x19k\n" +
+	"\bworkflow\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/workflows/{workflow_id}:signal\x12\xfd\x03\n" +
+	"\x0fAckWorkflowStep\x125.udb.core.workflow.services.v1.AckWorkflowStepRequest\x1a6.udb.core.workflow.services.v1.AckWorkflowStepResponse\"\xfa\x02\xca\xf3\x18E\b\x02\x1a\x1eudb:workflow:ack-workflow-step \x01J\x02\x01\x02j\x18workflow.AckWorkflowStep\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18?\b\x01\x12\x11ack_workflow_step\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x01Z\x0fackWorkflowStep\xea\xf3\x18g\n" +
+	"\x18workflow.AckWorkflowStep\x12\x1dudb.workflow.step.advanced.v1\x1a\vworkflow_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18B\n" +
+	"\bworkflow\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02):\x01*\"$/v1/workflows/{workflow_id}:ack-step\x1a\xea\x02\xca\xf0\x19k\n" +
 	"\bworkflow\x12\bworkflow\x1a\bworkflow\"\tWorkflows*\bworkflow0\x018\x01h\x01z\bworkflow\x82\x01\bworkflow\x8a\x01\bworkflow\x92\x01\x0fnative.workflow\xd2\xf0\x19\x1b\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\bworkflowP\x01\xda\xf0\x19\x91\x01\n" +
 	"\bworkflow\x12\x13udb/native/workflow\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1audb.native.workflow.config:\bworkflowJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19B\n" +
 	"\bworkflow\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x9f\x02\n" +
@@ -753,44 +978,52 @@ func file_udb_core_workflow_services_v1_workflow_service_proto_rawDescGZIP() []b
 	return file_udb_core_workflow_services_v1_workflow_service_proto_rawDescData
 }
 
-var file_udb_core_workflow_services_v1_workflow_service_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_udb_core_workflow_services_v1_workflow_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_udb_core_workflow_services_v1_workflow_service_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_udb_core_workflow_services_v1_workflow_service_proto_goTypes = []any{
-	(*StartWorkflowRequest)(nil),   // 0: udb.core.workflow.services.v1.StartWorkflowRequest
-	(*StartWorkflowResponse)(nil),  // 1: udb.core.workflow.services.v1.StartWorkflowResponse
-	(*GetWorkflowRequest)(nil),     // 2: udb.core.workflow.services.v1.GetWorkflowRequest
-	(*GetWorkflowResponse)(nil),    // 3: udb.core.workflow.services.v1.GetWorkflowResponse
-	(*ListWorkflowsRequest)(nil),   // 4: udb.core.workflow.services.v1.ListWorkflowsRequest
-	(*ListWorkflowsResponse)(nil),  // 5: udb.core.workflow.services.v1.ListWorkflowsResponse
-	(*CancelWorkflowRequest)(nil),  // 6: udb.core.workflow.services.v1.CancelWorkflowRequest
-	(*CancelWorkflowResponse)(nil), // 7: udb.core.workflow.services.v1.CancelWorkflowResponse
-	(*SignalWorkflowRequest)(nil),  // 8: udb.core.workflow.services.v1.SignalWorkflowRequest
-	(*SignalWorkflowResponse)(nil), // 9: udb.core.workflow.services.v1.SignalWorkflowResponse
-	(*v1.ApiError)(nil),            // 10: udb.core.common.v1.ApiError
-	(*v11.WorkflowInstance)(nil),   // 11: udb.core.workflow.entity.v1.WorkflowInstance
+	(WorkflowStepOutcome)(0),        // 0: udb.core.workflow.services.v1.WorkflowStepOutcome
+	(*StartWorkflowRequest)(nil),    // 1: udb.core.workflow.services.v1.StartWorkflowRequest
+	(*StartWorkflowResponse)(nil),   // 2: udb.core.workflow.services.v1.StartWorkflowResponse
+	(*GetWorkflowRequest)(nil),      // 3: udb.core.workflow.services.v1.GetWorkflowRequest
+	(*GetWorkflowResponse)(nil),     // 4: udb.core.workflow.services.v1.GetWorkflowResponse
+	(*ListWorkflowsRequest)(nil),    // 5: udb.core.workflow.services.v1.ListWorkflowsRequest
+	(*ListWorkflowsResponse)(nil),   // 6: udb.core.workflow.services.v1.ListWorkflowsResponse
+	(*CancelWorkflowRequest)(nil),   // 7: udb.core.workflow.services.v1.CancelWorkflowRequest
+	(*CancelWorkflowResponse)(nil),  // 8: udb.core.workflow.services.v1.CancelWorkflowResponse
+	(*SignalWorkflowRequest)(nil),   // 9: udb.core.workflow.services.v1.SignalWorkflowRequest
+	(*SignalWorkflowResponse)(nil),  // 10: udb.core.workflow.services.v1.SignalWorkflowResponse
+	(*AckWorkflowStepRequest)(nil),  // 11: udb.core.workflow.services.v1.AckWorkflowStepRequest
+	(*AckWorkflowStepResponse)(nil), // 12: udb.core.workflow.services.v1.AckWorkflowStepResponse
+	(*v1.ApiError)(nil),             // 13: udb.core.common.v1.ApiError
+	(*v11.WorkflowInstance)(nil),    // 14: udb.core.workflow.entity.v1.WorkflowInstance
 }
 var file_udb_core_workflow_services_v1_workflow_service_proto_depIdxs = []int32{
-	10, // 0: udb.core.workflow.services.v1.StartWorkflowResponse.error:type_name -> udb.core.common.v1.ApiError
-	11, // 1: udb.core.workflow.services.v1.GetWorkflowResponse.workflow:type_name -> udb.core.workflow.entity.v1.WorkflowInstance
-	10, // 2: udb.core.workflow.services.v1.GetWorkflowResponse.error:type_name -> udb.core.common.v1.ApiError
-	11, // 3: udb.core.workflow.services.v1.ListWorkflowsResponse.workflows:type_name -> udb.core.workflow.entity.v1.WorkflowInstance
-	10, // 4: udb.core.workflow.services.v1.ListWorkflowsResponse.error:type_name -> udb.core.common.v1.ApiError
-	10, // 5: udb.core.workflow.services.v1.CancelWorkflowResponse.error:type_name -> udb.core.common.v1.ApiError
-	10, // 6: udb.core.workflow.services.v1.SignalWorkflowResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 7: udb.core.workflow.services.v1.WorkflowService.StartWorkflow:input_type -> udb.core.workflow.services.v1.StartWorkflowRequest
-	2,  // 8: udb.core.workflow.services.v1.WorkflowService.GetWorkflow:input_type -> udb.core.workflow.services.v1.GetWorkflowRequest
-	4,  // 9: udb.core.workflow.services.v1.WorkflowService.ListWorkflows:input_type -> udb.core.workflow.services.v1.ListWorkflowsRequest
-	6,  // 10: udb.core.workflow.services.v1.WorkflowService.CancelWorkflow:input_type -> udb.core.workflow.services.v1.CancelWorkflowRequest
-	8,  // 11: udb.core.workflow.services.v1.WorkflowService.SignalWorkflow:input_type -> udb.core.workflow.services.v1.SignalWorkflowRequest
-	1,  // 12: udb.core.workflow.services.v1.WorkflowService.StartWorkflow:output_type -> udb.core.workflow.services.v1.StartWorkflowResponse
-	3,  // 13: udb.core.workflow.services.v1.WorkflowService.GetWorkflow:output_type -> udb.core.workflow.services.v1.GetWorkflowResponse
-	5,  // 14: udb.core.workflow.services.v1.WorkflowService.ListWorkflows:output_type -> udb.core.workflow.services.v1.ListWorkflowsResponse
-	7,  // 15: udb.core.workflow.services.v1.WorkflowService.CancelWorkflow:output_type -> udb.core.workflow.services.v1.CancelWorkflowResponse
-	9,  // 16: udb.core.workflow.services.v1.WorkflowService.SignalWorkflow:output_type -> udb.core.workflow.services.v1.SignalWorkflowResponse
-	12, // [12:17] is the sub-list for method output_type
-	7,  // [7:12] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	13, // 0: udb.core.workflow.services.v1.StartWorkflowResponse.error:type_name -> udb.core.common.v1.ApiError
+	14, // 1: udb.core.workflow.services.v1.GetWorkflowResponse.workflow:type_name -> udb.core.workflow.entity.v1.WorkflowInstance
+	13, // 2: udb.core.workflow.services.v1.GetWorkflowResponse.error:type_name -> udb.core.common.v1.ApiError
+	14, // 3: udb.core.workflow.services.v1.ListWorkflowsResponse.workflows:type_name -> udb.core.workflow.entity.v1.WorkflowInstance
+	13, // 4: udb.core.workflow.services.v1.ListWorkflowsResponse.error:type_name -> udb.core.common.v1.ApiError
+	13, // 5: udb.core.workflow.services.v1.CancelWorkflowResponse.error:type_name -> udb.core.common.v1.ApiError
+	13, // 6: udb.core.workflow.services.v1.SignalWorkflowResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 7: udb.core.workflow.services.v1.AckWorkflowStepRequest.outcome:type_name -> udb.core.workflow.services.v1.WorkflowStepOutcome
+	13, // 8: udb.core.workflow.services.v1.AckWorkflowStepResponse.error:type_name -> udb.core.common.v1.ApiError
+	1,  // 9: udb.core.workflow.services.v1.WorkflowService.StartWorkflow:input_type -> udb.core.workflow.services.v1.StartWorkflowRequest
+	3,  // 10: udb.core.workflow.services.v1.WorkflowService.GetWorkflow:input_type -> udb.core.workflow.services.v1.GetWorkflowRequest
+	5,  // 11: udb.core.workflow.services.v1.WorkflowService.ListWorkflows:input_type -> udb.core.workflow.services.v1.ListWorkflowsRequest
+	7,  // 12: udb.core.workflow.services.v1.WorkflowService.CancelWorkflow:input_type -> udb.core.workflow.services.v1.CancelWorkflowRequest
+	9,  // 13: udb.core.workflow.services.v1.WorkflowService.SignalWorkflow:input_type -> udb.core.workflow.services.v1.SignalWorkflowRequest
+	11, // 14: udb.core.workflow.services.v1.WorkflowService.AckWorkflowStep:input_type -> udb.core.workflow.services.v1.AckWorkflowStepRequest
+	2,  // 15: udb.core.workflow.services.v1.WorkflowService.StartWorkflow:output_type -> udb.core.workflow.services.v1.StartWorkflowResponse
+	4,  // 16: udb.core.workflow.services.v1.WorkflowService.GetWorkflow:output_type -> udb.core.workflow.services.v1.GetWorkflowResponse
+	6,  // 17: udb.core.workflow.services.v1.WorkflowService.ListWorkflows:output_type -> udb.core.workflow.services.v1.ListWorkflowsResponse
+	8,  // 18: udb.core.workflow.services.v1.WorkflowService.CancelWorkflow:output_type -> udb.core.workflow.services.v1.CancelWorkflowResponse
+	10, // 19: udb.core.workflow.services.v1.WorkflowService.SignalWorkflow:output_type -> udb.core.workflow.services.v1.SignalWorkflowResponse
+	12, // 20: udb.core.workflow.services.v1.WorkflowService.AckWorkflowStep:output_type -> udb.core.workflow.services.v1.AckWorkflowStepResponse
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_workflow_services_v1_workflow_service_proto_init() }
@@ -803,13 +1036,14 @@ func file_udb_core_workflow_services_v1_workflow_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_workflow_services_v1_workflow_service_proto_rawDesc), len(file_udb_core_workflow_services_v1_workflow_service_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   10,
+			NumEnums:      1,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_udb_core_workflow_services_v1_workflow_service_proto_goTypes,
 		DependencyIndexes: file_udb_core_workflow_services_v1_workflow_service_proto_depIdxs,
+		EnumInfos:         file_udb_core_workflow_services_v1_workflow_service_proto_enumTypes,
 		MessageInfos:      file_udb_core_workflow_services_v1_workflow_service_proto_msgTypes,
 	}.Build()
 	File_udb_core_workflow_services_v1_workflow_service_proto = out.File

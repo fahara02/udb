@@ -1,5 +1,6 @@
 //! Object-store interaction for the native `StorageService`: the presigned-URL
-//! mint, the best-effort byte delete, the HEAD presence probe, and the two
+//! mint, the outcome-reporting byte delete, the HEAD presence probe, the
+//! physical-key candidate list shared by both upload paths, and the two
 //! result enums the handlers match on. Extracted verbatim from the former god
 //! file — the degraded-vs-failed presign distinction and the tri-state presence
 //! check are byte-for-byte identical; the methods take `&self` unchanged.
@@ -9,7 +10,7 @@ use tonic::Status;
 use crate::proto::udb::core::storage::entity::v1 as storage_entity_pb;
 
 use super::StorageServiceImpl;
-use super::config::{OBJECT_DELETE_ORPHANED, storage_sse_required};
+use super::config::storage_sse_required;
 use super::errors::storage_capability_status;
 
 /// Outcome of minting a presigned URL: a real URL + unix-seconds expiry, a
@@ -24,58 +25,87 @@ pub(crate) enum PresignOutcome {
 
 /// Tri-state object-presence result from the storage `object_exists` wrapper:
 /// `Unchecked` (metadata-only mode, no runtime — skip verification), `Absent`
-/// (object not in the store), or `Present` with the HEAD content-length + ETag.
+/// (object not in the store), or `Present` with the HEAD content-length + ETag
+/// and the physical `key` the bytes were found under (see
+/// [`file_object_key_candidates`]).
 pub(crate) enum ObjectCheck {
     Unchecked,
     Absent,
-    Present { size: i64, etag: String },
+    Present {
+        size: i64,
+        etag: String,
+        key: String,
+    },
+}
+
+/// The physical key the PUBLIC data-plane object RPCs (`PutObject`,
+/// `GeneratePresignedUrl`, `GetObject`) use for `object_key` under `tenant_id`:
+/// they namespace every key by the verified tenant. A client that falls back
+/// from the native presigned PUT to the public `PutObject` RPC (the documented
+/// fallback when no upload URL could be minted) therefore lands its bytes HERE,
+/// not at the bare `object_key` the native presign targets.
+pub(crate) fn data_plane_object_key(tenant_id: &str, object_key: &str) -> String {
+    let context = crate::RequestContext {
+        tenant_id: tenant_id.trim().to_string(),
+        ..crate::RequestContext::default()
+    };
+    crate::runtime::executor_utils::tenant_scoped_object_key(&context, object_key)
+}
+
+/// Every physical location a storage file's bytes may occupy, primary first:
+/// the bare `object_key` (where the native presigned PUT writes) and the
+/// tenant-namespaced key (where the public `PutObject` fallback writes). Finalize,
+/// download, and every byte delete consult this ONE list, so the two upload
+/// paths can never disagree about where a file lives. Deduplicated (a blank
+/// tenant yields a single key); empty for a key-less (metadata-only) file.
+pub(crate) fn file_object_key_candidates(tenant_id: &str, object_key: &str) -> Vec<String> {
+    if object_key.trim().is_empty() {
+        return Vec::new();
+    }
+    let primary = object_key.to_string();
+    let fallback = data_plane_object_key(tenant_id, object_key);
+    if fallback == primary {
+        vec![primary]
+    } else {
+        vec![primary, fallback]
+    }
 }
 
 impl StorageServiceImpl {
-    /// Best-effort delete of an object's bytes via the existing object executor.
-    /// Never fails the caller: on error the metadata row stays soft-deleted and
-    /// auditable, and the bytes are logged as orphaned for ops/lifecycle cleanup.
-    pub(crate) async fn delete_object_bytes(&self, project_id: &str, object_key: &str) {
-        let Some(runtime) = self.runtime.as_ref() else {
-            return;
+    /// The `(backend, bucket)` a file's bytes live in: the values recorded on the
+    /// row, falling back to this service's defaults when the row left them blank.
+    pub(crate) fn file_object_location(&self, file: &storage_entity_pb::File) -> (String, String) {
+        let backend = if file.backend.trim().is_empty() {
+            self.object_backend.clone()
+        } else {
+            file.backend.clone()
         };
-        if object_key.trim().is_empty() {
-            return;
-        }
-        let request_json = crate::runtime::core::setup_data::object_request_json(
-            "delete",
-            &self.object_bucket,
-            object_key,
-            "",
-        );
-        if let Err(err) = runtime
-            .delete_object_backend_target(&self.object_backend, None, project_id, &request_json)
-            .await
-        {
-            tracing::warn!(
-                error = %err,
-                object_key,
-                bucket = %self.object_bucket,
-                code = OBJECT_DELETE_ORPHANED,
-                "storage object byte delete failed; metadata soft-deleted (auditable), bytes orphaned"
-            );
-        }
+        let bucket = if file.bucket.trim().is_empty() {
+            self.object_bucket.clone()
+        } else {
+            file.bucket.clone()
+        };
+        (backend, bucket)
     }
 
-    /// Delete an object's bytes via the object executor, RETURNING the outcome —
-    /// unlike the best-effort [`Self::delete_object_bytes`], which swallows the
-    /// result. The HARD-delete convergence path and the GC-intent sweep MUST know
-    /// whether the bytes were actually removed, so a failure is surfaced (never
-    /// silently ignored) and the durable intent is left PENDING for retry.
+    /// Delete an object's bytes via the object executor, RETURNING the outcome.
+    /// Every delete path (SOFT, HARD convergence, the orphan reaper, the GC-intent
+    /// sweep) MUST know whether the bytes were actually removed, so a failure is
+    /// surfaced (never silently ignored) and the caller records a durable GC
+    /// intent / leaves it PENDING for retry.
     ///
-    /// Object DELETE is idempotent (S3/MinIO return success for an already-absent
-    /// key), so a re-drive after a partially-applied prior attempt converges rather
-    /// than erroring. `backend`/`bucket` fall back to the service defaults when the
-    /// intent/file did not record them.
+    /// Every candidate location ([`file_object_key_candidates`]) is deleted, so
+    /// bytes uploaded through either the native presign or the public `PutObject`
+    /// fallback are removed. Object DELETE is idempotent (S3/MinIO return success
+    /// for an already-absent key), so deleting the location that was never
+    /// written, or re-driving after a partial prior attempt, converges rather
+    /// than erroring. `backend`/`bucket` fall back to the service defaults when
+    /// the intent/file did not record them.
     pub(crate) async fn try_delete_object_bytes(
         &self,
         backend: &str,
         bucket: &str,
+        tenant_id: &str,
         project_id: &str,
         object_key: &str,
     ) -> Result<(), Status> {
@@ -100,11 +130,14 @@ impl StorageServiceImpl {
         } else {
             bucket
         };
-        let request_json =
-            crate::runtime::core::setup_data::object_request_json("delete", bucket, object_key, "");
-        runtime
-            .delete_object_backend_target(backend, None, project_id, &request_json)
-            .await
+        for key in file_object_key_candidates(tenant_id, object_key) {
+            let request_json =
+                crate::runtime::core::setup_data::object_request_json("delete", bucket, &key, "");
+            runtime
+                .delete_object_backend_target(backend, None, project_id, &request_json)
+                .await?;
+        }
+        Ok(())
     }
 
     /// Mint a presigned object URL via the runtime (PUT for uploads, GET for
@@ -193,12 +226,17 @@ impl StorageServiceImpl {
         } else {
             file.bucket.as_str()
         };
-        match runtime
-            .object_exists_backend_target(backend, &file.project_id, bucket, &file.object_key)
-            .await?
-        {
-            Some((size, etag)) => Ok(ObjectCheck::Present { size, etag }),
-            None => Ok(ObjectCheck::Absent),
+        // Probe every location the bytes may have been written to (native presign
+        // first, then the public PutObject fallback); the first hit wins and its
+        // physical key is returned so the caller streams/presigns THAT key.
+        for key in file_object_key_candidates(&file.tenant_id, &file.object_key) {
+            if let Some((size, etag)) = runtime
+                .object_exists_backend_target(backend, &file.project_id, bucket, &key)
+                .await?
+            {
+                return Ok(ObjectCheck::Present { size, etag, key });
+            }
         }
+        Ok(ObjectCheck::Absent)
     }
 }

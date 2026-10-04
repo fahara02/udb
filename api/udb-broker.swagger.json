@@ -46225,6 +46225,142 @@
         "x-udb-operation-kind": "read_only"
       }
     },
+    "/v1/workflows/{workflowId}:ack-step": {
+      "post": {
+        "summary": "Acknowledge the outcome of the step the workflow tick dispatched\n(`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:\nthe instance stays RUNNING awaiting this acknowledgement, and a step that is\nnot acknowledged within the step timeout fails the workflow (compensating\nany completed steps). SUCCEEDED advances to the next step (or COMPLETED on\nthe last one); FAILED fails the workflow through the same\nfailed/compensating path as a timeout.",
+        "operationId": "WorkflowService_AckWorkflowStep",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AckWorkflowStepResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceAckWorkflowStepBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/v1/workflows/{workflowId}:cancel": {
       "post": {
         "summary": "Cancel a workflow and trigger the saga compensation path (reverse-order). The\ninstance moves to COMPENSATING and the EXISTING recovery worker undoes the\nrecorded side effects — this RPC never reimplements compensation.",
@@ -47926,6 +48062,30 @@
         }
       }
     },
+    "WorkflowServiceAckWorkflowStepBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "stepIndex": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Zero-based index of the dispatched step being acknowledged (the\n`step_index` carried by `udb.workflow.step.dispatched.v1`). An ack for any\nother step is rejected, so a stale or misrouted ack can never advance the\nworkflow."
+        },
+        "outcome": {
+          "$ref": "#/definitions/v1WorkflowStepOutcome"
+        },
+        "output": {
+          "type": "string",
+          "description": "Optional step output (JSON or text, bounded) carried on the resulting\ntransition event."
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Failure reason when outcome is FAILED; recorded as the workflow last_error."
+        }
+      }
+    },
     "WorkflowServiceCancelWorkflowBody": {
       "type": "object",
       "properties": {
@@ -48370,6 +48530,21 @@
         "nacked": {
           "type": "boolean",
           "description": "True iff the node's last response was rejected (NACK) and not yet recovered."
+        }
+      }
+    },
+    "v1AckWorkflowStepResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError"
+        },
+        "status": {
+          "type": "string",
+          "description": "Workflow status after the acknowledgement (e.g. \"RUNNING\", \"COMPLETED\",\n\"COMPENSATING\", \"FAILED\")."
         }
       }
     },
@@ -60283,6 +60458,16 @@
       ],
       "default": "WORKFLOW_STATUS_UNSPECIFIED",
       "description": "Lifecycle status of a durable workflow instance (master-plan 9.12). Only RUNNING\ninstances whose next_run_at is due are claimed by the leader-elected workflow\ntick; terminal states (COMPLETED / COMPENSATED / CANCELLED / FAILED) are never\nre-advanced. COMPENSATING is the transitional state while the EXISTING saga\nrecovery worker reverses the recorded compensations (reverse-order).\n\n - WORKFLOW_STATUS_PENDING: Recorded but not yet eligible to advance.\n - WORKFLOW_STATUS_RUNNING: Eligible to advance when next_run_at is due.\n - WORKFLOW_STATUS_WAITING_SIGNAL: Blocked on an external signal (SignalWorkflow resumes it).\n - WORKFLOW_STATUS_COMPLETED: All steps advanced; terminal success.\n - WORKFLOW_STATUS_COMPENSATING: Cancellation requested; the saga compensation path is undoing side effects.\n - WORKFLOW_STATUS_COMPENSATED: Compensation completed; terminal.\n - WORKFLOW_STATUS_CANCELLED: Cancelled by an operator; terminal.\n - WORKFLOW_STATUS_FAILED: Forward execution failed; terminal."
+    },
+    "v1WorkflowStepOutcome": {
+      "type": "string",
+      "enum": [
+        "WORKFLOW_STEP_OUTCOME_UNSPECIFIED",
+        "WORKFLOW_STEP_OUTCOME_SUCCEEDED",
+        "WORKFLOW_STEP_OUTCOME_FAILED"
+      ],
+      "default": "WORKFLOW_STEP_OUTCOME_UNSPECIFIED",
+      "description": "Outcome reported by AckWorkflowStep for the dispatched step.\n\n - WORKFLOW_STEP_OUTCOME_SUCCEEDED: The step's side effects completed; the workflow advances.\n - WORKFLOW_STEP_OUTCOME_FAILED: The step failed; the workflow fails (compensating completed steps)."
     }
   }
 }

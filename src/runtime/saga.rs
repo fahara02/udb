@@ -48,6 +48,81 @@ pub const SAGA_STATUS_COMPENSATED: &str = "compensated";
 pub const SAGA_STATUS_FAILED_COMPENSATION: &str = "failed_compensation";
 pub const SAGA_STATUS_MANUAL_REVIEW: &str = "manual_review";
 
+// ── Data-plane saga ledger (single relation shared with recovery) ────────────
+//
+// The `BeginTx` data plane writes saga rows with raw SQL against the pool, and
+// the recovery worker / saga admin RPCs read them through `SagaStore`. Both
+// sides MUST resolve the relation through [`data_plane_saga_relation`]: the
+// production `PostgresCanonicalStore` is built with
+// `with_saga_relation(data_plane_saga_relation())`, and every data-plane SQL
+// builder below takes that same relation. The column set written here is the
+// `SagaStore` row shape (saga_id/tx_id/tenant_id/…/compensations), plus the
+// additive `owner_node` column below.
+
+/// Column recording which broker node opened an in-progress saga. Used only to
+/// scope the startup "crashed in-flight → indeterminate" sweep to this node's
+/// own sagas; it is additive (`DEFAULT ''`) so legacy rows and other stores'
+/// readers are unaffected.
+pub(crate) const SAGA_OWNER_COLUMN: &str = "owner_node";
+
+/// The one saga relation the data plane writes and the recovery store reads.
+pub(crate) fn data_plane_saga_relation() -> String {
+    SystemCatalogConfig::current().saga_relation()
+}
+
+/// Idempotent DDL adding [`SAGA_OWNER_COLUMN`] to an existing saga relation.
+pub(crate) fn saga_owner_column_ddl(relation: &str) -> String {
+    format!(
+        "ALTER TABLE {relation} ADD COLUMN IF NOT EXISTS {SAGA_OWNER_COLUMN} TEXT NOT NULL DEFAULT ''"
+    )
+}
+
+/// Data-plane `saga_begin` INSERT. Binds: `$1` saga_id (uuid text), `$2`
+/// tx_id, `$3` tenant_id, `$4` correlation_id, `$5` backend_instance, `$6`
+/// operation, `$7` owner node.
+pub(crate) fn data_plane_saga_begin_sql(relation: &str) -> String {
+    format!(
+        "INSERT INTO {relation} \
+         (saga_id, tx_id, tenant_id, correlation_id, backend_instance, operation, retry_count, compensation_status, steps, current_step, status, compensations, {SAGA_OWNER_COLUMN}, created_at) \
+         VALUES ($1::UUID, $2, $3, $4, $5, $6, 0, 'none', '[]'::JSONB, 0, 'in_progress', '[]'::JSONB, $7, NOW()) \
+         ON CONFLICT (saga_id) DO NOTHING"
+    )
+}
+
+/// Startup sweep: an `in_progress` saga becomes `indeterminate` only when this
+/// node opened it (a previous incarnation of this node crashed mid-flight) OR
+/// it has not been touched for longer than the stale threshold (its owner is
+/// gone). A peer node's live, recently-updated in-flight saga is never touched.
+/// Binds: `$1` owner node, `$2` stale-after seconds.
+pub(crate) fn startup_mark_indeterminate_sql(relation: &str) -> String {
+    format!(
+        "UPDATE {relation} SET status = 'indeterminate', updated_at = NOW() \
+         WHERE status = 'in_progress' \
+           AND ({SAGA_OWNER_COLUMN} = $1 \
+                OR updated_at < NOW() - make_interval(secs => $2::DOUBLE PRECISION))"
+    )
+}
+
+/// Stable identity of this broker node across restarts: `UDB_NODE_ID`, else
+/// the host name. Deliberately NOT the process id — the startup sweep must
+/// recognise sagas opened by the previous (crashed) incarnation of this node.
+pub(crate) fn local_saga_owner() -> String {
+    saga_owner_from(
+        std::env::var("UDB_NODE_ID").ok(),
+        std::env::var("HOSTNAME")
+            .ok()
+            .or_else(|| std::env::var("COMPUTERNAME").ok()),
+    )
+}
+
+fn saga_owner_from(node_id: Option<String>, host: Option<String>) -> String {
+    node_id
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+        .or_else(|| host.map(|v| v.trim().to_string()).filter(|v| !v.is_empty()))
+        .unwrap_or_else(|| "unknown-node".to_string())
+}
+
 fn saga_recompensation_not_retryable_status(saga_id: &str) -> tonic::Status {
     crate::runtime::executor_utils::policy_status(
         "retry_saga_compensation",
@@ -957,6 +1032,46 @@ mod tests {
     /// operation string is recorded verbatim and classifies back to `Default`, so
     /// no pre-9.12 saga path changes. The `Workflow` kind round-trips through the
     /// `operation` field without colliding with bare data-plane verbs.
+    #[test]
+    fn saga_owner_prefers_node_id_then_host_and_is_pid_free() {
+        assert_eq!(
+            saga_owner_from(Some("node-a".into()), Some("host-1".into())),
+            "node-a"
+        );
+        assert_eq!(
+            saga_owner_from(Some("  ".into()), Some("host-1".into())),
+            "host-1"
+        );
+        assert_eq!(saga_owner_from(None, None), "unknown-node");
+        // Stable across restarts: the owner must not embed the process id,
+        // or the startup sweep could never match the crashed incarnation.
+        let owner = local_saga_owner();
+        assert!(!owner.contains(&format!(":{}", std::process::id())));
+    }
+
+    #[test]
+    fn startup_sweep_is_scoped_to_owner_or_stale_age() {
+        let rel = r#""udb_system"."udb_saga_coordinator""#;
+        let sql = startup_mark_indeterminate_sql(rel);
+        assert!(sql.contains("status = 'in_progress'"));
+        assert!(
+            sql.contains(&format!("{SAGA_OWNER_COLUMN} = $1")),
+            "sweep must be scoped to this node's sagas: {sql}"
+        );
+        assert!(
+            sql.contains("updated_at < NOW() - make_interval(secs => $2"),
+            "foreign sagas are only touched once stale: {sql}"
+        );
+        // An unconditional `WHERE status = 'in_progress'` would mark peers'
+        // live sagas indeterminate.
+        assert!(!sql.trim_end().ends_with("WHERE status = 'in_progress'"));
+
+        let begin = data_plane_saga_begin_sql(rel);
+        assert!(begin.contains(SAGA_OWNER_COLUMN));
+        assert!(begin.contains("$7"));
+        assert!(saga_owner_column_ddl(rel).contains("ADD COLUMN IF NOT EXISTS owner_node"));
+    }
+
     #[test]
     fn saga_kind_default_preserves_operation_and_round_trips() {
         // Default is the identity function — every existing saga is unchanged.

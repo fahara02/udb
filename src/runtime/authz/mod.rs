@@ -31,6 +31,72 @@ pub mod policy_engine;
 
 pub use policy_engine::PolicyEngine;
 
+// ── Snapshot staleness bound ───────────────────────────────────────────────
+//
+// The live policy snapshot is PG-warmed on an interval and a failed reload
+// RETAINS the last good snapshot (so a PG blip does not blank authz). Without a
+// bound, a revoked grant would keep being honored for as long as PG stays
+// unreachable. The bound: once a snapshot has been loaded from the durable store
+// at least once, a last-good snapshot older than the configured maximum fails
+// data-plane decisions closed until a reload succeeds.
+
+/// Unix seconds of the last SUCCESSFUL durable snapshot load; 0 = never loaded
+/// from the durable store (in-memory/dev snapshot — no bound applies).
+static LAST_GOOD_SNAPSHOT_UNIX: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
+/// Default maximum age of a last-good snapshot before decisions fail closed.
+pub const DEFAULT_SNAPSHOT_MAX_STALENESS_SECS: u64 = 600;
+
+fn unix_now_secs() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
+        .unwrap_or_default()
+}
+
+/// Record a successful durable snapshot load (called by the snapshot loader).
+pub(crate) fn record_snapshot_reload_success() {
+    LAST_GOOD_SNAPSHOT_UNIX.store(unix_now_secs(), std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Parse `UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS` (`0` disables the bound).
+fn resolve_snapshot_max_staleness_secs(raw: Option<&str>) -> u64 {
+    raw.and_then(|v| v.trim().parse::<u64>().ok())
+        .unwrap_or(DEFAULT_SNAPSHOT_MAX_STALENESS_SECS)
+}
+
+fn snapshot_max_staleness_secs() -> u64 {
+    static CACHE: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    *CACHE.get_or_init(|| {
+        resolve_snapshot_max_staleness_secs(
+            std::env::var("UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS")
+                .ok()
+                .as_deref(),
+        )
+    })
+}
+
+/// Pure staleness rule: `Some(age_secs)` when a durable snapshot was loaded
+/// (`last_good > 0`), the bound is enabled (`max_secs > 0`) and the last good
+/// load is older than the bound.
+pub(crate) fn snapshot_staleness(last_good: i64, now: i64, max_secs: u64) -> Option<u64> {
+    if last_good <= 0 || max_secs == 0 {
+        return None;
+    }
+    let age = u64::try_from(now.saturating_sub(last_good)).unwrap_or(0);
+    (age > max_secs).then_some(age)
+}
+
+/// `Some(age_secs)` when the live snapshot is past its staleness bound and
+/// data-plane decisions must fail closed.
+pub(crate) fn snapshot_stale_age_secs() -> Option<u64> {
+    snapshot_staleness(
+        LAST_GOOD_SNAPSHOT_UNIX.load(std::sync::atomic::Ordering::Relaxed),
+        unix_now_secs(),
+        snapshot_max_staleness_secs(),
+    )
+}
+
 /// Map a broker RPC name to a canonical authorization action. Pure so the
 /// broker-integration layer (Milestone 7) and tests share one table.
 pub fn rpc_action(rpc_name: &str) -> &'static str {

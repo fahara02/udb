@@ -138,20 +138,45 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
         });
     }
 
-    // (f) Authz default-deny with no seeded policies.
-    if !config.service.abac_default_allow {
-        out.push(PreflightFinding {
-            name: "authz-default-deny",
-            severity: PreflightSeverity::Warn,
-            detail: "ABAC default-deny is active: data RPCs return PERMISSION_DENIED until ABAC \
-                     policies are seeded (note: the live engine reads ABAC policies, NOT the \
-                     udb_authz.policy_rules governance table)"
-                .to_string(),
-            fix: "configure policies via the AuthzService (policy_rules), or set UDB_ABAC_DEFAULT_ALLOW=true for dev/bootstrap",
-        });
+    // (f) Authz default posture: default-deny with no seeded policies, or the
+    // dev default-allow hatch (refused in production).
+    if let Some(finding) = authz_default_posture_finding(
+        config.service.abac_default_allow,
+        crate::runtime::security::SecurityConfig::current().is_production(),
+    ) {
+        out.push(finding);
     }
 
     out
+}
+
+/// Pure authz default-posture finding. The live Casbin engine reads the
+/// PG-warmed `udb_authz.policy_rules` table (written by the AuthzService and
+/// `udb authz seed`).
+fn authz_default_posture_finding(
+    default_allow: bool,
+    production: bool,
+) -> Option<PreflightFinding> {
+    match (default_allow, production) {
+        (false, _) => Some(PreflightFinding {
+            name: "authz-default-deny",
+            severity: PreflightSeverity::Warn,
+            detail: "authz default-deny is active: data RPCs return PERMISSION_DENIED until \
+                     policy rules are seeded in udb_authz.policy_rules (the table the live \
+                     Casbin engine reads) and principals are bound to roles"
+                .to_string(),
+            fix: "seed policy with `udb authz seed --tenant <tenant-uuid> --role app_rw` (or AuthzService CreatePolicyRule/PutAuthzPolicy) and bind principals; UDB_ABAC_DEFAULT_ALLOW=true is a dev-only bootstrap hatch",
+        }),
+        (true, true) => Some(PreflightFinding {
+            name: "authz-default-allow-production",
+            severity: PreflightSeverity::Fail,
+            detail: "UDB_ABAC_DEFAULT_ALLOW is set in production: every request would be allowed \
+                     while zero policy rows exist; production startup refuses this"
+                .to_string(),
+            fix: "unset UDB_ABAC_DEFAULT_ALLOW and seed policy with `udb authz seed --tenant <tenant-uuid> --role app_rw`",
+        }),
+        (true, false) => None,
+    }
 }
 
 /// Emit the findings as a single consolidated, human-readable startup report —
@@ -206,6 +231,21 @@ mod tests {
         assert!(names.contains(&"authz-default-deny"));
         // Default (empty) control plane is loopback while the bind is public.
         assert!(names.contains(&"auth-plane-exposure"));
+    }
+
+    #[test]
+    fn authz_default_posture_names_the_live_policy_table_and_refuses_prod_allow() {
+        let deny = authz_default_posture_finding(false, false).expect("default-deny is flagged");
+        assert_eq!(deny.name, "authz-default-deny");
+        assert!(
+            deny.detail.contains("udb_authz.policy_rules") && !deny.detail.contains("NOT the"),
+            "the finding must say the live engine reads policy_rules: {}",
+            deny.detail
+        );
+        assert!(authz_default_posture_finding(true, false).is_none());
+        let prod =
+            authz_default_posture_finding(true, true).expect("prod default-allow is flagged");
+        assert_eq!(prod.severity, PreflightSeverity::Fail);
     }
 
     #[test]

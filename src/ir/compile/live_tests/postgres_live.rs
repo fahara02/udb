@@ -357,7 +357,14 @@ async fn fetch_legacy_select_rows(
     let plan = build_select_query_plan(manifest, request);
     assert!(plan.errors.is_empty(), "{:?}", plan.errors);
     let table = table_for_message(manifest, &request.message_type).expect("manifest table");
-    let values = filter_bind_values(&request.filter);
+    // Mirror the production planner fallback: caller filter values first, then
+    // the verified tenant/project predicates the select plan appends.
+    let mut values = filter_bind_values(&request.filter);
+    values.extend(
+        plan.context_parameter_values
+            .iter()
+            .map(|value| serde_json::Value::String(value.clone())),
+    );
     let query = bind_values(
         sqlx::query(&plan.sql),
         table,

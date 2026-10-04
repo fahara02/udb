@@ -487,3 +487,50 @@ fn backoff_is_bounded() {
     assert!(delivery_backoff(2) > delivery_backoff(1));
     assert!(delivery_backoff(100) <= DELIVERY_BACKOFF_CAP);
 }
+
+/// The bug: the delivery loader joined each endpoint against the tenant's whole
+/// retained journal, so a new endpoint received every past event. The window
+/// now starts at the endpoint's creation, and stays tenant-bound / skips
+/// already-terminal deliveries and the service's own delivery topics.
+#[test]
+fn delivery_loader_window_starts_at_endpoint_creation() {
+    let sql = super::worker::webhook_delivery_jobs_sql("udb_system.udb_cdc_event_journal");
+    let endpoint = super::model::endpoint_model();
+    let created_at = endpoint.q("created_at");
+    assert!(
+        sql.contains(&format!("AND j.published_at >= e.{created_at}")),
+        "{sql}"
+    );
+    let tenant = endpoint.q("tenant_id");
+    assert!(
+        sql.contains(&format!(
+            "ON e.{tenant}::TEXT = COALESCE(j.payload->>'tenant_id', '')"
+        )),
+        "{sql}"
+    );
+    assert!(
+        sql.contains("FROM udb_system.udb_cdc_event_journal j"),
+        "{sql}"
+    );
+    assert!(sql.contains("AND NOT EXISTS ("), "{sql}");
+    for placeholder in ["$1", "$2", "$3", "$4", "$5", "LIMIT $6"] {
+        assert!(sql.contains(placeholder), "{placeholder}: {sql}");
+    }
+}
+
+/// The bug: a secret that failed to decrypt was kept as-is and used as the
+/// HMAC key, signing deliveries with ciphertext. It now fails the delivery.
+#[test]
+fn delivery_refuses_a_signing_secret_it_cannot_decrypt() {
+    use super::worker::resolve_signing_secret;
+    assert_eq!(
+        resolve_signing_secret(Ok("whsec_plain".to_string())).unwrap(),
+        "whsec_plain"
+    );
+    let err = resolve_signing_secret(Err("bad key".to_string())).unwrap_err();
+    assert!(err.contains("could not be decrypted"), "{err}");
+    // A sealed secret on a broker with no key passes through decrypt unchanged.
+    let err = resolve_signing_secret(Ok("udb-aead:v1:abc".to_string())).unwrap_err();
+    assert!(err.contains("no decryption key"), "{err}");
+    assert!(resolve_signing_secret(Ok(String::new())).is_err());
+}

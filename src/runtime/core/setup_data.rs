@@ -242,6 +242,50 @@ fn typed_object_backend_required_status(backend: &str) -> tonic::Status {
     )
 }
 
+fn manifest_declares_vector_collection(manifest: &CatalogManifest, collection: &str) -> bool {
+    manifest
+        .stores
+        .iter()
+        .any(|store| store.store_kind == "vector" && store.resource_name == collection)
+}
+
+#[cfg(test)]
+mod vector_route_override_tests {
+    use super::manifest_declares_vector_collection;
+    use crate::generation::CatalogManifest;
+    use crate::generation::manifest::ManifestStore;
+
+    #[test]
+    fn only_manifest_vector_stores_count_as_declared() {
+        // A durable-registry route override applies only to collections the
+        // manifest does NOT declare, so a tenant-chosen index resource name can
+        // never re-route a declared collection.
+        let manifest = CatalogManifest {
+            stores: vec![
+                ManifestStore {
+                    store_kind: "vector".to_string(),
+                    backend: "qdrant".to_string(),
+                    resource_name: "docs".to_string(),
+                    ..ManifestStore::default()
+                },
+                ManifestStore {
+                    store_kind: "object".to_string(),
+                    backend: "s3".to_string(),
+                    resource_name: "blobs".to_string(),
+                    ..ManifestStore::default()
+                },
+            ],
+            ..CatalogManifest::default()
+        };
+        assert!(manifest_declares_vector_collection(&manifest, "docs"));
+        assert!(!manifest_declares_vector_collection(&manifest, "blobs"));
+        assert!(!manifest_declares_vector_collection(
+            &manifest,
+            "tenant_index"
+        ));
+    }
+}
+
 impl DataBrokerRuntime {
     pub(crate) fn record_vector_resource_backend(
         &self,
@@ -258,6 +302,25 @@ impl DataBrokerRuntime {
         if let Ok(mut routes) = self.vector_resource_routes.lock() {
             routes.insert(key, route);
         }
+    }
+
+    /// Snapshot of the process-local `EnsureResource` vector routes as
+    /// `(project_id, collection, route)`. The hard tenant purge erases the
+    /// tenant's points from these ad-hoc collections too (they are not in the
+    /// manifest or any service registry).
+    pub(crate) fn vector_resource_route_snapshot(
+        &self,
+    ) -> Vec<(String, String, ResolvedBackendSelector)> {
+        let Ok(routes) = self.vector_resource_routes.lock() else {
+            return Vec::new();
+        };
+        routes
+            .iter()
+            .filter_map(|(key, route)| {
+                let (project, collection) = key.split_once(':')?;
+                Some((project.to_string(), collection.to_string(), route.clone()))
+            })
+            .collect()
     }
 
     fn vector_resource_backend(
@@ -280,6 +343,30 @@ impl DataBrokerRuntime {
                 backend: store.backend.to_ascii_lowercase(),
                 instance: None,
             })
+    }
+
+    /// Resolve a collection's serving route, preferring a caller-supplied route
+    /// read from a DURABLE registry (e.g. the search-index registry) over the
+    /// process-local `EnsureResource` map. The override never re-routes a
+    /// manifest-declared collection: the manifest stays authoritative for those,
+    /// so a tenant-chosen index `resource_name` cannot hijack a declared
+    /// collection onto another backend.
+    fn vector_resource_backend_with_override(
+        &self,
+        manifest: &CatalogManifest,
+        project_id: &str,
+        collection: &str,
+        route_override: Option<ResolvedBackendSelector>,
+    ) -> Option<ResolvedBackendSelector> {
+        match route_override {
+            Some(route) if !manifest_declares_vector_collection(manifest, collection) => {
+                Some(ResolvedBackendSelector {
+                    backend: route.backend.to_ascii_lowercase(),
+                    instance: route.instance,
+                })
+            }
+            _ => self.vector_resource_backend(manifest, project_id, collection),
+        }
     }
 
     pub async fn try_from_config(config: UdbConfig) -> Result<Self, String> {
@@ -539,6 +626,7 @@ impl DataBrokerRuntime {
         }
 
         let context = merge_context(request.context.as_ref(), metadata_context);
+        typed_relational_backend_guard(&context, "select")?;
         let filter = request
             .filter
             .as_ref()
@@ -609,8 +697,17 @@ impl DataBrokerRuntime {
                         )
                     })
                     .collect();
-                let keys =
-                    pagination::total_order_keys(&resolved_sort, &table_for_keys.primary_key);
+                // NULL-aware keyset: a NOT NULL / primary-key sort column needs no
+                // NULL branches in the cursor predicate.
+                let keys = pagination::with_nullability(
+                    pagination::total_order_keys(&resolved_sort, &table_for_keys.primary_key),
+                    |column| {
+                        table_for_keys
+                            .columns
+                            .iter()
+                            .any(|c| c.column_name == column && (c.not_null || c.is_primary))
+                    },
+                );
                 // #7: digest the query shape from the NORMALIZED base filter (BEFORE
                 // the cursor predicate is injected below — otherwise the digest would
                 // depend on which page we are on), the resolved sort, and the caller's
@@ -781,7 +878,15 @@ impl DataBrokerRuntime {
             &crate::planning::broker::column_resolver(table),
             &filter,
         );
-        let values = filter_bind_values(&normalized_filter);
+        let mut values = filter_bind_values(&normalized_filter);
+        // Planner-path only (the bridged arm binds its own compiled params): the
+        // fallback SQL carries the verified tenant/project predicates the plan
+        // appended after the caller's filter; bind their values last.
+        values.extend(
+            plan.context_parameter_values
+                .iter()
+                .map(|value| JsonValue::String(value.clone())),
+        );
         let query = match bridged.as_ref() {
             Some(stmt) => bind_typed_generic_pg_params(
                 sqlx::query(&stmt.sql),
@@ -823,16 +928,19 @@ impl DataBrokerRuntime {
             self.encryption.as_ref(),
             &self.encryption_metrics,
         )?;
-        // P-1: mint next_page_token when this is a FULL page (more rows may exist)
-        // and every cursor key is present in the last row. An empty token signals
-        // the last page (AIP-158). Paginated reads never touch the read cache
-        // (below), so a cache hit can't drop the cursor.
+        // P-1: mint next_page_token when this is a FULL page (more rows may exist).
+        // An empty token signals the last page (AIP-158), so a full page whose
+        // last row has a NULL sort key is refused rather than silently ending the
+        // walk (a keyset cursor cannot address a position past NULL). Paginated
+        // reads never touch the read cache (below), so a cache hit can't drop the
+        // cursor.
         if let Some(keys) = &cursor_keys
             && (record_set.records_json.len() as i32) >= request.limit
             && let Some(last) = record_set.records_json.last()
             && let Ok(JsonValue::Object(row)) = serde_json::from_slice::<JsonValue>(last)
-            && let Some(cursor) = pagination::cursor_values_from_row(keys, &row)
         {
+            let cursor = pagination::next_page_cursor(keys, &row)
+                .map_err(|msg| setup_data_invalid_field("sort", &msg, &msg))?;
             record_set.next_page_token = pagination::encode_page_token(
                 &context.tenant_id,
                 &request.message_type,
@@ -990,6 +1098,7 @@ impl DataBrokerRuntime {
         metadata_context: RequestContext,
     ) -> Result<MutationResponse, tonic::Status> {
         let context = merge_context(request.context.as_ref(), metadata_context);
+        typed_relational_backend_guard(&context, "upsert")?;
         let record = upsert_record_json(&request)?;
         let plan_request = UpsertPlanRequest {
             context: context.clone(),
@@ -1093,6 +1202,9 @@ impl DataBrokerRuntime {
         // so encryption + binding (keyed by `plan.parameter_columns`, which the
         // planner already resolved) find each value.
         let record = crate::broker::normalize_record_keys(table, &record);
+        // Refuse planted ciphertext / caller-chosen blind-index tokens before
+        // the encryptor (which skips already-encrypted-looking values) sees them.
+        crate::runtime::executor_utils::validate_client_encrypted_write(&table.columns, &record)?;
         // GO-005 (compare-and-swap): when the caller asserts an `expected`
         // column=value precondition, evaluate it in THIS write tx — after the
         // tenant/RLS GUCs are installed (line above) and holding a row lock — so
@@ -1171,6 +1283,16 @@ impl DataBrokerRuntime {
             })?;
             (result.rows_affected() as i64, Vec::new())
         };
+        // A guarded DO UPDATE that touched 0 rows means the conflict target is a
+        // row owned by another tenant/project: refuse (the tx, including any
+        // idempotency claim, rolls back on drop) rather than report success.
+        let executed_sql = bridged
+            .as_ref()
+            .map(|stmt| stmt.sql.as_str())
+            .unwrap_or(plan.sql.as_str());
+        if let Some(status) = upsert_scope_guard_refusal(executed_sql, affected_rows) {
+            return Err(status);
+        }
         let mut projection_task_ids = Vec::new();
         // #5: opaque revision of the upserted row after the write (empty when the
         // upsert was a no-op — 0 affected). Bumped in THIS tx so it commits atomically.
@@ -1185,7 +1307,11 @@ impl DataBrokerRuntime {
                     crate::runtime::projection::task_project_id(&context.project_id),
                     &request.message_type,
                     "upsert",
-                    &record,
+                    // The ENCRYPTED record — the bytes the row holds — so a
+                    // projection never receives an encrypted column in
+                    // plaintext, and live writes agree with replay (which
+                    // reads the stored row back).
+                    &encrypted_record,
                     &projection_plans,
                 )
                 .await
@@ -1204,7 +1330,7 @@ impl DataBrokerRuntime {
                 manifest,
                 &request.message_type,
                 "upsert",
-                &record,
+                &encrypted_record,
                 &context,
             )
             .await?;
@@ -1405,20 +1531,13 @@ impl DataBrokerRuntime {
         context: &RequestContext,
     ) -> Result<(), tonic::Status> {
         let resolver = crate::planning::broker::column_resolver(table);
-        let predicate = key_columns
-            .iter()
-            .enumerate()
-            .map(|(idx, column)| format!("\"{column}\" = ${}", idx + 1))
-            .collect::<Vec<_>>()
-            .join(" AND ");
-        // FOR UPDATE takes the row lock that serializes racing CAS writers; the
-        // read runs under the tenant/RLS GUCs installed earlier in this tx.
-        let sql = format!(
-            "SELECT * FROM \"{schema}\".\"{table}\" WHERE {predicate} FOR UPDATE",
-            schema = table.schema,
-            table = table.table,
-        );
-        let query = bind_values(sqlx::query(&sql), table, key_columns, key_values)?;
+        // FOR UPDATE takes the row lock that serializes racing CAS writers. The
+        // lookup is scoped to the caller's tenant/project, so another tenant's
+        // row is indistinguishable from an absent one (no existence/value
+        // oracle) and is never locked.
+        let (sql, bind_columns, bind_row_values) =
+            scoped_locked_row_lookup(table, key_columns, key_values, context);
+        let query = bind_values(sqlx::query(&sql), table, &bind_columns, &bind_row_values)?;
         let row = query.fetch_optional(&mut **tx).await.map_err(|err| {
             crate::runtime::executor_utils::sqlx_error_to_status(
                 "compare-and-swap precondition read failed",
@@ -1696,7 +1815,7 @@ impl DataBrokerRuntime {
         } else {
             context.correlation_id.clone()
         };
-        let envelope = serde_json::json!({
+        let mut envelope = serde_json::json!({
             "event_id": event_id.to_string(),
             "event_type": topic,
             "topic": topic,
@@ -1711,8 +1830,26 @@ impl DataBrokerRuntime {
             "purpose": context.purpose,
             "decision_id": context.decision_id,
             "occurred_at": chrono::Utc::now().to_rfc3339(),
-            "payload": record,
         });
+        // The manifest CDC redaction the explicit EnqueueOutboxEvent path
+        // applies runs on mutation events too, so a PII/encrypted column never
+        // reaches Kafka, the journal, LiveQuery or webhooks in the clear. Only
+        // the record is redacted (wrapped as `payload`); the envelope's routing
+        // fields stay intact, and the redaction annotations ride at top level.
+        let redacted = crate::runtime::cdc::apply_manifest_cdc_redaction(
+            manifest,
+            message_type,
+            topic,
+            None,
+            serde_json::json!({ "payload": record }),
+            self.config.cdc.redaction_mode,
+            self.config.cdc.redaction_version,
+        );
+        if let (Some(target), serde_json::Value::Object(redacted)) =
+            (envelope.as_object_mut(), redacted)
+        {
+            target.extend(redacted);
+        }
         let outbox_relation = self.config.cdc.outbox_relation();
         crate::runtime::cdc::insert_outbox_row(
             &mut **tx,
@@ -1744,6 +1881,7 @@ impl DataBrokerRuntime {
         // #5 + gate 25: optional opaque-revision precondition and lock-fencing.
         guards: MutationGuards,
     ) -> Result<MutationResponse, tonic::Status> {
+        typed_relational_backend_guard(&context, "delete")?;
         let filter = match resolve_table_for_message(manifest, message_type) {
             Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
                 table_for_encryption,
@@ -1928,7 +2066,15 @@ impl DataBrokerRuntime {
                     crate::runtime::projection::task_project_id(&context.project_id),
                     message_type,
                     "delete",
-                    &filter,
+                    // The filter plus the VERIFIED tenant the delete ran under,
+                    // so the worker can resolve which tenant's projected
+                    // record to remove instead of refusing (or widening).
+                    &crate::runtime::projection::scoped_delete_payload(
+                        manifest,
+                        message_type,
+                        &filter,
+                        &context.tenant_id,
+                    ),
                     &projection_plans,
                 )
                 .await
@@ -2094,6 +2240,25 @@ impl DataBrokerRuntime {
             crate::runtime::projection::message_type_matches(&plan.message_type, message_type)
         });
         let need_rows = return_record || has_projections;
+        // Encrypt BEFORE planning, exactly as the upsert path does: the plan's
+        // SET list, the bound values and the CDC change event must all carry the
+        // ciphertext (and the refreshed blind-index token), never the caller's
+        // plaintext. An unknown message type falls through to the plan's own
+        // rejection below.
+        let encrypted_changes;
+        let changes: &JsonValue = match resolve_table_for_message(manifest, message_type) {
+            Ok(table) => {
+                // Caller-supplied changes: refuse planted ciphertext /
+                // blind-index tokens before encrypting.
+                crate::runtime::executor_utils::validate_client_encrypted_write(
+                    &table.columns,
+                    &crate::broker::normalize_record_keys(table, changes),
+                )?;
+                encrypted_changes = self.encrypt_update_changes(table, changes, context)?;
+                &encrypted_changes
+            }
+            Err(_) => changes,
+        };
         let plan_request = crate::planning::broker::UpdatePlanRequest {
             context: context.clone(),
             message_type: message_type.to_string(),
@@ -2167,19 +2332,18 @@ impl DataBrokerRuntime {
             if rows.is_empty() {
                 (0, Vec::new(), Vec::new())
             } else {
+                // Decode ONCE, unmasked: these rows feed the projection tasks
+                // below, where a `***MASKED***` placeholder (for a caller
+                // without `udb:pii:read`) would be projected as the value. The
+                // caller's returned record is masked separately.
                 let record_set = rows_to_record_set(
                     rows,
                     Some(table),
-                    crate::runtime::core::PiiMasking::ClientVisible,
+                    crate::runtime::core::PiiMasking::InternalUnmasked,
                     context,
                     self.encryption.as_ref(),
                     &self.encryption_metrics,
                 )?;
-                let record_json = if return_record {
-                    returned_record_json_or_status(&record_set.records_json)?
-                } else {
-                    Vec::new()
-                };
                 let updated_rows_json = record_set
                     .records_json
                     .iter()
@@ -2191,6 +2355,29 @@ impl DataBrokerRuntime {
                             format!("updated row decode failed: {err}"),
                         )
                     })?;
+                let record_json = if return_record {
+                    let masked: Vec<Vec<u8>> = updated_rows_json
+                        .iter()
+                        .map(|row| {
+                            let mut record = row.as_object().cloned().unwrap_or_default();
+                            crate::runtime::core::mask_record_for_client(
+                                table,
+                                context,
+                                &mut record,
+                            );
+                            serde_json::to_vec(&JsonValue::Object(record))
+                        })
+                        .collect::<Result<_, _>>()
+                        .map_err(|err| {
+                            setup_data_internal_status(
+                                "update_returned_record_encode",
+                                format!("returned record encode failed: {err}"),
+                            )
+                        })?;
+                    returned_record_json_or_status(&masked)?
+                } else {
+                    Vec::new()
+                };
                 (
                     record_set.records_json.len() as i64,
                     record_json,
@@ -2221,7 +2408,13 @@ impl DataBrokerRuntime {
                         crate::runtime::projection::task_project_id(&context.project_id),
                         message_type,
                         "upsert",
-                        row_json,
+                        // The returned rows were DECRYPTED for the response;
+                        // re-encrypt (column-keyed) before they leave the DB
+                        // boundary so no projection target holds plaintext.
+                        &self.encrypt_record_for_table(
+                            table,
+                            &crate::broker::normalize_record_keys(table, row_json),
+                        )?,
                         &projection_plans,
                     )
                     .await
@@ -2275,6 +2468,7 @@ impl DataBrokerRuntime {
         // #5 + gate 25: optional opaque-revision precondition and lock-fencing.
         guards: MutationGuards,
     ) -> Result<MutationResponse, tonic::Status> {
+        typed_relational_backend_guard(&context, "update")?;
         let filter = match resolve_table_for_message(manifest, message_type) {
             Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
                 table_for_encryption,
@@ -2530,6 +2724,7 @@ impl DataBrokerRuntime {
         metadata_context: RequestContext,
     ) -> Result<crate::proto::BulkCasResponse, tonic::Status> {
         let context = merge_context(request.context.as_ref(), metadata_context);
+        typed_relational_backend_guard(&context, "bulk_cas")?;
         // Bound the batch: clamp the caller's explicit ceiling to the server max,
         // then reject an over-ceiling or empty batch fail-closed BEFORE any work.
         let ceiling = bulk_cas_effective_ceiling(request.max_rows);
@@ -2708,9 +2903,15 @@ impl DataBrokerRuntime {
                             )
                             .await?;
                             item_result.revision = revision.to_string();
+                            changed += 1;
+                            item_result.changed = true;
+                        } else {
+                            // The scoped update matched nothing (e.g. the caller's
+                            // filter names a tenant/project outside its scope):
+                            // nothing changed, so never report `changed`.
+                            conflicted += 1;
+                            item_result.conflicted = true;
                         }
-                        changed += 1;
-                        item_result.changed = true;
                     } else {
                         conflicted += 1;
                         item_result.conflicted = true;
@@ -2797,18 +2998,11 @@ impl DataBrokerRuntime {
         key_values: &[JsonValue],
         context: &RequestContext,
     ) -> Result<Option<JsonValue>, tonic::Status> {
-        let predicate = key_columns
-            .iter()
-            .enumerate()
-            .map(|(idx, column)| format!("\"{column}\" = ${}", idx + 1))
-            .collect::<Vec<_>>()
-            .join(" AND ");
-        let sql = format!(
-            "SELECT * FROM \"{schema}\".\"{table}\" WHERE {predicate} FOR UPDATE",
-            schema = table.schema,
-            table = table.table,
-        );
-        let query = bind_values(sqlx::query(&sql), table, key_columns, key_values)?;
+        // Scoped to the caller's tenant/project: a foreign row reads as absent
+        // (counted as a conflict) and is never locked.
+        let (sql, bind_columns, bind_row_values) =
+            scoped_locked_row_lookup(table, key_columns, key_values, context);
+        let query = bind_values(sqlx::query(&sql), table, &bind_columns, &bind_row_values)?;
         let row = query.fetch_optional(&mut **tx).await.map_err(|err| {
             crate::runtime::executor_utils::sqlx_error_to_status("bulk CAS row read failed", &err)
         })?;
@@ -2839,9 +3033,27 @@ impl DataBrokerRuntime {
         request: VectorSearchRequest,
         metadata_context: RequestContext,
     ) -> Result<VectorSet, tonic::Status> {
+        self.vector_search_routed(manifest, request, metadata_context, None)
+            .await
+    }
+
+    /// [`Self::vector_search`] with an explicit serving route for a collection
+    /// that is not declared in the manifest. Native services that own a durable
+    /// collection registry (the search-index registry) pass the route they read
+    /// from it, so a search works after a restart and on every replica instead of
+    /// depending on the in-memory `EnsureResource` route map. The tenant, scope
+    /// and filter plan checks run exactly as for a declared collection; only the
+    /// unknown-collection error is waived for a routed collection.
+    pub(crate) async fn vector_search_routed(
+        &self,
+        manifest: &CatalogManifest,
+        request: VectorSearchRequest,
+        metadata_context: RequestContext,
+        route_override: Option<ResolvedBackendSelector>,
+    ) -> Result<VectorSet, tonic::Status> {
         #[cfg(not(feature = "qdrant"))]
         {
-            let _ = (manifest, request, metadata_context);
+            let _ = (manifest, request, metadata_context, route_override);
             return Err(qdrant_vector_feature_status("vector_search"));
         }
         #[cfg(feature = "qdrant")]
@@ -2862,8 +3074,12 @@ impl DataBrokerRuntime {
                     limit: request.limit,
                 },
             );
-            let route =
-                self.vector_resource_backend(manifest, &context.project_id, &request.collection);
+            let route = self.vector_resource_backend_with_override(
+                manifest,
+                &context.project_id,
+                &request.collection,
+                route_override,
+            );
             reject_vector_plan_errors(&plan.errors, route.is_some())?;
             let target = route.unwrap_or_else(|| ResolvedBackendSelector {
                 backend: plan.backend.to_ascii_lowercase(),
@@ -2913,6 +3129,7 @@ impl DataBrokerRuntime {
                 self.vector_search_dispatch_target(
                     &target.backend,
                     target_instance,
+                    &context.project_id,
                     &scoped_request,
                 )
                 .await
@@ -2926,9 +3143,22 @@ impl DataBrokerRuntime {
         request: VectorHybridSearchRequest,
         metadata_context: RequestContext,
     ) -> Result<VectorSet, tonic::Status> {
+        self.vector_hybrid_search_routed(manifest, request, metadata_context, None)
+            .await
+    }
+
+    /// [`Self::vector_hybrid_search`] with an explicit serving route for a
+    /// manifest-undeclared collection (see [`Self::vector_search_routed`]).
+    pub(crate) async fn vector_hybrid_search_routed(
+        &self,
+        manifest: &CatalogManifest,
+        request: VectorHybridSearchRequest,
+        metadata_context: RequestContext,
+        route_override: Option<ResolvedBackendSelector>,
+    ) -> Result<VectorSet, tonic::Status> {
         #[cfg(not(feature = "qdrant"))]
         {
-            let _ = (manifest, request, metadata_context);
+            let _ = (manifest, request, metadata_context, route_override);
             return Err(qdrant_vector_feature_status("vector_hybrid_search"));
         }
         #[cfg(feature = "qdrant")]
@@ -2950,12 +3180,27 @@ impl DataBrokerRuntime {
                     limit: request.limit,
                 },
             );
-            reject_plan(&plan.errors)?;
-            if !plan.backend.trim().is_empty() && !plan.backend.eq_ignore_ascii_case("qdrant") {
-                return Err(vector_hybrid_qdrant_only_status(&plan.backend));
+            // A routed (manifest-undeclared) collection waives only the
+            // unknown-collection error; tenant/scope/filter checks still apply.
+            let route = self.vector_resource_backend_with_override(
+                manifest,
+                &context.project_id,
+                &request.collection,
+                route_override,
+            );
+            reject_vector_plan_errors(&plan.errors, route.is_some())?;
+            let backend = route
+                .as_ref()
+                .map(|route| route.backend.clone())
+                .unwrap_or_else(|| plan.backend.clone());
+            if !backend.trim().is_empty() && !backend.eq_ignore_ascii_case("qdrant") {
+                return Err(vector_hybrid_qdrant_only_status(&backend));
             }
+            let route_instance = route.as_ref().and_then(|route| route.instance.as_deref());
             let target_instance = if context.target_instance.trim().is_empty() {
-                self.choose_instance_name_for_project("qdrant", false, &context.project_id)
+                route_instance.or_else(|| {
+                    self.choose_instance_name_for_project("qdrant", false, &context.project_id)
+                })
             } else {
                 Some(context.target_instance.as_str())
             };
@@ -3008,9 +3253,22 @@ impl DataBrokerRuntime {
         request: VectorUpsertRequest,
         metadata_context: RequestContext,
     ) -> Result<MutationResponse, tonic::Status> {
+        self.vector_upsert_routed(manifest, request, metadata_context, None)
+            .await
+    }
+
+    /// [`Self::vector_upsert`] with an explicit serving route for a
+    /// manifest-undeclared collection (see [`Self::vector_search_routed`]).
+    pub(crate) async fn vector_upsert_routed(
+        &self,
+        manifest: &CatalogManifest,
+        request: VectorUpsertRequest,
+        metadata_context: RequestContext,
+        route_override: Option<ResolvedBackendSelector>,
+    ) -> Result<MutationResponse, tonic::Status> {
         #[cfg(not(feature = "qdrant"))]
         {
-            let _ = (manifest, request, metadata_context);
+            let _ = (manifest, request, metadata_context, route_override);
             return Err(qdrant_vector_feature_status("vector_upsert"));
         }
         #[cfg(feature = "qdrant")]
@@ -3041,8 +3299,12 @@ impl DataBrokerRuntime {
                     payloads,
                 },
             );
-            let route =
-                self.vector_resource_backend(manifest, &context.project_id, &request.collection);
+            let route = self.vector_resource_backend_with_override(
+                manifest,
+                &context.project_id,
+                &request.collection,
+                route_override,
+            );
             reject_vector_plan_errors(&plan.errors, route.is_some())?;
             let target = route.unwrap_or_else(|| ResolvedBackendSelector {
                 backend: plan.backend.to_ascii_lowercase(),
@@ -3075,8 +3337,13 @@ impl DataBrokerRuntime {
                     self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
                 qdrant.upsert(&stamped).await?;
             } else {
-                self.vector_upsert_dispatch_target(&target.backend, target_instance, &stamped)
-                    .await?;
+                self.vector_upsert_dispatch_target(
+                    &target.backend,
+                    target_instance,
+                    &context.project_id,
+                    &stamped,
+                )
+                .await?;
             }
             Ok(MutationResponse {
                 mutation_id: Uuid::new_v4().to_string(),
@@ -3091,10 +3358,13 @@ impl DataBrokerRuntime {
         &self,
         backend: &str,
         instance: Option<&str>,
+        project_id: &str,
         request: &VectorSearchRequest,
     ) -> Result<VectorSet, tonic::Status> {
         use crate::runtime::executors::SearchExecutor;
-        let spec = vector_search_dispatch_spec(backend, request)?;
+        let namespace = pinecone_namespace(project_id);
+        // Validate/translate the filter before touching the backend.
+        let mut spec = vector_search_dispatch_spec_scoped(backend, request, None, &namespace)?;
         let executor = self.resolve_dispatch_executor(
             backend,
             instance,
@@ -3102,9 +3372,40 @@ impl DataBrokerRuntime {
             tonic::Code::FailedPrecondition,
             None,
         )?;
+        if backend == "weaviate" {
+            // GraphQL needs every returned property named; read the class schema
+            // so the hit carries its full payload. A failed schema read keeps the
+            // isolation-key-only selection rather than failing the search.
+            let schema_spec = serde_json::json!({
+                "method": "GET",
+                "path": format!(
+                    "/v1/schema/{}",
+                    vector_weaviate_class_name(&request.collection)
+                ),
+            })
+            .to_string();
+            match SearchExecutor::search(&executor, &schema_spec).await {
+                Ok(raw_schema) => {
+                    let schema: JsonValue =
+                        serde_json::from_str(&raw_schema).unwrap_or(JsonValue::Null);
+                    let properties = weaviate_selectable_properties(&schema);
+                    spec = vector_search_dispatch_spec_scoped(
+                        backend,
+                        request,
+                        Some(&properties),
+                        &namespace,
+                    )?;
+                }
+                Err(err) => tracing::warn!(
+                    collection = %request.collection,
+                    error = %err,
+                    "weaviate class schema read failed; returning isolation keys only"
+                ),
+            }
+        }
         let raw = SearchExecutor::search(&executor, &spec).await?;
         // Vector arm: ES scores carry the `+ 1.0` cosine offset, so normalize back.
-        parse_vector_search_response(backend, &raw, true)
+        parse_vector_search_response_for_collection(backend, &raw, true, &request.collection)
     }
 
     /// Execute a mediated FULL-TEXT-ONLY (lexical, no query vector) search
@@ -3155,8 +3456,30 @@ impl DataBrokerRuntime {
             let _ = self
                 .enforce_read_fence(&context, &backend, target_instance.unwrap_or("selected"))
                 .await?;
-            self.text_search_dispatch_target(&backend, target_instance, &request, &query_text)
-                .await
+            // The plan is bypassed here, so enforce its tenant requirement
+            // directly, then AND the context tenant/project around the caller
+            // filter exactly as the dense arm does.
+            if context.tenant_id.trim().is_empty() {
+                reject_plan(&["tenant_id is required".to_string()])?;
+            }
+            let caller_filter = request
+                .filter
+                .as_ref()
+                .map(struct_to_json)
+                .unwrap_or(JsonValue::Null);
+            let mut scoped_request = request.clone();
+            scoped_request.filter = scoped_generic_vector_filter(
+                caller_filter,
+                &context.tenant_id,
+                &context.project_id,
+            );
+            self.text_search_dispatch_target(
+                &backend,
+                target_instance,
+                &scoped_request,
+                &query_text,
+            )
+            .await
         }
     }
 
@@ -3186,6 +3509,7 @@ impl DataBrokerRuntime {
         &self,
         backend: &str,
         instance: Option<&str>,
+        project_id: &str,
         request: &VectorUpsertRequest,
     ) -> Result<(), tonic::Status> {
         use crate::runtime::executors::MutationExecutor;
@@ -3197,8 +3521,21 @@ impl DataBrokerRuntime {
             None,
         )?;
         for point in &request.points {
-            let spec = vector_upsert_dispatch_spec(backend, &request.collection, point)?;
-            MutationExecutor::mutate(&executor, &spec).await?;
+            let spec = vector_upsert_dispatch_spec_scoped(
+                backend,
+                &request.collection,
+                point,
+                &pinecone_namespace(project_id),
+            )?;
+            let raw = MutationExecutor::mutate(&executor, &spec).await?;
+            if backend == "weaviate"
+                && let Some(message) = weaviate_batch_errors(&raw)
+            {
+                return Err(setup_data_internal_status(
+                    "vector_upsert_weaviate_batch",
+                    format!("weaviate rejected vector point '{}': {message}", point.id),
+                ));
+            }
         }
         Ok(())
     }
@@ -3209,21 +3546,36 @@ impl DataBrokerRuntime {
         mut stream: tonic::Streaming<Chunk>,
         metadata_context: RequestContext,
     ) -> Result<MutationResponse, tonic::Status> {
+        // A.6: pull only the FIRST chunk (it carries bucket/key/content-type/
+        // context + the first body slice); the remainder of the gRPC stream is
+        // forwarded straight into the backing store without buffering the whole
+        // object. Size is bounded cumulatively by `UDB_MAX_OBJECT_BYTES`.
+        let first = match stream.next().await {
+            Some(chunk) => chunk?,
+            None => return Err(empty_object_stream_status()),
+        };
+        self.put_object_with_first(manifest, first, stream, metadata_context)
+            .await
+    }
+
+    /// `PutObject` with its FIRST chunk already read by the caller. The broker
+    /// handler reads the first chunk itself so it can authorize the request
+    /// against the chunk's real bucket BEFORE any byte reaches the store, then
+    /// hands the chunk and the rest of the stream here.
+    pub async fn put_object_with_first(
+        &self,
+        manifest: &CatalogManifest,
+        first: Chunk,
+        mut stream: tonic::Streaming<Chunk>,
+        metadata_context: RequestContext,
+    ) -> Result<MutationResponse, tonic::Status> {
         #[cfg(not(any(feature = "s3", feature = "gcs", feature = "azureblob")))]
         {
-            let _ = (manifest, &mut stream, metadata_context);
+            let _ = (manifest, first, &mut stream, metadata_context);
             return Err(no_object_store_feature_status("put_object"));
         }
         #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
         {
-            // A.6: pull only the FIRST chunk (it carries bucket/key/content-type/
-            // context + the first body slice); the remainder of the gRPC stream is
-            // forwarded straight into the backing store without buffering the whole
-            // object. Size is bounded cumulatively by `UDB_MAX_OBJECT_BYTES`.
-            let first = match stream.next().await {
-                Some(chunk) => chunk?,
-                None => return Err(empty_object_stream_status()),
-            };
             let context = merge_context(first.context.as_ref(), metadata_context);
             let plan = build_object_stream_plan(
                 manifest,
@@ -3539,6 +3891,12 @@ impl DataBrokerRuntime {
             if method != "PUT" && method != "GET" {
                 return Err(unsupported_presign_method_status());
             }
+            // A bucket the manifest binds to Azure Blob / GCS cannot be presigned
+            // by the S3 signer: refuse with an explicit capability error.
+            ensure_s3_compatible_object_target(
+                &manifest_object_backend(manifest, &request.bucket),
+                "generate_presigned_url",
+            )?;
             let target_instance = if context.target_instance.trim().is_empty() {
                 let write = method == "PUT";
                 self.choose_instance_name_for_project("minio", write, &context.project_id)
@@ -3786,6 +4144,7 @@ impl DataBrokerRuntime {
         self.vector_upsert_dispatch_target(
             &backend.to_ascii_lowercase(),
             instance,
+            project_id,
             &VectorUpsertRequest {
                 context: None,
                 collection: collection.to_string(),
@@ -3839,6 +4198,7 @@ impl DataBrokerRuntime {
         self.vector_upsert_dispatch_target(
             &backend.to_ascii_lowercase(),
             instance,
+            project_id,
             &VectorUpsertRequest {
                 context: None,
                 collection: collection.to_string(),
@@ -3878,8 +4238,13 @@ impl DataBrokerRuntime {
             ));
         }
         self.ensure_vector_instance_allowed_for_project(backend, instance, project_id)?;
-        self.vector_search_dispatch_target(&backend.to_ascii_lowercase(), instance, request)
-            .await
+        self.vector_search_dispatch_target(
+            &backend.to_ascii_lowercase(),
+            instance,
+            project_id,
+            request,
+        )
+        .await
     }
 
     pub async fn vector_hybrid_backend_kind_target(
@@ -4069,6 +4434,10 @@ impl DataBrokerRuntime {
             let write = method == "PUT";
             let target = backend_target.trim();
             let target_lower = target.to_ascii_lowercase();
+            // Presign is wired for S3-compatible stores only: say so explicitly
+            // for Azure Blob / GCS instead of misreading the backend name as an
+            // S3 instance name and failing with an unrelated lookup error.
+            ensure_s3_compatible_object_target(&target_lower, "presign_object_backend_target")?;
             let target_instance = match target_lower.as_str() {
                 "" | "minio" => self.choose_instance_name_for_project("minio", write, project),
                 "s3" => self.choose_instance_name_for_project("s3", write, project),
@@ -4109,6 +4478,9 @@ impl DataBrokerRuntime {
                 project
             };
             let target = backend_target.trim().to_ascii_lowercase();
+            // HEAD is wired for S3-compatible stores only (explicit capability
+            // error for Azure Blob / GCS, never a misrouted S3 lookup).
+            ensure_s3_compatible_object_target(&target, "object_exists_backend_target")?;
             // Q#7 (bug_report.md): existence-after-write must HEAD the SAME instance
             // the object was WRITTEN to. PutObject resolves the write instance
             // (`choose_instance_name_for_project(.., write=true, ..)`); resolving a
@@ -4185,6 +4557,13 @@ impl DataBrokerRuntime {
             if request.part_count <= 0 {
                 return Err(invalid_part_count_status());
             }
+            if request.part_count > MULTIPART_MAX_PARTS {
+                return Err(multipart_too_many_parts_status());
+            }
+            ensure_s3_compatible_object_target(
+                &manifest_object_backend(manifest, &request.bucket),
+                "initiate_multipart_upload",
+            )?;
             let target_instance = if context.target_instance.trim().is_empty() {
                 self.choose_instance_name_for_project("minio", true, &context.project_id)
                     .or_else(|| {
@@ -4246,6 +4625,494 @@ impl DataBrokerRuntime {
             })
         }
     }
+
+    /// Finish a multipart upload started by [`Self::initiate_multipart_upload`].
+    ///
+    /// Scoped exactly like initiate: the same object-access policy evaluation,
+    /// and the SAME tenant-namespaced physical key, so an `upload_id` belongs to
+    /// the key its tenant initiated — another tenant presenting it addresses a
+    /// different key and the store answers NoSuchUpload.
+    ///
+    /// Quota accounting: before assembling, the uploaded part sizes are read back
+    /// from the store (ListParts) and summed for the parts being completed. A
+    /// total above `UDB_MAX_OBJECT_BYTES` (the same per-object ceiling the
+    /// streaming `PutObject` enforces) aborts the upload and refuses, so presigned
+    /// parts can no longer assemble an object the broker would never accept.
+    pub async fn complete_multipart_upload(
+        &self,
+        manifest: &CatalogManifest,
+        request: crate::proto::CompleteMultipartUploadRequest,
+        metadata_context: RequestContext,
+    ) -> Result<crate::proto::CompleteMultipartUploadResponse, tonic::Status> {
+        #[cfg(not(feature = "s3"))]
+        {
+            let _ = (manifest, request, metadata_context);
+            return Err(s3_object_feature_status("complete_multipart_upload"));
+        }
+        #[cfg(feature = "s3")]
+        {
+            let context = merge_context(request.context.as_ref(), metadata_context);
+            let decision = evaluate_object_access(
+                manifest,
+                &ObjectAccessRequest {
+                    context: context.clone(),
+                    bucket: request.bucket.clone(),
+                    object_key: request.object_key.clone(),
+                    method: "PUT".to_string(),
+                    presigned: true,
+                },
+            );
+            reject_plan(&decision.errors)?;
+            validate_multipart_upload_id(&request.upload_id)?;
+            validate_completed_parts(&request.parts)?;
+            ensure_s3_compatible_object_target(
+                &manifest_object_backend(manifest, &request.bucket),
+                "complete_multipart_upload",
+            )?;
+            let target_instance = if context.target_instance.trim().is_empty() {
+                self.choose_instance_name_for_project("minio", true, &context.project_id)
+                    .or_else(|| {
+                        self.choose_instance_name_for_project("s3", true, &context.project_id)
+                    })
+            } else {
+                Some(context.target_instance.as_str())
+            };
+            let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
+            let physical_key = tenant_scoped_object_key(&context, &request.object_key);
+            let uploaded =
+                list_multipart_parts(s3, &request.bucket, &physical_key, &request.upload_id)
+                    .await?;
+            let total = multipart_completed_size(&request.parts, &uploaded)?;
+            let max_bytes = crate::runtime::config::max_object_bytes();
+            if !multipart_total_within_limit(total, max_bytes) {
+                // Release the parts: an over-limit upload can never be completed.
+                if let Err(err) = s3
+                    .abort_multipart_upload()
+                    .bucket(&request.bucket)
+                    .key(&physical_key)
+                    .upload_id(&request.upload_id)
+                    .send()
+                    .await
+                {
+                    tracing::warn!(
+                        error = %err,
+                        bucket = %request.bucket,
+                        "over-limit multipart upload could not be aborted; the store's \
+                         incomplete-upload lifecycle must reclaim its parts"
+                    );
+                }
+                return Err(crate::runtime::executor_utils::quota_refusal_status(
+                    "s3",
+                    "complete_multipart_upload",
+                    format!("object exceeds UDB_MAX_OBJECT_BYTES ({max_bytes}): {total} bytes"),
+                ));
+            }
+            let parts = request
+                .parts
+                .iter()
+                .map(|part| {
+                    aws_sdk_s3::types::CompletedPart::builder()
+                        .part_number(part.part_number)
+                        .e_tag(part.etag.trim())
+                        .build()
+                })
+                .collect::<Vec<_>>();
+            let completed = aws_sdk_s3::types::CompletedMultipartUpload::builder()
+                .set_parts(Some(parts))
+                .build();
+            let out = s3
+                .complete_multipart_upload()
+                .bucket(&request.bucket)
+                .key(&physical_key)
+                .upload_id(&request.upload_id)
+                .multipart_upload(completed)
+                .send()
+                .await
+                .map_err(|err| {
+                    crate::runtime::executor_utils::backend_transport_status(
+                        "S3",
+                        "multipart complete",
+                        err,
+                    )
+                })?;
+            Ok(crate::proto::CompleteMultipartUploadResponse {
+                resource_uri: decision.resource_uri,
+                etag: out.e_tag().unwrap_or_default().to_string(),
+                size_bytes: total,
+            })
+        }
+    }
+
+    /// Cancel a multipart upload and release its uploaded parts. Same policy
+    /// evaluation and tenant-namespaced key as initiate/complete. An upload the
+    /// store no longer knows (already completed/aborted, or never this tenant's)
+    /// reports `aborted: false` rather than an error, so a retried abort is safe.
+    pub async fn abort_multipart_upload(
+        &self,
+        manifest: &CatalogManifest,
+        request: crate::proto::AbortMultipartUploadRequest,
+        metadata_context: RequestContext,
+    ) -> Result<crate::proto::AbortMultipartUploadResponse, tonic::Status> {
+        #[cfg(not(feature = "s3"))]
+        {
+            let _ = (manifest, request, metadata_context);
+            return Err(s3_object_feature_status("abort_multipart_upload"));
+        }
+        #[cfg(feature = "s3")]
+        {
+            let context = merge_context(request.context.as_ref(), metadata_context);
+            let decision = evaluate_object_access(
+                manifest,
+                &ObjectAccessRequest {
+                    context: context.clone(),
+                    bucket: request.bucket.clone(),
+                    object_key: request.object_key.clone(),
+                    method: "PUT".to_string(),
+                    presigned: true,
+                },
+            );
+            reject_plan(&decision.errors)?;
+            validate_multipart_upload_id(&request.upload_id)?;
+            ensure_s3_compatible_object_target(
+                &manifest_object_backend(manifest, &request.bucket),
+                "abort_multipart_upload",
+            )?;
+            let target_instance = if context.target_instance.trim().is_empty() {
+                self.choose_instance_name_for_project("minio", true, &context.project_id)
+                    .or_else(|| {
+                        self.choose_instance_name_for_project("s3", true, &context.project_id)
+                    })
+            } else {
+                Some(context.target_instance.as_str())
+            };
+            let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
+            let physical_key = tenant_scoped_object_key(&context, &request.object_key);
+            match s3
+                .abort_multipart_upload()
+                .bucket(&request.bucket)
+                .key(&physical_key)
+                .upload_id(&request.upload_id)
+                .send()
+                .await
+            {
+                Ok(_) => Ok(crate::proto::AbortMultipartUploadResponse { aborted: true }),
+                Err(err) => {
+                    let no_such_upload = err
+                        .as_service_error()
+                        .map(|svc| svc.is_no_such_upload())
+                        .unwrap_or(false);
+                    if no_such_upload {
+                        Ok(crate::proto::AbortMultipartUploadResponse { aborted: false })
+                    } else {
+                        Err(crate::runtime::executor_utils::backend_transport_status(
+                            "S3",
+                            "multipart abort",
+                            err,
+                        ))
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── multipart completion + object-backend capability helpers ──────────────────
+
+/// S3's hard ceiling on parts per multipart upload (part numbers 1..=10000).
+#[cfg_attr(not(feature = "s3"), allow(dead_code))]
+const MULTIPART_MAX_PARTS: i32 = 10_000;
+
+#[cfg_attr(not(feature = "s3"), allow(dead_code))]
+fn multipart_too_many_parts_status() -> tonic::Status {
+    setup_data_invalid_field(
+        "part_count",
+        "multipart upload part_count must not exceed 10000",
+        "part_count exceeds the 10000-part multipart limit",
+    )
+}
+
+/// `upload_id` is the store's handle for the upload; blank can never match.
+#[cfg_attr(not(feature = "s3"), allow(dead_code))]
+fn validate_multipart_upload_id(upload_id: &str) -> Result<(), tonic::Status> {
+    if upload_id.trim().is_empty() {
+        return Err(setup_data_invalid_field(
+            "upload_id",
+            "must be the upload_id returned by InitiateMultipartUpload",
+            "upload_id is required",
+        ));
+    }
+    Ok(())
+}
+
+/// The completion list must be non-empty, within the part limit, in STRICTLY
+/// ascending part-number order (S3's own rule, checked up front for a typed
+/// field error instead of a store InvalidPartOrder), and every part must carry
+/// the ETag the store returned for it.
+#[cfg_attr(not(feature = "s3"), allow(dead_code))]
+fn validate_completed_parts(
+    parts: &[crate::proto::MultipartUploadPart],
+) -> Result<(), tonic::Status> {
+    if parts.is_empty() {
+        return Err(setup_data_invalid_field(
+            "parts",
+            "must list every uploaded part (part_number + etag)",
+            "parts is required",
+        ));
+    }
+    if parts.len() > MULTIPART_MAX_PARTS as usize {
+        return Err(setup_data_invalid_field(
+            "parts",
+            "must not exceed 10000 parts",
+            "too many parts",
+        ));
+    }
+    let mut previous = 0i32;
+    for part in parts {
+        if part.part_number < 1 || part.part_number > MULTIPART_MAX_PARTS {
+            return Err(setup_data_invalid_field(
+                "parts.part_number",
+                "must be between 1 and 10000",
+                format!("part_number {} is out of range", part.part_number),
+            ));
+        }
+        if part.part_number <= previous {
+            return Err(setup_data_invalid_field(
+                "parts.part_number",
+                "parts must be in strictly ascending part_number order",
+                format!(
+                    "part_number {} is not greater than the preceding {previous}",
+                    part.part_number
+                ),
+            ));
+        }
+        if part.etag.trim().is_empty() {
+            return Err(setup_data_invalid_field(
+                "parts.etag",
+                "must be the ETag the object store returned for the part upload",
+                format!("part {} has no etag", part.part_number),
+            ));
+        }
+        previous = part.part_number;
+    }
+    Ok(())
+}
+
+/// Byte total of the parts being completed, from the store's own part listing
+/// (`uploaded`: part number → (size, etag)). A listed part the store does not
+/// have, or whose ETag differs, is refused (FailedPrecondition) — the client
+/// must re-upload it, completion cannot paper over it.
+#[cfg_attr(not(feature = "s3"), allow(dead_code))]
+fn multipart_completed_size(
+    parts: &[crate::proto::MultipartUploadPart],
+    uploaded: &std::collections::HashMap<i32, (i64, String)>,
+) -> Result<i64, tonic::Status> {
+    let normalize = |etag: &str| etag.trim().trim_matches('"').to_ascii_lowercase();
+    let mut total = 0i64;
+    for part in parts {
+        let Some((size, etag)) = uploaded.get(&part.part_number) else {
+            return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                format!("part {} has not been uploaded", part.part_number),
+                [(
+                    "parts.part_number",
+                    "every listed part must have been uploaded",
+                )],
+            ));
+        };
+        if normalize(etag) != normalize(&part.etag) {
+            return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                format!(
+                    "part {} etag does not match the uploaded part",
+                    part.part_number
+                ),
+                [(
+                    "parts.etag",
+                    "must match the ETag the store returned for the part",
+                )],
+            ));
+        }
+        total = total.saturating_add((*size).max(0));
+    }
+    Ok(total)
+}
+
+/// The assembled object must fit the per-object ceiling (`UDB_MAX_OBJECT_BYTES`).
+#[cfg_attr(not(feature = "s3"), allow(dead_code))]
+fn multipart_total_within_limit(total: i64, max_bytes: u64) -> bool {
+    total >= 0 && (total as u64) <= max_bytes
+}
+
+/// Every part the store holds for an upload (ListParts, paginated).
+#[cfg(feature = "s3")]
+async fn list_multipart_parts(
+    s3: &aws_sdk_s3::Client,
+    bucket: &str,
+    key: &str,
+    upload_id: &str,
+) -> Result<std::collections::HashMap<i32, (i64, String)>, tonic::Status> {
+    let mut parts = std::collections::HashMap::new();
+    let mut marker: Option<String> = None;
+    loop {
+        let mut call = s3.list_parts().bucket(bucket).key(key).upload_id(upload_id);
+        if let Some(marker) = marker.as_deref() {
+            call = call.part_number_marker(marker);
+        }
+        let page = call.send().await.map_err(|err| {
+            crate::runtime::executor_utils::backend_transport_status(
+                "S3",
+                "multipart list parts",
+                err,
+            )
+        })?;
+        for part in page.parts() {
+            if let Some(number) = part.part_number() {
+                parts.insert(
+                    number,
+                    (
+                        part.size().unwrap_or(0),
+                        part.e_tag().unwrap_or_default().to_string(),
+                    ),
+                );
+            }
+        }
+        let next = page
+            .next_part_number_marker()
+            .filter(|m| !m.trim().is_empty())
+            .map(str::to_string);
+        if !page.is_truncated().unwrap_or(false) || next.is_none() || next == marker {
+            break;
+        }
+        marker = next;
+    }
+    Ok(parts)
+}
+
+/// The manifest-declared backend for an object bucket (lowercased); `""` when
+/// the bucket has no object-store declaration (the S3/MinIO default).
+#[cfg_attr(not(feature = "s3"), allow(dead_code))]
+fn manifest_object_backend(manifest: &CatalogManifest, bucket: &str) -> String {
+    manifest
+        .stores
+        .iter()
+        .find(|store| {
+            matches!(store.store_kind.as_str(), "object" | "blob" | "storage")
+                && store.resource_name == bucket
+        })
+        .map(|store| store.backend.trim().to_ascii_lowercase())
+        .unwrap_or_default()
+}
+
+/// Object backends the presign / HEAD / multipart paths are NOT wired for. Those
+/// paths sign and probe with the S3 client only; Azure Blob (SAS) and GCS
+/// (signed URL / metadata GET) have no implementation here yet.
+#[cfg_attr(not(feature = "s3"), allow(dead_code))]
+fn non_s3_object_backend(target: &str) -> Option<&'static str> {
+    match target.trim().to_ascii_lowercase().as_str() {
+        "azureblob" | "azure" | "azure_blob" => Some("azureblob"),
+        "gcs" | "google_cloud_storage" => Some("gcs"),
+        _ => None,
+    }
+}
+
+/// Explicit capability refusal (FailedPrecondition, kind CAPABILITY) for an
+/// S3-only object operation aimed at Azure Blob / GCS, instead of misreading the
+/// backend name as an S3 instance name and failing with an unrelated error.
+/// PutObject / GetObject / DeleteObject do support those backends.
+#[cfg_attr(not(feature = "s3"), allow(dead_code))]
+fn ensure_s3_compatible_object_target(
+    target: &str,
+    operation: &'static str,
+) -> Result<(), tonic::Status> {
+    match non_s3_object_backend(target) {
+        None => Ok(()),
+        Some(backend) => Err(setup_data_capability_status(
+            backend,
+            operation,
+            "s3_compatible_object_store",
+            format!(
+                "{operation} is not wired for the {backend} object backend (S3/MinIO only); \
+                 use the streaming PutObject/GetObject RPCs for {backend}"
+            ),
+        )),
+    }
+}
+
+#[cfg(test)]
+mod multipart_and_object_capability_tests {
+    use super::*;
+
+    fn part(part_number: i32, etag: &str) -> crate::proto::MultipartUploadPart {
+        crate::proto::MultipartUploadPart {
+            part_number,
+            etag: etag.to_string(),
+        }
+    }
+
+    #[test]
+    fn completed_parts_must_be_ascending_tagged_and_bounded() {
+        assert!(validate_completed_parts(&[part(1, "a"), part(2, "b")]).is_ok());
+        assert!(validate_completed_parts(&[]).is_err(), "empty list");
+        assert!(validate_completed_parts(&[part(2, "a"), part(1, "b")]).is_err());
+        assert!(validate_completed_parts(&[part(1, "a"), part(1, "b")]).is_err());
+        assert!(validate_completed_parts(&[part(0, "a")]).is_err());
+        assert!(validate_completed_parts(&[part(10_001, "a")]).is_err());
+        assert!(
+            validate_completed_parts(&[part(1, "  ")]).is_err(),
+            "etag required"
+        );
+        let err = validate_completed_parts(&[part(3, "a"), part(2, "b")]).unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(validate_multipart_upload_id(" ").is_err());
+        assert!(validate_multipart_upload_id("abc").is_ok());
+    }
+
+    #[test]
+    fn completed_size_sums_store_sizes_and_checks_presence_and_etag() {
+        let mut uploaded = std::collections::HashMap::new();
+        uploaded.insert(1, (5_242_880i64, "\"AbC\"".to_string()));
+        uploaded.insert(2, (100i64, "def".to_string()));
+        // ETags compare quote/case-insensitively; sizes come from the store.
+        let total = multipart_completed_size(&[part(1, "abc"), part(2, "\"DEF\"")], &uploaded)
+            .expect("listed parts complete");
+        assert_eq!(total, 5_242_980);
+        // Completing a subset charges only that subset.
+        assert_eq!(
+            multipart_completed_size(&[part(2, "def")], &uploaded).unwrap(),
+            100
+        );
+        let missing = multipart_completed_size(&[part(3, "x")], &uploaded).unwrap_err();
+        assert_eq!(missing.code(), tonic::Code::FailedPrecondition);
+        let wrong = multipart_completed_size(&[part(1, "zzz")], &uploaded).unwrap_err();
+        assert_eq!(wrong.code(), tonic::Code::FailedPrecondition);
+    }
+
+    #[test]
+    fn multipart_total_respects_the_object_ceiling() {
+        assert!(multipart_total_within_limit(100, 100));
+        assert!(!multipart_total_within_limit(101, 100));
+        assert!(!multipart_total_within_limit(-1, 100));
+    }
+
+    #[test]
+    fn s3_only_object_paths_refuse_azure_and_gcs_explicitly() {
+        for target in ["", "minio", "s3", "minio-primary"] {
+            assert!(
+                ensure_s3_compatible_object_target(target, "presign").is_ok(),
+                "{target} is S3-compatible"
+            );
+        }
+        for (target, backend) in [
+            ("azureblob", "azureblob"),
+            ("GCS", "gcs"),
+            ("azure", "azureblob"),
+        ] {
+            let err = ensure_s3_compatible_object_target(target, "presign")
+                .expect_err("non-S3 backend must be refused explicitly");
+            assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+            assert!(err.message().contains(backend), "{}", err.message());
+            assert!(err.message().contains("S3/MinIO only"));
+        }
+        assert!(multipart_too_many_parts_status().code() == tonic::Code::InvalidArgument);
+    }
 }
 
 // ── #5 (opaque row revision / ETag) + gate 25 (lock fencing) shared helpers ────
@@ -4262,6 +5129,238 @@ pub(crate) struct MutationGuards {
     pub(crate) lock_name: String,
     /// gate 25: the caller's monotonic fencing token for `lock_name`.
     pub(crate) fencing_token: i64,
+}
+
+/// Typed relational data-plane RPCs (Select / Upsert / Update / Delete / BulkCas
+/// and BeginTx's relational mutations) execute on the PostgreSQL pool only.
+///
+/// A caller that targets another SQL engine (`x-udb-target-backend: mysql`,
+/// `sqlite`, `mssql`, …) used to be served from the Postgres pool anyway — the
+/// planner even compiled filter syntax for the requested dialect and then ran it
+/// against Postgres. Refuse explicitly with a typed capability error that names
+/// the path that does serve those engines (GenericDispatch over the neutral IR).
+/// An empty or Postgres target is admitted; an unrecognised hint resolves to
+/// the Postgres default exactly as the planner does.
+pub(crate) fn typed_relational_backend_guard(
+    context: &RequestContext,
+    operation: &'static str,
+) -> Result<(), tonic::Status> {
+    let target = context.target_backend.trim();
+    if target.is_empty() {
+        return Ok(());
+    }
+    match crate::backend::BackendKind::from_store_kind("sql", target) {
+        Some(crate::backend::BackendKind::Postgres) | None => Ok(()),
+        Some(_) => Err(crate::runtime::executor_utils::capability_status(
+            target,
+            operation,
+            "typed_relational_data_plane",
+            format!(
+                "typed {operation} executes on PostgreSQL only; target backend '{target}' is \
+                 served through GenericDispatch (neutral IR), not the typed data-plane RPCs"
+            ),
+        )),
+    }
+}
+
+#[cfg(test)]
+mod typed_relational_backend_guard_tests {
+    use super::typed_relational_backend_guard;
+    use crate::RequestContext;
+
+    fn ctx(target: &str) -> RequestContext {
+        RequestContext {
+            target_backend: target.to_string(),
+            ..RequestContext::default()
+        }
+    }
+
+    #[test]
+    fn postgres_or_unset_target_is_admitted() {
+        for target in ["", "postgres", "PostgreSQL", "unknown-hint"] {
+            assert!(
+                typed_relational_backend_guard(&ctx(target), "select").is_ok(),
+                "{target}"
+            );
+        }
+    }
+
+    #[test]
+    fn other_sql_engines_are_refused_with_a_capability_error() {
+        for target in ["mysql", "sqlite", "mssql"] {
+            let status = typed_relational_backend_guard(&ctx(target), "upsert")
+                .expect_err("non-Postgres typed RPC must be refused");
+            assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+            assert!(status.message().contains("GenericDispatch"), "{status:?}");
+        }
+    }
+}
+
+/// Refusal for an upsert whose conflict branch was blocked by the tenant/project
+/// scope guard.
+///
+/// Both upsert emitters guard `ON CONFLICT … DO UPDATE` with the conflicting
+/// row's tenant/project, and always emit a DO UPDATE (never DO NOTHING) when a
+/// guard applies. An unguarded DO UPDATE affects exactly one row per record, so
+/// a DO UPDATE statement that affected 0 rows can only mean the conflict target
+/// belongs to another tenant or project. Returns `None` for every other outcome
+/// (an insert, a same-scope update, or a DO NOTHING no-op).
+pub(crate) fn upsert_scope_guard_refusal(
+    executed_sql: &str,
+    affected_rows: i64,
+) -> Option<tonic::Status> {
+    if affected_rows != 0 || !executed_sql.contains(" DO UPDATE SET ") {
+        return None;
+    }
+    Some(crate::runtime::executor_utils::failed_precondition_fields(
+        "upsert refused: the conflicting row is not in the caller's tenant/project scope; \
+         nothing was written",
+        [(
+            "record".to_string(),
+            "the conflict key identifies a row outside the request scope".to_string(),
+        )],
+    ))
+}
+
+/// The locked single-row lookup shared by compare-and-swap reads (upsert /
+/// conditional update/delete CAS, BulkCas): `key_columns = key_values`, ANDed
+/// with the verified caller tenant/project when the table declares those
+/// columns, `FOR UPDATE`. Returns `(sql, bind_columns, bind_values)`.
+///
+/// Postgres RLS is not the boundary here (owner connection, no FORCE), so
+/// without the scope predicate a caller naming another tenant's key could
+/// lock that row and learn whether it exists and whether `expected` matches.
+fn scoped_locked_row_lookup(
+    table: &ManifestTable,
+    key_columns: &[String],
+    key_values: &[JsonValue],
+    context: &RequestContext,
+) -> (String, Vec<String>, Vec<JsonValue>) {
+    let mut bind_columns = key_columns.to_vec();
+    let mut bind_row_values = key_values.to_vec();
+    for (column, value) in [
+        (
+            crate::generation::sql::resolve_tenant_column(table),
+            context.tenant_id.trim(),
+        ),
+        (
+            crate::generation::sql::resolve_project_column(table),
+            context.project_id.trim(),
+        ),
+    ] {
+        if let Some(column) = column
+            && !value.is_empty()
+            && !key_columns.iter().any(|key| key == column)
+        {
+            bind_columns.push(column.to_string());
+            bind_row_values.push(JsonValue::String(value.to_string()));
+        }
+    }
+    let predicate = bind_columns
+        .iter()
+        .enumerate()
+        .map(|(idx, column)| format!("\"{column}\" = ${}", idx + 1))
+        .collect::<Vec<_>>()
+        .join(" AND ");
+    let sql = format!(
+        "SELECT * FROM \"{schema}\".\"{table}\" WHERE {predicate} FOR UPDATE",
+        schema = table.schema,
+        table = table.table,
+    );
+    (sql, bind_columns, bind_row_values)
+}
+
+#[cfg(test)]
+mod scoped_locked_row_lookup_tests {
+    use super::scoped_locked_row_lookup;
+    use crate::RequestContext;
+    use crate::generation::{ManifestColumn, ManifestTable};
+    use serde_json::json;
+
+    fn table() -> ManifestTable {
+        let column = |name: &str| ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            sql_type: "TEXT".to_string(),
+            is_primary: name == "id",
+            is_tenant_column: name == "tenant_id",
+            is_project_column: name == "project_id",
+            ..ManifestColumn::default()
+        };
+        ManifestTable {
+            message_name: "acme.test.v1.Widget".to_string(),
+            schema: "public".to_string(),
+            table: "widgets".to_string(),
+            primary_key: vec!["id".to_string()],
+            columns: vec![column("id"), column("tenant_id"), column("project_id")],
+            ..ManifestTable::default()
+        }
+    }
+
+    #[test]
+    fn lookup_is_scoped_to_the_verified_tenant_and_project() {
+        let context = RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            project_id: "project-a".to_string(),
+            ..RequestContext::default()
+        };
+        let (sql, columns, values) =
+            scoped_locked_row_lookup(&table(), &["id".to_string()], &[json!("w1")], &context);
+        assert_eq!(
+            sql,
+            "SELECT * FROM \"public\".\"widgets\" WHERE \"id\" = $1 AND \"tenant_id\" = $2 \
+             AND \"project_id\" = $3 FOR UPDATE"
+        );
+        assert_eq!(columns, ["id", "tenant_id", "project_id"]);
+        assert_eq!(values, [json!("w1"), json!("tenant-a"), json!("project-a")]);
+    }
+
+    #[test]
+    fn lookup_without_a_project_context_scopes_tenant_only() {
+        let context = RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            ..RequestContext::default()
+        };
+        let (sql, columns, _) =
+            scoped_locked_row_lookup(&table(), &["id".to_string()], &[json!("w1")], &context);
+        assert!(
+            sql.ends_with("WHERE \"id\" = $1 AND \"tenant_id\" = $2 FOR UPDATE"),
+            "{sql}"
+        );
+        assert_eq!(columns, ["id", "tenant_id"]);
+    }
+}
+
+#[cfg(test)]
+mod upsert_scope_guard_tests {
+    use super::upsert_scope_guard_refusal;
+
+    const GUARDED: &str = "INSERT INTO \"public\".\"widgets\" (\"id\", \"tenant_id\") \
+        VALUES ($1, $2) ON CONFLICT (\"id\") DO UPDATE SET \"tenant_id\" = EXCLUDED.\"tenant_id\" \
+        WHERE \"widgets\".\"tenant_id\" IS NOT DISTINCT FROM EXCLUDED.\"tenant_id\"";
+
+    #[test]
+    fn guarded_update_touching_zero_rows_is_refused() {
+        let status = upsert_scope_guard_refusal(GUARDED, 0).expect("foreign-scope conflict");
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert!(
+            status
+                .message()
+                .contains("not in the caller's tenant/project scope")
+        );
+    }
+
+    #[test]
+    fn insert_or_same_scope_update_is_not_refused() {
+        assert!(upsert_scope_guard_refusal(GUARDED, 1).is_none());
+    }
+
+    #[test]
+    fn do_nothing_no_op_is_not_refused() {
+        let sql = "INSERT INTO \"public\".\"widgets\" (\"id\") VALUES ($1) \
+                   ON CONFLICT (\"id\") DO NOTHING";
+        assert!(upsert_scope_guard_refusal(sql, 0).is_none());
+    }
 }
 
 /// Canonical, type-stable token for a single primary-key value used to build a
@@ -6591,10 +7690,17 @@ mod setup_data_validation_tests {
         )
         .expect("pinecone vector search spec");
         let json: serde_json::Value = serde_json::from_str(&spec).expect("spec json");
+        // The logical collection is AND'd with the tenant scope: one Pinecone
+        // index backs every collection.
         assert_eq!(
             json["body"]["filter"],
-            serde_json::json!({ "_tenant_id": { "$eq": "acme" } }),
-            "pinecone query must scope to the tenant"
+            serde_json::json!({
+                "$and": [
+                    { "_collection": { "$eq": "Docs" } },
+                    { "_tenant_id": { "$eq": "acme" } }
+                ]
+            }),
+            "pinecone query must scope to the tenant and the collection"
         );
     }
 
@@ -6645,7 +7751,8 @@ mod setup_data_validation_tests {
         // `struct_filter_equality_terms` skipped it (no `value`) so the gather ran
         // UNSCOPED. It must now become an ES `terms` clause over the OR-set while the
         // tenant equality stays a `term` — both within the tenant.
-        let clauses = es_payload_filter_terms(parent_window_filter().as_ref());
+        let clauses =
+            es_payload_filter_terms(parent_window_filter().as_ref()).expect("es filter translates");
         assert!(
             clauses.contains(&serde_json::json!({
                 "term": { "payload._tenant_id.keyword": "acme" }
@@ -6664,7 +7771,8 @@ mod setup_data_validation_tests {
     fn weaviate_where_translates_match_any_into_an_or() {
         // `match.any` → a weaviate `Or` of `Equal` operands so the gather stays
         // scoped; combined with the tenant equality under a top-level `And`.
-        let arg = weaviate_where_arg(parent_window_filter().as_ref());
+        let arg = weaviate_where_arg(parent_window_filter().as_ref())
+            .expect("weaviate filter translates");
         assert!(arg.contains("operator: And"), "combined under And: {arg}");
         assert!(arg.contains("operator: Or"), "any-set becomes an Or: {arg}");
         assert!(
@@ -6676,13 +7784,18 @@ mod setup_data_validation_tests {
 
     #[test]
     fn pinecone_filter_translates_match_any_into_in() {
-        // `match.any` → Pinecone `$in`; tenant equality stays `$eq`.
-        let filter = pinecone_metadata_filter(parent_window_filter().as_ref());
+        // `match.any` → Pinecone `$in`; tenant equality stays `$eq`. The two are
+        // separate `$and` operands (never one merged key map), so neither clause
+        // can replace the other.
+        let filter = pinecone_metadata_filter(parent_window_filter().as_ref())
+            .expect("pinecone filter translates");
         assert_eq!(
             filter,
             serde_json::json!({
-                "_tenant_id": { "$eq": "acme" },
-                "_parent_pk": { "$in": ["row-1", "row-2"] }
+                "$and": [
+                    { "_tenant_id": { "$eq": "acme" } },
+                    { "_parent_pk": { "$in": ["row-1", "row-2"] } }
+                ]
             }),
             "match.any must become a $in set, not be dropped"
         );
@@ -8734,8 +9847,14 @@ pub(crate) async fn register_postgres(ctx: &mut RegisterCtx<'_>) {
                     use crate::runtime::canonical_store::postgres::PostgresCanonicalStore;
                     use crate::runtime::cdc::CdcConfig;
                     let outbox_relation = CdcConfig::current().outbox_relation();
+                    // The data plane (`saga_begin` / `saga_record_step` /
+                    // `saga_set_status`) writes the configured system-catalog
+                    // saga relation; the recovery worker + saga admin RPCs read
+                    // through this store. Both MUST name the same relation or
+                    // crash recovery never sees a single data-plane saga.
                     let store =
-                        PostgresCanonicalStore::new(pool.clone(), "primary", outbox_relation);
+                        PostgresCanonicalStore::new(pool.clone(), "primary", outbox_relation)
+                            .with_saga_relation(crate::runtime::saga::data_plane_saga_relation());
                     match ensure_full_system_store_tables(&store).await {
                         Ok(()) => {
                             let store: std::sync::Arc<dyn SystemStores> =
@@ -10101,211 +11220,1015 @@ fn reject_vector_plan_errors(
     reject_plan(&remaining)
 }
 
-/// Translate the neutral qdrant-style filter (`{"must":[{"key":…,"match":{"value":…}}]}`)
-/// into Elasticsearch `term` clauses over the stored `payload.<key>` field.
+/// One node of the neutral (qdrant-style) vector filter, parsed once and then
+/// rendered per backend. The neutral grammar is
+/// `{"must":[…], "should":[…], "must_not":[…]}` whose conditions are either a
+/// field condition (`{"key":…, "match":{"value"|"any"|"except":…}}` or
+/// `{"key":…, "range":{"gt"|"gte"|"lt"|"lte":…}}`) or a NESTED filter object.
 ///
-/// The tenant scope (`_tenant_id`) is the SECURITY boundary: previously the ES
-/// arm ran `match_all` and ignored `request.filter` entirely, returning other
-/// tenants' documents. Each equality `must` term becomes a `term` on
-/// `payload.<key>.keyword` — the `.keyword` sub-field is used so exact-match
-/// works under Elasticsearch's default dynamic string mapping (a bare `term` on
-/// an analyzed `text` field would tokenise a UUID and mis-match). Non-equality
-/// operators are not translated (they would only ever broaden results WITHIN the
-/// tenant, never cross it). Docs are tenant-stamped at write time by
-/// [`stamp_generic_vector_point_payloads`], so `payload._tenant_id` exists to
-/// match against.
-fn es_payload_filter_terms(filter: Option<&prost_types::Struct>) -> Vec<JsonValue> {
-    let mut clauses: Vec<JsonValue> = struct_filter_equality_terms(filter)
-        .into_iter()
-        .map(|(key, value)| {
-            let mut term_field = serde_json::Map::new();
-            term_field.insert(format!("payload.{key}.keyword"), value);
-            serde_json::json!({ "term": JsonValue::Object(term_field) })
-        })
-        .collect();
-    // `match.any` (the parent-window gather scoping `_parent_pk` to the selected
-    // parents) becomes an ES `terms` clause so the OR-set still narrows the query
-    // WITHIN the tenant — previously it was dropped and the gather ran unscoped.
-    for (key, values) in struct_filter_any_terms(filter) {
-        let mut terms_field = serde_json::Map::new();
-        terms_field.insert(format!("payload.{key}.keyword"), JsonValue::Array(values));
-        clauses.push(serde_json::json!({ "terms": JsonValue::Object(terms_field) }));
-    }
-    clauses
+/// The tenant/project scope is AND'd around the caller filter as sibling `must`
+/// conditions (see [`scoped_generic_vector_filter`]), so every translator MUST
+/// either express a clause faithfully or refuse the whole filter: silently
+/// dropping a clause widens the query, and a merged key map lets a caller clause
+/// replace the tenant clause. Anything the grammar or a backend cannot express is
+/// an `InvalidArgument`, never a dropped clause.
+#[derive(Debug, Clone, PartialEq)]
+enum VectorFilterNode {
+    Eq {
+        key: String,
+        value: JsonValue,
+    },
+    In {
+        key: String,
+        values: Vec<JsonValue>,
+    },
+    Range {
+        key: String,
+        bounds: Vec<(&'static str, JsonValue)>,
+    },
+    And(Vec<VectorFilterNode>),
+    Or(Vec<VectorFilterNode>),
+    Not(Box<VectorFilterNode>),
 }
 
-/// Extract equality `(key, value)` pairs from the neutral qdrant-style filter
-/// (`{"must":[{"key":…,"match":{"value":…}}]}`). The tenant scope (`_tenant_id`)
-/// is the security boundary each generic-HTTP backend must AND into its query;
-/// non-equality operators are not translated (they only broaden WITHIN a tenant).
-/// Docs are tenant-stamped at write time by [`stamp_generic_vector_point_payloads`].
-fn struct_filter_equality_terms(filter: Option<&prost_types::Struct>) -> Vec<(String, JsonValue)> {
-    let Some(filter) = filter else {
-        return Vec::new();
-    };
-    let json = struct_to_json(filter);
-    let Some(must) = json.get("must").and_then(JsonValue::as_array) else {
-        return Vec::new();
-    };
-    let mut terms = Vec::new();
-    for clause in must {
-        if let (Some(key), Some(value)) = (
-            clause.get("key").and_then(JsonValue::as_str),
-            clause.get("match").and_then(|m| m.get("value")),
-        ) {
-            terms.push((key.to_string(), value.clone()));
+fn vector_filter_invalid(message: impl Into<String>) -> tonic::Status {
+    setup_data_invalid_field(
+        "filter",
+        "must be a must/should/must_not filter of match.value/any/except or range \
+         conditions the target vector backend can express",
+        message,
+    )
+}
+
+fn vector_filter_scalar(value: &JsonValue, context: &str) -> Result<JsonValue, tonic::Status> {
+    match value {
+        JsonValue::String(_) | JsonValue::Number(_) | JsonValue::Bool(_) => Ok(value.clone()),
+        other => Err(vector_filter_invalid(format!(
+            "{context} must be a string, number or boolean, got {other}"
+        ))),
+    }
+}
+
+fn vector_filter_scalar_list(
+    value: &JsonValue,
+    context: &str,
+) -> Result<Vec<JsonValue>, tonic::Status> {
+    let items = value
+        .as_array()
+        .ok_or_else(|| vector_filter_invalid(format!("{context} must be an array")))?;
+    if items.is_empty() {
+        return Err(vector_filter_invalid(format!(
+            "{context} must not be empty"
+        )));
+    }
+    items
+        .iter()
+        .map(|item| vector_filter_scalar(item, context))
+        .collect()
+}
+
+/// Parse the neutral filter JSON. `null` / `{}` is the empty conjunction.
+fn parse_vector_filter(value: &JsonValue) -> Result<VectorFilterNode, tonic::Status> {
+    match value {
+        JsonValue::Null => Ok(VectorFilterNode::And(Vec::new())),
+        JsonValue::Object(object) if object.contains_key("key") => {
+            parse_vector_filter_condition(object)
+        }
+        JsonValue::Object(object) => {
+            let mut parts: Vec<VectorFilterNode> = Vec::new();
+            for (group, conditions) in object {
+                let conditions = match conditions {
+                    JsonValue::Array(items) => items.clone(),
+                    JsonValue::Object(_) => vec![conditions.clone()],
+                    other => {
+                        return Err(vector_filter_invalid(format!(
+                            "filter group {group:?} must be an array of conditions, got {other}"
+                        )));
+                    }
+                };
+                match group.as_str() {
+                    "must" => {
+                        for condition in &conditions {
+                            push_and_flattened(&mut parts, parse_vector_filter(condition)?);
+                        }
+                    }
+                    "should" => {
+                        let mut alternatives = Vec::new();
+                        for condition in &conditions {
+                            alternatives.push(parse_vector_filter(condition)?);
+                        }
+                        match alternatives.len() {
+                            0 => {}
+                            1 => push_and_flattened(&mut parts, alternatives.remove(0)),
+                            _ => parts.push(VectorFilterNode::Or(alternatives)),
+                        }
+                    }
+                    "must_not" => {
+                        for condition in &conditions {
+                            parts.push(VectorFilterNode::Not(Box::new(parse_vector_filter(
+                                condition,
+                            )?)));
+                        }
+                    }
+                    other => {
+                        return Err(vector_filter_invalid(format!(
+                            "unsupported filter group {other:?} (expected must/should/must_not)"
+                        )));
+                    }
+                }
+            }
+            Ok(VectorFilterNode::And(parts))
+        }
+        other => Err(vector_filter_invalid(format!(
+            "a filter must be a JSON object, got {other}"
+        ))),
+    }
+}
+
+/// AND `node` into `parts`, splicing a nested conjunction in place (sound: AND is
+/// associative) so the common `{must:[{must:[…]}, tenant]}` shape stays flat.
+fn push_and_flattened(parts: &mut Vec<VectorFilterNode>, node: VectorFilterNode) {
+    match node {
+        VectorFilterNode::And(children) => parts.extend(children),
+        other => parts.push(other),
+    }
+}
+
+fn parse_vector_filter_condition(
+    object: &serde_json::Map<String, JsonValue>,
+) -> Result<VectorFilterNode, tonic::Status> {
+    let key = object
+        .get("key")
+        .and_then(JsonValue::as_str)
+        .map(str::trim)
+        .filter(|key| !key.is_empty())
+        .ok_or_else(|| vector_filter_invalid("condition `key` must be a non-empty string"))?
+        .to_string();
+    for field in object.keys() {
+        if !matches!(field.as_str(), "key" | "match" | "range") {
+            return Err(vector_filter_invalid(format!(
+                "unsupported condition field {field:?} on key {key:?} (expected match or range)"
+            )));
         }
     }
-    terms
-}
-
-/// Extract `match.any` OR-set `(key, [values…])` clauses from the neutral
-/// qdrant-style filter (`{"must":[{"key":…,"match":{"any":[…]}}]}`). The
-/// parent-window neighbor gather scopes `_parent_pk` this way (match ANY of the
-/// selected parents in ONE query); [`struct_filter_equality_terms`] only reads
-/// `match.value`, so without this the `any` clause was silently dropped and the
-/// gather ran unscoped over the whole collection. Each backend translator ANDs
-/// these in as its native OR/terms/`$in` primitive. Empty `any` lists are skipped.
-fn struct_filter_any_terms(filter: Option<&prost_types::Struct>) -> Vec<(String, Vec<JsonValue>)> {
-    let Some(filter) = filter else {
-        return Vec::new();
-    };
-    let json = struct_to_json(filter);
-    let Some(must) = json.get("must").and_then(JsonValue::as_array) else {
-        return Vec::new();
-    };
-    let mut terms = Vec::new();
-    for clause in must {
-        if let (Some(key), Some(any)) = (
-            clause.get("key").and_then(JsonValue::as_str),
-            clause
-                .get("match")
-                .and_then(|m| m.get("any"))
-                .and_then(JsonValue::as_array),
-        ) {
-            if !any.is_empty() {
-                terms.push((key.to_string(), any.clone()));
+    match (object.get("match"), object.get("range")) {
+        (Some(matcher), None) => {
+            let matcher = matcher.as_object().ok_or_else(|| {
+                vector_filter_invalid(format!("match on {key:?} must be an object"))
+            })?;
+            let (Some((kind, operand)), 1) = (matcher.iter().next(), matcher.len()) else {
+                return Err(vector_filter_invalid(format!(
+                    "match on {key:?} must carry exactly one of value/any/except"
+                )));
+            };
+            match kind.as_str() {
+                "value" => Ok(VectorFilterNode::Eq {
+                    value: vector_filter_scalar(operand, &format!("match.value on {key:?}"))?,
+                    key,
+                }),
+                "any" => Ok(VectorFilterNode::In {
+                    values: vector_filter_scalar_list(operand, &format!("match.any on {key:?}"))?,
+                    key,
+                }),
+                "except" => Ok(VectorFilterNode::Not(Box::new(VectorFilterNode::In {
+                    values: vector_filter_scalar_list(
+                        operand,
+                        &format!("match.except on {key:?}"),
+                    )?,
+                    key,
+                }))),
+                other => Err(vector_filter_invalid(format!(
+                    "unsupported match kind {other:?} on {key:?} (expected value/any/except)"
+                ))),
             }
         }
+        (None, Some(range)) => {
+            let range = range.as_object().ok_or_else(|| {
+                vector_filter_invalid(format!("range on {key:?} must be an object"))
+            })?;
+            let mut bounds = Vec::new();
+            for (op, bound) in range {
+                let op: &'static str = match op.as_str() {
+                    "gt" => "gt",
+                    "gte" => "gte",
+                    "lt" => "lt",
+                    "lte" => "lte",
+                    other => {
+                        return Err(vector_filter_invalid(format!(
+                            "unsupported range operator {other:?} on {key:?}"
+                        )));
+                    }
+                };
+                if !bound.is_number() {
+                    return Err(vector_filter_invalid(format!(
+                        "range.{op} on {key:?} must be a number"
+                    )));
+                }
+                bounds.push((op, bound.clone()));
+            }
+            if bounds.is_empty() {
+                return Err(vector_filter_invalid(format!(
+                    "range on {key:?} has no bounds"
+                )));
+            }
+            Ok(VectorFilterNode::Range { key, bounds })
+        }
+        _ => Err(vector_filter_invalid(format!(
+            "condition on {key:?} must carry exactly one of match or range"
+        ))),
     }
-    terms
+}
+
+fn parse_vector_filter_struct(
+    filter: Option<&prost_types::Struct>,
+) -> Result<VectorFilterNode, tonic::Status> {
+    match filter {
+        Some(filter) => parse_vector_filter(&struct_to_json(filter)),
+        None => Ok(VectorFilterNode::And(Vec::new())),
+    }
+}
+
+/// Translate the neutral filter into Elasticsearch `bool.filter` clauses over the
+/// stored `payload.<key>` field. String equality targets the `.keyword`
+/// sub-field (exact match under the default dynamic mapping — a bare `term` on an
+/// analysed `text` field would tokenise a UUID and mis-match); numbers/booleans
+/// target the bare field. `should` becomes `bool.should` with
+/// `minimum_should_match: 1`, `must_not` becomes `bool.must_not`, and nested
+/// filters nest as `bool` queries. Docs are tenant-stamped at write time by
+/// [`stamp_generic_vector_point_payloads`], so `payload._tenant_id` exists to
+/// match against.
+fn es_payload_filter_terms(
+    filter: Option<&prost_types::Struct>,
+) -> Result<Vec<JsonValue>, tonic::Status> {
+    match parse_vector_filter_struct(filter)? {
+        VectorFilterNode::And(children) => children.iter().map(es_filter_clause).collect(),
+        other => Ok(vec![es_filter_clause(&other)?]),
+    }
+}
+
+fn es_payload_field(key: &str, values: &[JsonValue]) -> Result<String, tonic::Status> {
+    let strings = values.iter().filter(|value| value.is_string()).count();
+    if strings == values.len() {
+        Ok(format!("payload.{key}.keyword"))
+    } else if strings == 0 {
+        Ok(format!("payload.{key}"))
+    } else {
+        Err(vector_filter_invalid(format!(
+            "match on {key:?} mixes string and non-string values"
+        )))
+    }
+}
+
+fn es_filter_clause(node: &VectorFilterNode) -> Result<JsonValue, tonic::Status> {
+    Ok(match node {
+        VectorFilterNode::Eq { key, value } => {
+            let mut term = serde_json::Map::new();
+            term.insert(
+                es_payload_field(key, std::slice::from_ref(value))?,
+                value.clone(),
+            );
+            serde_json::json!({ "term": JsonValue::Object(term) })
+        }
+        VectorFilterNode::In { key, values } => {
+            let mut terms = serde_json::Map::new();
+            terms.insert(
+                es_payload_field(key, values)?,
+                JsonValue::Array(values.clone()),
+            );
+            serde_json::json!({ "terms": JsonValue::Object(terms) })
+        }
+        VectorFilterNode::Range { key, bounds } => {
+            let mut ops = serde_json::Map::new();
+            for (op, bound) in bounds {
+                ops.insert((*op).to_string(), bound.clone());
+            }
+            let mut range = serde_json::Map::new();
+            range.insert(format!("payload.{key}"), JsonValue::Object(ops));
+            serde_json::json!({ "range": JsonValue::Object(range) })
+        }
+        VectorFilterNode::And(children) => serde_json::json!({
+            "bool": {
+                "filter": children.iter().map(es_filter_clause).collect::<Result<Vec<_>, _>>()?
+            }
+        }),
+        VectorFilterNode::Or(children) => serde_json::json!({
+            "bool": {
+                "should": children.iter().map(es_filter_clause).collect::<Result<Vec<_>, _>>()?,
+                "minimum_should_match": 1
+            }
+        }),
+        VectorFilterNode::Not(child) => serde_json::json!({
+            "bool": { "must_not": [es_filter_clause(child)?] }
+        }),
+    })
 }
 
 /// Build a Weaviate GraphQL `where:` argument (with a trailing comma so it slots
-/// before `limit:`) enforcing the tenant/equality terms. Weaviate stores the
-/// stamped payload as top-level properties, so the path is the bare key. Empty
-/// terms → empty string (unchanged behaviour). Values are emitted as `valueText`.
-fn weaviate_where_arg(filter: Option<&prost_types::Struct>) -> String {
-    let equality = struct_filter_equality_terms(filter);
-    let any = struct_filter_any_terms(filter);
-    let operand = |key: &str, value: &JsonValue| -> String {
-        let text = value
-            .as_str()
-            .map(str::to_string)
-            .unwrap_or_else(|| value.to_string());
-        format!("{{ path: [{key:?}], operator: Equal, valueText: {text:?} }}")
-    };
-    let mut operands: Vec<String> = equality
-        .iter()
-        .map(|(key, value)| operand(key, value))
-        .collect();
-    // `match.any` → an OR of Equal operands on the same path, so the parent-window
-    // gather (or any multi-value clause) stays scoped instead of being dropped.
-    for (key, values) in &any {
-        let inner = values
-            .iter()
-            .map(|value| operand(key, value))
-            .collect::<Vec<_>>()
-            .join(", ");
-        operands.push(format!("{{ operator: Or, operands: [{inner}] }}"));
+/// before `limit:`). Weaviate stores the stamped payload as top-level properties,
+/// so the path is the bare key. `should` → `Or`, nested filters → nested
+/// `And`/`Or`, `must_not` is pushed down by De Morgan onto `NotEqual`. A range
+/// under `must_not` has no faithful Weaviate form and is refused. An empty filter
+/// → empty string (no `where`).
+fn weaviate_where_arg(filter: Option<&prost_types::Struct>) -> Result<String, tonic::Status> {
+    match parse_vector_filter_struct(filter)? {
+        VectorFilterNode::And(children) if children.is_empty() => Ok(String::new()),
+        node => Ok(format!("where: {}, ", weaviate_operand(&node, false)?)),
     }
-    match operands.as_slice() {
-        [] => String::new(),
-        [single] => format!("where: {single}, "),
-        many => {
-            let joined = many.join(", ");
-            format!("where: {{ operator: And, operands: [{joined}] }}, ")
+}
+
+/// GraphQL string literal. JSON string escaping is valid GraphQL string escaping
+/// (Rust `Debug` escaping is not: it emits `\u{…}`).
+fn graphql_string(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "\"\"".to_string())
+}
+
+fn weaviate_value_field(value: &JsonValue) -> Result<String, tonic::Status> {
+    Ok(match value {
+        JsonValue::String(text) => format!("valueText: {}", graphql_string(text)),
+        JsonValue::Bool(flag) => format!("valueBoolean: {flag}"),
+        JsonValue::Number(number) if number.is_i64() || number.is_u64() => {
+            format!("valueInt: {number}")
+        }
+        JsonValue::Number(number) => format!("valueNumber: {number}"),
+        other => {
+            return Err(vector_filter_invalid(format!(
+                "weaviate cannot match the value {other}"
+            )));
+        }
+    })
+}
+
+fn weaviate_group(operator: &str, operands: Vec<String>) -> Result<String, tonic::Status> {
+    match operands.len() {
+        0 => Err(vector_filter_invalid(
+            "weaviate cannot express an empty filter group",
+        )),
+        1 => Ok(operands.into_iter().next().unwrap_or_default()),
+        _ => Ok(format!(
+            "{{ operator: {operator}, operands: [{}] }}",
+            operands.join(", ")
+        )),
+    }
+}
+
+fn weaviate_compare(key: &str, operator: &str, value: &JsonValue) -> Result<String, tonic::Status> {
+    Ok(format!(
+        "{{ path: [{}], operator: {operator}, {} }}",
+        graphql_string(key),
+        weaviate_value_field(value)?
+    ))
+}
+
+fn weaviate_operand(node: &VectorFilterNode, negated: bool) -> Result<String, tonic::Status> {
+    match (node, negated) {
+        (VectorFilterNode::Eq { key, value }, false) => weaviate_compare(key, "Equal", value),
+        (VectorFilterNode::Eq { key, value }, true) => weaviate_compare(key, "NotEqual", value),
+        (VectorFilterNode::In { key, values }, false) => weaviate_group(
+            "Or",
+            values
+                .iter()
+                .map(|value| weaviate_compare(key, "Equal", value))
+                .collect::<Result<_, _>>()?,
+        ),
+        (VectorFilterNode::In { key, values }, true) => weaviate_group(
+            "And",
+            values
+                .iter()
+                .map(|value| weaviate_compare(key, "NotEqual", value))
+                .collect::<Result<_, _>>()?,
+        ),
+        (VectorFilterNode::Range { key, bounds }, false) => weaviate_group(
+            "And",
+            bounds
+                .iter()
+                .map(|(op, bound)| {
+                    let operator = match *op {
+                        "gt" => "GreaterThan",
+                        "gte" => "GreaterThanEqual",
+                        "lt" => "LessThan",
+                        _ => "LessThanEqual",
+                    };
+                    weaviate_compare(key, operator, bound)
+                })
+                .collect::<Result<_, _>>()?,
+        ),
+        (VectorFilterNode::Range { key, .. }, true) => Err(vector_filter_invalid(format!(
+            "weaviate cannot express a negated range on {key:?}"
+        ))),
+        (VectorFilterNode::And(children), negated) => weaviate_group(
+            if negated { "Or" } else { "And" },
+            children
+                .iter()
+                .map(|child| weaviate_operand(child, negated))
+                .collect::<Result<_, _>>()?,
+        ),
+        (VectorFilterNode::Or(children), negated) => weaviate_group(
+            if negated { "And" } else { "Or" },
+            children
+                .iter()
+                .map(|child| weaviate_operand(child, negated))
+                .collect::<Result<_, _>>()?,
+        ),
+        (VectorFilterNode::Not(child), negated) => weaviate_operand(child, !negated),
+    }
+}
+
+/// Build a Pinecone metadata `filter` from the neutral filter. Conjunctions are
+/// ALWAYS emitted as an explicit `$and` list (never a merged key map), so a
+/// caller clause on the same key can never replace the tenant `$eq`. `should` →
+/// `$or`, `must_not` is pushed down by De Morgan onto `$ne`/`$nin`; a negated
+/// range has no Pinecone form and is refused. An empty filter → `null` (the
+/// caller omits the field).
+fn pinecone_metadata_filter(
+    filter: Option<&prost_types::Struct>,
+) -> Result<JsonValue, tonic::Status> {
+    match parse_vector_filter_struct(filter)? {
+        VectorFilterNode::And(children) if children.is_empty() => Ok(JsonValue::Null),
+        node => pinecone_filter_node(&node, false),
+    }
+}
+
+fn pinecone_group(operator: &str, operands: Vec<JsonValue>) -> Result<JsonValue, tonic::Status> {
+    match operands.len() {
+        0 => Err(vector_filter_invalid(
+            "pinecone cannot express an empty filter group",
+        )),
+        1 => Ok(operands.into_iter().next().unwrap_or(JsonValue::Null)),
+        _ => {
+            let mut group = serde_json::Map::new();
+            group.insert(operator.to_string(), JsonValue::Array(operands));
+            Ok(JsonValue::Object(group))
         }
     }
 }
 
-/// Build a Pinecone metadata `filter` object (`{"_tenant_id": {"$eq": …}, …}`)
-/// enforcing the tenant/equality terms over the stamped metadata. Empty terms →
-/// `null` (the caller omits the field, unchanged behaviour).
-fn pinecone_metadata_filter(filter: Option<&prost_types::Struct>) -> JsonValue {
-    let equality = struct_filter_equality_terms(filter);
-    let any = struct_filter_any_terms(filter);
-    if equality.is_empty() && any.is_empty() {
-        return JsonValue::Null;
-    }
-    let mut map = serde_json::Map::new();
-    for (key, value) in equality {
-        let mut eq = serde_json::Map::new();
-        eq.insert("$eq".to_string(), value);
-        map.insert(key, JsonValue::Object(eq));
-    }
-    // `match.any` → Pinecone's `$in` set membership, keeping the parent-window
-    // gather scoped instead of dropping the clause (unscoped cross-parent read).
-    for (key, values) in any {
-        let mut in_op = serde_json::Map::new();
-        in_op.insert("$in".to_string(), JsonValue::Array(values));
-        map.insert(key, JsonValue::Object(in_op));
-    }
-    JsonValue::Object(map)
+fn pinecone_field(key: &str, operator: &str, operand: JsonValue) -> JsonValue {
+    let mut op = serde_json::Map::new();
+    op.insert(operator.to_string(), operand);
+    let mut field = serde_json::Map::new();
+    field.insert(key.to_string(), JsonValue::Object(op));
+    JsonValue::Object(field)
 }
 
+fn pinecone_filter_node(
+    node: &VectorFilterNode,
+    negated: bool,
+) -> Result<JsonValue, tonic::Status> {
+    match (node, negated) {
+        (VectorFilterNode::Eq { key, value }, false) => {
+            Ok(pinecone_field(key, "$eq", value.clone()))
+        }
+        (VectorFilterNode::Eq { key, value }, true) => {
+            Ok(pinecone_field(key, "$ne", value.clone()))
+        }
+        (VectorFilterNode::In { key, values }, false) => {
+            Ok(pinecone_field(key, "$in", JsonValue::Array(values.clone())))
+        }
+        (VectorFilterNode::In { key, values }, true) => Ok(pinecone_field(
+            key,
+            "$nin",
+            JsonValue::Array(values.clone()),
+        )),
+        (VectorFilterNode::Range { key, bounds }, false) => {
+            let mut ops = serde_json::Map::new();
+            for (op, bound) in bounds {
+                ops.insert(format!("${op}"), bound.clone());
+            }
+            let mut field = serde_json::Map::new();
+            field.insert(key.clone(), JsonValue::Object(ops));
+            Ok(JsonValue::Object(field))
+        }
+        (VectorFilterNode::Range { key, .. }, true) => Err(vector_filter_invalid(format!(
+            "pinecone cannot express a negated range on {key:?}"
+        ))),
+        (VectorFilterNode::And(children), negated) => pinecone_group(
+            if negated { "$or" } else { "$and" },
+            children
+                .iter()
+                .map(|child| pinecone_filter_node(child, negated))
+                .collect::<Result<_, _>>()?,
+        ),
+        (VectorFilterNode::Or(children), negated) => pinecone_group(
+            if negated { "$and" } else { "$or" },
+            children
+                .iter()
+                .map(|child| pinecone_filter_node(child, negated))
+                .collect::<Result<_, _>>()?,
+        ),
+        (VectorFilterNode::Not(child), negated) => pinecone_filter_node(child, !negated),
+    }
+}
+
+#[cfg(test)]
+mod vector_filter_translation_tests {
+    use super::{es_payload_filter_terms, pinecone_metadata_filter, weaviate_where_arg};
+    use serde_json::json;
+
+    fn as_struct(value: serde_json::Value) -> Option<prost_types::Struct> {
+        crate::runtime::executor_utils::json_to_struct(&value)
+    }
+
+    /// The runtime-scoped shape: caller filter nested FIRST, tenant/project after.
+    fn scoped(caller: serde_json::Value) -> Option<prost_types::Struct> {
+        as_struct(json!({
+            "must": [
+                caller,
+                { "key": "_tenant_id", "match": { "value": "acme" } },
+                { "key": "_project_id", "match": { "value": "p1" } }
+            ]
+        }))
+    }
+
+    #[test]
+    fn es_nested_should_stays_anded_with_the_tenant() {
+        // A caller `should` (previously ignored by the flat translators, so the
+        // query ran with only the tenant term) must become a bool.should that is
+        // a SIBLING conjunct of the tenant term.
+        let clauses = es_payload_filter_terms(
+            scoped(json!({
+                "should": [
+                    { "key": "kind", "match": { "value": "a" } },
+                    { "key": "kind", "match": { "value": "b" } }
+                ]
+            }))
+            .as_ref(),
+        )
+        .expect("es translates nested should");
+        assert!(clauses.contains(&json!({ "term": { "payload._tenant_id.keyword": "acme" } })));
+        assert!(clauses.contains(&json!({ "term": { "payload._project_id.keyword": "p1" } })));
+        assert!(clauses.contains(&json!({
+            "bool": {
+                "should": [
+                    { "term": { "payload.kind.keyword": "a" } },
+                    { "term": { "payload.kind.keyword": "b" } }
+                ],
+                "minimum_should_match": 1
+            }
+        })));
+    }
+
+    #[test]
+    fn es_must_not_and_range_and_numbers_translate() {
+        let clauses = es_payload_filter_terms(
+            scoped(json!({
+                "must": [ { "key": "year", "range": { "gte": 2020, "lt": 2030 } } ],
+                "must_not": [ { "key": "rank", "match": { "value": 3 } } ]
+            }))
+            .as_ref(),
+        )
+        .expect("es translates range/must_not");
+        assert!(
+            clauses.contains(&json!({ "range": { "payload.year": { "gte": 2020, "lt": 2030 } } }))
+        );
+        assert!(clauses.contains(&json!({
+            "bool": { "must_not": [ { "term": { "payload.rank": 3 } } ] }
+        })));
+    }
+
+    #[test]
+    fn unsupported_clauses_are_refused_not_dropped() {
+        for caller in [
+            json!({ "must": [ { "key": "body", "match": { "text": "hello" } } ] }),
+            json!({ "must": [ { "is_empty": { "key": "body" } } ] }),
+            json!({ "must": [ { "has_id": ["a"] } ] }),
+            json!({ "min_should": { "conditions": [], "min_count": 1 } }),
+            json!({ "must": [ { "key": "k", "match": { "any": [] } } ] }),
+        ] {
+            let filter = scoped(caller.clone());
+            let es = es_payload_filter_terms(filter.as_ref()).expect_err("es must refuse");
+            assert_eq!(es.code(), tonic::Code::InvalidArgument, "{caller}");
+            let weaviate = weaviate_where_arg(filter.as_ref()).expect_err("weaviate must refuse");
+            assert_eq!(weaviate.code(), tonic::Code::InvalidArgument, "{caller}");
+            let pinecone =
+                pinecone_metadata_filter(filter.as_ref()).expect_err("pinecone must refuse");
+            assert_eq!(pinecone.code(), tonic::Code::InvalidArgument, "{caller}");
+        }
+    }
+
+    #[test]
+    fn pinecone_any_on_the_tenant_key_cannot_replace_the_tenant_eq() {
+        // Even if a reserved-key clause slipped past plan validation, the
+        // translator keeps both clauses as separate `$and` operands; the former
+        // merged map let `$in` overwrite the tenant `$eq` under the same key.
+        let filter = pinecone_metadata_filter(
+            scoped(json!({
+                "must": [ { "key": "_tenant_id", "match": { "any": ["acme", "other"] } } ]
+            }))
+            .as_ref(),
+        )
+        .expect("pinecone translates");
+        let operands = filter["$and"].as_array().expect("$and list");
+        assert!(operands.contains(&json!({ "_tenant_id": { "$eq": "acme" } })));
+        assert!(operands.contains(&json!({ "_tenant_id": { "$in": ["acme", "other"] } })));
+    }
+
+    #[test]
+    fn pinecone_should_and_must_not_translate() {
+        let filter = pinecone_metadata_filter(
+            scoped(json!({
+                "should": [
+                    { "key": "kind", "match": { "value": "a" } },
+                    { "key": "rank", "range": { "gt": 1 } }
+                ],
+                "must_not": [ { "key": "kind", "match": { "any": ["x", "y"] } } ]
+            }))
+            .as_ref(),
+        )
+        .expect("pinecone translates");
+        let operands = filter["$and"].as_array().expect("$and list");
+        assert!(operands.contains(&json!({
+            "$or": [ { "kind": { "$eq": "a" } }, { "rank": { "$gt": 1 } } ]
+        })));
+        assert!(operands.contains(&json!({ "kind": { "$nin": ["x", "y"] } })));
+        assert!(operands.contains(&json!({ "_tenant_id": { "$eq": "acme" } })));
+    }
+
+    #[test]
+    fn weaviate_should_and_must_not_translate_under_the_tenant_and() {
+        let arg = weaviate_where_arg(
+            scoped(json!({
+                "should": [
+                    { "key": "kind", "match": { "value": "a" } },
+                    { "key": "rank", "match": { "value": 2 } }
+                ],
+                "must_not": [ { "key": "kind", "match": { "value": "x" } } ]
+            }))
+            .as_ref(),
+        )
+        .expect("weaviate translates");
+        assert!(
+            arg.starts_with("where: { operator: And, operands: ["),
+            "{arg}"
+        );
+        assert!(arg.contains("operator: Or"), "{arg}");
+        assert!(arg.contains("valueInt: 2"), "{arg}");
+        assert!(
+            arg.contains(r#"{ path: ["kind"], operator: NotEqual, valueText: "x" }"#),
+            "{arg}"
+        );
+        assert!(
+            arg.contains(r#"{ path: ["_tenant_id"], operator: Equal, valueText: "acme" }"#),
+            "{arg}"
+        );
+    }
+
+    #[test]
+    fn weaviate_negated_range_is_refused() {
+        let err = weaviate_where_arg(
+            scoped(json!({ "must_not": [ { "key": "rank", "range": { "gt": 1 } } ] })).as_ref(),
+        )
+        .expect_err("negated range has no weaviate form");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn empty_filter_emits_no_clauses() {
+        assert!(es_payload_filter_terms(None).expect("es").is_empty());
+        assert_eq!(weaviate_where_arg(None).expect("weaviate"), "");
+        assert!(pinecone_metadata_filter(None).expect("pinecone").is_null());
+    }
+}
+
+#[cfg(test)]
+mod weaviate_vector_wire_tests {
+    use super::{
+        parse_vector_search_response, vector_search_dispatch_spec_scoped,
+        vector_upsert_dispatch_spec, vector_weaviate_object_id, weaviate_batch_errors,
+        weaviate_selectable_properties,
+    };
+    use crate::proto::{VectorPointMutation, VectorSearchRequest};
+    use serde_json::json;
+
+    #[test]
+    fn weaviate_upsert_uses_a_deterministic_id_and_stamps_the_caller_id() {
+        let point = VectorPointMutation {
+            id: "acme:row-1".to_string(),
+            vector: vec![0.1, 0.2],
+            payload: crate::runtime::executor_utils::json_to_struct(&json!({ "kind": "doc" })),
+            vector_name: String::new(),
+        };
+        let first: serde_json::Value = serde_json::from_str(
+            &vector_upsert_dispatch_spec("weaviate", "docs", &point).expect("spec"),
+        )
+        .expect("json");
+        let again: serde_json::Value = serde_json::from_str(
+            &vector_upsert_dispatch_spec("weaviate", "docs", &point).expect("spec"),
+        )
+        .expect("json");
+        assert_eq!(first["path"], "/v1/batch/objects");
+        let object = &first["body"]["objects"][0];
+        // Same caller id → same object id, so a re-upsert replaces, not duplicates.
+        assert_eq!(object["id"], again["body"]["objects"][0]["id"]);
+        assert!(uuid::Uuid::parse_str(object["id"].as_str().expect("id")).is_ok());
+        assert_eq!(object["properties"]["_point_id"], "acme:row-1");
+        assert_eq!(object["properties"]["kind"], "doc");
+        // A UUID caller id is used verbatim.
+        let raw = "6a1f0c58-8a7e-4a43-9c55-9b3c1f6f3f10";
+        assert_eq!(vector_weaviate_object_id(raw), raw);
+        assert_ne!(
+            vector_weaviate_object_id("a"),
+            vector_weaviate_object_id("b")
+        );
+    }
+
+    #[test]
+    fn weaviate_batch_object_errors_are_surfaced() {
+        let raw = json!([{ "result": { "errors": { "error": [ { "message": "bad vector" } ] } } }])
+            .to_string();
+        assert_eq!(weaviate_batch_errors(&raw).as_deref(), Some("bad vector"));
+        assert!(weaviate_batch_errors(&json!([{ "result": {} }]).to_string()).is_none());
+    }
+
+    #[test]
+    fn weaviate_search_selects_declared_scalar_properties() {
+        let schema = json!({
+            "properties": [
+                { "name": "_tenant_id", "dataType": ["text"] },
+                { "name": "_chunk_seq", "dataType": ["int"] },
+                { "name": "_point_id", "dataType": ["text"] },
+                { "name": "location", "dataType": ["geoCoordinates"] },
+                { "name": "author", "dataType": ["Person"] },
+                { "name": "bad-name", "dataType": ["text"] }
+            ]
+        });
+        let properties = weaviate_selectable_properties(&schema);
+        assert_eq!(properties, vec!["_tenant_id", "_chunk_seq", "_point_id"]);
+        let request = VectorSearchRequest {
+            context: None,
+            collection: "docs".to_string(),
+            vector: vec![0.1],
+            filter: None,
+            limit: 3,
+            score_threshold: 0.0,
+            with_payload: true,
+            with_vector: false,
+            vector_name: String::new(),
+            quantization_rescore: false,
+        };
+        let spec: serde_json::Value = serde_json::from_str(
+            &vector_search_dispatch_spec_scoped("weaviate", &request, Some(&properties), "")
+                .expect("spec"),
+        )
+        .expect("json");
+        let query = spec["body"]["query"].as_str().expect("query");
+        assert!(
+            query.contains("{ _tenant_id _chunk_seq _point_id _additional {"),
+            "{query}"
+        );
+    }
+
+    #[test]
+    fn weaviate_hit_id_is_the_caller_point_id() {
+        let raw = json!({
+            "data": { "Get": { "Udbdocs": [{
+                "_point_id": "acme:row-1",
+                "_tenant_id": "acme",
+                "_chunk_text": null,
+                "_additional": { "id": "6a1f0c58-8a7e-4a43-9c55-9b3c1f6f3f10", "distance": 0.1 }
+            }] } }
+        })
+        .to_string();
+        let set = parse_vector_search_response("weaviate", &raw, true).expect("parses");
+        assert_eq!(set.points[0].id, "acme:row-1");
+        let payload = crate::runtime::executor_utils::struct_to_json(
+            set.points[0].payload.as_ref().expect("payload"),
+        );
+        assert!(payload.get("_point_id").is_none(), "{payload}");
+        assert!(
+            payload.get("_chunk_text").is_none(),
+            "unset property omitted: {payload}"
+        );
+        assert_eq!(payload["_tenant_id"], "acme");
+    }
+}
+
+#[cfg(test)]
+mod pinecone_vector_wire_tests {
+    use super::{
+        parse_vector_search_response_for_collection, pinecone_namespace,
+        vector_search_dispatch_spec_scoped, vector_upsert_dispatch_spec_scoped,
+    };
+    use crate::proto::{VectorPointMutation, VectorSearchRequest};
+    use serde_json::json;
+
+    #[test]
+    fn pinecone_upsert_namespaces_by_project_and_stamps_the_collection() {
+        let point = VectorPointMutation {
+            id: "row-1".to_string(),
+            vector: vec![0.1],
+            payload: crate::runtime::executor_utils::json_to_struct(&json!({ "k": "v" })),
+            vector_name: String::new(),
+        };
+        let spec: serde_json::Value = serde_json::from_str(
+            &vector_upsert_dispatch_spec_scoped("pinecone", "docs", &point, "p1").expect("spec"),
+        )
+        .expect("json");
+        assert_eq!(spec["body"]["namespace"], "p1");
+        let vector = &spec["body"]["vectors"][0];
+        assert_eq!(vector["id"], "docs::row-1");
+        assert_eq!(vector["metadata"]["_collection"], "docs");
+        assert_eq!(vector["metadata"]["k"], "v");
+    }
+
+    #[test]
+    fn pinecone_query_is_namespaced_and_collection_filtered() {
+        let request = VectorSearchRequest {
+            context: None,
+            collection: "docs".to_string(),
+            vector: vec![0.1],
+            filter: None,
+            limit: 3,
+            score_threshold: 0.0,
+            with_payload: true,
+            with_vector: false,
+            vector_name: String::new(),
+            quantization_rescore: false,
+        };
+        let spec: serde_json::Value = serde_json::from_str(
+            &vector_search_dispatch_spec_scoped("pinecone", &request, None, "p1").expect("spec"),
+        )
+        .expect("json");
+        assert_eq!(spec["body"]["namespace"], "p1");
+        assert_eq!(
+            spec["body"]["filter"],
+            json!({ "_collection": { "$eq": "docs" } })
+        );
+    }
+
+    #[test]
+    fn pinecone_hits_strip_the_collection_prefix_and_stamp() {
+        let raw = json!({
+            "matches": [{
+                "id": "docs::row-1",
+                "score": 0.9,
+                "metadata": { "_collection": "docs", "_tenant_id": "acme" }
+            }]
+        })
+        .to_string();
+        let set = parse_vector_search_response_for_collection("pinecone", &raw, true, "docs")
+            .expect("parses");
+        assert_eq!(set.points[0].id, "row-1");
+        let payload = crate::runtime::executor_utils::struct_to_json(
+            set.points[0].payload.as_ref().expect("payload"),
+        );
+        assert!(payload.get("_collection").is_none());
+        assert_eq!(payload["_tenant_id"], "acme");
+    }
+
+    #[test]
+    fn blank_project_maps_to_the_default_namespace() {
+        assert_eq!(
+            pinecone_namespace("  "),
+            crate::runtime::catalog::DEFAULT_PROJECT_ID
+        );
+        assert_eq!(pinecone_namespace(" p1 "), "p1");
+    }
+}
+
+/// Unscoped wrapper (no Pinecone namespace / Weaviate schema) for the unit tests;
+/// the runtime dispatch always calls the `_scoped` builder.
+#[cfg(test)]
 fn vector_search_dispatch_spec(
     backend: &str,
     request: &VectorSearchRequest,
 ) -> Result<String, tonic::Status> {
+    vector_search_dispatch_spec_scoped(backend, request, None, "")
+}
+
+/// Pinecone namespace for a project: the project id, with a blank project mapped
+/// to the default project (the same normalisation the Qdrant path applies), so
+/// two projects sharing one Pinecone index never see each other's vectors.
+pub(crate) fn pinecone_namespace(project_id: &str) -> String {
+    let project = project_id.trim();
+    if project.is_empty() {
+        crate::runtime::catalog::DEFAULT_PROJECT_ID.to_string()
+    } else {
+        project.to_string()
+    }
+}
+
+/// Metadata key carrying a Pinecone vector's logical collection. One Pinecone
+/// index (the configured DSN host) backs every logical collection, so the
+/// collection must be stamped and filtered or a search reads all of them.
+pub(crate) const PINECONE_COLLECTION_KEY: &str = "_collection";
+
+/// Pinecone vector id for a point of a logical collection: prefixed by the
+/// collection so two collections sharing the index cannot overwrite each other's
+/// same-id points. Search strips the prefix back off.
+pub(crate) fn pinecone_vector_id(collection: &str, point_id: &str) -> String {
+    format!("{collection}::{point_id}")
+}
+
+/// The Weaviate class's selectable properties, read from `GET /v1/schema/{class}`.
+/// Only scalar data types are returned (object, geo and phone types need a
+/// sub-selection, and a cross-reference is not payload). Pure.
+fn weaviate_selectable_properties(schema: &JsonValue) -> Vec<String> {
+    const SCALAR_TYPES: &[&str] = &[
+        "text",
+        "text[]",
+        "string",
+        "string[]",
+        "int",
+        "int[]",
+        "number",
+        "number[]",
+        "boolean",
+        "boolean[]",
+        "date",
+        "date[]",
+        "uuid",
+        "uuid[]",
+    ];
+    let graphql_name = |name: &str| {
+        name.chars()
+            .next()
+            .is_some_and(|first| first == '_' || first.is_ascii_alphabetic())
+            && name
+                .chars()
+                .all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+    };
+    schema
+        .get("properties")
+        .and_then(JsonValue::as_array)
+        .map(|properties| {
+            properties
+                .iter()
+                .filter(|property| {
+                    property
+                        .pointer("/dataType/0")
+                        .and_then(JsonValue::as_str)
+                        .is_some_and(|data_type| SCALAR_TYPES.contains(&data_type))
+                })
+                .filter_map(|property| property.get("name").and_then(JsonValue::as_str))
+                .filter(|name| graphql_name(name))
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// [`vector_search_dispatch_spec`] with the Weaviate class's declared properties,
+/// so a Weaviate hit carries its whole stored payload (GraphQL has no wildcard;
+/// selecting an undeclared property fails the query, hence the schema read;
+/// `None` selects only the always-declared isolation keys), and the Pinecone
+/// project namespace (an empty `namespace` leaves the field out).
+fn vector_search_dispatch_spec_scoped(
+    backend: &str,
+    request: &VectorSearchRequest,
+    weaviate_properties: Option<&[String]>,
+    namespace: &str,
+) -> Result<String, tonic::Status> {
     let limit = if request.limit > 0 { request.limit } else { 10 };
     let spec = match backend {
-        "elasticsearch" => serde_json::json!({
-            "method": "POST",
-            "path": format!("/{}/_search", request.collection.to_ascii_lowercase()),
-            "body": {
-                "size": limit,
-                "query": {
-                    // Wrap the vector similarity in a bool so the tenant-scope
-                    // (and any equality) filter is AND'd in server-side. Without
-                    // the `filter` clause this arm leaked across tenants.
-                    "bool": {
-                        "must": [{
-                            "script_score": {
-                                "query": { "match_all": {} },
-                                "script": {
-                                    "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
-                                    "params": { "query_vector": request.vector }
+        "elasticsearch" => {
+            let es_filter = es_payload_filter_terms(request.filter.as_ref())?;
+            serde_json::json!({
+                "method": "POST",
+                "path": format!("/{}/_search", request.collection.to_ascii_lowercase()),
+                "body": {
+                    "size": limit,
+                    "query": {
+                        // Wrap the vector similarity in a bool so the tenant-scope
+                        // (and any equality) filter is AND'd in server-side. Without
+                        // the `filter` clause this arm leaked across tenants.
+                        "bool": {
+                            "must": [{
+                                "script_score": {
+                                    "query": { "match_all": {} },
+                                    "script": {
+                                        "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
+                                        "params": { "query_vector": request.vector }
+                                    }
                                 }
-                            }
-                        }],
-                        "filter": es_payload_filter_terms(request.filter.as_ref())
+                            }],
+                            "filter": es_filter
+                        }
                     }
                 }
-            }
-        }),
+            })
+        }
         "weaviate" => {
             let class_name = vector_weaviate_class_name(&request.collection);
             // Tenant scope (and any equality term) AND'd into the GraphQL `where`;
             // previously the arm ignored request.filter (cross-tenant leak class).
-            let where_arg = weaviate_where_arg(request.filter.as_ref());
+            let where_arg = weaviate_where_arg(request.filter.as_ref())?;
+            // Weaviate GraphQL requires every returned property be named
+            // explicitly (no wildcard). With the class schema in hand every
+            // declared scalar property is selected, so the hit carries the whole
+            // stored payload (provenance, chunk text, `_point_id`, caller fields);
+            // without it only the always-declared isolation keys are selected.
+            // The parser lifts the properties into the point payload and the
+            // caller-facing strip removes the reserved ones again.
+            let selection = match weaviate_properties {
+                Some(properties) if !properties.is_empty() => properties.join(" "),
+                _ => "_tenant_id _project_id".to_string(),
+            };
             serde_json::json!({
                 "method": "POST",
                 "path": "/v1/graphql",
                 "body": {
-                    // Weaviate GraphQL requires every returned property be named
-                    // explicitly (no wildcard). `_tenant_id`/`_project_id` are the
-                    // isolation keys the class schema always declares, so selecting
-                    // them is safe for both the embedding and the generic vector
-                    // path; the parser lifts them into the point payload and the
-                    // caller-facing strip removes them again.
-                    // TODO(leader-wire): to also surface embedding provenance
-                    // (`_parent_pk`/`_chunk_seq`/`_chunk_text`/…) on weaviate reads,
-                    // declare those properties in the weaviate class schema
-                    // (executors/weaviate.rs `ensure_resource`) and add them to this
-                    // selection — selecting undeclared props errors the whole query.
                     "query": format!(
-                        "{{ Get {{ {class_name}(nearVector: {{ vector: {:?} }}, {where_arg}limit: {limit}) {{ _tenant_id _project_id _additional {{ id distance certainty }} }} }} }}",
+                        "{{ Get {{ {class_name}(nearVector: {{ vector: {:?} }}, {where_arg}limit: {limit}) {{ {selection} _additional {{ id distance certainty }} }} }} }}",
                         request.vector
                     )
                 }
@@ -10320,10 +12243,24 @@ fn vector_search_dispatch_spec(
                 serde_json::json!(request.with_payload),
             );
             // Tenant scope AND'd into the Pinecone metadata `filter`; previously the
-            // arm ignored request.filter (cross-tenant leak class).
-            let metadata_filter = pinecone_metadata_filter(request.filter.as_ref());
-            if !metadata_filter.is_null() {
-                body.insert("filter".to_string(), metadata_filter);
+            // arm ignored request.filter (cross-tenant leak class). The logical
+            // collection is AND'd in too: every collection shares the one index.
+            let mut collection_clause = serde_json::Map::new();
+            collection_clause.insert(
+                PINECONE_COLLECTION_KEY.to_string(),
+                serde_json::json!({ "$eq": request.collection }),
+            );
+            let collection_clause = JsonValue::Object(collection_clause);
+            let metadata_filter = match pinecone_metadata_filter(request.filter.as_ref())? {
+                JsonValue::Null => collection_clause,
+                scoped => serde_json::json!({ "$and": [collection_clause, scoped] }),
+            };
+            body.insert("filter".to_string(), metadata_filter);
+            if !namespace.is_empty() {
+                body.insert(
+                    "namespace".to_string(),
+                    JsonValue::String(namespace.to_string()),
+                );
             }
             serde_json::json!({
                 "method": "POST",
@@ -10364,28 +12301,31 @@ fn text_search_dispatch_spec(
 ) -> Result<String, tonic::Status> {
     let limit = if request.limit > 0 { request.limit } else { 10 };
     let spec = match backend {
-        "elasticsearch" => serde_json::json!({
-            "method": "POST",
-            "path": format!("/{}/_search", request.collection.to_ascii_lowercase()),
-            "body": {
-                "size": limit,
-                "query": {
-                    // BM25 lexical relevance wrapped in a bool so the tenant-scope
-                    // (and any equality) filter is AND'd in server-side — the same
-                    // isolation boundary the vector arm enforces.
-                    "bool": {
-                        "must": [{
-                            "multi_match": {
-                                "query": query_text,
-                                "fields": ["payload.*"],
-                                "type": "best_fields"
-                            }
-                        }],
-                        "filter": es_payload_filter_terms(request.filter.as_ref())
+        "elasticsearch" => {
+            let es_filter = es_payload_filter_terms(request.filter.as_ref())?;
+            serde_json::json!({
+                "method": "POST",
+                "path": format!("/{}/_search", request.collection.to_ascii_lowercase()),
+                "body": {
+                    "size": limit,
+                    "query": {
+                        // BM25 lexical relevance wrapped in a bool so the tenant-scope
+                        // (and any equality) filter is AND'd in server-side — the same
+                        // isolation boundary the vector arm enforces.
+                        "bool": {
+                            "must": [{
+                                "multi_match": {
+                                    "query": query_text,
+                                    "fields": ["payload.*"],
+                                    "type": "best_fields"
+                                }
+                            }],
+                            "filter": es_filter
+                        }
                     }
                 }
-            }
-        }),
+            })
+        }
         other => {
             return Err(setup_data_capability_status(
                 other,
@@ -10436,44 +12376,66 @@ fn qdrant_and_tenant_filter(
     serde_json::json!({ "must": must })
 }
 
-/// F2: merge the CONTEXT tenant/project into the neutral qdrant-style filter as
-/// FLAT `must` equality clauses so the per-backend translators
-/// (`es_payload_filter_terms`/`weaviate_where_arg`/`pinecone_metadata_filter`)
-/// emit the `_tenant_id`/`_project_id` predicate that pairs with the write-side
-/// `stamp_generic_vector_point_payloads` stamp. Unlike `qdrant_and_tenant_filter`
-/// (which NESTS the caller filter for Qdrant's native nested-filter support), this
-/// keeps clauses flat because the generic translators only read top-level
-/// `{key, match}` clauses. No-context (both empty, no caller filter) → `{"must":[]}`
-/// → translators emit zero clauses = identical to today (no regression).
+/// F2: merge the CONTEXT tenant/project into the neutral qdrant-style filter for
+/// the generic (ES/Weaviate/Pinecone) translators, which emit the
+/// `_tenant_id`/`_project_id` predicate that pairs with the write-side
+/// `stamp_generic_vector_point_payloads` stamp.
+///
+/// The shape is ALWAYS `{"must":[<caller filter, nested>, tenant, project]}` —
+/// identical to [`qdrant_and_tenant_filter`]. Appending the scope to the caller's
+/// own `must` array (the former shape) left a caller `should` sibling OR'd
+/// against nothing the translators enforced, and a caller filter without a
+/// `must` array never got the scope at all. Nesting makes the scope an
+/// unconditional conjunct whatever the caller wrote; the translators parse the
+/// nested filter recursively and refuse what they cannot express. No context and
+/// no caller filter → `None` (no clauses).
 #[cfg(feature = "qdrant")]
 fn scoped_generic_vector_filter(
-    mut user_filter: JsonValue,
+    user_filter: JsonValue,
     tenant_id: &str,
     project_id: &str,
 ) -> Option<prost_types::Struct> {
-    if !user_filter.is_object() {
-        user_filter = JsonValue::Object(serde_json::Map::new());
+    let scoped = qdrant_and_tenant_filter(user_filter, tenant_id, project_id);
+    if scoped.is_null() {
+        return None;
     }
-    if let Some(obj) = user_filter.as_object_mut() {
-        let must = obj
-            .entry("must".to_string())
-            .or_insert_with(|| JsonValue::Array(Vec::new()));
-        if let Some(arr) = must.as_array_mut() {
-            if !tenant_id.trim().is_empty() {
-                arr.push(serde_json::json!({"key": "_tenant_id", "match": {"value": tenant_id}}));
-            }
-            if !project_id.trim().is_empty() {
-                arr.push(serde_json::json!({"key": "_project_id", "match": {"value": project_id}}));
-            }
-        }
-    }
-    crate::runtime::executor_utils::json_to_struct(&user_filter)
+    crate::runtime::executor_utils::json_to_struct(&scoped)
 }
 
 #[cfg(all(test, feature = "qdrant"))]
 mod qdrant_tenant_filter_tests {
-    use super::qdrant_and_tenant_filter;
+    use super::{qdrant_and_tenant_filter, scoped_generic_vector_filter};
     use serde_json::json;
+
+    #[test]
+    fn generic_scope_nests_the_caller_filter_whatever_its_shape() {
+        // A caller filter with only `should` (no `must` array) used to have the
+        // tenant appended to its own groups; now the scope is always a sibling
+        // conjunct of the nested caller filter.
+        let user = json!({"should":[{"key":"kind","match":{"value":"a"}}]});
+        let scoped = scoped_generic_vector_filter(user.clone(), "t1", "p1").expect("scoped filter");
+        let scoped = crate::runtime::executor_utils::struct_to_json(&scoped);
+        let must = scoped["must"].as_array().expect("must array");
+        assert_eq!(must.len(), 3, "{scoped}");
+        assert_eq!(must[0], user);
+        assert!(
+            must.iter()
+                .any(|c| c["key"] == "_tenant_id" && c["match"]["value"] == "t1")
+        );
+        assert!(
+            must.iter()
+                .any(|c| c["key"] == "_project_id" && c["match"]["value"] == "p1")
+        );
+        assert!(
+            scoped.get("should").is_none(),
+            "caller should must not stay top-level"
+        );
+    }
+
+    #[test]
+    fn generic_scope_without_context_or_filter_is_none() {
+        assert!(scoped_generic_vector_filter(serde_json::Value::Null, "", "").is_none());
+    }
 
     #[test]
     fn ands_tenant_and_project_into_must() {
@@ -10539,10 +12501,63 @@ fn stamp_generic_vector_point_payloads(
     stamped
 }
 
+/// Payload property carrying the caller's point id on a Weaviate object (whose
+/// own id must be a UUID). Search lifts it back out as the hit id.
+const WEAVIATE_POINT_ID_PROPERTY: &str = "_point_id";
+
+/// Deterministic Weaviate object UUID for a caller point id: a UUID id is used
+/// verbatim; anything else maps to a stable digest-derived RFC 4122 UUID so the
+/// same caller id always addresses the same object.
+fn vector_weaviate_object_id(point_id: &str) -> String {
+    match Uuid::parse_str(point_id) {
+        Ok(parsed) => parsed.to_string(),
+        Err(_) => {
+            use sha2::{Digest as _, Sha256};
+            let digest = Sha256::digest(point_id.as_bytes());
+            let mut bytes = [0u8; 16];
+            bytes.copy_from_slice(&digest[..16]);
+            bytes[6] = (bytes[6] & 0x0f) | 0x50;
+            bytes[8] = (bytes[8] & 0x3f) | 0x80;
+            Uuid::from_bytes(bytes).to_string()
+        }
+    }
+}
+
+/// The Weaviate batch endpoint answers 200 even when an object was rejected,
+/// reporting the failure per object under `result.errors`. Surface that as an
+/// error instead of reporting a write that did not happen.
+fn weaviate_batch_errors(raw: &str) -> Option<String> {
+    let parsed: JsonValue = serde_json::from_str(raw).ok()?;
+    let messages = parsed
+        .as_array()?
+        .iter()
+        .filter_map(|object| object.pointer("/result/errors/error"))
+        .filter_map(JsonValue::as_array)
+        .flatten()
+        .filter_map(|error| error.get("message").and_then(JsonValue::as_str))
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    (!messages.is_empty()).then(|| messages.join("; "))
+}
+
+/// Unscoped wrapper (no Pinecone namespace / Weaviate schema) for the unit tests;
+/// the runtime dispatch always calls the `_scoped` builder.
+#[cfg(test)]
 fn vector_upsert_dispatch_spec(
     backend: &str,
     collection: &str,
     point: &VectorPointMutation,
+) -> Result<String, tonic::Status> {
+    vector_upsert_dispatch_spec_scoped(backend, collection, point, "")
+}
+
+/// [`vector_upsert_dispatch_spec`] with the Pinecone project namespace (an empty
+/// `namespace` leaves the field out).
+fn vector_upsert_dispatch_spec_scoped(
+    backend: &str,
+    collection: &str,
+    point: &VectorPointMutation,
+    namespace: &str,
 ) -> Result<String, tonic::Status> {
     let payload = point
         .payload
@@ -10566,27 +12581,66 @@ fn vector_upsert_dispatch_spec(
         }
         "weaviate" => {
             let class_name = vector_weaviate_class_name(collection);
+            // Weaviate ids must be UUIDs. A deterministic UUID derived from the
+            // caller id makes a re-upsert REPLACE the object (the batch endpoint
+            // upserts by id) instead of piling up a duplicate under a fresh
+            // server-assigned UUID; the caller id itself rides as `_point_id` so a
+            // search returns it.
+            let mut properties = match payload {
+                JsonValue::Object(map) => map,
+                _ => serde_json::Map::new(),
+            };
+            properties.insert(
+                WEAVIATE_POINT_ID_PROPERTY.to_string(),
+                JsonValue::String(point.id.clone()),
+            );
             serde_json::json!({
                 "method": "POST",
-                "path": "/v1/objects",
+                "path": "/v1/batch/objects",
                 "body": {
-                    "class": class_name,
-                    "properties": payload,
-                    "vector": point.vector
+                    "objects": [{
+                        "class": class_name,
+                        "id": vector_weaviate_object_id(&point.id),
+                        "properties": JsonValue::Object(properties),
+                        "vector": point.vector
+                    }]
                 }
             })
         }
-        "pinecone" => serde_json::json!({
-            "method": "POST",
-            "path": "/vectors/upsert",
-            "body": {
-                "vectors": [{
-                    "id": point.id,
+        "pinecone" => {
+            // One index backs every logical collection: stamp the collection into
+            // the metadata (search filters on it) and prefix the id with it (two
+            // collections cannot overwrite each other's same-id point); the
+            // project rides as the namespace.
+            let mut metadata = match payload {
+                JsonValue::Object(map) => map,
+                _ => serde_json::Map::new(),
+            };
+            metadata.insert(
+                PINECONE_COLLECTION_KEY.to_string(),
+                JsonValue::String(collection.to_string()),
+            );
+            let mut body = serde_json::Map::new();
+            body.insert(
+                "vectors".to_string(),
+                serde_json::json!([{
+                    "id": pinecone_vector_id(collection, &point.id),
                     "values": point.vector,
-                    "metadata": payload
-                }]
+                    "metadata": JsonValue::Object(metadata)
+                }]),
+            );
+            if !namespace.is_empty() {
+                body.insert(
+                    "namespace".to_string(),
+                    JsonValue::String(namespace.to_string()),
+                );
             }
-        }),
+            serde_json::json!({
+                "method": "POST",
+                "path": "/vectors/upsert",
+                "body": JsonValue::Object(body)
+            })
+        }
         other => {
             return Err(setup_data_capability_status(
                 other,
@@ -10601,6 +12655,39 @@ fn vector_upsert_dispatch_spec(
 }
 
 fn parse_vector_search_response(
+    backend: &str,
+    raw: &str,
+    es_cosine_offset: bool,
+) -> Result<VectorSet, tonic::Status> {
+    parse_vector_search_response_for_collection(backend, raw, es_cosine_offset, "")
+}
+
+/// [`parse_vector_search_response`] for a known logical collection: Pinecone ids
+/// carry the collection prefix the upsert added ([`pinecone_vector_id`]), which is
+/// stripped so callers see the id they wrote, and the `_collection` stamp is
+/// removed from the payload. An empty `collection` strips nothing.
+fn parse_vector_search_response_for_collection(
+    backend: &str,
+    raw: &str,
+    es_cosine_offset: bool,
+    collection: &str,
+) -> Result<VectorSet, tonic::Status> {
+    let mut set = parse_vector_search_response_raw(backend, raw, es_cosine_offset)?;
+    if backend == "pinecone" && !collection.is_empty() {
+        let prefix = pinecone_vector_id(collection, "");
+        for point in &mut set.points {
+            if let Some(stripped) = point.id.strip_prefix(&prefix) {
+                point.id = stripped.to_string();
+            }
+            if let Some(payload) = point.payload.as_mut() {
+                payload.fields.remove(PINECONE_COLLECTION_KEY);
+            }
+        }
+    }
+    Ok(set)
+}
+
+fn parse_vector_search_response_raw(
     backend: &str,
     raw: &str,
     es_cosine_offset: bool,
@@ -10695,9 +12782,18 @@ fn parse_vector_search_response(
                     .map(|object| {
                         let additional = object.get("_additional");
                         VectorPoint {
-                            id: additional
-                                .and_then(|meta| meta.get("id"))
+                            // The caller's id rides as `_point_id` (the Weaviate
+                            // object id is a derived UUID); fall back to the object
+                            // id for objects written before the id was stamped.
+                            id: object
+                                .get(WEAVIATE_POINT_ID_PROPERTY)
                                 .and_then(JsonValue::as_str)
+                                .filter(|id| !id.is_empty())
+                                .or_else(|| {
+                                    additional
+                                        .and_then(|meta| meta.get("id"))
+                                        .and_then(JsonValue::as_str)
+                                })
                                 .unwrap_or_default()
                                 .to_string(),
                             score: additional.map(weaviate_cosine_score).unwrap_or(0.0),
@@ -10743,7 +12839,10 @@ fn weaviate_point_payload(object: &JsonValue) -> Option<prost_types::Struct> {
     let properties = object.as_object()?;
     let mut payload = serde_json::Map::new();
     for (key, value) in properties {
-        if key != "_additional" {
+        // `_additional` is query metadata and `_point_id` is the hit id itself;
+        // a selected property the object never set comes back `null` — omit it
+        // so the payload matches what was written.
+        if key != "_additional" && key != WEAVIATE_POINT_ID_PROPERTY && !value.is_null() {
             payload.insert(key.clone(), value.clone());
         }
     }

@@ -201,6 +201,13 @@ impl AuthzSnapshot {
             .iter()
             .filter(|p| {
                 p.enabled
+                    // Project domain: the request token contract (`r = sub, dom,
+                    // obj, act`) has no project slot, so project scoping is
+                    // enforced here — a policy bound to project P never enters
+                    // the enforcer for a request in project Q. Empty/`*` policy
+                    // project = every project (same rule explicit denies use in
+                    // `policy_matches`).
+                    && wildcard(&p.project, &principal.project_id)
                     && wildcard(&p.purpose, req.purpose)
                     && conditions_match(&p.conditions, req.attributes)
                     && (p.relationship.is_empty()
@@ -670,6 +677,69 @@ mod tests {
                 .await
                 .allowed,
             "an unrelated service identity must remain denied"
+        );
+    }
+
+    #[tokio::test]
+    async fn casbin_allow_honors_policy_project_scope() {
+        let mut snap = AuthzSnapshot::default();
+        snap.version = "v1".to_string();
+        snap.policies.push(AuthzPolicy {
+            id: "billing-only".to_string(),
+            effect: Effect::Allow,
+            subject: "svc".to_string(),
+            tenant: "tenant-1".to_string(),
+            project: "billing".to_string(),
+            action: "Select".to_string(),
+            resource: "invoice".to_string(),
+            ..Default::default()
+        });
+        snap.policies.push(AuthzPolicy {
+            id: "all-projects".to_string(),
+            effect: Effect::Allow,
+            subject: "svc".to_string(),
+            tenant: "tenant-1".to_string(),
+            action: "Select".to_string(),
+            resource: "ledger".to_string(),
+            ..Default::default()
+        });
+        let attrs = BTreeMap::new();
+        let invoice = ResourceRef::message("invoice");
+        let ledger = ResourceRef::message("ledger");
+        let in_project = |project: &str| Principal {
+            subject: "svc".to_string(),
+            tenant_id: "tenant-1".to_string(),
+            project_id: project.to_string(),
+            ..Default::default()
+        };
+
+        let billing = in_project("billing");
+        assert!(
+            snap.casbin_authorize(&query(&billing, &invoice, "Select", &attrs))
+                .await
+                .allowed,
+            "a project-bound allow grants inside its project"
+        );
+        let hr = in_project("hr");
+        let cross = snap
+            .casbin_authorize(&query(&hr, &invoice, "Select", &attrs))
+            .await;
+        assert!(
+            !cross.allowed,
+            "a project-bound allow must not grant in another project"
+        );
+        assert!(
+            !cross
+                .matched_policy_ids
+                .contains(&"billing-only".to_string()),
+            "the foreign-project policy must not even enter the enforcer"
+        );
+        // Empty policy project = every project.
+        assert!(
+            snap.casbin_authorize(&query(&hr, &ledger, "Select", &attrs))
+                .await
+                .allowed,
+            "an all-projects allow grants in any project"
         );
     }
 

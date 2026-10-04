@@ -285,11 +285,38 @@ impl Compiler for MysqlCompiler {
                     ConflictStrategy::Replace => columns.clone(),
                     _ => unreachable!(),
                 };
-                let set_clause = target_cols
-                    .iter()
-                    .map(|c| format!("`{c}` = VALUES(`{c}`)"))
-                    .collect::<Vec<_>>()
-                    .join(", ");
+                // Cross-tenant takeover guard. ON DUPLICATE KEY UPDATE has no
+                // WHERE, so each assignment keeps the existing value unless the
+                // duplicate row already belongs to the scope being written. The
+                // tenant/project columns are never assigned, so the guard reads
+                // the row's original scope for every assignment (MySQL applies
+                // assignments left to right). `?` placeholders are positional, so
+                // the guard is re-rendered (re-binding any context param) per use.
+                let isolation = My::upsert_isolation_columns(table);
+                let mut assignments = Vec::with_capacity(target_cols.len());
+                for c in target_cols.iter().filter(|c| !isolation.contains(c)) {
+                    let guard = My::upsert_scope_guard(
+                        table,
+                        ctx,
+                        &columns,
+                        &mut params,
+                        |col| format!("`{col}`"),
+                        |col| format!("VALUES(`{col}`)"),
+                        |a, b| format!("{a} <=> {b}"),
+                    );
+                    assignments.push(match guard {
+                        Some(guard) => format!("`{c}` = IF({guard}, VALUES(`{c}`), `{c}`)"),
+                        None => format!("`{c}` = VALUES(`{c}`)"),
+                    });
+                }
+                if assignments.is_empty()
+                    && let Some(c) = isolation.first()
+                {
+                    // Nothing assignable: a self-assignment keeps the statement
+                    // valid and never moves the row.
+                    assignments.push(format!("`{c}` = `{c}`"));
+                }
+                let set_clause = assignments.join(", ");
                 sql.push_str(&format!(" ON DUPLICATE KEY UPDATE {set_clause}"));
             }
         }
@@ -1249,6 +1276,62 @@ mod tests {
             statement.contains("`tenant_id` = ?"),
             "search must AND the tenant scope: {statement}"
         );
+        assert!(has_tenant_bind(&params));
+    }
+
+    // Cross-tenant takeover: a duplicate-key hit on another tenant's row must
+    // keep every existing value and never reassign the tenant column.
+    #[test]
+    fn upsert_guards_duplicate_key_update_by_tenant() {
+        let m = tenant_fixture();
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let mut rec = LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        rec.insert("name".into(), LogicalValue::String("Alice".into()));
+        rec.insert("tenant_id".into(), LogicalValue::String("t1".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::update(vec!["name".into(), "tenant_id".into()]),
+            return_fields: vec![],
+        };
+        let (statement, params) = sql(MysqlCompiler.compile_write(&write, &ctx).unwrap());
+        assert!(
+            statement.contains(
+                "ON DUPLICATE KEY UPDATE `name` = IF(`tenant_id` <=> VALUES(`tenant_id`), \
+                 VALUES(`name`), `name`)"
+            ),
+            "{statement}"
+        );
+        assert!(
+            !statement.contains("`tenant_id` = VALUES(`tenant_id`)")
+                && !statement.contains("`tenant_id` = IF("),
+            "the tenant column must never be reassigned on conflict: {statement}"
+        );
+        assert_eq!(params.len(), 3, "the guard reads VALUES(), no extra bind");
+    }
+
+    // A record that omits the tenant column is guarded by the context tenant,
+    // re-bound once per positional `?`.
+    #[test]
+    fn upsert_guard_binds_context_tenant_when_record_omits_it() {
+        let m = tenant_fixture();
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let mut rec = LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        rec.insert("name".into(), LogicalValue::String("Alice".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::update(vec!["name".into()]),
+            return_fields: vec![],
+        };
+        let (statement, params) = sql(MysqlCompiler.compile_write(&write, &ctx).unwrap());
+        assert!(
+            statement.contains("`name` = IF(`tenant_id` = ?, VALUES(`name`), `name`)"),
+            "{statement}"
+        );
+        assert_eq!(params.len(), 3);
         assert!(has_tenant_bind(&params));
     }
 }

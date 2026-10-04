@@ -55,3 +55,46 @@ message MultipartUploadResponse {
   repeated string part_urls = 2;
   int64 expires_at_unix = 3;
 }
+
+// One uploaded part of a multipart upload: the 1-based part number the part
+// URL was issued for, and the ETag the object store returned for that PUT.
+message MultipartUploadPart {
+  int32 part_number = 1;
+  string etag = 2;
+}
+
+// Finish a multipart upload started by InitiateMultipartUpload. bucket +
+// object_key must be the ones the upload was initiated with; the key is scoped
+// to the caller's tenant exactly as on initiate, so an upload_id can only be
+// completed by the tenant that started it. parts must be in strictly ascending
+// part_number order.
+message CompleteMultipartUploadRequest {
+  RequestContext context = 1;
+  string bucket = 2;
+  string object_key = 3;
+  string upload_id = 4;
+  repeated MultipartUploadPart parts = 5;
+  string idempotency_key = 6;
+}
+
+message CompleteMultipartUploadResponse {
+  string resource_uri = 1;
+  // ETag of the assembled object as reported by the object store.
+  string etag = 2;
+  // Total bytes of the assembled object (sum of the completed parts).
+  int64 size_bytes = 3;
+}
+
+// Cancel a multipart upload and release the parts already uploaded. Same
+// tenant-scoped key rule as CompleteMultipartUploadRequest.
+message AbortMultipartUploadRequest {
+  RequestContext context = 1;
+  string bucket = 2;
+  string object_key = 3;
+  string upload_id = 4;
+  string idempotency_key = 5;
+}
+
+message AbortMultipartUploadResponse {
+  bool aborted = 1;
+}

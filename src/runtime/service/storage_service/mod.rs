@@ -53,6 +53,11 @@ mod store;
 mod tests;
 mod workers;
 
+/// Shared with the asset pipeline, which reads storage-file bytes directly: one
+/// list of physical locations for a file, so a byte step finds bytes uploaded
+/// through either the native presign or the public `PutObject` fallback.
+pub(crate) use presign::file_object_key_candidates;
+
 /// Postgres-backed `StorageService` handler.
 #[derive(Clone)]
 pub struct StorageServiceImpl {

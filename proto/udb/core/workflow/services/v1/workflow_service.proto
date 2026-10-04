@@ -282,6 +282,68 @@ service WorkflowService {
       body: "*"
     };
   }
+
+  // Acknowledge the outcome of the step the workflow tick dispatched
+  // (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
+  // the instance stays RUNNING awaiting this acknowledgement, and a step that is
+  // not acknowledged within the step timeout fails the workflow (compensating
+  // any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
+  // the last one); FAILED fails the workflow through the same
+  // failed/compensating path as a timeout.
+  rpc AckWorkflowStep(AckWorkflowStepRequest) returns (AckWorkflowStepResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:workflow:ack-workflow-step"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "workflow.AckWorkflowStep"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "ack_workflow_step" rest_operation_id: "ackWorkflowStep"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "workflow"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "workflow"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "workflow.AckWorkflowStep"
+      outbox_topic: "udb.workflow.step.advanced.v1"
+      partition_key_field: "workflow_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/workflows/{workflow_id}:ack-step"
+      body: "*"
+    };
+  }
+}
+
+// Outcome reported by AckWorkflowStep for the dispatched step.
+enum WorkflowStepOutcome {
+  WORKFLOW_STEP_OUTCOME_UNSPECIFIED = 0;
+  // The step's side effects completed; the workflow advances.
+  WORKFLOW_STEP_OUTCOME_SUCCEEDED = 1;
+  // The step failed; the workflow fails (compensating completed steps).
+  WORKFLOW_STEP_OUTCOME_FAILED = 2;
 }
 
 message StartWorkflowRequest {
@@ -444,4 +506,46 @@ message SignalWorkflowResponse {
   };
   string message = 1;
   udb.core.common.v1.ApiError error = 2;
+}
+
+message AckWorkflowStepRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string workflow_id = 2;
+  // Zero-based index of the dispatched step being acknowledged (the
+  // `step_index` carried by `udb.workflow.step.dispatched.v1`). An ack for any
+  // other step is rejected, so a stale or misrouted ack can never advance the
+  // workflow.
+  int32 step_index = 3;
+  WorkflowStepOutcome outcome = 4;
+  // Optional step output (JSON or text, bounded) carried on the resulting
+  // transition event.
+  string output = 5;
+  // Failure reason when outcome is FAILED; recorded as the workflow last_error.
+  string error_message = 6;
+}
+
+message AckWorkflowStepResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  udb.core.common.v1.ApiError error = 2;
+  // Workflow status after the acknowledgement (e.g. "RUNNING", "COMPLETED",
+  // "COMPENSATING", "FAILED").
+  string status = 3;
 }

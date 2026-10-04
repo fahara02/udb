@@ -255,3 +255,52 @@ fn rollup_sql_computes_percentiles_over_bound_scope() {
         "snapshots_written must report rows written, not a row count"
     );
 }
+
+/// A summary that nothing writes is reported as "not collected"
+/// (`FailedPrecondition` + `analytics_collection`), never an empty success.
+#[test]
+fn not_collected_status_carries_typed_capability_detail() {
+    let status = super::errors::analytics_not_collected_status(
+        "get_executor_performance",
+        "executor performance summaries",
+    );
+    assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+    assert!(status.message().contains("not collected"), "{status}");
+    let detail = decode_detail(&status);
+    assert_eq!(detail.backend, "analytics");
+    assert_eq!(detail.operation, "get_executor_performance");
+    assert_eq!(detail.capability_required, "analytics_collection");
+}
+
+/// Against Postgres: with nothing ever written, the executor-performance and
+/// reconciliation reads fail "not collected" instead of returning empty.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with cargo test --lib live_analytics_uncollected_summaries_fail_precondition -- --ignored --nocapture"]
+async fn live_analytics_uncollected_summaries_fail_precondition() {
+    use crate::runtime::service::live_tests::support::{
+        live_native_service_db_lock, live_pg_pool, migrate_native_service_db,
+    };
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let svc = AnalyticsServiceImpl::new().with_postgres(Some(pool.clone()));
+
+    let err = svc
+        .get_executor_performance(Request::new(ana_pb::GetExecutorPerformanceRequest {
+            date_from: "2026-06-01".to_string(),
+            date_to: "2026-06-14".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect_err("an uncollected summary must not read as empty success");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition, "{err}");
+
+    let err = svc
+        .get_reconciliation_analytics(Request::new(ana_pb::GetReconciliationAnalyticsRequest {
+            date_from: "2026-06-01".to_string(),
+            date_to: "2026-06-14".to_string(),
+        }))
+        .await
+        .expect_err("an uncollected summary must not read as empty success");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition, "{err}");
+}

@@ -371,6 +371,11 @@ pub(crate) async fn purge_tenant(
                 }),
             )
         };
+    // Vectors FIRST, as on the admin path: the embedding/search registries that
+    // name the tenant's collections are relational rows the purge deletes, and
+    // a hard purge that left the tenant's vectors (with their chunk text) behind
+    // would not be an erasure.
+    let vectors = super::tenant_purge::purge_tenant_vector_stores(svc, manifest, &tenant_id).await;
     let report = {
         #[cfg(feature = "redis")]
         {
@@ -409,6 +414,17 @@ pub(crate) async fn purge_tenant(
                 tenant_column: p.tenant_column,
                 deleted: p.deleted,
             })
+            .chain(vectors.purged.iter().map(|v| {
+                tenant_pb::PurgedTableCount {
+                    schema: json_str(v, "schema"),
+                    table: json_str(v, "table"),
+                    tenant_column: json_str(v, "tenant_column"),
+                    deleted: v
+                        .get("deleted")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0),
+                }
+            }))
             .collect(),
         excluded: report
             .excluded
@@ -418,6 +434,16 @@ pub(crate) async fn purge_tenant(
                 table: e.table,
                 reason: e.reason,
             })
+            .chain(
+                vectors
+                    .excluded
+                    .iter()
+                    .map(|v| tenant_pb::PurgeExcludedTable {
+                        schema: json_str(v, "schema"),
+                        table: json_str(v, "table"),
+                        reason: json_str(v, "reason"),
+                    }),
+            )
             .collect(),
         total_deleted: report.total_deleted,
         tenant_denylisted: report.tenant_denylisted,
@@ -650,7 +676,8 @@ pub(crate) async fn update_tenant(
     // signal so a transition to SUSPENDED/INACTIVE revokes this tenant's LIVE
     // bearer tokens at the request gate immediately, instead of letting them run
     // for their full TTL. The shared method-security layer consults this via
-    // `gate::tenant_status_gate` before dispatch (see its `TODO(leader-wire)`).
+    // `gate::tenant_status_gate_durable` before dispatch; other replicas pick the
+    // change up from the durable row within the gate's cache TTL.
     // Contract-declared tenant event (tenant_service.proto UpdateTenant
     // method_event_contract, partition key = tenant_id). Identifiers + status
     // only — never the config/branding bodies. Enqueued through the same
@@ -682,7 +709,8 @@ pub(crate) async fn update_tenant(
     // signal so a transition to SUSPENDED/INACTIVE revokes this tenant's LIVE
     // bearer tokens at the request gate immediately, instead of letting them run
     // for their full TTL. The shared method-security layer consults this via
-    // `gate::tenant_status_gate` before dispatch (see its `TODO(leader-wire)`).
+    // `gate::tenant_status_gate_durable` before dispatch; other replicas pick the
+    // change up from the durable row within the gate's cache TTL.
     // Set only after commit: the gate must not reflect a status the transaction
     // rolled back.
     gate::mark_tenant_status(&tenant_id, &stored_status);
@@ -808,4 +836,13 @@ pub(crate) async fn update_tenant_config(
         message: "tenant config updated".to_string(),
         error: None,
     }))
+}
+
+/// A string field of a purge-report JSON entry, empty when absent.
+fn json_str(value: &serde_json::Value, key: &str) -> String {
+    value
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .to_string()
 }

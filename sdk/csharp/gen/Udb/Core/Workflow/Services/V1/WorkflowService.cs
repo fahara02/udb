@@ -69,74 +69,99 @@ namespace Udb.Core.Workflow.Services.V1 {
             "Oh+ashkbCAEaA3VkYiiw6gEwA0ABSgh3b3JrZmxvd1ABIocBChZTaWduYWxX",
             "b3JrZmxvd1Jlc3BvbnNlEhgKB21lc3NhZ2UYASABKAlSB21lc3NhZ2USMgoF",
             "ZXJyb3IYAiABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JSBWVy",
-            "cm9yOh+ashkbCAEaA3VkYiiw6gEwA0ABSgh3b3JrZmxvd1ABMogUCg9Xb3Jr",
-            "Zmxvd1NlcnZpY2US0gMKDVN0YXJ0V29ya2Zsb3cSMy51ZGIuY29yZS53b3Jr",
-            "Zmxvdy5zZXJ2aWNlcy52MS5TdGFydFdvcmtmbG93UmVxdWVzdBo0LnVkYi5j",
-            "b3JlLndvcmtmbG93LnNlcnZpY2VzLnYxLlN0YXJ0V29ya2Zsb3dSZXNwb25z",
-            "ZSLVAsrzGEAIAhobdWRiOndvcmtmbG93OnN0YXJ0LXdvcmtmbG93IAFKAgEC",
-            "ahZ3b3JrZmxvdy5TdGFydFdvcmtmbG93kAEB0vMYBggBEAEgAdrzGDoIARIO",
-            "c3RhcnRfd29ya2Zsb3caA3VkYiiw6gEwA0ABSgh3b3JrZmxvd1ABWg1zdGFy",
-            "dFdvcmtmbG936vMYXQoWd29ya2Zsb3cuU3RhcnRXb3JrZmxvdxIXdWRiLndv",
-            "cmtmbG93LnN0YXJ0ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xl",
-            "YXN0X29uY2UyBnN0YWJsZfLzGEIKCHdvcmtmbG93Gghwb3N0Z3JlczIbVURC",
-            "X05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgC",
-            "gtPkkwIYIhMvdjEvd29ya2Zsb3dzOnN0YXJ0OgEqEugCCgtHZXRXb3JrZmxv",
-            "dxIxLnVkYi5jb3JlLndvcmtmbG93LnNlcnZpY2VzLnYxLkdldFdvcmtmbG93",
-            "UmVxdWVzdBoyLnVkYi5jb3JlLndvcmtmbG93LnNlcnZpY2VzLnYxLkdldFdv",
-            "cmtmbG93UmVzcG9uc2Ui8QHK8xg8CAIaGXVkYjp3b3JrZmxvdzpnZXQtd29y",
-            "a2Zsb3cgAUoCAQJqFHdvcmtmbG93LkdldFdvcmtmbG93kAEB0vMYBggBEAEg",
-            "AdrzGDYIARIMZ2V0X3dvcmtmbG93GgN1ZGIosOoBMANAAUoId29ya2Zsb3dQ",
-            "AVoLZ2V0V29ya2Zsb3fy8xhCCgh3b3JrZmxvdxoIcG9zdGdyZXMyG1VEQl9O",
-            "QVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT",
-            "5JMCHRIbL3YxL3dvcmtmbG93cy97d29ya2Zsb3dfaWR9EugCCg1MaXN0V29y",
-            "a2Zsb3dzEjMudWRiLmNvcmUud29ya2Zsb3cuc2VydmljZXMudjEuTGlzdFdv",
-            "cmtmbG93c1JlcXVlc3QaNC51ZGIuY29yZS53b3JrZmxvdy5zZXJ2aWNlcy52",
-            "MS5MaXN0V29ya2Zsb3dzUmVzcG9uc2Ui6wHK8xhACAIaG3VkYjp3b3JrZmxv",
-            "dzpsaXN0LXdvcmtmbG93cyABSgIBAmoWd29ya2Zsb3cuTGlzdFdvcmtmbG93",
-            "c5ABAdLzGAYIARABIAHa8xg6CAESDmxpc3Rfd29ya2Zsb3dzGgN1ZGIosOoB",
-            "MANAAUoId29ya2Zsb3dQAVoNbGlzdFdvcmtmbG93c/LzGEIKCHdvcmtmbG93",
-            "Gghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJf",
-            "R1JQQ19UQVJHRVT48xgBgtPkkwIPEg0vdjEvd29ya2Zsb3dzEu0DCg5DYW5j",
-            "ZWxXb3JrZmxvdxI0LnVkYi5jb3JlLndvcmtmbG93LnNlcnZpY2VzLnYxLkNh",
-            "bmNlbFdvcmtmbG93UmVxdWVzdBo1LnVkYi5jb3JlLndvcmtmbG93LnNlcnZp",
-            "Y2VzLnYxLkNhbmNlbFdvcmtmbG93UmVzcG9uc2Ui7QLK8xhCCAIaHHVkYjp3",
-            "b3JrZmxvdzpjYW5jZWwtd29ya2Zsb3cgAUoCAQJqF3dvcmtmbG93LkNhbmNl",
-            "bFdvcmtmbG93kAEB0vMYBggBEAEgAdrzGDwIARIPY2FuY2VsX3dvcmtmbG93",
-            "GgN1ZGIosOoBMANAAUoId29ya2Zsb3dQAVoOY2FuY2VsV29ya2Zsb3fq8xhi",
-            "Chd3b3JrZmxvdy5DYW5jZWxXb3JrZmxvdxIZdWRiLndvcmtmbG93LmNhbmNl",
-            "bGxlZC52MRoLd29ya2Zsb3dfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNl",
-            "MgZzdGFibGXy8xhCCgh3b3JrZmxvdxoIcG9zdGdyZXMyG1VEQl9OQVRJVkVf",
-            "U0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYA4LT5JMCJyIi",
-            "L3YxL3dvcmtmbG93cy97d29ya2Zsb3dfaWR9OmNhbmNlbDoBKhLsAwoOU2ln",
-            "bmFsV29ya2Zsb3cSNC51ZGIuY29yZS53b3JrZmxvdy5zZXJ2aWNlcy52MS5T",
-            "aWduYWxXb3JrZmxvd1JlcXVlc3QaNS51ZGIuY29yZS53b3JrZmxvdy5zZXJ2",
-            "aWNlcy52MS5TaWduYWxXb3JrZmxvd1Jlc3BvbnNlIuwCyvMYQggCGhx1ZGI6",
-            "d29ya2Zsb3c6c2lnbmFsLXdvcmtmbG93IAFKAgECahd3b3JrZmxvdy5TaWdu",
-            "YWxXb3JrZmxvd5ABAdLzGAYIARABIAHa8xg8CAESD3NpZ25hbF93b3JrZmxv",
-            "dxoDdWRiKLDqATADQAFKCHdvcmtmbG93UAFaDnNpZ25hbFdvcmtmbG936vMY",
-            "YQoXd29ya2Zsb3cuU2lnbmFsV29ya2Zsb3cSGHVkYi53b3JrZmxvdy5zaWdu",
-            "YWxlZC52MRoLd29ya2Zsb3dfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNl",
-            "MgZzdGFibGXy8xhCCgh3b3JrZmxvdxoIcG9zdGdyZXMyG1VEQl9OQVRJVkVf",
-            "U0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCJyIi",
-            "L3YxL3dvcmtmbG93cy97d29ya2Zsb3dfaWR9OnNpZ25hbDoBKhrqAsrwGWsK",
-            "CHdvcmtmbG93Egh3b3JrZmxvdxoId29ya2Zsb3ciCVdvcmtmbG93cyoId29y",
-            "a2Zsb3cwATgBaAF6CHdvcmtmbG93ggEId29ya2Zsb3eKAQh3b3JrZmxvd5IB",
-            "D25hdGl2ZS53b3JrZmxvd9LwGRsIARoDdWRiKLDqATADQAFKCHdvcmtmbG93",
-            "UAHa8BmRAQoId29ya2Zsb3cSE3VkYi9uYXRpdmUvd29ya2Zsb3caG1VEQl9O",
-            "QVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIhp1ZGIu",
-            "bmF0aXZlLndvcmtmbG93LmNvbmZpZzoId29ya2Zsb3dKC1VEQl9BUElfS0VZ",
-            "Wg91ZGIgbmF0aXZlIGxpbnTi8BlCCgh3b3JrZmxvdxoIcG9zdGdyZXMyG1VE",
-            "Ql9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VUQp8C",
-            "CiFjb20udWRiLmNvcmUud29ya2Zsb3cuc2VydmljZXMudjFCFFdvcmtmbG93",
-            "U2VydmljZVByb3RvUAFaS2dpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9n",
-            "by9nZW4vdWRiL2NvcmUvd29ya2Zsb3cvc2VydmljZXMvdjE7c2VydmljZXN2",
-            "MaICBFVDV1OqAh1VZGIuQ29yZS5Xb3JrZmxvdy5TZXJ2aWNlcy5WMcoCHVVk",
-            "YlxDb3JlXFdvcmtmbG93XFNlcnZpY2VzXFYx4gIpVWRiXEdQQk1ldGFkYXRh",
-            "XENvcmVcV29ya2Zsb3dcU2VydmljZXNcVjHqAiFVZGI6OkNvcmU6Oldvcmtm",
-            "bG93OjpTZXJ2aWNlczo6VjFiBnByb3RvMw=="));
+            "cm9yOh+ashkbCAEaA3VkYiiw6gEwA0ABSgh3b3JrZmxvd1ABIqECChZBY2tX",
+            "b3JrZmxvd1N0ZXBSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50",
+            "SWQSHwoLd29ya2Zsb3dfaWQYAiABKAlSCndvcmtmbG93SWQSHQoKc3RlcF9p",
+            "bmRleBgDIAEoBVIJc3RlcEluZGV4EkwKB291dGNvbWUYBCABKA4yMi51ZGIu",
+            "Y29yZS53b3JrZmxvdy5zZXJ2aWNlcy52MS5Xb3JrZmxvd1N0ZXBPdXRjb21l",
+            "UgdvdXRjb21lEhYKBm91dHB1dBgFIAEoCVIGb3V0cHV0EiMKDWVycm9yX21l",
+            "c3NhZ2UYBiABKAlSDGVycm9yTWVzc2FnZTofmrIZGwgBGgN1ZGIosOoBMANA",
+            "AUoId29ya2Zsb3dQASKgAQoXQWNrV29ya2Zsb3dTdGVwUmVzcG9uc2USGAoH",
+            "bWVzc2FnZRgBIAEoCVIHbWVzc2FnZRIyCgVlcnJvchgCIAEoCzIcLnVkYi5j",
+            "b3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3ISFgoGc3RhdHVzGAMgASgJ",
+            "UgZzdGF0dXM6H5qyGRsIARoDdWRiKLDqATADQAFKCHdvcmtmbG93UAEqgwEK",
+            "E1dvcmtmbG93U3RlcE91dGNvbWUSJQohV09SS0ZMT1dfU1RFUF9PVVRDT01F",
+            "X1VOU1BFQ0lGSUVEEAASIwofV09SS0ZMT1dfU1RFUF9PVVRDT01FX1NVQ0NF",
+            "RURFRBABEiAKHFdPUktGTE9XX1NURVBfT1VUQ09NRV9GQUlMRUQQAjKIGAoP",
+            "V29ya2Zsb3dTZXJ2aWNlEtIDCg1TdGFydFdvcmtmbG93EjMudWRiLmNvcmUu",
+            "d29ya2Zsb3cuc2VydmljZXMudjEuU3RhcnRXb3JrZmxvd1JlcXVlc3QaNC51",
+            "ZGIuY29yZS53b3JrZmxvdy5zZXJ2aWNlcy52MS5TdGFydFdvcmtmbG93UmVz",
+            "cG9uc2Ui1QLK8xhACAIaG3VkYjp3b3JrZmxvdzpzdGFydC13b3JrZmxvdyAB",
+            "SgIBAmoWd29ya2Zsb3cuU3RhcnRXb3JrZmxvd5ABAdLzGAYIARABIAHa8xg6",
+            "CAESDnN0YXJ0X3dvcmtmbG93GgN1ZGIosOoBMANAAUoId29ya2Zsb3dQAVoN",
+            "c3RhcnRXb3JrZmxvd+rzGF0KFndvcmtmbG93LlN0YXJ0V29ya2Zsb3cSF3Vk",
+            "Yi53b3JrZmxvdy5zdGFydGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1h",
+            "dF9sZWFzdF9vbmNlMgZzdGFibGXy8xhCCgh3b3JrZmxvdxoIcG9zdGdyZXMy",
+            "G1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU",
+            "+PMYAoLT5JMCGCITL3YxL3dvcmtmbG93czpzdGFydDoBKhLoAgoLR2V0V29y",
+            "a2Zsb3cSMS51ZGIuY29yZS53b3JrZmxvdy5zZXJ2aWNlcy52MS5HZXRXb3Jr",
+            "Zmxvd1JlcXVlc3QaMi51ZGIuY29yZS53b3JrZmxvdy5zZXJ2aWNlcy52MS5H",
+            "ZXRXb3JrZmxvd1Jlc3BvbnNlIvEByvMYPAgCGhl1ZGI6d29ya2Zsb3c6Z2V0",
+            "LXdvcmtmbG93IAFKAgECahR3b3JrZmxvdy5HZXRXb3JrZmxvd5ABAdLzGAYI",
+            "ARABIAHa8xg2CAESDGdldF93b3JrZmxvdxoDdWRiKLDqATADQAFKCHdvcmtm",
+            "bG93UAFaC2dldFdvcmtmbG938vMYQgoId29ya2Zsb3caCHBvc3RncmVzMhtV",
+            "REJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjz",
+            "GAGC0+STAh0SGy92MS93b3JrZmxvd3Mve3dvcmtmbG93X2lkfRLoAgoNTGlz",
+            "dFdvcmtmbG93cxIzLnVkYi5jb3JlLndvcmtmbG93LnNlcnZpY2VzLnYxLkxp",
+            "c3RXb3JrZmxvd3NSZXF1ZXN0GjQudWRiLmNvcmUud29ya2Zsb3cuc2Vydmlj",
+            "ZXMudjEuTGlzdFdvcmtmbG93c1Jlc3BvbnNlIusByvMYQAgCGht1ZGI6d29y",
+            "a2Zsb3c6bGlzdC13b3JrZmxvd3MgAUoCAQJqFndvcmtmbG93Lkxpc3RXb3Jr",
+            "Zmxvd3OQAQHS8xgGCAEQASAB2vMYOggBEg5saXN0X3dvcmtmbG93cxoDdWRi",
+            "KLDqATADQAFKCHdvcmtmbG93UAFaDWxpc3RXb3JrZmxvd3Py8xhCCgh3b3Jr",
+            "ZmxvdxoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIP",
+            "VURCX0dSUENfVEFSR0VU+PMYAYLT5JMCDxINL3YxL3dvcmtmbG93cxLtAwoO",
+            "Q2FuY2VsV29ya2Zsb3cSNC51ZGIuY29yZS53b3JrZmxvdy5zZXJ2aWNlcy52",
+            "MS5DYW5jZWxXb3JrZmxvd1JlcXVlc3QaNS51ZGIuY29yZS53b3JrZmxvdy5z",
+            "ZXJ2aWNlcy52MS5DYW5jZWxXb3JrZmxvd1Jlc3BvbnNlIu0CyvMYQggCGhx1",
+            "ZGI6d29ya2Zsb3c6Y2FuY2VsLXdvcmtmbG93IAFKAgECahd3b3JrZmxvdy5D",
+            "YW5jZWxXb3JrZmxvd5ABAdLzGAYIARABIAHa8xg8CAESD2NhbmNlbF93b3Jr",
+            "ZmxvdxoDdWRiKLDqATADQAFKCHdvcmtmbG93UAFaDmNhbmNlbFdvcmtmbG93",
+            "6vMYYgoXd29ya2Zsb3cuQ2FuY2VsV29ya2Zsb3cSGXVkYi53b3JrZmxvdy5j",
+            "YW5jZWxsZWQudjEaC3dvcmtmbG93X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rf",
+            "b25jZTIGc3RhYmxl8vMYQgoId29ya2Zsb3caCHBvc3RncmVzMhtVREJfTkFU",
+            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAOC0+ST",
+            "AiciIi92MS93b3JrZmxvd3Mve3dvcmtmbG93X2lkfTpjYW5jZWw6ASoS7AMK",
+            "DlNpZ25hbFdvcmtmbG93EjQudWRiLmNvcmUud29ya2Zsb3cuc2VydmljZXMu",
+            "djEuU2lnbmFsV29ya2Zsb3dSZXF1ZXN0GjUudWRiLmNvcmUud29ya2Zsb3cu",
+            "c2VydmljZXMudjEuU2lnbmFsV29ya2Zsb3dSZXNwb25zZSLsAsrzGEIIAhoc",
+            "dWRiOndvcmtmbG93OnNpZ25hbC13b3JrZmxvdyABSgIBAmoXd29ya2Zsb3cu",
+            "U2lnbmFsV29ya2Zsb3eQAQHS8xgGCAEQASAB2vMYPAgBEg9zaWduYWxfd29y",
+            "a2Zsb3caA3VkYiiw6gEwA0ABSgh3b3JrZmxvd1ABWg5zaWduYWxXb3JrZmxv",
+            "d+rzGGEKF3dvcmtmbG93LlNpZ25hbFdvcmtmbG93Ehh1ZGIud29ya2Zsb3cu",
+            "c2lnbmFsZWQudjEaC3dvcmtmbG93X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rf",
+            "b25jZTIGc3RhYmxl8vMYQgoId29ya2Zsb3caCHBvc3RncmVzMhtVREJfTkFU",
+            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+ST",
+            "AiciIi92MS93b3JrZmxvd3Mve3dvcmtmbG93X2lkfTpzaWduYWw6ASoS/QMK",
+            "D0Fja1dvcmtmbG93U3RlcBI1LnVkYi5jb3JlLndvcmtmbG93LnNlcnZpY2Vz",
+            "LnYxLkFja1dvcmtmbG93U3RlcFJlcXVlc3QaNi51ZGIuY29yZS53b3JrZmxv",
+            "dy5zZXJ2aWNlcy52MS5BY2tXb3JrZmxvd1N0ZXBSZXNwb25zZSL6AsrzGEUI",
+            "AhoedWRiOndvcmtmbG93OmFjay13b3JrZmxvdy1zdGVwIAFKAgECahh3b3Jr",
+            "Zmxvdy5BY2tXb3JrZmxvd1N0ZXCQAQHS8xgGCAEQASAB2vMYPwgBEhFhY2tf",
+            "d29ya2Zsb3dfc3RlcBoDdWRiKLDqATADQAFKCHdvcmtmbG93UAFaD2Fja1dv",
+            "cmtmbG93U3RlcOrzGGcKGHdvcmtmbG93LkFja1dvcmtmbG93U3RlcBIddWRi",
+            "LndvcmtmbG93LnN0ZXAuYWR2YW5jZWQudjEaC3dvcmtmbG93X2lkIghzdGFu",
+            "ZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQgoId29ya2Zsb3caCHBv",
+            "c3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBD",
+            "X1RBUkdFVPjzGAKC0+STAikiJC92MS93b3JrZmxvd3Mve3dvcmtmbG93X2lk",
+            "fTphY2stc3RlcDoBKhrqAsrwGWsKCHdvcmtmbG93Egh3b3JrZmxvdxoId29y",
+            "a2Zsb3ciCVdvcmtmbG93cyoId29ya2Zsb3cwATgBaAF6CHdvcmtmbG93ggEI",
+            "d29ya2Zsb3eKAQh3b3JrZmxvd5IBD25hdGl2ZS53b3JrZmxvd9LwGRsIARoD",
+            "dWRiKLDqATADQAFKCHdvcmtmbG93UAHa8BmRAQoId29ya2Zsb3cSE3VkYi9u",
+            "YXRpdmUvd29ya2Zsb3caG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoP",
+            "VURCX0dSUENfVEFSR0VUIhp1ZGIubmF0aXZlLndvcmtmbG93LmNvbmZpZzoI",
+            "d29ya2Zsb3dKC1VEQl9BUElfS0VZWg91ZGIgbmF0aXZlIGxpbnTi8BlCCgh3",
+            "b3JrZmxvdxoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxF",
+            "RDIPVURCX0dSUENfVEFSR0VUQp8CCiFjb20udWRiLmNvcmUud29ya2Zsb3cu",
+            "c2VydmljZXMudjFCFFdvcmtmbG93U2VydmljZVByb3RvUAFaS2dpdGh1Yi5j",
+            "b20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvd29ya2Zsb3cv",
+            "c2VydmljZXMvdjE7c2VydmljZXN2MaICBFVDV1OqAh1VZGIuQ29yZS5Xb3Jr",
+            "Zmxvdy5TZXJ2aWNlcy5WMcoCHVVkYlxDb3JlXFdvcmtmbG93XFNlcnZpY2Vz",
+            "XFYx4gIpVWRiXEdQQk1ldGFkYXRhXENvcmVcV29ya2Zsb3dcU2VydmljZXNc",
+            "VjHqAiFVZGI6OkNvcmU6OldvcmtmbG93OjpTZXJ2aWNlczo6VjFiBnByb3Rv",
+            "Mw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::Udb.Core.Common.V1.DtoReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, global::Udb.Core.Workflow.Entity.V1.WorkflowInstanceReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest), global::Udb.Core.Workflow.Services.V1.StartWorkflowRequest.Parser, new[]{ "TenantId", "ProjectId", "WorkflowType", "TotalSteps", "Payload", "Compensations", "CorrelationId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse), global::Udb.Core.Workflow.Services.V1.StartWorkflowResponse.Parser, new[]{ "WorkflowId", "Message", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest), global::Udb.Core.Workflow.Services.V1.GetWorkflowRequest.Parser, new[]{ "TenantId", "WorkflowId" }, null, null, null, null),
@@ -146,12 +171,32 @@ namespace Udb.Core.Workflow.Services.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest), global::Udb.Core.Workflow.Services.V1.CancelWorkflowRequest.Parser, new[]{ "TenantId", "WorkflowId", "Reason" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse), global::Udb.Core.Workflow.Services.V1.CancelWorkflowResponse.Parser, new[]{ "Message", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest), global::Udb.Core.Workflow.Services.V1.SignalWorkflowRequest.Parser, new[]{ "TenantId", "WorkflowId", "SignalName", "SignalPayload" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse), global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse.Parser, new[]{ "Message", "Error" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse), global::Udb.Core.Workflow.Services.V1.SignalWorkflowResponse.Parser, new[]{ "Message", "Error" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest), global::Udb.Core.Workflow.Services.V1.AckWorkflowStepRequest.Parser, new[]{ "TenantId", "WorkflowId", "StepIndex", "Outcome", "Output", "ErrorMessage" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse), global::Udb.Core.Workflow.Services.V1.AckWorkflowStepResponse.Parser, new[]{ "Message", "Error", "Status" }, null, null, null, null)
           }));
     }
     #endregion
 
   }
+  #region Enums
+  /// <summary>
+  /// Outcome reported by AckWorkflowStep for the dispatched step.
+  /// </summary>
+  public enum WorkflowStepOutcome {
+    [pbr::OriginalName("WORKFLOW_STEP_OUTCOME_UNSPECIFIED")] Unspecified = 0,
+    /// <summary>
+    /// The step's side effects completed; the workflow advances.
+    /// </summary>
+    [pbr::OriginalName("WORKFLOW_STEP_OUTCOME_SUCCEEDED")] Succeeded = 1,
+    /// <summary>
+    /// The step failed; the workflow fails (compensating completed steps).
+    /// </summary>
+    [pbr::OriginalName("WORKFLOW_STEP_OUTCOME_FAILED")] Failed = 2,
+  }
+
+  #endregion
+
   #region Messages
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class StartWorkflowRequest : pb::IMessage<StartWorkflowRequest>
@@ -3079,6 +3124,687 @@ namespace Udb.Core.Workflow.Services.V1 {
               Error = new global::Udb.Core.Common.V1.ApiError();
             }
             input.ReadMessage(Error);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class AckWorkflowStepRequest : pb::IMessage<AckWorkflowStepRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<AckWorkflowStepRequest> _parser = new pb::MessageParser<AckWorkflowStepRequest>(() => new AckWorkflowStepRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<AckWorkflowStepRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Core.Workflow.Services.V1.WorkflowServiceReflection.Descriptor.MessageTypes[10]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckWorkflowStepRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckWorkflowStepRequest(AckWorkflowStepRequest other) : this() {
+      tenantId_ = other.tenantId_;
+      workflowId_ = other.workflowId_;
+      stepIndex_ = other.stepIndex_;
+      outcome_ = other.outcome_;
+      output_ = other.output_;
+      errorMessage_ = other.errorMessage_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckWorkflowStepRequest Clone() {
+      return new AckWorkflowStepRequest(this);
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 1;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "workflow_id" field.</summary>
+    public const int WorkflowIdFieldNumber = 2;
+    private string workflowId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string WorkflowId {
+      get { return workflowId_; }
+      set {
+        workflowId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "step_index" field.</summary>
+    public const int StepIndexFieldNumber = 3;
+    private int stepIndex_;
+    /// <summary>
+    /// Zero-based index of the dispatched step being acknowledged (the
+    /// `step_index` carried by `udb.workflow.step.dispatched.v1`). An ack for any
+    /// other step is rejected, so a stale or misrouted ack can never advance the
+    /// workflow.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int StepIndex {
+      get { return stepIndex_; }
+      set {
+        stepIndex_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "outcome" field.</summary>
+    public const int OutcomeFieldNumber = 4;
+    private global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome outcome_ = global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome Outcome {
+      get { return outcome_; }
+      set {
+        outcome_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "output" field.</summary>
+    public const int OutputFieldNumber = 5;
+    private string output_ = "";
+    /// <summary>
+    /// Optional step output (JSON or text, bounded) carried on the resulting
+    /// transition event.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Output {
+      get { return output_; }
+      set {
+        output_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "error_message" field.</summary>
+    public const int ErrorMessageFieldNumber = 6;
+    private string errorMessage_ = "";
+    /// <summary>
+    /// Failure reason when outcome is FAILED; recorded as the workflow last_error.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ErrorMessage {
+      get { return errorMessage_; }
+      set {
+        errorMessage_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as AckWorkflowStepRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(AckWorkflowStepRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TenantId != other.TenantId) return false;
+      if (WorkflowId != other.WorkflowId) return false;
+      if (StepIndex != other.StepIndex) return false;
+      if (Outcome != other.Outcome) return false;
+      if (Output != other.Output) return false;
+      if (ErrorMessage != other.ErrorMessage) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (WorkflowId.Length != 0) hash ^= WorkflowId.GetHashCode();
+      if (StepIndex != 0) hash ^= StepIndex.GetHashCode();
+      if (Outcome != global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome.Unspecified) hash ^= Outcome.GetHashCode();
+      if (Output.Length != 0) hash ^= Output.GetHashCode();
+      if (ErrorMessage.Length != 0) hash ^= ErrorMessage.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(WorkflowId);
+      }
+      if (StepIndex != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(StepIndex);
+      }
+      if (Outcome != global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome.Unspecified) {
+        output.WriteRawTag(32);
+        output.WriteEnum((int) Outcome);
+      }
+      if (Output.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Output);
+      }
+      if (ErrorMessage.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ErrorMessage);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(WorkflowId);
+      }
+      if (StepIndex != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(StepIndex);
+      }
+      if (Outcome != global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome.Unspecified) {
+        output.WriteRawTag(32);
+        output.WriteEnum((int) Outcome);
+      }
+      if (Output.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Output);
+      }
+      if (ErrorMessage.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ErrorMessage);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (WorkflowId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(WorkflowId);
+      }
+      if (StepIndex != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(StepIndex);
+      }
+      if (Outcome != global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Outcome);
+      }
+      if (Output.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Output);
+      }
+      if (ErrorMessage.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ErrorMessage);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(AckWorkflowStepRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.WorkflowId.Length != 0) {
+        WorkflowId = other.WorkflowId;
+      }
+      if (other.StepIndex != 0) {
+        StepIndex = other.StepIndex;
+      }
+      if (other.Outcome != global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome.Unspecified) {
+        Outcome = other.Outcome;
+      }
+      if (other.Output.Length != 0) {
+        Output = other.Output;
+      }
+      if (other.ErrorMessage.Length != 0) {
+        ErrorMessage = other.ErrorMessage;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            WorkflowId = input.ReadString();
+            break;
+          }
+          case 24: {
+            StepIndex = input.ReadInt32();
+            break;
+          }
+          case 32: {
+            Outcome = (global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome) input.ReadEnum();
+            break;
+          }
+          case 42: {
+            Output = input.ReadString();
+            break;
+          }
+          case 50: {
+            ErrorMessage = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            WorkflowId = input.ReadString();
+            break;
+          }
+          case 24: {
+            StepIndex = input.ReadInt32();
+            break;
+          }
+          case 32: {
+            Outcome = (global::Udb.Core.Workflow.Services.V1.WorkflowStepOutcome) input.ReadEnum();
+            break;
+          }
+          case 42: {
+            Output = input.ReadString();
+            break;
+          }
+          case 50: {
+            ErrorMessage = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class AckWorkflowStepResponse : pb::IMessage<AckWorkflowStepResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<AckWorkflowStepResponse> _parser = new pb::MessageParser<AckWorkflowStepResponse>(() => new AckWorkflowStepResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<AckWorkflowStepResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Core.Workflow.Services.V1.WorkflowServiceReflection.Descriptor.MessageTypes[11]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckWorkflowStepResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckWorkflowStepResponse(AckWorkflowStepResponse other) : this() {
+      message_ = other.message_;
+      error_ = other.error_ != null ? other.error_.Clone() : null;
+      status_ = other.status_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckWorkflowStepResponse Clone() {
+      return new AckWorkflowStepResponse(this);
+    }
+
+    /// <summary>Field number for the "message" field.</summary>
+    public const int MessageFieldNumber = 1;
+    private string message_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Message {
+      get { return message_; }
+      set {
+        message_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "error" field.</summary>
+    public const int ErrorFieldNumber = 2;
+    private global::Udb.Core.Common.V1.ApiError error_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Core.Common.V1.ApiError Error {
+      get { return error_; }
+      set {
+        error_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "status" field.</summary>
+    public const int StatusFieldNumber = 3;
+    private string status_ = "";
+    /// <summary>
+    /// Workflow status after the acknowledgement (e.g. "RUNNING", "COMPLETED",
+    /// "COMPENSATING", "FAILED").
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Status {
+      get { return status_; }
+      set {
+        status_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as AckWorkflowStepResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(AckWorkflowStepResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Message != other.Message) return false;
+      if (!object.Equals(Error, other.Error)) return false;
+      if (Status != other.Status) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Message.Length != 0) hash ^= Message.GetHashCode();
+      if (error_ != null) hash ^= Error.GetHashCode();
+      if (Status.Length != 0) hash ^= Status.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Message.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Message);
+      }
+      if (error_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Error);
+      }
+      if (Status.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Status);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Message.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Message);
+      }
+      if (error_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Error);
+      }
+      if (Status.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Status);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Message.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Message);
+      }
+      if (error_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Error);
+      }
+      if (Status.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Status);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(AckWorkflowStepResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Message.Length != 0) {
+        Message = other.Message;
+      }
+      if (other.error_ != null) {
+        if (error_ == null) {
+          Error = new global::Udb.Core.Common.V1.ApiError();
+        }
+        Error.MergeFrom(other.Error);
+      }
+      if (other.Status.Length != 0) {
+        Status = other.Status;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Message = input.ReadString();
+            break;
+          }
+          case 18: {
+            if (error_ == null) {
+              Error = new global::Udb.Core.Common.V1.ApiError();
+            }
+            input.ReadMessage(Error);
+            break;
+          }
+          case 26: {
+            Status = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Message = input.ReadString();
+            break;
+          }
+          case 18: {
+            if (error_ == null) {
+              Error = new global::Udb.Core.Common.V1.ApiError();
+            }
+            input.ReadMessage(Error);
+            break;
+          }
+          case 26: {
+            Status = input.ReadString();
             break;
           }
         }
