@@ -789,7 +789,7 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
     ),
     ".github/actions/start-backends/action.yml": (
         ("docker run -d --name udb-bench-minio", "MinIO container name"),
-        ("minio/minio:RELEASE.2025-01-20T14-49-07Z", "MinIO image pin"),
+        ("cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034", "MinIO image pin"),
         ("curl -fsS http://localhost:9000/minio/health/live", "MinIO health gate"),
         ("docker run -d --name udb-bench-kafka", "Kafka container name"),
         ("apache/kafka:3.9.0", "Kafka image pin"),

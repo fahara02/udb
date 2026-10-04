@@ -58,7 +58,7 @@ runs:
           -p 9000:9000 \
           -e MINIO_ROOT_USER=minio \
           -e MINIO_ROOT_PASSWORD=minio123 \
-          minio/minio:RELEASE.2025-01-20T14-49-07Z \
+          cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034 \
           server /data --console-address ":9001"
         for _ in {1..60}; do
           curl -fsS http://localhost:9000/minio/health/live >/dev/null && exit 0

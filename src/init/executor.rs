@@ -275,7 +275,7 @@ fn compose_overlay(result: &InitPlanResult) -> String {
     }
     if has_backend("minio") {
         out.push_str(
-            "  minio:\n    image: minio/minio:latest\n    command: server /data --console-address :9001\n    environment:\n      MINIO_ROOT_USER: minioadmin\n      MINIO_ROOT_PASSWORD: minioadmin\n    ports:\n      - \"9000:9000\"\n      - \"9001:9001\"\n",
+            "  minio:\n    image: cgr.dev/chainguard/minio:latest\n    command: server /data --console-address :9001\n    environment:\n      MINIO_ROOT_USER: minioadmin\n      MINIO_ROOT_PASSWORD: minioadmin\n    ports:\n      - \"9000:9000\"\n      - \"9001:9001\"\n",
         );
     }
     out

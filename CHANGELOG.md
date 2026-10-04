@@ -5,7 +5,13 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## [Unreleased]
+## [0.5.23] - 2026-10-05
+
+Tenant scoping for projected vector and graph records, projected graph edges,
+a `udb lint` that rejects backends UDB cannot run, and a relational read
+contract that finally says which field is the data. Adds `udb auth role` for
+binding users and service accounts to data-plane roles, and proves the Go SDK on
+Go 1.27.
 
 ### Fixed
 
@@ -163,6 +169,14 @@ release line was tagged.
   exercised against real bytes.
 
 ### Changed
+
+- **MinIO images: `minio/minio` and `minio/mc` are no longer published**, on
+  Docker Hub or Quay, so every compose file, the CI backend action and the
+  `udb init`/scaffold templates referenced images that no longer pull — the live
+  native-services CI job could not start its stack. They now use
+  `cgr.dev/chainguard/minio` (MinIO server plus `mc`, so the `mc ready`
+  healthchecks and bucket bootstrap sidecars are unchanged); CI pins it by
+  digest.
 
 - `RecordSet.records_json` is documented as CANONICAL and `RecordSet.rows` /
   `Row.fields` as compatibility-only, deprecated for reads. `rows` is retained,
