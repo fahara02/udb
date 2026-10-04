@@ -21,6 +21,9 @@ version-matched CLI launcher.
 go get github.com/fahara02/udb/sdk/go@v0.5.22
 ```
 
+Supported Go versions: 1.22 (the `go.mod` floor) through 1.27. CI vets, builds
+and tests the SDK on both ends of that range.
+
 Install the `udb` CLI launcher:
 
 ```bash

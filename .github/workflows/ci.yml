@@ -998,6 +998,23 @@ jobs:
       #   - V23-2: ConnectEnterprise emits exactly one canonical value per identity
       #     header (no duplicated / stale pre-login tenant/project hint).
       - run: go test ./udbclient -run 'TestEntityRepoGeneratedContract|TestConnectEnterpriseEmitsCanonicalSingletonMetadata' -count=1
+      # The steps above prove the declared floor (go.mod `go 1.22`). Re-run the
+      # SDK on the newest release too, so a toolchain change (vet analyzers,
+      # linkname restrictions, stdlib behavior) that breaks consumers on current
+      # Go fails here instead of in their build. Kept inside this job, not a
+      # matrix, because "Go SDK (vet + build)" is a required status check name.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+      - name: go vet / build / test (Go 1.27)
+        run: |
+          go version
+          go vet ./...
+          go build ./...
+          go test ./... -count=1
+      - name: native-services Go example (Go 1.27)
+        working-directory: examples/native-services/go
+        run: go vet ./...
 
   # ── TypeScript SDK: typecheck + build (matches the npm-publish build) ──
   ts-sdk:

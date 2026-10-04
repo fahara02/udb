@@ -71,6 +71,14 @@ release line was tagged.
   endpoint failures at transaction begin used `{{err}}`, an escaped brace, so
   the cause was dropped from the message.
 
+### Added
+
+- **Go SDK: supported on Go 1.22 through 1.27.** CI now vets, builds and runs the
+  full Go SDK test suite on Go 1.27 as well as on the 1.22 `go.mod` floor, and
+  vets the native-services Go example, whose `go.sum` was missing the
+  `genproto/googleapis/api` entry and had stopped building on any toolchain.
+
+
 ## [0.5.22] - 2026-08-26
 
 A single-purpose release: the Rust client shipped in 0.5.21 could not be used by
