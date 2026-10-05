@@ -2250,7 +2250,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "tonic::Code::PermissionDenied",
             "fn native_authz_denied_status(",
             '"authn_native_rpc_authorize"',
-            "decision.matched_policy_ids.is_empty()",
+            "!decision.is_explicit_deny()",
             "return Ok(decision.decision_id);",
             "Err(native_authz_denied_status(",
             "decision.decision_id.clone()",
