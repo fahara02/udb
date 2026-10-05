@@ -115,6 +115,10 @@ async fn live_postgres_cdc_control_preserves_slot_ownership() {
         request
             .metadata_mut()
             .insert("x-correlation-id", slot.parse().unwrap());
+        // CDC control is admin-only: the gate reads the request's scopes.
+        request
+            .metadata_mut()
+            .insert("x-scopes", "udb:admin".parse().unwrap());
         request
     };
     let claim = |tenant: &str, project: &str| {
