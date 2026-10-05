@@ -93,18 +93,24 @@ type Mutation struct {
 	// 2^53 (`google.protobuf.Value` is double-only) and fails closed for integer
 	// columns rather than writing a rounded value. Send such a number as its
 	// decimal STRING through `payload`, or use `record_json`.
-	RecordJson     []byte                 `protobuf:"bytes,5,opt,name=record_json,json=recordJson,proto3" json:"record_json,omitempty"`
-	Payload        *structpb.Struct       `protobuf:"bytes,6,opt,name=payload,proto3" json:"payload,omitempty"`
-	Filter         *structpb.Struct       `protobuf:"bytes,7,opt,name=filter,proto3" json:"filter,omitempty"`
-	Collection     string                 `protobuf:"bytes,8,opt,name=collection,proto3" json:"collection,omitempty"`
-	VectorPoints   []*VectorPointMutation `protobuf:"bytes,9,rep,name=vector_points,json=vectorPoints,proto3" json:"vector_points,omitempty"`
-	Commit         bool                   `protobuf:"varint,10,opt,name=commit,proto3" json:"commit,omitempty"`
-	Rollback       bool                   `protobuf:"varint,11,opt,name=rollback,proto3" json:"rollback,omitempty"`
-	Bucket         string                 `protobuf:"bytes,12,opt,name=bucket,proto3" json:"bucket,omitempty"`
-	ObjectKey      string                 `protobuf:"bytes,13,opt,name=object_key,json=objectKey,proto3" json:"object_key,omitempty"`
-	ObjectData     []byte                 `protobuf:"bytes,14,opt,name=object_data,json=objectData,proto3" json:"object_data,omitempty"`
-	ContentType    string                 `protobuf:"bytes,15,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,16,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	RecordJson   []byte                 `protobuf:"bytes,5,opt,name=record_json,json=recordJson,proto3" json:"record_json,omitempty"`
+	Payload      *structpb.Struct       `protobuf:"bytes,6,opt,name=payload,proto3" json:"payload,omitempty"`
+	Filter       *structpb.Struct       `protobuf:"bytes,7,opt,name=filter,proto3" json:"filter,omitempty"`
+	Collection   string                 `protobuf:"bytes,8,opt,name=collection,proto3" json:"collection,omitempty"`
+	VectorPoints []*VectorPointMutation `protobuf:"bytes,9,rep,name=vector_points,json=vectorPoints,proto3" json:"vector_points,omitempty"`
+	Commit       bool                   `protobuf:"varint,10,opt,name=commit,proto3" json:"commit,omitempty"`
+	Rollback     bool                   `protobuf:"varint,11,opt,name=rollback,proto3" json:"rollback,omitempty"`
+	Bucket       string                 `protobuf:"bytes,12,opt,name=bucket,proto3" json:"bucket,omitempty"`
+	ObjectKey    string                 `protobuf:"bytes,13,opt,name=object_key,json=objectKey,proto3" json:"object_key,omitempty"`
+	ObjectData   []byte                 `protobuf:"bytes,14,opt,name=object_data,json=objectData,proto3" json:"object_data,omitempty"`
+	ContentType  string                 `protobuf:"bytes,15,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	// Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+	// Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+	// INVALID_ARGUMENT before the transaction opens (a transactional relational
+	// mutation keeps no per-mutation replay receipt, so the key cannot be
+	// honoured, and it is never silently ignored). Use the unary verb's
+	// `idempotency_key` when a relational write must be deduplicated.
+	IdempotencyKey string `protobuf:"bytes,16,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	// Partial-update payload for `operation = "update"` — the SET columns and the
 	// atomic increments. Same semantics as the unary UpdateRequest (SETs named
 	// columns / applies counter deltas on the rows matched by `filter`), atomic

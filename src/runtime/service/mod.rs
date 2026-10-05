@@ -93,7 +93,7 @@ pub use auth_service::auth_readiness_triples;
 pub(crate) use auth_service::events::topics::AUTH_TOPIC_PATTERNS;
 pub use auth_service::{
     BootstrapAdmin, DATA_PLANE_ACTION_TOKENS, bootstrap_admin_user, bootstrap_platform_admin_user,
-    cli_api_key_list, cli_api_key_revoke, migrate_service_account_grants,
+    cli_api_key_list, cli_api_key_revoke, migrate_service_account_grants, seed_authz_policy_id,
     seed_project_authz_policies_offline, served_bootstrap_admin,
 };
 // W17: native LiveQueryService (master-plan 9.7). Server-streaming tenant-scoped
@@ -1773,6 +1773,122 @@ fn spawn_uds_data_plane(
     }))
 }
 
+/// Every native control-plane service the internal listener mounts. `serve()`
+/// builds these (some with startup side effects, e.g. the authz snapshot warmer)
+/// and hands them here; live tests build them from a broker via `from_broker`.
+/// Both then mount through [`Self::into_routes`], so the served test stack and
+/// production cannot drift on which services exist or how they are wrapped.
+struct NativeControlPlaneServices {
+    authn: auth_service::AuthnServiceImpl,
+    authz: auth_service::AuthzServiceImpl,
+    api_key: auth_service::ApiKeyServiceImpl,
+    identity_provider: auth_service::IdentityProviderServiceImpl,
+    control_plane: auth_service::ControlPlaneServiceImpl,
+    tenant: tenant_service::TenantServiceImpl,
+    lock: lock_service::LockServiceImpl,
+    scheduler: scheduler_service::SchedulerServiceImpl,
+    vault: vault_service::VaultServiceImpl,
+    cache: cache_service::CacheServiceImpl,
+    webhook: webhook_service::WebhookServiceImpl,
+    backup: backup_service::BackupServiceImpl,
+    search: search_service::SearchServiceImpl,
+    config: config_service::ConfigServiceImpl,
+    metering: metering_service::MeteringServiceImpl,
+    livequery: livequery_service::LiveQueryServiceImpl,
+    workflow: workflow_service::WorkflowServiceImpl,
+    embedding: embedding_service::EmbeddingServiceImpl,
+    notification: notification_service::NotificationServiceImpl,
+    analytics: analytics_service::AnalyticsServiceImpl,
+    storage: storage_service::StorageServiceImpl,
+    asset: asset_service::AssetServiceImpl,
+    webrtc: webrtc_service::WebrtcServiceImpl,
+}
+
+impl NativeControlPlaneServices {
+    /// Build every native service from one broker, the way `serve()` does, for
+    /// tests that drive the served native plane.
+    #[cfg(test)]
+    fn from_broker(service: &DataBrokerService) -> Self {
+        let (authn, authz, api_key) = service.build_auth_services();
+        Self {
+            authn,
+            authz,
+            api_key,
+            identity_provider: service.build_identity_provider_service(),
+            control_plane: service.build_control_plane_service(),
+            tenant: service.build_tenant_service(),
+            lock: service.build_lock_service(),
+            scheduler: service.build_scheduler_service(),
+            vault: service.build_vault_service(),
+            cache: service.build_cache_service(),
+            webhook: service.build_webhook_service(),
+            backup: service.build_backup_service(),
+            search: service.build_search_service(),
+            config: service.build_config_service(),
+            metering: service.build_metering_service(),
+            livequery: service.build_livequery_service(),
+            workflow: service.build_workflow_service(),
+            embedding: service.build_embedding_service(),
+            notification: service.build_notification_service(),
+            analytics: service.build_analytics_service(),
+            storage: service.build_storage_service(),
+            asset: service.build_asset_service(),
+            webrtc: service.build_webrtc_service(),
+        }
+    }
+
+    /// Mount every native control-plane service behind the proto-driven
+    /// method-security layer. The caller adds the transport layers (credential
+    /// resolution, timeouts) and, in production, the listener health service.
+    fn into_routes(self, msec: &method_security::MethodSecurityLayer) -> tonic::service::Routes {
+        tonic::service::Routes::new(msec.wrap(auth_service::AuthnServiceServer::new(self.authn)))
+            .add_service(msec.wrap(auth_service::AuthzServiceServer::new(self.authz)))
+            .add_service(msec.wrap(auth_service::ApiKeyServiceServer::new(self.api_key)))
+            .add_service(msec.wrap(auth_service::IdentityProviderServiceServer::new(
+                self.identity_provider,
+            )))
+            .add_service(msec.wrap(auth_service::ControlPlaneServiceServer::new(
+                self.control_plane,
+            )))
+            .add_service(msec.wrap(tenant_service::TenantServiceServer::new(self.tenant)))
+            .add_service(msec.wrap(lock_service::LockServiceServer::new(self.lock)))
+            .add_service(msec.wrap(scheduler_service::SchedulerServiceServer::new(
+                self.scheduler,
+            )))
+            .add_service(msec.wrap(vault_service::VaultServiceServer::new(self.vault)))
+            .add_service(msec.wrap(cache_service::CacheServiceServer::new(self.cache)))
+            .add_service(msec.wrap(webhook_service::WebhookServiceServer::new(self.webhook)))
+            .add_service(msec.wrap(backup_service::BackupServiceServer::new(self.backup)))
+            .add_service(msec.wrap(search_service::SearchServiceServer::new(self.search)))
+            .add_service(msec.wrap(config_service::ConfigServiceServer::new(self.config)))
+            .add_service(msec.wrap(metering_service::MeteringServiceServer::new(self.metering)))
+            .add_service(msec.wrap(livequery_service::LiveQueryServiceServer::new(
+                self.livequery,
+            )))
+            .add_service(msec.wrap(workflow_service::WorkflowServiceServer::new(self.workflow)))
+            .add_service(msec.wrap(embedding_service::EmbeddingServiceServer::new(
+                self.embedding,
+            )))
+            .add_service(
+                msec.wrap(notification_service::NotificationServiceServer::new(
+                    self.notification,
+                )),
+            )
+            .add_service(msec.wrap(analytics_service::AnalyticsServiceServer::new(
+                self.analytics,
+            )))
+            .add_service(msec.wrap(storage_service::StorageServiceServer::new(self.storage)))
+            .add_service(msec.wrap(asset_service::AssetServiceServer::new(self.asset)))
+            // WebRTC ships five tonic services on one (Clone) impl; each mounts with
+            // the same proto-driven method-security layer.
+            .add_service(msec.wrap(webrtc_service::RoomServiceServer::new(self.webrtc.clone())))
+            .add_service(msec.wrap(webrtc_service::PeerServiceServer::new(self.webrtc.clone())))
+            .add_service(msec.wrap(webrtc_service::TrackServiceServer::new(self.webrtc.clone())))
+            .add_service(msec.wrap(webrtc_service::TurnServiceServer::new(self.webrtc.clone())))
+            .add_service(msec.wrap(webrtc_service::SignalingServiceServer::new(self.webrtc)))
+    }
+}
+
 pub async fn serve(
     manifest: CatalogManifest,
     schemas: Vec<ProtoSchema>,
@@ -2390,14 +2506,14 @@ pub async fn serve(
                     let runtime = runtime.clone();
                     let catalog = catalog.clone();
                     let store = store.clone();
-                    match crate::runtime::singleton::run_while_leader(
+                    match crate::runtime::singleton::run_while_leader_fenced(
                         &singleton_pool,
                         &singleton_relation,
                         crate::runtime::singleton::WORKER_PROJECTION_MATERIALIZER,
                         crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-                        || async move {
+                        |fence| async move {
                             ProjectionWorker::new(store, runtime, metrics, catalog)
-                                .run_forever()
+                                .run_forever_fenced(fence)
                                 .await;
                             Ok::<(), String>(())
                         },
@@ -2436,12 +2552,12 @@ pub async fn serve(
                     let runtime = runtime.clone();
                     let store = store.clone();
                     let worker_pool = worker_pool.clone();
-                    match crate::runtime::singleton::run_while_leader(
+                    match crate::runtime::singleton::run_while_leader_fenced(
                         &singleton_pool,
                         &singleton_relation,
                         crate::runtime::singleton::WORKER_PROJECTION_RECONCILIATION,
                         crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-                        || async move {
+                        |fence| async move {
                             ReconciliationWorker::new(
                                 worker_pool,
                                 store,
@@ -2449,7 +2565,7 @@ pub async fn serve(
                                 catalog,
                                 runtime,
                             )
-                            .run_forever()
+                            .run_forever_fenced(fence)
                             .await;
                             Ok::<(), String>(())
                         },
@@ -3514,67 +3630,37 @@ pub async fn serve(
         shutdown_signal().await;
         let _ = listener_shutdown_tx.send(true);
     });
+    // The native service set is mounted by the same function the served-stack
+    // conformance tests use, so production and tests cannot drift.
+    let native_routes = NativeControlPlaneServices {
+        authn: authn_service,
+        authz: authz_service,
+        api_key: api_key_service,
+        identity_provider: identity_provider_service,
+        control_plane: control_plane_service,
+        tenant: tenant_service,
+        lock: lock_service,
+        scheduler: scheduler_service,
+        vault: vault_service,
+        cache: cache_service,
+        webhook: webhook_service,
+        backup: backup_service,
+        search: search_service,
+        config: config_service,
+        metering: metering_service,
+        livequery: livequery_service,
+        workflow: workflow_service,
+        embedding: embedding_service,
+        notification: notification_service,
+        analytics: analytics_service,
+        storage: storage_service,
+        asset: asset_service,
+        webrtc: webrtc_service.clone(),
+    }
+    .into_routes(&msec);
     let auth_fut = auth_server
+        .add_routes(native_routes)
         .add_service(native_health)
-        .add_service(msec.wrap(auth_service::AuthnServiceServer::new(authn_service)))
-        .add_service(msec.wrap(auth_service::AuthzServiceServer::new(authz_service)))
-        .add_service(msec.wrap(auth_service::ApiKeyServiceServer::new(api_key_service)))
-        .add_service(msec.wrap(auth_service::IdentityProviderServiceServer::new(
-            identity_provider_service,
-        )))
-        .add_service(msec.wrap(auth_service::ControlPlaneServiceServer::new(
-            control_plane_service,
-        )))
-        .add_service(msec.wrap(tenant_service::TenantServiceServer::new(tenant_service)))
-        .add_service(msec.wrap(lock_service::LockServiceServer::new(lock_service)))
-        .add_service(msec.wrap(scheduler_service::SchedulerServiceServer::new(
-            scheduler_service,
-        )))
-        .add_service(msec.wrap(vault_service::VaultServiceServer::new(vault_service)))
-        .add_service(msec.wrap(cache_service::CacheServiceServer::new(cache_service)))
-        .add_service(msec.wrap(webhook_service::WebhookServiceServer::new(webhook_service)))
-        .add_service(msec.wrap(backup_service::BackupServiceServer::new(backup_service)))
-        .add_service(msec.wrap(search_service::SearchServiceServer::new(search_service)))
-        .add_service(msec.wrap(config_service::ConfigServiceServer::new(config_service)))
-        .add_service(msec.wrap(metering_service::MeteringServiceServer::new(
-            metering_service,
-        )))
-        .add_service(msec.wrap(livequery_service::LiveQueryServiceServer::new(
-            livequery_service,
-        )))
-        .add_service(msec.wrap(workflow_service::WorkflowServiceServer::new(
-            workflow_service,
-        )))
-        .add_service(msec.wrap(embedding_service::EmbeddingServiceServer::new(
-            embedding_service,
-        )))
-        .add_service(
-            msec.wrap(notification_service::NotificationServiceServer::new(
-                notification_service,
-            )),
-        )
-        .add_service(msec.wrap(analytics_service::AnalyticsServiceServer::new(
-            analytics_service,
-        )))
-        .add_service(msec.wrap(storage_service::StorageServiceServer::new(storage_service)))
-        .add_service(msec.wrap(asset_service::AssetServiceServer::new(asset_service)))
-        // WebRTC ships five tonic services on one (Clone) impl; each mounts with
-        // the same proto-driven method-security layer.
-        .add_service(msec.wrap(webrtc_service::RoomServiceServer::new(
-            webrtc_service.clone(),
-        )))
-        .add_service(msec.wrap(webrtc_service::PeerServiceServer::new(
-            webrtc_service.clone(),
-        )))
-        .add_service(msec.wrap(webrtc_service::TrackServiceServer::new(
-            webrtc_service.clone(),
-        )))
-        .add_service(msec.wrap(webrtc_service::TurnServiceServer::new(
-            webrtc_service.clone(),
-        )))
-        .add_service(msec.wrap(webrtc_service::SignalingServiceServer::new(
-            webrtc_service.clone(),
-        )))
         .serve_with_shutdown(
             auth_addr,
             listener_shutdown_signal(listener_shutdown_rx.clone()),
@@ -3829,12 +3915,14 @@ async fn start_cdc_engine(
                         loop {
                             let engine = engine.clone();
                             let source = source.clone();
-                            match crate::runtime::singleton::run_while_leader(
+                            match crate::runtime::singleton::run_while_leader_fenced(
                                 &singleton_pool,
                                 &singleton_relation,
                                 crate::runtime::singleton::WORKER_CDC_POSTGRES_SOURCE,
                                 crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-                                || async move { engine.tail_source(source).await },
+                                |fence| async move {
+                                    engine.tail_source_fenced(source, Some(&fence)).await
+                                },
                             )
                             .await
                             {
@@ -3877,12 +3965,14 @@ async fn start_cdc_engine(
                         loop {
                             let engine = engine.clone();
                             let source = source.clone();
-                            match crate::runtime::singleton::run_while_leader(
+                            match crate::runtime::singleton::run_while_leader_fenced(
                                 &singleton_pool,
                                 &singleton_relation,
                                 crate::runtime::singleton::WORKER_CDC_MYSQL_SOURCE,
                                 crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-                                || async move { engine.tail_source(source).await },
+                                |fence| async move {
+                                    engine.tail_source_fenced(source, Some(&fence)).await
+                                },
                             )
                             .await
                             {
@@ -3926,12 +4016,14 @@ async fn start_cdc_engine(
                         loop {
                             let engine = engine.clone();
                             let source = source.clone();
-                            match crate::runtime::singleton::run_while_leader(
+                            match crate::runtime::singleton::run_while_leader_fenced(
                                 &singleton_pool,
                                 &singleton_relation,
                                 crate::runtime::singleton::WORKER_CDC_MONGODB_SOURCE,
                                 crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-                                || async move { engine.tail_source(source).await },
+                                |fence| async move {
+                                    engine.tail_source_fenced(source, Some(&fence)).await
+                                },
                             )
                             .await
                             {

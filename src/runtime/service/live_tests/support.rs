@@ -18,6 +18,66 @@ pub(crate) fn live_pg_dsn() -> String {
         .unwrap_or_else(|_| "postgres://udb:udb@127.0.0.1:55432/udb".to_string())
 }
 
+/// The env flags that mark THIS run as a CI live lane (the "Native service live
+/// tests" step sets `UDB_LIVE_AUTH_TESTS=1`; `UDB_LIVE_REQUIRED=1` lets any other
+/// lane opt in). Inside a lane a missing DSN is a provisioning bug, not a reason
+/// to skip.
+pub(crate) fn live_lane_active() -> bool {
+    ["UDB_LIVE_AUTH_TESTS", "UDB_LIVE_REQUIRED"]
+        .iter()
+        .any(|flag| {
+            std::env::var(flag)
+                .map(|value| matches!(value.trim(), "1" | "true" | "TRUE" | "yes"))
+                .unwrap_or(false)
+        })
+}
+
+/// A live-lane setting, read from its `UDB_LIVE_*` alias first (`UDB_X` →
+/// `UDB_LIVE_X`), then the name itself. The CI native live step publishes
+/// backend DSNs ONLY under the alias, so runtimes built from env in unrelated
+/// tests do not silently connect to (and register) every canonical backend.
+pub(crate) fn live_env(name: &str) -> Option<String> {
+    let alias = format!("UDB_LIVE_{}", name.strip_prefix("UDB_").unwrap_or(name));
+    [alias.as_str(), name].iter().find_map(|key| {
+        std::env::var(key)
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+    })
+}
+
+/// Resolve a live-test DSN from the first non-empty env var in `names`.
+///
+/// Outside a live lane a missing DSN returns `None` so a local `--ignored` run
+/// without that backend can skip. INSIDE a live lane ([`live_lane_active`]) a
+/// missing DSN PANICS naming every variable it looked for: an early `return`
+/// there reports a green test that verified nothing, which is how a renamed or
+/// unprovisioned DSN used to hide whole suites.
+pub(crate) fn require_live_dsn_any(names: &[&str]) -> Option<String> {
+    for name in names {
+        if let Some(value) = live_env(name) {
+            // A backend published only under its `UDB_LIVE_*` alias becomes
+            // visible to runtimes built from env once a test asks for it.
+            if std::env::var(name).map_or(true, |current| current.trim().is_empty()) {
+                // SAFETY: the live lane runs single-threaded (--test-threads=1).
+                unsafe { std::env::set_var(name, &value) };
+            }
+            return Some(value);
+        }
+    }
+    if live_lane_active() {
+        panic!(
+            "live lane is active (UDB_LIVE_AUTH_TESTS / UDB_LIVE_REQUIRED) but none of {names:?} \
+             is set: provision the DSN in the CI step instead of letting the test skip"
+        );
+    }
+    None
+}
+
+/// Single-variable form of [`require_live_dsn_any`].
+pub(crate) fn require_live_dsn(name: &str) -> Option<String> {
+    require_live_dsn_any(&[name])
+}
+
 pub(crate) fn live_native_service_db_lock() -> &'static tokio::sync::Mutex<()> {
     static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| tokio::sync::Mutex::new(()))

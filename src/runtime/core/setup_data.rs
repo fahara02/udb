@@ -323,19 +323,131 @@ impl DataBrokerRuntime {
             .collect()
     }
 
-    fn vector_resource_backend(
+    /// C3: record an `EnsureResource` vector route DURABLY in the system store
+    /// (`udb_vector_resource_routes`), then in the process-local cache. The
+    /// durable row is what lets another replica (or this one after a restart)
+    /// resolve the collection's backend, and what the hard tenant purge
+    /// enumerates. Without a PostgreSQL system store the route stays
+    /// process-local (logged), matching every other PG-only system table.
+    pub(crate) async fn persist_vector_resource_route(
+        &self,
+        tenant_id: &str,
+        project_id: &str,
+        collection: &str,
+        backend: &str,
+        instance: Option<&str>,
+    ) -> Result<(), tonic::Status> {
+        self.record_vector_resource_backend(project_id, collection, backend, instance);
+        let Some(pool) = self.pg_pool.as_ref() else {
+            tracing::warn!(
+                project_id,
+                collection,
+                backend,
+                "no PostgreSQL system store configured; the EnsureResource vector route is \
+                 kept in process memory only and will not resolve on other replicas"
+            );
+            return Ok(());
+        };
+        let rel = crate::runtime::system::SystemCatalogConfig::current()
+            .vector_resource_routes_relation();
+        sqlx::query(&format!(
+            "INSERT INTO {rel} (tenant_id, project_id, collection, backend, instance_name, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, NOW()) \
+             ON CONFLICT (tenant_id, project_id, collection) DO UPDATE \
+             SET backend = EXCLUDED.backend, instance_name = EXCLUDED.instance_name, \
+                 updated_at = NOW()"
+        ))
+        .bind(tenant_id.trim())
+        .bind(project_id.trim())
+        .bind(collection.trim())
+        .bind(backend.trim().to_ascii_lowercase())
+        .bind(instance.map(str::trim).unwrap_or_default())
+        .execute(pool)
+        .await
+        .map_err(|err| vector_route_store_status("vector_route_persist", &err))?;
+        Ok(())
+    }
+
+    /// C3: every durable `EnsureResource` vector route the tenant recorded, as
+    /// `(project_id, collection, route)`. Empty without a PostgreSQL system store
+    /// (the process-local [`Self::vector_resource_route_snapshot`] still applies).
+    pub(crate) async fn persisted_vector_resource_routes_for_tenant(
+        &self,
+        tenant_id: &str,
+    ) -> Result<Vec<(String, String, ResolvedBackendSelector)>, tonic::Status> {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Ok(Vec::new());
+        };
+        let rel = crate::runtime::system::SystemCatalogConfig::current()
+            .vector_resource_routes_relation();
+        let rows: Vec<(String, String, String, String)> = sqlx::query_as(&format!(
+            "SELECT project_id, collection, backend, instance_name FROM {rel} \
+             WHERE tenant_id = $1 ORDER BY project_id, collection"
+        ))
+        .bind(tenant_id.trim())
+        .fetch_all(pool)
+        .await
+        .map_err(|err| vector_route_store_status("vector_route_list_tenant", &err))?;
+        Ok(rows
+            .into_iter()
+            .map(|(project, collection, backend, instance)| {
+                (
+                    project,
+                    collection,
+                    ResolvedBackendSelector {
+                        backend: backend.to_ascii_lowercase(),
+                        instance: (!instance.trim().is_empty()).then_some(instance),
+                    },
+                )
+            })
+            .collect())
+    }
+
+    /// C3: read one collection's durable route (load-on-miss for the cache).
+    /// The most recently recorded route wins when several tenants of the
+    /// project ensured the same collection.
+    async fn load_persisted_vector_resource_route(
+        &self,
+        project_id: &str,
+        collection: &str,
+    ) -> Result<Option<ResolvedBackendSelector>, tonic::Status> {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Ok(None);
+        };
+        let rel = crate::runtime::system::SystemCatalogConfig::current()
+            .vector_resource_routes_relation();
+        let row: Option<(String, String)> = sqlx::query_as(&format!(
+            "SELECT backend, instance_name FROM {rel} \
+             WHERE project_id = $1 AND collection = $2 \
+             ORDER BY updated_at DESC LIMIT 1"
+        ))
+        .bind(project_id.trim())
+        .bind(collection.trim())
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| vector_route_store_status("vector_route_load", &err))?;
+        Ok(row.map(|(backend, instance)| ResolvedBackendSelector {
+            backend: backend.to_ascii_lowercase(),
+            instance: (!instance.trim().is_empty()).then_some(instance),
+        }))
+    }
+
+    /// Resolve a vector collection's serving route: the process-local cache,
+    /// then the manifest, then (C3) the durable `EnsureResource` route table —
+    /// a hit there is cached so later calls stay in memory.
+    async fn vector_resource_backend(
         &self,
         manifest: &CatalogManifest,
         project_id: &str,
         collection: &str,
-    ) -> Option<ResolvedBackendSelector> {
+    ) -> Result<Option<ResolvedBackendSelector>, tonic::Status> {
         let key = vector_route_key(project_id, collection);
         if let Ok(routes) = self.vector_resource_routes.lock()
             && let Some(route) = routes.get(&key)
         {
-            return Some(route.clone());
+            return Ok(Some(route.clone()));
         }
-        manifest
+        if let Some(route) = manifest
             .stores
             .iter()
             .find(|store| store.store_kind == "vector" && store.resource_name == collection)
@@ -343,6 +455,22 @@ impl DataBrokerRuntime {
                 backend: store.backend.to_ascii_lowercase(),
                 instance: None,
             })
+        {
+            return Ok(Some(route));
+        }
+        let Some(route) = self
+            .load_persisted_vector_resource_route(project_id, collection)
+            .await?
+        else {
+            return Ok(None);
+        };
+        self.record_vector_resource_backend(
+            project_id,
+            collection,
+            &route.backend,
+            route.instance.as_deref(),
+        );
+        Ok(Some(route))
     }
 
     /// Resolve a collection's serving route, preferring a caller-supplied route
@@ -351,21 +479,24 @@ impl DataBrokerRuntime {
     /// manifest-declared collection: the manifest stays authoritative for those,
     /// so a tenant-chosen index `resource_name` cannot hijack a declared
     /// collection onto another backend.
-    fn vector_resource_backend_with_override(
+    async fn vector_resource_backend_with_override(
         &self,
         manifest: &CatalogManifest,
         project_id: &str,
         collection: &str,
         route_override: Option<ResolvedBackendSelector>,
-    ) -> Option<ResolvedBackendSelector> {
+    ) -> Result<Option<ResolvedBackendSelector>, tonic::Status> {
         match route_override {
             Some(route) if !manifest_declares_vector_collection(manifest, collection) => {
-                Some(ResolvedBackendSelector {
+                Ok(Some(ResolvedBackendSelector {
                     backend: route.backend.to_ascii_lowercase(),
                     instance: route.instance,
-                })
+                }))
             }
-            _ => self.vector_resource_backend(manifest, project_id, collection),
+            _ => {
+                self.vector_resource_backend(manifest, project_id, collection)
+                    .await
+            }
         }
     }
 
@@ -626,7 +757,7 @@ impl DataBrokerRuntime {
         }
 
         let context = merge_context(request.context.as_ref(), metadata_context);
-        typed_relational_backend_guard(&context, "select")?;
+        typed_relational_backend_guard(&context, &self.backend_instances, "select")?;
         let filter = request
             .filter
             .as_ref()
@@ -1098,7 +1229,7 @@ impl DataBrokerRuntime {
         metadata_context: RequestContext,
     ) -> Result<MutationResponse, tonic::Status> {
         let context = merge_context(request.context.as_ref(), metadata_context);
-        typed_relational_backend_guard(&context, "upsert")?;
+        typed_relational_backend_guard(&context, &self.backend_instances, "upsert")?;
         let record = upsert_record_json(&request)?;
         let plan_request = UpsertPlanRequest {
             context: context.clone(),
@@ -1881,7 +2012,7 @@ impl DataBrokerRuntime {
         // #5 + gate 25: optional opaque-revision precondition and lock-fencing.
         guards: MutationGuards,
     ) -> Result<MutationResponse, tonic::Status> {
-        typed_relational_backend_guard(&context, "delete")?;
+        typed_relational_backend_guard(&context, &self.backend_instances, "delete")?;
         let filter = match resolve_table_for_message(manifest, message_type) {
             Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
                 table_for_encryption,
@@ -2322,7 +2453,7 @@ impl DataBrokerRuntime {
             &values,
         )?;
 
-        let (affected_rows, record_json, updated_rows_json) = if need_rows {
+        let (affected_rows, record_json, stored_rows_json) = if need_rows {
             let rows = query.fetch_all(&mut **tx).await.map_err(|err| {
                 crate::runtime::executor_utils::sqlx_error_to_status(
                     "PostgreSQL update failed",
@@ -2332,9 +2463,14 @@ impl DataBrokerRuntime {
             if rows.is_empty() {
                 (0, Vec::new(), Vec::new())
             } else {
-                // Decode ONCE, unmasked: these rows feed the projection tasks
-                // below, where a `***MASKED***` placeholder (for a caller
-                // without `udb:pii:read`) would be projected as the value. The
+                // The projection tasks below carry the rows EXACTLY as the DB
+                // holds them (D1): read the stored values straight off the
+                // RETURNING rows BEFORE decryption. Re-encrypting the decrypted
+                // rows would mint a fresh nonce, so projection targets would
+                // hold different ciphertext than the source row (and than
+                // replay, which reads the stored row back).
+                let stored_rows_json = stored_row_values(&rows)?;
+                // Decode ONCE, unmasked, for the caller's returned record. The
                 // caller's returned record is masked separately.
                 let record_set = rows_to_record_set(
                     rows,
@@ -2381,7 +2517,7 @@ impl DataBrokerRuntime {
                 (
                     record_set.records_json.len() as i64,
                     record_json,
-                    updated_rows_json,
+                    stored_rows_json,
                 )
             }
         } else {
@@ -2400,7 +2536,7 @@ impl DataBrokerRuntime {
             // update enqueues each POST-UPDATE row as an 'upsert' task (the table
             // CHECK enforces that pair and the worker projects source_payload
             // verbatim).
-            for row_json in &updated_rows_json {
+            for row_json in &stored_rows_json {
                 projection_task_ids.extend(
                     crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                         &mut *tx,
@@ -2408,13 +2544,11 @@ impl DataBrokerRuntime {
                         crate::runtime::projection::task_project_id(&context.project_id),
                         message_type,
                         "upsert",
-                        // The returned rows were DECRYPTED for the response;
-                        // re-encrypt (column-keyed) before they leave the DB
-                        // boundary so no projection target holds plaintext.
-                        &self.encrypt_record_for_table(
-                            table,
-                            &crate::broker::normalize_record_keys(table, row_json),
-                        )?,
+                        // The stored (still-encrypted, column-keyed) row as
+                        // RETURNING produced it: the same bytes the DB holds,
+                        // so no projection target holds plaintext and live
+                        // agrees with replay byte for byte.
+                        row_json,
                         &projection_plans,
                     )
                     .await
@@ -2468,7 +2602,7 @@ impl DataBrokerRuntime {
         // #5 + gate 25: optional opaque-revision precondition and lock-fencing.
         guards: MutationGuards,
     ) -> Result<MutationResponse, tonic::Status> {
-        typed_relational_backend_guard(&context, "update")?;
+        typed_relational_backend_guard(&context, &self.backend_instances, "update")?;
         let filter = match resolve_table_for_message(manifest, message_type) {
             Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
                 table_for_encryption,
@@ -2724,7 +2858,7 @@ impl DataBrokerRuntime {
         metadata_context: RequestContext,
     ) -> Result<crate::proto::BulkCasResponse, tonic::Status> {
         let context = merge_context(request.context.as_ref(), metadata_context);
-        typed_relational_backend_guard(&context, "bulk_cas")?;
+        typed_relational_backend_guard(&context, &self.backend_instances, "bulk_cas")?;
         // Bound the batch: clamp the caller's explicit ceiling to the server max,
         // then reject an over-ceiling or empty batch fail-closed BEFORE any work.
         let ceiling = bulk_cas_effective_ceiling(request.max_rows);
@@ -3074,12 +3208,14 @@ impl DataBrokerRuntime {
                     limit: request.limit,
                 },
             );
-            let route = self.vector_resource_backend_with_override(
-                manifest,
-                &context.project_id,
-                &request.collection,
-                route_override,
-            );
+            let route = self
+                .vector_resource_backend_with_override(
+                    manifest,
+                    &context.project_id,
+                    &request.collection,
+                    route_override,
+                )
+                .await?;
             reject_vector_plan_errors(&plan.errors, route.is_some())?;
             let target = route.unwrap_or_else(|| ResolvedBackendSelector {
                 backend: plan.backend.to_ascii_lowercase(),
@@ -3182,12 +3318,14 @@ impl DataBrokerRuntime {
             );
             // A routed (manifest-undeclared) collection waives only the
             // unknown-collection error; tenant/scope/filter checks still apply.
-            let route = self.vector_resource_backend_with_override(
-                manifest,
-                &context.project_id,
-                &request.collection,
-                route_override,
-            );
+            let route = self
+                .vector_resource_backend_with_override(
+                    manifest,
+                    &context.project_id,
+                    &request.collection,
+                    route_override,
+                )
+                .await?;
             reject_vector_plan_errors(&plan.errors, route.is_some())?;
             let backend = route
                 .as_ref()
@@ -3299,12 +3437,14 @@ impl DataBrokerRuntime {
                     payloads,
                 },
             );
-            let route = self.vector_resource_backend_with_override(
-                manifest,
-                &context.project_id,
-                &request.collection,
-                route_override,
-            );
+            let route = self
+                .vector_resource_backend_with_override(
+                    manifest,
+                    &context.project_id,
+                    &request.collection,
+                    route_override,
+                )
+                .await?;
             reject_vector_plan_errors(&plan.errors, route.is_some())?;
             let target = route.unwrap_or_else(|| ResolvedBackendSelector {
                 backend: plan.backend.to_ascii_lowercase(),
@@ -3388,6 +3528,25 @@ impl DataBrokerRuntime {
                 Ok(raw_schema) => {
                     let schema: JsonValue =
                         serde_json::from_str(&raw_schema).unwrap_or(JsonValue::Null);
+                    // C5: the tenant/project scope is an `Equal` on these
+                    // properties. Under `word` tokenization (Weaviate's default
+                    // for a class auto-created by a write, not `EnsureResource`)
+                    // `acme` matches `acme-eu`, so the scoped search would leak
+                    // across tenants. Weaviate cannot change a property's
+                    // tokenization in place: refuse instead of serving.
+                    let word_tokenized = weaviate_word_tokenized_scope_properties(&schema);
+                    if !word_tokenized.is_empty() {
+                        return Err(setup_data_capability_status(
+                            "weaviate",
+                            "vector_search",
+                            "weaviate_field_tokenized_scope",
+                            format!(
+                                "Weaviate class '{}' declares the scope properties [{}] with                                  `word` tokenization, so a tenant-scoped filter would also                                  match other tenants sharing a token; recreate the class                                  through EnsureResource (which declares them `tokenization:                                  field`) and re-index before searching it",
+                                vector_weaviate_class_name(&request.collection),
+                                word_tokenized.join(", ")
+                            ),
+                        ));
+                    }
                     let properties = weaviate_selectable_properties(&schema);
                     spec = vector_search_dispatch_spec_scoped(
                         backend,
@@ -3441,8 +3600,9 @@ impl DataBrokerRuntime {
             // trip "dimension mismatch"); the tenant filter still governs. Resolve
             // only the target instance (route override → project default) — the
             // index backend is authoritative.
-            let route =
-                self.vector_resource_backend(manifest, &context.project_id, &request.collection);
+            let route = self
+                .vector_resource_backend(manifest, &context.project_id, &request.collection)
+                .await?;
             let route_instance = route.as_ref().and_then(|route| route.instance.as_deref());
             let target_instance = if context.target_instance.trim().is_empty() {
                 route_instance.or_else(|| {
@@ -5139,34 +5299,74 @@ pub(crate) struct MutationGuards {
 /// planner even compiled filter syntax for the requested dialect and then ran it
 /// against Postgres. Refuse explicitly with a typed capability error that names
 /// the path that does serve those engines (GenericDispatch over the neutral IR).
-/// An empty or Postgres target is admitted; an unrecognised hint resolves to
-/// the Postgres default exactly as the planner does.
+///
+/// The decision is made on the EFFECTIVE backend, not the raw header string:
+/// a `backend:instance` / `backend.instance` selector is split first (a bare
+/// `mysql:reporting` used to fall through `from_store_kind` to the Postgres
+/// default and be admitted), and a bare `x-udb-target-instance` with no backend
+/// resolves through the registered instances — an instance that exists only on
+/// a non-Postgres backend is that backend, not Postgres. An empty target, a
+/// Postgres target, or an unrecognised hint resolves to the Postgres default
+/// exactly as the planner does.
 pub(crate) fn typed_relational_backend_guard(
     context: &RequestContext,
+    instances: &[RuntimeBackendInstance],
     operation: &'static str,
 ) -> Result<(), tonic::Status> {
-    let target = context.target_backend.trim();
-    if target.is_empty() {
+    let Some(effective) = effective_typed_relational_backend(context, instances) else {
         return Ok(());
+    };
+    Err(crate::runtime::executor_utils::capability_status(
+        &effective,
+        operation,
+        "typed_relational_data_plane",
+        format!(
+            "typed {operation} executes on PostgreSQL only; the request resolves to backend              '{effective}', which is served through GenericDispatch (neutral IR), not the typed              data-plane RPCs"
+        ),
+    ))
+}
+
+/// The non-Postgres backend a typed relational request would actually target,
+/// or `None` when it resolves to PostgreSQL (the only engine the typed RPCs
+/// serve). See [`typed_relational_backend_guard`].
+fn effective_typed_relational_backend(
+    context: &RequestContext,
+    instances: &[RuntimeBackendInstance],
+) -> Option<String> {
+    let (backend_raw, selector_instance) = split_backend_selector(context.target_backend.trim());
+    if !backend_raw.is_empty() {
+        return match crate::backend::BackendKind::from_store_kind("sql", backend_raw) {
+            Some(crate::backend::BackendKind::Postgres) | None => None,
+            Some(other) => Some(other.as_str().to_string()),
+        };
     }
-    match crate::backend::BackendKind::from_store_kind("sql", target) {
-        Some(crate::backend::BackendKind::Postgres) | None => Ok(()),
-        Some(_) => Err(crate::runtime::executor_utils::capability_status(
-            target,
-            operation,
-            "typed_relational_data_plane",
-            format!(
-                "typed {operation} executes on PostgreSQL only; target backend '{target}' is \
-                 served through GenericDispatch (neutral IR), not the typed data-plane RPCs"
-            ),
-        )),
+    // No backend named: a bare instance name decides. Postgres wins any name
+    // shared across backends, the conventional default names (`primary` /
+    // `default`, which every backend uses for its own default instance) never
+    // identify another engine, and an unregistered name stays on the Postgres
+    // path, whose pool resolver reports it.
+    let instance = selector_instance
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| context.target_instance.trim());
+    if instance.is_empty() || matches!(instance, "primary" | "default") {
+        return None;
     }
+    let mut named = instances
+        .iter()
+        .filter(|candidate| candidate.name == instance);
+    let first = named.next()?;
+    if first.backend == "postgres" || named.any(|candidate| candidate.backend == "postgres") {
+        return None;
+    }
+    Some(first.backend.clone())
 }
 
 #[cfg(test)]
 mod typed_relational_backend_guard_tests {
     use super::typed_relational_backend_guard;
     use crate::RequestContext;
+    use crate::runtime::core::RuntimeBackendInstance;
 
     fn ctx(target: &str) -> RequestContext {
         RequestContext {
@@ -5175,11 +5375,35 @@ mod typed_relational_backend_guard_tests {
         }
     }
 
+    fn instance(name: &str, backend: &str) -> RuntimeBackendInstance {
+        RuntimeBackendInstance {
+            name: name.to_string(),
+            backend: backend.to_string(),
+            role: "read_write".to_string(),
+            enabled: true,
+            configured: true,
+            connected: true,
+            read_weight: 1,
+            write_weight: 1,
+            dsn_env: None,
+            labels: Default::default(),
+            capabilities: Vec::new(),
+            healthy: true,
+            circuit_open: false,
+        }
+    }
+
     #[test]
     fn postgres_or_unset_target_is_admitted() {
-        for target in ["", "postgres", "PostgreSQL", "unknown-hint"] {
+        for target in [
+            "",
+            "postgres",
+            "PostgreSQL",
+            "unknown-hint",
+            "postgres:primary",
+        ] {
             assert!(
-                typed_relational_backend_guard(&ctx(target), "select").is_ok(),
+                typed_relational_backend_guard(&ctx(target), &[], "select").is_ok(),
                 "{target}"
             );
         }
@@ -5187,12 +5411,42 @@ mod typed_relational_backend_guard_tests {
 
     #[test]
     fn other_sql_engines_are_refused_with_a_capability_error() {
-        for target in ["mysql", "sqlite", "mssql"] {
-            let status = typed_relational_backend_guard(&ctx(target), "upsert")
+        for target in [
+            "mysql",
+            "sqlite",
+            "mssql",
+            "mysql:reporting",
+            "sqlite.local",
+        ] {
+            let status = typed_relational_backend_guard(&ctx(target), &[], "upsert")
                 .expect_err("non-Postgres typed RPC must be refused");
             assert_eq!(status.code(), tonic::Code::FailedPrecondition);
             assert!(status.message().contains("GenericDispatch"), "{status:?}");
         }
+    }
+
+    #[test]
+    fn a_bare_instance_resolves_through_the_registry() {
+        let instances = [
+            instance("primary", "postgres"),
+            instance("primary", "mysql"),
+            instance("reporting", "mysql"),
+        ];
+        let by_instance = |name: &str| RequestContext {
+            target_instance: name.to_string(),
+            ..RequestContext::default()
+        };
+        // A name only a MySQL instance carries is MySQL, not Postgres.
+        let status =
+            typed_relational_backend_guard(&by_instance("reporting"), &instances, "select")
+                .expect_err("an instance that exists only on MySQL must be refused");
+        assert!(status.message().contains("'mysql'"), "{status:?}");
+        // A name shared with a Postgres instance stays on Postgres.
+        assert!(
+            typed_relational_backend_guard(&by_instance("primary"), &instances, "select").is_ok()
+        );
+        // An unregistered name stays on the Postgres path.
+        assert!(typed_relational_backend_guard(&by_instance("nope"), &instances, "select").is_ok());
     }
 }
 
@@ -5230,6 +5484,12 @@ pub(crate) fn upsert_scope_guard_refusal(
 /// Postgres RLS is not the boundary here (owner connection, no FORCE), so
 /// without the scope predicate a caller naming another tenant's key could
 /// lock that row and learn whether it exists and whether `expected` matches.
+///
+/// The verified scope is bound even when the key itself names the tenant or
+/// project column (a tenant-in-PK table): the caller-supplied key value stays
+/// one predicate and the verified value is ANDed as another, so a key naming a
+/// foreign tenant matches nothing and reads exactly like an absent row. The
+/// caller's value is never trusted as the scope.
 fn scoped_locked_row_lookup(
     table: &ManifestTable,
     key_columns: &[String],
@@ -5250,7 +5510,6 @@ fn scoped_locked_row_lookup(
     ] {
         if let Some(column) = column
             && !value.is_empty()
-            && !key_columns.iter().any(|key| key == column)
         {
             bind_columns.push(column.to_string());
             bind_row_values.push(JsonValue::String(value.to_string()));
@@ -5328,6 +5587,39 @@ mod scoped_locked_row_lookup_tests {
             "{sql}"
         );
         assert_eq!(columns, ["id", "tenant_id"]);
+    }
+
+    #[test]
+    fn tenant_in_key_still_binds_the_verified_tenant() {
+        // A tenant-in-PK table whose caller key names a foreign tenant: the
+        // verified tenant is ANDed as its own predicate, so the lookup can
+        // never match the foreign row.
+        let context = RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            project_id: "project-a".to_string(),
+            ..RequestContext::default()
+        };
+        let (sql, columns, values) = scoped_locked_row_lookup(
+            &table(),
+            &["id".to_string(), "tenant_id".to_string()],
+            &[json!("w1"), json!("tenant-b")],
+            &context,
+        );
+        assert_eq!(
+            sql,
+            "SELECT * FROM \"public\".\"widgets\" WHERE \"id\" = $1 AND \"tenant_id\" = $2 \
+             AND \"tenant_id\" = $3 AND \"project_id\" = $4 FOR UPDATE"
+        );
+        assert_eq!(columns, ["id", "tenant_id", "tenant_id", "project_id"]);
+        assert_eq!(
+            values,
+            [
+                json!("w1"),
+                json!("tenant-b"),
+                json!("tenant-a"),
+                json!("project-a")
+            ]
+        );
     }
 }
 
@@ -5424,6 +5716,26 @@ fn row_key_text(pk_canonical: &str) -> String {
     pk_canonical.replace('\u{0}', "\u{1f}")
 }
 
+/// D1: RETURNING rows rendered EXACTLY as PostgreSQL holds them — column-keyed,
+/// encrypted columns left as their stored ciphertext (never decrypted, so never
+/// re-encrypted with a fresh nonce). Projection tasks built from these carry the
+/// same bytes as the source row and as a replay, which reads the row back.
+fn stored_row_values(rows: &[PgRow]) -> Result<Vec<JsonValue>, tonic::Status> {
+    rows.iter()
+        .map(|row| {
+            let columns = row.columns();
+            let mut json_row = serde_json::Map::with_capacity(columns.len());
+            for (idx, column) in columns.iter().enumerate() {
+                json_row.insert(
+                    column.name().to_string(),
+                    row_value_to_json(row, idx, column.type_info().name())?,
+                );
+            }
+            Ok(JsonValue::Object(json_row))
+        })
+        .collect()
+}
+
 /// #5: bump (or create at 1) the opaque revision of ONE row IN THE CALLER'S write
 /// tx, returning the NEW revision. Monotonic (`revision = revision + 1` on
 /// conflict), so an opaque token is ABA-safe (never reused or decreased). A SQL
@@ -5516,6 +5828,22 @@ fn row_revision_precondition_failed_status() -> tonic::Status {
 /// Fail-closed, retryable status for a revision-store SQL failure. The keyed
 /// mutation is refused (never silently skipped) so read-your-writes and CAS
 /// callers can retry the SAME request while the tx is dropped fail-closed.
+/// C3: the durable vector-route table is unreachable. Retryable: the caller's
+/// EnsureResource / vector call can be replayed once the system store is back.
+fn vector_route_store_status(operation: &'static str, err: &sqlx::Error) -> tonic::Status {
+    tracing::error!(
+        error = %err,
+        operation,
+        "vector resource route store operation failed"
+    );
+    crate::runtime::executor_utils::retryable_status(
+        "postgres",
+        operation,
+        250,
+        "vector resource route store unavailable",
+    )
+}
+
 fn row_revision_store_status(operation: &'static str, err: &sqlx::Error) -> tonic::Status {
     tracing::error!(
         error = %err,
@@ -9855,7 +10183,18 @@ pub(crate) async fn register_postgres(ctx: &mut RegisterCtx<'_>) {
                     let store =
                         PostgresCanonicalStore::new(pool.clone(), "primary", outbox_relation)
                             .with_saga_relation(crate::runtime::saga::data_plane_saga_relation());
-                    match ensure_full_system_store_tables(&store).await {
+                    // H4: under the startup advisory lock, so a second replica
+                    // starting against the same cold database cannot race this
+                    // DDL (`relation "outbox_events" already exists`), leave the
+                    // canonical store unregistered and then trip the production
+                    // outbox consistency assertion.
+                    let ddl = crate::runtime::system::with_startup_ddl_lock(
+                        &pool,
+                        "system_store",
+                        || ensure_full_system_store_tables(&store),
+                    )
+                    .await;
+                    match ddl {
                         Ok(()) => {
                             let store: std::sync::Arc<dyn SystemStores> =
                                 std::sync::Arc::new(store);
@@ -11894,7 +12233,7 @@ mod weaviate_vector_wire_tests {
     use super::{
         parse_vector_search_response, vector_search_dispatch_spec_scoped,
         vector_upsert_dispatch_spec, vector_weaviate_object_id, weaviate_batch_errors,
-        weaviate_selectable_properties,
+        weaviate_selectable_properties, weaviate_word_tokenized_scope_properties,
     };
     use crate::proto::{VectorPointMutation, VectorSearchRequest};
     use serde_json::json;
@@ -11929,6 +12268,37 @@ mod weaviate_vector_wire_tests {
             vector_weaviate_object_id("a"),
             vector_weaviate_object_id("b")
         );
+    }
+
+    #[test]
+    fn weaviate_word_tokenized_scope_properties_are_detected() {
+        // EnsureResource classes declare the scope keys `field`: nothing flagged.
+        let ensured = json!({
+            "properties": [
+                { "name": "_tenant_id", "dataType": ["text"], "tokenization": "field" },
+                { "name": "_project_id", "dataType": ["text"], "tokenization": "field" },
+                { "name": "_source", "dataType": ["text"], "tokenization": "field" },
+                { "name": "_parent_pk", "dataType": ["text"], "tokenization": "field" },
+                { "name": "_chunk_text", "dataType": ["text"] }
+            ]
+        });
+        assert!(weaviate_word_tokenized_scope_properties(&ensured).is_empty());
+        // An auto-created class: explicit `word` and the implicit default both flag;
+        // a non-scope or non-text property never does.
+        let auto = json!({
+            "properties": [
+                { "name": "_tenant_id", "dataType": ["text"], "tokenization": "word" },
+                { "name": "_project_id", "dataType": ["text"] },
+                { "name": "_source", "dataType": ["text"], "tokenization": "field" },
+                { "name": "_parent_pk", "dataType": ["int"] },
+                { "name": "title", "dataType": ["text"], "tokenization": "word" }
+            ]
+        });
+        assert_eq!(
+            weaviate_word_tokenized_scope_properties(&auto),
+            vec!["_tenant_id", "_project_id"]
+        );
+        assert!(weaviate_word_tokenized_scope_properties(&json!(null)).is_empty());
     }
 
     #[test]
@@ -12117,6 +12487,41 @@ pub(crate) const PINECONE_COLLECTION_KEY: &str = "_collection";
 /// same-id points. Search strips the prefix back off.
 pub(crate) fn pinecone_vector_id(collection: &str, point_id: &str) -> String {
     format!("{collection}::{point_id}")
+}
+
+/// C5: the server-stamped scope properties a Weaviate class schema declares
+/// with a tokenization other than `field` (an absent tokenization on a text
+/// property is Weaviate's default, `word`). Non-empty = an `Equal` scope filter
+/// on the class is a token match, not an exact match. Pure.
+fn weaviate_word_tokenized_scope_properties(schema: &JsonValue) -> Vec<String> {
+    const SCOPE_PROPERTIES: &[&str] = &["_tenant_id", "_project_id", "_source", "_parent_pk"];
+    schema
+        .get("properties")
+        .and_then(JsonValue::as_array)
+        .map(|properties| {
+            properties
+                .iter()
+                .filter_map(|property| {
+                    let name = property.get("name").and_then(JsonValue::as_str)?;
+                    if !SCOPE_PROPERTIES.contains(&name) {
+                        return None;
+                    }
+                    let data_type = property
+                        .pointer("/dataType/0")
+                        .and_then(JsonValue::as_str)
+                        .unwrap_or_default();
+                    if !matches!(data_type, "text" | "text[]" | "string" | "string[]") {
+                        return None;
+                    }
+                    let tokenization = property
+                        .get("tokenization")
+                        .and_then(JsonValue::as_str)
+                        .unwrap_or("word");
+                    (!tokenization.eq_ignore_ascii_case("field")).then(|| name.to_string())
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// The Weaviate class's selectable properties, read from `GET /v1/schema/{class}`.

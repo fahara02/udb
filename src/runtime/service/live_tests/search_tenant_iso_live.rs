@@ -21,10 +21,11 @@
 //!
 //! NOT purely served (documented): the harness runs no CDC engine, so the durable
 //! CDC-journal rows the freshness/teardown workers consume are inserted directly
-//! (the same technique `native_events_live.rs` uses for the outbox), and the
-//! vector route `CreateIndex` does not register is registered by the test
-//! (`record_vector_resource_backend`, as the EnsureResource RPC would). The
-//! tenant-namespacing under test is unaffected — it is computed by the worker.
+//! (the same technique `native_events_live.rs` uses for the outbox). No vector
+//! route is registered by the test: every read and write resolves the index's
+//! serving route from its DURABLE registry record (C3), exactly as another
+//! replica or a restarted broker would. The tenant-namespacing under test is
+//! computed by the worker.
 //!
 //! Run with a live Qdrant + Postgres (see the session runbook):
 //!   UDB_LIVE_OBJECT_TESTS=1 UDB_QDRANT_URL=http://127.0.0.1:56333 \
@@ -229,9 +230,6 @@ async fn search_tenant_isolation_no_clobber_and_teardown_survives_live() {
     register_index(&svc, &tenant_a, index_a, &collection, 4).await;
     register_index(&svc, &tenant_b, index_b, &collection, 0).await;
 
-    // The route CreateIndex does not register (only the EnsureResource RPC does).
-    runtime.record_vector_resource_backend(PROJECT, &collection, "qdrant", None);
-
     // Two CDC events reusing the SAME pk; A applied first, B second.
     seed_freshness_event(&pool, &tenant_a, &pk, vec_a, 10).await;
     seed_freshness_event(&pool, &tenant_b, &pk, vec_b, 0).await;
@@ -250,6 +248,38 @@ async fn search_tenant_isolation_no_clobber_and_teardown_survives_live() {
         a_hits,
         vec![pk.clone()],
         "tenant A must see exactly its own vector at the RAW pk (revert ⇒ B clobbered A ⇒ 0 hits)"
+    );
+
+    // C3: a caller WITHOUT `udb:vector:read` is refused at the runtime vector
+    // seam even on a routed (manifest-undeclared) index collection — the route
+    // waives only the unknown-collection check, never the scope check.
+    let unscoped = crate::RequestContext {
+        tenant_id: tenant_a.clone(),
+        project_id: PROJECT.to_string(),
+        scopes: vec!["udb:read".to_string()],
+        ..crate::RequestContext::default()
+    };
+    let denied = runtime
+        .vector_search_routed(
+            &crate::generation::CatalogManifest::default(),
+            crate::proto::VectorSearchRequest {
+                collection: collection.clone(),
+                vector: vec_a.to_vec(),
+                limit: 10,
+                with_payload: true,
+                ..Default::default()
+            },
+            unscoped,
+            Some(crate::runtime::core::ResolvedBackendSelector {
+                backend: "qdrant".to_string(),
+                instance: None,
+            }),
+        )
+        .await
+        .expect_err("a vector search without udb:vector:read must be refused");
+    assert!(
+        denied.message().contains("udb:vector:read"),
+        "deny must name the missing scope: {denied:?}"
     );
 
     // (c) TEARDOWN assertion: A deletes its index; only A's point is purged, B's

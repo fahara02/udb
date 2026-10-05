@@ -840,6 +840,33 @@ async fn record_attempt_outcome(
     }
 }
 
+/// TEST-ONLY: lets the delivery pass POST to a cleartext `http://` LOOPBACK
+/// provider (`http://127.0.0.1:<port>/...`) so a live seam test can run a local
+/// provider. Compiled only into test builds; production keeps the full https +
+/// SSRF guard ([`validate_provider_target`]) for every provider endpoint.
+#[cfg(all(feature = "http-client", test))]
+pub(crate) static ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// The delivery-time SSRF guard for a provider endpoint: the webhook lane's
+/// `resolve_and_validate_target` (https only, DNS-rebinding-safe). In test
+/// builds only, a loopback `http://ip:port` URL is accepted directly when
+/// [`ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST`] is set.
+#[cfg(feature = "http-client")]
+async fn validate_provider_target(url: &str) -> Result<(), tonic::Status> {
+    #[cfg(test)]
+    if ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST.load(std::sync::atomic::Ordering::SeqCst)
+        && let Some(addr) = url
+            .strip_prefix("http://")
+            .and_then(|rest| rest.split('/').next())
+            .and_then(|hostport| hostport.parse::<std::net::SocketAddr>().ok())
+        && addr.ip().is_loopback()
+    {
+        return Ok(());
+    }
+    crate::runtime::service::webhook_service::resolve_and_validate_target(url).await
+}
+
 /// Run ONE leader pass of notification delivery (the consumer shape `serve()`
 /// spawns under `NativeWorkerHost::spawn_while_leader(WORKER_NOTIFICATION_DELIVERY)`).
 /// For each queued intent: find the channel's provider, SSRF-revalidate its URL at
@@ -939,11 +966,7 @@ pub(crate) async fn run_notification_delivery_once(
         };
         // SSRF guard at DELIVERY time (reuse the webhook resolver; defeats DNS
         // rebinding). A blocked target never becomes deliverable, so fail closed.
-        if let Err(err) = crate::runtime::service::webhook_service::resolve_and_validate_target(
-            &provider.endpoint_url,
-        )
-        .await
-        {
+        if let Err(err) = validate_provider_target(&provider.endpoint_url).await {
             record_attempt_outcome(
                 pool,
                 outbox_relation,

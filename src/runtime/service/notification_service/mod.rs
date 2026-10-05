@@ -62,6 +62,16 @@ pub(crate) use config::{notification_delivery_batch, notification_delivery_inter
 pub(crate) use config::notification_delivery_timeout;
 #[cfg(feature = "http-client")]
 pub(crate) use delivery::run_notification_delivery_worker_once;
+// Test-only surface for the live notification HTTP delivery seam test: the
+// loopback switch plus the single-pass sender and its value types.
+#[cfg(all(feature = "http-client", test))]
+pub(crate) use config::max_delivery_attempts;
+#[cfg(all(feature = "http-client", test))]
+pub(crate) use delivery::{
+    ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST, NotificationDeliveryIntent,
+    NotificationDeliveryProvider, ProviderAuth, run_notification_delivery_once,
+    run_notification_delivery_worker_pass,
+};
 
 use errors::notification_capability_status;
 

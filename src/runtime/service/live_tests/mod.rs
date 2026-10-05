@@ -13,8 +13,16 @@ mod authz_deny_path_live;
 mod backup_live;
 mod catalog_authority_live;
 mod data_plane_live;
+mod data_plane_seam_live;
 mod data_plane_tenant_rls_live;
+#[cfg(feature = "kafka")]
+mod livequery_journal_live;
 mod native_events_live;
+mod native_worker_seams_live;
+#[cfg(feature = "http-client")]
+mod notification_http_live;
+mod ops_seams_live;
+mod projection_drift_live;
 mod scheduler_live;
 #[cfg(feature = "http-client")]
 mod search_tenant_iso_live;
@@ -23,6 +31,23 @@ mod storage_live;
 mod storage_object_live;
 #[cfg(feature = "http-client")]
 mod storage_object_tenant_iso_live;
+#[cfg(feature = "http-client")]
+mod storage_seams_live;
+mod store_rpc_live;
 pub(crate) mod support;
+// C1/C5/C6/C7: Elasticsearch / Weaviate / Pinecone-stub vector isolation.
+#[cfg(all(
+    feature = "http-client",
+    feature = "qdrant",
+    feature = "elasticsearch",
+    feature = "weaviate",
+    feature = "pinecone"
+))]
+mod vector_backends_live;
+// C2/C3/C8: served Qdrant vector RPC isolation on persisted routes.
+#[cfg(all(feature = "http-client", feature = "qdrant"))]
+mod vector_tenant_iso_live;
+#[cfg(feature = "http-client")]
+mod webhook_delivery_live;
 mod webrtc_live;
 mod workflow_live;

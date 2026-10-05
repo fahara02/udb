@@ -99,7 +99,9 @@ pub(crate) async fn subscribe(
     // replica holding the CDC tailer lease, so anchor a durable-journal tail at
     // the journal head NOW (also before the snapshot) — every replica then
     // streams the deltas committed after this point. A journal that cannot be
-    // read leaves the broadcast as the only source (logged, not silent).
+    // read REFUSES the subscription (Unavailable, retryable): falling back to
+    // the broadcast alone would silently deliver nothing on every replica but
+    // the tailer's leader.
     let journal_head = match svc.cdc_engine.as_ref() {
         Some(cdc) => match cdc.journal_head_event_id(&source.cdc_topic).await {
             Ok(head) => Some((cdc.clone(), head.unwrap_or_default())),
@@ -107,9 +109,11 @@ pub(crate) async fn subscribe(
                 tracing::warn!(
                     topic = %source.cdc_topic,
                     error = %err,
-                    "live query journal tail unavailable; deltas reach this subscriber only if this replica leads the CDC tailer"
+                    "live query subscription refused: the CDC journal head cannot be read"
                 );
-                None
+                return Err(super::errors::livequery_journal_unavailable_status(
+                    "journal_head",
+                ));
             }
         },
         None => None,
@@ -122,9 +126,11 @@ pub(crate) async fn subscribe(
     // reconnect gap the in-process broadcast ring cannot span. Bounded by
     // `resume_replay_limit()`; a larger gap is closed by a subsequent re-resume
     // from the client's new last-delivered cursor.
+    // An unreadable journal refuses the resume rather than replaying an empty
+    // backlog the client would take as "nothing was missed".
     let resume_replay = match (resume_cursor.as_deref(), svc.cdc_engine.as_ref()) {
-        (Some(cursor), Some(cdc)) => {
-            cdc.journal_replay_for_scope(
+        (Some(cursor), Some(cdc)) => cdc
+            .try_journal_replay_for_scope(
                 &source.cdc_topic,
                 &tenant_id,
                 &project_id,
@@ -132,7 +138,14 @@ pub(crate) async fn subscribe(
                 i64::from(resume_replay_limit()),
             )
             .await
-        }
+            .map_err(|err| {
+                tracing::warn!(
+                    topic = %source.cdc_topic,
+                    error = %err,
+                    "live query resume refused: the CDC journal cannot be read"
+                );
+                super::errors::livequery_journal_unavailable_status("resume_replay")
+            })?,
         _ => Vec::new(),
     };
 

@@ -576,17 +576,28 @@ impl ProjectionTaskStore for MongoDbCanonicalStore {
             .iter()
             .map(|k| Bson::String(k.clone()))
             .collect();
-        let n = self
+        // D10: list the COMPLETED keys and count the rest — an unknown key (no
+        // task document) stays unsettled exactly as on Postgres.
+        let completed = self
             .projection()
-            .count_documents(doc! {
-                "idempotency_key": { "$in": keys },
-                // P2-1 NF-1/NF-2: only COMPLETED clears the fence; FAILED/DEAD_LETTER
-                // are not projected yet so they still count as pending.
-                "status": { "$ne": ProjectionTaskStatus::Completed.as_str() },
-            })
+            .distinct(
+                "idempotency_key",
+                doc! {
+                    "idempotency_key": { "$in": keys },
+                    // P2-1 NF-1/NF-2: only COMPLETED clears the fence; FAILED/DEAD_LETTER
+                    // are not projected yet so they still count as pending.
+                    "status": ProjectionTaskStatus::Completed.as_str(),
+                },
+            )
             .await
             .map_err(|e| mongo_err("pending_projection_task_count", e))?;
-        Ok(n as i64)
+        let completed = completed
+            .iter()
+            .filter_map(|key| key.as_str().map(str::to_string));
+        Ok(super::system_store::unsettled_fence_key_count(
+            idempotency_keys,
+            completed,
+        ))
     }
 
     async fn projection_task_summary(&self) -> SystemStoreResult<ProjectionTaskSummary> {

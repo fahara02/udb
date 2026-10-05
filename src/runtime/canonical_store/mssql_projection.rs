@@ -558,10 +558,13 @@ impl ProjectionTaskStore for MssqlCanonicalStore {
         // tokens (UUID-derived in practice) and are bound as a single
         // parameter — never interpolated — so this stays injection-safe.
         let csv = idempotency_keys.join(",");
+        // D10: list the COMPLETED keys and count the rest — an unknown key (no
+        // task row) stays unsettled exactly as on Postgres. P2-1 NF-1/NF-2:
+        // FAILED/DEAD_LETTER are not projected yet, so they still fence.
         let sql = format!(
-            "SELECT COUNT(*) AS n FROM {rel} \
+            "SELECT DISTINCT idempotency_key FROM {rel} \
              WHERE idempotency_key IN (SELECT value FROM STRING_SPLIT(@P1, ',')) \
-               AND status <> 'COMPLETED'" // P2-1 NF-1/NF-2: FAILED/DEAD_LETTER = not projected yet = still fences
+               AND status = 'COMPLETED'"
         );
         let params = [SqlParam::Str(csv)];
         let rows = self
@@ -569,8 +572,11 @@ impl ProjectionTaskStore for MssqlCanonicalStore {
             .fetch_rows(&sql, &params)
             .await
             .map_err(|e| SystemStoreError::query("mssql", sql.clone(), e))?;
-        let n = rows.first().map(|r| i32_col(r, "n")).unwrap_or(0);
-        Ok(i64::from(n))
+        let completed = rows.iter().map(|r| str_col(r, "idempotency_key"));
+        Ok(super::system_store::unsettled_fence_key_count(
+            idempotency_keys,
+            completed,
+        ))
     }
 
     async fn projection_task_summary(&self) -> SystemStoreResult<ProjectionTaskSummary> {

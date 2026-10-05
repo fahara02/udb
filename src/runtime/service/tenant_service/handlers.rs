@@ -699,6 +699,19 @@ pub(crate) async fn update_tenant(
             format!("update tenant event enqueue failed: {err}"),
         )
     })?;
+    // G5: every other replica's request gate evicts this tenant's cached status
+    // when (and only if) this transaction commits, instead of serving a stale
+    // ACTIVE for up to the cache TTL.
+    if update_status {
+        gate::notify_tenant_status_changed_in_tx(&mut tx, &tenant_id, &code)
+            .await
+            .map_err(|err| {
+                tenant_internal_status(
+                    "update_tenant_status_notify",
+                    format!("update tenant status notification failed: {err}"),
+                )
+            })?;
+    }
     tx.commit().await.map_err(|err| {
         tenant_internal_status(
             "update_tenant",

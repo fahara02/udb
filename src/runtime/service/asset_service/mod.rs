@@ -268,6 +268,16 @@ impl AssetService for AssetServiceImpl {
     }
 }
 
+/// The vector collection `EMBED`-step points are written to:
+/// `UDB_ASSET_VECTOR_COLLECTION`, else [`DEFAULT_VECTOR_COLLECTION`]. Shared
+/// with the hard tenant purge, which erases the tenant's EMBED points from it.
+pub(crate) fn asset_vector_collection() -> String {
+    std::env::var("UDB_ASSET_VECTOR_COLLECTION")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_VECTOR_COLLECTION.to_string())
+}
+
 impl DataBrokerService {
     /// Build the native `AssetService`, wired to the broker's Postgres pool.
     pub(crate) fn build_asset_service(&self) -> AssetServiceImpl {
@@ -279,8 +289,7 @@ impl DataBrokerService {
             .native_store_pool_for_service("asset", true, "")
             .ok();
         let outbox = runtime.config().cdc.outbox_relation();
-        let collection = std::env::var("UDB_ASSET_VECTOR_COLLECTION")
-            .unwrap_or_else(|_| DEFAULT_VECTOR_COLLECTION.to_string());
+        let collection = asset_vector_collection();
         AssetServiceImpl::new()
             .with_postgres(pg_pool)
             .with_outbox(Some(outbox))

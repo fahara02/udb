@@ -291,9 +291,214 @@ impl SystemCatalogConfig {
     pub(crate) fn row_revisions_relation(&self) -> String {
         relation(&self.cdc.system_schema, &self.row_revisions_table)
     }
+
+    /// C3: durable `EnsureResource` vector-collection routes (see
+    /// [`VECTOR_RESOURCE_ROUTES_TABLE`]).
+    pub(crate) fn vector_resource_routes_relation(&self) -> String {
+        relation(&self.cdc.system_schema, VECTOR_RESOURCE_ROUTES_TABLE)
+    }
 }
 
+/// C3: the system table holding the serving route of every vector collection
+/// created through `EnsureResource` (not declared in the catalog manifest).
+/// Keyed per `(tenant, project, collection)` so the hard tenant purge can find
+/// every ad-hoc collection a tenant wrote to, on any replica and after restart.
+pub(crate) const VECTOR_RESOURCE_ROUTES_TABLE: &str = "udb_vector_resource_routes";
+
+/// H4: bootstrap the UDB system catalog under the startup advisory lock.
+///
+/// Two replicas starting against one cold database otherwise run this DDL
+/// concurrently, and Postgres `CREATE TABLE IF NOT EXISTS` is not race-safe
+/// (the loser fails with `relation ... already exists` / a `pg_type` unique
+/// violation). See [`with_startup_ddl_lock`].
 pub async fn ensure_system_catalog(pool: &PgPool) -> Result<SystemCatalogReport, tonic::Status> {
+    with_startup_ddl_lock(pool, "system_catalog", || {
+        ensure_system_catalog_unlocked(pool)
+    })
+    .await
+}
+
+/// H4: process-local count of startup advisory session-locks held by the
+/// startup lifecycle (`control::lifecycle`). While this process already holds
+/// the lock, startup DDL in the same process is already serialized against
+/// every other replica, and re-acquiring the (non-reentrant across
+/// connections) session lock from a second connection would wait on
+/// ourselves until the deadline.
+static STARTUP_LOCK_HELD_IN_PROCESS: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
+
+/// H4: RAII mark that this process holds the startup advisory session-lock.
+/// Dropping it (including on an early return) clears the mark.
+pub(crate) struct StartupLockHeldMark(());
+
+impl StartupLockHeldMark {
+    pub(crate) fn hold() -> Self {
+        STARTUP_LOCK_HELD_IN_PROCESS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Self(())
+    }
+}
+
+impl Drop for StartupLockHeldMark {
+    fn drop(&mut self) {
+        STARTUP_LOCK_HELD_IN_PROCESS.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+fn startup_lock_held_in_process() -> bool {
+    STARTUP_LOCK_HELD_IN_PROCESS.load(std::sync::atomic::Ordering::SeqCst) > 0
+}
+
+/// H4: how many times startup DDL is re-run after colliding with a concurrent
+/// replica's identical DDL (only reachable when the lock could not be taken).
+const STARTUP_DDL_COLLISION_ATTEMPTS: u32 = 3;
+
+/// H4: a Postgres error raised when two sessions run the same idempotent DDL at
+/// once: `42P07 duplicate_table` / `42P06 duplicate_schema` / `42710
+/// duplicate_object` ("... already exists"), or the `pg_type` / `pg_namespace`
+/// unique violation (`23505`) a racing `CREATE ... IF NOT EXISTS` hits.
+pub(crate) fn is_concurrent_ddl_collision(message: &str) -> bool {
+    message.contains("already exists")
+        || message.contains("duplicate key value violates unique constraint")
+}
+
+/// H4: run idempotent startup DDL while holding the startup advisory
+/// session-lock (`engine::PG_ADVISORY_LOCK_KEY`, the same key the startup
+/// lifecycle holds through artifact apply), so two replicas never run system
+/// DDL concurrently. The loser WAITS (bounded by `UDB_STARTUP_LOCK_WAIT_SECS`,
+/// polled every `UDB_FORCE_SYNC_LOCK_POLL_MS`).
+///
+/// Never fails on its own: if the lock cannot be taken (no spare pool
+/// connection, a DB error, or the wait deadline) the DDL still runs, and a
+/// concurrent-DDL collision is retried — the DDL is `IF NOT EXISTS`, so the
+/// retry converges once the winner commits.
+pub(crate) async fn with_startup_ddl_lock<T, E, F, Fut>(
+    pool: &PgPool,
+    label: &str,
+    mut run: F,
+) -> Result<T, E>
+where
+    E: std::fmt::Display,
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<T, E>>,
+{
+    let holder = if startup_lock_held_in_process() {
+        None
+    } else {
+        acquire_startup_ddl_lock(pool, label).await
+    };
+    let mut attempt = 0u32;
+    let result = loop {
+        attempt += 1;
+        match run().await {
+            Err(err)
+                if attempt < STARTUP_DDL_COLLISION_ATTEMPTS
+                    && is_concurrent_ddl_collision(&err.to_string()) =>
+            {
+                tracing::warn!(
+                    label,
+                    attempt,
+                    error = %err,
+                    "startup DDL collided with a concurrent replica's identical DDL; retrying"
+                );
+                tokio::time::sleep(std::time::Duration::from_millis(250 * u64::from(attempt)))
+                    .await;
+            }
+            other => break other,
+        }
+    };
+    if let Some(mut conn) = holder {
+        if let Err(err) = sqlx::query("SELECT pg_advisory_unlock($1)")
+            .bind(crate::engine::PG_ADVISORY_LOCK_KEY)
+            .execute(&mut *conn)
+            .await
+        {
+            // The holder is `close_on_drop`: closing the backend frees the
+            // session lock even when the explicit unlock fails.
+            tracing::warn!(
+                label,
+                error = %err,
+                "failed to release the startup DDL advisory lock; closing its connection"
+            );
+        }
+    }
+    result
+}
+
+/// Take the startup advisory session-lock on a dedicated pool connection, or
+/// `None` when it cannot be taken (see [`with_startup_ddl_lock`]).
+async fn acquire_startup_ddl_lock(
+    pool: &PgPool,
+    label: &str,
+) -> Option<sqlx::pool::PoolConnection<sqlx::Postgres>> {
+    use crate::engine::PG_ADVISORY_LOCK_KEY;
+    // The DDL itself runs on other pool connections; a single-connection pool
+    // would starve it while the holder sits on the only connection.
+    if pool.options().get_max_connections() < 2 {
+        return None;
+    }
+    let mut conn = match pool.acquire().await {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::warn!(
+                label,
+                error = %err,
+                "startup DDL lock: no connection; running the DDL unlocked (collision-tolerant)"
+            );
+            return None;
+        }
+    };
+    // Any exit that does not explicitly unlock closes the backend, which frees
+    // the session lock server-side instead of stranding it on a pooled
+    // connection.
+    conn.close_on_drop();
+    let wait_secs = crate::lifecycle::startup_lock_wait_secs();
+    let poll = std::time::Duration::from_millis(crate::lifecycle::force_sync_lock_poll_ms());
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(wait_secs);
+    let mut announced = false;
+    loop {
+        match sqlx::query_scalar::<_, bool>("SELECT pg_try_advisory_lock($1)")
+            .bind(PG_ADVISORY_LOCK_KEY)
+            .fetch_one(&mut *conn)
+            .await
+        {
+            Ok(true) => return Some(conn),
+            Ok(false) => {
+                if std::time::Instant::now() >= deadline {
+                    tracing::warn!(
+                        label,
+                        wait_secs,
+                        "startup advisory lock ({PG_ADVISORY_LOCK_KEY:#x}) still held by another \
+                         UDB instance; running startup DDL unlocked (collision-tolerant)"
+                    );
+                    return None;
+                }
+                if !announced {
+                    announced = true;
+                    tracing::info!(
+                        label,
+                        wait_secs,
+                        "startup advisory lock ({PG_ADVISORY_LOCK_KEY:#x}) held by another UDB \
+                         instance; waiting before running startup DDL"
+                    );
+                }
+                tokio::time::sleep(poll).await;
+            }
+            Err(err) => {
+                tracing::warn!(
+                    label,
+                    error = %err,
+                    "startup DDL lock: advisory-lock poll failed; running the DDL unlocked \
+                     (collision-tolerant)"
+                );
+                return None;
+            }
+        }
+    }
+}
+
+async fn ensure_system_catalog_unlocked(
+    pool: &PgPool,
+) -> Result<SystemCatalogReport, tonic::Status> {
     let config = SystemCatalogConfig::current();
     let statements = system_catalog_statements(&config);
     let mut tx = pool.begin().await.map_err(|err| {
@@ -644,6 +849,12 @@ fn expected_relations(config: &SystemCatalogConfig) -> Vec<ExpectedRelation> {
             &config.cdc.system_schema,
             &config.row_revisions_table,
         ),
+        // C3 — durable EnsureResource vector-collection routes
+        expected_relation(
+            "vector_resource_routes",
+            &config.cdc.system_schema,
+            VECTOR_RESOURCE_ROUTES_TABLE,
+        ),
     ];
 
     if let Ok(manifest) = crate::runtime::native_catalog::native_service_manifest() {
@@ -712,6 +923,15 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
         ),
         format!(
             "ALTER TABLE {} ADD COLUMN IF NOT EXISTS event_seq BIGSERIAL",
+            config.cdc.outbox_relation()
+        ),
+        // On a cold database the canonical store's minimal outbox DDL
+        // (`sql_schema::postgres_outbox_ddl`, run during backend registration)
+        // creates this relation BEFORE the catalog CREATE above, which then
+        // skips. Every other column the catalog declares has its ALTER; without
+        // this one a fresh deployment's outbox never gains `headers`.
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS headers JSONB NOT NULL DEFAULT '{{}}'::JSONB",
             config.cdc.outbox_relation()
         ),
         format!(
@@ -1664,6 +1884,13 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             "ALTER TABLE {} ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ",
             config.projection_tasks_relation()
         ),
+        // D9: monotonic per-task row revision (the per-row ordering key the
+        // claim/supersede/re-arm rules compare on). Same statement the
+        // PostgreSQL projection store runs from `ensure_projection_tables`.
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS row_revision BIGSERIAL",
+            config.projection_tasks_relation()
+        ),
         format!(
             "CREATE INDEX IF NOT EXISTS {} ON {} (status, created_at)",
             qi(&format!("idx_{}_status", config.projection_tasks_table)),
@@ -1740,6 +1967,30 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             "CREATE INDEX IF NOT EXISTS {} ON {} (tenant_id, project_id, message_type)",
             qi(&format!("idx_{}_tenant_type", config.row_revisions_table)),
             config.row_revisions_relation()
+        ),
+        // C3 — the serving route of every vector collection created through
+        // `EnsureResource`. The in-process route map is only a cache of this
+        // table: a route recorded on one replica resolves on every other replica
+        // and survives a restart, and the hard tenant purge enumerates the
+        // tenant's ad-hoc collections from here.
+        format!(
+            "CREATE TABLE IF NOT EXISTS {} (
+                tenant_id TEXT NOT NULL,
+                project_id TEXT NOT NULL,
+                collection TEXT NOT NULL,
+                backend TEXT NOT NULL,
+                instance_name TEXT NOT NULL DEFAULT '',
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (tenant_id, project_id, collection)
+            )",
+            config.vector_resource_routes_relation()
+        ),
+        format!(
+            "CREATE INDEX IF NOT EXISTS {} ON {} (project_id, collection)",
+            qi(&format!(
+                "idx_{VECTOR_RESOURCE_ROUTES_TABLE}_project_collection"
+            )),
+            config.vector_resource_routes_relation()
         ),
     ]);
     // UDB-owned native-service tables are migrated through the normal proto →
@@ -1893,6 +2144,7 @@ mod tests {
             "projection_tasks",
             "idempotency_keys",
             "row_revisions",
+            "vector_resource_routes",
             "native_udb_authn_users",
             "native_udb_authn_sessions",
             "native_udb_authn_otps",

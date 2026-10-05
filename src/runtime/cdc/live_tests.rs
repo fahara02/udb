@@ -441,3 +441,189 @@ async fn live_journal_tail_anchors_at_head_and_scopes_by_tenant() {
         .await
         .expect("clean up live journal rows");
 }
+
+/// Brokers for the live tail test: CI's live lane exports
+/// `UDB_INTEGRATION_KAFKA_BROKERS`.
+#[cfg(feature = "kafka")]
+fn live_kafka_brokers() -> String {
+    std::env::var("UDB_INTEGRATION_KAFKA_BROKERS")
+        .or_else(|_| std::env::var("UDB_KAFKA_BROKERS"))
+        .unwrap_or_else(|_| "localhost:59192".to_string())
+}
+
+/// Create `topic` (1 partition, RF 1) so the produce does not depend on broker
+/// auto-creation.
+#[cfg(feature = "kafka")]
+async fn ensure_live_kafka_topic(brokers: &str, topic: &str) {
+    use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
+    use rdkafka::client::DefaultClientContext;
+
+    let admin: AdminClient<DefaultClientContext> = rdkafka::ClientConfig::new()
+        .set("bootstrap.servers", brokers)
+        .create()
+        .unwrap_or_else(|err| panic!("create Kafka admin client for {brokers}: {err}"));
+    match admin
+        .create_topics(
+            &[NewTopic::new(topic, 1, TopicReplication::Fixed(1))],
+            &AdminOptions::new(),
+        )
+        .await
+    {
+        Ok(results) => {
+            for result in results {
+                if let Err((name, code)) = result
+                    && !format!("{code:?}").contains("TopicAlreadyExists")
+                {
+                    panic!("create Kafka topic {name} failed: {code:?}");
+                }
+            }
+        }
+        Err(err) => panic!("create Kafka topic {topic} request failed: {err}"),
+    }
+}
+
+/// D14: the production tail loop itself — `CdcEngine::tail_outbox`, the relay
+/// the leader runs — drains a PENDING outbox row to Kafka, journals it (the
+/// replay / cross-replica LiveQuery source) and acks the outbox row. Until
+/// this test only the per-event helpers were exercised, never the loop.
+#[cfg(feature = "kafka")]
+#[tokio::test]
+#[ignore = "requires live Postgres + Kafka (CI live lane: UDB_INTEGRATION_PG_DSN + UDB_INTEGRATION_KAFKA_BROKERS) -- --ignored"]
+async fn live_tail_outbox_publishes_journals_and_acks_a_pending_row() {
+    let _guard = live_cdc_db_lock().lock().await;
+    let Some(pool) = live_cdc_pool().await else {
+        if std::env::var("UDB_LIVE_AUTH_TESTS").is_ok_and(|v| v.trim() == "1") {
+            panic!(
+                "UDB_LIVE_AUTH_TESTS=1 but no live CDC Postgres DSN is set \
+                 (UDB_LIVE_CDC_PG_DSN / UDB_LIVE_NATIVE_PG_DSN / UDB_INTEGRATION_PG_DSN)"
+            );
+        }
+        eprintln!("{LIVE_GATE_HINT}");
+        return;
+    };
+    let dsn = live_pg_dsn().expect("live dsn present when pool connected");
+    let brokers = live_kafka_brokers();
+    let topic = format!("udb.cdc.live.tail.{}.v1", Uuid::new_v4().simple());
+    ensure_live_kafka_topic(&brokers, &topic).await;
+
+    // The tail only publishes topics the active topic policy allows once any
+    // policy exists (other live tests leave some behind), so allow this one.
+    let policy_relation =
+        crate::runtime::system::SystemCatalogConfig::current().topic_policy_relation();
+    sqlx::query(&format!(
+        "INSERT INTO {policy_relation} (topic, owning_project, owning_service, schema_uri, enabled) \
+         VALUES ($1, 'default', 'cdc-live-tail', '', TRUE) \
+         ON CONFLICT (topic) DO UPDATE SET enabled = TRUE, updated_at = NOW()"
+    ))
+    .bind(&topic)
+    .execute(&pool)
+    .await
+    .expect("allow the live tail topic");
+
+    let config = CdcConfig::default();
+    let outbox = config.outbox_relation();
+    let metrics: std::sync::Arc<dyn MetricsRecorder> =
+        std::sync::Arc::new(crate::metrics::NoopMetrics);
+    #[cfg(feature = "redis")]
+    let engine = CdcEngine::new(pool.clone(), None, &brokers, dsn, metrics, config)
+        .expect("build live CDC engine against real Kafka");
+    #[cfg(not(feature = "redis"))]
+    let engine = CdcEngine::new(pool.clone(), &brokers, dsn, metrics, config)
+        .expect("build live CDC engine against real Kafka");
+    engine
+        .load_topic_policies()
+        .await
+        .expect("load live topic policies");
+    let engine = std::sync::Arc::new(engine);
+
+    let event_id = Uuid::new_v4();
+    let payload = serde_json::json!({
+        "event_id": event_id.to_string(),
+        "event_type": topic,
+        "correlation_id": format!("cdc-tail:{event_id}"),
+        "document_id": "row-1",
+        "tenant_id": "tenant-a",
+        "project_id": "default",
+        "timestamp": Utc::now().to_rfc3339(),
+        "payload": {"id": "row-1", "tenant_id": "tenant-a"}
+    });
+    sqlx::query(&format!(
+        "INSERT INTO {outbox} (event_id, topic, partition_key, payload, created_at) \
+         VALUES ($1, $2, 'row-1', $3::JSONB, NOW())"
+    ))
+    .bind(event_id)
+    .bind(&topic)
+    .bind(payload.to_string())
+    .execute(&pool)
+    .await
+    .expect("insert pending outbox row");
+
+    let tailer = {
+        let engine = engine.clone();
+        tokio::spawn(async move {
+            if let Err(err) = engine.tail_outbox().await {
+                eprintln!("tail_outbox exited: {err}");
+            }
+        })
+    };
+
+    let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    let (journal_state, outbox_state) = loop {
+        let journal_state: Option<String> = sqlx::query_scalar(&format!(
+            "SELECT delivery_state FROM {journal} WHERE event_id = $1"
+        ))
+        .bind(event_id)
+        .fetch_optional(&pool)
+        .await
+        .expect("read journal row");
+        let outbox_state: Option<String> = sqlx::query_scalar(&format!(
+            "SELECT delivery_state FROM {outbox} WHERE event_id = $1"
+        ))
+        .bind(event_id)
+        .fetch_optional(&pool)
+        .await
+        .expect("read outbox row");
+        let acked = outbox_state
+            .as_deref()
+            .is_none_or(|state| matches!(state, "published" | "acked"));
+        if (journal_state.is_some() && acked) || std::time::Instant::now() >= deadline {
+            break (journal_state, outbox_state);
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    };
+    tailer.abort();
+
+    let dlq: Option<String> = sqlx::query_scalar(
+        "SELECT error_message FROM udb_system.udb_cdc_dlq_events WHERE event_id = $1",
+    )
+    .bind(event_id)
+    .fetch_optional(&pool)
+    .await
+    .unwrap_or(None);
+    assert_eq!(dlq, None, "the tail routed the event to the DLQ");
+    assert!(
+        matches!(journal_state.as_deref(), Some("published" | "acked")),
+        "tail_outbox must journal the published event, got journal {journal_state:?} \
+         (outbox state: {outbox_state:?})"
+    );
+    assert!(
+        outbox_state
+            .as_deref()
+            .is_none_or(|state| matches!(state, "published" | "acked")),
+        "tail_outbox must ack the outbox row after publishing, got {outbox_state:?}"
+    );
+
+    let _ = sqlx::query(&format!("DELETE FROM {outbox} WHERE event_id = $1"))
+        .bind(event_id)
+        .execute(&pool)
+        .await;
+    let _ = sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = $1"))
+        .bind(event_id)
+        .execute(&pool)
+        .await;
+    let _ = sqlx::query(&format!("DELETE FROM {policy_relation} WHERE topic = $1"))
+        .bind(&topic)
+        .execute(&pool)
+        .await;
+}

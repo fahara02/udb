@@ -20,7 +20,14 @@
 //!     tenant row is READ from the registered tenant store, so a suspension made
 //!     on another replica — or before this process started — is enforced within
 //!     one cache TTL ([`TENANT_STATUS_CACHE_TTL`], 5s). A store error
-//!     with no previously known status fails closed (retryable `Unavailable`).
+//!     with no previously known status fails closed (retryable `Unavailable`);
+//!   * cross-replica invalidation (G5): the status write publishes
+//!     `pg_notify(`[`TENANT_STATUS_CHANNEL`]`, tenant_id)` inside its own
+//!     transaction (delivered only on commit), and every replica's
+//!     [`register_tenant_status_store`] runs a `LISTEN` task that evicts that
+//!     tenant's cache entry, so the next request re-reads the durable row. A
+//!     lost listener connection (notifications missed) clears the whole cache.
+//!     The TTL stays as the backstop for the reconnect window.
 //!
 //! Keying on the caller's OWN claim tenant means a cross-tenant/platform admin
 //! (whose claim tenant is their own, active tenant) still reaches UpdateTenant
@@ -137,11 +144,145 @@ fn status_store() -> &'static RwLock<Option<PgPool>> {
     STORE.get_or_init(|| RwLock::new(None))
 }
 
-/// Register (or clear) the tenant store the durable request gate reads.
+/// Register (or clear) the tenant store the durable request gate reads, and
+/// (re)start this process's cross-replica invalidation listener on it.
 pub(crate) fn register_tenant_status_store(pool: Option<PgPool>) {
+    restart_status_listener(pool.as_ref());
     *status_store()
         .write()
         .unwrap_or_else(|poisoned| poisoned.into_inner()) = pool;
+}
+
+/// G5: Postgres `NOTIFY` channel carrying the id of a tenant whose durable
+/// status changed. Payload = the tenant id exactly as cached (canonical UUID).
+pub(crate) const TENANT_STATUS_CHANNEL: &str = "udb_tenant_status_changed";
+
+/// G5: publish a tenant status change to every replica's gate, INSIDE the
+/// transaction that writes the status. `NOTIFY` is transactional: it is
+/// delivered only if that transaction commits, so no replica evicts on a
+/// rolled-back write and none misses a committed one (short of a dropped
+/// listener connection, which clears its cache).
+///
+/// The gate caches by the caller's claim tenant, which is the canonical UUID or
+/// the human `code` alias, so both are published.
+pub(crate) async fn notify_tenant_status_changed_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tenant_id: &str,
+    code: &str,
+) -> Result<(), sqlx::Error> {
+    for id in [tenant_id.trim(), code.trim()] {
+        if id.is_empty() {
+            continue;
+        }
+        sqlx::query("SELECT pg_notify($1, $2)")
+            .bind(TENANT_STATUS_CHANNEL)
+            .bind(id)
+            .execute(&mut **tx)
+            .await?;
+    }
+    Ok(())
+}
+
+/// G5: publish an ALREADY-COMMITTED status change (autocommit write paths).
+/// Best-effort: a failure is logged and other replicas fall back to the TTL.
+pub(crate) async fn notify_tenant_status_changed(pool: &PgPool, tenant_id: &str, code: &str) {
+    for id in [tenant_id.trim(), code.trim()] {
+        if id.is_empty() {
+            continue;
+        }
+        if let Err(err) = sqlx::query("SELECT pg_notify($1, $2)")
+            .bind(TENANT_STATUS_CHANNEL)
+            .bind(id)
+            .execute(pool)
+            .await
+        {
+            tracing::warn!(
+                tenant_id = id,
+                error = %err,
+                "tenant status gate: change notification failed; other replicas apply it within the cache TTL"
+            );
+        }
+    }
+}
+
+/// G5: evict one tenant's cached status so the next gated request re-reads the
+/// durable row.
+fn cache_evict(tenant_id: &str) {
+    status_cache()
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .remove(tenant_id.trim());
+}
+
+/// G5: drop every cached status (the listener may have missed notifications).
+fn cache_clear() {
+    status_cache()
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clear();
+}
+
+/// The running invalidation listener, aborted when the store is re-registered.
+fn status_listener() -> &'static std::sync::Mutex<Option<tokio::task::AbortHandle>> {
+    static LISTENER: OnceLock<std::sync::Mutex<Option<tokio::task::AbortHandle>>> = OnceLock::new();
+    LISTENER.get_or_init(|| std::sync::Mutex::new(None))
+}
+
+fn restart_status_listener(pool: Option<&PgPool>) {
+    let mut slot = status_listener()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some(previous) = slot.take() {
+        previous.abort();
+    }
+    let Some(pool) = pool.cloned() else {
+        return;
+    };
+    // Registration happens while the service is built inside the runtime; a
+    // caller with no runtime keeps the TTL-bounded behaviour.
+    let Ok(handle) = tokio::runtime::Handle::try_current() else {
+        tracing::warn!(
+            "tenant status gate: no async runtime; cross-replica invalidation listener not started (suspensions on other replicas apply within the cache TTL)"
+        );
+        return;
+    };
+    *slot = Some(handle.spawn(run_status_listener(pool)).abort_handle());
+}
+
+/// G5: per-replica `LISTEN` loop. Each notification evicts that tenant; a lost
+/// listening connection clears the whole cache, since notifications sent
+/// meanwhile are gone, then reconnects with a bounded delay. While no listener
+/// is up the cache TTL is the bound, exactly as without this task.
+async fn run_status_listener(pool: PgPool) {
+    loop {
+        let mut listener = match sqlx::postgres::PgListener::connect_with(&pool).await {
+            Ok(listener) => listener,
+            Err(err) => {
+                tracing::warn!(error = %err, "tenant status gate: listener connect failed");
+                tokio::time::sleep(TENANT_STATUS_CACHE_TTL).await;
+                continue;
+            }
+        };
+        if let Err(err) = listener.listen(TENANT_STATUS_CHANNEL).await {
+            tracing::warn!(error = %err, "tenant status gate: LISTEN failed");
+            tokio::time::sleep(TENANT_STATUS_CACHE_TTL).await;
+            continue;
+        }
+        // Entries cached before LISTEN took effect stay bounded by the TTL.
+        loop {
+            match listener.try_recv().await {
+                Ok(Some(notification)) => cache_evict(notification.payload()),
+                // Connection lost: notifications in the gap are gone.
+                Ok(None) => cache_clear(),
+                Err(err) => {
+                    tracing::warn!(error = %err, "tenant status gate: listener failed");
+                    cache_clear();
+                    break;
+                }
+            }
+        }
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
 }
 
 fn registered_status_store() -> Option<PgPool> {

@@ -562,21 +562,27 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
         }
         // MySQL: build the IN list with one ? per key.
         let placeholders: Vec<&str> = idempotency_keys.iter().map(|_| "?").collect();
+        // D10: list the COMPLETED keys and count the rest — an unknown key (no
+        // task row) stays unsettled exactly as on Postgres. P2-1 NF-1/NF-2:
+        // FAILED/DEAD_LETTER are not projected yet, so they still fence.
         let sql = format!(
-            "SELECT COUNT(*) FROM {TABLE}
+            "SELECT DISTINCT idempotency_key FROM {TABLE}
              WHERE idempotency_key IN ({})
-               AND status <> 'COMPLETED'", // P2-1 NF-1/NF-2: FAILED/DEAD_LETTER = not projected yet = still fences
+               AND status = 'COMPLETED'",
             placeholders.join(",")
         );
-        let mut q = sqlx::query_scalar::<_, i64>(&sql);
+        let mut q = sqlx::query_scalar::<_, String>(&sql);
         for k in idempotency_keys {
             q = q.bind(k.clone());
         }
-        let n: i64 = q
-            .fetch_one(self.mysql_pool())
+        let completed: Vec<String> = q
+            .fetch_all(self.mysql_pool())
             .await
             .map_err(|e| SystemStoreError::query("mysql", sql.clone(), e))?;
-        Ok(n)
+        Ok(super::system_store::unsettled_fence_key_count(
+            idempotency_keys,
+            completed,
+        ))
     }
 
     async fn projection_task_summary(&self) -> SystemStoreResult<ProjectionTaskSummary> {

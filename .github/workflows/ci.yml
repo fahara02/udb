@@ -1429,6 +1429,27 @@ jobs:
           # which is the MinIO service above.
           UDB_LIVE_OBJECT_TESTS: "1"
           UDB_QDRANT_URL: http://localhost:56333
+          # Typed store-RPC / raw-dispatch served tests (store_rpc_live) and the
+          # Phase 3 backend seam tests need the canonical-store containers this
+          # job already started (integration stack: redis; canonical stack:
+          # mongodb/cassandra/neo4j/clickhouse/elasticsearch/weaviate). Same
+          # values as the IR live golden step above; a test whose DSN is
+          # missing here fails rather than skips (require_live_dsn). Published ONLY as
+          # UDB_LIVE_* aliases: every test in this step builds runtimes from env,
+          # and the real names would connect (and register) all of these stores
+          # in unrelated tests. require_live_dsn exports the real name on demand.
+          UDB_LIVE_MONGODB_DSN: mongodb://127.0.0.1:57017/udb?directConnection=true
+          UDB_LIVE_REDIS_DSN: redis://localhost:56379/0
+          UDB_LIVE_WEAVIATE_DSN: http://127.0.0.1:58080
+          UDB_LIVE_ELASTIC_DSN: http://127.0.0.1:59200
+          UDB_LIVE_GRAPH_HTTP_URL: http://127.0.0.1:57474
+          UDB_LIVE_GRAPH_USER: neo4j
+          UDB_LIVE_GRAPH_PASSWORD: Udb_Strong#2026
+          UDB_LIVE_CASSANDRA_DSN: 127.0.0.1:59042
+          UDB_LIVE_CLICKHOUSE_DSN: http://127.0.0.1:58123/udb
+          UDB_LIVE_CLICKHOUSE_USER: udb
+          UDB_LIVE_CLICKHOUSE_PASSWORD: udb
+          UDB_LIVE_CLICKHOUSE_DATABASE: udb
           UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
           # TURN credentials need their own secret: the broker no longer falls
           # back to the data-at-rest key above.

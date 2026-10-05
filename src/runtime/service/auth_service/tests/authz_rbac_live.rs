@@ -180,3 +180,94 @@ async fn live_postgres_authz_role_policy_roundtrip() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+/// B5 — a non-admin caller's CheckAccess evaluates the AUTHENTICATED principal:
+/// roles (and identity) in the request body are ignored, so naming a role the
+/// caller is not bound to grants nothing, while the caller's own direct grant
+/// still answers allowed.
+///
+/// Revert-proof: keep the body principal for non-admin callers (drop
+/// `bind_principal_to_claim`) and the injected role satisfies the role policy —
+/// the injected check answers allowed.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_check_access_ignores_body_roles -- --ignored --nocapture"]
+async fn live_postgres_check_access_ignores_body_roles() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authz = authz_service(pool.clone()).await;
+    let tenant = Uuid::new_v4().to_string();
+    let subject = Uuid::new_v4().to_string();
+    let role = format!("b5_admin_{}", Uuid::new_v4().simple());
+
+    for (resource, policy_subject, policy_role) in [
+        // Only holders of `role` may read the secret table.
+        ("acme.b5.v1.Secret", "", role.as_str()),
+        // The caller's own direct grant (positive control).
+        ("acme.b5.v1.Public", subject.as_str(), ""),
+    ] {
+        authz
+            .put_authz_policy(Request::new(authz_pb::PutAuthzPolicyRequest {
+                policy: Some(authz_pb::AuthzPolicyRecord {
+                    id: Uuid::new_v4().to_string(),
+                    enabled: true,
+                    effect: "allow".to_string(),
+                    tenant: tenant.clone(),
+                    subject: policy_subject.to_string(),
+                    role: policy_role.to_string(),
+                    action: "Select".to_string(),
+                    resource: resource.to_string(),
+                    ..Default::default()
+                }),
+            }))
+            .await
+            .unwrap_or_else(|err| panic!("put policy for {resource}: {err}"));
+    }
+
+    // A non-admin caller bound to `subject` in `tenant`, holding NO role.
+    let ctx = crate::runtime::service::method_security::test_claim_context(
+        &subject,
+        &tenant,
+        "",
+        &["udb:read"],
+        &[],
+    );
+    let check = |resource: &str, body_roles: Vec<String>| authz_pb::CheckAccessRequest {
+        user_id: subject.clone(),
+        domain: tenant.clone(),
+        tenant_id: tenant.clone(),
+        object: resource.to_string(),
+        action: "Select".to_string(),
+        principal: Some(authz_pb::Principal {
+            subject: subject.clone(),
+            user_id: subject.clone(),
+            tenant_id: tenant.clone(),
+            roles: body_roles,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    let own = crate::runtime::service::method_security::scope_claim_context_for_test(
+        ctx.clone(),
+        authz.check_access(Request::new(check("acme.b5.v1.Public", Vec::new()))),
+    )
+    .await
+    .expect("check the caller's own grant")
+    .into_inner();
+    assert!(own.allowed, "the direct grant must allow: {}", own.reason);
+
+    let injected = crate::runtime::service::method_security::scope_claim_context_for_test(
+        ctx,
+        authz.check_access(Request::new(check("acme.b5.v1.Secret", vec![role.clone()]))),
+    )
+    .await
+    .expect("check with an injected body role")
+    .into_inner();
+    assert!(
+        !injected.allowed,
+        "a role named only in the request body must not grant anything"
+    );
+
+    cleanup_native_auth_db(&pool).await;
+}

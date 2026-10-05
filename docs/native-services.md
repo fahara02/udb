@@ -13,10 +13,10 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.25 | protocol v1.0.0                                          │
+│    crate v0.5.26 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-Alongside the data plane that reads and writes your app's tables, UDB 0.5.25 includes a native control plane
+Alongside the data plane that reads and writes your app's tables, UDB 0.5.26 includes a native control plane
 — a set of built-in gRPC services that handle the plumbing
 most applications end up building anyway. If you need login and access control, file
 storage, asset pipelines, realtime coordination, multi-tenancy, notifications,
@@ -408,7 +408,15 @@ Only the override scope reaches such an object.
 - pipeline instances;
 - step completion;
 - asset listing and fetch;
-- embedding/vector-ready asset workflows.
+- a metadata feature-hash step (`STEP_TYPE_EMBED`).
+
+The `EMBED` pipeline step is a **metadata feature hash**, not a content
+embedding. It hashes the asset's name and metadata text into a 64-dimension
+signed feature vector and records `embedding_model: "metadata_feature_hash_v1"`,
+`embedding_input: "asset_name+metadata"` and `semantic: false` on the step
+result. It never reads the asset's bytes and uses no neural model, so it is only
+useful for near-exact metadata similarity. For semantic or content search, embed
+the content through `EmbeddingService` instead.
 
 ## WebRTC And Signalling
 

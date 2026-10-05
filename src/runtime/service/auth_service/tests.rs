@@ -36,8 +36,10 @@ mod jwks_bearer_dos_live;
 #[cfg(feature = "kafka")]
 mod notification_events_live;
 mod notification_live;
+mod service_caller_conformance_live;
 mod support;
 mod tenant_live;
+mod tenant_suspension_served_live;
 mod xa_recovery_idempotency_live;
 
 #[test]

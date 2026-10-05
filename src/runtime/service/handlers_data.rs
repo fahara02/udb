@@ -278,6 +278,9 @@ impl DataBrokerService {
                 }
                 // #112: authorize THIS item's message_type and stamp its own
                 // decision id (the batch-level grant covered only "BatchSelect").
+                // The wildcard / empty message type is refused per item exactly as
+                // on the unary gate: it names no executable resource.
+                super::reject_wildcard_data_message_type(&item.message_type, "BatchSelect")?;
                 let item_decision_id = DataBrokerService::authorize_message_item(
                     &abac_snapshot,
                     &security_for_stream,
@@ -406,6 +409,9 @@ impl DataBrokerService {
                         .await?;
                 }
                 // #112: authorize THIS item's message_type + stamp its decision id.
+                // The wildcard / empty message type is refused per item exactly as
+                // on the unary gate: it names no executable resource.
+                super::reject_wildcard_data_message_type(&item.message_type, "BatchUpsert")?;
                 let item_decision_id = DataBrokerService::authorize_message_item(
                     &abac_snapshot,
                     &security_for_stream,
@@ -1106,7 +1112,11 @@ fn raw_dispatch_decision(
 /// * S3 / MinIO object keys (`key`, `object_key`) are forced under
 ///   `__udb_t/{tenant}/` — the same scheme as the typed object RPCs.
 ///
-/// KV/object scoping fails closed (`tenant_scope_required`) for an
+/// * Cassandra `{table, rows}` writes get the verified tenant/project as a
+///   broker-owned `scope`, stamped into the table's tenant/project columns
+///   by the executor.
+///
+/// KV/object/row scoping fails closed (`tenant_scope_required`) for an
 /// authenticated non-admin caller whose verified tenant is empty, instead of
 /// falling back to a shared namespace.
 fn harden_raw_dispatch_spec(
@@ -1135,9 +1145,9 @@ fn harden_raw_dispatch_spec_with(
     let kv = matches!(kind, Some(BackendKind::Redis | BackendKind::Memcached));
     let object = matches!(kind, Some(BackendKind::S3 | BackendKind::Minio))
         && matches!(operation, "get_object" | "put_object" | "delete_object");
-    if !kv && !object && !spec_json.contains("compiler_mediated") {
-        return Ok(spec_json);
-    }
+    // Always decode before deciding: a substring check on the raw text misses
+    // JSON-escaped spellings of the marker (e.g. `compiler\u005fmediated`),
+    // which serde decodes to the real key on the executor side.
     let mut spec: serde_json::Value = serde_json::from_str(&spec_json).map_err(|err| {
         handlers_data_invalid_field(
             "spec_json",
@@ -1150,41 +1160,111 @@ fn harden_raw_dispatch_spec_with(
         // rejects the shape itself.
         return Ok(spec_json);
     };
-    map.remove("compiler_mediated");
-    if kv || object {
+    // Executors read the marker from the top-level object only (Cassandra
+    // `is_compiler_mediated_dispatch`, ClickHouse `mutate`).
+    let stripped = map.remove("compiler_mediated").is_some();
+    // Cassandra `{table, rows}` writes (the typed TimeSeriesWrite shape for a
+    // non-manifest table) carry no IR, so the broker stamps the verified
+    // scope onto the spec; the executor writes it into the table's
+    // tenant/project columns. Any caller-supplied `scope` is replaced.
+    let cassandra_rows = matches!(kind, Some(BackendKind::Cassandra))
+        && operation == "mutate"
+        && map.contains_key("rows")
+        && !map.contains_key("sql");
+    if cassandra_rows {
         if enforce_tenant && context.tenant_id.trim().is_empty() {
             return Err(crate::runtime::executor_utils::policy_status(
                 "generic_dispatch_raw_dispatch",
                 "tenant_scope_required",
-                format!(
-                    "raw {backend} dispatch requires a verified tenant: keys are tenant-namespaced \
-                     and an empty tenant would address a shared namespace"
-                ),
+                "raw cassandra row write requires a verified tenant: an empty tenant would \
+                 write rows no tenant owns",
             ));
         }
-        if kv {
-            let namespace = raw_kv_namespace(&context.project_id, &context.tenant_id);
-            for field in ["key", "pattern"] {
-                if let Some(serde_json::Value::String(raw)) = map.get_mut(field) {
+        map.insert(
+            "scope".to_string(),
+            serde_json::json!({
+                "tenant_id": context.tenant_id.trim(),
+                "project_id": context.project_id.trim(),
+                "require_tenant": enforce_tenant,
+            }),
+        );
+        return Ok(spec.to_string());
+    }
+    // Neo4j scoped node/edge mutations key on the `scope` they carry; a raw
+    // caller must never choose it (that would write into, or delete from,
+    // another tenant's graph). The broker replaces it with the verified scope.
+    let neo4j_scoped = matches!(kind, Some(BackendKind::Neo4j))
+        && operation == "mutate"
+        && map
+            .get("operation")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|op| {
+                matches!(
+                    op,
+                    "create_node" | "upsert_node" | "delete_node" | "upsert_edge" | "delete_edge"
+                )
+            });
+    if neo4j_scoped {
+        if enforce_tenant && context.tenant_id.trim().is_empty() {
+            return Err(crate::runtime::executor_utils::policy_status(
+                "generic_dispatch_raw_dispatch",
+                "tenant_scope_required",
+                "raw neo4j node/edge mutation requires a verified tenant: an empty tenant \
+                 would address unscoped graph records",
+            ));
+        }
+        let mut scope = serde_json::Map::new();
+        for (field, value) in [
+            ("_tenant_id", context.tenant_id.trim()),
+            ("_project_id", context.project_id.trim()),
+        ] {
+            if !value.is_empty() {
+                scope.insert(field.to_string(), serde_json::json!(value));
+            }
+        }
+        map.insert("scope".to_string(), serde_json::Value::Object(scope));
+        return Ok(spec.to_string());
+    }
+    if !kv && !object {
+        // Nothing else to rewrite: an untouched spec passes through
+        // byte-for-byte.
+        return Ok(if stripped {
+            spec.to_string()
+        } else {
+            spec_json
+        });
+    }
+    if enforce_tenant && context.tenant_id.trim().is_empty() {
+        return Err(crate::runtime::executor_utils::policy_status(
+            "generic_dispatch_raw_dispatch",
+            "tenant_scope_required",
+            format!(
+                "raw {backend} dispatch requires a verified tenant: keys are tenant-namespaced \
+                     and an empty tenant would address a shared namespace"
+            ),
+        ));
+    }
+    if kv {
+        let namespace = raw_kv_namespace(&context.project_id, &context.tenant_id);
+        for field in ["key", "pattern"] {
+            if let Some(serde_json::Value::String(raw)) = map.get_mut(field) {
+                let scoped = scope_raw_kv_key(&namespace, raw);
+                *raw = scoped;
+            }
+        }
+        if let Some(serde_json::Value::Array(keys)) = map.get_mut("keys") {
+            for key in keys.iter_mut() {
+                if let serde_json::Value::String(raw) = key {
                     let scoped = scope_raw_kv_key(&namespace, raw);
                     *raw = scoped;
                 }
             }
-            if let Some(serde_json::Value::Array(keys)) = map.get_mut("keys") {
-                for key in keys.iter_mut() {
-                    if let serde_json::Value::String(raw) = key {
-                        let scoped = scope_raw_kv_key(&namespace, raw);
-                        *raw = scoped;
-                    }
-                }
-            }
-        } else {
-            for field in ["key", "object_key"] {
-                if let Some(serde_json::Value::String(raw)) = map.get_mut(field) {
-                    let scoped =
-                        crate::runtime::executor_utils::tenant_scoped_object_key(context, raw);
-                    *raw = scoped;
-                }
+        }
+    } else {
+        for field in ["key", "object_key"] {
+            if let Some(serde_json::Value::String(raw)) = map.get_mut(field) {
+                let scoped = crate::runtime::executor_utils::tenant_scoped_object_key(context, raw);
+                *raw = scoped;
             }
         }
     }
@@ -2617,6 +2697,20 @@ mod tests {
             );
             assert_eq!(out["sql"], spec["sql"]);
         }
+        // The JSON-escaped spelling decodes to the same key and must be
+        // stripped too (a raw substring check would miss it).
+        for backend in ["cassandra", "clickhouse"] {
+            let escaped = r#"{"sql":"CREATE TABLE IF NOT EXISTS \"ks\".\"t\" (id text PRIMARY KEY)","compiler\u005fmediated":true}"#;
+            assert!(!escaped.contains("compiler_mediated"));
+            let out = harden_raw_dispatch_spec_with(backend, "mutate", &ctx, false, escaped.into())
+                .unwrap();
+            let out: serde_json::Value = serde_json::from_str(&out).unwrap();
+            assert!(
+                out.get("compiler_mediated").is_none(),
+                "{backend}: escaped compiler_mediated must be stripped: {out}"
+            );
+            assert!(out["sql"].as_str().unwrap().starts_with("CREATE TABLE"));
+        }
         // A spec that never mentions the marker passes through byte-for-byte.
         let untouched = r#"{"cypher":"MATCH (n) RETURN n"}"#;
         assert_eq!(
@@ -2670,6 +2764,89 @@ mod tests {
         assert_eq!(s3["key"], "__udb_t/t1/docs/a.pdf");
         assert_eq!(s3["object_key"], "__udb_t/t1/docs/a.pdf");
         assert_eq!(s3["bucket"], "b");
+    }
+
+    #[test]
+    fn raw_cassandra_row_write_carries_the_verified_scope() {
+        let spec = serde_json::json!({
+            "table": "metrics.cpu",
+            "rows": [{"host": "a"}],
+            "scope": {"tenant_id": "forged", "project_id": "forged"},
+        });
+        let out = harden_raw_dispatch_spec_with(
+            "cassandra",
+            "mutate",
+            &raw_ctx("t1", "p1"),
+            true,
+            spec.to_string(),
+        )
+        .unwrap();
+        let out: serde_json::Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(
+            out["scope"],
+            serde_json::json!({"tenant_id": "t1", "project_id": "p1", "require_tenant": true})
+        );
+        assert_eq!(out["rows"], spec["rows"]);
+        let err = harden_raw_dispatch_spec_with(
+            "cassandra",
+            "mutate",
+            &raw_ctx("", "p1"),
+            true,
+            spec.to_string(),
+        )
+        .expect_err("empty tenant must not write unowned rows");
+        assert_policy_detail(
+            &err,
+            "generic_dispatch_raw_dispatch",
+            "tenant_scope_required",
+        );
+    }
+
+    #[test]
+    fn raw_neo4j_scoped_mutation_carries_the_verified_scope() {
+        let spec = serde_json::json!({
+            "operation": "create_node",
+            "label": "Patient",
+            "id": "p1",
+            "scope": {"_tenant_id": "victim"},
+        });
+        let out = harden_raw_dispatch_spec_with(
+            "neo4j",
+            "mutate",
+            &raw_ctx("t1", "p1"),
+            true,
+            spec.to_string(),
+        )
+        .unwrap();
+        let out: serde_json::Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(
+            out["scope"],
+            serde_json::json!({"_tenant_id": "t1", "_project_id": "p1"})
+        );
+        // Free-text cypher is left as-is (no scope to replace).
+        let cypher = serde_json::json!({"operation": "cypher", "cypher": "RETURN 1"});
+        let out = harden_raw_dispatch_spec_with(
+            "neo4j",
+            "mutate",
+            &raw_ctx("t1", "p1"),
+            true,
+            cypher.to_string(),
+        )
+        .unwrap();
+        assert_eq!(out, cypher.to_string());
+        let err = harden_raw_dispatch_spec_with(
+            "neo4j",
+            "mutate",
+            &raw_ctx("", "p1"),
+            true,
+            spec.to_string(),
+        )
+        .expect_err("empty tenant must not address unscoped graph records");
+        assert_policy_detail(
+            &err,
+            "generic_dispatch_raw_dispatch",
+            "tenant_scope_required",
+        );
     }
 
     #[test]

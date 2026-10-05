@@ -23,9 +23,11 @@
 //! zero external dependencies, and the CI live step (which runs `--ignored` with
 //! `UDB_INTEGRATION_PG_DSN` exported) RUNS them. A self-skip without a DSN would
 //! otherwise make them run nowhere: the unit job has no DSN and the live step
-//! only picks up ignored tests. Each test still returns early unless one of
-//! `UDB_LIVE_NATIVE_PG_DSN` / `UDB_LIVE_AUTH_PG_DSN` / `UDB_INTEGRATION_PG_DSN` /
-//! `UDB_PG_DSN` is set, for a local `--ignored` run without a database.
+//! only picks up ignored tests. Outside the live lane a test returns early
+//! unless one of `UDB_LIVE_NATIVE_PG_DSN` / `UDB_LIVE_AUTH_PG_DSN` /
+//! `UDB_INTEGRATION_PG_DSN` / `UDB_PG_DSN` is set, for a local `--ignored` run
+//! without a database; INSIDE the lane (`UDB_LIVE_AUTH_TESTS=1`) a missing DSN
+//! fails the test (`support::require_live_dsn_any`) rather than skipping.
 
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -55,23 +57,19 @@ use crate::runtime::system::{SystemCatalogConfig, ensure_system_catalog};
 
 // ── env-gated DSN resolution ──────────────────────────────────────────────────
 
-fn dp_live_pg_dsn() -> Option<String> {
-    for key in [
+/// The live Postgres DSN. Inside the CI live lane a missing DSN FAILS the test
+/// (`require_live_dsn_any` panics) instead of the old silent `return`-skip; only
+/// a local `--ignored` run outside the lane gets `None` and skips.
+pub(super) fn dp_live_pg_dsn() -> Option<String> {
+    super::support::require_live_dsn_any(&[
         "UDB_LIVE_NATIVE_PG_DSN",
         "UDB_LIVE_AUTH_PG_DSN",
         "UDB_INTEGRATION_PG_DSN",
         "UDB_PG_DSN",
-    ] {
-        if let Ok(value) = std::env::var(key)
-            && !value.trim().is_empty()
-        {
-            return Some(value);
-        }
-    }
-    None
+    ])
 }
 
-async fn dp_pool(dsn: &str) -> sqlx::PgPool {
+pub(super) async fn dp_pool(dsn: &str) -> sqlx::PgPool {
     sqlx::postgres::PgPoolOptions::new()
         .max_connections(6)
         .acquire_timeout(Duration::from_secs(10))
@@ -93,7 +91,7 @@ fn dp_test_security() -> SecurityConfig {
     }
 }
 
-fn install_dp_security() {
+pub(super) fn install_dp_security() {
     SecurityConfig::install_global(dp_test_security());
 }
 
@@ -101,7 +99,71 @@ fn install_dp_security() {
 /// `dsn` (so the served mutations commit to the same database the test seeded),
 /// lifecycle=Completed, and `abac_default_allow=true` so a tenant+purpose request
 /// clears the deny-by-default Casbin gate (mirrors the `open_service` harness).
-async fn dp_service(dsn: &str, mut manifest: CatalogManifest) -> DataBrokerService {
+pub(super) async fn dp_service(dsn: &str, manifest: CatalogManifest) -> DataBrokerService {
+    dp_service_with(dsn, manifest, |_| {}).await
+}
+
+/// [`dp_service`] with a hook over the runtime config before the runtime is
+/// built (e.g. to add the backend instances a store-RPC test targets).
+pub(super) async fn dp_service_with(
+    dsn: &str,
+    manifest: CatalogManifest,
+    configure: impl FnOnce(&mut UdbConfig),
+) -> DataBrokerService {
+    dp_service_built(dsn, manifest, configure, true).await
+}
+
+/// P0.1 — the production authorization posture: the same live served broker as
+/// [`dp_service`], but with `abac_default_allow` OFF, so the shared snapshot
+/// starts EMPTY + deny-by-default and only rules seeded with
+/// [`dp_insert_allow_rule`] and loaded by [`dp_warm_authz`] grant anything.
+/// The native authz tables must exist ([`dp_prepare_deny_db`]).
+pub(super) async fn dp_service_deny(dsn: &str, manifest: CatalogManifest) -> DataBrokerService {
+    dp_service_built(dsn, manifest, |_| {}, false).await
+}
+
+/// Reset the live database to the native catalog (authz `policy_rules` table
+/// included) plus the system catalog — what a deny-profile test needs before it
+/// seeds rules. Callers must hold `live_native_service_db_lock` (this drops
+/// every `udb_*` schema first).
+pub(super) async fn dp_prepare_deny_db(pool: &sqlx::PgPool) {
+    super::support::migrate_native_service_db(pool).await;
+}
+
+/// Seed one narrow ALLOW rule exactly as the AuthzService stores it (shared with
+/// the deny-path profile test). Returns the policy id.
+pub(super) async fn dp_insert_allow_rule(
+    pool: &sqlx::PgPool,
+    tenant: &str,
+    project: &str,
+    subject: &str,
+    object: &str,
+    action: &str,
+) -> String {
+    super::authz_deny_path_live::insert_allow_rule(pool, tenant, project, subject, object, action)
+        .await
+}
+
+/// PG-warm the broker's SHARED authz snapshot cell through the AuthzService —
+/// the production wiring — and assert every expected policy id landed in it.
+pub(super) async fn dp_warm_authz(svc: &DataBrokerService, expected_policy_ids: &[&str]) {
+    let (_authn, authz, _keys) = svc.build_auth_services();
+    authz.warm_shared_snapshot().await;
+    let snapshot = svc.authz_snapshot().load_full();
+    for id in expected_policy_ids {
+        assert!(
+            snapshot.policies.iter().any(|policy| policy.id == *id),
+            "the PG-warmed snapshot must carry seeded policy {id}"
+        );
+    }
+}
+
+async fn dp_service_built(
+    dsn: &str,
+    mut manifest: CatalogManifest,
+    configure: impl FnOnce(&mut UdbConfig),
+    abac_default_allow: bool,
+) -> DataBrokerService {
     // A real catalog always carries its checksum, and the idempotency replay
     // receipt records it (and refuses an empty one); hand-built test manifests
     // need one too. It must be a real digest of THIS manifest: catalog-derived
@@ -122,16 +184,24 @@ async fn dp_service(dsn: &str, mut manifest: CatalogManifest) -> DataBrokerServi
     // and every bare in-process request fails before reaching the handler the
     // regression is meant to exercise.
     config.security = dp_test_security();
+    configure(&mut config);
     let runtime = DataBrokerRuntime::from_config(config).await;
     let lifecycle = Arc::new(RwLock::new(FsmState::Completed));
     let metrics: Arc<dyn MetricsRecorder> = Arc::new(PrometheusMetrics::new().expect("metrics"));
-    DataBrokerService::with_runtime_and_state(manifest, runtime, lifecycle, metrics, None, true)
+    DataBrokerService::with_runtime_and_state(
+        manifest,
+        runtime,
+        lifecycle,
+        metrics,
+        None,
+        abac_default_allow,
+    )
 }
 
 /// Attach the caller identity a client sends as gRPC metadata: tenant + purpose
 /// (both required by `authorize`) and a scope. The header path resolves these
 /// into the `SecurityContext` / `RequestContext` the handler runs under.
-fn with_ctx<T>(message: T, tenant: &str) -> Request<T> {
+pub(super) fn with_ctx<T>(message: T, tenant: &str) -> Request<T> {
     let mut req = Request::new(message);
     let md = req.metadata_mut();
     md.insert("x-tenant-id", tenant.parse().unwrap());
@@ -140,7 +210,7 @@ fn with_ctx<T>(message: T, tenant: &str) -> Request<T> {
     req
 }
 
-fn col(name: &str, sql_type: &str, is_primary: bool) -> ManifestColumn {
+pub(super) fn col(name: &str, sql_type: &str, is_primary: bool) -> ManifestColumn {
     ManifestColumn {
         field_name: name.to_string(),
         column_name: name.to_string(),
@@ -156,7 +226,12 @@ fn col(name: &str, sql_type: &str, is_primary: bool) -> ManifestColumn {
 /// relation is `<schema>.<table>`, tenant-scoped on `tenant_id` (so the planner's
 /// tenant-isolation gate is satisfied by a `tenant_id` filter). When `soft_delete`
 /// is set, adds a `deleted_at` tombstone column and marks the table soft-delete.
-fn widget_manifest(schema: &str, table: &str, message: &str, soft_delete: bool) -> CatalogManifest {
+pub(super) fn widget_manifest(
+    schema: &str,
+    table: &str,
+    message: &str,
+    soft_delete: bool,
+) -> CatalogManifest {
     let mut columns = vec![
         col("id", "TEXT", true),
         col("tenant_id", "TEXT", false),
@@ -186,14 +261,14 @@ fn widget_manifest(schema: &str, table: &str, message: &str, soft_delete: bool) 
     }
 }
 
-async fn create_schema(pool: &sqlx::PgPool, schema: &str) {
+pub(super) async fn create_schema(pool: &sqlx::PgPool, schema: &str) {
     sqlx::query(&format!("CREATE SCHEMA \"{schema}\""))
         .execute(pool)
         .await
         .expect("create throwaway data-plane schema");
 }
 
-async fn teardown(pool: &sqlx::PgPool, schema: &str, tenant: &str) {
+pub(super) async fn teardown(pool: &sqlx::PgPool, schema: &str, tenant: &str) {
     let _ = sqlx::query(&format!("DROP SCHEMA IF EXISTS \"{schema}\" CASCADE"))
         .execute(pool)
         .await;
@@ -214,7 +289,7 @@ async fn teardown(pool: &sqlx::PgPool, schema: &str, tenant: &str) {
 
 // Response/record helpers -------------------------------------------------------
 
-fn record_status(bytes: &[u8]) -> Option<String> {
+pub(super) fn record_status(bytes: &[u8]) -> Option<String> {
     let value: serde_json::Value = serde_json::from_slice(bytes).ok()?;
     value.get("status")?.as_str().map(str::to_string)
 }
@@ -232,7 +307,7 @@ fn rev_int(token: &str) -> i64 {
 
 // Served-RPC convenience wrappers (build the request, attach ctx, drive handler).
 
-async fn served_upsert(
+pub(super) async fn served_upsert(
     svc: &DataBrokerService,
     tenant: &str,
     message: &str,
@@ -250,7 +325,7 @@ async fn served_upsert(
         .map(tonic::Response::into_inner)
 }
 
-async fn served_select_rows(
+pub(super) async fn served_select_rows(
     svc: &DataBrokerService,
     tenant: &str,
     message: &str,
@@ -1198,7 +1273,7 @@ async fn served_row_revision_cas_gates_updates_live() {
 
 // ── shared helpers for the gate23 / gate25 / BeginTx served tests ──────────────
 
-async fn served_update(
+pub(super) async fn served_update(
     svc: &DataBrokerService,
     tenant: &str,
     message: &str,
@@ -1218,7 +1293,7 @@ async fn served_update(
 
 /// The served status of a single row (or `None` when the served read returns it as
 /// absent), used to assert what a mutation did/did not apply.
-async fn served_status_of(
+pub(super) async fn served_status_of(
     svc: &DataBrokerService,
     tenant: &str,
     message: &str,
@@ -1862,7 +1937,7 @@ async fn served_mutation_fences_stale_lock_token_with_no_side_effect_live() {
 /// dev header-credential path, identical to the direct-handler tests) and return a
 /// connected client plus a shutdown handle. This is the transport a client SDK uses
 /// to drive the client-streaming `BeginTx` RPC.
-async fn serve_data_broker(
+pub(super) async fn serve_data_broker(
     svc: DataBrokerService,
 ) -> (
     DataBrokerClient<tonic::transport::Channel>,
@@ -1897,7 +1972,7 @@ async fn serve_data_broker(
 /// committed and the terminating error status (if any). A per-mutation failure
 /// surfaces as an `Err` stream item (the runtime wraps the underlying precondition
 /// error in the rollback/compensation envelope), so we read the stream to its end.
-async fn drive_begin_tx(
+pub(super) async fn drive_begin_tx(
     client: &mut DataBrokerClient<tonic::transport::Channel>,
     tenant: &str,
     mutations: Vec<Mutation>,
@@ -2093,7 +2168,7 @@ async fn served_begin_tx_cdc_required_fails_closed_live() {
 
 /// Raw privileged read of one row's `(tenant_id, status)`, bypassing every
 /// served scope, so a test can prove what physically happened to a victim row.
-async fn raw_tenant_and_status(
+pub(super) async fn raw_tenant_and_status(
     pool: &sqlx::PgPool,
     schema: &str,
     table: &str,

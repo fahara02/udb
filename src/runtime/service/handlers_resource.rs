@@ -72,22 +72,40 @@ impl DataBrokerService {
                 },
             )
             .await;
-        if result.is_ok() {
-            for target in &resolved_targets {
-                if crate::backend::BackendKind::from_store_kind("", &target.backend).is_some_and(
-                    |kind| {
-                        let cap = kind.capabilities();
-                        cap.supports_vector_search || cap.supports_hybrid_search
-                    },
-                ) {
-                    self.runtime_snapshot().record_vector_resource_backend(
-                        &metadata_context.project_id,
-                        &resource_name,
-                        &target.backend,
-                        target.instance.as_deref(),
-                    );
+        // C3: a vector collection's route is persisted in the system store (the
+        // in-process map is only its cache), so the collection resolves on every
+        // replica and after a restart, and the tenant purge can find it. A route
+        // that cannot be persisted fails the call (retryable; EnsureResource is
+        // idempotent) rather than leaving a collection only one replica knows.
+        let result = match result {
+            Ok(()) => {
+                let mut persisted = Ok(());
+                for target in &resolved_targets {
+                    if crate::backend::BackendKind::from_store_kind("", &target.backend)
+                        .is_some_and(|kind| {
+                            let cap = kind.capabilities();
+                            cap.supports_vector_search || cap.supports_hybrid_search
+                        })
+                        && let Err(err) = self
+                            .runtime_snapshot()
+                            .persist_vector_resource_route(
+                                &metadata_context.tenant_id,
+                                &metadata_context.project_id,
+                                &resource_name,
+                                &target.backend,
+                                target.instance.as_deref(),
+                            )
+                            .await
+                    {
+                        persisted = Err(err);
+                        break;
+                    }
                 }
+                persisted
             }
+            Err(err) => Err(err),
+        };
+        if result.is_ok() {
             let _ = self
                 .runtime_snapshot()
                 .write_audit_log(

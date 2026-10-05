@@ -47,7 +47,7 @@ async fn deny_path_broker() -> DataBrokerService {
 
 /// Insert one ALLOW row the way the AuthzService stores it: a direct subject,
 /// a tenant + project scope, an exact object and an RPC-method action.
-async fn insert_allow_rule(
+pub(super) async fn insert_allow_rule(
     pool: &sqlx::PgPool,
     tenant: &str,
     project: &str,

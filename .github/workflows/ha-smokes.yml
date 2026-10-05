@@ -3,7 +3,12 @@ name: Resilience smokes
 on:
   workflow_dispatch:
   # Release tags must carry multi-process HA evidence, not only the weekly run.
+  # Tags pushed by the release automation do not always fire this trigger, so
+  # release commits on main run the smokes too (the job-level `if` below skips
+  # every other main push: a full run builds three broker images, ~90 min).
   push:
+    branches:
+      - main
     tags:
       - "v*"
   schedule:
@@ -19,6 +24,11 @@ concurrency:
 jobs:
   ha-smokes:
     name: Multi-process HA smokes
+    if: >-
+      github.event_name != 'push'
+      || startsWith(github.ref, 'refs/tags/')
+      || contains(github.event.head_commit.message, '(release)')
+      || startsWith(github.event.head_commit.message, 'release:')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -141,6 +151,11 @@ jobs:
 
   cdc-fault-smoke:
     name: CDC fault smoke
+    if: >-
+      github.event_name != 'push'
+      || startsWith(github.ref, 'refs/tags/')
+      || contains(github.event.head_commit.message, '(release)')
+      || startsWith(github.event.head_commit.message, 'release:')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:

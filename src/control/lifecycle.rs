@@ -595,6 +595,10 @@ async fn run_startup_lifecycle_core(
     // return, so the lock can never be stranded on a pooled backend.
     // H4: the startup advisory-lock holder connection, kept until apply ends.
     let mut startup_lock: Option<sqlx::pool::PoolConnection<sqlx::Postgres>> = None;
+    // H4: while this process holds the startup lock, in-process startup DDL
+    // (`runtime::system::with_startup_ddl_lock`) is already serialized and must
+    // not wait on our own session lock. Dropped on every exit path.
+    let mut startup_lock_mark: Option<crate::runtime::system::StartupLockHeldMark> = None;
     if dry_run {
         report.step(
             FsmState::Initialising,
@@ -776,6 +780,7 @@ async fn run_startup_lifecycle_core(
         // connection. The success path unlocks explicitly before `Completed`.
         conn.close_on_drop();
         startup_lock = Some(conn);
+        startup_lock_mark = Some(crate::runtime::system::StartupLockHeldMark::hold());
         report.step(
             FsmState::Initialising,
             format!(
@@ -2115,6 +2120,7 @@ async fn run_startup_lifecycle_core(
     }
 
     release_startup_lock(startup_lock.take(), &mut report).await;
+    drop(startup_lock_mark.take());
     transition(
         &mut engine,
         &mut report,
@@ -2350,7 +2356,7 @@ fn force_sync_lock_timeout_secs() -> u64 {
 /// H3: how long a normal (non-`force_sync`) start waits for a concurrent
 /// instance's startup advisory lock before giving up. Default 600s covers a
 /// full first-boot apply over a remote database; 0 restores fail-fast.
-fn startup_lock_wait_secs() -> u64 {
+pub(crate) fn startup_lock_wait_secs() -> u64 {
     parse_startup_lock_wait_secs(std::env::var("UDB_STARTUP_LOCK_WAIT_SECS").ok().as_deref())
 }
 
@@ -2417,7 +2423,7 @@ async fn release_startup_lock(
 /// `pg_try_advisory_lock` attempts. Default 500ms matches the
 /// pre-fix hardcoded value; range 50–30_000ms lets operators trade
 /// off database load against acquisition latency.
-fn force_sync_lock_poll_ms() -> u64 {
+pub(crate) fn force_sync_lock_poll_ms() -> u64 {
     std::env::var("UDB_FORCE_SYNC_LOCK_POLL_MS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())

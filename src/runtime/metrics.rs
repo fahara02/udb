@@ -1052,6 +1052,7 @@ impl PrometheusMetrics {
             Box::new(livequery_delta_forwarded.clone()),
             Box::new(livequery_delta_dropped.clone()),
             Box::new(livequery_active_streams.clone()),
+            Box::new(vector_hybrid_fallbacks().clone()),
         ] {
             registry.register(collector)?;
         }
@@ -1276,6 +1277,22 @@ impl PrometheusMetrics {
             ])
             .inc_by(cost.max(0.0));
     }
+}
+
+/// C8: process-wide count of hybrid vector searches whose tier-1 native fusion
+/// query failed and were served by the dense-search + local lexical re-rank
+/// fallback instead. The vector executors hold no `MetricsRecorder` handle, so
+/// the collector is a process global that every [`PrometheusMetrics`] registry
+/// exports as `udb_vector_hybrid_fallback_total` (clones share one atomic).
+pub(crate) fn vector_hybrid_fallbacks() -> &'static prometheus::IntCounter {
+    static COUNTER: std::sync::OnceLock<prometheus::IntCounter> = std::sync::OnceLock::new();
+    COUNTER.get_or_init(|| {
+        prometheus::IntCounter::new(
+            "udb_vector_hybrid_fallback_total",
+            "Hybrid vector searches whose native fusion query failed and were served              by the dense-search + local lexical re-rank fallback",
+        )
+        .expect("udb_vector_hybrid_fallback_total is a valid metric name")
+    })
 }
 
 fn cdc_topic_label(topic: &str) -> &'static str {
@@ -2074,6 +2091,18 @@ mod tests {
             series <= cap + 1,
             "control_nack series must cap at {} (+overflow), got {series}",
             cap
+        );
+    }
+
+    #[test]
+    fn vector_hybrid_fallback_metric_is_exported() {
+        let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        vector_hybrid_fallbacks().inc();
+        let text = m.gather_text("");
+        assert!(
+            text.contains("udb_vector_hybrid_fallback_total "),
+            "missing hybrid fallback counter:
+{text}"
         );
     }
 

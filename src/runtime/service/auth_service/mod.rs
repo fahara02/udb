@@ -55,13 +55,15 @@ pub use idp::IdentityProviderServiceServer;
 // set. Reuses the gRPC SCIM handlers (and thus store::* + IdP events). The
 // `IdentityProviderServiceImpl` itself is mounted via `IdentityProviderServiceServer`
 // (above) and built/owned inside `service::mod` through
-// `DataBrokerService::build_identity_provider_service`, so it needs no parent
-// re-export — only the HTTP-spawn entry point is surfaced here.
+// `DataBrokerService::build_identity_provider_service`; the parent names its type
+// only to hand it to the shared native mount (`NativeControlPlaneServices`).
+pub(crate) use idp::IdentityProviderServiceImpl;
 pub(crate) use idp::spawn_saml_http_from_env;
 pub(crate) use idp::spawn_scim_http_from_env;
 // Phase 9: versioned control-plane policy distribution (xDS-style). The parent
 // `service` module mounts `ControlPlaneServiceServer` on the native auth listener
 // alongside Authn/Authz/ApiKey/Idp, wrapped by the proto method-security layer.
+pub(crate) use control_plane::ControlPlaneServiceImpl;
 pub use control_plane::ControlPlaneServiceServer;
 
 pub use apikey::ApiKeyServiceImpl;
@@ -1090,6 +1092,30 @@ pub const DATA_PLANE_ACTION_TOKENS: &[&str] = &[
     "*",
 ];
 
+/// The deterministic `policy_id` the authz seed stores for one
+/// (tenant, project, role, object, action) grant. Re-running the seed is a no-op
+/// because the id is stable, and `udb authz seed --emit` uses this SAME function
+/// so an emitted policy file names exactly the ids the database holds (the `uuid`
+/// crate here only carries the `v4` feature, so the stable UUID is derived from a
+/// hash of the logical key rather than `new_v5`).
+pub fn seed_authz_policy_id(
+    tenant_id: &str,
+    project_id: &str,
+    role_code: &str,
+    object: &str,
+    action: &str,
+) -> uuid::Uuid {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(
+        format!("udb-authz-seed|{tenant_id}|{project_id}|{role_code}|{object}|{action}").as_bytes(),
+    );
+    let digest = hasher.finalize();
+    let mut bytes = [0u8; 16];
+    bytes.copy_from_slice(&digest[..16]);
+    uuid::Uuid::from_bytes(bytes)
+}
+
 /// Offline (Postgres-direct) seed of the STANDARD data-plane authorization for a
 /// project: one role-gated `ALLOW` policy per (`object`, `action`) into
 /// `udb_authz.policy_rules`, using the REAL Casbin action tokens the DataBroker
@@ -1111,7 +1137,6 @@ pub(crate) async fn seed_project_authz_policies(
     objects: &[String],
 ) -> Result<usize, sqlx::Error> {
     use crate::runtime::native_catalog::native_model;
-    use sha2::{Digest, Sha256};
 
     let policy = native_model(
         "udb.core.authz.entity.v1.PolicyRule",
@@ -1162,18 +1187,8 @@ pub(crate) async fn seed_project_authz_policies(
     let mut inserted = 0usize;
     for object in objects {
         for action in actions {
-            // Deterministic id so re-running the seed is a no-op (the `uuid` crate
-            // here only carries the `v4` feature, so derive a stable UUID from a
-            // hash of the logical key rather than `new_v5`).
-            let mut hasher = Sha256::new();
-            hasher.update(
-                format!("udb-authz-seed|{tenant_id}|{project_id}|{role_code}|{object}|{action}")
-                    .as_bytes(),
-            );
-            let digest = hasher.finalize();
-            let mut bytes = [0u8; 16];
-            bytes.copy_from_slice(&digest[..16]);
-            let policy_id = uuid::Uuid::from_bytes(bytes);
+            // Deterministic id so re-running the seed is a no-op.
+            let policy_id = seed_authz_policy_id(tenant_id, project_id, role_code, object, action);
             let description = format!("udb authz seed: role '{role_code}' {action} on {object}");
             let result = sqlx::query(&sql)
                 .bind(policy_id)

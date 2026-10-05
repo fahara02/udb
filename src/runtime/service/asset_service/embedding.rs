@@ -6,6 +6,7 @@
 //! (they use `self.runtime` + `self.vector_collection`).
 
 use super::AssetServiceImpl;
+use crate::runtime::service::embedding_service::tenant_scoped_point_id;
 
 /// Where a completed EMBED step's vector landed, so a later failure can delete it
 /// from the exact same backend instance + project it was upserted into.
@@ -17,7 +18,10 @@ pub(crate) struct VectorEmbeddingTarget {
 
 impl AssetServiceImpl {
     /// Best-effort: push a completed EMBED step's vector into the vector backend.
-    /// `point_id` is the asset id; the embedding + dim come from the step result.
+    /// `point_id` is the asset id; the engine point id is tenant-scoped
+    /// (`{tenant}:{asset_id}`, see [`tenant_scoped_point_id`]) so tenants sharing
+    /// the asset collection can never overwrite each other's points. The
+    /// embedding + dim come from the step result.
     /// Never fails the pipeline — a vector-backend outage just logs.
     ///
     /// The point payload carries `_tenant_id`/`_project_id` stamps: the shared
@@ -65,7 +69,7 @@ impl AssetServiceImpl {
         let payload =
             crate::runtime::executor_utils::json_to_struct(&serde_json::Value::Object(stamps));
         let point = crate::proto::VectorPointMutation {
-            id: point_id.to_string(),
+            id: tenant_scoped_point_id(tenant_id, point_id),
             vector,
             payload,
             vector_name: String::new(),
@@ -94,11 +98,13 @@ impl AssetServiceImpl {
         }
     }
 
-    /// Best-effort: remove an asset's embedding (point id = asset_id) from the
-    /// vector backend. Called on pipeline failure so a failed run leaves no orphan
-    /// vector. Never fails the caller.
+    /// Best-effort: remove an asset's embedding (engine point id =
+    /// `{tenant}:{asset_id}`, the same id [`Self::upsert_embedding`] wrote) from
+    /// the vector backend. Called on pipeline failure so a failed run leaves no
+    /// orphan vector. Never fails the caller.
     pub(crate) async fn delete_embedding(
         &self,
+        tenant_id: &str,
         project_id: &str,
         vector_instance: Option<&str>,
         point_id: &str,
@@ -114,7 +120,7 @@ impl AssetServiceImpl {
                 vector_instance,
                 project_id,
                 &self.vector_collection,
-                vec![point_id.to_string()],
+                vec![tenant_scoped_point_id(tenant_id, point_id)],
             )
             .await
         {

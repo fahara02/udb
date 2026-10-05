@@ -149,14 +149,24 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
                 .await
                 .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
         }
-        // Per-row ordering lookups (supersede on claim, re-arm on enqueue)
-        // probe "the newest task for this row and target"; index them.
-        let sql = postgres_row_order_index_ddl(rel);
-        sqlx::query(&sql)
-            .execute(self.pg_pool())
-            .await
-            .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
+        // D9: the monotonic per-task row revision the ordering contract keys
+        // on, then the index behind the per-row ordering lookups (supersede
+        // on claim, re-arm on enqueue, in-flight exclusivity on claim), which
+        // probe "the newest task for this row and target".
+        for sql in [
+            postgres_row_revision_ddl(rel),
+            postgres_row_order_index_ddl(rel),
+        ] {
+            sqlx::query(&sql)
+                .execute(self.pg_pool())
+                .await
+                .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
+        }
         Ok(())
+    }
+
+    fn enforces_per_row_ordering(&self) -> bool {
+        true
     }
 
     async fn enqueue_projection_task(
@@ -220,10 +230,13 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         }
         let rel = self.projection_relation_ref();
         // Per-row ordering: before claiming, retire every PENDING/FAILED task
-        // that a NEWER task for the same row and target has superseded. Each
-        // task carries the full row state, so the newest one is the only one
-        // worth applying — and applying an older one after it (a retried
-        // failure, a requeued dead letter) would roll the target back.
+        // that a NEWER task (higher `row_revision`) for the same row and target
+        // has superseded. Each task carries the full row state, so the newest
+        // one is the only one worth applying — and applying an older one after
+        // it (a retried failure, a requeued dead letter) would roll the target
+        // back. The claim below additionally never takes a task whose row has
+        // a task IN_PROGRESS or a newer queued task, so at most one task per
+        // row is in flight and tasks for one row apply in revision order.
         let supersede_sql = postgres_supersede_sql(rel, filter.project_id.is_some());
         let mut supersede = sqlx::query(&supersede_sql);
         if let Some(project_id) = &filter.project_id {
@@ -252,25 +265,28 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
             (None, Some(_)) => format!("AND target_instance = ${next_param}"),
             (None, None) => String::new(),
         };
+        let row_exclusive = postgres_claim_row_exclusive_sql(rel);
         let sql = format!(
             r#"
             WITH pending_candidates AS (
-                SELECT task_id, created_at FROM {rel}
+                SELECT task_id, created_at FROM {rel} AS cand
                 WHERE status = 'PENDING'
                   AND retry_count < $1
                   {project_filter}
                   {target_filter}
+                  {row_exclusive}
                 ORDER BY created_at
                 LIMIT $2
                 FOR UPDATE SKIP LOCKED
             ),
             failed_candidates AS (
-                SELECT task_id, created_at FROM {rel}
+                SELECT task_id, created_at FROM {rel} AS cand
                 WHERE status = 'FAILED'
                   AND retry_count < $1
                   AND (next_retry_at IS NULL OR next_retry_at <= NOW())
                   {project_filter}
                   {target_filter}
+                  {row_exclusive}
                 ORDER BY created_at
                 LIMIT $2
                 FOR UPDATE SKIP LOCKED
@@ -580,24 +596,31 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
     }
 }
 
+/// D9: the monotonic row revision every projection task carries. A
+/// `BIGSERIAL` draws `nextval` when the task row is INSERTed, and the live
+/// write path inserts its task inside the writer's transaction AFTER the row
+/// write — i.e. while holding the source row's lock — so for two committed
+/// writes to the same row the later writer's task has the strictly higher
+/// revision. Unlike a timestamp it cannot tie or step backwards with the clock.
+/// The re-arm on enqueue (projection engine) takes a FRESH revision from the
+/// proposed row (`EXCLUDED.row_revision`), so a row returning to an earlier
+/// value orders after the value it replaced.
+fn postgres_row_revision_ddl(rel: &str) -> String {
+    format!(r#"ALTER TABLE {rel} ADD COLUMN IF NOT EXISTS row_revision BIGSERIAL"#)
+}
+
 /// Index backing the per-row ordering lookups: "is there a newer task for this
 /// (project, source row, target)?". The row key is indexed by its md5 so an
 /// arbitrarily large JSONB key (a delete filter on a table with no primary key)
 /// can never exceed the btree entry limit and fail the enqueue.
 fn postgres_row_order_index_ddl(rel: &str) -> String {
     format!(
-        r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_row_order"
+        r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_row_revision"
                  ON {rel} (project_id, source_table, target_backend, target_instance,
-                           resource_name, md5(source_row_key::text), created_at)"#
+                           resource_name, md5(source_row_key::text), row_revision)"#
     )
 }
 
-/// Retire (mark COMPLETED, with a `superseded` note) every PENDING/FAILED task
-/// for which a strictly newer task exists for the same row and target. The
-/// ordering key is `created_at`, which the write path stamps with
-/// `clock_timestamp()` while holding the source row's lock (see
-/// `projection_task_insert_sql` in the projection engine), with `task_id` as a
-/// deterministic tie-break. IN_PROGRESS tasks are left to their worker.
 /// SQL for the tenant a projection task's row belongs to: the value of the
 /// target's `tenant_field` option inside the task's source payload (empty when
 /// the target declares none). Two tenants' rows can share a primary key, so
@@ -610,6 +633,45 @@ pub(crate) fn projection_task_row_tenant_sql(alias: &str) -> String {
     )
 }
 
+/// The "same row and same target" predicate between two aliased task rows —
+/// the identity every per-row ordering rule (supersede, re-arm, in-flight
+/// exclusivity) compares on.
+pub(crate) fn projection_task_same_row_sql(a: &str, b: &str) -> String {
+    format!(
+        "{a}.project_id = {b}.project_id \
+         AND {a}.source_table = {b}.source_table \
+         AND {a}.target_backend = {b}.target_backend \
+         AND {a}.target_instance = {b}.target_instance \
+         AND {a}.resource_name = {b}.resource_name \
+         AND md5({a}.source_row_key::text) = md5({b}.source_row_key::text) \
+         AND {a_tenant} = {b_tenant}",
+        a_tenant = projection_task_row_tenant_sql(a),
+        b_tenant = projection_task_row_tenant_sql(b),
+    )
+}
+
+/// Claim-side half of the D9 ordering contract: never claim a task (`cand`)
+/// while another task for the same row and target is IN_PROGRESS, or while a
+/// NEWER task for it is still queued (PENDING/FAILED — the next supersede pass
+/// retires `cand` in its favour). At most one task per row is in flight, so a
+/// slow worker can never apply an older row state after a newer one landed.
+fn postgres_claim_row_exclusive_sql(rel: &str) -> String {
+    format!(
+        "AND NOT EXISTS (
+                      SELECT 1 FROM {rel} AS sib
+                      WHERE sib.task_id <> cand.task_id
+                        AND {same_row}
+                        AND (sib.status = 'IN_PROGRESS'
+                             OR (sib.status IN ('PENDING', 'FAILED')
+                                 AND sib.row_revision > cand.row_revision)))",
+        same_row = projection_task_same_row_sql("sib", "cand"),
+    )
+}
+
+/// Retire (mark COMPLETED, with a `superseded` note) every PENDING/FAILED task
+/// for which a strictly newer task exists for the same row and target. The
+/// ordering key is the monotonic `row_revision` (see
+/// [`postgres_row_revision_ddl`]). IN_PROGRESS tasks are left to their worker.
 fn postgres_supersede_sql(rel: &str, project_scoped: bool) -> String {
     let project_filter = if project_scoped {
         "AND older.project_id = $1"
@@ -625,16 +687,9 @@ fn postgres_supersede_sql(rel: &str, project_scoped: bool) -> String {
              {project_filter}
              AND EXISTS (
                  SELECT 1 FROM {rel} AS newer
-                 WHERE newer.project_id = older.project_id
-                   AND newer.source_table = older.source_table
-                   AND newer.target_backend = older.target_backend
-                   AND newer.target_instance = older.target_instance
-                   AND newer.resource_name = older.resource_name
-                   AND md5(newer.source_row_key::text) = md5(older.source_row_key::text)
-                   AND {newer_tenant} = {older_tenant}
-                   AND (newer.created_at, newer.task_id) > (older.created_at, older.task_id))"#,
-        newer_tenant = projection_task_row_tenant_sql("newer"),
-        older_tenant = projection_task_row_tenant_sql("older"),
+                 WHERE {same_row}
+                   AND newer.row_revision > older.row_revision)"#,
+        same_row = projection_task_same_row_sql("newer", "older"),
     )
 }
 
@@ -690,7 +745,12 @@ mod row_order_tests {
         }
         assert!(sql.contains("md5(newer.source_row_key::text) = md5(older.source_row_key::text)"));
         assert!(
-            sql.contains("(newer.created_at, newer.task_id) > (older.created_at, older.task_id)")
+            sql.contains("newer.row_revision > older.row_revision"),
+            "{sql}"
+        );
+        assert!(
+            !sql.contains("created_at)"),
+            "ordering is by revision: {sql}"
         );
         assert!(!sql.contains("$1"), "unscoped pass binds nothing");
         let scoped = postgres_supersede_sql(DEFAULT_REL, true);
@@ -700,7 +760,38 @@ mod row_order_tests {
     #[test]
     fn row_order_index_uses_a_bounded_row_key() {
         let ddl = postgres_row_order_index_ddl(DEFAULT_REL);
-        assert!(ddl.contains("md5(source_row_key::text)"), "{ddl}");
+        assert!(
+            ddl.contains("md5(source_row_key::text), row_revision)"),
+            "{ddl}"
+        );
         assert!(ddl.contains("CREATE INDEX IF NOT EXISTS"), "{ddl}");
+    }
+
+    /// D9: every task carries a sequence-drawn revision (not a clock stamp).
+    #[test]
+    fn row_revision_column_is_a_sequence() {
+        let ddl = postgres_row_revision_ddl(DEFAULT_REL);
+        assert!(
+            ddl.contains("ADD COLUMN IF NOT EXISTS row_revision BIGSERIAL"),
+            "{ddl}"
+        );
+    }
+
+    /// D9: a claim never takes a task whose row already has one in flight or
+    /// a newer one queued, so one row's tasks apply one at a time, in order.
+    #[test]
+    fn claim_is_exclusive_per_row_and_takes_only_the_newest() {
+        let sql = postgres_claim_row_exclusive_sql(DEFAULT_REL);
+        assert!(sql.contains("AND NOT EXISTS"), "{sql}");
+        assert!(sql.contains("sib.task_id <> cand.task_id"), "{sql}");
+        assert!(sql.contains("sib.status = 'IN_PROGRESS'"), "{sql}");
+        assert!(
+            sql.contains("sib.row_revision > cand.row_revision"),
+            "{sql}"
+        );
+        assert!(
+            sql.contains("md5(sib.source_row_key::text) = md5(cand.source_row_key::text)"),
+            "{sql}"
+        );
     }
 }

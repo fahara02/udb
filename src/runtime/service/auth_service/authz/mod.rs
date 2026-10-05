@@ -641,6 +641,22 @@ fn normalized_policy_tenant(tenant_id: &str, domain: &str) -> String {
     }
 }
 
+/// The `domain` column a policy rule is STORED with, kept consistent with
+/// [`normalized_policy_tenant`]. A tenant domain (`tenant:<id>`, any spacing) is
+/// rewritten to the canonical `tenant:<stored tenant>` — so `" tenant: X "`
+/// becomes `tenant:X`, and a body `tenant_id` that wins over a mismatching
+/// `tenant:<other>` domain no longer leaves the row claiming the other tenant.
+/// Any other domain shape is trimmed and otherwise kept verbatim.
+fn normalized_policy_domain(domain: &str, stored_tenant: &str) -> String {
+    let domain = domain.trim();
+    match domain.split_once(':') {
+        Some((prefix, _)) if prefix.trim() == "tenant" && !stored_tenant.trim().is_empty() => {
+            format!("tenant:{}", stored_tenant.trim())
+        }
+        _ => domain.to_string(),
+    }
+}
+
 /// Non-admin principal binding for the decision RPCs (Authorize/CheckAccess):
 /// every identity field AND the role set come from the verified claim/binding
 /// snapshot — never from the body. Roles are cleared so `effective_roles`
@@ -3099,6 +3115,9 @@ impl AuthzService for AuthzServiceImpl {
         // The tenant the rule is STORED under: `tenant:<uuid>` is normalized to
         // the bare id the snapshot loader and the caller's claim both carry.
         let stored_tenant = normalized_policy_tenant(&req.tenant_id, &req.domain);
+        // The `domain` column is normalized the same way (B7), so the stored row
+        // and the readback agree with the tenant the rule is enforced under.
+        let stored_domain = normalized_policy_domain(&req.domain, &stored_tenant);
         if !req.domain.trim().is_empty() || !req.tenant_id.trim().is_empty() {
             check_policy_tenant_boundary(
                 authz_record_tenant_scope().as_deref(),
@@ -3194,7 +3213,7 @@ impl AuthzService for AuthzServiceImpl {
             // P6.10 Wave 1: typed native insert (was raw INSERT). `is_active=TRUE`
             // literal preserved; `created_by` is a validated UUID; `attributes_json`
             // binds as JSONB via `LogicalValue::Json`. Column→value parity is exact:
-            // domain=req.domain, object=policy.resource, tenant_id=policy.tenant.
+            // domain=normalized req.domain, object=policy.resource, tenant_id=policy.tenant.
             let mut record = LogicalRecord::new();
             record.insert(
                 "policy_id".to_string(),
@@ -3206,7 +3225,7 @@ impl AuthzService for AuthzServiceImpl {
             );
             record.insert(
                 "domain".to_string(),
-                LogicalValue::String(req.domain.clone()),
+                LogicalValue::String(stored_domain.clone()),
             );
             record.insert(
                 "object".to_string(),
@@ -3307,7 +3326,7 @@ impl AuthzService for AuthzServiceImpl {
         self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::CreatePolicyRuleResponse {
             policy: Some(authz_entity_pb::PolicyRule {
-                domain: req.domain,
+                domain: stored_domain,
                 description: req.description,
                 created_by: req.created_by,
                 resource_type: req.resource_type,
@@ -5789,6 +5808,24 @@ mod validation_tests {
             normalized_policy_tenant("", "project:billing"),
             "project:billing"
         );
+    }
+
+    #[test]
+    fn create_policy_rule_domain_column_is_stored_normalized() {
+        let id = "9f1c2d3e-0000-4000-8000-000000000001";
+        let stored = |tenant_id: &str, domain: &str| {
+            normalized_policy_domain(domain, &normalized_policy_tenant(tenant_id, domain))
+        };
+        assert_eq!(
+            stored("", &format!(" tenant: {id} ")),
+            format!("tenant:{id}")
+        );
+        assert_eq!(stored("", &format!("tenant:{id}")), format!("tenant:{id}"));
+        // The body tenant wins, and the domain column follows it.
+        assert_eq!(stored(id, "tenant:other"), format!("tenant:{id}"));
+        // Non-tenant shapes are trimmed, not reinterpreted.
+        assert_eq!(stored("", " project:billing "), "project:billing");
+        assert_eq!(stored(id, "*"), "*");
     }
 
     #[tokio::test]

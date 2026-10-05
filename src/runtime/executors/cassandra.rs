@@ -204,6 +204,41 @@ impl CassandraExecutor {
     pub fn new(client: CassandraClient) -> Self {
         Self { client }
     }
+
+    /// Column names of `[ks.]table` from `system_schema.columns` (empty when
+    /// the table does not exist or an unqualified name has no session
+    /// keyspace — the INSERT then fails on its own).
+    async fn table_columns(&self, table: &str) -> Result<Vec<String>, tonic::Status> {
+        let session_keyspace = self.client.session.get_keyspace();
+        let Some((keyspace, name)) =
+            split_cassandra_table(table, session_keyspace.as_deref().map(String::as_str))
+        else {
+            return Ok(Vec::new());
+        };
+        let params = vec![CqlValue::Text(keyspace), CqlValue::Text(name)];
+        let result = self
+            .client
+            .session
+            .query(
+                "SELECT column_name FROM system_schema.columns \
+                 WHERE keyspace_name = ? AND table_name = ?",
+                &params[..],
+            )
+            .await
+            .map_err(|e| {
+                cassandra_internal_status(
+                    "mutate_rows_table_columns",
+                    format!("cassandra column lookup failed: {e}"),
+                )
+            })?;
+        Ok(result
+            .rows
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|row| row.columns.into_iter().next().flatten())
+            .filter_map(CqlValue::into_string)
+            .collect())
+    }
 }
 
 impl BackendContextEnforcer for CassandraExecutor {
@@ -492,10 +527,126 @@ fn is_plain_cql_identifier(value: &str) -> bool {
         && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
 }
 
+/// The verified tenant/project the broker stamps onto a `{table, rows}` write
+/// (`scope` in the spec; any caller-supplied value is replaced broker-side
+/// before dispatch). `require_tenant` is set when the caller is an
+/// authenticated non-admin, for whom a table with no tenant column cannot be
+/// written at all.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct RowsWriteScope {
+    tenant_id: String,
+    project_id: String,
+    require_tenant: bool,
+}
+
+impl RowsWriteScope {
+    fn from_spec(spec: &JsonValue) -> Self {
+        let scope = spec.get("scope");
+        let text = |key: &str| {
+            scope
+                .and_then(|scope| scope.get(key))
+                .and_then(JsonValue::as_str)
+                .map(|value| value.trim().to_string())
+                .unwrap_or_default()
+        };
+        Self {
+            tenant_id: text("tenant_id"),
+            project_id: text("project_id"),
+            require_tenant: scope
+                .and_then(|scope| scope.get("require_tenant"))
+                .and_then(JsonValue::as_bool)
+                .unwrap_or(false),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.tenant_id.is_empty() && self.project_id.is_empty() && !self.require_tenant
+    }
+}
+
+/// Column names a raw table can carry its tenant / project in (the same
+/// names `util::resolve_tenant_column` accepts for manifest tables).
+const ROW_TENANT_COLUMNS: [&str; 2] = ["tenant_id", "_tenant_id"];
+const ROW_PROJECT_COLUMNS: [&str; 2] = ["project_id", "_project_id"];
+
+/// Stamp `scope` into every row's tenant / project columns among
+/// `table_columns` (overwriting any caller value, so a row can only land in
+/// the verified tenant). A table without a tenant column is refused when the
+/// scope requires a tenant; otherwise it is written unscoped, as a table the
+/// manifest does not declare tenant-scoped would be.
+fn stamp_rows_scope(
+    table: &str,
+    rows: &mut [JsonValue],
+    table_columns: &[String],
+    scope: &RowsWriteScope,
+) -> Result<(), tonic::Status> {
+    let present = |candidates: &[&str]| -> Vec<String> {
+        table_columns
+            .iter()
+            .filter(|column| {
+                candidates
+                    .iter()
+                    .any(|candidate| column.eq_ignore_ascii_case(candidate))
+            })
+            .cloned()
+            .collect()
+    };
+    let tenant_columns = present(&ROW_TENANT_COLUMNS[..]);
+    if scope.require_tenant && (scope.tenant_id.is_empty() || tenant_columns.is_empty()) {
+        return Err(crate::runtime::executor_utils::policy_status(
+            "cassandra_rows_write",
+            "tenant_scope_required",
+            format!(
+                "cassandra row write to '{table}' cannot be tenant-scoped: the caller has no \
+                 verified tenant or the table has no tenant_id/_tenant_id column"
+            ),
+        ));
+    }
+    let mut stamps: Vec<(String, &str)> = Vec::new();
+    if !scope.tenant_id.is_empty() {
+        stamps.extend(
+            tenant_columns
+                .into_iter()
+                .map(|c| (c, scope.tenant_id.as_str())),
+        );
+    }
+    if !scope.project_id.is_empty() {
+        stamps.extend(
+            present(&ROW_PROJECT_COLUMNS[..])
+                .into_iter()
+                .map(|c| (c, scope.project_id.as_str())),
+        );
+    }
+    for row in rows.iter_mut() {
+        let JsonValue::Object(map) = row else {
+            continue;
+        };
+        // Drop any differently-cased spelling of a stamped column first, so
+        // the INSERT never names the same column twice.
+        map.retain(|key, _| !stamps.iter().any(|(c, _)| key.eq_ignore_ascii_case(c)));
+        for (column, value) in &stamps {
+            map.insert(column.clone(), JsonValue::String((*value).to_string()));
+        }
+    }
+    Ok(())
+}
+
+/// `(keyspace, table)` of a `[ks.]t` identifier, with the session keyspace
+/// for an unqualified name.
+fn split_cassandra_table(table: &str, session_keyspace: Option<&str>) -> Option<(String, String)> {
+    match table.split_once('.') {
+        Some((keyspace, name)) => Some((keyspace.to_string(), name.to_string())),
+        None => session_keyspace.map(|keyspace| (keyspace.to_string(), table.to_string())),
+    }
+}
+
 /// The typed row-write shape `{"table": "[ks.]t", "rows": [{col: value}, ...]}`
 /// (what the typed TimeSeriesWrite RPC sends when its resource is not a
-/// manifest entity). `None` when the request is the `{"sql": ...}` form.
-fn cassandra_rows_write_spec(req: &str) -> Result<Option<(String, Vec<JsonValue>)>, tonic::Status> {
+/// manifest entity), with the broker-stamped scope. `None` when the request is
+/// the `{"sql": ...}` form.
+fn cassandra_rows_write_spec(
+    req: &str,
+) -> Result<Option<(String, Vec<JsonValue>, RowsWriteScope)>, tonic::Status> {
     let spec: JsonValue = serde_json::from_str(req).map_err(|e| {
         invalid_argument_fields(
             format!("invalid dispatch JSON: {e}"),
@@ -511,7 +662,11 @@ fn cassandra_rows_write_spec(req: &str) -> Result<Option<(String, Vec<JsonValue>
     ) else {
         return Ok(None);
     };
-    Ok(Some((table.to_string(), rows.clone())))
+    Ok(Some((
+        table.to_string(),
+        rows.clone(),
+        RowsWriteScope::from_spec(&spec),
+    )))
 }
 
 /// Render one row of the `{table, rows}` shape as a parameterised INSERT.
@@ -580,7 +735,11 @@ fn cassandra_affected_rows(cql: &str, first_row_applied: Option<bool>) -> Option
 
 impl MutationExecutor for CassandraExecutor {
     async fn mutate(&self, req: &str) -> Result<String, tonic::Status> {
-        if let Some((table, rows)) = cassandra_rows_write_spec(req)? {
+        if let Some((table, mut rows, scope)) = cassandra_rows_write_spec(req)? {
+            if !scope.is_empty() {
+                let columns = self.table_columns(&table).await?;
+                stamp_rows_scope(&table, &mut rows, &columns, &scope)?;
+            }
             let mut affected: u64 = 0;
             for row in &rows {
                 let (cql, params_json) = cassandra_row_insert(&table, row)?;
@@ -826,9 +985,10 @@ mod tests {
             "rows": [{"host": "a", "value": 1.5}, {"host": "b", "value": 2}]
         })
         .to_string();
-        let (table, rows) = cassandra_rows_write_spec(&req)
+        let (table, rows, scope) = cassandra_rows_write_spec(&req)
             .unwrap()
             .expect("{table, rows} must be recognised");
+        assert!(scope.is_empty(), "no broker scope on this request");
         assert_eq!(table, "metrics.cpu");
         assert_eq!(rows.len(), 2);
         let (cql, params) = cassandra_row_insert(&table, &rows[0]).unwrap();
@@ -843,6 +1003,60 @@ mod tests {
                 .unwrap()
                 .is_none()
         );
+    }
+
+    #[test]
+    fn rows_write_stamps_the_broker_scope_into_tenant_columns() {
+        let req = json!({
+            "table": "metrics.cpu",
+            "rows": [
+                {"host": "a", "TENANT_ID": "forged"},
+                {"host": "b"},
+                {"host": "c", "project_id": "other"}
+            ],
+            "scope": {"tenant_id": "t1", "project_id": "p1", "require_tenant": true}
+        })
+        .to_string();
+        let (table, mut rows, scope) = cassandra_rows_write_spec(&req).unwrap().unwrap();
+        assert_eq!(
+            scope,
+            RowsWriteScope {
+                tenant_id: "t1".into(),
+                project_id: "p1".into(),
+                require_tenant: true,
+            }
+        );
+        let columns = vec![
+            "host".to_string(),
+            "tenant_id".to_string(),
+            "project_id".to_string(),
+        ];
+        stamp_rows_scope(&table, &mut rows, &columns, &scope).unwrap();
+        for row in &rows {
+            assert_eq!(row["tenant_id"], "t1", "{row}");
+            assert_eq!(row["project_id"], "p1", "{row}");
+            assert!(row.get("TENANT_ID").is_none(), "{row}");
+        }
+        // A table with no tenant column cannot take a tenant-required write.
+        let mut rows = vec![json!({"host": "a"})];
+        let err = stamp_rows_scope(&table, &mut rows, &["host".to_string()], &scope).unwrap_err();
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        // Without enforcement such a table is written as-is (not tenant-scoped).
+        let lenient = RowsWriteScope {
+            require_tenant: false,
+            ..scope.clone()
+        };
+        stamp_rows_scope(&table, &mut rows, &["host".to_string()], &lenient).unwrap();
+        assert_eq!(rows, vec![json!({"host": "a"})]);
+        assert_eq!(
+            split_cassandra_table("ks.t", None),
+            Some(("ks".to_string(), "t".to_string()))
+        );
+        assert_eq!(
+            split_cassandra_table("t", Some("ks")),
+            Some(("ks".to_string(), "t".to_string()))
+        );
+        assert_eq!(split_cassandra_table("t", None), None);
     }
 
     #[test]

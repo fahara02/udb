@@ -376,6 +376,36 @@ async fn insert_delivery_journal(
     }
 }
 
+/// TEST-ONLY: lets the delivery worker POST to a cleartext `http://` LOOPBACK
+/// socket (`http://127.0.0.1:<port>/...`) so a live seam test can run a local
+/// receiver. Compiled only into test builds; production keeps the full https +
+/// SSRF guard ([`resolve_and_pin_target`]) for every target.
+#[cfg(all(feature = "http-client", test))]
+pub(crate) static ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// The delivery-time target: the SSRF-validated, address-pinned target. In
+/// test builds only, a loopback `http://ip:port` URL is pinned directly when
+/// [`ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST`] is set.
+#[cfg(feature = "http-client")]
+async fn delivery_target(url: &str) -> Result<super::security::ValidatedTarget, tonic::Status> {
+    #[cfg(test)]
+    if ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST.load(std::sync::atomic::Ordering::SeqCst)
+        && let Some(addr) = url
+            .strip_prefix("http://")
+            .and_then(|rest| rest.split('/').next())
+            .and_then(|hostport| hostport.parse::<std::net::SocketAddr>().ok())
+        && addr.ip().is_loopback()
+    {
+        return Ok(super::security::ValidatedTarget {
+            host: addr.ip().to_string(),
+            port: addr.port(),
+            addrs: vec![addr],
+        });
+    }
+    resolve_and_pin_target(url).await
+}
+
 /// Current unix time in whole seconds (saturating), the timestamp bound into the
 /// delivery signature and emitted in the `X-Udb-Timestamp` header.
 #[cfg(feature = "http-client")]
@@ -442,7 +472,7 @@ pub(crate) async fn run_webhook_delivery_once(
                 // SSRF re-check AND address PIN at DELIVERY time: resolve+validate
                 // once here, then connect to exactly those addresses so reqwest
                 // never re-resolves the hostname (closing the DNS-rebinding TOCTOU).
-                let target = match resolve_and_pin_target(&endpoint.url).await {
+                let target = match delivery_target(&endpoint.url).await {
                     Ok(target) => target,
                     Err(err) => {
                         last_error = err.message().to_string();

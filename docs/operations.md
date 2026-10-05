@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.25 | protocol v1.0.0                                          │
+│    crate v0.5.26 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -139,6 +139,35 @@ And these point the broker at whichever backends your deployment uses:
 | Azure Blob | `UDB_AZUREBLOB_DSN` |
 | Google Cloud Storage | `UDB_GCS_DSN` |
 | Kafka / CDC | `UDB_KAFKA_BROKERS` |
+
+### Two-phase commit and MySQL mirrors
+
+With `UDB_2PC_ENABLED=true`, a two-phase `BeginTx` commits PostgreSQL through
+an XA ledger. By default PostgreSQL is the only participant. Configuring a
+MySQL instance does not enrol it.
+
+A MySQL participant is a **mirror**. It does not receive mutations of its own.
+Between `XA START` and `XA END` it replays the transaction's PostgreSQL
+statements, translated to MySQL, so the same rows land in both stores
+atomically. That is only correct for a MySQL database that actually holds a copy
+of those tables. To opt one in, name it explicitly:
+
+| Setting | Purpose |
+|---|---|
+| `UDB_XA_MYSQL_MIRROR_INSTANCES` | Comma-separated MySQL instance names (for example `primary,reporting`) that mirror the relational tables and join two-phase `BeginTx` as replay participants. Unset or empty means no MySQL participant. |
+
+How it behaves:
+
+- The variable is read once at startup. Changing it needs a restart.
+- Names are trimmed, de-duplicated and sorted, so the order participants are
+  recorded in the XA ledger is stable.
+- A listed name that is not a configured MySQL instance fails the transaction
+  before any `XA PREPARE`, and the error names the missing instance. The broker
+  never silently drops a participant you declared.
+- Unlisted MySQL instances never take part, however many are configured.
+- In-doubt transactions are resolved by the XA recovery worker. It runs on one
+  replica at a time, under a fenced singleton lease, and drives each ledger row
+  to commit or abort on the participants recorded for it.
 
 ## Migrations And Database Ops
 
@@ -330,7 +359,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.5.25"
+python scripts/bench_snapshot.py --label "release-0.5.26"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

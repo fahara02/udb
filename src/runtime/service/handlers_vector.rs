@@ -203,6 +203,8 @@ impl DataBrokerService {
                         .await?;
                 }
                 // #112: authorize THIS item's collection + stamp its decision id.
+                // A wildcard / empty collection names no executable resource.
+                super::reject_wildcard_data_message_type(&item.collection, "VectorBatchUpsert")?;
                 let item_decision_id = DataBrokerService::authorize_message_item(
                     &abac_snapshot,
                     &security_for_stream,

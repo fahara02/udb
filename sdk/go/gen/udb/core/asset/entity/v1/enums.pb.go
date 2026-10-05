@@ -138,12 +138,17 @@ type StepType int32
 
 const (
 	StepType_STEP_TYPE_UNSPECIFIED StepType = 0
-	StepType_STEP_TYPE_EMBED       StepType = 1
-	StepType_STEP_TYPE_THUMBNAIL   StepType = 2
-	StepType_STEP_TYPE_RESIZE      StepType = 3
-	StepType_STEP_TYPE_TRANSCODE   StepType = 4
-	StepType_STEP_TYPE_CAPTION     StepType = 5
-	StepType_STEP_TYPE_EXTRACT     StepType = 6
+	// Metadata feature hash, NOT a content embedding: a 64-dim signed
+	// feature-hashing vector over the asset's name + metadata text
+	// (`embedding_model = "metadata_feature_hash_v1"`, `semantic = false` in the
+	// step result). It never reads the asset's bytes and is not a neural model;
+	// use the EmbeddingService for content/semantic embeddings.
+	StepType_STEP_TYPE_EMBED     StepType = 1
+	StepType_STEP_TYPE_THUMBNAIL StepType = 2
+	StepType_STEP_TYPE_RESIZE    StepType = 3
+	StepType_STEP_TYPE_TRANSCODE StepType = 4
+	StepType_STEP_TYPE_CAPTION   StepType = 5
+	StepType_STEP_TYPE_EXTRACT   StepType = 6
 )
 
 // Enum value maps for StepType.

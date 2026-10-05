@@ -773,7 +773,9 @@ impl ProjectionTaskStore for RedisCanonicalStore {
         &self,
         idempotency_keys: &[String],
     ) -> SystemStoreResult<i64> {
-        let mut count = 0;
+        // D10: an unknown key (no idem pointer / no task row) is NOT completed,
+        // so it stays unsettled exactly as on Postgres.
+        let mut completed = Vec::new();
         for idem in idempotency_keys {
             let mut conn = self
                 .connection()
@@ -794,11 +796,14 @@ impl ProjectionTaskStore for RedisCanonicalStore {
             };
             // P2-1 NF-1/NF-2: only COMPLETED clears the fence; FAILED/DEAD_LETTER
             // are not projected yet so they still count as pending.
-            if !matches!(row.status, ProjectionTaskStatus::Completed) {
-                count += 1;
+            if matches!(row.status, ProjectionTaskStatus::Completed) {
+                completed.push(idem.as_str());
             }
         }
-        Ok(count)
+        Ok(super::system_store::unsettled_fence_key_count(
+            idempotency_keys,
+            completed,
+        ))
     }
 }
 

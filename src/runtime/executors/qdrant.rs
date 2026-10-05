@@ -954,12 +954,12 @@ impl QdrantHttpClient {
                 // native fusion stage is not serving (old Qdrant without
                 // `/points/query`, a bad `using` name, an outage).
                 Err(reason) => {
-                    QDRANT_HYBRID_FALLBACKS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    let fallbacks = crate::runtime::metrics::vector_hybrid_fallbacks();
+                    fallbacks.inc();
                     tracing::warn!(
                         collection = %request.collection,
                         reason = %reason,
-                        fallbacks_total = QDRANT_HYBRID_FALLBACKS
-                            .load(std::sync::atomic::Ordering::Relaxed),
+                        fallbacks_total = fallbacks.get(),
                         "qdrant hybrid search: native fusion query failed; degrading to dense \
                          search with local lexical re-rank"
                     );
@@ -1021,10 +1021,6 @@ impl QdrantHttpClient {
 }
 
 // ── Hybrid search helpers ─────────────────────────────────────────────────────
-
-/// Process-wide count of hybrid searches that fell back from the native fusion
-/// query to dense search + local re-rank (reported with every fallback warning).
-static QDRANT_HYBRID_FALLBACKS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 /// Re-rank `points` by combining the normalised dense vector score with a
 /// lexical text score computed against `text_query`.
@@ -1643,7 +1639,7 @@ mod tests {
             api_key: None,
             http: reqwest::Client::new(),
         };
-        let before = QDRANT_HYBRID_FALLBACKS.load(std::sync::atomic::Ordering::Relaxed);
+        let before = crate::runtime::metrics::vector_hybrid_fallbacks().get();
         let request = VectorHybridSearchRequest {
             collection: "items".to_string(),
             vector: vec![0.1, 0.2],
@@ -1657,7 +1653,7 @@ mod tests {
                 .await
                 .is_err()
         );
-        assert!(QDRANT_HYBRID_FALLBACKS.load(std::sync::atomic::Ordering::Relaxed) > before);
+        assert!(crate::runtime::metrics::vector_hybrid_fallbacks().get() > before);
     }
 
     #[tokio::test]

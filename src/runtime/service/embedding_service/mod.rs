@@ -68,6 +68,9 @@ mod registry;
 mod reports;
 mod retrieval;
 mod store;
+// C4 live worker-seam tenant isolation (real Qdrant; CI live lane).
+#[cfg(all(test, feature = "http-client"))]
+mod tenant_iso_live;
 #[cfg(test)]
 mod tests;
 mod vector_store;
@@ -83,6 +86,10 @@ pub(crate) use workers::run_embedding_work_emitter_once;
 pub(crate) use vector_store::{
     TenantVectorTarget, purge_tenant_vectors, tenant_embedding_vector_targets,
 };
+// The asset EMBED step namespaces its engine point ids with the same scheme as
+// the embedding worker, so two tenants sharing the asset collection can never
+// collide on (or delete) each other's points.
+pub(crate) use chunking::tenant_scoped_point_id;
 
 /// Postgres-backed `EmbeddingService` handler.
 pub struct EmbeddingServiceImpl {

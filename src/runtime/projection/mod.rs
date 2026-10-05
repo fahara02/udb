@@ -911,25 +911,29 @@ where
 
 /// The task INSERT, and the per-row ORDERING contract the worker relies on.
 ///
-/// Ordering key: `created_at`, stamped with `clock_timestamp()` — NOT the
-/// column default `NOW()`, which is the enclosing transaction's START time.
-/// The live write path inserts its task inside the writer's transaction AFTER
-/// the row write, i.e. while holding that row's lock, so for two committed
-/// writes to the same row the later writer's `clock_timestamp()` is strictly
-/// later. (`NOW()` is not: a transaction that began first but acquired the
-/// row lock second would sort first.) `source_checksum` cannot order tasks —
-/// it is a content hash — and a separate revision column would need a schema
-/// change on every system-store dialect.
+/// Ordering key: `row_revision`, a `BIGSERIAL` drawn when the task row is
+/// inserted. The live write path inserts its task inside the writer's
+/// transaction AFTER the row write, i.e. while holding that row's lock, so for
+/// two committed writes to the same row the later writer's task has the
+/// strictly higher revision — a sequence cannot tie or step backwards the way
+/// a clock stamp can. `created_at` (stamped with `clock_timestamp()`, not the
+/// transaction-start `NOW()`) stays the claim's fairness order only.
+/// `source_checksum` cannot order tasks — it is a content hash.
 ///
 /// The PostgreSQL claim (`postgres_projection.rs`) retires a PENDING/FAILED
-/// task once a NEWER task for the same row and target exists, so a retried
-/// stale task can never be applied over a newer one.
+/// task once a task with a higher revision exists for the same row and
+/// target, and never claims a task while its row has a task IN_PROGRESS or a
+/// newer one queued — so a retried stale task can never be applied over a
+/// newer one.
 ///
 /// Re-arm on conflict: the idempotency key hashes the row CONTENT, so a row
-/// that returns to an earlier value (v1 → v2 → v1) maps onto v1's
-/// already-COMPLETED task. `DO NOTHING` would then leave the target at v2.
-/// When the conflicting task is COMPLETED and a newer task exists for the row,
-/// it is re-armed as PENDING with a fresh ordering stamp. A replay of an
+/// that returns to an earlier value (v1 → v2 → v1) maps onto v1's existing
+/// task. `DO NOTHING` would then leave the target at v2. When ANY task with a
+/// higher revision exists for the row, the conflicting task takes a FRESH
+/// revision (`EXCLUDED.row_revision`, the value the proposed insert drew) so
+/// it orders after v2 again: a queued/finished/dead-lettered one is re-armed
+/// as PENDING; an IN_PROGRESS one keeps its status (its worker is applying
+/// exactly this content) and simply becomes the newest. A replay of an
 /// unchanged row (its task is the newest) stays deduplicated.
 fn projection_task_insert_sql(rel: &str) -> String {
     format!(
@@ -942,33 +946,33 @@ fn projection_task_insert_sql(rel: &str) -> String {
              VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15,
                      clock_timestamp())
              ON CONFLICT (idempotency_key) DO UPDATE
-                 SET status = 'PENDING', retry_count = 0, last_error = '',
-                     next_retry_at = NULL, completed_at = NULL,
-                     created_at = clock_timestamp(), updated_at = NOW()
-                 WHERE existing.status = 'COMPLETED'
-                   AND EXISTS (
+                 SET row_revision = EXCLUDED.row_revision,
+                     status = CASE WHEN existing.status = 'IN_PROGRESS'
+                                   THEN existing.status ELSE 'PENDING' END,
+                     retry_count = CASE WHEN existing.status = 'IN_PROGRESS'
+                                        THEN existing.retry_count ELSE 0 END,
+                     last_error = CASE WHEN existing.status = 'IN_PROGRESS'
+                                       THEN existing.last_error ELSE '' END,
+                     next_retry_at = CASE WHEN existing.status = 'IN_PROGRESS'
+                                          THEN existing.next_retry_at ELSE NULL END,
+                     completed_at = CASE WHEN existing.status = 'IN_PROGRESS'
+                                         THEN existing.completed_at ELSE NULL END,
+                     updated_at = CASE WHEN existing.status = 'IN_PROGRESS'
+                                       THEN existing.updated_at ELSE NOW() END,
+                     created_at = clock_timestamp()
+                 WHERE EXISTS (
                        SELECT 1 FROM {rel} AS newer
-                       WHERE newer.project_id = existing.project_id
-                         AND newer.source_table = existing.source_table
-                         AND md5(newer.source_row_key::text) = md5(existing.source_row_key::text)
-                         AND {newer_tenant} = {existing_tenant}
-                         AND newer.target_backend = existing.target_backend
-                         AND newer.target_instance = existing.target_instance
-                         AND newer.resource_name = existing.resource_name
-                         AND newer.created_at > existing.created_at)
+                       WHERE {same_row}
+                         AND newer.row_revision > existing.row_revision)
              RETURNING task_id
          )
          SELECT task_id::TEXT FROM inserted
          UNION ALL
          SELECT task_id::TEXT FROM {rel} WHERE idempotency_key = $1
          LIMIT 1",
-        newer_tenant =
-            crate::runtime::canonical_store::postgres_projection::projection_task_row_tenant_sql(
-                "newer"
-            ),
-        existing_tenant =
-            crate::runtime::canonical_store::postgres_projection::projection_task_row_tenant_sql(
-                "existing"
+        same_row =
+            crate::runtime::canonical_store::postgres_projection::projection_task_same_row_sql(
+                "newer", "existing"
             ),
     )
 }
@@ -1087,6 +1091,24 @@ impl ProjectionWorker {
         self.run_loop(None::<std::future::Pending<()>>).await;
     }
 
+    /// H5: the worker loop under a singleton lease. The fencing token is
+    /// re-verified before every pass; the first failed check returns, so a
+    /// superseded leader (paused past its TTL while a peer took over) claims
+    /// and materializes nothing further. The lease heartbeat additionally
+    /// drops a pass mid-flight when ownership is lost.
+    pub async fn run_forever_fenced(self, fence: crate::runtime::singleton::LeaseFence) {
+        let interval = Duration::from_secs(self.settings.poll_interval_secs.max(1));
+        let mut ticker = tokio::time::interval(interval);
+        loop {
+            ticker.tick().await;
+            if let Err(err) = fence.check().await {
+                tracing::warn!(error = %err, "projection worker stopping: lease fence lost");
+                return;
+            }
+            self.run_and_log_once().await;
+        }
+    }
+
     /// Run the worker loop until `shutdown` resolves.
     pub async fn run_until_cancelled<F>(self, shutdown: F)
     where
@@ -1184,6 +1206,7 @@ impl ProjectionWorker {
 
         let mut completed = 0usize;
         let mut failed = 0usize;
+        let ordering_enforced = ProjectionTaskStore::enforces_per_row_ordering(self.store.as_ref());
 
         // Consume the claimed tasks and move each field into its local — `claimed`
         // is not used after this loop, so the per-field clones are unnecessary (#107).
@@ -1213,6 +1236,15 @@ impl ProjectionWorker {
                 &project_id,
                 &manifest_checksum,
             ) {
+                // D9: a ledger that cannot order one row's tasks must not drive
+                // a keyed target — refuse instead of applying out of order.
+                Ok(()) if !ordering_enforced
+                    && projection_task_is_ordering_dependent(&target_backend, &target_options) =>
+                {
+                    Err(projection_ordering_refusal(ProjectionTaskStore::backend_label(
+                        self.store.as_ref(),
+                    )))
+                }
                 Ok(()) => {
                     self.execute_task(
                         &project_id,
@@ -1276,7 +1308,11 @@ impl ProjectionWorker {
                 }
                 Err(err) => {
                     let new_retry = retry_count + 1;
-                    let new_status = if new_retry >= self.settings.max_retries {
+                    // An ordering refusal is permanent for this ledger:
+                    // dead-letter it now rather than burn the retry budget.
+                    let new_status = if new_retry >= self.settings.max_retries
+                        || err.starts_with(PROJECTION_ORDERING_REFUSAL)
+                    {
                         ProjectionTaskStatus::DeadLetter
                     } else {
                         ProjectionTaskStatus::Failed
@@ -1402,13 +1438,26 @@ impl ProjectionWorker {
                 .await;
         }
 
+        // E8: an edge projection's endpoint labels come from the manifest
+        // (the referenced tables' node labels) when the target does not
+        // declare them, so the edge MATCH addresses the same labels the node
+        // projection / IR / DDL use.
+        let target_options = if normalized_backend == "neo4j" {
+            with_manifest_edge_labels(
+                &self.catalog.active_for(project_id).manifest,
+                resource_name,
+                target_options,
+            )
+        } else {
+            target_options.clone()
+        };
         let request = render_projection_mutation(
             &normalized_backend,
             projection_kind,
             resource_name,
             operation,
             source_row_key,
-            target_options,
+            &target_options,
             source_payload,
             &scope,
         )?;
@@ -1448,11 +1497,10 @@ impl ProjectionWorker {
             .unwrap_or_else(|| resource_name.to_string());
         let key = redis_projection_key(&pattern, source_row_key, source_payload, scope)?;
         if operation.eq_ignore_ascii_case("delete") {
-            // The cache delete primitive matches a SCAN pattern; escape the
-            // glob metacharacters so it removes exactly this key and a `*` in
-            // a row value can never widen the delete to other records.
+            // Exact-key DEL (never a SCAN MATCH pattern): a `*` in a row value
+            // can never widen the delete to other records or tenants.
             self.runtime
-                .projection_cache_delete_for_project(instance, project_id, &redis_glob_escape(&key))
+                .projection_cache_delete_for_project(instance, project_id, &key)
                 .await?;
             return Ok(());
         }
@@ -1712,19 +1760,6 @@ fn redis_projection_key(
     Ok(scope.scoped_key(&rendered))
 }
 
-/// Escape Redis glob metacharacters (`*`, `?`, `[`, `]`, `\`) so a SCAN
-/// `MATCH` pattern matches exactly one literal key.
-fn redis_glob_escape(key: &str) -> String {
-    let mut escaped = String::with_capacity(key.len());
-    for ch in key.chars() {
-        if matches!(ch, '*' | '?' | '[' | ']' | '\\') {
-            escaped.push('\\');
-        }
-        escaped.push(ch);
-    }
-    escaped
-}
-
 /// The object key an object projection writes:
 /// `t:{tenant}/p:{project}/{key_prefix}/{id}.json`.
 fn object_projection_key(
@@ -1741,6 +1776,32 @@ fn object_projection_key(
         format!("{}/{}.json", key_prefix.trim().trim_matches('/'), id)
     };
     Ok(scope.scoped_key(&object_key))
+}
+
+/// Prefix of the error a projection task is dead-lettered with when the task
+/// ledger cannot enforce per-row ordering (D9). It starts with the authority
+/// prefix so reconciliation repair never requeues it into the same refusal.
+const PROJECTION_ORDERING_REFUSAL: &str =
+    "projection authority rejected: per-row ordering unavailable:";
+
+fn projection_ordering_refusal(store_label: &str) -> String {
+    format!(
+        "{PROJECTION_ORDERING_REFUSAL} the '{store_label}' projection task ledger does not \
+         enforce per-row ordering (monotonic row revision + supersede + one in-flight task \
+         per row), so a keyed projection target could be rolled back to an older row state; \
+         run the projection worker on the PostgreSQL system store"
+    )
+}
+
+/// Whether applying this task out of order could leave the target holding an
+/// older row state. Every keyed target (upsert/delete by id) is; only an
+/// append-only ClickHouse target, which records every change as a new row and
+/// ignores deletes, is order-independent.
+fn projection_task_is_ordering_dependent(
+    target_backend: &str,
+    target_options: &serde_json::Value,
+) -> bool {
+    !(normalize_backend(target_backend) == "clickhouse" && clickhouse_append_only(target_options))
 }
 
 /// Whether a ClickHouse projection target is declared append-only
@@ -1892,6 +1953,115 @@ fn render_qdrant_projection(
     }))
 }
 
+/// Option keys an edge projection declares its endpoint labels under (first
+/// wins), in `[source, target]` order. Shared with [`render_neo4j_projection`].
+const EDGE_ENDPOINT_LABEL_KEYS: [[&str; 2]; 2] = [
+    ["edge_source_label", "from_label"],
+    ["edge_target_label", "to_label"],
+];
+
+/// `target_options` plus the endpoint labels the manifest implies for an edge
+/// projection that does not declare them. The edge's source table is the table
+/// whose neo4j projection targets `resource_name`; each endpoint field that is a
+/// single-column foreign key resolves to the referenced table's node label —
+/// the label of that table's own neo4j node projection when it has one, else
+/// the shared IR/DDL label ([`neo4j_label_for_table`]). Declared labels win;
+/// an endpoint the manifest cannot resolve stays unlabeled (an unlabeled MATCH
+/// is still scope-keyed, only slower).
+///
+/// [`neo4j_label_for_table`]: crate::generation::neo4j_labels::neo4j_label_for_table
+fn with_manifest_edge_labels(
+    manifest: &CatalogManifest,
+    resource_name: &str,
+    target_options: &serde_json::Value,
+) -> serde_json::Value {
+    let declared = |key: &str| option_value(target_options, key).filter(|v| !v.trim().is_empty());
+    let (Some(source_field), Some(target_field)) =
+        (declared("edge_source_field"), declared("edge_target_field"))
+    else {
+        return target_options.clone();
+    };
+    let is_neo4j = |target: &ProjectionTarget| normalize_backend(&target.backend) == "neo4j";
+    let plans = ProjectionPlan::from_manifest(manifest);
+    let Some(source_table) = plans
+        .iter()
+        .find(|plan| {
+            plan.targets
+                .iter()
+                .any(|target| is_neo4j(target) && target.resource_name == resource_name)
+        })
+        .and_then(|plan| manifest_table_named(manifest, &plan.source_schema, &plan.source_table))
+    else {
+        return target_options.clone();
+    };
+    let node_label = |table: &crate::generation::manifest::ManifestTable| -> String {
+        plans
+            .iter()
+            .filter(|plan| plan.source_table == table.table && plan.source_schema == table.schema)
+            .flat_map(|plan| plan.targets.iter())
+            .find(|&target| {
+                is_neo4j(target)
+                    && !target
+                        .options
+                        .iter()
+                        .any(|o| o.key.eq_ignore_ascii_case("edge_source_field"))
+            })
+            .map(|target| {
+                let label_override = crate::generation::backends::neo4j::NEO4J_LABEL_OPTION_KEYS
+                    .iter()
+                    .find_map(|key| {
+                        target
+                            .options
+                            .iter()
+                            .find(|o| o.key.eq_ignore_ascii_case(key) && !o.value.trim().is_empty())
+                    })
+                    .map(|o| o.value.as_str());
+                crate::generation::backends::neo4j::resolve_neo4j_label(
+                    &target.resource_name,
+                    label_override,
+                )
+            })
+            .unwrap_or_else(|| {
+                crate::generation::neo4j_labels::neo4j_label_for_table(manifest, table)
+            })
+    };
+    let mut options = match target_options {
+        serde_json::Value::Array(entries) => entries.clone(),
+        _ => Vec::new(),
+    };
+    for (keys, field) in EDGE_ENDPOINT_LABEL_KEYS
+        .iter()
+        .zip([source_field.trim(), target_field.trim()])
+    {
+        if keys.iter().any(|&key| declared(key).is_some()) {
+            continue;
+        }
+        let Some(referenced) = source_table
+            .foreign_keys
+            .iter()
+            .find(|fk| fk.columns.len() == 1 && fk.columns[0].eq_ignore_ascii_case(field))
+            .and_then(|fk| manifest_table_named(manifest, &fk.ref_schema, &fk.ref_table))
+        else {
+            continue;
+        };
+        options.push(serde_json::json!({ "key": keys[0], "value": node_label(referenced) }));
+    }
+    serde_json::Value::Array(options)
+}
+
+/// The manifest table `schema.name`, or the only-by-name match when the schema
+/// differs (a foreign key's `ref_schema` defaults to `public`).
+fn manifest_table_named<'m>(
+    manifest: &'m CatalogManifest,
+    schema: &str,
+    name: &str,
+) -> Option<&'m crate::generation::manifest::ManifestTable> {
+    let by_name = || manifest.tables.iter().filter(move |t| t.table == name);
+    by_name()
+        .find(|t| schema.trim().is_empty() || t.schema == schema)
+        .or_else(|| by_name().next())
+}
+
 fn render_neo4j_projection(
     resource_name: &str,
     operation: &str,
@@ -1953,10 +2123,10 @@ fn render_neo4j_projection(
             });
             // Endpoint labels, when declared, let the executor's edge MATCH
             // use the label index instead of scanning every node.
-            for (option_keys, field) in [
-                (["edge_source_label", "from_label"], "from_label"),
-                (["edge_target_label", "to_label"], "to_label"),
-            ] {
+            for (option_keys, field) in EDGE_ENDPOINT_LABEL_KEYS
+                .into_iter()
+                .zip(["from_label", "to_label"])
+            {
                 if let Some(endpoint_label) = option_keys
                     .iter()
                     .find_map(|key| option_value(target_options, key))
@@ -2137,17 +2307,37 @@ impl ReconciliationWorker {
         let mut ticker = tokio::time::interval(interval);
         loop {
             ticker.tick().await;
-            let reports = self.run_once().await;
-            for r in &reports {
-                tracing::info!(
-                    project_id = %r.project_id,
-                    source_table = %r.source_table,
-                    backend = %r.target_backend,
-                    dead_letter = %r.dead_letter_count,
-                    repaired = %r.repair_tasks_enqueued,
-                    "projection reconciliation pass",
-                );
+            self.run_and_log_once().await;
+        }
+    }
+
+    /// H5: [`Self::run_forever`] under a singleton lease: the fencing token is
+    /// re-verified before every pass and the first failed check returns, so a
+    /// superseded leader stops requeueing / replaying.
+    pub async fn run_forever_fenced(self, fence: crate::runtime::singleton::LeaseFence) {
+        let interval = Duration::from_secs(self.settings.interval_secs);
+        let mut ticker = tokio::time::interval(interval);
+        loop {
+            ticker.tick().await;
+            if let Err(err) = fence.check().await {
+                tracing::warn!(error = %err, "projection reconciliation stopping: lease fence lost");
+                return;
             }
+            self.run_and_log_once().await;
+        }
+    }
+
+    async fn run_and_log_once(&self) {
+        let reports = self.run_once().await;
+        for r in &reports {
+            tracing::info!(
+                project_id = %r.project_id,
+                source_table = %r.source_table,
+                backend = %r.target_backend,
+                dead_letter = %r.dead_letter_count,
+                repaired = %r.repair_tasks_enqueued,
+                "projection reconciliation pass",
+            );
         }
     }
 
@@ -2625,6 +2815,41 @@ mod tests {
         }
     }
 
+    /// D9: on a task ledger that cannot order one row's tasks, every keyed
+    /// target is refused (dead-lettered with the named reason, which the
+    /// reconciliation repair never requeues); only an append-only ClickHouse
+    /// target — where order cannot change the outcome — still applies.
+    #[test]
+    fn unordered_ledgers_refuse_every_keyed_projection_target() {
+        let none = json!([]);
+        let append_only = json!([{"key": "append_only", "value": "true"}]);
+        for backend in [
+            "qdrant", "mongodb", "neo4j", "redis", "s3", "minio", "postgres",
+        ] {
+            assert!(
+                projection_task_is_ordering_dependent(backend, &none),
+                "{backend} is keyed"
+            );
+        }
+        assert!(projection_task_is_ordering_dependent("clickhouse", &none));
+        assert!(!projection_task_is_ordering_dependent(
+            "clickhouse",
+            &append_only
+        ));
+        let refusal = projection_ordering_refusal("sqlite");
+        assert!(
+            refusal.starts_with(PROJECTION_ORDERING_REFUSAL),
+            "{refusal}"
+        );
+        assert!(
+            refusal.starts_with(
+                crate::runtime::canonical_store::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX
+            ),
+            "reconciliation repair must never requeue an ordering refusal: {refusal}"
+        );
+        assert!(refusal.contains("'sqlite'"), "{refusal}");
+    }
+
     /// ClickHouse cannot apply a projected delete. Only a target declared
     /// append-only is supported (lint), and then a delete is a no-op rather
     /// than a dead letter.
@@ -2782,8 +3007,8 @@ mod tests {
         )
         .unwrap();
         assert_eq!(key, "t:t1/p:proj-a/patient:p*");
-        assert_eq!(redis_glob_escape(&key), "t:t1/p:proj-a/patient:p\\*");
-        assert_eq!(redis_glob_escape("a?[b]\\"), "a\\?\\[b\\]\\\\");
+        // The delete removes exactly this rendered key (`DEL`, never a SCAN
+        // MATCH pattern), so the `*` stays a literal character.
         // An unfilled placeholder would make every such row share one key.
         let err = redis_projection_key("patient:{id}", &json!({}), &json!({}), &scope).unwrap_err();
         assert!(err.contains("placeholder"), "{err}");
@@ -2844,10 +3069,11 @@ mod tests {
         assert!(settings.task_lease_secs >= MIN_TASK_LEASE_SECS);
     }
 
-    /// D9: tasks are ordered by a stamp taken while the writer holds the row
-    /// lock, and a row returning to an earlier value re-arms that value's task.
+    /// D9: tasks are ordered by a sequence-drawn revision taken while the
+    /// writer holds the row lock, and a row returning to an earlier value
+    /// re-arms that value's task with a FRESH revision — whatever its status.
     #[test]
-    fn task_insert_orders_by_clock_timestamp_and_rearms_aba_rows() {
+    fn task_insert_orders_by_row_revision_and_rearms_aba_rows() {
         let sql = projection_task_insert_sql("\"udb_system\".\"udb_projection_tasks\"");
         assert!(sql.contains("source_checksum, created_at)"), "{sql}");
         assert!(sql.contains("clock_timestamp())"), "{sql}");
@@ -2855,9 +3081,22 @@ mod tests {
             sql.contains("ON CONFLICT (idempotency_key) DO UPDATE"),
             "{sql}"
         );
-        assert!(sql.contains("WHERE existing.status = 'COMPLETED'"), "{sql}");
         assert!(
-            sql.contains("newer.created_at > existing.created_at"),
+            sql.contains("SET row_revision = EXCLUDED.row_revision"),
+            "{sql}"
+        );
+        assert!(
+            sql.contains("newer.row_revision > existing.row_revision"),
+            "{sql}"
+        );
+        // An in-flight task keeps its status (its worker is applying exactly
+        // this content); every other status is re-armed as PENDING.
+        assert!(
+            sql.contains("THEN existing.status ELSE 'PENDING' END"),
+            "{sql}"
+        );
+        assert!(
+            !sql.contains("WHERE existing.status = 'COMPLETED'"),
             "{sql}"
         );
         assert!(!sql.contains("DO NOTHING"), "{sql}");
@@ -2906,6 +3145,104 @@ mod tests {
         assert_eq!(edge["rel_type"], "TREATS");
         assert_eq!(edge["from_label"], "Doctor");
         assert_eq!(edge["to_label"], "Patient");
+    }
+
+    /// E8: an edge projection that does not declare its endpoint labels gets
+    /// them from the manifest — the referenced tables' node labels — so the
+    /// edge MATCH and the node projection address the same labels.
+    #[test]
+    fn graph_edge_endpoint_labels_derive_from_the_manifest() {
+        use crate::generation::manifest::ManifestForeignKey;
+        let opt = |key: &str, value: &str| ManifestStoreOption {
+            key: key.into(),
+            value: value.into(),
+        };
+        let neo4j = |resource: &str, options: Vec<ManifestStoreOption>| ManifestProjection {
+            projection_kind: "graph".into(),
+            backend: "neo4j".into(),
+            resource_name: resource.into(),
+            options,
+            ..Default::default()
+        };
+        let fk = |column: &str, ref_table: &str| ManifestForeignKey {
+            columns: vec![column.into()],
+            ref_schema: "clinic".into(),
+            ref_table: ref_table.into(),
+            ref_columns: vec!["id".into()],
+            ..Default::default()
+        };
+        let manifest = CatalogManifest {
+            tables: vec![
+                ManifestTable {
+                    message_name: "Doctor".into(),
+                    schema: "clinic".into(),
+                    table: "doctors".into(),
+                    projections: vec![neo4j("doctors", vec![opt("node_label", "Doctor")])],
+                    ..Default::default()
+                },
+                // No node projection: falls back to the shared IR/DDL label.
+                ManifestTable {
+                    message_name: "Patient".into(),
+                    schema: "clinic".into(),
+                    table: "patients".into(),
+                    ..Default::default()
+                },
+                ManifestTable {
+                    message_name: "Treatment".into(),
+                    schema: "clinic".into(),
+                    table: "treatments".into(),
+                    foreign_keys: vec![fk("doctor_id", "doctors"), fk("patient_id", "patients")],
+                    projections: vec![neo4j(
+                        "treatments",
+                        vec![
+                            opt("udb.neo4j_label", "TREATS"),
+                            opt("edge_source_field", "doctor_id"),
+                            opt("edge_target_field", "patient_id"),
+                        ],
+                    )],
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let options = json!([
+            {"key":"udb.neo4j_label","value":"TREATS"},
+            {"key":"edge_source_field","value":"doctor_id"},
+            {"key":"edge_target_field","value":"patient_id"}
+        ]);
+        let derived = with_manifest_edge_labels(&manifest, "treatments", &options);
+        let payload = json!({"id":"e1","doctor_id":"d1","patient_id":"p1"});
+        let edge = render_projection_mutation(
+            "neo4j",
+            "graph",
+            "treatments",
+            "upsert",
+            &json!({"id":"e1"}),
+            &derived,
+            &payload,
+            &ProjectionScope::default(),
+        )
+        .unwrap();
+        assert_eq!(edge["from_label"], "Doctor");
+        assert_eq!(
+            edge["to_label"],
+            crate::generation::neo4j_labels::neo4j_label_for_table(&manifest, &manifest.tables[1])
+        );
+        // A declared endpoint label wins over the manifest.
+        let declared = json!([
+            {"key":"edge_source_field","value":"doctor_id"},
+            {"key":"edge_target_field","value":"patient_id"},
+            {"key":"from_label","value":"Physician"}
+        ]);
+        let kept = with_manifest_edge_labels(&manifest, "treatments", &declared);
+        assert_eq!(
+            option_value(&kept, "from_label").as_deref(),
+            Some("Physician")
+        );
+        assert!(option_value(&kept, "edge_source_label").is_none());
+        // Node projections (no edge fields) are untouched.
+        let node = json!([{"key":"node_label","value":"Doctor"}]);
+        assert_eq!(with_manifest_edge_labels(&manifest, "doctors", &node), node);
     }
 
     #[test]

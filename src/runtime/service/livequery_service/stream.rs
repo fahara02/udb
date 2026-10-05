@@ -124,8 +124,9 @@ pub(crate) async fn run_delta_forward(
     // of this task — normal break, error close, abort) releases this
     // subscription's per-tenant active-stream budget slot.
     stream_slot: StreamSlot,
-    // Cross-replica journal backstop (None when the journal head could not be
-    // read; the broadcast fast path still runs).
+    // Cross-replica journal tail. The subscribe handler refuses the stream when
+    // the journal head cannot be read, so a live stream always has one; `None`
+    // only in unit harnesses that drive the forwarder without a journal.
     mut journal_tail: Option<JournalTail>,
 ) {
     // Reflect this newly-active stream in the per-tenant gauge (the acquirer
@@ -344,10 +345,31 @@ async fn poll_journal_tail(
     let Some(tail) = journal_tail else {
         return Forwarded::Continue;
     };
-    let (events, last_scanned) = tail
+    // An unreadable journal closes the stream with a routable, retryable
+    // error. Swallowing it would leave this subscriber on the broadcast
+    // alone, which on every replica but the CDC tailer's leader is silent —
+    // indistinguishable from "nothing changed". The client resumes from its
+    // last delivered event id once the journal is readable again.
+    let (events, last_scanned) = match tail
         .cdc
-        .journal_scan_for_scope(cdc_topic, tenant_id, project_id, &tail.cursor, tail.batch)
-        .await;
+        .try_journal_scan_for_scope(cdc_topic, tenant_id, project_id, &tail.cursor, tail.batch)
+        .await
+    {
+        Ok(scan) => scan,
+        Err(err) => {
+            tracing::warn!(
+                topic = %cdc_topic,
+                error = %err,
+                "live query stream closed: the CDC journal cannot be read"
+            );
+            let _ = tx
+                .send(Err(super::errors::livequery_journal_unavailable_status(
+                    "journal_tail",
+                )))
+                .await;
+            return Forwarded::Stop;
+        }
+    };
     if let Some(last_scanned) = last_scanned {
         tail.cursor = last_scanned;
     }

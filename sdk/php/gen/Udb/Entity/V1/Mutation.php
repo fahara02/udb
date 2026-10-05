@@ -84,6 +84,13 @@ class Mutation extends \Google\Protobuf\Internal\Message
      */
     protected $content_type = '';
     /**
+     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+     * INVALID_ARGUMENT before the transaction opens (a transactional relational
+     * mutation keeps no per-mutation replay receipt, so the key cannot be
+     * honoured, and it is never silently ignored). Use the unary verb's
+     * `idempotency_key` when a relational write must be deduplicated.
+     *
      * Generated from protobuf field <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      */
     protected $idempotency_key = '';
@@ -158,6 +165,12 @@ class Mutation extends \Google\Protobuf\Internal\Message
      *     @type string $object_data
      *     @type string $content_type
      *     @type string $idempotency_key
+     *           Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+     *           Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+     *           INVALID_ARGUMENT before the transaction opens (a transactional relational
+     *           mutation keeps no per-mutation replay receipt, so the key cannot be
+     *           honoured, and it is never silently ignored). Use the unary verb's
+     *           `idempotency_key` when a relational write must be deduplicated.
      *     @type \Google\Protobuf\Struct $changes
      *           Partial-update payload for `operation = "update"` — the SET columns and the
      *           atomic increments. Same semantics as the unary UpdateRequest (SETs named
@@ -569,6 +582,13 @@ class Mutation extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+     * INVALID_ARGUMENT before the transaction opens (a transactional relational
+     * mutation keeps no per-mutation replay receipt, so the key cannot be
+     * honoured, and it is never silently ignored). Use the unary verb's
+     * `idempotency_key` when a relational write must be deduplicated.
+     *
      * Generated from protobuf field <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      * @return string
      */
@@ -578,6 +598,13 @@ class Mutation extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+     * INVALID_ARGUMENT before the transaction opens (a transactional relational
+     * mutation keeps no per-mutation replay receipt, so the key cannot be
+     * honoured, and it is never silently ignored). Use the unary verb's
+     * `idempotency_key` when a relational write must be deduplicated.
+     *
      * Generated from protobuf field <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      * @param string $var
      * @return $this

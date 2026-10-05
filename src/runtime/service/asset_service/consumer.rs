@@ -431,12 +431,12 @@ impl AssetServiceImpl {
                 let brokers = brokers.clone();
                 // Leader-elected: only the lease holder runs the manager loop, so
                 // the per-topic consumers exist once cluster-wide (no per-node dup).
-                match crate::runtime::singleton::run_while_leader(
+                match crate::runtime::singleton::run_while_leader_fenced(
                     &singleton_pool,
                     &singleton_relation,
                     crate::runtime::singleton::WORKER_ASSET_TRIGGER_MANAGER,
                     crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-                    || async move { manager.run_trigger_manager_loop(brokers).await },
+                    |fence| async move { manager.run_trigger_manager_loop(brokers, fence).await },
                 )
                 .await
                 {
@@ -458,7 +458,14 @@ impl AssetServiceImpl {
 
     /// The manager loop, run only while this node holds the lease. Reconciles the
     /// running consumer set against the desired trigger-topic set every interval.
-    async fn run_trigger_manager_loop(self: std::sync::Arc<Self>, brokers: String) {
+    /// H5: the lease's fencing token is re-verified on every reconcile; a
+    /// superseded leader returns, and dropping `consumers` aborts every consumer
+    /// it started, so two nodes never run the same trigger consumers.
+    async fn run_trigger_manager_loop(
+        self: std::sync::Arc<Self>,
+        brokers: String,
+        fence: crate::runtime::singleton::LeaseFence,
+    ) {
         let reconcile_interval = std::time::Duration::from_secs(
             std::env::var("UDB_ASSET_TRIGGER_RECONCILE_SECS")
                 .ok()
@@ -473,6 +480,13 @@ impl AssetServiceImpl {
         let mut ticker = tokio::time::interval(reconcile_interval);
         loop {
             ticker.tick().await;
+            if let Err(err) = fence.check().await {
+                tracing::warn!(
+                    error = %err,
+                    "asset trigger manager stopping: lease fence lost; aborting its consumers"
+                );
+                return;
+            }
             // Forget consumers whose task already exited so they can be restarted.
             consumers
                 .handles

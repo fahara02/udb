@@ -62,6 +62,12 @@ services:
     depends_on: *udb-xa-ha-depends
     healthcheck: *udb-xa-ha-healthcheck
 
+  # Start ordering: B boots only after A is healthy, so the two replicas never
+  # race the system-store DDL on a cold database (the broker also serializes
+  # that DDL under the startup advisory lock; this keeps the smoke's cold start
+  # deterministic). B is the smoke's SURVIVOR, so it carries a bounded
+  # on-failure restart policy; A is the replica the smoke SIGKILLs and asserts
+  # stays down, so it deliberately has none.
   udb-xa-ha-b:
     profiles: ["broker-xa-ha"]
     hostname: udb-xa-ha-b
@@ -69,5 +75,9 @@ services:
       context: .
       dockerfile: Dockerfile
     environment: *udb-xa-ha-env
-    depends_on: *udb-xa-ha-depends
+    depends_on:
+      <<: *udb-xa-ha-depends
+      udb-xa-ha-a:
+        condition: service_healthy
+    restart: on-failure:5
     healthcheck: *udb-xa-ha-healthcheck

@@ -782,9 +782,10 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
             return Ok(0);
         }
         // Resolve each idempotency_key → task_id via the idem lookup table
-        // (point reads on the PK), then read that task's status. A key whose
-        // task is COMPLETED/DEAD_LETTER/FAILED is "settled" and not counted.
-        let mut pending = 0i64;
+        // (point reads on the PK), then read that task's status. Only a COMPLETED
+        // task settles its key; D10: an unknown key (no idem row / no task row)
+        // stays unsettled exactly as on Postgres.
+        let mut completed = Vec::new();
         for key in idempotency_keys {
             let lookup = format!(
                 "SELECT task_id FROM {tbl} WHERE idempotency_key = ?",
@@ -819,11 +820,14 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
                 ProjectionTaskStatus::parse(&status),
                 Some(ProjectionTaskStatus::Completed)
             );
-            if !settled {
-                pending += 1;
+            if settled {
+                completed.push(key.as_str());
             }
         }
-        Ok(pending)
+        Ok(super::system_store::unsettled_fence_key_count(
+            idempotency_keys,
+            completed,
+        ))
     }
 
     async fn projection_task_summary(&self) -> SystemStoreResult<ProjectionTaskSummary> {

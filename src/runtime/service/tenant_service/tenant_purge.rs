@@ -732,8 +732,10 @@ pub(crate) struct TenantVectorPurgeReport {
 /// Erase the tenant's vectors from every vector collection it may occupy: the
 /// manifest's vector stores, the tenant's embedding-model collections and
 /// search-index collections (read from their durable registries, so this MUST
-/// run before the relational ripple deletes those rows), and the process-local
-/// `EnsureResource` collections. Points are deleted by the server-stamped
+/// run before the relational ripple deletes those rows), the `EnsureResource`
+/// collections (the durable route table plus the process-local cache), and the
+/// asset `EMBED` collection. Registries are read for EVERY registered project,
+/// not only projects that happen to hold an ad-hoc route. Points are deleted by the server-stamped
 /// `_tenant_id` payload tag, which also removes embedding chunk text stored with
 /// them.
 ///
@@ -756,15 +758,49 @@ pub(crate) async fn purge_tenant_vector_stores(
         }));
         return report;
     };
-    let routes = runtime.vector_resource_route_snapshot();
+    let mut routes = runtime.vector_resource_route_snapshot();
+    match runtime
+        .persisted_vector_resource_routes_for_tenant(tenant_id)
+        .await
+    {
+        Ok(persisted) => routes.extend(persisted),
+        Err(err) => report.excluded.push(vector_enumeration_failure(
+            "vector_resource_routes",
+            "*",
+            &err,
+        )),
+    }
     let mut targets = tenant_vector_purge_targets(manifest, &routes);
-    // Registries are read per project the broker knows of (the default project
-    // plus every project an ad-hoc route was registered under).
+    // Registries are read per project the broker knows of: the default project,
+    // every registered project, and every project an ad-hoc route names.
     let mut projects: BTreeSet<String> = routes
         .iter()
         .map(|(project, _, _)| project.clone())
         .collect();
     projects.insert(String::new());
+    match runtime.list_projects().await {
+        Ok(registered) => projects.extend(
+            registered
+                .iter()
+                .filter_map(|project| project.get("project_id").and_then(|v| v.as_str()))
+                .filter(|project| !project.trim().is_empty())
+                .map(str::to_string),
+        ),
+        // No project registry (non-Postgres system store) is not a failure: the
+        // default project and the routed projects are still covered.
+        Err(err) if err.code() == tonic::Code::FailedPrecondition => {}
+        Err(err) => report
+            .excluded
+            .push(vector_enumeration_failure("projects", "*", &err)),
+    }
+    // The asset EMBED step writes every tenant's points to one Qdrant collection
+    // (per project instance), stamped `_tenant_id`.
+    let asset_collection = super::super::asset_service::asset_vector_collection();
+    for project in &projects {
+        if let Some(target) = TenantVectorTarget::new(project, "qdrant", "", &asset_collection) {
+            targets.insert(target);
+        }
+    }
     for project in &projects {
         match tenant_embedding_vector_targets(runtime, tenant_id, project).await {
             Ok(found) => targets.extend(found),
@@ -800,6 +836,16 @@ pub(crate) async fn purge_tenant_vector_stores(
                 "tenant_column": "_tenant_id",
                 "deleted": 0,
             })),
+            // A collection that does not exist holds no vectors: nothing remains.
+            Err(message) if vector_collection_absent(&message) => {
+                report.purged.push(serde_json::json!({
+                    "schema": schema,
+                    "table": target.collection,
+                    "tenant_column": "_tenant_id",
+                    "deleted": 0,
+                    "note": "collection absent",
+                }))
+            }
             Err(message) => {
                 tracing::warn!(
                     backend = %target.backend,
@@ -816,6 +862,16 @@ pub(crate) async fn purge_tenant_vector_stores(
         }
     }
     report
+}
+
+/// Whether a vector delete failed only because the collection does not exist
+/// (e.g. the asset EMBED collection on a deployment that never ran EMBED). Pure.
+fn vector_collection_absent(message: &str) -> bool {
+    let lower = message.to_ascii_lowercase();
+    lower.contains("doesn't exist")
+        || lower.contains("does not exist")
+        || lower.contains("not found: collection")
+        || lower.contains("index_not_found")
 }
 
 fn vector_enumeration_failure(registry: &str, project: &str, err: &Status) -> serde_json::Value {
@@ -900,6 +956,12 @@ async fn execute_soft_purge(
     // live bearer tokens at once instead of at TTL (same H10 mechanism the status
     // update path uses).
     gate::mark_tenant_status(target, TENANT_STATUS_INACTIVE_DB);
+    // G5: and on every other replica (the UPDATE above is already committed).
+    let purged_code = updated
+        .as_ref()
+        .and_then(|row| sqlx::Row::try_get::<String, _>(row, "code").ok())
+        .unwrap_or_default();
+    gate::notify_tenant_status_changed(pool, target, &purged_code).await;
     // Best-effort cluster-wide cutoff (accelerator over the durable state).
     #[cfg(feature = "redis")]
     let tenant_denylisted = if let Some(denylist) = svc.jti_denylist.as_ref() {
@@ -1186,6 +1248,18 @@ mod tests {
         assert!(targets.contains(
             &TenantVectorTarget::new("p1", "elasticsearch", "es-a", "adhoc").expect("route target")
         ));
+    }
+
+    #[test]
+    fn vector_collection_absent_matches_only_missing_collections() {
+        assert!(vector_collection_absent(
+            "Not found: Collection `udb_asset_embeddings` doesn't exist!"
+        ));
+        assert!(vector_collection_absent(
+            "elasticsearch returned 404: index_not_found_exception"
+        ));
+        assert!(!vector_collection_absent("connection refused"));
+        assert!(!vector_collection_absent("HTTP 500 internal error"));
     }
 
     #[test]

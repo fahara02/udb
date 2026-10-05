@@ -258,7 +258,12 @@ fn seed_emit_policies(
     for object in objects {
         for action in actions {
             rows.push(udb::runtime::authz::AuthzPolicy {
-                id: format!("udb-authz-seed:{tenant}:{project}:{role}:{object}:{action}"),
+                // The SAME deterministic id the seed stores, so a policy file
+                // emitted here names exactly the rows the database holds.
+                id: udb::runtime::service::seed_authz_policy_id(
+                    tenant, project, role, object, action,
+                )
+                .to_string(),
                 enabled: true,
                 effect: udb::runtime::authz::Effect::Allow,
                 tenant: tenant.to_string(),
@@ -725,7 +730,19 @@ mod tests {
             assert_eq!(row.resource, "*");
             assert_eq!(row.effect, udb::runtime::authz::Effect::Allow);
             assert!(row.enabled);
-            assert!(!row.id.is_empty());
+            // The emitted id is the stored id (B10), not a synthetic label.
+            assert_eq!(
+                row.id,
+                udb::runtime::service::seed_authz_policy_id(
+                    tenant,
+                    "billing",
+                    "app_rw",
+                    "*",
+                    &row.action,
+                )
+                .to_string()
+            );
+            assert!(uuid::Uuid::parse_str(&row.id).is_ok(), "{}", row.id);
         }
         // The file is read back by `policy-seed` / `policy-lint` as AuthzPolicy.
         let json = serde_json::to_string(&rows).expect("serializes");

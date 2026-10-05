@@ -98,6 +98,12 @@ export enum StepType {
   UNSPECIFIED = 0,
 
   /**
+   * Metadata feature hash, NOT a content embedding: a 64-dim signed
+   * feature-hashing vector over the asset's name + metadata text
+   * (`embedding_model = "metadata_feature_hash_v1"`, `semantic = false` in the
+   * step result). It never reads the asset's bytes and is not a neural model;
+   * use the EmbeddingService for content/semantic embeddings.
+   *
    * @generated from enum value: STEP_TYPE_EMBED = 1;
    */
   EMBED = 1,

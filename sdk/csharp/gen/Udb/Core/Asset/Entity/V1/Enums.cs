@@ -73,6 +73,13 @@ namespace Udb.Core.Asset.Entity.V1 {
 
   public enum StepType {
     [pbr::OriginalName("STEP_TYPE_UNSPECIFIED")] Unspecified = 0,
+    /// <summary>
+    /// Metadata feature hash, NOT a content embedding: a 64-dim signed
+    /// feature-hashing vector over the asset's name + metadata text
+    /// (`embedding_model = "metadata_feature_hash_v1"`, `semantic = false` in the
+    /// step result). It never reads the asset's bytes and is not a neural model;
+    /// use the EmbeddingService for content/semantic embeddings.
+    /// </summary>
     [pbr::OriginalName("STEP_TYPE_EMBED")] Embed = 1,
     [pbr::OriginalName("STEP_TYPE_THUMBNAIL")] Thumbnail = 2,
     [pbr::OriginalName("STEP_TYPE_RESIZE")] Resize = 3,

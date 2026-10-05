@@ -873,6 +873,36 @@ where
     Ok(count)
 }
 
+/// D10/A8: the read-fence rule every system store shares. The fence is
+/// "unsettled" for each DISTINCT requested key that has no COMPLETED task.
+///
+/// A requested key with NO task row counts as unsettled. The keys come from
+/// this broker's own write responses, so a missing row means the fence is
+/// looking in the wrong ledger (another project's store, a reset table) —
+/// treating it as "0 pending" cleared the fence and served a stale read as
+/// fresh. Counting it keeps the fence closed until it times out into the
+/// honest ProjectionMissing. Superseded tasks are retired as COMPLETED, never
+/// deleted, so they still clear. Stores that can only list the COMPLETED keys
+/// among the requested set (rather than anti-join against the request) compute
+/// the count here, so every backend applies the identical rule as Postgres.
+pub(crate) fn unsettled_fence_key_count<I, S>(idempotency_keys: &[String], completed: I) -> i64
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    let completed: std::collections::BTreeSet<String> = completed
+        .into_iter()
+        .map(|key| key.as_ref().to_string())
+        .collect();
+    idempotency_keys
+        .iter()
+        .map(String::as_str)
+        .collect::<std::collections::BTreeSet<&str>>()
+        .into_iter()
+        .filter(|key| !completed.contains(*key))
+        .count() as i64
+}
+
 pub(crate) async fn pending_json_projection_task_count<A>(
     adapter: &A,
     idempotency_keys: &[String],
@@ -880,9 +910,11 @@ pub(crate) async fn pending_json_projection_task_count<A>(
 where
     A: JsonProjectionTaskAdapter + ?Sized,
 {
-    let mut count = 0;
+    let mut completed = Vec::new();
     for idem in idempotency_keys {
         let idem_key = adapter.projection_idem_key(idem);
+        // An unknown key (no idem pointer, or a pointer to a missing task) is
+        // NOT completed, so it stays unsettled: see `unsettled_fence_key_count`.
         let Some(task_id) = adapter
             .get_projection_idem(&idem_key)
             .await?
@@ -901,11 +933,11 @@ where
         // read-your-writes they still count as pending — a FAILED task holds the
         // fence until the retry lands; a DEAD_LETTER task never clears, so the
         // fence times out into a ProjectionMissing rather than lying "fresh".
-        if !matches!(row.status, ProjectionTaskStatus::Completed) {
-            count += 1;
+        if matches!(row.status, ProjectionTaskStatus::Completed) {
+            completed.push(idem.as_str());
         }
     }
-    Ok(count)
+    Ok(unsettled_fence_key_count(idempotency_keys, completed))
 }
 
 // ── ProjectionTaskStore trait ────────────────────────────────────────────────
@@ -929,6 +961,21 @@ pub trait ProjectionTaskStore: Send + Sync {
     /// Idempotent — safe to call on every startup. Creates the
     /// `udb_projection_tasks` table + indexes in the right dialect.
     async fn ensure_projection_tables(&self) -> SystemStoreResult<()>;
+
+    /// D9: whether this store enforces the per-row ordering contract — every
+    /// task carries a monotonic row revision, a claim retires tasks a newer
+    /// revision superseded, and at most one task per (row, target) is in
+    /// flight — so a keyed projection target (upsert/delete by id) can never
+    /// be rolled back to an older row state by a retried or slow task.
+    ///
+    /// Only the PostgreSQL ledger implements it (it is also the only ledger
+    /// the live write path enqueues into, inside the writer's transaction).
+    /// The worker REFUSES ordering-dependent tasks claimed from a store that
+    /// returns `false` (dead-letters them with a named reason) instead of
+    /// applying them in an order it cannot guarantee.
+    fn enforces_per_row_ordering(&self) -> bool {
+        false
+    }
 
     /// Insert a task. Returns the assigned `task_id`. Re-enqueueing
     /// the same `idempotency_key` returns the existing `task_id`
@@ -1015,16 +1062,18 @@ pub trait ProjectionTaskStore: Send + Sync {
         target_instance: &str,
     ) -> SystemStoreResult<i64>;
 
-    /// NW1-3e — count tasks among `idempotency_keys` whose status is
-    /// NOT terminal-or-failed (`COMPLETED` / `DEAD_LETTER` / `FAILED`).
+    /// NW1-3e — count the DISTINCT keys among `idempotency_keys` that have
+    /// no `COMPLETED` task.
     ///
     /// Used by `consistency_fence::wait_for_fence` to decide whether
     /// a read fence (carrying the projection task IDs the producer
     /// enqueued on the matching write) has cleared. Returning `0`
-    /// means every task in the list either succeeded or is in a
-    /// terminal failure state that the fence treats as "not coming
-    /// back, serve the read." A non-zero count means at least one
-    /// task is still in-flight; the fence loops and re-checks.
+    /// means every requested key's task COMPLETED. FAILED (will retry),
+    /// DEAD_LETTER (will never complete) and an UNKNOWN key (no task row in
+    /// this store) all count as unsettled, so the fence stays closed and
+    /// times out into ProjectionMissing instead of serving a stale read as
+    /// fresh. Every implementation applies [`unsettled_fence_key_count`]'s
+    /// rule.
     async fn pending_projection_task_count(
         &self,
         idempotency_keys: &[String],
@@ -2335,6 +2384,17 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Pin (D10/A8): unknown fence keys fail closed in the shared rule every
+    /// store applies; only a COMPLETED key settles, and duplicates count once.
+    #[test]
+    fn unknown_fence_keys_stay_unsettled() {
+        let keys = ["a", "ghost", "a", "b"].map(str::to_string);
+        assert_eq!(unsettled_fence_key_count(&keys, ["a"]), 2);
+        assert_eq!(unsettled_fence_key_count(&keys, ["a", "b", "ghost"]), 0);
+        assert_eq!(unsettled_fence_key_count(&keys, Vec::<String>::new()), 3);
+        assert_eq!(unsettled_fence_key_count(&[], ["a"]), 0);
+    }
 
     /// Pin: status string forms are the wire contract for the DB
     /// CHECK constraint + the dashboard. They MUST NOT change.

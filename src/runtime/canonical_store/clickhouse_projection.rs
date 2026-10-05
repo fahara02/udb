@@ -853,25 +853,29 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
             return Ok(0);
         }
         let tbl = self.projection_table()?;
-        // FINAL count of rows whose idempotency_key is in the list and whose
-        // status is NOT settled (PG's `status NOT IN
-        // ('COMPLETED','DEAD_LETTER','FAILED')`). FINAL is required so superseded
-        // versions don't double-count.
+        // D10: FINAL list of the requested keys whose latest version is
+        // COMPLETED; every other requested key — including one with no task row
+        // at all — stays unsettled, exactly as on Postgres. FINAL is required so
+        // a superseded version never reads as the current status.
         let in_list = idempotency_keys
             .iter()
             .map(|k| sql_lit(k))
             .collect::<Vec<_>>()
             .join(", ");
         let sql = format!(
-            "SELECT count() AS n FROM {tbl} FINAL WHERE idempotency_key IN ({in_list}) \
-             AND status <> 'COMPLETED'" // P2-1 NF-1/NF-2: FAILED/DEAD_LETTER = not projected yet = still fences
+            "SELECT DISTINCT idempotency_key FROM {tbl} FINAL \
+             WHERE idempotency_key IN ({in_list}) AND status = 'COMPLETED'" // P2-1 NF-1/NF-2: FAILED/DEAD_LETTER = not projected yet = still fences
         );
         let rows = self
             .executor()
             .select_rows(&sql)
             .await
             .map_err(|e| ch_err("pending_projection_task_count", e))?;
-        Ok(rows.first().map(|r| ch_i64(r, "n")).unwrap_or(0))
+        let completed = rows.iter().map(|r| ch_str(r, "idempotency_key"));
+        Ok(super::system_store::unsettled_fence_key_count(
+            idempotency_keys,
+            completed,
+        ))
     }
 
     async fn projection_task_summary(&self) -> SystemStoreResult<ProjectionTaskSummary> {

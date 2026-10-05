@@ -509,6 +509,15 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object idempotencyKey_ = "";
   /**
+   * <pre>
+   * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+   * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+   * INVALID_ARGUMENT before the transaction opens (a transactional relational
+   * mutation keeps no per-mutation replay receipt, so the key cannot be
+   * honoured, and it is never silently ignored). Use the unary verb's
+   * `idempotency_key` when a relational write must be deduplicated.
+   * </pre>
+   *
    * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
    * @return The idempotencyKey.
    */
@@ -526,6 +535,15 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+   * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+   * INVALID_ARGUMENT before the transaction opens (a transactional relational
+   * mutation keeps no per-mutation replay receipt, so the key cannot be
+   * honoured, and it is never silently ignored). Use the unary verb's
+   * `idempotency_key` when a relational write must be deduplicated.
+   * </pre>
+   *
    * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
    * @return The bytes for idempotencyKey.
    */
@@ -2913,6 +2931,15 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object idempotencyKey_ = "";
     /**
+     * <pre>
+     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+     * INVALID_ARGUMENT before the transaction opens (a transactional relational
+     * mutation keeps no per-mutation replay receipt, so the key cannot be
+     * honoured, and it is never silently ignored). Use the unary verb's
+     * `idempotency_key` when a relational write must be deduplicated.
+     * </pre>
+     *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      * @return The idempotencyKey.
      */
@@ -2929,6 +2956,15 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+     * INVALID_ARGUMENT before the transaction opens (a transactional relational
+     * mutation keeps no per-mutation replay receipt, so the key cannot be
+     * honoured, and it is never silently ignored). Use the unary verb's
+     * `idempotency_key` when a relational write must be deduplicated.
+     * </pre>
+     *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      * @return The bytes for idempotencyKey.
      */
@@ -2946,6 +2982,15 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+     * INVALID_ARGUMENT before the transaction opens (a transactional relational
+     * mutation keeps no per-mutation replay receipt, so the key cannot be
+     * honoured, and it is never silently ignored). Use the unary verb's
+     * `idempotency_key` when a relational write must be deduplicated.
+     * </pre>
+     *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      * @param value The idempotencyKey to set.
      * @return This builder for chaining.
@@ -2959,6 +3004,15 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+     * INVALID_ARGUMENT before the transaction opens (a transactional relational
+     * mutation keeps no per-mutation replay receipt, so the key cannot be
+     * honoured, and it is never silently ignored). Use the unary verb's
+     * `idempotency_key` when a relational write must be deduplicated.
+     * </pre>
+     *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      * @return This builder for chaining.
      */
@@ -2969,6 +3023,15 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
+     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
+     * INVALID_ARGUMENT before the transaction opens (a transactional relational
+     * mutation keeps no per-mutation replay receipt, so the key cannot be
+     * honoured, and it is never silently ignored). Use the unary verb's
+     * `idempotency_key` when a relational write must be deduplicated.
+     * </pre>
+     *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      * @param value The bytes for idempotencyKey to set.
      * @return This builder for chaining.

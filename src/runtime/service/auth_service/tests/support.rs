@@ -254,7 +254,7 @@ pub(super) fn api_key_service(pool: sqlx::PgPool) -> ApiKeyServiceImpl {
         .with_postgres(Some(pool))
 }
 
-async fn native_broker_service() -> DataBrokerService {
+pub(super) async fn native_broker_service() -> DataBrokerService {
     let config = UdbConfig {
         primary: DbConfig {
             direct_dsn: live_pg_dsn(),

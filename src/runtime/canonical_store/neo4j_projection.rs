@@ -497,14 +497,15 @@ impl ProjectionTaskStore for Neo4jCanonicalStore {
         if idempotency_keys.is_empty() {
             return Ok(0);
         }
-        // Count rows whose idempotency_key is in the list and whose status is
-        // NOT settled (COMPLETED/DEAD_LETTER/FAILED). `IN $keys` binds a string
-        // list directly (PG's `= ANY($1)`).
+        // D10: list the requested keys whose task COMPLETED; every other
+        // requested key — including one with no task node — stays unsettled,
+        // exactly as on Postgres (FAILED/DEAD_LETTER still fence). `IN $keys`
+        // binds a string list directly (PG's `= ANY($1)`).
         let cypher = format!(
             "MATCH (t:{LABEL_PROJECTION_TASK} {{run_tag:$tag}}) \
              WHERE t.idempotency_key IN $keys \
-               AND t.status <> 'COMPLETED' \
-             RETURN count(t) AS n"
+               AND t.status = 'COMPLETED' \
+             RETURN DISTINCT t.idempotency_key AS k"
         );
         let rows = self
             .executor()
@@ -514,11 +515,13 @@ impl ProjectionTaskStore for Neo4jCanonicalStore {
             )
             .await
             .map_err(|e| neo_err("pending_projection_task_count", e))?;
-        Ok(rows
-            .first()
-            .and_then(|r| r.get("n"))
-            .and_then(Json::as_i64)
-            .unwrap_or(0))
+        let completed = rows
+            .iter()
+            .filter_map(|r| r.get("k").and_then(Json::as_str).map(str::to_string));
+        Ok(super::system_store::unsettled_fence_key_count(
+            idempotency_keys,
+            completed,
+        ))
     }
 
     async fn projection_task_summary(&self) -> SystemStoreResult<ProjectionTaskSummary> {

@@ -22,7 +22,17 @@ impl GcsCompiler {
         ctx: &'a CompileContext<'_>,
     ) -> Result<&'a ManifestTable, CompileError> {
         match crate::broker::table_lookup(ctx.manifest, message_type) {
-            crate::broker::TableLookup::Found(table) => Ok(table),
+            // Fail closed on an empty tenant when enforcement is on (the
+            // non-SQL counterpart of the generic-SQL tenant-scope check):
+            // an empty tenant would address the shared unprefixed key space.
+            crate::broker::TableLookup::Found(table) => {
+                super::util::require_tenant_scope(
+                    table,
+                    ctx,
+                    super::util::TenantScopeKind::Always,
+                )?;
+                Ok(table)
+            }
             // fix_plan §4.1: an ambiguous short name names its candidates so the
             // caller can FQN-qualify — never a silent first-wins misroute.
             crate::broker::TableLookup::Ambiguous { .. } => Err(CompileError::Malformed {
@@ -263,5 +273,42 @@ mod tests {
             }
             other => panic!("expected Object, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn empty_tenant_fails_closed_under_enforcement() {
+        let m = fixture();
+        let read =
+            LogicalRead::message("acme.docs.v1.Doc").with_filter(LogicalFilter::Comparison {
+                field: "object_name".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("file.pdf".into()),
+            });
+        for tenant in [None, Some(""), Some("  ")] {
+            let mut ctx = CompileContext::new(&m)
+                .with_project("p1")
+                .enforcing_tenant_scope(true);
+            if let Some(tenant) = tenant {
+                ctx = ctx.with_tenant(tenant);
+            }
+            let err = GcsCompiler.compile_read(&read, &ctx).unwrap_err();
+            assert!(
+                matches!(err, CompileError::TenantScopeRequired { .. }),
+                "tenant {tenant:?}: {err:?}"
+            );
+        }
+        // A verified tenant compiles to the tenant-prefixed key.
+        let ctx = CompileContext::new(&m)
+            .with_tenant("acme")
+            .with_project("p1")
+            .enforcing_tenant_scope(true);
+        match GcsCompiler.compile_read(&read, &ctx).unwrap() {
+            CompiledRendering::Object { key, .. } => assert_eq!(key, "t:acme/p:p1/file.pdf"),
+            other => panic!("expected Object, got {other:?}"),
+        }
+        // Without enforcement (internal / single-tenant) the legacy behaviour
+        // is unchanged.
+        let ctx = CompileContext::new(&m);
+        assert!(GcsCompiler.compile_read(&read, &ctx).is_ok());
     }
 }

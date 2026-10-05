@@ -5,6 +5,78 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.26] - 2026-10-06
+
+Completes the 2026-10-05 enterprise-readiness audit. The 0.5.24 fixes were
+correct units with no test across the seam (served RPC → worker → store →
+tenant-scoped read); this release finishes the fixes that stopped short and
+adds the seam tests, so a fix counts only when a served or worker test proves
+it on a real backend.
+
+### Security
+
+- **Raw dispatch: an escaped `compiler_mediated` key skipped the strip**
+  and was honoured by the Cassandra/ClickHouse executors. The spec is now
+  decoded before the marker is removed.
+- **Raw Neo4j writes accepted a caller-chosen scope** (write into another
+  tenant's graph). The broker replaces it with the verified scope.
+- **CAS revealed another tenant's row** on tables whose key includes the tenant
+  column. The locked-row lookup always binds the verified tenant/project.
+- Batch items (BatchSelect, BatchUpsert, VectorBatchUpsert) refuse the `"*"`
+  message type; the typed-relational backend guard resolves `backend:instance`
+  selectors (`mysql:reporting` was admitted as Postgres); IR compilers for
+  qdrant, weaviate, pinecone, azureblob and gcs fail closed on an empty tenant;
+  Cassandra `{table, rows}` writes are stamped with the verified scope.
+- Unknown read-fence keys fail closed in every system store, not only Postgres.
+- Weaviate search refuses classes whose scope properties use word tokenization
+  (`acme` would match `acme-eu`).
+
+### Fixed
+
+- **HA: a second replica crashed on startup.** System-store DDL raced the first
+  replica (`relation "outbox_events" already exists`) and tripped the outbox
+  assertion. All startup DDL runs under the startup advisory lock; the outbox
+  `headers` column is added on cold starts; the XA HA compose orders B after A.
+- **Vector routes were memory-only.** EnsureResource routes persist in
+  `udb_system.udb_vector_resource_routes`; tenant purge covers persisted routes
+  and asset EMBED collections; asset EMBED point ids are tenant-prefixed.
+- **Projection ordering.** Tasks carry a `row_revision`; a row's tasks apply in
+  revision order with at most one in flight (Postgres ledger). Other ledgers
+  refuse ordering-dependent keyed tasks with a named reason.
+- CDC/projection carry the exact stored ciphertext on Update; Redis projection
+  deletes by exact key; LiveQuery refuses with `Unavailable` when the journal
+  is unreadable instead of silently serving a snapshot.
+- Neo4j create/upsert report server counts; edge endpoint labels derive from
+  the manifest; uniqueness is tenant-composite.
+- BeginTx refuses a per-mutation `idempotency_key` instead of ignoring it; a
+  failed cache invalidation retries by exact key; authz policy `domain` is
+  stored normalized; `authz seed --emit` ids match the stored ids.
+- Tenant suspension reaches other replicas within ~1s (Postgres notify);
+  singleton workers (CDC tailers, projection, reconciliation, asset trigger)
+  check their lease fence; hybrid-search fallbacks are a Prometheus counter
+  (`udb_vector_hybrid_fallback_total`).
+- Native control-plane services are mounted from one function shared by
+  `serve()` and the tests.
+
+### Tests
+
+- Service-caller conformance: every service-callable native method, through
+  the real credential + method-security layers, with an exchanged bearer and
+  with the raw API key.
+- Served seam tests for the data plane (default-deny harness), authz admin,
+  vectors (Qdrant/Weaviate/ES/Pinecone stub), projection (Qdrant/MinIO/Mongo/
+  Redis/ClickHouse), CDC tail, LiveQuery on a non-leader, webhook and
+  notification HTTP delivery, store RPCs (Mongo/Neo4j/Cassandra/Redis/MinIO),
+  storage, native workers, sagas, lease fencing, health degradation.
+- A live test whose backend DSN is missing now FAILS in the CI live lane
+  instead of skipping. The native live step publishes backend DSNs as
+  `UDB_LIVE_*` aliases.
+
+### Documentation
+
+- Asset EMBED is described as a metadata feature hash, not a content
+  embedding; `UDB_XA_MYSQL_MIRROR_INSTANCES` documented.
+
 ## [0.5.25] - 2026-10-06
 
 ### Fixed

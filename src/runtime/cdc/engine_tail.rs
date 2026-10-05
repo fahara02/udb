@@ -1270,8 +1270,50 @@ impl CdcEngine {
         cursor_event_id: &str,
         limit: i64,
     ) -> (Vec<CdcEnvelope>, Option<String>) {
+        match self
+            .try_journal_scan_for_scope(topic, tenant_scope, project_scope, cursor_event_id, limit)
+            .await
+        {
+            Ok(scan) => scan,
+            Err(err) => {
+                warn!("[cdc] live-query journal scan failed: {err}");
+                (Vec::new(), None)
+            }
+        }
+    }
+
+    /// [`Self::journal_replay_for_scope`] that SURFACES an unreadable journal
+    /// instead of degrading to "no events". A caller that must not present
+    /// "nothing changed" when it cannot actually read the journal (the
+    /// LiveQuery resume replay and cross-replica tail) uses this.
+    pub(crate) async fn try_journal_replay_for_scope(
+        &self,
+        topic: &str,
+        tenant_scope: &str,
+        project_scope: &str,
+        cursor_event_id: &str,
+        limit: i64,
+    ) -> Result<Vec<CdcEnvelope>, String> {
+        self.try_journal_scan_for_scope(topic, tenant_scope, project_scope, cursor_event_id, limit)
+            .await
+            .map(|(events, _)| events)
+    }
+
+    /// [`Self::journal_scan_for_scope`] that returns `Err` when the journal
+    /// cannot be read at all (the first page fetch fails, nothing scanned). A
+    /// failure after some rows were scanned returns those rows with the
+    /// cursor advanced past them; the next call re-reads from there and
+    /// reports the failure if it persists.
+    pub(crate) async fn try_journal_scan_for_scope(
+        &self,
+        topic: &str,
+        tenant_scope: &str,
+        project_scope: &str,
+        cursor_event_id: &str,
+        limit: i64,
+    ) -> Result<(Vec<CdcEnvelope>, Option<String>), String> {
         if topic.trim().is_empty() || limit <= 0 {
-            return (Vec::new(), None);
+            return Ok((Vec::new(), None));
         }
         let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
         // Genesis floor for an unresolvable cursor: the Unix epoch, a valid
@@ -1334,6 +1376,9 @@ impl CdcEngine {
                 .await
             {
                 Ok(rows) => rows,
+                Err(err) if scanned == 0 => {
+                    return Err(format!("journal page fetch failed: {err}"));
+                }
                 Err(err) => {
                     warn!("[cdc] live-query resume journal page fetch failed: {err}");
                     break;
@@ -1408,7 +1453,7 @@ impl CdcEngine {
             }
         }
         let last_scanned = (scanned > 0).then_some(cursor_id);
-        (out, last_scanned)
+        Ok((out, last_scanned))
     }
 
     /// U21 step 2: sweep in-doubt `publishing` rows from prior epochs.
@@ -2950,6 +2995,19 @@ impl CdcEngine {
         &self,
         source: std::sync::Arc<dyn super::source::CdcSource>,
     ) -> Result<(), String> {
+        self.tail_source_fenced(source, None).await
+    }
+
+    /// H5: [`Self::tail_source`] under a singleton lease. Before every publish
+    /// the lease's fencing token is re-verified; a superseded leader returns
+    /// `Err` WITHOUT publishing or advancing the persisted source offset, so a
+    /// paused-then-resumed old leader cannot double-publish behind the new one.
+    #[cfg(feature = "kafka")]
+    pub async fn tail_source_fenced(
+        &self,
+        source: std::sync::Arc<dyn super::source::CdcSource>,
+        fence: Option<&crate::runtime::singleton::LeaseFence>,
+    ) -> Result<(), String> {
         use futures::StreamExt;
 
         let label = source.backend_label().to_string();
@@ -3060,6 +3118,13 @@ impl CdcEngine {
             }
             let payload_string = serde_json::to_string(&evt).unwrap_or_else(|_| "{}".to_string());
             let source_event_id = source_cdc_event_id(&label, &evt);
+
+            if let Some(fence) = fence
+                && let Err(err) = fence.check().await
+            {
+                warn!("[cdc] tail_source {label} stopping before publish: {err}");
+                return Err(err);
+            }
 
             let publish_result = if self.config.exactly_once_mode
                 == CdcExactlyOnceMode::KafkaTransactional

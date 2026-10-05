@@ -215,9 +215,13 @@ fn cypher_write_clause(cypher: &str) -> Option<String> {
 
 /// Real affected count from a statement's `includeStats` counters plus its
 /// returned rows: nodes/relationships created or deleted, or — for a pure
-/// property update (`MATCH ... SET ... RETURN n`) where the counters carry no
-/// entity count — the number of rows the statement returned. Zero when the
-/// statement changed nothing.
+/// property / label update (`MATCH ... SET ... RETURN n`) where the counters
+/// carry no entity count — the number of rows the statement returned. A pure
+/// property / label update that returns no rows (`MATCH ... SET` with no
+/// `RETURN`) still changed at least one entity per the server's counters, so
+/// it reports 1 rather than 0 (the server does not say how many entities; add
+/// `RETURN count(*)` for an exact figure). Zero when the statement changed
+/// nothing.
 fn neo4j_affected_rows(stats: Option<&Json>, returned_rows: usize) -> u64 {
     let Some(stats) = stats else {
         return 0;
@@ -228,14 +232,27 @@ fn neo4j_affected_rows(stats: Option<&Json>, returned_rows: usize) -> u64 {
         + counter("relationships_created")
         + counter("relationship_deleted")
         + counter("relationships_deleted");
+    let attribute_updates =
+        counter("properties_set") + counter("labels_added") + counter("labels_removed");
     let contains_updates = stats
         .get("contains_updates")
         .and_then(Json::as_bool)
-        .unwrap_or(entities > 0 || counter("properties_set") > 0);
+        .unwrap_or(entities > 0 || attribute_updates > 0);
     if !contains_updates {
         return 0;
     }
-    entities.max(returned_rows as u64)
+    let affected = entities.max(returned_rows as u64);
+    if affected == 0 && attribute_updates > 0 {
+        return 1;
+    }
+    affected
+}
+
+/// Affected count of an upsert statement (`MERGE ... SET ... RETURN`): one per
+/// returned (merged) entity, and only when the server's counters report a
+/// write. A MERGE that returned nothing reports 0.
+fn neo4j_upsert_affected(stats: Option<&Json>, returned_rows: usize) -> u64 {
+    neo4j_affected_rows(stats, returned_rows).min(returned_rows as u64)
 }
 
 /// The `affected` column of a `... RETURN count(*) AS affected` statement.
@@ -579,6 +596,27 @@ impl Neo4jExecutor {
             .unwrap_or_default())
     }
 
+    /// Run `statements` in one auto-commit WRITE transaction with
+    /// `includeStats`, returning each statement's rows and server counters.
+    async fn write_with_stats(
+        &self,
+        statements: &[(&str, Json)],
+    ) -> Result<Vec<(Vec<Json>, Option<Json>)>, String> {
+        let stmt_array: Vec<Json> = statements
+            .iter()
+            .map(|(text, params)| {
+                json!({ "statement": text, "parameters": params, "includeStats": true })
+            })
+            .collect();
+        let results = self
+            .post_statements(stmt_array, Neo4jAccessMode::Write)
+            .await?;
+        Ok(results
+            .iter()
+            .map(|result| (Self::rows_from_result(result), result.get("stats").cloned()))
+            .collect())
+    }
+
     /// Parse one statement result-set (the `{columns, data:[{row:[...]}]}`
     /// shape the HTTP API returns) into a `Vec` of column-keyed JSON objects.
     /// Shared by `run_single` (above) and the canonical-store helpers below.
@@ -736,22 +774,29 @@ impl Neo4jExecutor {
     /// scoping existed (no `_tenant_id`/`_project_id`) is adopted into the scope
     /// first, in the same transaction; otherwise the MERGE would create a twin
     /// that trips the unique-`id` constraint and the write could never land.
+    ///
+    /// Returns the affected count the server reported for the MERGE.
     pub async fn upsert_scoped_node(
         &self,
         label: &str,
         id: &str,
         properties: Json,
         scope: &GraphScope,
-    ) -> Result<(), String> {
+    ) -> Result<u64, String> {
         validate_neo4j_identifier(label)?;
-        if scope.is_empty() {
-            return self.create_node(label, id, properties).await;
-        }
-        let (adopt, merge) = scoped_node_upsert_cypher(label, scope);
         let params = scope.params(json!({ "id": id, "props": properties }));
-        self.cypher(&[(&adopt, params.clone()), (&merge, params)])
-            .await?;
-        Ok(())
+        let results = if scope.is_empty() {
+            let merge = format!("MERGE (n:{label} {{id: $id}}) SET n += $props RETURN n");
+            self.write_with_stats(&[(&merge, params)]).await?
+        } else {
+            let (adopt, merge) = scoped_node_upsert_cypher(label, scope);
+            self.write_with_stats(&[(&adopt, params.clone()), (&merge, params)])
+                .await?
+        };
+        Ok(results
+            .last()
+            .map(|(rows, stats)| neo4j_upsert_affected(stats.as_ref(), rows.len()))
+            .unwrap_or(0))
     }
 
     /// Tenant/project-scoped node delete: only the node inside the scope is
@@ -780,14 +825,16 @@ impl Neo4jExecutor {
     /// removed in the same statement. An endpoint that does not exist (yet) is an
     /// error, not a silent no-op: the projection task retries until the node
     /// projection that creates it has landed.
+    ///
+    /// Returns the affected count the server reported for the MERGE.
     pub async fn upsert_scoped_edge(
         &self,
         edge: &GraphEdge,
         scope: &GraphScope,
-    ) -> Result<(), String> {
+    ) -> Result<u64, String> {
         let cypher = scoped_edge_upsert_cypher(edge, scope)?;
-        let rows = self
-            .run_single(
+        let results = self
+            .write_with_stats(&[(
                 &cypher,
                 scope.params(json!({
                     "id": edge.id,
@@ -795,15 +842,16 @@ impl Neo4jExecutor {
                     "to_id": edge.to_id,
                     "props": edge.properties,
                 })),
-            )
+            )])
             .await?;
+        let (rows, stats) = results.into_iter().next().unwrap_or_default();
         if rows.is_empty() {
             return Err(format!(
                 "graph edge '{}' ({}) not written: endpoint node '{}' or '{}' does not exist in its tenant/project scope",
                 edge.id, edge.rel_type, edge.from_id, edge.to_id
             ));
         }
-        Ok(())
+        Ok(neo4j_upsert_affected(stats.as_ref(), rows.len()))
     }
 
     /// Delete the scoped edge identified by `id` (idempotent).
@@ -1094,10 +1142,11 @@ impl MutationExecutor for Neo4jExecutor {
                     .cloned()
                     .unwrap_or_else(|| json!({}));
                 let scope = request_scope(&spec)?;
-                self.upsert_scoped_node(&label, &id, properties, &scope)
+                let affected = self
+                    .upsert_scoped_node(&label, &id, properties, &scope)
                     .await
                     .map_err(|err| neo4j_internal_status("create_node", err))?;
-                Ok(r#"{"affected_rows":1}"#.to_string())
+                Ok(json!({ "affected_rows": affected }).to_string())
             }
             "update_node" => {
                 let label = req_str("label")?;
@@ -1135,10 +1184,11 @@ impl MutationExecutor for Neo4jExecutor {
                     properties: spec.get("properties").cloned().unwrap_or_else(|| json!({})),
                 };
                 let scope = request_scope(&spec)?;
-                self.upsert_scoped_edge(&edge, &scope)
+                let affected = self
+                    .upsert_scoped_edge(&edge, &scope)
                     .await
                     .map_err(|err| neo4j_internal_status("upsert_edge", err))?;
-                Ok(r#"{"affected_rows":1}"#.to_string())
+                Ok(json!({ "affected_rows": affected }).to_string())
             }
             "delete_edge" => {
                 let rel_type = req_str("rel_type")?;
@@ -1419,6 +1469,21 @@ mod tests {
         let noop = json!({"contains_updates": false});
         assert_eq!(neo4j_affected_rows(Some(&noop), 4), 0);
         assert_eq!(neo4j_affected_rows(None, 4), 0);
+        // `MATCH ... SET` with no RETURN: the counters confirm a write but carry
+        // no entity count, so at least one entity changed (never 0).
+        let set_only = json!({"contains_updates": true, "properties_set": 3});
+        assert_eq!(neo4j_affected_rows(Some(&set_only), 0), 1);
+        let label_only = json!({"labels_added": 1});
+        assert_eq!(neo4j_affected_rows(Some(&label_only), 0), 1);
+        // Upserts count merged entities, never the counters' delete+create pair.
+        let moved_edge = json!({
+            "contains_updates": true,
+            "relationships_deleted": 1,
+            "relationships_created": 1
+        });
+        assert_eq!(neo4j_upsert_affected(Some(&moved_edge), 1), 1);
+        assert_eq!(neo4j_upsert_affected(Some(&update), 0), 0);
+        assert_eq!(neo4j_upsert_affected(Some(&noop), 1), 0);
         assert_eq!(affected_from_count_rows(&[json!({"affected": 0})]), 0);
         assert_eq!(affected_from_count_rows(&[json!({"affected": 2})]), 2);
         assert_eq!(affected_from_count_rows(&[]), 0);

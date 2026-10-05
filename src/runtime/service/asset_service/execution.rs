@@ -819,8 +819,13 @@ pub(crate) async fn advance_instance(
                     .and_then(|value| value.get("vector_backend_instance"))
                     .and_then(|value| value.as_str())
                     .filter(|value| !value.trim().is_empty());
-                svc.delete_embedding(vector_project, vector_instance, &asset_id)
-                    .await;
+                svc.delete_embedding(
+                    &tenant_id.to_string(),
+                    vector_project,
+                    vector_instance,
+                    &asset_id,
+                )
+                .await;
             }
         }
     }

@@ -42,6 +42,9 @@ mod store;
 mod tenant_purge;
 #[cfg(test)]
 mod tests;
+// C9 live hard-purge vector erasure (real Qdrant; CI live lane).
+#[cfg(all(test, feature = "http-client"))]
+mod vector_purge_live;
 
 // Fail-closed request-time tenant-status gate. Re-exported at the module root so
 // the shared method-security tower layer awaits the durable gate on the validated

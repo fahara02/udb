@@ -67,7 +67,18 @@ impl PineconeCompiler {
         ctx: &'a CompileContext<'_>,
     ) -> Result<&'a ManifestTable, CompileError> {
         match crate::broker::table_lookup(ctx.manifest, message_type) {
-            crate::broker::TableLookup::Found(table) => Ok(table),
+            // E6: fail closed on an empty tenant when enforcement is on (the
+            // non-SQL counterpart of the generic-SQL tenant-scope check): an
+            // empty tenant would skip the `_tenant_id` predicate / stamp and
+            // address every tenant's points.
+            crate::broker::TableLookup::Found(table) => {
+                super::util::require_tenant_scope(
+                    table,
+                    ctx,
+                    super::util::TenantScopeKind::Always,
+                )?;
+                Ok(table)
+            }
             // fix_plan §4.1: an ambiguous short name names its candidates so the
             // caller can FQN-qualify — never a silent first-wins misroute.
             crate::broker::TableLookup::Ambiguous { .. } => Err(CompileError::Malformed {
@@ -1308,5 +1319,53 @@ mod tests {
             });
         let (path, _, _) = extract_json(PineconeCompiler.compile_read(&read, &ctx).unwrap());
         assert_eq!(path, "/vectors/fetch?ids=doc1");
+    }
+
+    #[test]
+    fn empty_tenant_fails_closed_under_enforcement() {
+        // E6: with enforcement on, a missing/blank tenant must refuse to compile
+        // instead of emitting a search with no `_tenant_id` predicate.
+        let m = fixture();
+        let search = LogicalSearch {
+            message_type: "acme.docs.v1.Doc".into(),
+            vector: Some(vec![0.1, 0.2, 0.3]),
+            text_query: None,
+            filter: None,
+            top_k: 5,
+            score_threshold: None,
+            require_hybrid: false,
+            with_vector: false,
+            with_payload: true,
+        };
+        for tenant in [None, Some(""), Some("  ")] {
+            let mut ctx = CompileContext::new(&m)
+                .with_project("p1")
+                .enforcing_tenant_scope(true);
+            if let Some(tenant) = tenant {
+                ctx = ctx.with_tenant(tenant);
+            }
+            let err = PineconeCompiler.compile_search(&search, &ctx).unwrap_err();
+            assert!(
+                matches!(err, CompileError::TenantScopeRequired { .. }),
+                "tenant {tenant:?}: {err:?}"
+            );
+        }
+        // A verified tenant compiles, and its tenant id reaches the request.
+        let ctx = CompileContext::new(&m)
+            .with_tenant("acme")
+            .with_project("p1")
+            .enforcing_tenant_scope(true);
+        let rendering = PineconeCompiler.compile_search(&search, &ctx).unwrap();
+        assert!(
+            format!("{rendering:?}").contains("acme"),
+            "tenant predicate missing: {rendering:?}"
+        );
+        // Without enforcement (internal / single-tenant) the legacy behaviour
+        // is unchanged.
+        assert!(
+            PineconeCompiler
+                .compile_search(&search, &CompileContext::new(&m))
+                .is_ok()
+        );
     }
 }

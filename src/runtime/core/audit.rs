@@ -620,7 +620,11 @@ pub(crate) async fn ensure_pg_audit_sink_ready(
         "UDB_AUDIT_SINK=postgres but no data-plane Postgres pool is configured (set UDB_PG_DSN)"
             .to_string()
     })?;
-    ensure_pg_audit_table(pool, &relation).await
+    // H4: replicas booting together would otherwise race this DDL.
+    crate::runtime::system::with_startup_ddl_lock(pool, "audit_sink", || {
+        ensure_pg_audit_table(pool, &relation)
+    })
+    .await
 }
 
 fn append_line(path: &str, line: &str) -> std::io::Result<()> {

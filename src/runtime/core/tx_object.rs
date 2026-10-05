@@ -288,6 +288,32 @@ fn is_bare_commit_marker(mutation: &Mutation) -> bool {
     mutation.commit && mutation.operation.trim().is_empty()
 }
 
+/// A relational mutation (upsert / update / delete) inside BeginTx cannot honour
+/// a per-mutation `idempotency_key`: replaying it would need a stored per-mutation
+/// receipt the transaction does not keep, and the key used to be accepted and
+/// silently ignored — a retried transaction then wrote twice while the caller
+/// believed it was deduplicated. Refuse it up front, before any saga row or
+/// transaction exists. Use the unary verbs (which do honour the key) when a
+/// write must be deduplicated; `vector_upsert` and `enqueue_outbox_event` keep
+/// using the field as before.
+fn reject_relational_tx_idempotency_keys(mutations: &[Mutation]) -> Result<(), tonic::Status> {
+    for (index, mutation) in mutations.iter().enumerate() {
+        let operation = mutation.operation.trim().to_ascii_lowercase();
+        if matches!(operation.as_str(), "upsert" | "update" | "delete")
+            && !mutation.idempotency_key.trim().is_empty()
+        {
+            return Err(tx_object_invalid_field(
+                format!("mutations[{index}].idempotency_key"),
+                "not supported on upsert/update/delete inside BeginTx; leave it empty",
+                format!(
+                    "BeginTx mutation {index} ({operation}) sets idempotency_key, which a                      transactional relational mutation cannot honour; nothing was written"
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
 impl DataBrokerRuntime {
     pub async fn begin_tx(
         &self,
@@ -353,6 +379,9 @@ impl DataBrokerRuntime {
             Err(err) => return vec![Err(err)],
         };
         if let Err(err) = validate_tx_strategy(strategy, &mutations) {
+            return vec![Err(err)];
+        }
+        if let Err(err) = reject_relational_tx_idempotency_keys(&mutations) {
             return vec![Err(err)];
         }
         let commit = mutations.iter().any(|mutation| mutation.commit);
@@ -453,7 +482,11 @@ impl DataBrokerRuntime {
             // non-owner/FORCE-RLS deployment's row policies see the right tenant.
             let relational_target = if matches!(operation.as_str(), "upsert" | "update" | "delete")
             {
-                super::setup_data::typed_relational_backend_guard(&context, "begin_tx")
+                super::setup_data::typed_relational_backend_guard(
+                    &context,
+                    &self.backend_instances,
+                    "begin_tx",
+                )
             } else {
                 Ok(())
             };
@@ -1944,27 +1977,86 @@ impl DataBrokerRuntime {
         Ok(())
     }
 
-    /// Best-effort read-cache invalidation after a committed write. Callers do
-    /// not fail the (already committed) write on an invalidation error, so the
-    /// failure is logged here — once, for every caller — instead of vanishing:
-    /// until the stale entries' TTL lapses, reads of `pattern` may be served
-    /// from the cache.
+    /// Read-cache invalidation after a committed write.
+    ///
+    /// Behaviour contract (documented, not silent):
+    /// 1. SCAN `pattern` and DEL every matching key.
+    /// 2. On ANY failure the invalidation is retried once on a fresh
+    ///    connection: keys the first pass already found are deleted by EXACT
+    ///    key (no SCAN needed, so a SCAN-side fault cannot hide them), then the
+    ///    pattern is re-scanned so keys the first pass never reached are
+    ///    covered too.
+    /// 3. Only when the retry also fails is the invalidation counted as failed
+    ///    (`udb_cache_invalidation_failure_total`) and logged at warn. The
+    ///    committed write is never failed by its cache; until the stale
+    ///    entries' TTL lapses, reads of `pattern` may then be served from the
+    ///    cache — this is the documented best-effort bound.
     #[cfg(feature = "redis")]
     pub(crate) async fn cache_delete_pattern(&self, pattern: &str) -> Result<(), String> {
-        let result = self.cache_delete_pattern_scan(pattern).await;
-        if let Err(err) = &result {
+        let mut found = Vec::new();
+        let first = self.cache_delete_pattern_scan(pattern, &mut found).await;
+        let Err(first_error) = first else {
+            return Ok(());
+        };
+        tracing::info!(
+            pattern = %pattern,
+            error = %first_error,
+            known_keys = found.len(),
+            "read-cache invalidation failed; retrying by exact key and re-scan"
+        );
+        let retry = match self.cache_delete_exact_keys(&found).await {
+            Ok(()) => {
+                let mut rescanned = Vec::new();
+                self.cache_delete_pattern_scan(pattern, &mut rescanned)
+                    .await
+            }
+            Err(err) => Err(err),
+        };
+        if let Err(err) = &retry {
             self.cache_metrics.invalidation_failed();
             tracing::warn!(
                 pattern = %pattern,
+                first_error = %first_error,
                 error = %err,
-                "read-cache invalidation failed; matching entries stay cached until their TTL expires"
+                "read-cache invalidation failed after an exact-key retry; matching entries                  stay cached until their TTL expires"
             );
         }
-        result
+        retry
     }
 
+    /// DEL each key by its exact name (the retry half of
+    /// [`Self::cache_delete_pattern`]). An empty key list is a no-op.
     #[cfg(feature = "redis")]
-    async fn cache_delete_pattern_scan(&self, pattern: &str) -> Result<(), String> {
+    async fn cache_delete_exact_keys(&self, keys: &[String]) -> Result<(), String> {
+        if keys.is_empty() {
+            return Ok(());
+        }
+        let Some(client) = &self.redis else {
+            return Ok(());
+        };
+        let mut conn = client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| e.to_string())?;
+        for key in keys {
+            let deleted = redis::cmd("DEL")
+                .arg(key)
+                .query_async::<u64>(&mut conn)
+                .await
+                .map_err(|e| e.to_string())?;
+            self.cache_metrics.invalidated(deleted);
+        }
+        Ok(())
+    }
+
+    /// SCAN + DEL pass. Every key SCAN returned is appended to `found` BEFORE
+    /// its DEL runs, so a failed DEL leaves the exact keys for the retry.
+    #[cfg(feature = "redis")]
+    async fn cache_delete_pattern_scan(
+        &self,
+        pattern: &str,
+        found: &mut Vec<String>,
+    ) -> Result<(), String> {
         let Some(client) = &self.redis else {
             return Ok(());
         };
@@ -1984,6 +2076,7 @@ impl DataBrokerRuntime {
                 .await
                 .map_err(|e| e.to_string())?;
             if !keys.is_empty() {
+                found.extend(keys.iter().cloned());
                 // A failed DEL leaves stale entries behind exactly like a failed
                 // SCAN; surface it rather than counting it as 0 invalidations.
                 let deleted = redis::cmd("DEL")
@@ -2001,12 +2094,17 @@ impl DataBrokerRuntime {
         Ok(())
     }
 
+    /// Remove ONE projected cache record by its exact key (`DEL key`). A
+    /// projection key is fully rendered and scope-prefixed, so it is deleted
+    /// literally — never through a SCAN `MATCH` pattern, where a glob
+    /// metacharacter in a row value (`*`, `?`, `[`) could widen the delete to
+    /// other rows or other tenants' records.
     #[cfg(feature = "redis")]
     pub(crate) async fn projection_cache_delete_for_project(
         &self,
         instance: Option<&str>,
         project_id: &str,
-        pattern: &str,
+        key: &str,
     ) -> Result<(), String> {
         let target = self
             .resolve_projection_write_target_for_project("redis", instance, project_id)
@@ -2018,30 +2116,12 @@ impl DataBrokerRuntime {
             .get_multiplexed_async_connection()
             .await
             .map_err(|e| e.to_string())?;
-        let mut cursor = 0_u64;
-        loop {
-            let (next, keys): (u64, Vec<String>) = redis::cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg(pattern)
-                .arg("COUNT")
-                .arg(500_u32)
-                .query_async(&mut conn)
-                .await
-                .map_err(|e| e.to_string())?;
-            if !keys.is_empty() {
-                let deleted = redis::cmd("DEL")
-                    .arg(&keys)
-                    .query_async::<u64>(&mut conn)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                self.cache_metrics.invalidated(deleted);
-            }
-            if next == 0 {
-                break;
-            }
-            cursor = next;
-        }
+        let deleted = redis::cmd("DEL")
+            .arg(key)
+            .query_async::<u64>(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        self.cache_metrics.invalidated(deleted);
         Ok(())
     }
 
@@ -2050,7 +2130,7 @@ impl DataBrokerRuntime {
         &self,
         _instance: Option<&str>,
         _project_id: &str,
-        _pattern: &str,
+        _key: &str,
     ) -> Result<(), String> {
         Err("redis projection target is unavailable: redis feature is disabled".to_string())
     }
@@ -3112,4 +3192,43 @@ fn table_tenant_value(
         .and_then(|value| value.as_str())
         .unwrap_or_default()
         .to_string()
+}
+
+#[cfg(test)]
+mod relational_tx_idempotency_key_tests {
+    use super::*;
+
+    fn mutation(operation: &str, idempotency_key: &str) -> Mutation {
+        Mutation {
+            operation: operation.to_string(),
+            message_type: "acme.test.v1.Widget".to_string(),
+            idempotency_key: idempotency_key.to_string(),
+            ..Mutation::default()
+        }
+    }
+
+    #[test]
+    fn relational_mutations_with_a_key_are_refused() {
+        for operation in ["upsert", "UPDATE", "delete"] {
+            let status = reject_relational_tx_idempotency_keys(&[
+                mutation("upsert", ""),
+                mutation(operation, "retry-1"),
+            ])
+            .expect_err("a relational idempotency_key must be refused");
+            assert_eq!(status.code(), tonic::Code::InvalidArgument);
+            assert!(status.message().contains("mutation 1"), "{status:?}");
+        }
+    }
+
+    #[test]
+    fn keyless_and_non_relational_mutations_are_admitted() {
+        assert!(
+            reject_relational_tx_idempotency_keys(&[
+                mutation("upsert", ""),
+                mutation("vector_upsert", "vec-1"),
+                mutation("enqueue_outbox_event", "evt-1"),
+            ])
+            .is_ok()
+        );
+    }
 }

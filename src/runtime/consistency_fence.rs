@@ -466,11 +466,12 @@ mod tests {
                 .await;
         assert_eq!(cleared, FenceOutcome::Cleared);
 
-        // 3. wait_for_fence with a projection task ID that doesn't
-        // exist clears too — the pending count is 0 because no task
-        // matches the idempotency key. (A non-existent task can't
-        // block a read forever.)
-        let cleared = super::wait_for_fence(
+        // 3. D10/A8: a fence on a projection task ID this store has never
+        // seen does NOT clear. The keys come from the broker's own write
+        // receipts, so an unknown key means the fence is looking in the wrong
+        // ledger; it fails closed and times out into ProjectionMissing (the
+        // read is not blocked forever — `max_wait_ms` bounds it).
+        let ghost = super::wait_for_fence(
             store_dyn.as_ref(),
             &ReadFence {
                 min_outbox_lsn: String::new(),
@@ -481,7 +482,18 @@ mod tests {
             "test",
         )
         .await;
-        assert_eq!(cleared, FenceOutcome::Cleared);
+        match ghost {
+            FenceOutcome::Stale(
+                crate::runtime::consistency::StaleReadWarning::ProjectionMissing {
+                    backend,
+                    resource,
+                },
+            ) => {
+                assert_eq!(backend, "sqlite");
+                assert!(resource.contains("ghost"), "{resource}");
+            }
+            other => panic!("an unknown fence key must not clear, got {other:?}"),
+        }
 
         // 4. Enqueue a task and fence on it — should block because
         // the task is PENDING, returning ProjectionMissing on timeout.

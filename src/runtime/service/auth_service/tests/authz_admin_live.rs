@@ -594,3 +594,233 @@ async fn live_postgres_authz_role_binding_authorize_and_lint() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+/// Raw privileged read of one stored policy row: `(tenant_id, domain)`.
+async fn raw_policy_tenant_and_domain(
+    pool: &sqlx::PgPool,
+    policy_id: &str,
+) -> Option<(String, String)> {
+    let model = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicyRule",
+        &["policy_id", "domain", "tenant_id"],
+    );
+    sqlx::query_as(&format!(
+        "SELECT COALESCE({tenant_id}, ''), COALESCE({domain}, '') FROM {rel} \
+         WHERE {policy_id} = $1::UUID",
+        tenant_id = model.q("tenant_id"),
+        domain = model.q("domain"),
+        rel = model.relation,
+        policy_id = model.q("policy_id"),
+    ))
+    .bind(policy_id)
+    .fetch_optional(pool)
+    .await
+    .expect("raw policy row read")
+}
+
+/// B3 — a tenant-bound policy admin (tenant A) cannot overwrite a policy id
+/// that tenant B owns through PutAuthzPolicy: PermissionDenied, and the stored
+/// row keeps tenant B.
+///
+/// Revert-proof: drop `check_policy_overwrite_boundary` from put_authz_policy
+/// and the upsert on `policy_id` re-homes the row into tenant A.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_put_authz_policy_refuses_foreign_policy_id_overwrite -- --ignored --nocapture"]
+async fn live_postgres_put_authz_policy_refuses_foreign_policy_id_overwrite() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authz = authz_service(pool.clone()).await;
+    let tenant_a = Uuid::new_v4().to_string();
+    let tenant_b = Uuid::new_v4().to_string();
+    let policy_id = Uuid::new_v4().to_string();
+    let record = |tenant: &str, resource: &str| authz_pb::PutAuthzPolicyRequest {
+        policy: Some(authz_pb::AuthzPolicyRecord {
+            id: policy_id.clone(),
+            enabled: true,
+            effect: "allow".to_string(),
+            tenant: tenant.to_string(),
+            subject: "svc-b3".to_string(),
+            action: "Select".to_string(),
+            resource: resource.to_string(),
+            ..Default::default()
+        }),
+    };
+
+    // Tenant B's policy, written in-process (no claim = unrestricted).
+    authz
+        .put_authz_policy(Request::new(record(&tenant_b, "acme.b3.v1.Invoice")))
+        .await
+        .expect("seed the tenant B policy");
+    assert_eq!(
+        raw_policy_tenant_and_domain(&pool, &policy_id)
+            .await
+            .map(|(tenant, _)| tenant),
+        Some(tenant_b.clone())
+    );
+
+    // Tenant A's admin aims the same id at its own tenant.
+    let ctx = crate::runtime::service::method_security::test_claim_context(
+        "policy-admin-a",
+        &tenant_a,
+        "",
+        &["udb:authz:admin"],
+        &[],
+    );
+    let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+        ctx,
+        authz.put_authz_policy(Request::new(record(&tenant_a, "acme.b3.v1.Payroll"))),
+    )
+    .await
+    .expect_err("a tenant-bound admin must not overwrite another tenant's policy id");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied, "{err:?}");
+    assert_eq!(
+        raw_policy_tenant_and_domain(&pool, &policy_id)
+            .await
+            .map(|(tenant, _)| tenant),
+        Some(tenant_b),
+        "the stored policy must keep tenant B"
+    );
+
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// B7 — CreatePolicyRule with a `tenant:<uuid>` domain (any spacing) stores
+/// BOTH `tenant_id` and the `domain` column normalized, and the rule then
+/// authorizes the bare tenant id the caller's claim carries.
+///
+/// Revert-proof: store `req.domain` verbatim and the raw domain column reads
+/// back as `" tenant: <uuid> "`.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_create_policy_rule_stores_domain_normalized -- --ignored --nocapture"]
+async fn live_postgres_create_policy_rule_stores_domain_normalized() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service(pool.clone());
+    let authz = authz_service(pool.clone()).await;
+    let user = create_verified_user(&authn, "authz_b7", "CorrectHorse1!").await;
+    let tenant = Uuid::new_v4().to_string();
+
+    let created = authz
+        .create_policy_rule(Request::new(authz_pb::CreatePolicyRuleRequest {
+            subject: user.user_id.clone(),
+            domain: format!(" tenant: {tenant} "),
+            object: "acme.b7.v1.Invoice".to_string(),
+            action: "Select".to_string(),
+            effect: authz_entity_pb::PolicyEffect::Allow as i32,
+            description: "B7 normalized domain".to_string(),
+            created_by: user.user_id.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("create policy rule with a tenant domain")
+        .into_inner()
+        .policy
+        .expect("created policy");
+    assert_eq!(created.domain, format!("tenant:{tenant}"));
+    assert_eq!(
+        raw_policy_tenant_and_domain(&pool, &created.policy_id).await,
+        Some((tenant.clone(), format!("tenant:{tenant}"))),
+        "tenant_id AND domain must be stored normalized"
+    );
+
+    let decision = authz
+        .check_access(Request::new(authz_pb::CheckAccessRequest {
+            user_id: user.user_id.clone(),
+            domain: tenant.clone(),
+            tenant_id: tenant.clone(),
+            object: "acme.b7.v1.Invoice".to_string(),
+            action: "Select".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("check access under the normalized tenant")
+        .into_inner();
+    assert!(
+        decision.allowed,
+        "the normalized rule must authorize the bare tenant id: {}",
+        decision.reason
+    );
+
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// B10 — the policy ids `udb authz seed --emit` writes are exactly the ids the
+/// offline seed stores: both derive them through `seed_authz_policy_id`, and
+/// the stored rows carry exactly that set (empty subject, role in attributes).
+///
+/// Revert-proof: give the seed its own id derivation again (or emit a
+/// synthetic `udb-authz-seed:` label) and the stored set no longer equals the
+/// derived set.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authz_seed_ids_match_emitted_ids -- --ignored --nocapture"]
+async fn live_postgres_authz_seed_ids_match_emitted_ids() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let tenant = Uuid::new_v4().to_string();
+    let project = "b10-project";
+    let role = "app_rw";
+    let objects = vec!["*".to_string(), "acme.b10.v1.Invoice".to_string()];
+    let actions = vec!["Select".to_string(), "Upsert".to_string()];
+
+    let inserted = crate::runtime::service::auth_service::seed_project_authz_policies(
+        &pool, &tenant, project, role, &actions, &objects,
+    )
+    .await
+    .expect("seed project authz policies");
+    assert_eq!(inserted, objects.len() * actions.len());
+
+    let mut expected: Vec<String> = objects
+        .iter()
+        .flat_map(|object| {
+            actions.iter().map(|action| {
+                crate::runtime::service::seed_authz_policy_id(
+                    &tenant, project, role, object, action,
+                )
+                .to_string()
+            })
+        })
+        .collect();
+    expected.sort();
+
+    let model = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicyRule",
+        &["policy_id", "subject", "tenant_id", "project_id"],
+    );
+    let mut stored: Vec<(String, String)> = sqlx::query_as(&format!(
+        "SELECT {policy_id}::TEXT, COALESCE({subject}, '') FROM {rel} \
+         WHERE {tenant_id} = $1 AND {project_id} = $2",
+        policy_id = model.q("policy_id"),
+        subject = model.q("subject"),
+        rel = model.relation,
+        tenant_id = model.q("tenant_id"),
+        project_id = model.q("project_id"),
+    ))
+    .bind(&tenant)
+    .bind(project)
+    .fetch_all(&pool)
+    .await
+    .expect("read seeded policy rows");
+    stored.sort();
+    assert!(
+        stored.iter().all(|(_, subject)| subject.is_empty()),
+        "the seed stores an empty subject (the role carries the grant)"
+    );
+    let stored_ids: Vec<String> = stored.into_iter().map(|(id, _)| id).collect();
+    assert_eq!(
+        stored_ids, expected,
+        "the stored policy ids must be exactly the ids `authz seed --emit` writes"
+    );
+
+    // Re-seeding is a no-op because the ids are stable.
+    let again = crate::runtime::service::auth_service::seed_project_authz_policies(
+        &pool, &tenant, project, role, &actions, &objects,
+    )
+    .await
+    .expect("re-seed");
+    assert_eq!(again, 0);
+
+    cleanup_native_auth_db(&pool).await;
+}
