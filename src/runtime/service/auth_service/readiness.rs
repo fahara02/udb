@@ -383,9 +383,10 @@ async fn check_policy_snapshot() -> AuthReadinessCheck {
             format!("authz policy snapshot cannot load (model parse failed): {e}"),
         );
     }
-    let hardened =
-        SecurityConfig::current().is_production() || crate::runtime::security::fail_closed_mode();
-    policy_snapshot_posture(env_on("UDB_ABAC_DEFAULT_ALLOW"), hardened)
+    // Same rule as the startup refusal: default-allow is a failure only under an
+    // explicit `UDB_ENV=production`; elsewhere it is reported, not failed.
+    let production = crate::runtime::security::udb_env_is_production();
+    policy_snapshot_posture(env_on("UDB_ABAC_DEFAULT_ALLOW"), production)
 }
 
 /// Pure default-allow posture for [`check_policy_snapshot`].

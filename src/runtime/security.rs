@@ -443,9 +443,13 @@ impl SecurityConfig {
             .unwrap_or_default();
         // The dev default-allow escape hatch is an explicit misconfiguration in
         // production: refuse it (startup aborts via `hardened_startup_violations`)
-        // rather than silently ignoring the operator's flag.
-        if let Some(violation) = default_allow_production_violation(abac_default_allow_requested())
-        {
+        // rather than silently ignoring the operator's flag. Keyed on an explicit
+        // `UDB_ENV=production`: this list is also enforced in fail-closed /
+        // enterprise-transport posture, which non-production environments (CI
+        // smoke, staging) use while still relying on the dev hatch.
+        if let Some(violation) = default_allow_production_violation(
+            udb_env_is_production() && abac_default_allow_requested(),
+        ) {
             errors.push(violation);
         }
         if errors.is_empty() {

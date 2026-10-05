@@ -142,7 +142,7 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
     // dev default-allow hatch (refused in production).
     if let Some(finding) = authz_default_posture_finding(
         config.service.abac_default_allow,
-        crate::runtime::security::SecurityConfig::current().is_production(),
+        crate::runtime::security::udb_env_is_production(),
     ) {
         out.push(finding);
     }

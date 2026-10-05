@@ -105,6 +105,9 @@ const CYPHER_READ_PROCEDURE_PREFIXES: &[&str] = &[
     "db.index.fulltext.queryrelationships",
     "db.index.vector.querynodes",
     "db.index.vector.queryrelationships",
+    // `db.awaitIndex(es)` only blocks until indexes are ONLINE; the compiled
+    // text search issues it before querying a freshly created full-text index.
+    "db.awaitindex",
     "db.labels",
     "db.relationshiptypes",
     "db.propertykeys",
@@ -1379,6 +1382,7 @@ mod tests {
             "MATCH (n) RETURN n.created_at /* SET */ AS created",
             "CALL db.index.fulltext.queryNodes('Customer_fulltext', $p0) YIELD node, score RETURN node",
             "CALL db.labels() YIELD label RETURN label",
+            "CALL db.awaitIndexes(30) CALL db.index.fulltext.queryNodes('i', $p0) YIELD node RETURN node",
             "MATCH (n) CALL { WITH n RETURN count(*) AS c } RETURN c",
         ] {
             assert_eq!(

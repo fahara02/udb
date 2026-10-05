@@ -352,6 +352,139 @@ async fn served_update_accepts_protobuf_integer_number_live() {
     teardown(&pool, &schema, &tenant).await;
 }
 
+/// An encrypted column must be stored as ciphertext after an UPDATE, not only
+/// after the insert. The served Update bound the caller's `changes` straight to
+/// SQL, so the upsert stored ciphertext and the first update overwrote it with
+/// the plaintext — and the same plaintext rode the CDC change event.
+///
+/// Revert-proof: dropping the `encrypt_update_changes` call in
+/// `execute_update_in_tx_checked` makes the raw column read back as
+/// `after-plain`.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN) + UDB_ENCRYPTION_KEY; runs in the CI --ignored live step"]
+async fn served_update_stores_encrypted_columns_as_ciphertext_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        eprintln!("data-plane live DSN unset — skipping encrypted Update");
+        return;
+    };
+    if std::env::var("UDB_ENCRYPTION_KEY")
+        .map(|key| key.trim().is_empty())
+        .unwrap_or(true)
+    {
+        eprintln!("UDB_ENCRYPTION_KEY unset — skipping encrypted Update");
+        return;
+    }
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool)
+        .await
+        .expect("bootstrap system catalog");
+
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    let tenant = Uuid::new_v4().to_string();
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".vaulted \
+         (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, secret TEXT)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create vaulted");
+
+    const MSG: &str = "acme.dp.v1.Vaulted";
+    let mut table = ManifestTable {
+        proto_package: "acme.dp.v1".to_string(),
+        message_name: "Vaulted".to_string(),
+        schema: schema.clone(),
+        table: "vaulted".to_string(),
+        primary_key: vec!["id".to_string()],
+        table_security: ManifestTableSecurity {
+            tenant_column: "tenant_id".to_string(),
+            ..ManifestTableSecurity::default()
+        },
+        ..ManifestTable::default()
+    };
+    let mut secret = col("secret", "TEXT", false);
+    secret.encrypted = true;
+    table.columns = vec![
+        col("id", "TEXT", true),
+        col("tenant_id", "TEXT", false),
+        secret,
+    ];
+    let svc = dp_service(
+        &dsn,
+        CatalogManifest {
+            tables: vec![table],
+            ..CatalogManifest::default()
+        },
+    )
+    .await;
+    let id = format!("vaulted-{}", Uuid::new_v4().simple());
+
+    served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant, "secret": "before-plain"}),
+        "",
+    )
+    .await
+    .expect("seed encrypted row");
+    let updated = served_update(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant}),
+        json!({"secret": "after-plain"}),
+    )
+    .await
+    .expect("served Update of an encrypted column");
+    assert_eq!(updated.affected_rows, 1);
+
+    let raw: Option<String> = sqlx::query_scalar(&format!(
+        "SELECT secret FROM \"{schema}\".vaulted WHERE id = $1"
+    ))
+    .bind(&id)
+    .fetch_one(&pool)
+    .await
+    .expect("read raw encrypted column");
+    let raw = raw.expect("encrypted column must not be NULL");
+    assert!(
+        !raw.contains("after-plain"),
+        "Update stored the encrypted column in plaintext: {raw}"
+    );
+
+    let rows = served_select_rows(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant}),
+        false,
+    )
+    .await;
+    let record: serde_json::Value =
+        serde_json::from_slice(&rows.records_json[0]).expect("decode updated row");
+    assert_eq!(
+        record["secret"].as_str(),
+        Some("after-plain"),
+        "the served read must still decrypt the updated value"
+    );
+
+    // The CDC change event for the update carries the same ciphertext, never
+    // the caller's plaintext.
+    let outbox = SystemCatalogConfig::current().cdc.outbox_relation();
+    let leaked: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {outbox} WHERE payload::text LIKE '%after-plain%'"
+    ))
+    .fetch_one(&pool)
+    .await
+    .unwrap_or(0);
+    assert_eq!(leaked, 0, "an update change event carried the plaintext");
+
+    teardown(&pool, &schema, &tenant).await;
+}
+
 /// A PostGIS geography declaration contains `POINT`, but it is not an integer
 /// column. The served Update binder used to classify SQL types with
 /// `sql_type.contains("INT")`, route EWKB through the integer parser, and reject

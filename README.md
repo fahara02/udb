@@ -58,8 +58,8 @@ staleness test fails if it drifts.
 <!-- BEGIN GENERATED:services -->
 | Area | Surface |
 |---|---|
-| Data plane | 79 `DataBroker` RPCs |
-| Native control plane | 27 services, 303 RPCs |
+| Data plane | 81 `DataBroker` RPCs |
+| Native control plane | 27 services, 304 RPCs |
 
 Per-service RPC counts (native control plane):
 
@@ -91,7 +91,7 @@ Per-service RPC counts (native control plane):
 | `webrtc_signaling` | 1 |
 | `webrtc_track` | 4 |
 | `webrtc_turn` | 1 |
-| `workflow` | 5 |
+| `workflow` | 6 |
 <!-- END GENERATED:services -->
 
 | Area | Surface |
