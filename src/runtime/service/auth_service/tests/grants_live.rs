@@ -499,7 +499,7 @@ async fn live_postgres_served_grant_management_binds_every_rpc_to_claim_tenant()
     migrate_native_auth_db(&pool).await;
     // Clearing the old pool alone would bypass durable tenant status checks.
     // Prove the fixture reads a suspension from this test's real database.
-    let suspended_tenant = Uuid::new_v4().to_string();
+    let suspended_tenant = uuid::Uuid::new_v4().to_string();
     sqlx::query(
         "INSERT INTO udb_tenant.tenants (tenant_id, code, name, type, status) \
          VALUES ($1::UUID, $2, 'grant gate regression', 'ORGANIZATION', 'SUSPENDED')",
