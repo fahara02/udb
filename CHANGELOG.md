@@ -72,6 +72,10 @@ what that audit found and adds the seam tests that were missing.
 - Rebound served auth-test tenant gates to each test's live Postgres pool,
   preventing a previous Tokio runtime's closed pool from rejecting valid grants.
 - Configured durable Postgres audit storage and sessions for HA/CDC smoke brokers.
+- Preserved HA diagnostics and stopped each smoke stack before starting the next,
+  preventing fixed host ports from colliding between smoke scenarios.
+- Provisioned benchmark buckets with the pinned MinIO container's bundled client,
+  replacing the retired client download endpoint.
 - Allowed npm publishing recovery from immutable release tags and added an
   authenticated-account diagnostic for publishing permission failures.
 - Replaced the retired OpenAI Assistants publisher with downloadable Responses

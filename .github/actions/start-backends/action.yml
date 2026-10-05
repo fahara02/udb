@@ -211,14 +211,11 @@ runs:
         MINIO_STORAGE_BUCKET: ${{ inputs.minio-storage-bucket }}
       run: |
         set -euo pipefail
-        # mc is not pre-installed; keep the downloaded client in runner temp so
-        # this action does not depend on write access to /usr/local/bin.
-        mc_bin="${RUNNER_TEMP:-/tmp}/mc"
-        curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc -o "${mc_bin}"
-        chmod +x "${mc_bin}"
-        "${mc_bin}" alias set local http://localhost:9000 minio minio123
-        "${mc_bin}" mb --ignore-existing "local/${MINIO_BUCKET}"
+        # The pinned server image includes mc, as used by the native live suite.
+        # Keep provisioning independent of the retired dl.min.io client download.
+        docker exec udb-bench-minio mc alias set local http://localhost:9000 minio minio123
+        docker exec udb-bench-minio mc mb --ignore-existing "local/${MINIO_BUCKET}"
         if [ -n "${MINIO_STORAGE_BUCKET}" ]; then
           # StorageService object bucket (UDB_OBJECT_BUCKET) for the presigned FinalizeUpload path.
-          "${mc_bin}" mb --ignore-existing "local/${MINIO_STORAGE_BUCKET}"
+          docker exec udb-bench-minio mc mb --ignore-existing "local/${MINIO_STORAGE_BUCKET}"
         fi

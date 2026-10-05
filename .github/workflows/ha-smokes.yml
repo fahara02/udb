@@ -39,8 +39,36 @@ jobs:
       - name: Lease failover smoke
         run: bash scripts/ha_multinode_smoke.sh
 
+      - name: Preserve lease diagnostics and release host ports
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p ha-smoke-logs
+          docker compose -p "$UDB_HA_PROJECT" --profile broker-ha \
+            -f docker-compose.integration.yml \
+            ps > ha-smoke-logs/lease-ps.txt 2>&1
+          docker compose -p "$UDB_HA_PROJECT" --profile broker-ha \
+            -f docker-compose.integration.yml \
+            logs --no-color > ha-smoke-logs/lease.log 2>&1
+          docker compose -p "$UDB_HA_PROJECT" --profile broker-ha \
+            -f docker-compose.integration.yml down -v --remove-orphans
+
       - name: CDC no-duplicate smoke
         run: bash scripts/ha_cdc_no_duplicate_smoke.sh
+
+      - name: Preserve CDC diagnostics and release host ports
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p ha-smoke-logs
+          docker compose -p "$UDB_HA_CDC_PROJECT" --profile broker-ha \
+            -f docker-compose.integration.yml \
+            ps > ha-smoke-logs/cdc-ps.txt 2>&1
+          docker compose -p "$UDB_HA_CDC_PROJECT" --profile broker-ha \
+            -f docker-compose.integration.yml \
+            logs --no-color > ha-smoke-logs/cdc.log 2>&1
+          docker compose -p "$UDB_HA_CDC_PROJECT" --profile broker-ha \
+            -f docker-compose.integration.yml down -v --remove-orphans
 
       - name: XA recovery smoke
         run: bash scripts/ha_xa_recovery_smoke.sh
@@ -57,19 +85,23 @@ jobs:
           # `--profile broker-ha`), so the diagnostic `ps`/`logs` calls MUST pass
           # the same profile or Compose silently omits the very containers whose
           # crash we are trying to capture.
-          docker compose -p "$UDB_HA_PROJECT" --profile broker-ha \
-            -f docker-compose.integration.yml \
-            ps > ha-smoke-logs/lease-ps.txt 2>&1
-          docker compose -p "$UDB_HA_PROJECT" --profile broker-ha \
-            -f docker-compose.integration.yml \
-            logs --no-color > ha-smoke-logs/lease.log 2>&1
+          if [ ! -f ha-smoke-logs/lease.log ]; then
+            docker compose -p "$UDB_HA_PROJECT" --profile broker-ha \
+              -f docker-compose.integration.yml \
+              ps > ha-smoke-logs/lease-ps.txt 2>&1
+            docker compose -p "$UDB_HA_PROJECT" --profile broker-ha \
+              -f docker-compose.integration.yml \
+              logs --no-color > ha-smoke-logs/lease.log 2>&1
+          fi
 
-          docker compose -p "$UDB_HA_CDC_PROJECT" --profile broker-ha \
-            -f docker-compose.integration.yml \
-            ps > ha-smoke-logs/cdc-ps.txt 2>&1
-          docker compose -p "$UDB_HA_CDC_PROJECT" --profile broker-ha \
-            -f docker-compose.integration.yml \
-            logs --no-color > ha-smoke-logs/cdc.log 2>&1
+          if [ ! -f ha-smoke-logs/cdc.log ]; then
+            docker compose -p "$UDB_HA_CDC_PROJECT" --profile broker-ha \
+              -f docker-compose.integration.yml \
+              ps > ha-smoke-logs/cdc-ps.txt 2>&1
+            docker compose -p "$UDB_HA_CDC_PROJECT" --profile broker-ha \
+              -f docker-compose.integration.yml \
+              logs --no-color > ha-smoke-logs/cdc.log 2>&1
+          fi
 
           docker compose -p "$UDB_HA_XA_PROJECT" --profile broker-xa-ha \
             -f docker-compose.integration.yml \

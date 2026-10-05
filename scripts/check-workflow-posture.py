@@ -809,7 +809,7 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ("docker run -d --name udb-bench-neo4j", "Neo4j container name"),
         ("neo4j:5", "Neo4j image pin"),
         ("http://localhost:7474/db/neo4j/tx/commit", "Neo4j query readiness gate"),
-        ("curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc", "MinIO client download"),
+        ("docker exec udb-bench-minio mc alias set", "MinIO client from the pinned server image"),
         ("\"${mc_bin}\" mb --ignore-existing \"local/${MINIO_BUCKET}\"", "MinIO live SDK bucket"),
         ("\"${mc_bin}\" mb --ignore-existing \"local/${MINIO_STORAGE_BUCKET}\"", "MinIO storage bucket"),
     ),
