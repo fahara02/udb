@@ -5,6 +5,7 @@ pub mod dsn;
 pub mod lint;
 pub mod manifest;
 pub mod manifest_index;
+pub mod neo4j_labels;
 pub mod sql;
 
 pub use backends::{

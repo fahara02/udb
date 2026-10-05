@@ -28,7 +28,11 @@ use crate::generation::GeneratedArtifact;
 use crate::generation::backend_safety::{
     safe_comment_value, safe_identifier, safe_resource_name, store_opt_str_any,
 };
-use crate::generation::manifest::{CatalogManifest, ManifestStore, ManifestTable};
+use crate::generation::manifest::{CatalogManifest, ManifestStore};
+use crate::generation::neo4j_labels::is_neo4j_store;
+pub use crate::generation::neo4j_labels::{
+    NEO4J_LABEL_OPTION_KEYS, neo4j_label_for_table, neo4j_store_label, resolve_neo4j_label,
+};
 use crate::generation::sql::SqlGenerationConfig;
 
 /// Generate Neo4j Cypher constraint/index artifacts from the proto AST.
@@ -125,17 +129,6 @@ pub fn generate_neo4j_artifacts(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-fn is_neo4j_store(store: &ManifestStore) -> bool {
-    store.backend == "neo4j"
-        || store.store_kind == "graph"
-        || store.options.iter().any(|o| {
-            matches!(
-                o.key.as_str(),
-                "udb.neo4j_database" | "database_name" | "udb.neo4j_label" | "node_label"
-            )
-        })
-}
-
 fn neo4j_database(store: &ManifestStore) -> String {
     store_opt_str_any(store, &["udb.neo4j_database", "database_name"])
         .map(ToOwned::to_owned)
@@ -146,50 +139,6 @@ fn neo4j_database(store: &ManifestStore) -> String {
                 "neo4j".to_string()
             }
         })
-}
-
-/// Store option keys that override a graph store's node label (first wins).
-pub const NEO4J_LABEL_OPTION_KEYS: &[&str] = &["udb.neo4j_label", "node_label"];
-
-/// THE Neo4j node label for a graph store: the label override option when
-/// set, else the store's resource name verbatim, sanitised to a plain
-/// identifier. Shared by the DDL generator, the IR compiler
-/// ([`neo4j_label_for_table`]) and the projection worker so all three address
-/// the same nodes.
-pub fn resolve_neo4j_label(resource_name: &str, label_override: Option<&str>) -> String {
-    let raw = label_override
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| resource_name.trim());
-    safe_identifier(raw, "Node")
-}
-
-/// [`resolve_neo4j_label`] for a manifest store (resource name, falling back
-/// to the owner table).
-pub fn neo4j_store_label(store: &ManifestStore) -> String {
-    let resource = if store.resource_name.trim().is_empty() {
-        &store.owner_table
-    } else {
-        &store.resource_name
-    };
-    resolve_neo4j_label(resource, store_opt_str_any(store, NEO4J_LABEL_OPTION_KEYS))
-}
-
-/// The node label the IR compiler uses for a manifest table: the label of the
-/// graph store that table owns (matched by owner table, or by resource name),
-/// else the table name itself through the same resolver.
-pub fn neo4j_label_for_table(manifest: &CatalogManifest, table: &ManifestTable) -> String {
-    manifest
-        .stores
-        .iter()
-        .filter(|store| is_neo4j_store(store))
-        .find(|store| {
-            (store.owner_table == table.table
-                && (store.owner_schema.trim().is_empty() || store.owner_schema == table.schema))
-                || store.resource_name == table.table
-        })
-        .map(neo4j_store_label)
-        .unwrap_or_else(|| resolve_neo4j_label(&table.table, None))
 }
 
 fn node_label(store: &ManifestStore) -> String {
@@ -228,7 +177,7 @@ fn to_pascal_case(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::generation::manifest::{ManifestStore, ManifestStoreOption};
+    use crate::generation::manifest::{ManifestStore, ManifestStoreOption, ManifestTable};
 
     fn make_store(resource: &str, opts: &[(&str, &str)]) -> ManifestStore {
         ManifestStore {

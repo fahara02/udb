@@ -679,6 +679,28 @@ jobs:
             --bin udb \
             --no-default-features --features "${RELEASE_BINARY_FEATURES}"
 
+  portable-wasm:
+    name: Portable compiler + browser WASM
+    needs: quick-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-rust
+        with:
+          target: wasm32-unknown-unknown
+          install-build-deps: "false"
+          cache-key: portable-wasm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Test the shared portable compiler
+        run: cargo test --locked -p udb-portable
+      - name: Build and exercise the browser parser
+        run: |
+          cargo build --locked -p udb-wasm --release --target wasm32-unknown-unknown
+          node scripts/playground_wasm_smoke.mjs target/wasm32-unknown-unknown/release/udb_wasm.wasm
+
   # ── Slim postgres-only build + dep-graph guard ────────────────────
   slim-build:
     name: Slim build (postgres-only)

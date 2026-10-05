@@ -8,7 +8,8 @@ name: Publish UDB skill
 #              plugin and checks the skill answers a UDB question.
 #  - Ollama  : direct authenticated API create + push (uses OLLAMA_API_KEY),
 #              followed by public registry-manifest verification.
-#  - OpenAI  : create/update an Assistant from openai/instructions.md (uses OPENAI_API_KEY).
+#  - OpenAI  : publish runnable Responses API profiles from the canonical instructions.
+#              Verify them against the API when OPENAI_API_KEY is configured.
 # Publish steps self-skip when their secret is absent, so the run never fails for a
 # missing optional secret.
 
@@ -149,7 +150,7 @@ jobs:
     # ADVISORY, like the Claude smoke job. Publishing to Ollama means publishing a
     # MODEL: `ollama push` uploads every layer, including the multi-GB `FROM` base
     # weights. That is model distribution, not skill distribution — the skill's real
-    # channels are the Claude plugin (this repo) and the OpenAI Assistant, both of
+    # channels are the Claude plugin (this repo) and the OpenAI Responses profiles, both of
     # which are hard-gated above. A failure of this optional mirror must not redden
     # the whole skill publish.
     continue-on-error: true
@@ -306,41 +307,39 @@ jobs:
           fi
 
   openai:
-    name: Sync OpenAI Assistant
+    name: Publish OpenAI Responses profiles
     needs: validate
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Create/update Assistant from instructions
+      - uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          python: true
+      - name: Build and verify Responses profiles
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
           set -euo pipefail
-          if [ -z "${OPENAI_API_KEY:-}" ]; then
-            echo "OPENAI_API_KEY not set — skipping OpenAI Assistant sync (instructions.md is published via the repo)."
-            exit 0
+          args=(--output openai-release)
+          if [ -n "${OPENAI_API_KEY:-}" ]; then
+            args+=(--verify-api)
+          else
+            echo "OPENAI_API_KEY not set — publishing profiles without live API verification."
           fi
-          model="${OPENAI_MODEL:-gpt-4o-mini}"
-          base="https://api.openai.com/v1"
-          auth=(-H "Authorization: Bearer ${OPENAI_API_KEY}" -H "OpenAI-Beta: assistants=v2" -H "Content-Type: application/json")
-          # Idempotent upsert by assistant name, one per skill.
-          upsert() {
-            local name="$1" file="$2"
-            local instr id payload new_id
-            instr="$(cat "$file")"
-            id="$(curl -fsS "${auth[@]}" "$base/assistants?limit=100" \
-                  | jq -r --arg n "$name" '.data[] | select(.name==$n) | .id' | head -1)"
-            payload="$(jq -n --arg n "$name" --arg m "$model" --arg i "$instr" \
-                       '{name:$n, model:$m, instructions:$i}')"
-            if [ -n "$id" ] && [ "$id" != "null" ]; then
-              curl -fsS "${auth[@]}" -X POST "$base/assistants/$id" -d "$payload" >/dev/null
-              echo "updated assistant '$name' ($id)"
-            else
-              new_id="$(curl -fsS "${auth[@]}" -X POST "$base/assistants" -d "$payload" | jq -r '.id')"
-              echo "created assistant '$name' ($new_id)"
-            fi
-          }
-          upsert "UDB Assistant"    udb-skill/openai/instructions.md
-          upsert "UDB Coding Agent" udb-skill/openai/instructions-udb-coding.md
+          python3 udb-skill/openai/build_profiles.py "${args[@]}"
+      - name: Publish downloadable OpenAI profiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: udb-openai-responses-profiles
+          path: openai-release/*.json
+          if-no-files-found: error
+      - name: Attach profiles to tagged release
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: gh release upload "$RELEASE_TAG" openai-release/*.json --clobber

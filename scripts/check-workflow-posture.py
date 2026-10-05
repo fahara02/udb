@@ -661,8 +661,10 @@ PUBLISH_SKILL_REQUIREMENTS = (
     ('create_and_publish("udb-assistant"', "Ollama using-udb model publication"),
     ('create_and_publish("udb-coding"', "Ollama coding model publication"),
     ("registry.ollama.ai/v2/${model}/manifests/latest", "Ollama public manifest verification"),
-    ("upsert \"UDB Assistant\"    udb-skill/openai/instructions.md", "OpenAI using-udb assistant sync"),
-    ("upsert \"UDB Coding Agent\" udb-skill/openai/instructions-udb-coding.md", "OpenAI coding assistant sync"),
+    ("python3 udb-skill/openai/build_profiles.py", "OpenAI Responses profile generation"),
+    ("--verify-api", "OpenAI live Responses verification"),
+    ("udb-openai-responses-profiles", "downloadable OpenAI profile artifact"),
+    ('gh release upload "$RELEASE_TAG"', "tagged OpenAI profile publication"),
 )
 
 SHADOW_LIVE_SDK_REQUIREMENTS = (
@@ -4811,8 +4813,15 @@ def check_publish_skill_workflow(root: Path = ROOT) -> list[str]:
             continue
         if "needs: validate" not in match.group("block"):
             scoped.append(f"{job_name} skill publish job must wait for validate")
-    if "contents: write" in _non_comment_text(text) or "packages: write" in _non_comment_text(text):
-        scoped.append("skill publish workflow must keep read-only repository permissions")
+    # Only the OpenAI profile publisher uploads public release assets. All other
+    # skill jobs and the workflow defaults retain read-only repository access.
+    without_openai = re.sub(
+        r"(?ms)^  openai:\n.*?(?=^  [A-Za-z0-9_-]+:|\Z)", "", text
+    )
+    if "contents: write" in _non_comment_text(without_openai) or "packages: write" in _non_comment_text(text):
+        scoped.append("only the OpenAI release-asset job may write repository contents")
+    if "/assistants" in _non_comment_text(text):
+        scoped.append("skill publisher must not call the retired Assistants API")
     return [f"publish-skill.yml: {failure}" for failure in scoped]
 
 
@@ -7354,11 +7363,17 @@ jobs:
           registry.ollama.ai/v2/${model}/manifests/latest
   openai:
     needs: validate
+    permissions:
+      contents: write
     steps:
       - run: |
           echo "OPENAI_API_KEY not set"
-          upsert "UDB Assistant"    udb-skill/openai/instructions.md
-          upsert "UDB Coding Agent" udb-skill/openai/instructions-udb-coding.md
+          args+=(--verify-api)
+          python3 udb-skill/openai/build_profiles.py "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: udb-openai-responses-profiles
+      - run: gh release upload "$RELEASE_TAG" openai-release/*.json --clobber
 """
         shadow_live_sdk_good = """name: Shadow live-sdk-suite
 on:

@@ -489,7 +489,31 @@ async fn live_postgres_typed_grant_login_and_boundaries() {
 async fn live_postgres_served_grant_management_binds_every_rpc_to_claim_tenant() {
     let _guard = live_auth_db_lock().lock().await;
     let pool = live_pg_pool().await;
+    // Reproduce a tenant store left behind by a previous test's runtime. The
+    // fixture must bind the durable request gate to this test's live pool.
+    let previous_pool = live_pg_pool().await;
+    crate::runtime::service::tenant_service::register_tenant_status_store(Some(
+        previous_pool.clone(),
+    ));
+    previous_pool.close().await;
     migrate_native_auth_db(&pool).await;
+    // Clearing the old pool alone would bypass durable tenant status checks.
+    // Prove the fixture reads a suspension from this test's real database.
+    let suspended_tenant = Uuid::new_v4().to_string();
+    sqlx::query(
+        "INSERT INTO udb_tenant.tenants (tenant_id, code, name, type, status) \
+         VALUES ($1::UUID, $2, 'grant gate regression', 'ORGANIZATION', 'SUSPENDED')",
+    )
+    .bind(&suspended_tenant)
+    .bind(&suspended_tenant)
+    .execute(&pool)
+    .await
+    .expect("insert durable suspended tenant");
+    let suspended =
+        crate::runtime::service::tenant_service::tenant_status_gate_durable(&suspended_tenant)
+            .await
+            .expect_err("fixture must enforce durable tenant suspension");
+    assert_eq!(suspended.code(), tonic::Code::FailedPrecondition);
     let authn = authn_service(pool.clone());
     let (owner, grant) = create_service_account_with_grant(
         &authn,

@@ -5,7 +5,7 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## [Unreleased]
+## [0.5.24] - 2026-10-05
 
 A security and correctness release. A full audit of the native features found
 that the same defect recurred across the codebase: every unit was correct and
@@ -66,6 +66,16 @@ what that audit found and adds the seam tests that were missing.
   admin and self-service purges now delete the tenant's vectors first.
 
 ### Fixed
+
+- Restored the browser playground build by sharing Neo4j label resolution with
+  the portable compiler; CI now tests the portable crate and the built WASM.
+- Rebound served auth-test tenant gates to each test's live Postgres pool,
+  preventing a previous Tokio runtime's closed pool from rejecting valid grants.
+- Configured durable Postgres audit storage and sessions for HA/CDC smoke brokers.
+- Allowed npm publishing recovery from immutable release tags and added an
+  authenticated-account diagnostic for publishing permission failures.
+- Replaced the retired OpenAI Assistants publisher with downloadable Responses
+  API profiles, verified against the API when credentials are configured.
 
 - **Workflows were marked COMPLETED on a timer**, whether or not any step ran.
   Steps now complete only on `AckWorkflowStep`; no ack within the step timeout

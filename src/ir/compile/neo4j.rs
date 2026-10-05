@@ -198,7 +198,7 @@ impl Neo4jCompiler {
     /// resource name), so compiled reads/writes address the same nodes the
     /// DDL constrains and the projection writes.
     fn label_for(ctx: &CompileContext<'_>, table: &ManifestTable) -> String {
-        crate::generation::backends::neo4j::neo4j_label_for_table(ctx.manifest, table)
+        crate::generation::neo4j_labels::neo4j_label_for_table(ctx.manifest, table)
     }
 
     fn render_cypher(statement: String, bind: CypherBind) -> CompiledRendering {

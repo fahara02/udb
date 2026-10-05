@@ -108,11 +108,17 @@ pub use schema_cache::{CatalogCompatibility, Negotiation, SchemaCache};
 /// dependency (the DDL renderer reads `ChangeOperation`; the differ reads
 /// `generation::sql::validate_enum_value`) and are both included here.
 pub mod generation {
+    #[path = "../../../../src/generation/backend_safety.rs"]
+    mod backend_safety;
+
     #[path = "../../../../src/generation/manifest/mod.rs"]
     pub mod manifest;
 
     #[path = "../../../../src/generation/manifest_index.rs"]
     pub mod manifest_index;
+
+    #[path = "../../../../src/generation/neo4j_labels.rs"]
+    pub mod neo4j_labels;
 
     #[path = "../../../../src/generation/sql/mod.rs"]
     pub mod sql;

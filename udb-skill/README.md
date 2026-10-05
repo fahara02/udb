@@ -12,7 +12,7 @@ runtime can use them:
 | Runtime | Artifacts | How it's used |
 |---|---|---|
 | **Claude Code** | `plugins/udb/skills/<skill>/SKILL.md` (+ `.claude-plugin/`) | Installable plugin (both skills in one plugin) via a marketplace |
-| **OpenAI** | `openai/instructions.md` · `openai/instructions-udb-coding.md` | Custom GPT instructions / Assistants `instructions` / `system` message |
+| **OpenAI** | `openai/instructions.md` · `openai/instructions-udb-coding.md` | Custom GPT instructions / Responses API `instructions` / `system` message |
 | **Ollama** | `ollama/Modelfile` · `ollama/Modelfile.udb-coding` | `SYSTEM` prompt baked into a local model |
 
 The **canonical knowledge** lives in `shared/<skill>.md`
@@ -21,7 +21,11 @@ The **canonical knowledge** lives in `shared/<skill>.md`
 also live under `shared/udb-coding-*.md`. The wrappers embed/reference those
 canonical sources. Publishing is **automated** by `.github/workflows/publish-skill.yml`
 on every push that touches the skill — it validates structure + wrapper sync,
-pushes both Ollama models, and syncs both OpenAI Assistants. The Claude plugin
+pushes both Ollama models, and publishes both OpenAI Responses profiles. When
+`OPENAI_API_KEY` is configured, both profiles must complete a real Responses API
+call before publishing. Tagged runs attach the JSON profiles and their checksum
+manifest to the GitHub release; other runs expose them as a workflow artifact.
+The Claude plugin
 metadata lives under `udb-skill/.claude-plugin/` so the repo root stays clean.
 
 ## Quick install
@@ -42,8 +46,18 @@ how should UDB code be structured?". Local test without publishing:
 **OpenAI** — copy the body of [`openai/instructions.md`](openai/instructions.md)
 (usage assistant) or
 [`openai/instructions-udb-coding.md`](openai/instructions-udb-coding.md)
-(coding agent) into a Custom GPT's *Instructions*, or pass it as the Assistants
-API `instructions` / a Chat Completions `system` message.
+(coding agent) into a Custom GPT's *Instructions*, or pass it as the Responses
+API `instructions` / a Chat Completions `system` message. The Assistants API was
+retired on August 26, 2026; see the [official migration guide](https://developers.openai.com/api/docs/assistants/migration).
+
+The release assets `udb-assistant-responses.json` and `udb-coding-responses.json`
+are complete Responses API requests. Replace their `input` with your question
+and send the JSON to `POST https://api.openai.com/v1/responses` with your own API
+key. To build the same profiles locally:
+
+```bash
+python3 udb-skill/openai/build_profiles.py --output /tmp/udb-openai-profiles
+```
 
 **Ollama**
 ```bash

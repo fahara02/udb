@@ -46,7 +46,9 @@ mod tests;
 // Fail-closed request-time tenant-status gate. Re-exported at the module root so
 // the shared method-security tower layer awaits the durable gate on the validated
 // claim tenant before dispatch, and synchronous callers use the cache fast path.
-pub(crate) use gate::{tenant_status_gate, tenant_status_gate_durable};
+pub(crate) use gate::{
+    register_tenant_status_store, tenant_status_gate, tenant_status_gate_durable,
+};
 
 /// Postgres-backed `TenantService` handler.
 pub struct TenantServiceImpl {
@@ -252,7 +254,7 @@ impl DataBrokerService {
         // The request-time tenant-status gate reads suspensions from this same
         // durable tenant store (cached with a short TTL), so a suspension holds on
         // every replica and across restarts — not only where it was processed.
-        gate::register_tenant_status_store(pg_pool.clone());
+        register_tenant_status_store(pg_pool.clone());
         let service = TenantServiceImpl::new()
             .with_postgres(pg_pool)
             .with_runtime(Some(runtime))

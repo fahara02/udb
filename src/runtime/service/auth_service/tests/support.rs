@@ -37,6 +37,7 @@ pub(super) async fn live_pg_pool() -> sqlx::PgPool {
 }
 
 pub(super) async fn cleanup_native_auth_db(pool: &sqlx::PgPool) {
+    crate::runtime::service::tenant_service::register_tenant_status_store(None);
     // Drop EVERY native `udb_*` schema present, not just the migration-enabled
     // subset returned by `native_schema_names()`. `native_service_catalog_ddl()`
     // creates schemas that subset omits (e.g. the control-plane registry
@@ -117,6 +118,9 @@ pub(super) async fn migrate_native_auth_db(pool: &sqlx::PgPool) {
     crate::runtime::system::ensure_system_catalog(pool)
         .await
         .expect("bootstrap udb_system catalog for native auth tests");
+    // Each test owns a new Tokio runtime. Bind the durable request gate to its
+    // live pool instead of retaining a pool from a runtime that has finished.
+    crate::runtime::service::tenant_service::register_tenant_status_store(Some(pool.clone()));
 }
 
 pub(super) async fn activate_live_project_catalog(

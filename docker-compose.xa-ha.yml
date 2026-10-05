@@ -20,6 +20,10 @@ x-udb-xa-ha-env: &udb-xa-ha-env
   UDB_MINIO_SECRET_KEY: minio123
   UDB_KAFKA_BROKERS: kafka:9092
   UDB_MYSQL_DSN: mysql://udb:udb@mysql:3306/udb
+  UDB_AUDIT_SINK: postgres
+  UDB_AUDIT_PG_TABLE: public.udb_audit_log
+  UDB_SESSION_ENABLED: "true"
+  UDB_SESSION_HASH_SECRET: local-integration-session-secret
   UDB_XA_RECOVERY_INTERVAL_SECS: "2"
   UDB_XA_RECOVERY_MAX_ATTEMPTS: "10"
   UDB_XA_RECOVERY_GRACE_SECS: "0"
