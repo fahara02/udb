@@ -281,6 +281,13 @@ fn tx_cas_required(mutation: &Mutation, operation: &str) -> Result<bool, tonic::
     Ok(true)
 }
 
+/// A transaction-control message that only commits: `commit: true` and no
+/// operation. A `commit: true` mutation WITH an operation is a write that also
+/// commits, and must be applied.
+fn is_bare_commit_marker(mutation: &Mutation) -> bool {
+    mutation.commit && mutation.operation.trim().is_empty()
+}
+
 impl DataBrokerRuntime {
     pub async fn begin_tx(
         &self,
@@ -351,7 +358,7 @@ impl DataBrokerRuntime {
         let commit = mutations.iter().any(|mutation| mutation.commit);
         let mutation_count = mutations
             .iter()
-            .filter(|m| !m.commit && !m.rollback)
+            .filter(|m| !is_bare_commit_marker(m) && !m.rollback)
             .count();
 
         // Persist saga state before opening the PG transaction. A failed saga
@@ -399,9 +406,14 @@ impl DataBrokerRuntime {
         let mut compensations_spilled = false;
         let projection_plans = crate::runtime::projection::ProjectionPlan::from_manifest(manifest);
         let projection_config = crate::runtime::system::SystemCatalogConfig::current_arc();
+        // A mutation that carries an operation is applied even when it ALSO
+        // carries `commit: true` (the natural "last write commits" shape); only
+        // a bare commit marker — no operation — is control, not a write.
+        // Filtering on `commit` alone silently dropped that last write while the
+        // transaction still reported COMMITTED, with no CAS check run on it.
         let tx_mutations: Vec<&Mutation> = mutations
             .iter()
-            .filter(|mutation| !mutation.commit)
+            .filter(|mutation| !is_bare_commit_marker(mutation))
             .collect();
         let mut pending_saga_steps: Vec<PendingSagaStep> = Vec::new();
         // Per-mutation affected-row counts, so the post-commit audit loop skips a

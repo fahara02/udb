@@ -598,6 +598,18 @@ fn postgres_row_order_index_ddl(rel: &str) -> String {
 /// `clock_timestamp()` while holding the source row's lock (see
 /// `projection_task_insert_sql` in the projection engine), with `task_id` as a
 /// deterministic tie-break. IN_PROGRESS tasks are left to their worker.
+/// SQL for the tenant a projection task's row belongs to: the value of the
+/// target's `tenant_field` option inside the task's source payload (empty when
+/// the target declares none). Two tenants' rows can share a primary key, so
+/// "the same row" for ordering purposes is (row key, tenant) — matching on the
+/// key alone let one tenant's newer write supersede (and so silently drop)
+/// another tenant's task.
+pub(crate) fn projection_task_row_tenant_sql(alias: &str) -> String {
+    format!(
+        "COALESCE({alias}.source_payload ->> (SELECT o ->> 'value' FROM jsonb_array_elements(         CASE WHEN jsonb_typeof({alias}.target_options) = 'array'          THEN {alias}.target_options ELSE '[]'::jsonb END) AS o          WHERE o ->> 'key' = 'tenant_field' LIMIT 1), '')"
+    )
+}
+
 fn postgres_supersede_sql(rel: &str, project_scoped: bool) -> String {
     let project_filter = if project_scoped {
         "AND older.project_id = $1"
@@ -619,13 +631,38 @@ fn postgres_supersede_sql(rel: &str, project_scoped: bool) -> String {
                    AND newer.target_instance = older.target_instance
                    AND newer.resource_name = older.resource_name
                    AND md5(newer.source_row_key::text) = md5(older.source_row_key::text)
-                   AND (newer.created_at, newer.task_id) > (older.created_at, older.task_id))"#
+                   AND {newer_tenant} = {older_tenant}
+                   AND (newer.created_at, newer.task_id) > (older.created_at, older.task_id))"#,
+        newer_tenant = projection_task_row_tenant_sql("newer"),
+        older_tenant = projection_task_row_tenant_sql("older"),
     )
 }
 
 #[cfg(test)]
 mod row_order_tests {
     use super::*;
+
+    /// Two tenants' rows can share a primary key: "the same row" must include
+    /// the tenant, or tenant B's newer write retires tenant A's queued task and
+    /// A's change is never projected.
+    #[test]
+    fn supersede_only_matches_a_sibling_in_the_same_tenant() {
+        let sql = postgres_supersede_sql(DEFAULT_REL, false);
+        assert!(
+            sql.contains(&format!(
+                "{} = {}",
+                projection_task_row_tenant_sql("newer"),
+                projection_task_row_tenant_sql("older")
+            )),
+            "{sql}"
+        );
+        let tenant = projection_task_row_tenant_sql("older");
+        assert!(tenant.contains("'tenant_field'"), "{tenant}");
+        assert!(
+            tenant.contains("jsonb_typeof(older.target_options) = 'array'"),
+            "{tenant}"
+        );
+    }
 
     #[test]
     fn supersede_retires_only_queued_tasks_older_than_a_sibling() {

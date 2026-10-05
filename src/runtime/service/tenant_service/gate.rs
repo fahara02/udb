@@ -190,12 +190,16 @@ async fn read_tenant_status(pool: &PgPool, tenant_id: &str) -> Result<Option<Str
         .begin()
         .await
         .map_err(|err| format!("begin tenant status read failed: {err}"))?;
-    sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
-        .bind(tenant_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| format!("set tenant status read context failed: {err}"))?;
-    let row: Option<(String, bool)> = sqlx::query_as(
+    // The RLS context is a tenant UUID; a non-UUID id (a tenant `code`) would
+    // make a policy's `::uuid` cast error, so only canonical ids install it.
+    if uuid::Uuid::parse_str(tenant_id).is_ok() {
+        sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| format!("set tenant status read context failed: {err}"))?;
+    }
+    let row: Option<(String, bool)> = match sqlx::query_as(
         "SELECT COALESCE(status, ''), deleted_at IS NOT NULL \
          FROM udb_tenant.tenants WHERE tenant_id::text = $1 OR code = $1 \
          ORDER BY (tenant_id::text = $1) DESC LIMIT 1",
@@ -203,7 +207,19 @@ async fn read_tenant_status(pool: &PgPool, tenant_id: &str) -> Result<Option<Str
     .bind(tenant_id)
     .fetch_optional(&mut *tx)
     .await
-    .map_err(|err| format!("tenant status read failed: {err}"))?;
+    {
+        Ok(row) => row,
+        // Deterministic, not transient: no tenant registry provisioned in this
+        // database (undefined table) or an id that can never match a row
+        // (invalid text representation). Neither can carry a suspension, and
+        // failing every request as "retry later" would never recover.
+        Err(sqlx::Error::Database(db))
+            if matches!(db.code().as_deref(), Some("42P01") | Some("22P02")) =>
+        {
+            return Ok(None);
+        }
+        Err(err) => return Err(format!("tenant status read failed: {err}")),
+    };
     tx.commit()
         .await
         .map_err(|err| format!("commit tenant status read failed: {err}"))?;

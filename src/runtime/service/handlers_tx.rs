@@ -223,7 +223,12 @@ async fn authorize_tx_mutations(
     security: &SecurityContext,
     mutations: &[Mutation],
 ) -> Result<(), Status> {
-    for mutation in mutations.iter().filter(|mutation| !mutation.commit) {
+    // Skip only a BARE commit marker (no operation). A write that also carries
+    // `commit: true` is applied by the runtime, so it must be authorized too.
+    for mutation in mutations
+        .iter()
+        .filter(|mutation| !(mutation.commit && mutation.operation.trim().is_empty()))
+    {
         if mutation.rollback && mutation.operation.trim().is_empty() {
             // A bare rollback marker writes nothing.
             continue;
@@ -729,6 +734,20 @@ mod tests {
         )
         .await
         .expect_err("a table outside the grant must be denied");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+
+        // A write that ALSO carries `commit: true` is applied, so it is
+        // authorized — the commit flag is not a way past the per-table check.
+        let err = authorize_tx_mutations(
+            &snapshot,
+            &security,
+            &[Mutation {
+                commit: true,
+                ..mutation("delete", "acme.billing.v1.Invoice")
+            }],
+        )
+        .await
+        .expect_err("a committing write must still be authorized");
         assert_eq!(err.code(), tonic::Code::PermissionDenied);
 
         // A caller-supplied wildcard message type never bypasses the policy.

@@ -101,7 +101,13 @@ fn install_dp_security() {
 /// `dsn` (so the served mutations commit to the same database the test seeded),
 /// lifecycle=Completed, and `abac_default_allow=true` so a tenant+purpose request
 /// clears the deny-by-default Casbin gate (mirrors the `open_service` harness).
-async fn dp_service(dsn: &str, manifest: CatalogManifest) -> DataBrokerService {
+async fn dp_service(dsn: &str, mut manifest: CatalogManifest) -> DataBrokerService {
+    // A real catalog always carries its checksum, and the idempotency replay
+    // receipt records it (and refuses an empty one); hand-built test manifests
+    // need one too.
+    if manifest.checksum_sha256.trim().is_empty() {
+        manifest.checksum_sha256 = "data-plane-live-test-manifest".to_string();
+    }
     let mut config = UdbConfig::from_env();
     config.primary.direct_dsn = dsn.to_string();
     // `DataBrokerRuntime::from_config` installs `config.security` globally.
@@ -455,14 +461,24 @@ async fn served_update_stores_encrypted_columns_as_ciphertext_live() {
         "Update stored the encrypted column in plaintext: {raw}"
     );
 
-    let rows = served_select_rows(
-        &svc,
+    // Reading an encrypted column back is a PII export: it needs `udb:pii:read`.
+    let mut select = with_ctx(
+        SelectRequest {
+            message_type: MSG.to_string(),
+            filter: json_to_struct(&json!({"id": id, "tenant_id": tenant})),
+            ..SelectRequest::default()
+        },
         &tenant,
-        MSG,
-        json!({"id": id, "tenant_id": tenant}),
-        false,
-    )
-    .await;
+    );
+    select.metadata_mut().insert(
+        "x-scopes",
+        "udb:admin,udb:read,udb:write,udb:pii:read".parse().unwrap(),
+    );
+    let rows = svc
+        .select(select)
+        .await
+        .expect("served Select with udb:pii:read")
+        .into_inner();
     let record: serde_json::Value =
         serde_json::from_slice(&rows.records_json[0]).expect("decode updated row");
     assert_eq!(
@@ -1671,6 +1687,10 @@ async fn served_mutation_fences_stale_lock_token_with_no_side_effect_live() {
     const MSG: &str = "acme.dp.v1.Widget";
     let svc = dp_service(&dsn, widget_manifest(&schema, "widgets", "Widget", false)).await;
     let lock_svc = super::support::lock_service(pool.clone()).await;
+    // Building the native LockService harness installs its own global security
+    // profile; restore the data-plane header-credential profile the served
+    // DataBroker calls below rely on.
+    install_dp_security();
 
     let lock_name = format!("fence-{}", Uuid::new_v4().simple());
 

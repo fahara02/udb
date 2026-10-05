@@ -951,6 +951,7 @@ fn projection_task_insert_sql(rel: &str) -> String {
                        WHERE newer.project_id = existing.project_id
                          AND newer.source_table = existing.source_table
                          AND md5(newer.source_row_key::text) = md5(existing.source_row_key::text)
+                         AND {newer_tenant} = {existing_tenant}
                          AND newer.target_backend = existing.target_backend
                          AND newer.target_instance = existing.target_instance
                          AND newer.resource_name = existing.resource_name
@@ -960,7 +961,15 @@ fn projection_task_insert_sql(rel: &str) -> String {
          SELECT task_id::TEXT FROM inserted
          UNION ALL
          SELECT task_id::TEXT FROM {rel} WHERE idempotency_key = $1
-         LIMIT 1"
+         LIMIT 1",
+        newer_tenant =
+            crate::runtime::canonical_store::postgres_projection::projection_task_row_tenant_sql(
+                "newer"
+            ),
+        existing_tenant =
+            crate::runtime::canonical_store::postgres_projection::projection_task_row_tenant_sql(
+                "existing"
+            ),
     )
 }
 

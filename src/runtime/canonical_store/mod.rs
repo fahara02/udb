@@ -204,7 +204,7 @@ mod sql_schema;
 mod sqlite_projection;
 // NW1-1a: PostgreSQL implementation of ProjectionTaskStore.
 #[cfg(feature = "postgres")]
-mod postgres_projection;
+pub(crate) mod postgres_projection;
 // NW1-1a: MySQL implementation of ProjectionTaskStore.
 #[cfg(feature = "mysql")]
 mod mysql_projection;
