@@ -174,79 +174,79 @@ public final class MeteringServiceProto {
       "\034\n\tunlimited\030\005 \001(\010R\tunlimited\022\030\n\007message" +
       "\030\006 \001(\tR\007message\0222\n\005error\030\007 \001(\0132\034.udb.cor" +
       "e.common.v1.ApiErrorR\005error:\037\232\262\031\033\010\001\032\003udb" +
-      "(\260\352\0010\003@\001J\010meteringP\0012\231\024\n\017MeteringService" +
-      "\022\351\002\n\013RecordUsage\0221.udb.core.metering.ser" +
+      "(\260\352\0010\003@\001J\010meteringP\0012\236\024\n\017MeteringService" +
+      "\022\352\002\n\013RecordUsage\0221.udb.core.metering.ser" +
       "vices.v1.RecordUsageRequest\0322.udb.core.m" +
       "etering.services.v1.RecordUsageResponse\"" +
-      "\362\001\312\363\030<\010\002\032\031udb:metering:record-usage \001J\002\001" +
-      "\002j\024metering.RecordUsage\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306" +
-      "\010\001\022\014record_usage\032\003udb(\260\352\0010\003@\001J\010meteringP" +
-      "\001Z\013recordUsage\362\363\030B\n\010metering\032\010postgres2\033" +
-      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
-      "RGET\370\363\030\002\202\323\344\223\002\036\"\031/v1/metering/usage:recor" +
-      "d:\001*\022\341\002\n\nQueryUsage\0220.udb.core.metering." +
-      "services.v1.QueryUsageRequest\0321.udb.core" +
-      ".metering.services.v1.QueryUsageResponse" +
-      "\"\355\001\312\363\030:\010\002\032\030udb:metering:query-usage \001J\002\001" +
-      "\002j\023metering.QueryUsage\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010" +
-      "\001\022\013query_usage\032\003udb(\260\352\0010\003@\001J\010meteringP\001Z" +
-      "\nqueryUsage\362\363\030B\n\010metering\032\010postgres2\033UDB" +
-      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
-      "T\370\363\030\001\202\323\344\223\002\035\"\030/v1/metering/usage:query:\001*" +
-      "\022\261\003\n\010PutQuota\022..udb.core.metering.servic" +
-      "es.v1.PutQuotaRequest\032/.udb.core.meterin" +
-      "g.services.v1.PutQuotaResponse\"\303\002\312\363\0306\010\002\032" +
-      "\026udb:metering:put-quota \001J\002\001\002j\021metering." +
-      "PutQuota\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\tput_quota\032\003" +
-      "udb(\260\352\0010\003@\001J\010meteringP\001Z\010putQuota\352\363\030[\n\021m" +
-      "etering.PutQuota\022\035udb.metering.quota.cha" +
-      "nged.v1\032\006metric\"\010standard*\rat_least_once" +
-      "2\006stable\362\363\030B\n\010metering\032\010postgres2\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
-      "\030\002\202\323\344\223\002\034\"\027/v1/metering/quotas:put:\001*\022\324\002\n" +
-      "\010GetQuota\022..udb.core.metering.services.v" +
-      "1.GetQuotaRequest\032/.udb.core.metering.se" +
-      "rvices.v1.GetQuotaResponse\"\346\001\312\363\0306\010\002\032\026udb" +
-      ":metering:get-quota \001J\002\001\002j\021metering.GetQ" +
-      "uota\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\tget_quota\032\003udb(" +
-      "\260\352\0010\003@\001J\010meteringP\001Z\010getQuota\362\363\030B\n\010meter" +
-      "ing\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\036\022\034/v1/meter" +
-      "ing/quotas/{metric}\022\331\002\n\nListQuotas\0220.udb" +
-      ".core.metering.services.v1.ListQuotasReq" +
-      "uest\0321.udb.core.metering.services.v1.Lis" +
-      "tQuotasResponse\"\345\001\312\363\030:\010\002\032\030udb:metering:l" +
-      "ist-quotas \001J\002\001\002j\023metering.ListQuotas\220\001\001" +
-      "\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\013list_quotas\032\003udb(\260\352\0010\003" +
-      "@\001J\010meteringP\001Z\nlistQuotas\362\363\030B\n\010metering" +
-      "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
-      "\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\025\022\023/v1/metering" +
-      "/quotas\022\342\002\n\nCheckQuota\0220.udb.core.meteri" +
-      "ng.services.v1.CheckQuotaRequest\0321.udb.c" +
-      "ore.metering.services.v1.CheckQuotaRespo" +
-      "nse\"\356\001\312\363\030:\010\002\032\030udb:metering:check-quota \001" +
-      "J\002\001\002j\023metering.CheckQuota\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\0304\010\001\022\013check_quota\032\003udb(\260\352\0010\003@\001J\010metering" +
-      "P\001Z\ncheckQuota\362\363\030B\n\010metering\032\010postgres2\033" +
-      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
-      "RGET\370\363\030\001\202\323\344\223\002\036\"\031/v1/metering/quotas:chec" +
-      "k:\001*\032\351\002\312\360\031j\n\010metering\022\010metering\032\010meterin" +
-      "g\"\010Metering*\010metering0\0018\001h\001z\010metering\202\001\010" +
-      "metering\212\001\010metering\222\001\017native.metering\322\360\031" +
-      "\033\010\001\032\003udb(\260\352\0010\003@\001J\010meteringP\001\332\360\031\221\001\n\010meter" +
-      "ing\022\023udb/native/metering\032\033UDB_NATIVE_SER" +
-      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"\032udb.nati" +
-      "ve.metering.config:\010meteringJ\013UDB_API_KE" +
-      "YZ\017udb native lint\342\360\031B\n\010metering\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGETB\237\002\n!com.udb.core.metering.servi" +
-      "ces.v1B\024MeteringServiceProtoP\001ZKgithub.c" +
-      "om/fahara02/udb/sdk/go/gen/udb/core/mete" +
-      "ring/services/v1;servicesv1\242\002\004UCMS\252\002\035Udb" +
-      ".Core.Metering.Services.V1\312\002\035Udb\\Core\\Me" +
-      "tering\\Services\\V1\342\002)Udb\\GPBMetadata\\Cor" +
-      "e\\Metering\\Services\\V1\352\002!Udb::Core::Mete" +
-      "ring::Services::V1b\006proto3"
+      "\363\001\312\363\030=\010\002\032\031udb:metering:record-usage \001J\003\001" +
+      "\002\004j\024metering.RecordUsage\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030" +
+      "6\010\001\022\014record_usage\032\003udb(\260\352\0010\003@\001J\010metering" +
+      "P\001Z\013recordUsage\362\363\030B\n\010metering\032\010postgres2" +
+      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
+      "ARGET\370\363\030\002\202\323\344\223\002\036\"\031/v1/metering/usage:reco" +
+      "rd:\001*\022\342\002\n\nQueryUsage\0220.udb.core.metering" +
+      ".services.v1.QueryUsageRequest\0321.udb.cor" +
+      "e.metering.services.v1.QueryUsageRespons" +
+      "e\"\356\001\312\363\030;\010\002\032\030udb:metering:query-usage \001J\003" +
+      "\001\002\004j\023metering.QueryUsage\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030" +
+      "4\010\001\022\013query_usage\032\003udb(\260\352\0010\003@\001J\010meteringP" +
+      "\001Z\nqueryUsage\362\363\030B\n\010metering\032\010postgres2\033U" +
+      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
+      "GET\370\363\030\001\202\323\344\223\002\035\"\030/v1/metering/usage:query:" +
+      "\001*\022\261\003\n\010PutQuota\022..udb.core.metering.serv" +
+      "ices.v1.PutQuotaRequest\032/.udb.core.meter" +
+      "ing.services.v1.PutQuotaResponse\"\303\002\312\363\0306\010" +
+      "\002\032\026udb:metering:put-quota \001J\002\001\002j\021meterin" +
+      "g.PutQuota\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\tput_quota" +
+      "\032\003udb(\260\352\0010\003@\001J\010meteringP\001Z\010putQuota\352\363\030[\n" +
+      "\021metering.PutQuota\022\035udb.metering.quota.c" +
+      "hanged.v1\032\006metric\"\010standard*\rat_least_on" +
+      "ce2\006stable\362\363\030B\n\010metering\032\010postgres2\033UDB_" +
+      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
+      "\370\363\030\002\202\323\344\223\002\034\"\027/v1/metering/quotas:put:\001*\022\325" +
+      "\002\n\010GetQuota\022..udb.core.metering.services" +
+      ".v1.GetQuotaRequest\032/.udb.core.metering." +
+      "services.v1.GetQuotaResponse\"\347\001\312\363\0307\010\002\032\026u" +
+      "db:metering:get-quota \001J\003\001\002\004j\021metering.G" +
+      "etQuota\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\tget_quota\032\003u" +
+      "db(\260\352\0010\003@\001J\010meteringP\001Z\010getQuota\362\363\030B\n\010me" +
+      "tering\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\036\022\034/v1/me" +
+      "tering/quotas/{metric}\022\332\002\n\nListQuotas\0220." +
+      "udb.core.metering.services.v1.ListQuotas" +
+      "Request\0321.udb.core.metering.services.v1." +
+      "ListQuotasResponse\"\346\001\312\363\030;\010\002\032\030udb:meterin" +
+      "g:list-quotas \001J\003\001\002\004j\023metering.ListQuota" +
+      "s\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\013list_quotas\032\003udb(\260" +
+      "\352\0010\003@\001J\010meteringP\001Z\nlistQuotas\362\363\030B\n\010mete" +
+      "ring\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
+      "LED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\025\022\023/v1/mete" +
+      "ring/quotas\022\343\002\n\nCheckQuota\0220.udb.core.me" +
+      "tering.services.v1.CheckQuotaRequest\0321.u" +
+      "db.core.metering.services.v1.CheckQuotaR" +
+      "esponse\"\357\001\312\363\030;\010\002\032\030udb:metering:check-quo" +
+      "ta \001J\003\001\002\004j\023metering.CheckQuota\220\001\001\322\363\030\006\010\001\020" +
+      "\001 \001\332\363\0304\010\001\022\013check_quota\032\003udb(\260\352\0010\003@\001J\010met" +
+      "eringP\001Z\ncheckQuota\362\363\030B\n\010metering\032\010postg" +
+      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
+      "PC_TARGET\370\363\030\001\202\323\344\223\002\036\"\031/v1/metering/quotas" +
+      ":check:\001*\032\351\002\312\360\031j\n\010metering\022\010metering\032\010me" +
+      "tering\"\010Metering*\010metering0\0018\001h\001z\010meteri" +
+      "ng\202\001\010metering\212\001\010metering\222\001\017native.meteri" +
+      "ng\322\360\031\033\010\001\032\003udb(\260\352\0010\003@\001J\010meteringP\001\332\360\031\221\001\n\010" +
+      "metering\022\023udb/native/metering\032\033UDB_NATIV" +
+      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\032udb" +
+      ".native.metering.config:\010meteringJ\013UDB_A" +
+      "PI_KEYZ\017udb native lint\342\360\031B\n\010metering\032\010p" +
+      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
+      "B_GRPC_TARGETB\237\002\n!com.udb.core.metering." +
+      "services.v1B\024MeteringServiceProtoP\001ZKgit" +
+      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
+      "/metering/services/v1;servicesv1\242\002\004UCMS\252" +
+      "\002\035Udb.Core.Metering.Services.V1\312\002\035Udb\\Co" +
+      "re\\Metering\\Services\\V1\342\002)Udb\\GPBMetadat" +
+      "a\\Core\\Metering\\Services\\V1\352\002!Udb::Core:" +
+      ":Metering::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

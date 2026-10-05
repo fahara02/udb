@@ -97,33 +97,33 @@ public final class LivequeryServiceProto {
       "_CHANGE_OP_UNSPECIFIED\020\000\022\037\n\033LIVE_QUERY_C" +
       "HANGE_OP_INSERT\020\001\022\037\n\033LIVE_QUERY_CHANGE_O" +
       "P_UPDATE\020\002\022\037\n\033LIVE_QUERY_CHANGE_OP_DELET" +
-      "E\020\0032\371\005\n\020LiveQueryService\022\350\002\n\tSubscribe\0220" +
+      "E\020\0032\372\005\n\020LiveQueryService\022\351\002\n\tSubscribe\0220" +
       ".udb.core.livequery.services.v1.Subscrib" +
       "eRequest\0321.udb.core.livequery.services.v" +
-      "1.SubscribeResponse\"\363\001\312\363\0309\010\002\032\027udb:livequ" +
-      "ery:subscribe \001J\002\001\002j\023livequery.Subscribe" +
-      "\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030;\010\001\022\tsubscribe\032\003udb(\260\352\0010" +
-      "\003@\001J\tlivequeryP\001Z\022liveQuerySubscribe\362\363\030C" +
-      "\n\tlivequery\032\010postgres2\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\"\027/" +
-      "v1/livequery:subscribe:\001*0\001\032\371\002\312\360\031t\n\tlive" +
-      "query\022\tlivequery\032\tlivequery\"\nLive Query*" +
-      "\tlivequery0\0018\001h\001z\tlivequery\202\001\tlivequery\212" +
-      "\001\tlivequery\222\001\020native.livequery\322\360\031\034\010\001\032\003ud" +
-      "b(\260\352\0010\003@\001J\tlivequeryP\001\332\360\031\225\001\n\tlivequery\022\024" +
-      "udb/native/livequery\032\033UDB_NATIVE_SERVICE" +
-      "S_ENABLED\032\017UDB_GRPC_TARGET\"\033udb.native.l" +
-      "ivequery.config:\tlivequeryJ\013UDB_API_KEYZ" +
-      "\017udb native lint\342\360\031C\n\tlivequery\032\010postgre" +
-      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
-      "_TARGETB\246\002\n\"com.udb.core.livequery.servi" +
-      "ces.v1B\025LivequeryServiceProtoP\001ZLgithub." +
-      "com/fahara02/udb/sdk/go/gen/udb/core/liv" +
-      "equery/services/v1;servicesv1\242\002\004UCLS\252\002\036U" +
-      "db.Core.LiveQuery.Services.V1\312\002\036Udb\\Core" +
-      "\\Livequery\\Services\\V1\342\002*Udb\\GPBMetadata" +
-      "\\Core\\Livequery\\Services\\V1\352\002\"Udb::Core:" +
-      ":Livequery::Services::V1b\006proto3"
+      "1.SubscribeResponse\"\364\001\312\363\030:\010\002\032\027udb:livequ" +
+      "ery:subscribe \001J\003\001\002\004j\023livequery.Subscrib" +
+      "e\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030;\010\001\022\tsubscribe\032\003udb(\260\352\001" +
+      "0\003@\001J\tlivequeryP\001Z\022liveQuerySubscribe\362\363\030" +
+      "C\n\tlivequery\032\010postgres2\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\"\027" +
+      "/v1/livequery:subscribe:\001*0\001\032\371\002\312\360\031t\n\tliv" +
+      "equery\022\tlivequery\032\tlivequery\"\nLive Query" +
+      "*\tlivequery0\0018\001h\001z\tlivequery\202\001\tlivequery" +
+      "\212\001\tlivequery\222\001\020native.livequery\322\360\031\034\010\001\032\003u" +
+      "db(\260\352\0010\003@\001J\tlivequeryP\001\332\360\031\225\001\n\tlivequery\022" +
+      "\024udb/native/livequery\032\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED\032\017UDB_GRPC_TARGET\"\033udb.native." +
+      "livequery.config:\tlivequeryJ\013UDB_API_KEY" +
+      "Z\017udb native lint\342\360\031C\n\tlivequery\032\010postgr" +
+      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
+      "C_TARGETB\246\002\n\"com.udb.core.livequery.serv" +
+      "ices.v1B\025LivequeryServiceProtoP\001ZLgithub" +
+      ".com/fahara02/udb/sdk/go/gen/udb/core/li" +
+      "vequery/services/v1;servicesv1\242\002\004UCLS\252\002\036" +
+      "Udb.Core.LiveQuery.Services.V1\312\002\036Udb\\Cor" +
+      "e\\Livequery\\Services\\V1\342\002*Udb\\GPBMetadat" +
+      "a\\Core\\Livequery\\Services\\V1\352\002\"Udb::Core" +
+      "::Livequery::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

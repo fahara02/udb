@@ -197,7 +197,7 @@ public final class AssetServiceProto {
       "Response\0225\n\005asset\030\001 \001(\0132\037.udb.core.asset" +
       ".entity.v1.AssetR\005asset\0222\n\005error\030\002 \001(\0132\034" +
       ".udb.core.common.v1.ApiErrorR\005error:\034\232\262\031" +
-      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005assetP\0012\2770\n\014AssetServi" +
+      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005assetP\0012\3050\n\014AssetServi" +
       "ce\022\370\005\n\030CreatePipelineDefinition\022;.udb.co" +
       "re.asset.services.v1.CreatePipelineDefin" +
       "itionRequest\032<.udb.core.asset.services.v" +
@@ -235,131 +235,131 @@ public final class AssetServiceProto {
       "nce2\006stable\362\363\030M\n\005asset\032\010postgres\032\014object" +
       "_store2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
       "_GRPC_TARGET\370\363\030\001\202\323\344\223\0021\022//v1/assets/pipel" +
-      "ine-definitions/{definition_id}\022\332\005\n\rRegi" +
+      "ine-definitions/{definition_id}\022\333\005\n\rRegi" +
       "sterAsset\0220.udb.core.asset.services.v1.R" +
       "egisterAssetRequest\0321.udb.core.asset.ser" +
-      "vices.v1.RegisterAssetResponse\"\343\004\312\363\030:\010\002\032" +
-      "\030udb:asset:register-asset \001J\002\001\002j\023asset.R" +
-      "egisterAsset\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0307\010\001\022\016registe" +
-      "r_asset\032\003udb(\260\352\0010\003@\001J\005assetP\001Z\rregisterA" +
-      "sset\342\363\030\265\001\n\005asset\022\020udb/native/asset\032\033UDB_" +
-      "NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET" +
-      "\"+udb.native.asset.register_asset.boiler" +
-      "plate*\016register_asset2\tudb_asset:\005assetJ" +
-      "\013UDB_API_KEYZ\020udb native smoke\352\363\030\223\001\n\023ass" +
-      "et.RegisterAsset\022\014asset.events\032\ttenant_i" +
-      "d\"\010standard*\rat_least_once2\006stable:B\n\035ud" +
-      "b.asset.asset.registered.v1\022\010asset_id\032\ra" +
-      "t_least_once\"\010standard\362\363\030M\n\005asset\032\010postg" +
-      "res\032\014object_store2\033UDB_NATIVE_SERVICES_E" +
-      "NABLED2\017UDB_GRPC_TARGET\370\363\030\002\212\364\030 \n\010asset_i" +
-      "d\022\010GetAsset\032\010asset_id(\001\202\323\344\223\002\017\"\n/v1/asset" +
-      "s:\001*\022\220\007\n\rStartPipeline\0220.udb.core.asset." +
-      "services.v1.StartPipelineRequest\0321.udb.c" +
-      "ore.asset.services.v1.StartPipelineRespo" +
-      "nse\"\231\006\312\363\030:\010\002\032\030udb:asset:start-pipeline \001" +
-      "J\002\001\002j\023asset.StartPipeline\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\0307\010\001\022\016start_pipeline\032\003udb(\260\352\0010\003@\001J\005asset" +
-      "P\001Z\rstartPipeline\342\363\030\265\001\n\005asset\022\020udb/nativ" +
-      "e/asset\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
-      "B_GRPC_TARGET\"+udb.native.asset.start_pi" +
-      "peline.boilerplate*\016start_pipeline2\tudb_" +
-      "asset:\005assetJ\013UDB_API_KEYZ\020udb native sm" +
-      "oke\352\363\030\226\001\n\023asset.StartPipeline\022\014asset.eve" +
-      "nts\032\ttenant_id\"\010standard*\rat_least_once2" +
-      "\006stable:E\n\035udb.asset.pipeline.started.v1" +
-      "\022\013instance_id\032\rat_least_once\"\010standard\362\363" +
-      "\030M\n\005asset\032\010postgres\032\014object_store2\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\002\212\364\030)\n\013instance_id\022\013GetPipeline\032\013insta" +
-      "nce_id(\001\222\364\030.\n\020PipelineInstance\032\007RUNNING\"" +
-      "\tCOMPLETED\"\006FAILED\232\364\030\022\n\016correlation_id \001" +
-      "\242\364\030T\n\'\n\033PIPELINE_DEFINITION_INVALID\022\010INT" +
-      "ERNAL\n)\n\025STEP_TYPE_UNSUPPORTED\022\020INVALID_" +
-      "ARGUMENT\202\323\344\223\002\031\"\024/v1/assets/pipelines:\001*\022" +
-      "\362\004\n\013GetPipeline\022..udb.core.asset.service" +
-      "s.v1.GetPipelineRequest\032/.udb.core.asset" +
-      ".services.v1.GetPipelineResponse\"\201\004\312\363\0306\010" +
-      "\002\032\026udb:asset:get-pipeline \001J\002\001\002j\021asset.G" +
-      "etPipeline\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\014get_pipel" +
-      "ine\032\003udb(\260\352\0010\003@\001J\005assetP\001Z\013getPipeline\342\363" +
-      "\030\261\001\n\005asset\022\020udb/native/asset\032\033UDB_NATIVE" +
-      "_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\")udb." +
-      "native.asset.get_pipeline.boilerplate*\014g" +
-      "et_pipeline2\tudb_asset:\005assetJ\013UDB_API_K" +
-      "EYZ\020udb native smoke\352\363\030M\n\021asset.GetPipel" +
-      "ine\022\014asset.events\032\ttenant_id\"\010standard*\r" +
-      "at_least_once2\006stable\362\363\030M\n\005asset\032\010postgr" +
-      "es\032\014object_store2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002$\022\"/v1/as" +
-      "sets/pipelines/{instance_id}\022\342\006\n\014Complet" +
-      "eStep\022/.udb.core.asset.services.v1.Compl" +
-      "eteStepRequest\0320.udb.core.asset.services" +
-      ".v1.CompleteStepResponse\"\356\005\312\363\0308\010\002\032\027udb:a" +
-      "sset:complete-step \001J\002\001\002j\022asset.Complete" +
-      "Step\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0305\010\001\022\rcomplete_step\032\003" +
-      "udb(\260\352\0010\003@\001J\005assetP\001Z\014completeStep\342\363\030\263\001\n" +
-      "\005asset\022\020udb/native/asset\032\033UDB_NATIVE_SER" +
-      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"*udb.nati" +
-      "ve.asset.complete_step.boilerplate*\rcomp" +
-      "lete_step2\tudb_asset:\005assetJ\013UDB_API_KEY" +
-      "Z\020udb native smoke\352\363\030\257\002\n\022asset.CompleteS" +
-      "tep\022\014asset.events\032\ttenant_id\"\010standard*\r" +
-      "at_least_once2\006stable:L\n$udb.asset.pipel" +
-      "ine.step_completed.v1\022\013instance_id\032\rat_l" +
-      "east_once\"\010standard:I\n\037udb.asset.pipelin" +
-      "e.completed.v1\022\013instance_id\032\rat_least_on" +
-      "ce\"\010standard(\001:F\n\034udb.asset.pipeline.fai" +
-      "led.v1\022\013instance_id\032\rat_least_once\"\010stan" +
-      "dard(\001\362\363\030M\n\005asset\032\010postgres\032\014object_stor" +
-      "e2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
-      "_TARGET\370\363\030\002\202\323\344\223\002(\"#/v1/assets/steps/{ste" +
-      "p_id}:complete:\001*\022\320\004\n\nListAssets\022-.udb.c" +
-      "ore.asset.services.v1.ListAssetsRequest\032" +
-      "..udb.core.asset.services.v1.ListAssetsR" +
-      "esponse\"\342\003\312\363\0304\010\002\032\025udb:asset:list-assets " +
-      "\001J\002\001\002j\020asset.ListAssets\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301" +
-      "\010\001\022\013list_assets\032\003udb(\260\352\0010\003@\001J\005assetP\001Z\nl" +
-      "istAssets\342\363\030\257\001\n\005asset\022\020udb/native/asset\032" +
-      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T" +
-      "ARGET\"(udb.native.asset.list_assets.boil" +
-      "erplate*\013list_assets2\tudb_asset:\005assetJ\013" +
-      "UDB_API_KEYZ\020udb native smoke\352\363\030L\n\020asset" +
-      ".ListAssets\022\014asset.events\032\ttenant_id\"\010st" +
-      "andard*\rat_least_once2\006stable\362\363\030M\n\005asset" +
-      "\032\010postgres\032\014object_store2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\014" +
-      "\022\n/v1/assets\022\307\004\n\010GetAsset\022+.udb.core.ass" +
-      "et.services.v1.GetAssetRequest\032,.udb.cor" +
-      "e.asset.services.v1.GetAssetResponse\"\337\003\312" +
-      "\363\0300\010\002\032\023udb:asset:get-asset \001J\002\001\002j\016asset." +
-      "GetAsset\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030-\010\001\022\tget_asset\032\003" +
-      "udb(\260\352\0010\003@\001J\005assetP\001Z\010getAsset\342\363\030\253\001\n\005ass" +
-      "et\022\020udb/native/asset\032\033UDB_NATIVE_SERVICE" +
-      "S_ENABLED\032\017UDB_GRPC_TARGET\"&udb.native.a" +
-      "sset.get_asset.boilerplate*\tget_asset2\tu" +
-      "db_asset:\005assetJ\013UDB_API_KEYZ\020udb native" +
-      " smoke\352\363\030J\n\016asset.GetAsset\022\014asset.events" +
-      "\032\ttenant_id\"\010standard*\rat_least_once2\006st" +
-      "able\362\363\030M\n\005asset\032\010postgres\032\014object_store2" +
-      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
-      "ARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/assets/{asset_id}\032\342" +
-      "\002\312\360\031T\n\005asset\022\005asset\032\005asset\"\006Assets*\007stor" +
-      "age0\0018\001H\001h\001z\005asset\202\001\005asset\212\001\005asset\222\001\014nat" +
-      "ive.asset\322\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005assetP\001\332\360\031" +
-      "\212\001\n\005asset\022\020udb/native/asset\032\033UDB_NATIVE_" +
-      "SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\034udb.n" +
-      "ative.asset.config.json:\005assetJ\013UDB_API_" +
-      "KEYZ\017udb native lint\342\360\031[\n\005asset\032\010postgre" +
-      "s\032\014object_store2\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED2\017UDB_GRPC_TARGET:\014object_storeB\212\002\n\036" +
-      "com.udb.core.asset.services.v1B\021AssetSer" +
-      "viceProtoP\001ZHgithub.com/fahara02/udb/sdk" +
-      "/go/gen/udb/core/asset/services/v1;servi" +
-      "cesv1\242\002\004UCAS\252\002\032Udb.Core.Asset.Services.V" +
-      "1\312\002\032Udb\\Core\\Asset\\Services\\V1\342\002&Udb\\GPB" +
-      "Metadata\\Core\\Asset\\Services\\V1\352\002\036Udb::C" +
-      "ore::Asset::Services::V1b\006proto3"
+      "vices.v1.RegisterAssetResponse\"\344\004\312\363\030;\010\002\032" +
+      "\030udb:asset:register-asset \001J\003\001\002\004j\023asset." +
+      "RegisterAsset\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0307\010\001\022\016regist" +
+      "er_asset\032\003udb(\260\352\0010\003@\001J\005assetP\001Z\rregister" +
+      "Asset\342\363\030\265\001\n\005asset\022\020udb/native/asset\032\033UDB" +
+      "_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGE" +
+      "T\"+udb.native.asset.register_asset.boile" +
+      "rplate*\016register_asset2\tudb_asset:\005asset" +
+      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030\223\001\n\023as" +
+      "set.RegisterAsset\022\014asset.events\032\ttenant_" +
+      "id\"\010standard*\rat_least_once2\006stable:B\n\035u" +
+      "db.asset.asset.registered.v1\022\010asset_id\032\r" +
+      "at_least_once\"\010standard\362\363\030M\n\005asset\032\010post" +
+      "gres\032\014object_store2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\212\364\030 \n\010asset_" +
+      "id\022\010GetAsset\032\010asset_id(\001\202\323\344\223\002\017\"\n/v1/asse" +
+      "ts:\001*\022\221\007\n\rStartPipeline\0220.udb.core.asset" +
+      ".services.v1.StartPipelineRequest\0321.udb." +
+      "core.asset.services.v1.StartPipelineResp" +
+      "onse\"\232\006\312\363\030;\010\002\032\030udb:asset:start-pipeline " +
+      "\001J\003\001\002\004j\023asset.StartPipeline\220\001\001\322\363\030\006\010\001\020\001 \001" +
+      "\332\363\0307\010\001\022\016start_pipeline\032\003udb(\260\352\0010\003@\001J\005ass" +
+      "etP\001Z\rstartPipeline\342\363\030\265\001\n\005asset\022\020udb/nat" +
+      "ive/asset\032\033UDB_NATIVE_SERVICES_ENABLED\032\017" +
+      "UDB_GRPC_TARGET\"+udb.native.asset.start_" +
+      "pipeline.boilerplate*\016start_pipeline2\tud" +
+      "b_asset:\005assetJ\013UDB_API_KEYZ\020udb native " +
+      "smoke\352\363\030\226\001\n\023asset.StartPipeline\022\014asset.e" +
+      "vents\032\ttenant_id\"\010standard*\rat_least_onc" +
+      "e2\006stable:E\n\035udb.asset.pipeline.started." +
+      "v1\022\013instance_id\032\rat_least_once\"\010standard" +
+      "\362\363\030M\n\005asset\032\010postgres\032\014object_store2\033UDB" +
+      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
+      "T\370\363\030\002\212\364\030)\n\013instance_id\022\013GetPipeline\032\013ins" +
+      "tance_id(\001\222\364\030.\n\020PipelineInstance\032\007RUNNIN" +
+      "G\"\tCOMPLETED\"\006FAILED\232\364\030\022\n\016correlation_id" +
+      " \001\242\364\030T\n\'\n\033PIPELINE_DEFINITION_INVALID\022\010I" +
+      "NTERNAL\n)\n\025STEP_TYPE_UNSUPPORTED\022\020INVALI" +
+      "D_ARGUMENT\202\323\344\223\002\031\"\024/v1/assets/pipelines:\001" +
+      "*\022\363\004\n\013GetPipeline\022..udb.core.asset.servi" +
+      "ces.v1.GetPipelineRequest\032/.udb.core.ass" +
+      "et.services.v1.GetPipelineResponse\"\202\004\312\363\030" +
+      "7\010\002\032\026udb:asset:get-pipeline \001J\003\001\002\004j\021asse" +
+      "t.GetPipeline\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\014get_pi" +
+      "peline\032\003udb(\260\352\0010\003@\001J\005assetP\001Z\013getPipelin" +
+      "e\342\363\030\261\001\n\005asset\022\020udb/native/asset\032\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\")u" +
+      "db.native.asset.get_pipeline.boilerplate" +
+      "*\014get_pipeline2\tudb_asset:\005assetJ\013UDB_AP" +
+      "I_KEYZ\020udb native smoke\352\363\030M\n\021asset.GetPi" +
+      "peline\022\014asset.events\032\ttenant_id\"\010standar" +
+      "d*\rat_least_once2\006stable\362\363\030M\n\005asset\032\010pos" +
+      "tgres\032\014object_store2\033UDB_NATIVE_SERVICES" +
+      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002$\022\"/v1" +
+      "/assets/pipelines/{instance_id}\022\343\006\n\014Comp" +
+      "leteStep\022/.udb.core.asset.services.v1.Co" +
+      "mpleteStepRequest\0320.udb.core.asset.servi" +
+      "ces.v1.CompleteStepResponse\"\357\005\312\363\0309\010\002\032\027ud" +
+      "b:asset:complete-step \001J\003\001\002\004j\022asset.Comp" +
+      "leteStep\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0305\010\001\022\rcomplete_st" +
+      "ep\032\003udb(\260\352\0010\003@\001J\005assetP\001Z\014completeStep\342\363" +
+      "\030\263\001\n\005asset\022\020udb/native/asset\032\033UDB_NATIVE" +
+      "_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"*udb." +
+      "native.asset.complete_step.boilerplate*\r" +
+      "complete_step2\tudb_asset:\005assetJ\013UDB_API" +
+      "_KEYZ\020udb native smoke\352\363\030\257\002\n\022asset.Compl" +
+      "eteStep\022\014asset.events\032\ttenant_id\"\010standa" +
+      "rd*\rat_least_once2\006stable:L\n$udb.asset.p" +
+      "ipeline.step_completed.v1\022\013instance_id\032\r" +
+      "at_least_once\"\010standard:I\n\037udb.asset.pip" +
+      "eline.completed.v1\022\013instance_id\032\rat_leas" +
+      "t_once\"\010standard(\001:F\n\034udb.asset.pipeline" +
+      ".failed.v1\022\013instance_id\032\rat_least_once\"\010" +
+      "standard(\001\362\363\030M\n\005asset\032\010postgres\032\014object_" +
+      "store2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\002\202\323\344\223\002(\"#/v1/assets/steps/" +
+      "{step_id}:complete:\001*\022\321\004\n\nListAssets\022-.u" +
+      "db.core.asset.services.v1.ListAssetsRequ" +
+      "est\032..udb.core.asset.services.v1.ListAss" +
+      "etsResponse\"\343\003\312\363\0305\010\002\032\025udb:asset:list-ass" +
+      "ets \001J\003\001\002\004j\020asset.ListAssets\220\001\001\322\363\030\006\010\001\020\001 " +
+      "\001\332\363\0301\010\001\022\013list_assets\032\003udb(\260\352\0010\003@\001J\005asset" +
+      "P\001Z\nlistAssets\342\363\030\257\001\n\005asset\022\020udb/native/a" +
+      "sset\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_G" +
+      "RPC_TARGET\"(udb.native.asset.list_assets" +
+      ".boilerplate*\013list_assets2\tudb_asset:\005as" +
+      "setJ\013UDB_API_KEYZ\020udb native smoke\352\363\030L\n\020" +
+      "asset.ListAssets\022\014asset.events\032\ttenant_i" +
+      "d\"\010standard*\rat_least_once2\006stable\362\363\030M\n\005" +
+      "asset\032\010postgres\032\014object_store2\033UDB_NATIV" +
+      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202" +
+      "\323\344\223\002\014\022\n/v1/assets\022\310\004\n\010GetAsset\022+.udb.cor" +
+      "e.asset.services.v1.GetAssetRequest\032,.ud" +
+      "b.core.asset.services.v1.GetAssetRespons" +
+      "e\"\340\003\312\363\0301\010\002\032\023udb:asset:get-asset \001J\003\001\002\004j\016" +
+      "asset.GetAsset\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030-\010\001\022\tget_a" +
+      "sset\032\003udb(\260\352\0010\003@\001J\005assetP\001Z\010getAsset\342\363\030\253" +
+      "\001\n\005asset\022\020udb/native/asset\032\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\"&udb.na" +
+      "tive.asset.get_asset.boilerplate*\tget_as" +
+      "set2\tudb_asset:\005assetJ\013UDB_API_KEYZ\020udb " +
+      "native smoke\352\363\030J\n\016asset.GetAsset\022\014asset." +
+      "events\032\ttenant_id\"\010standard*\rat_least_on" +
+      "ce2\006stable\362\363\030M\n\005asset\032\010postgres\032\014object_" +
+      "store2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/assets/{asset" +
+      "_id}\032\342\002\312\360\031T\n\005asset\022\005asset\032\005asset\"\006Assets" +
+      "*\007storage0\0018\001H\001h\001z\005asset\202\001\005asset\212\001\005asset" +
+      "\222\001\014native.asset\322\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005asse" +
+      "tP\001\332\360\031\212\001\n\005asset\022\020udb/native/asset\032\033UDB_N" +
+      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
+      "\034udb.native.asset.config.json:\005assetJ\013UD" +
+      "B_API_KEYZ\017udb native lint\342\360\031[\n\005asset\032\010p" +
+      "ostgres\032\014object_store2\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED2\017UDB_GRPC_TARGET:\014object_stor" +
+      "eB\212\002\n\036com.udb.core.asset.services.v1B\021As" +
+      "setServiceProtoP\001ZHgithub.com/fahara02/u" +
+      "db/sdk/go/gen/udb/core/asset/services/v1" +
+      ";servicesv1\242\002\004UCAS\252\002\032Udb.Core.Asset.Serv" +
+      "ices.V1\312\002\032Udb\\Core\\Asset\\Services\\V1\342\002&U" +
+      "db\\GPBMetadata\\Core\\Asset\\Services\\V1\352\002\036" +
+      "Udb::Core::Asset::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -930,7 +930,14 @@ impl AuthnServiceImpl {
         crate::runtime::service::method_security::authorize_action(
             &claim_ctx,
             "authn.user.create",
-            &["authn.user.create", "authn.user.write", "udb:authn:admin"],
+            &[
+                "authn.user.create",
+                "authn.user.write",
+                // The method's own descriptor scope: a least-privilege service
+                // grant that passed the transport gate must pass this one too.
+                "udb:authn:create-user",
+                "udb:authn:admin",
+            ],
         )?;
         // D2-full: per-action NATIVE authz decision via the shared decision engine
         // (the same AuthzSnapshot the AuthzService decides against). Denies on an
@@ -1189,7 +1196,12 @@ impl AuthnServiceImpl {
         crate::runtime::service::method_security::authorize_action(
             &claim_ctx,
             "authn.user.update",
-            &["authn.user.update", "authn.user.write", "udb:authn:admin"],
+            &[
+                "authn.user.update",
+                "authn.user.write",
+                "udb:authn:update-user",
+                "udb:authn:admin",
+            ],
         )?;
         // D2-full: per-action native authz decision (denies on an explicit policy
         // deny). UpdateUser emits no domain event, so the decision_id is not
@@ -1319,6 +1331,7 @@ impl AuthnServiceImpl {
             &[
                 "authn.user.status.write",
                 "authn.user.write",
+                "udb:authn:change-user-status",
                 "udb:authn:admin",
             ],
         )?;

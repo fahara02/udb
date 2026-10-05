@@ -75,6 +75,7 @@ service VaultService {
       scopes: "udb:vault:put-secret"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.PutSecret"
       request_context_required: true
       tenant_required: true
@@ -123,6 +124,7 @@ service VaultService {
       scopes: "udb:vault:get-secret"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.GetSecret"
       request_context_required: true
       tenant_required: true
@@ -168,6 +170,7 @@ service VaultService {
       scopes: "udb:vault:list-secrets"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.ListSecrets"
       request_context_required: true
       tenant_required: true
@@ -213,6 +216,7 @@ service VaultService {
       scopes: "udb:vault:delete-secret"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.DeleteSecret"
       request_context_required: true
       tenant_required: true
@@ -259,6 +263,7 @@ service VaultService {
       scopes: "udb:vault:undelete-secret"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.UndeleteSecret"
       request_context_required: true
       tenant_required: true
@@ -443,6 +448,7 @@ service VaultService {
       scopes: "udb:vault:encrypt"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.Encrypt"
       request_context_required: true
       tenant_required: true
@@ -481,6 +487,7 @@ service VaultService {
       scopes: "udb:vault:decrypt"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.Decrypt"
       request_context_required: true
       tenant_required: true
@@ -527,6 +534,7 @@ service VaultService {
       scopes: "udb:vault:sign"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.Sign"
       request_context_required: true
       tenant_required: true
@@ -565,6 +573,7 @@ service VaultService {
       scopes: "udb:vault:verify"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.Verify"
       request_context_required: true
       tenant_required: true
@@ -602,6 +611,7 @@ service VaultService {
       scopes: "udb:vault:hmac"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.Hmac"
       request_context_required: true
       tenant_required: true
@@ -641,6 +651,7 @@ service VaultService {
       scopes: "udb:vault:seal-status"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.SealStatus"
       request_context_required: true
       tenant_required: true
@@ -696,6 +707,7 @@ service VaultService {
       scopes: "udb:vault:generate-db-credentials"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.GenerateDatabaseCredentials"
       request_context_required: true
       tenant_required: true
@@ -761,6 +773,7 @@ service VaultService {
       scopes: "udb:vault:revoke-db-credentials"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.RevokeDatabaseCredentials"
       request_context_required: true
       tenant_required: true
@@ -857,6 +870,7 @@ service VaultService {
       scopes: "udb:vault:generate-data-key"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.GenerateDataKey"
       request_context_required: true
       tenant_required: true
@@ -896,6 +910,7 @@ service VaultService {
       scopes: "udb:vault:rewrap"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.Rewrap"
       request_context_required: true
       tenant_required: true
@@ -936,6 +951,7 @@ service VaultService {
       scopes: "udb:vault:get-public-key"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.GetTransitPublicKey"
       request_context_required: true
       tenant_required: true
@@ -974,6 +990,7 @@ service VaultService {
       scopes: "udb:vault:encrypt"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.BatchEncrypt"
       request_context_required: true
       tenant_required: true
@@ -1011,6 +1028,7 @@ service VaultService {
       scopes: "udb:vault:decrypt"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "vault.BatchDecrypt"
       request_context_required: true
       tenant_required: true

@@ -568,214 +568,214 @@ public final class EmbeddingServiceProto {
       "SF\020\003*z\n\016RerankStrategy\022\037\n\033RERANK_STRATEG" +
       "Y_UNSPECIFIED\020\000\022!\n\035RERANK_STRATEGY_CROSS" +
       "_ENCODER\020\001\022$\n RERANK_STRATEGY_LATE_INTER" +
-      "ACTION\020\0022\250>\n\020EmbeddingService\022\202\004\n\016Regist" +
+      "ACTION\020\0022\267>\n\020EmbeddingService\022\203\004\n\016Regist" +
       "erSource\0225.udb.core.embedding.services.v" +
       "1.RegisterSourceRequest\0326.udb.core.embed" +
       "ding.services.v1.RegisterSourceResponse\"" +
-      "\200\003\312\363\030D\010\002\032\035udb:embedding:register-source " +
-      "\001J\002\001\002j\030embedding.RegisterSource\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030F\010\001\022\017register_source\032\003udb(\260\352\0010\003@\001" +
-      "J\tembeddingP\001Z\027registerEmbeddingSource\352\363" +
-      "\030l\n\030embedding.RegisterSource\022\"udb.embedd" +
-      "ing.source.registered.v1\032\013source_name\"\010s" +
-      "tandard*\rat_least_once2\006stable\362\363\030C\n\tembe" +
-      "dding\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/emb" +
-      "edding/sources:register:\001*\022\361\002\n\013ListSourc" +
-      "es\0222.udb.core.embedding.services.v1.List" +
-      "SourcesRequest\0323.udb.core.embedding.serv" +
-      "ices.v1.ListSourcesResponse\"\370\001\312\363\030>\010\002\032\032ud" +
-      "b:embedding:list-sources \001J\002\001\002j\025embeddin" +
-      "g.ListSources\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@\010\001\022\014list_s" +
-      "ources\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\024listEm" +
-      "beddingSources\362\363\030C\n\tembedding\032\010postgres2" +
-      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
-      "ARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/embedding/sources\022\355" +
-      "\003\n\014DeleteSource\0223.udb.core.embedding.ser" +
-      "vices.v1.DeleteSourceRequest\0324.udb.core." +
-      "embedding.services.v1.DeleteSourceRespon" +
-      "se\"\361\002\312\363\030@\010\002\032\033udb:embedding:delete-source" +
-      " \001J\002\001\002j\026embedding.DeleteSource\220\001\001\322\363\030\006\010\001\020" +
-      "\001 \001\332\363\030B\010\001\022\rdelete_source\032\003udb(\260\352\0010\003@\001J\te" +
-      "mbeddingP\001Z\025deleteEmbeddingSource\352\363\030g\n\026e" +
-      "mbedding.DeleteSource\022\037udb.embedding.sou" +
-      "rce.deleted.v1\032\013source_name\"\010standard*\ra" +
-      "t_least_once2\006stable\362\363\030C\n\tembedding\032\010pos" +
-      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
-      "GRPC_TARGET\370\363\030\003\202\323\344\223\002!\"\034/v1/embedding/sou" +
-      "rces:delete:\001*\022\327\003\n\010Backfill\022/.udb.core.e" +
-      "mbedding.services.v1.BackfillRequest\0320.u" +
-      "db.core.embedding.services.v1.BackfillRe" +
-      "sponse\"\347\002\312\363\0307\010\002\032\026udb:embedding:backfill " +
-      "\001J\002\001\002j\022embedding.Backfill\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\030?\010\001\022\010backfill\032\003udb(\260\352\0010\003@\001J\tembeddingP\001" +
-      "Z\027backfillEmbeddingSource\352\363\030g\n\022embedding" +
-      ".Backfill\022#udb.embedding.backfill.reques" +
-      "ted.v1\032\013source_name\"\010standard*\rat_least_" +
-      "once2\006stable\362\363\030C\n\tembedding\032\010postgres2\033U" +
-      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\370\363\030\002\202\323\344\223\002#\"\036/v1/embedding/sources:bac" +
-      "kfill:\001*\022\312\002\n\017ReportEmbedding\0226.udb.core." +
-      "embedding.services.v1.ReportEmbeddingReq" +
-      "uest\0327.udb.core.embedding.services.v1.Re" +
-      "portEmbeddingResponse\"\305\001\312\363\030H\010\002\032\036udb:embe" +
-      "dding:report-embedding \0018\001J\002\001\002j\031embeddin" +
-      "g.ReportEmbedding\220\001\001\332\363\030*\022\020report_embeddi" +
-      "ng\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C\n\tembeddin" +
-      "g\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
-      "2\017UDB_GRPC_TARGET\370\363\030\002\022\336\002\n\010Retrieve\022/.udb" +
-      ".core.embedding.services.v1.RetrieveRequ" +
-      "est\0320.udb.core.embedding.services.v1.Ret" +
-      "rieveResponse\"\356\001\312\363\0307\010\002\032\026udb:embedding:re" +
-      "trieve \001J\002\001\002j\022embedding.Retrieve\220\001\001\322\363\030\006\010" +
-      "\001\020\001 \001\332\363\0309\010\001\022\010retrieve\032\003udb(\260\352\0010\003@\001J\tembe" +
-      "ddingP\001Z\021retrieveEmbedding\362\363\030C\n\tembeddin" +
-      "g\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
-      "2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\033\"\026/v1/embeddi" +
-      "ng:retrieve:\001*\022\200\003\n\rRegisterModel\0224.udb.c" +
-      "ore.embedding.services.v1.RegisterModelR" +
-      "equest\0325.udb.core.embedding.services.v1." +
-      "RegisterModelResponse\"\201\002\312\363\030B\010\002\032\034udb:embe" +
-      "dding:register-model \001J\002\001\002j\027embedding.Re" +
-      "gisterModel\220\001\001\332\363\030D\010\001\022\016register_model\032\003ud" +
-      "b(\260\352\0010\003@\001J\tembeddingP\001Z\026registerEmbeddin" +
-      "gModel\362\363\030C\n\tembedding\032\010postgres2\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
-      "\002\202\323\344\223\002\"\"\035/v1/embedding/models:register:\001" +
-      "*\022\337\002\n\nListModels\0221.udb.core.embedding.se" +
-      "rvices.v1.ListModelsRequest\0322.udb.core.e" +
-      "mbedding.services.v1.ListModelsResponse\"" +
-      "\351\001\312\363\030<\010\002\032\031udb:embedding:list-models \001J\002\001" +
-      "\002j\024embedding.ListModels\220\001\001\332\363\030>\010\001\022\013list_m" +
-      "odels\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\023listEmb" +
-      "eddingModels\362\363\030C\n\tembedding\032\010postgres2\033U" +
-      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\370\363\030\001\202\323\344\223\002\026\022\024/v1/embedding/models\022\360\002\n\013" +
-      "DeleteModel\0222.udb.core.embedding.service" +
-      "s.v1.DeleteModelRequest\0323.udb.core.embed" +
-      "ding.services.v1.DeleteModelResponse\"\367\001\312" +
-      "\363\030>\010\002\032\032udb:embedding:delete-model \001J\002\001\002j" +
-      "\025embedding.DeleteModel\220\001\001\332\363\030@\010\001\022\014delete_" +
-      "model\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\024deleteE" +
-      "mbeddingModel\362\363\030C\n\tembedding\032\010postgres2\033" +
-      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
-      "RGET\370\363\030\003\202\323\344\223\002 \"\033/v1/embedding/models:del" +
-      "ete:\001*\022\204\003\n\016SetModelStatus\0225.udb.core.emb" +
-      "edding.services.v1.SetModelStatusRequest" +
-      "\0326.udb.core.embedding.services.v1.SetMod" +
-      "elStatusResponse\"\202\002\312\363\030A\010\002\032\032udb:embedding" +
-      ":update-model \001J\002\001\002j\030embedding.SetModelS",
-      "tatus\220\001\001\332\363\030E\010\001\022\020set_model_status\032\003udb(\260\352" +
-      "\0010\003@\001J\tembeddingZ\027setEmbeddingModelStatu" +
-      "s\362\363\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_S" +
-      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223" +
-      "\002#\"\036/v1/embedding/models:setStatus:\001*\022\225\003" +
-      "\n\021CutoverModelAlias\0228.udb.core.embedding" +
-      ".services.v1.CutoverModelAliasRequest\0329." +
-      "udb.core.embedding.services.v1.CutoverMo" +
-      "delAliasResponse\"\212\002\312\363\030E\010\002\032\033udb:embedding" +
-      ":cutover-model \001J\002\001\002j\033embedding.CutoverM" +
-      "odelAlias\220\001\001\332\363\030K\010\001\022\023cutover_model_alias\032" +
-      "\003udb(\260\352\0010\001@\001J\tembeddingZ\032cutoverEmbeddin" +
-      "gModelAlias\362\363\030C\n\tembedding\032\010postgres2\033UD" +
-      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
-      "ET\370\363\030\002\202\323\344\223\002!\"\034/v1/embedding/models:cutov" +
-      "er:\001*\022\221\003\n\025GetEmbeddingJobStatus\022<.udb.co" +
-      "re.embedding.services.v1.GetEmbeddingJob" +
-      "StatusRequest\032=.udb.core.embedding.servi" +
-      "ces.v1.GetEmbeddingJobStatusResponse\"\372\001\312" +
-      "\363\030C\010\002\032\025udb:embedding:get-job \001J\002\001\002j\037embe" +
-      "dding.GetEmbeddingJobStatus\220\001\001\332\363\030A\010\001\022\016ge" +
-      "t_job_status\032\003udb(\260\352\0010\003@\001J\tembeddingZ\025ge" +
-      "tEmbeddingJobStatus\362\363\030C\n\tembedding\032\010post" +
-      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
-      "RPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/embedding/jobs" +
-      "/{job_id}\022\244\003\n\026ListEmbeddingWorkItems\022=.u" +
-      "db.core.embedding.services.v1.ListEmbedd" +
-      "ingWorkItemsRequest\032>.udb.core.embedding" +
-      ".services.v1.ListEmbeddingWorkItemsRespo" +
-      "nse\"\212\002\312\363\030F\010\002\032\027udb:embedding:list-work \001J" +
-      "\002\001\002j embedding.ListEmbeddingWorkItems\220\001\001" +
-      "\332\363\030C\010\001\022\017list_work_items\032\003udb(\260\352\0010\003@\001J\tem" +
-      "beddingZ\026listEmbeddingWorkItems\362\363\030C\n\temb" +
+      "\201\003\312\363\030E\010\002\032\035udb:embedding:register-source " +
+      "\001J\003\001\002\004j\030embedding.RegisterSource\220\001\001\322\363\030\006\010" +
+      "\001\020\001 \001\332\363\030F\010\001\022\017register_source\032\003udb(\260\352\0010\003@" +
+      "\001J\tembeddingP\001Z\027registerEmbeddingSource\352" +
+      "\363\030l\n\030embedding.RegisterSource\022\"udb.embed" +
+      "ding.source.registered.v1\032\013source_name\"\010" +
+      "standard*\rat_least_once2\006stable\362\363\030C\n\temb" +
       "edding\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002(\022&/v1/em" +
-      "bedding/jobs/{job_id}/work-items\022\344\002\n\024Rep" +
-      "ortEmbeddingBatch\022;.udb.core.embedding.s" +
-      "ervices.v1.ReportEmbeddingBatchRequest\032<" +
-      ".udb.core.embedding.services.v1.ReportEm" +
-      "beddingBatchResponse\"\320\001\312\363\030M\010\002\032\036udb:embed" +
-      "ding:report-embedding \0018\001J\002\001\002j\036embedding" +
-      ".ReportEmbeddingBatch\220\001\001\332\363\0300\022\026report_emb" +
-      "edding_batch\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C" +
-      "\n\tembedding\032\010postgres2\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\022\356\002\n\026Repo" +
-      "rtEmbeddingFailure\022=.udb.core.embedding." +
-      "services.v1.ReportEmbeddingFailureReques" +
-      "t\032>.udb.core.embedding.services.v1.Repor" +
-      "tEmbeddingFailureResponse\"\324\001\312\363\030O\010\002\032\036udb:" +
-      "embedding:report-embedding \0018\001J\002\001\002j embe" +
-      "dding.ReportEmbeddingFailure\220\001\001\332\363\0302\022\030rep" +
-      "ort_embedding_failure\032\003udb(\260\352\0010\001@\001J\tembe" +
-      "dding\362\363\030C\n\tembedding\032\010postgres2\033UDB_NATI" +
-      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002" +
-      "\022\210\003\n\016IngestDocument\0225.udb.core.embedding" +
-      ".services.v1.IngestDocumentRequest\0326.udb" +
-      ".core.embedding.services.v1.IngestDocume" +
-      "ntResponse\"\206\002\312\363\030D\010\002\032\035udb:embedding:inges" +
-      "t-document \001J\002\001\002j\030embedding.IngestDocume" +
-      "nt\220\001\001\332\363\030F\010\001\022\017ingest_document\032\003udb(\260\352\0010\003@" +
-      "\001J\tembeddingP\001Z\027ingestEmbeddingDocument\362" +
-      "\363\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#" +
-      "\"\036/v1/embedding/documents:ingest:\001*\022\252\003\n\023" +
-      "IngestDocumentBatch\022:.udb.core.embedding" +
-      ".services.v1.IngestDocumentBatchRequest\032" +
-      ";.udb.core.embedding.services.v1.IngestD" +
-      "ocumentBatchResponse\"\231\002\312\363\030I\010\002\032\035udb:embed" +
-      "ding:ingest-document \001J\002\001\002j\035embedding.In" +
-      "gestDocumentBatch\220\001\001\332\363\030O\010\001\022\025ingest_docum" +
-      "ent_batch\032\003udb(\260\352\0010\003@\001J\tembeddingZ\034inges" +
-      "tEmbeddingDocumentBatch\362\363\030C\n\tembedding\032\010" +
+      "ABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/em" +
+      "bedding/sources:register:\001*\022\362\002\n\013ListSour" +
+      "ces\0222.udb.core.embedding.services.v1.Lis" +
+      "tSourcesRequest\0323.udb.core.embedding.ser" +
+      "vices.v1.ListSourcesResponse\"\371\001\312\363\030?\010\002\032\032u" +
+      "db:embedding:list-sources \001J\003\001\002\004j\025embedd" +
+      "ing.ListSources\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@\010\001\022\014list" +
+      "_sources\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\024list" +
+      "EmbeddingSources\362\363\030C\n\tembedding\032\010postgre" +
+      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
+      "_TARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/embedding/sources" +
+      "\022\356\003\n\014DeleteSource\0223.udb.core.embedding.s" +
+      "ervices.v1.DeleteSourceRequest\0324.udb.cor" +
+      "e.embedding.services.v1.DeleteSourceResp" +
+      "onse\"\362\002\312\363\030A\010\002\032\033udb:embedding:delete-sour" +
+      "ce \001J\003\001\002\004j\026embedding.DeleteSource\220\001\001\322\363\030\006" +
+      "\010\001\020\001 \001\332\363\030B\010\001\022\rdelete_source\032\003udb(\260\352\0010\003@\001" +
+      "J\tembeddingP\001Z\025deleteEmbeddingSource\352\363\030g" +
+      "\n\026embedding.DeleteSource\022\037udb.embedding." +
+      "source.deleted.v1\032\013source_name\"\010standard" +
+      "*\rat_least_once2\006stable\362\363\030C\n\tembedding\032\010" +
       "postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017U" +
-      "DB_GRPC_TARGET\370\363\030\002\202\323\344\223\002(\"#/v1/embedding/" +
-      "documents:batchIngest:\001*\022\343\002\n\024ReportParse" +
-      "dDocument\022;.udb.core.embedding.services." +
-      "v1.ReportParsedDocumentRequest\032<.udb.cor" +
-      "e.embedding.services.v1.ReportParsedDocu" +
-      "mentResponse\"\317\001\312\363\030L\010\002\032\035udb:embedding:rep" +
-      "ort-document \0018\001J\002\001\002j\036embedding.ReportPa" +
-      "rsedDocument\220\001\001\332\363\0300\022\026report_parsed_docum" +
-      "ent\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C\n\tembeddi" +
-      "ng\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLE" +
-      "D2\017UDB_GRPC_TARGET\370\363\030\002\022\376\002\n\031ReportRetriev" +
-      "alEvaluation\022@.udb.core.embedding.servic" +
-      "es.v1.ReportRetrievalEvaluationRequest\032A" +
-      ".udb.core.embedding.services.v1.ReportRe" +
-      "trievalEvaluationResponse\"\333\001\312\363\030S\010\002\032\037udb:" +
-      "embedding:report-evaluation \0018\001J\002\001\002j#emb" +
-      "edding.ReportRetrievalEvaluation\220\001\001\332\363\0305\022" +
-      "\033report_retrieval_evaluation\032\003udb(\260\352\0010\003@" +
-      "\001J\tembedding\362\363\030C\n\tembedding\032\010postgres2\033U" +
+      "DB_GRPC_TARGET\370\363\030\003\202\323\344\223\002!\"\034/v1/embedding/" +
+      "sources:delete:\001*\022\330\003\n\010Backfill\022/.udb.cor" +
+      "e.embedding.services.v1.BackfillRequest\032" +
+      "0.udb.core.embedding.services.v1.Backfil" +
+      "lResponse\"\350\002\312\363\0308\010\002\032\026udb:embedding:backfi" +
+      "ll \001J\003\001\002\004j\022embedding.Backfill\220\001\001\322\363\030\006\010\001\020\001" +
+      " \001\332\363\030?\010\001\022\010backfill\032\003udb(\260\352\0010\003@\001J\tembeddi" +
+      "ngP\001Z\027backfillEmbeddingSource\352\363\030g\n\022embed" +
+      "ding.Backfill\022#udb.embedding.backfill.re" +
+      "quested.v1\032\013source_name\"\010standard*\rat_le" +
+      "ast_once2\006stable\362\363\030C\n\tembedding\032\010postgre" +
+      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
+      "_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/embedding/sources" +
+      ":backfill:\001*\022\313\002\n\017ReportEmbedding\0226.udb.c" +
+      "ore.embedding.services.v1.ReportEmbeddin" +
+      "gRequest\0327.udb.core.embedding.services.v" +
+      "1.ReportEmbeddingResponse\"\306\001\312\363\030I\010\002\032\036udb:" +
+      "embedding:report-embedding \0018\001J\003\001\002\004j\031emb" +
+      "edding.ReportEmbedding\220\001\001\332\363\030*\022\020report_em" +
+      "bedding\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C\n\temb" +
+      "edding\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED2\017UDB_GRPC_TARGET\370\363\030\002\022\337\002\n\010Retrieve\022" +
+      "/.udb.core.embedding.services.v1.Retriev" +
+      "eRequest\0320.udb.core.embedding.services.v" +
+      "1.RetrieveResponse\"\357\001\312\363\0308\010\002\032\026udb:embeddi" +
+      "ng:retrieve \001J\003\001\002\004j\022embedding.Retrieve\220\001" +
+      "\001\322\363\030\006\010\001\020\001 \001\332\363\0309\010\001\022\010retrieve\032\003udb(\260\352\0010\003@\001" +
+      "J\tembeddingP\001Z\021retrieveEmbedding\362\363\030C\n\tem" +
+      "bedding\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\033\"\026/v1/e" +
+      "mbedding:retrieve:\001*\022\200\003\n\rRegisterModel\0224" +
+      ".udb.core.embedding.services.v1.Register" +
+      "ModelRequest\0325.udb.core.embedding.servic" +
+      "es.v1.RegisterModelResponse\"\201\002\312\363\030B\010\002\032\034ud" +
+      "b:embedding:register-model \001J\002\001\002j\027embedd" +
+      "ing.RegisterModel\220\001\001\332\363\030D\010\001\022\016register_mod" +
+      "el\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\026registerEm" +
+      "beddingModel\362\363\030C\n\tembedding\032\010postgres2\033U" +
       "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\370\363\030\002\032\371\002\312\360\031t\n\tembedding\022\tembedding\032\tem" +
-      "bedding\"\nEmbeddings*\tembedding0\0018\001h\001z\tem" +
-      "bedding\202\001\tembedding\212\001\tembedding\222\001\020native" +
-      ".embedding\322\360\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tembedding" +
-      "P\001\332\360\031\225\001\n\tembedding\022\024udb/native/embedding" +
-      "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
-      "TARGET\"\033udb.native.embedding.config:\temb" +
-      "eddingJ\013UDB_API_KEYZ\017udb native lint\342\360\031C" +
+      "GET\370\363\030\002\202\323\344\223\002\"\"\035/v1/embedding/models:regi" +
+      "ster:\001*\022\340\002\n\nListModels\0221.udb.core.embedd" +
+      "ing.services.v1.ListModelsRequest\0322.udb." +
+      "core.embedding.services.v1.ListModelsRes" +
+      "ponse\"\352\001\312\363\030=\010\002\032\031udb:embedding:list-model" +
+      "s \001J\003\001\002\004j\024embedding.ListModels\220\001\001\332\363\030>\010\001\022" +
+      "\013list_models\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\023" +
+      "listEmbeddingModels\362\363\030C\n\tembedding\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGET\370\363\030\001\202\323\344\223\002\026\022\024/v1/embedding/mode" +
+      "ls\022\360\002\n\013DeleteModel\0222.udb.core.embedding." +
+      "services.v1.DeleteModelRequest\0323.udb.cor" +
+      "e.embedding.services.v1.DeleteModelRespo" +
+      "nse\"\367\001\312\363\030>\010\002\032\032udb:embedding:delete-model" +
+      " \001J\002\001\002j\025embedding.DeleteModel\220\001\001\332\363\030@\010\001\022\014" +
+      "delete_model\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\024" +
+      "deleteEmbeddingModel\362\363\030C\n\tembedding\032\010pos" +
+      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\003\202\323\344\223\002 \"\033/v1/embedding/mod" +
+      "els:delete:\001*\022\204\003\n\016SetModelStatus\0225.udb.c" +
+      "ore.embedding.services.v1.SetModelStatus" +
+      "Request\0326.udb.core.embedding.services.v1" +
+      ".SetModelStatusResponse\"\202\002\312\363\030A\010\002\032\032udb:em" +
+      "bedding:update-model \001J\002\001\002j\030embedding.Se",
+      "tModelStatus\220\001\001\332\363\030E\010\001\022\020set_model_status\032" +
+      "\003udb(\260\352\0010\003@\001J\tembeddingZ\027setEmbeddingMod" +
+      "elStatus\362\363\030C\n\tembedding\032\010postgres2\033UDB_N" +
+      "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
+      "\363\030\002\202\323\344\223\002#\"\036/v1/embedding/models:setStatu" +
+      "s:\001*\022\225\003\n\021CutoverModelAlias\0228.udb.core.em" +
+      "bedding.services.v1.CutoverModelAliasReq" +
+      "uest\0329.udb.core.embedding.services.v1.Cu" +
+      "toverModelAliasResponse\"\212\002\312\363\030E\010\002\032\033udb:em" +
+      "bedding:cutover-model \001J\002\001\002j\033embedding.C" +
+      "utoverModelAlias\220\001\001\332\363\030K\010\001\022\023cutover_model" +
+      "_alias\032\003udb(\260\352\0010\001@\001J\tembeddingZ\032cutoverE" +
+      "mbeddingModelAlias\362\363\030C\n\tembedding\032\010postg" +
+      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
+      "PC_TARGET\370\363\030\002\202\323\344\223\002!\"\034/v1/embedding/model" +
+      "s:cutover:\001*\022\222\003\n\025GetEmbeddingJobStatus\022<" +
+      ".udb.core.embedding.services.v1.GetEmbed" +
+      "dingJobStatusRequest\032=.udb.core.embeddin" +
+      "g.services.v1.GetEmbeddingJobStatusRespo" +
+      "nse\"\373\001\312\363\030D\010\002\032\025udb:embedding:get-job \001J\003\001" +
+      "\002\004j\037embedding.GetEmbeddingJobStatus\220\001\001\332\363" +
+      "\030A\010\001\022\016get_job_status\032\003udb(\260\352\0010\003@\001J\tembed" +
+      "dingZ\025getEmbeddingJobStatus\362\363\030C\n\tembeddi" +
+      "ng\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLE" +
+      "D2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/embedd" +
+      "ing/jobs/{job_id}\022\245\003\n\026ListEmbeddingWorkI" +
+      "tems\022=.udb.core.embedding.services.v1.Li" +
+      "stEmbeddingWorkItemsRequest\032>.udb.core.e" +
+      "mbedding.services.v1.ListEmbeddingWorkIt" +
+      "emsResponse\"\213\002\312\363\030G\010\002\032\027udb:embedding:list" +
+      "-work \001J\003\001\002\004j embedding.ListEmbeddingWor" +
+      "kItems\220\001\001\332\363\030C\010\001\022\017list_work_items\032\003udb(\260\352" +
+      "\0010\003@\001J\tembeddingZ\026listEmbeddingWorkItems" +
+      "\362\363\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002" +
+      "(\022&/v1/embedding/jobs/{job_id}/work-item" +
+      "s\022\345\002\n\024ReportEmbeddingBatch\022;.udb.core.em" +
+      "bedding.services.v1.ReportEmbeddingBatch" +
+      "Request\032<.udb.core.embedding.services.v1" +
+      ".ReportEmbeddingBatchResponse\"\321\001\312\363\030N\010\002\032\036" +
+      "udb:embedding:report-embedding \0018\001J\003\001\002\004j" +
+      "\036embedding.ReportEmbeddingBatch\220\001\001\332\363\0300\022\026" +
+      "report_embedding_batch\032\003udb(\260\352\0010\003@\001J\temb" +
+      "edding\362\363\030C\n\tembedding\032\010postgres2\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
+      "\002\022\357\002\n\026ReportEmbeddingFailure\022=.udb.core." +
+      "embedding.services.v1.ReportEmbeddingFai" +
+      "lureRequest\032>.udb.core.embedding.service" +
+      "s.v1.ReportEmbeddingFailureResponse\"\325\001\312\363" +
+      "\030P\010\002\032\036udb:embedding:report-embedding \0018\001" +
+      "J\003\001\002\004j embedding.ReportEmbeddingFailure\220" +
+      "\001\001\332\363\0302\022\030report_embedding_failure\032\003udb(\260\352" +
+      "\0010\001@\001J\tembedding\362\363\030C\n\tembedding\032\010postgre" +
+      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
+      "_TARGET\370\363\030\002\022\211\003\n\016IngestDocument\0225.udb.cor" +
+      "e.embedding.services.v1.IngestDocumentRe" +
+      "quest\0326.udb.core.embedding.services.v1.I" +
+      "ngestDocumentResponse\"\207\002\312\363\030E\010\002\032\035udb:embe" +
+      "dding:ingest-document \001J\003\001\002\004j\030embedding." +
+      "IngestDocument\220\001\001\332\363\030F\010\001\022\017ingest_document" +
+      "\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\027ingestEmbedd" +
+      "ingDocument\362\363\030C\n\tembedding\032\010postgres2\033UD" +
+      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
+      "ET\370\363\030\002\202\323\344\223\002#\"\036/v1/embedding/documents:in" +
+      "gest:\001*\022\253\003\n\023IngestDocumentBatch\022:.udb.co" +
+      "re.embedding.services.v1.IngestDocumentB" +
+      "atchRequest\032;.udb.core.embedding.service" +
+      "s.v1.IngestDocumentBatchResponse\"\232\002\312\363\030J\010" +
+      "\002\032\035udb:embedding:ingest-document \001J\003\001\002\004j" +
+      "\035embedding.IngestDocumentBatch\220\001\001\332\363\030O\010\001\022" +
+      "\025ingest_document_batch\032\003udb(\260\352\0010\003@\001J\temb" +
+      "eddingZ\034ingestEmbeddingDocumentBatch\362\363\030C" +
       "\n\tembedding\032\010postgres2\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED2\017UDB_GRPC_TARGETB\246\002\n\"com.udb." +
-      "core.embedding.services.v1B\025EmbeddingSer" +
-      "viceProtoP\001ZLgithub.com/fahara02/udb/sdk" +
-      "/go/gen/udb/core/embedding/services/v1;s" +
-      "ervicesv1\242\002\004UCES\252\002\036Udb.Core.Embedding.Se" +
-      "rvices.V1\312\002\036Udb\\Core\\Embedding\\Services\\" +
-      "V1\342\002*Udb\\GPBMetadata\\Core\\Embedding\\Serv" +
-      "ices\\V1\352\002\"Udb::Core::Embedding::Services" +
-      "::V1b\006proto3"
+      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002(\"#/" +
+      "v1/embedding/documents:batchIngest:\001*\022\344\002" +
+      "\n\024ReportParsedDocument\022;.udb.core.embedd" +
+      "ing.services.v1.ReportParsedDocumentRequ" +
+      "est\032<.udb.core.embedding.services.v1.Rep" +
+      "ortParsedDocumentResponse\"\320\001\312\363\030M\010\002\032\035udb:" +
+      "embedding:report-document \0018\001J\003\001\002\004j\036embe" +
+      "dding.ReportParsedDocument\220\001\001\332\363\0300\022\026repor" +
+      "t_parsed_document\032\003udb(\260\352\0010\003@\001J\tembeddin" +
+      "g\362\363\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\022\377\002\n" +
+      "\031ReportRetrievalEvaluation\022@.udb.core.em" +
+      "bedding.services.v1.ReportRetrievalEvalu" +
+      "ationRequest\032A.udb.core.embedding.servic" +
+      "es.v1.ReportRetrievalEvaluationResponse\"" +
+      "\334\001\312\363\030T\010\002\032\037udb:embedding:report-evaluatio" +
+      "n \0018\001J\003\001\002\004j#embedding.ReportRetrievalEva" +
+      "luation\220\001\001\332\363\0305\022\033report_retrieval_evaluat" +
+      "ion\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C\n\tembeddi" +
+      "ng\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLE" +
+      "D2\017UDB_GRPC_TARGET\370\363\030\002\032\371\002\312\360\031t\n\tembedding" +
+      "\022\tembedding\032\tembedding\"\nEmbeddings*\tembe" +
+      "dding0\0018\001h\001z\tembedding\202\001\tembedding\212\001\temb" +
+      "edding\222\001\020native.embedding\322\360\031\034\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\tembeddingP\001\332\360\031\225\001\n\tembedding\022\024udb/n" +
+      "ative/embedding\032\033UDB_NATIVE_SERVICES_ENA" +
+      "BLED\032\017UDB_GRPC_TARGET\"\033udb.native.embedd" +
+      "ing.config:\tembeddingJ\013UDB_API_KEYZ\017udb " +
+      "native lint\342\360\031C\n\tembedding\032\010postgres2\033UD" +
+      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
+      "ETB\246\002\n\"com.udb.core.embedding.services.v" +
+      "1B\025EmbeddingServiceProtoP\001ZLgithub.com/f" +
+      "ahara02/udb/sdk/go/gen/udb/core/embeddin" +
+      "g/services/v1;servicesv1\242\002\004UCES\252\002\036Udb.Co" +
+      "re.Embedding.Services.V1\312\002\036Udb\\Core\\Embe" +
+      "dding\\Services\\V1\342\002*Udb\\GPBMetadata\\Core" +
+      "\\Embedding\\Services\\V1\352\002\"Udb::Core::Embe" +
+      "dding::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

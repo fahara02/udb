@@ -435,6 +435,7 @@ service ApiKeyService {
       scopes: "udb:apikey:validate-api-key"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "apikey.ValidateApiKey"
       request_context_required: true
       tenant_required: true

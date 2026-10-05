@@ -571,10 +571,13 @@ class _ServiceClientBase:
         while True:
             attempt += 1
             request_id = uuid.uuid4().hex
+            # Server streams (LiveQuery subscribe, CDC tails, storage downloads)
+            # are long-lived: the client-wide default deadline would kill them,
+            # so only an explicit per-call ``timeout`` bounds the stream.
             stream = method(
                 request,
                 metadata=self._call_metadata(metadata, request_id),
-                timeout=self._timeout if timeout is None else timeout,
+                timeout=timeout,
             )
             iterator = iter(stream)
             try:
@@ -612,15 +615,21 @@ class _ServiceClientBase:
         *,
         metadata: Metadata | None,
         timeout: float | None,
+        default_deadline: bool = True,
     ) -> Any:
         # Client-streaming / bidi requests are never auto-retried: the request
-        # iterator is generally not replayable.
+        # iterator is generally not replayable. Bidi streams pass
+        # ``default_deadline=False``: they are long-lived (WebRTC signalling,
+        # resource watches), so only an explicit per-call ``timeout`` applies.
         request_id = uuid.uuid4().hex
+        effective_timeout = timeout
+        if timeout is None and default_deadline:
+            effective_timeout = self._timeout
         try:
             return method(
                 request_iterator,
                 metadata=self._call_metadata(metadata, request_id),
-                timeout=self._timeout if timeout is None else timeout,
+                timeout=effective_timeout,
             )
         except grpc.RpcError as error:
             raise _map_error(rpc_name, error) from error
@@ -742,6 +751,7 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
             request_iterator,
             metadata=metadata,
             timeout=timeout,
+            default_deadline=False,
         )
         try:
             for item in stream:

@@ -67,6 +67,7 @@ service SearchService {
       scopes: "udb:search:create-index"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "search.CreateIndex"
       request_context_required: true
       tenant_required: true
@@ -162,6 +163,7 @@ service SearchService {
       scopes: "udb:search:list-indexes"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "search.ListIndexes"
       request_context_required: true
       tenant_required: true
@@ -199,6 +201,7 @@ service SearchService {
       scopes: "udb:search:search"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "search.Search"
       request_context_required: true
       tenant_required: true
@@ -239,6 +242,7 @@ service SearchService {
       scopes: "udb:search:reindex"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "search.Reindex"
       request_context_required: true
       tenant_required: true

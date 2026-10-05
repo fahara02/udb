@@ -1529,6 +1529,8 @@ pub(crate) fn claims_from_verified_principal(
         jti: Some(principal.credential_id.clone()),
         auth_method: Some(principal.auth_method.clone()),
         exp: (principal.expires_at_unix > 0).then_some(principal.expires_at_unix),
+        account_kind: principal.account_kind,
+        acr: principal.acr.clone(),
         ..Default::default()
     }
 }
@@ -4211,6 +4213,8 @@ mod tests {
             expires_at_unix: 4_102_444_800,
             certificate_identity: None,
             rate_limit_per_minute: 0,
+            account_kind: None,
+            acr: None,
         }
     }
 

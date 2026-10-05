@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.24 | protocol v1.0.0                                          │
+│    crate v0.5.25 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -39,7 +39,7 @@ rest — is more sensitive, so keep it off the public internet. Run it on an
 internal network or behind a trusted gateway:
 
 ```bash
-$env:UDB_AUTH_GRPC_ADDR = "127.0.0.1:50052"
+export UDB_AUTH_GRPC_ADDR=127.0.0.1:50061   # :50052 is the metrics port
 udb serve proto "" 0.0.0.0:50051
 ```
 
@@ -330,7 +330,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.5.24"
+python scripts/bench_snapshot.py --label "release-0.5.25"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

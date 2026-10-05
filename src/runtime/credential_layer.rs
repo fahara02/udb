@@ -62,6 +62,12 @@ pub struct VerifiedPrincipal {
     /// (`api_keys.rate_limit_per_minute`). Only meaningful for API-key
     /// principals; `0` for every other credential type (tenant default applies).
     pub rate_limit_per_minute: i64,
+    /// The bearer's `account_kind` claim (SERVICE_ACCOUNT / WORKLOAD / ...),
+    /// carried so credential classification sees the same claims on the
+    /// preresolved path as on the direct JWT path.
+    pub account_kind: Option<i32>,
+    /// The bearer's `acr` (assurance level) claim, carried for step-up gates.
+    pub acr: Option<String>,
 }
 
 impl VerifiedPrincipal {
@@ -77,16 +83,11 @@ impl VerifiedPrincipal {
             .auth_method
             .clone()
             .unwrap_or_else(|| "bearer_jwt".to_string());
-        let credential_type = if !service_identity.trim().is_empty() {
-            4 // CREDENTIAL_TYPE_SERVICE_ACCOUNT
-        } else {
-            match auth_method.trim().to_ascii_lowercase().as_str() {
-                "session" => 2,
-                "api_key" | "apikey" => 3,
-                "mtls" => 5,
-                _ => 1, // CREDENTIAL_TYPE_BEARER_JWT
-            }
-        };
+        // One classifier for both paths, so the principal's recorded
+        // credential type always equals the type method security enforced.
+        let credential_type =
+            crate::runtime::service::method_security::credential_type_for_bearer_claims(claims)
+                as i32;
 
         Self {
             credential_type,
@@ -102,6 +103,8 @@ impl VerifiedPrincipal {
             certificate_identity: None,
             // Bearer/JWT principals carry no api-key budget — tenant default.
             rate_limit_per_minute: 0,
+            account_kind: claims.account_kind,
+            acr: claims.acr.clone(),
         }
     }
 }
@@ -385,6 +388,8 @@ async fn resolve_credentials(
                         // The key's own per-minute budget (0 when the column is
                         // unset) — the opt-in limiter uses it to raise this key.
                         rate_limit_per_minute: record.rate_limit_per_minute,
+                        account_kind: None,
+                        acr: None,
                     })),
                     // Grant revoked / owner inactive / empty intersection —
                     // the key no longer authenticates (fail closed).
@@ -430,6 +435,8 @@ async fn resolve_credentials(
                             certificate_identity: resolved.certificate_identity.clone(),
                             // mTLS grants carry no api-key budget — tenant default.
                             rate_limit_per_minute: 0,
+                            account_kind: None,
+                            acr: None,
                         });
                     }
                     Ok(None) => {

@@ -166,6 +166,10 @@ export interface StoredToken {
   sessionId?: string;
   /** Epoch milliseconds when the access token expires (0 = unknown). */
   expiresAt: number;
+  /** Epoch milliseconds when the token was obtained (optional). When present the
+   *  background refresher renews at ~80% of the lifetime instead of only 60s
+   *  before expiry. Set for API-key-exchanged bearers. */
+  issuedAt?: number;
 }
 
 /** Pluggable persistence for the active token. The default is in-process only;
@@ -1092,6 +1096,23 @@ const BG_REFRESH_SKEW_MS = 60_000; // refresh this long before expiry
 const BG_REFRESH_MIN_MS = 1_000; // floor between attempts (never busy-loop)
 const BG_REFRESH_IDLE_MS = 5 * 60_000; // cadence when the token carries no expiry
 const BG_REFRESH_RETRY_MS = 5_000; // cadence after a load error or while poisoned
+const BG_REFRESH_MAX_BACKOFF_MS = 60_000; // cap of the exponential failure backoff
+const BG_REFRESH_LIFETIME_FRACTION = 0.8; // renew at 80% of a known token lifetime
+
+/** API keys retained for bearer re-exchange, keyed by project. A WeakMap (not a
+ *  field) so the secret never appears in `util.inspect`/JSON dumps of the project. */
+const RETAINED_API_KEYS = new WeakMap<object, string>();
+
+/** How long before expiry a token should be renewed: 60s, or 20% of its known
+ *  lifetime when that is earlier — never more than half the lifetime. */
+function refreshSkewMs(tok: StoredToken | null | undefined): number {
+  if (tok && tok.issuedAt && tok.expiresAt > tok.issuedAt) {
+    const lifetime = tok.expiresAt - tok.issuedAt;
+    const skew = Math.max(BG_REFRESH_SKEW_MS, Math.round(lifetime * (1 - BG_REFRESH_LIFETIME_FRACTION)));
+    return Math.min(skew, Math.floor(lifetime / 2));
+  }
+  return BG_REFRESH_SKEW_MS;
+}
 
 export class UdbProject {
   /** The shared generated client (escape hatch — raw, typed, per-service RPCs). */
@@ -1129,7 +1150,14 @@ export class UdbProject {
   readonly admin: AdminFacade;
 
   private readonly tokenStore: TokenStore;
-  private refreshInFlight: Promise<StoredToken> | null = null;
+  private refreshInFlight: Promise<StoredToken | null> | null = null;
+  /** True while calls authenticate with the raw `x-api-key` header instead of an
+   *  exchanged bearer (broker minted no token, or re-exchange kept failing near
+   *  expiry). The refresher keeps trying to re-exchange and swaps back on success. */
+  private apiKeyRawMode = false;
+  private rawModeWarned = false;
+  /** Consecutive background-refresh failures (drives exponential backoff). */
+  private refreshFailures = 0;
   /** Background bearer-refresher state (parity with the Go enterprise session): a
    *  timer proactively refreshes before expiry; on a hard failure (expired +
    *  unrefreshable) the bearer is cleared so calls fail CLOSED instead of sending a
@@ -1316,6 +1344,8 @@ export class UdbProject {
         sessionId: resp.session_id || undefined,
         expiresAt: expiresIn > 0 ? Date.now() + expiresIn * 1000 : 0,
       });
+      // A password session supersedes any API-key identity: stop re-exchanging it.
+      RETAINED_API_KEYS.delete(this);
       this.applyCredentials(resp.access_token || resp.session_token || "");
     }
     return resp;
@@ -1365,6 +1395,79 @@ export class UdbProject {
   }
 
   /**
+   * Exchange a native API key (AuthnService.Authenticate) for a short-lived
+   * bearer, adopt the verified principal, and keep the bearer alive: the key is
+   * retained privately (never logged) and the background refresher re-exchanges
+   * it at ~80% of the bearer lifetime. If the broker mints no access token (no JWT
+   * signing key configured) or re-exchange keeps failing near expiry, calls fall
+   * back to the raw `x-api-key` header, which the broker accepts for service keys.
+   */
+  async authenticateApiKeyAndAdopt(apiKey = this.config.credentials?.apiKey ?? ""): Promise<any> {
+    if (!apiKey) throw new Error("udb: api key is required");
+    const { verified } = await this.exchangeApiKey(apiKey);
+    if (!this.closed) {
+      if (this.refreshTimer) this.scheduleRefresh();
+      else this.startBackgroundRefresh();
+    }
+    return verified;
+  }
+
+  /** One API-key → bearer exchange: adopt principal, persist + install the bearer
+   *  (or switch to raw `x-api-key` mode when no token is minted). Shared by the
+   *  initial connect and the background re-exchange. */
+  private async exchangeApiKey(apiKey: string): Promise<{ verified: any; token: StoredToken | null }> {
+    const verified: any = await this.auth.authenticateApiKey(apiKey);
+    RETAINED_API_KEYS.set(this, apiKey);
+    const token: string = verified?.access_token ?? "";
+    const principal = verified?.principal ?? {};
+    const tenantId: string = principal?.tenant_id ?? "";
+    if (tenantId) this.setTenant(tenantId);
+    const projectId: string = principal?.project_id ?? "";
+    if (projectId) this.sharedMeta.projectId = projectId;
+    const userId: string = principal?.user_id ?? principal?.principal_id ?? "";
+    if (userId) this.sharedMeta.userId = userId;
+    const serviceIdentity: string = principal?.service_identity ?? "";
+    if (serviceIdentity) this.sharedMeta.serviceIdentity = serviceIdentity;
+    if (Array.isArray(principal?.scopes)) this.sharedMeta.scopes = [...principal.scopes];
+    if (!token) {
+      // No JWT signing key on the broker: nothing to refresh; authenticate every
+      // call with the raw service key instead of failing the connect.
+      await this.tokenStore.clear();
+      this.enterApiKeyRawMode(apiKey, "the broker returned no access token for the API key");
+      return { verified, token: null };
+    }
+    const now = Date.now();
+    const expiresAtUnix = Number(verified?.expires_at_unix ?? 0);
+    const next: StoredToken = {
+      accessToken: token,
+      issuedAt: now,
+      expiresAt: expiresAtUnix > 0 ? expiresAtUnix * 1000 : 0,
+    };
+    await this.tokenStore.save(next);
+    this.applyCredentials(token);
+    return { verified, token: next };
+  }
+
+  /** Authenticate every outbound channel with the raw `x-api-key` header (no
+   *  bearer). Warns once; the key itself is never logged. */
+  private enterApiKeyRawMode(apiKey: string, reason: string): void {
+    this.apiKeyRawMode = true;
+    this.poisoned = false;
+    if (this.sharedMeta) {
+      this.sharedMeta.bearerToken = undefined;
+      this.sharedMeta.apiKey = apiKey;
+    }
+    this.core.setCredentials({ bearerToken: undefined, apiKey });
+    this.authGenerated?.core.setCredentials({ bearerToken: undefined, apiKey });
+    this.auth.setCredentials({ bearerToken: undefined, apiKey });
+    this.webrtcGenerated?.core.setCredentials({ bearerToken: undefined, apiKey });
+    if (!this.rawModeWarned) {
+      this.rawModeWarned = true;
+      console.warn(`udb: ${reason}; falling back to the raw x-api-key header`);
+    }
+  }
+
+  /**
    * Login, then ALWAYS authenticate the freshly-minted bearer and adopt the
    * canonical tenant/project from the VERIFIED principal. Canonical D11 sequence
    * (always 2 RPCs): `Login → AuthenticateBearer(token)` then adopt
@@ -1377,24 +1480,6 @@ export class UdbProject {
    * tenant header. When `mfa_required` comes back, returns early (nothing
    * adopted, no second factor stored).
    */
-  async authenticateApiKeyAndAdopt(apiKey = this.config.credentials?.apiKey ?? ""): Promise<any> {
-    if (!apiKey) throw new Error("udb: api key is required");
-    const verified: any = await this.auth.authenticateApiKey(apiKey);
-    const token: string = verified?.access_token ?? "";
-    if (!token) throw new Error("udb: authenticate api key returned no access token");
-    const principal = verified?.principal ?? {};
-    const tenantId: string = principal?.tenant_id ?? "";
-    if (tenantId) this.setTenant(tenantId);
-    const projectId: string = principal?.project_id ?? "";
-    if (projectId) this.sharedMeta.projectId = projectId;
-    const userId: string = principal?.user_id ?? principal?.principal_id ?? "";
-    if (userId) this.sharedMeta.userId = userId;
-    const serviceIdentity: string = principal?.service_identity ?? "";
-    if (serviceIdentity) this.sharedMeta.serviceIdentity = serviceIdentity;
-    if (Array.isArray(principal?.scopes)) this.sharedMeta.scopes = [...principal.scopes];
-    this.applyCredentials(token);
-    return verified;
-  }
   async loginAndAdoptTenant(request: {
     username: string;
     password: string;
@@ -1416,6 +1501,7 @@ export class UdbProject {
 
   /** Push a refreshed bearer into every outbound channel, clearing raw API-key metadata. */
   private applyCredentials(bearerToken: string): void {
+    this.apiKeyRawMode = false;
     if (this.sharedMeta) {
       this.sharedMeta.bearerToken = bearerToken;
       this.sharedMeta.apiKey = undefined;
@@ -1428,6 +1514,7 @@ export class UdbProject {
 
   /** Remove the active bearer and raw API-key metadata from every outbound channel. */
   private clearBearerCredentials(): void {
+    this.apiKeyRawMode = false;
     if (this.sharedMeta) {
       this.sharedMeta.bearerToken = undefined;
       this.sharedMeta.apiKey = undefined;
@@ -1445,13 +1532,29 @@ export class UdbProject {
    * refreshed token is written back to the store and returned. Returns the
    * existing token unchanged when no refresh is needed; returns null when there
    * is no stored token / refresh token.
+   *
+   * A bearer obtained from an API key carries no refresh token; it is renewed by
+   * re-exchanging the retained API key (same single-flight).
    */
   async refreshIfNeeded(skewMs = 60_000): Promise<StoredToken | null> {
     const current = await this.tokenStore.load();
     if (!current) return null;
     const fresh = current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt;
     if (fresh) return current;
-    if (!current.refreshToken && !current.sessionId) return current;
+    if (!current.refreshToken && !current.sessionId) {
+      const retainedKey = RETAINED_API_KEYS.get(this);
+      if (!retainedKey) return current;
+      if (!this.refreshInFlight) {
+        this.refreshInFlight = (async () => {
+          try {
+            return (await this.exchangeApiKey(retainedKey)).token;
+          } finally {
+            this.refreshInFlight = null;
+          }
+        })();
+      }
+      return this.refreshInFlight;
+    }
 
     if (!this.refreshInFlight) {
       this.refreshInFlight = (async () => {
@@ -1508,8 +1611,15 @@ export class UdbProject {
       .then((tok) => {
         let delay = BG_REFRESH_IDLE_MS;
         if (tok && tok.expiresAt > 0) {
-          delay = tok.expiresAt - BG_REFRESH_SKEW_MS - Date.now();
+          delay = tok.expiresAt - refreshSkewMs(tok) - Date.now();
           if (delay < BG_REFRESH_MIN_MS) delay = BG_REFRESH_MIN_MS;
+        }
+        // Exponential backoff across consecutive failures (1s, 2s, 4s … 60s) so a
+        // failing refresh/re-exchange is retried without hot-looping.
+        const failures = this.refreshFailures ?? 0;
+        if (failures > 0) {
+          const backoff = Math.min(BG_REFRESH_MIN_MS * 2 ** (failures - 1), BG_REFRESH_MAX_BACKOFF_MS);
+          if (delay < backoff) delay = backoff;
         }
         // While poisoned, back off from the 1s floor so a permanently-dead token
         // doesn't hot-loop the refresh RPC.
@@ -1521,6 +1631,8 @@ export class UdbProject {
 
   private armTimer(delayMs: number): void {
     if (this.closed) return;
+    // Two overlapping scheduleRefresh() calls must not leave an orphan timer.
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
     this.refreshTimer = setTimeout(() => {
       void this.backgroundRefreshTick();
     }, delayMs);
@@ -1530,7 +1642,9 @@ export class UdbProject {
 
   private async backgroundRefreshTick(): Promise<void> {
     try {
-      await this.refreshIfNeeded(BG_REFRESH_SKEW_MS);
+      const before = await this.tokenStore.load();
+      await this.refreshIfNeeded(refreshSkewMs(before));
+      this.refreshFailures = 0;
       const tok = await this.tokenStore.load();
       if (tok && (tok.expiresAt === 0 || Date.now() < tok.expiresAt)) {
         this.poisoned = false;
@@ -1538,7 +1652,21 @@ export class UdbProject {
       }
     } catch (err) {
       this.lastRefreshError = err instanceof Error ? err : new Error(String(err));
+      this.refreshFailures = (this.refreshFailures ?? 0) + 1;
       const tok = await Promise.resolve(this.tokenStore.load()).catch(() => null);
+      const retainedKey = RETAINED_API_KEYS.get(this);
+      const apiKeyBearer = !!retainedKey && (!tok || (!tok.refreshToken && !tok.sessionId));
+      if (apiKeyBearer) {
+        // API-key bearer whose re-exchange keeps failing: once it is within the
+        // final skew window (or expired), fall back to the raw service key rather
+        // than failing closed. The refresher keeps retrying the exchange.
+        const nearExpiry =
+          !tok || (tok.expiresAt > 0 && Date.now() + BG_REFRESH_SKEW_MS >= tok.expiresAt);
+        if (nearExpiry && !this.apiKeyRawMode) {
+          this.enterApiKeyRawMode(retainedKey!, "API key re-exchange is failing near bearer expiry");
+        }
+        return;
+      }
       const expired = !tok || (tok.expiresAt > 0 && Date.now() >= tok.expiresAt);
       if (expired) {
         // Fail closed: drop the dead bearer so no call goes out with a stale
@@ -1554,6 +1682,7 @@ export class UdbProject {
   /** Clear the stored token (local only; does not call Logout). */
   async logout(): Promise<void> {
     await this.tokenStore.clear();
+    RETAINED_API_KEYS.delete(this);
     this.clearBearerCredentials();
   }
 
@@ -1565,6 +1694,7 @@ export class UdbProject {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
     }
+    RETAINED_API_KEYS.delete(this);
     this.generated.close();
     this.authGenerated?.close();
     this.webrtcGenerated?.close();

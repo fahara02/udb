@@ -180,8 +180,10 @@ public sealed class UdbRpcException : Exception
 /// Robustness primitives shared by all generated service wrappers. Forwards to
 /// the buf-generated stub method (by reusing the supplied call delegate), adding
 /// deadline, retry/backoff, metadata, and error mapping. Streaming calls are
-/// forwarded once (never retried mid-stream) but still get deadline + metadata +
-/// error mapping.
+/// forwarded once (never retried mid-stream) but still get metadata + error
+/// mapping. The default <see cref="UdbCallOptions.Timeout"/> applies to unary and
+/// client-streaming calls only; server-streaming and bidi calls are long-lived
+/// and honour only an explicit per-call deadline.
 /// </summary>
 public abstract class GeneratedServiceBase
 {
@@ -199,9 +201,12 @@ public abstract class GeneratedServiceBase
         Options = options ?? new UdbCallOptions();
     }
 
-    private CallOptions MakeCallOptions(TimeSpan? deadline, CancellationToken ct)
+    private CallOptions MakeCallOptions(
+        TimeSpan? deadline,
+        CancellationToken ct,
+        bool applyDefaultTimeout = true)
     {
-        var effective = deadline ?? Options.Timeout;
+        var effective = deadline ?? (applyDefaultTimeout ? Options.Timeout : null);
         DateTime? when = effective.HasValue ? DateTime.UtcNow.Add(effective.Value) : null;
         return new CallOptions(HeadersFactory(), when, ct);
     }
@@ -294,6 +299,29 @@ public abstract class GeneratedServiceBase
         try
         {
             return call(MakeCallOptions(deadline, ct));
+        }
+        catch (RpcException ex)
+        {
+            throw new UdbRpcException(rpcPath, ex);
+        }
+    }
+
+    /// <summary>
+    /// Open a server-streaming or bidi RPC (single attempt). Unlike
+    /// <see cref="InvokeStreaming"/>, the default <see cref="UdbCallOptions.Timeout"/>
+    /// is NOT applied: these streams are long-lived (LiveQuery subscribe, CDC,
+    /// WebRTC signalling) and a default deadline would kill them. Only an
+    /// explicit <paramref name="deadline"/> bounds the stream.
+    /// </summary>
+    protected dynamic InvokeLongLivedStreaming(
+        string rpcPath,
+        Func<CallOptions, object> call,
+        TimeSpan? deadline,
+        CancellationToken ct)
+    {
+        try
+        {
+            return call(MakeCallOptions(deadline, ct, applyDefaultTimeout: false));
         }
         catch (RpcException ex)
         {

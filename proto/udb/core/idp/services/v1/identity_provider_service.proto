@@ -365,6 +365,7 @@ service IdentityProviderService {
       scopes: "udb:idp:resolve-external-identity"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ResolveExternalIdentity"
       request_context_required: true
       tenant_required: true
@@ -387,6 +388,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-create-user"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimCreateUser"
       request_context_required: true
       tenant_required: true
@@ -408,6 +410,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-get-user"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimGetUser"
       request_context_required: true
       tenant_required: true
@@ -426,6 +429,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-list-users"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimListUsers"
       request_context_required: true
       tenant_required: true
@@ -444,6 +448,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-replace-user"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimReplaceUser"
       request_context_required: true
       tenant_required: true
@@ -465,6 +470,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-patch-user"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimPatchUser"
       request_context_required: true
       tenant_required: true
@@ -486,6 +492,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-delete-user"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimDeleteUser"
       request_context_required: true
       tenant_required: true
@@ -504,6 +511,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-create-group"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimCreateGroup"
       request_context_required: true
       tenant_required: true
@@ -525,6 +533,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-get-group"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimGetGroup"
       request_context_required: true
       tenant_required: true
@@ -543,6 +552,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-list-groups"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimListGroups"
       request_context_required: true
       tenant_required: true
@@ -561,6 +571,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-patch-group"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimPatchGroup"
       request_context_required: true
       tenant_required: true
@@ -582,6 +593,7 @@ service IdentityProviderService {
       scopes: "udb:idp:scim-delete-group"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "idp.ScimDeleteGroup"
       request_context_required: true
       tenant_required: true

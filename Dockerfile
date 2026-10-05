@@ -50,7 +50,9 @@ RUN curl -fsSL \
 FROM debian:bookworm-slim AS runtime
 
 RUN groupadd --system udb \
-    && useradd --system --gid udb --home-dir /app --shell /usr/sbin/nologin udb
+    && useradd --system --gid udb --home-dir /app --shell /usr/sbin/nologin udb \
+    && mkdir -p /var/lib/udb/db_ops /var/lib/udb/audit /var/lib/udb/run \
+    && chown -R udb:udb /var/lib/udb
 
 WORKDIR /app
 COPY --from=builder /tmp/udb /usr/local/bin/udb
@@ -63,10 +65,18 @@ COPY proto ./proto
 COPY third_party ./third_party
 COPY configs ./configs
 
+# db_ops (migration bootstrap/delta artifacts) must be writable by the runtime
+# user: discovery from WORKDIR /app would otherwise resolve to the root-owned
+# /db_ops and fail at write_bootstrap_artifacts after a migrate.
+# The native control plane (:50061) and WebRTC peer listener (:50071) bind
+# loopback by default; set UDB_AUTH_GRPC_ADDR=0.0.0.0:50061 and/or
+# UDB_WEBRTC_GRPC_ADDR=0.0.0.0:50071 to publish them from the container.
+# Audit file sink and Unix sockets: use /var/lib/udb/audit and /var/lib/udb/run.
 ENV RUST_LOG=info \
-    UDB_METRICS_ADDR=0.0.0.0:50052
+    UDB_METRICS_ADDR=0.0.0.0:50052 \
+    UDB_DB_OPS_ROOT=/var/lib/udb/db_ops
 
-EXPOSE 50051 50052
+EXPOSE 50051 50052 50061 50071
 USER udb:udb
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \

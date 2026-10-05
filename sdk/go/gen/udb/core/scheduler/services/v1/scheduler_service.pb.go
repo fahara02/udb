@@ -826,33 +826,33 @@ const file_udb_core_scheduler_services_v1_scheduler_service_proto_rawDesc = "" +
 	"\x06job_id\x18\x02 \x01(\tR\x05jobId: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01\"\x83\x01\n" +
 	"\x11ResumeJobResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x012\xdf \n" +
-	"\x10SchedulerService\x12\xf7\x04\n" +
-	"\tCreateJob\x120.udb.core.scheduler.services.v1.CreateJobRequest\x1a1.udb.core.scheduler.services.v1.CreateJobResponse\"\x84\x04\xca\xf3\x18:\b\x02\x1a\x18udb:scheduler:create-job \x01J\x02\x01\x02j\x13scheduler.CreateJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x012\xe5 \n" +
+	"\x10SchedulerService\x12\xf8\x04\n" +
+	"\tCreateJob\x120.udb.core.scheduler.services.v1.CreateJobRequest\x1a1.udb.core.scheduler.services.v1.CreateJobResponse\"\x85\x04\xca\xf3\x18;\b\x02\x1a\x18udb:scheduler:create-job \x01J\x03\x01\x02\x04j\x13scheduler.CreateJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\n" +
 	"create_job\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01Z\tcreateJob\xe2\xf3\x18\xc1\x01\n" +
 	"\tscheduler\x12\x14udb/native/scheduler\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.scheduler.create_job.boilerplate*\n" +
 	"create_job2\rudb_scheduler:\tschedulerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18S\n" +
 	"\x13scheduler.CreateJob\x12\x10scheduler.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18C\n" +
-	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/scheduler/jobs\x12\xdf\x04\n" +
-	"\x06GetJob\x12-.udb.core.scheduler.services.v1.GetJobRequest\x1a..udb.core.scheduler.services.v1.GetJobResponse\"\xf5\x03\xca\xf3\x184\b\x02\x1a\x15udb:scheduler:get-job \x01J\x02\x01\x02j\x10scheduler.GetJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18-\b\x01\x12\aget_job\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01Z\x06getJob\xe2\xf3\x18\xbb\x01\n" +
+	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/scheduler/jobs\x12\xe0\x04\n" +
+	"\x06GetJob\x12-.udb.core.scheduler.services.v1.GetJobRequest\x1a..udb.core.scheduler.services.v1.GetJobResponse\"\xf6\x03\xca\xf3\x185\b\x02\x1a\x15udb:scheduler:get-job \x01J\x03\x01\x02\x04j\x10scheduler.GetJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18-\b\x01\x12\aget_job\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01Z\x06getJob\xe2\xf3\x18\xbb\x01\n" +
 	"\tscheduler\x12\x14udb/native/scheduler\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"(udb.native.scheduler.get_job.boilerplate*\aget_job2\rudb_scheduler:\tschedulerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
 	"\x10scheduler.GetJob\x12\x10scheduler.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18C\n" +
-	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/scheduler/jobs/{job_id}\x12\xea\x04\n" +
-	"\bListJobs\x12/.udb.core.scheduler.services.v1.ListJobsRequest\x1a0.udb.core.scheduler.services.v1.ListJobsResponse\"\xfa\x03\xca\xf3\x188\b\x02\x1a\x17udb:scheduler:list-jobs \x01J\x02\x01\x02j\x12scheduler.ListJobs\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x181\b\x01\x12\tlist_jobs\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01Z\blistJobs\xe2\xf3\x18\xbf\x01\n" +
+	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/scheduler/jobs/{job_id}\x12\xeb\x04\n" +
+	"\bListJobs\x12/.udb.core.scheduler.services.v1.ListJobsRequest\x1a0.udb.core.scheduler.services.v1.ListJobsResponse\"\xfb\x03\xca\xf3\x189\b\x02\x1a\x17udb:scheduler:list-jobs \x01J\x03\x01\x02\x04j\x12scheduler.ListJobs\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x181\b\x01\x12\tlist_jobs\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01Z\blistJobs\xe2\xf3\x18\xbf\x01\n" +
 	"\tscheduler\x12\x14udb/native/scheduler\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.scheduler.list_jobs.boilerplate*\tlist_jobs2\rudb_scheduler:\tschedulerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18R\n" +
 	"\x12scheduler.ListJobs\x12\x10scheduler.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18C\n" +
-	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/scheduler/jobs\x12\xfd\x04\n" +
-	"\tDeleteJob\x120.udb.core.scheduler.services.v1.DeleteJobRequest\x1a1.udb.core.scheduler.services.v1.DeleteJobResponse\"\x8a\x04\xca\xf3\x18:\b\x02\x1a\x18udb:scheduler:delete-job \x01J\x02\x01\x02j\x13scheduler.DeleteJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\n" +
+	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/scheduler/jobs\x12\xfe\x04\n" +
+	"\tDeleteJob\x120.udb.core.scheduler.services.v1.DeleteJobRequest\x1a1.udb.core.scheduler.services.v1.DeleteJobResponse\"\x8b\x04\xca\xf3\x18;\b\x02\x1a\x18udb:scheduler:delete-job \x01J\x03\x01\x02\x04j\x13scheduler.DeleteJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\n" +
 	"delete_job\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01Z\tdeleteJob\xe2\xf3\x18\xc1\x01\n" +
 	"\tscheduler\x12\x14udb/native/scheduler\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.scheduler.delete_job.boilerplate*\n" +
 	"delete_job2\rudb_scheduler:\tschedulerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18S\n" +
 	"\x13scheduler.DeleteJob\x12\x10scheduler.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18C\n" +
-	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/scheduler/jobs/{job_id}\x12\xfc\x04\n" +
-	"\bPauseJob\x12/.udb.core.scheduler.services.v1.PauseJobRequest\x1a0.udb.core.scheduler.services.v1.PauseJobResponse\"\x8c\x04\xca\xf3\x188\b\x02\x1a\x17udb:scheduler:pause-job \x01J\x02\x01\x02j\x12scheduler.PauseJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x181\b\x01\x12\tpause_job\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01Z\bpauseJob\xe2\xf3\x18\xbf\x01\n" +
+	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/scheduler/jobs/{job_id}\x12\xfd\x04\n" +
+	"\bPauseJob\x12/.udb.core.scheduler.services.v1.PauseJobRequest\x1a0.udb.core.scheduler.services.v1.PauseJobResponse\"\x8d\x04\xca\xf3\x189\b\x02\x1a\x17udb:scheduler:pause-job \x01J\x03\x01\x02\x04j\x12scheduler.PauseJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x181\b\x01\x12\tpause_job\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01Z\bpauseJob\xe2\xf3\x18\xbf\x01\n" +
 	"\tscheduler\x12\x14udb/native/scheduler\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.scheduler.pause_job.boilerplate*\tpause_job2\rudb_scheduler:\tschedulerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18R\n" +
 	"\x12scheduler.PauseJob\x12\x10scheduler.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18C\n" +
-	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02&:\x01*\"!/v1/scheduler/jobs/{job_id}:pause\x12\x87\x05\n" +
-	"\tResumeJob\x120.udb.core.scheduler.services.v1.ResumeJobRequest\x1a1.udb.core.scheduler.services.v1.ResumeJobResponse\"\x94\x04\xca\xf3\x18:\b\x02\x1a\x18udb:scheduler:resume-job \x01J\x02\x01\x02j\x13scheduler.ResumeJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\n" +
+	"\tscheduler\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02&:\x01*\"!/v1/scheduler/jobs/{job_id}:pause\x12\x88\x05\n" +
+	"\tResumeJob\x120.udb.core.scheduler.services.v1.ResumeJobRequest\x1a1.udb.core.scheduler.services.v1.ResumeJobResponse\"\x95\x04\xca\xf3\x18;\b\x02\x1a\x18udb:scheduler:resume-job \x01J\x03\x01\x02\x04j\x13scheduler.ResumeJob\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\n" +
 	"resume_job\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tschedulerP\x01Z\tresumeJob\xe2\xf3\x18\xc1\x01\n" +
 	"\tscheduler\x12\x14udb/native/scheduler\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.scheduler.resume_job.boilerplate*\n" +
 	"resume_job2\rudb_scheduler:\tschedulerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18S\n" +

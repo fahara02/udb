@@ -1106,7 +1106,7 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "{{RPC_PATH}}",
             co => (object)_stub.{{RPC_WIRE_NAME}}(request, co),
             deadline,
@@ -1152,7 +1152,7 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncDuplexStreamingCall<TReq,TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "{{RPC_PATH}}",
             co => (object)_stub.{{RPC_WIRE_NAME}}(co),
             deadline,

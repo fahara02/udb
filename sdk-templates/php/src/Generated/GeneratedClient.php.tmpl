@@ -39,7 +39,9 @@ use Grpc\ChannelCredentials;
  *
  * Streaming RPCs are exposed as accessors returning the live gRPC call object
  * (metadata + deadline already applied); retry is intentionally not applied to
- * streams because re-driving a half-consumed stream is unsafe.
+ * streams because re-driving a half-consumed stream is unsafe. The configured
+ * `deadline_ms` applies to unary and client-streaming calls only; server-streaming
+ * and bidi calls get no implicit deadline (pass `$deadlineMs` per call instead).
  *
  * Channel sharing: one gRPC channel per (host, credentials, options) tuple is
  * created lazily and shared across every service stub, matching the
@@ -270,13 +272,16 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: {{RPC_PATH}}
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function {{PHP_RPC_METHOD_CAMEL}}($request, ?UdbMetadata $metadata = null)
+    public function {{PHP_RPC_METHOD_CAMEL}}($request, ?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
-        return $stub->{{RPC_WIRE_NAME}}($request, $this->headers($metadata), $this->callOptions());
+        return $stub->{{RPC_WIRE_NAME}}($request, $this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     // @@UDB_RPC_END
 
@@ -304,12 +309,15 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: {{RPC_PATH}}
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @return \Grpc\BidiStreamingCall
      */
-    public function {{PHP_RPC_METHOD_CAMEL}}(?UdbMetadata $metadata = null)
+    public function {{PHP_RPC_METHOD_CAMEL}}(?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
-        return $stub->{{RPC_WIRE_NAME}}($this->headers($metadata), $this->callOptions());
+        return $stub->{{RPC_WIRE_NAME}}($this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     // @@UDB_RPC_END
 
@@ -417,6 +425,23 @@ final class GeneratedClient
         $opts = [];
         $deadlineMs = (int) ($this->config['deadline_ms'] ?? 30_000);
         if ($deadlineMs > 0) {
+            $opts['timeout'] = $deadlineMs * 1000;
+        }
+        return $opts;
+    }
+
+    /**
+     * Per-call gRPC options for server-streaming and bidi calls. These streams
+     * are long-lived (LiveQuery subscribe, CDC, WebRTC signalling), so the
+     * configured `deadline_ms` default would kill them; only an explicit
+     * per-call `$deadlineMs` bounds the stream.
+     *
+     * @return array<string,mixed>
+     */
+    private function streamCallOptions(?int $deadlineMs): array
+    {
+        $opts = [];
+        if ($deadlineMs !== null && $deadlineMs > 0) {
             $opts['timeout'] = $deadlineMs * 1000;
         }
         return $opts;

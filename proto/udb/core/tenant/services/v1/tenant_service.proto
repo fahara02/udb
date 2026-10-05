@@ -123,6 +123,7 @@ service TenantService {
       scopes: "udb:tenant:get-tenant"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "tenant.GetTenant"
       request_context_required: true
       tenant_required: true
@@ -294,6 +295,7 @@ service TenantService {
       scopes: "udb:tenant:get-tenant-config"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "tenant.GetTenantConfig"
       request_context_required: true
       tenant_required: true

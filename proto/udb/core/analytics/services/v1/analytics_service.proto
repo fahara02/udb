@@ -68,6 +68,7 @@ service AnalyticsService {
       scopes: "udb:analytics:record-pipeline-metric"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "analytics.RecordPipelineMetric"
       request_context_required: true
       tenant_required: true

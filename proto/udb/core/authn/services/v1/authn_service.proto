@@ -75,6 +75,7 @@ service AuthnService {
       scopes: "udb:authn:create-user"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.CreateUser"
       request_context_required: true
       tenant_required: true
@@ -132,6 +133,7 @@ service AuthnService {
       scopes: "udb:authn:get-user"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.GetUser"
       request_context_required: true
       tenant_required: true
@@ -186,6 +188,7 @@ service AuthnService {
       scopes: "udb:authn:list-users"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.ListUsers"
       request_context_required: true
       tenant_required: true
@@ -240,6 +243,7 @@ service AuthnService {
       scopes: "udb:authn:update-user"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.UpdateUser"
       request_context_required: true
       tenant_required: true
@@ -297,6 +301,7 @@ service AuthnService {
       scopes: "udb:authn:change-user-status"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.ChangeUserStatus"
       request_context_required: true
       tenant_required: true
@@ -414,6 +419,7 @@ service AuthnService {
       scopes: "udb:authn:send-otp"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.SendOTP"
       request_context_required: true
       tenant_required: true
@@ -471,6 +477,7 @@ service AuthnService {
       scopes: "udb:authn:verify-otp"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.VerifyOTP"
       request_context_required: true
       tenant_required: true
@@ -528,6 +535,7 @@ service AuthnService {
       scopes: "udb:authn:resend-otp"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.ResendOTP"
       request_context_required: true
       tenant_required: true
@@ -940,6 +948,7 @@ service AuthnService {
       scopes: "udb:authn:create-session"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.CreateSession"
       request_context_required: true
       tenant_required: true
@@ -998,6 +1007,7 @@ service AuthnService {
       scopes: "udb:authn:refresh-session"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.RefreshSession"
       request_context_required: true
       tenant_required: true
@@ -1056,6 +1066,7 @@ service AuthnService {
       scopes: "udb:authn:get-session"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.GetSession"
       request_context_required: true
       tenant_required: true
@@ -1110,6 +1121,7 @@ service AuthnService {
       scopes: "udb:authn:list-sessions"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.ListSessions"
       request_context_required: true
       tenant_required: true
@@ -1164,6 +1176,7 @@ service AuthnService {
       scopes: "udb:authn:revoke-session"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.RevokeSession"
       request_context_required: true
       tenant_required: true
@@ -1690,6 +1703,7 @@ service AuthnService {
       scopes: "udb:authn:introspect-token"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.IntrospectToken"
       request_context_required: true
     };
@@ -1749,6 +1763,7 @@ service AuthnService {
       scopes: "udb:authn:send-phone-verification"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.SendPhoneVerification"
       request_context_required: true
       tenant_required: true
@@ -2116,6 +2131,7 @@ service AuthnService {
       scopes: "udb:authn:admin-revoke-all-user-sessions"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.AdminRevokeAllUserSessions"
       request_context_required: true
       tenant_required: true

@@ -77,6 +77,7 @@ service RoomService {
       scopes: "udb:webrtc:room:create-room"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "webrtc.room.CreateRoom"
       request_context_required: true
       tenant_required: true
@@ -137,6 +138,7 @@ service RoomService {
       scopes: "udb:webrtc:room:get-room"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "webrtc.room.GetRoom"
       request_context_required: true
       tenant_required: true
@@ -261,6 +263,7 @@ service RoomService {
       scopes: "udb:webrtc:room:close-room"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "webrtc.room.CloseRoom"
       request_context_required: true
       tenant_required: true
@@ -385,6 +388,7 @@ service RoomService {
       scopes: "udb:webrtc:room:start-room-composite"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "webrtc.room.StartRoomComposite"
       request_context_required: true
       tenant_required: true
@@ -446,6 +450,7 @@ service RoomService {
       scopes: "udb:webrtc:room:start-track-egress"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "webrtc.room.StartTrackEgress"
       request_context_required: true
       tenant_required: true
@@ -507,6 +512,7 @@ service RoomService {
       scopes: "udb:webrtc:room:stop-egress"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "webrtc.room.StopEgress"
       request_context_required: true
       tenant_required: true
@@ -1272,6 +1278,7 @@ service TurnService {
       scopes: "udb:webrtc:turn:issue-credentials"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "webrtc.turn.IssueCredentials"
       request_context_required: true
       tenant_required: true

@@ -3,7 +3,7 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.5.24
+//   UDB version:      0.5.25
 //   Protocol version: 1.0.0
 //   Services:         28
 //   RPCs:             385
@@ -11522,7 +11522,7 @@ public sealed partial class GeneratedLiveQueryServiceClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.core.livequery.services.v1.LiveQueryService/Subscribe",
             co => (object)_stub.Subscribe(request, co),
             deadline,
@@ -11543,7 +11543,7 @@ public sealed partial class GeneratedStorageServiceClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.core.storage.services.v1.StorageService/DownloadFile",
             co => (object)_stub.DownloadFile(request, co),
             deadline,
@@ -11564,7 +11564,7 @@ public sealed partial class GeneratedDataBrokerClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.services.v1.DataBroker/GetObject",
             co => (object)_stub.GetObject(request, co),
             deadline,
@@ -11585,7 +11585,7 @@ public sealed partial class GeneratedDataBrokerClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.services.v1.DataBroker/PublishCDC",
             co => (object)_stub.PublishCDC(request, co),
             deadline,
@@ -11606,7 +11606,7 @@ public sealed partial class GeneratedDataBrokerClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.services.v1.DataBroker/SelectV2",
             co => (object)_stub.SelectV2(request, co),
             deadline,
@@ -11648,7 +11648,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncDuplexStreamingCall<TReq,TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.core.control.services.v1.ControlPlaneService/DeltaResources",
             co => (object)_stub.DeltaResources(co),
             deadline,
@@ -11667,7 +11667,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncDuplexStreamingCall<TReq,TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.core.control.services.v1.ControlPlaneService/StreamResources",
             co => (object)_stub.StreamResources(co),
             deadline,
@@ -11686,7 +11686,7 @@ public sealed partial class GeneratedSignalingServiceClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncDuplexStreamingCall<TReq,TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.core.webrtc.services.v1.SignalingService/Signal",
             co => (object)_stub.Signal(co),
             deadline,
@@ -11705,7 +11705,7 @@ public sealed partial class GeneratedDataBrokerClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncDuplexStreamingCall<TReq,TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.services.v1.DataBroker/BatchSelect",
             co => (object)_stub.BatchSelect(co),
             deadline,
@@ -11724,7 +11724,7 @@ public sealed partial class GeneratedDataBrokerClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncDuplexStreamingCall<TReq,TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.services.v1.DataBroker/BatchUpsert",
             co => (object)_stub.BatchUpsert(co),
             deadline,
@@ -11743,7 +11743,7 @@ public sealed partial class GeneratedDataBrokerClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncDuplexStreamingCall<TReq,TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.services.v1.DataBroker/BeginTx",
             co => (object)_stub.BeginTx(co),
             deadline,
@@ -11762,7 +11762,7 @@ public sealed partial class GeneratedDataBrokerClient
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncDuplexStreamingCall<TReq,TResp> as dynamic.
-        return InvokeStreaming(
+        return InvokeLongLivedStreaming(
             "/udb.services.v1.DataBroker/VectorBatchUpsert",
             co => (object)_stub.VectorBatchUpsert(co),
             deadline,

@@ -166,8 +166,11 @@ const COMMANDS: &[CmdHelp] = &[
         name: "manifest-export",
         group: "Schema & SQL",
         summary: "Export the current CatalogManifest to JSON (for CI plan-approval).",
-        usage: "udb manifest-export",
-        details: "",
+        usage: "udb manifest-export [<proto-root>]",
+        details: "  Writes udb_catalog_manifest.json in the working directory by default. Set
+  UDB_MANIFEST_EXPORT_PATH to choose the file, or to `-` to stream the JSON to
+  stdout (use this in the container image, whose working directory is not
+  writable by the runtime user).",
     },
     CmdHelp {
         name: "auth migrate-grants",
@@ -308,10 +311,13 @@ const COMMANDS: &[CmdHelp] = &[
   --dsn); run it right after `udb auth bootstrap user`. Idempotent (safe to re-run)
   and atomic (all rows in one tx, so an open `UDB_ABAC_DEFAULT_ALLOW` window never
   half-closes).\n\
-  Defaults: `--role app_rw`, all data actions, object `*` (the whole catalog).
-  `--entity <fqn>` (repeatable) narrows to specific message types; `--action <verb>`
-  (repeatable) narrows the verbs; `--emit <path>` also writes the equivalent
-  offline policy JSON for version control.\n\
+  Defaults: `--role app_rw`, the CRUD verbs (Select/Upsert/Delete/Update/BulkCas),
+  object `*` (the whole catalog). `--entity <fqn>` (repeatable) narrows to specific
+  message types (or a topic / bucket / collection for PublishCDC, object and
+  vector verbs); `--action <verb>` (repeatable) picks other verbs, e.g. PublishCDC,
+  VectorSearch, GetObject or a typed store token (cache.get, document.find, ...);
+  `--emit <path>` also writes the equivalent offline policy JSON for version
+  control (written before seeding; `--emit -` returns it in the output).\n\
   Then bind principals (users AND service accounts) to the role so the policy
   applies: `udb auth role bind --principal <id> --role <role> --tenant <uuid>`.\n\
   Example: udb authz seed --tenant 00000000-0000-0000-0000-0000000d0001 --role app_rw",

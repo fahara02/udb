@@ -151,9 +151,9 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
             };
             let project = first_non_empty(&project, "UDB_PROJECT_ID");
             let actions: Vec<String> = if actions.is_empty() {
-                // Default: read + the write verbs (append `BatchSelect`/`BatchUpsert`
-                // yourself if you stream). These are the LITERAL RPC method names the
-                // engine matches — a `data.*` alias would never match.
+                // Default: read + the write verbs (batch/stream RPCs are authorized
+                // per item as Select/Upsert). These are the LITERAL RPC method names
+                // the engine matches — a `data.*` alias would never match.
                 ["Select", "Upsert", "Delete", "Update", "BulkCas"]
                     .iter()
                     .map(|s| s.to_string())
@@ -187,6 +187,29 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
                 dsn.trim().to_string()
             };
 
+            // Optionally emit the equivalent version-controllable offline policy
+            // file (the `udb policy-seed` / lint shape) so the seed is reproducible.
+            // Written BEFORE the rows are inserted: an unwritable path (e.g. a
+            // read-only container WORKDIR) must fail before anything changed,
+            // not report failure after a successful seed. `--emit -` returns the
+            // rows inline in the command output instead of writing a file.
+            let emit = emit.trim();
+            let emitted_inline = if emit.is_empty() {
+                None
+            } else {
+                let rows = seed_emit_policies(&tenant, &project, &role, &objects, &actions);
+                if emit == "-" {
+                    Some(serde_json::to_value(&rows).unwrap_or_default())
+                } else {
+                    std::fs::write(emit, serde_json::to_string_pretty(&rows).unwrap_or_default())
+                        .map_err(|err| {
+                            format!(
+                                "failed to write --emit file '{emit}': {err} (use a writable path, or `--emit -` to return the policies in the output)"
+                            )
+                        })?;
+                    None
+                }
+            };
             let inserted = udb::runtime::service::seed_project_authz_policies_offline(
                 &dsn, &tenant, &project, &role, &actions, &objects,
             )
@@ -195,23 +218,12 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
                 format!("authz seed failed (is the authz schema bootstrapped?): {err}")
             })?;
 
-            // Optionally emit the equivalent version-controllable offline policy
-            // file (the `udb policy-seed` / lint shape) so the seed is reproducible.
-            if !emit.trim().is_empty() {
-                let rows = seed_emit_policies(&tenant, &project, &role, &objects, &actions);
-                std::fs::write(
-                    emit.trim(),
-                    serde_json::to_string_pretty(&rows).unwrap_or_default(),
-                )
-                .map_err(|err| format!("failed to write --emit file '{}': {err}", emit.trim()))?;
-            }
-
             let next = format!(
                 "bind principals to this role so the policy applies — \
                  `udb auth role bind --principal <user-or-service-id> --role {role} --tenant {tenant}` \
                  (works for users AND service accounts). Callers must also send a non-empty purpose."
             );
-            Ok(serde_json::json!({
+            let mut out = serde_json::json!({
                 "seeded": inserted,
                 "tenant_id": tenant,
                 "role": role,
@@ -219,7 +231,11 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
                 "actions": actions,
                 "objects": objects,
                 "next": next,
-            }))
+            });
+            if let Some(policies) = emitted_inline {
+                out["policies"] = policies;
+            }
+            Ok(out)
         }
     }
 }

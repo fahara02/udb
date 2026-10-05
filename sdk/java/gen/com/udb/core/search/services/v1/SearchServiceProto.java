@@ -162,73 +162,73 @@ public final class SearchServiceProto {
       "searchP\001*o\n\nSearchMode\022\033\n\027SEARCH_MODE_UN" +
       "SPECIFIED\020\000\022\024\n\020SEARCH_MODE_TEXT\020\001\022\026\n\022SEA" +
       "RCH_MODE_VECTOR\020\002\022\026\n\022SEARCH_MODE_HYBRID\020" +
-      "\0032\261\022\n\rSearchService\022\305\003\n\013CreateIndex\022/.ud" +
+      "\0032\265\022\n\rSearchService\022\306\003\n\013CreateIndex\022/.ud" +
       "b.core.search.services.v1.CreateIndexReq" +
       "uest\0320.udb.core.search.services.v1.Creat" +
-      "eIndexResponse\"\322\002\312\363\0308\010\002\032\027udb:search:crea" +
-      "te-index \001J\002\001\002j\022search.CreateIndex\220\001\001\322\363\030" +
-      "\006\010\001\020\001 \001\332\363\030:\010\001\022\014create_index\032\003udb(\260\352\0010\003@\001" +
-      "J\006searchP\001Z\021createSearchIndex\352\363\030^\n\022searc" +
-      "h.CreateIndex\022\033udb.search.index.created." +
-      "v1\032\nindex_name\"\010standard*\rat_least_once2" +
-      "\006stable\362\363\030@\n\006search\032\010postgres2\033UDB_NATIV" +
-      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202" +
-      "\323\344\223\002\036\"\031/v1/search/indexes:create:\001*\022\305\003\n\013" +
-      "DeleteIndex\022/.udb.core.search.services.v" +
-      "1.DeleteIndexRequest\0320.udb.core.search.s" +
-      "ervices.v1.DeleteIndexResponse\"\322\002\312\363\0308\010\002\032" +
-      "\027udb:search:delete-index \001J\002\001\002j\022search.D" +
-      "eleteIndex\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\014delete_in" +
-      "dex\032\003udb(\260\352\0010\003@\001J\006searchP\001Z\021deleteSearch" +
-      "Index\352\363\030^\n\022search.DeleteIndex\022\033udb.searc" +
-      "h.index.deleted.v1\032\nindex_name\"\010standard" +
-      "*\rat_least_once2\006stable\362\363\030@\n\006search\032\010pos" +
+      "eIndexResponse\"\323\002\312\363\0309\010\002\032\027udb:search:crea" +
+      "te-index \001J\003\001\002\004j\022search.CreateIndex\220\001\001\322\363" +
+      "\030\006\010\001\020\001 \001\332\363\030:\010\001\022\014create_index\032\003udb(\260\352\0010\003@" +
+      "\001J\006searchP\001Z\021createSearchIndex\352\363\030^\n\022sear" +
+      "ch.CreateIndex\022\033udb.search.index.created" +
+      ".v1\032\nindex_name\"\010standard*\rat_least_once" +
+      "2\006stable\362\363\030@\n\006search\032\010postgres2\033UDB_NATI" +
+      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002" +
+      "\202\323\344\223\002\036\"\031/v1/search/indexes:create:\001*\022\305\003\n" +
+      "\013DeleteIndex\022/.udb.core.search.services." +
+      "v1.DeleteIndexRequest\0320.udb.core.search." +
+      "services.v1.DeleteIndexResponse\"\322\002\312\363\0308\010\002" +
+      "\032\027udb:search:delete-index \001J\002\001\002j\022search." +
+      "DeleteIndex\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\014delete_i" +
+      "ndex\032\003udb(\260\352\0010\003@\001J\006searchP\001Z\021deleteSearc" +
+      "hIndex\352\363\030^\n\022search.DeleteIndex\022\033udb.sear" +
+      "ch.index.deleted.v1\032\nindex_name\"\010standar" +
+      "d*\rat_least_once2\006stable\362\363\030@\n\006search\032\010po" +
+      "stgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
+      "_GRPC_TARGET\370\363\030\003\202\323\344\223\002\036\"\031/v1/search/index" +
+      "es:delete:\001*\022\332\002\n\013ListIndexes\022/.udb.core." +
+      "search.services.v1.ListIndexesRequest\0320." +
+      "udb.core.search.services.v1.ListIndexesR" +
+      "esponse\"\347\001\312\363\0309\010\002\032\027udb:search:list-indexe" +
+      "s \001J\003\001\002\004j\022search.ListIndexes\220\001\001\322\363\030\006\010\001\020\001 " +
+      "\001\332\363\030:\010\001\022\014list_indexes\032\003udb(\260\352\0010\003@\001J\006sear" +
+      "chP\001Z\021listSearchIndexes\362\363\030@\n\006search\032\010pos" +
       "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
-      "GRPC_TARGET\370\363\030\003\202\323\344\223\002\036\"\031/v1/search/indexe" +
-      "s:delete:\001*\022\331\002\n\013ListIndexes\022/.udb.core.s" +
-      "earch.services.v1.ListIndexesRequest\0320.u" +
-      "db.core.search.services.v1.ListIndexesRe" +
-      "sponse\"\346\001\312\363\0308\010\002\032\027udb:search:list-indexes" +
-      " \001J\002\001\002j\022search.ListIndexes\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
-      "\363\030:\010\001\022\014list_indexes\032\003udb(\260\352\0010\003@\001J\006search" +
-      "P\001Z\021listSearchIndexes\362\363\030@\n\006search\032\010postg" +
-      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
-      "PC_TARGET\370\363\030\001\202\323\344\223\002\024\022\022/v1/search/indexes\022" +
-      "\257\002\n\006Search\022*.udb.core.search.services.v1" +
-      ".SearchRequest\032+.udb.core.search.service" +
-      "s.v1.SearchResponse\"\313\001\312\363\030-\010\002\032\021udb:search" +
-      ":search \001J\002\001\002j\rsearch.Search\220\001\001\322\363\030\006\010\001\020\001 " +
-      "\001\332\363\030)\010\001\022\006search\032\003udb(\260\352\0010\003@\001J\006searchP\001Z\006" +
-      "search\362\363\030@\n\006search\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323" +
-      "\344\223\002\025\"\020/v1/search:query:\001*\022\263\003\n\007Reindex\022+." +
-      "udb.core.search.services.v1.ReindexReque" +
-      "st\032,.udb.core.search.services.v1.Reindex" +
-      "Response\"\314\002\312\363\030/\010\002\032\022udb:search:reindex \001J" +
-      "\002\001\002j\016search.Reindex\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\007" +
-      "reindex\032\003udb(\260\352\0010\003@\001J\006searchP\001Z\022reindexS" +
-      "earchIndex\352\363\030d\n\016search.Reindex\022%udb.sear" +
-      "ch.index.reindex.requested.v1\032\nindex_nam" +
-      "e\"\010standard*\rat_least_once2\006stable\362\363\030@\n\006" +
-      "search\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\037\"\032/v1/se" +
-      "arch/indexes:reindex:\001*\032\313\002\312\360\031X\n\006search\022\006" +
-      "search\032\006search\"\006Search*\006search0\0018\001h\001z\006se" +
-      "arch\202\001\006search\212\001\006search\222\001\rnative.search\322\360" +
-      "\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006searchP\001\332\360\031\211\001\n\006search" +
-      "\022\021udb/native/search\032\033UDB_NATIVE_SERVICES" +
-      "_ENABLED\032\017UDB_GRPC_TARGET\"\030udb.native.se" +
-      "arch.config:\006searchJ\013UDB_API_KEYZ\017udb na" +
-      "tive lint\342\360\031@\n\006search\032\010postgres2\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGETB\221\002" +
-      "\n\037com.udb.core.search.services.v1B\022Searc" +
-      "hServiceProtoP\001ZIgithub.com/fahara02/udb" +
-      "/sdk/go/gen/udb/core/search/services/v1;" +
-      "servicesv1\242\002\004UCSS\252\002\033Udb.Core.Search.Serv" +
-      "ices.V1\312\002\033Udb\\Core\\Search\\Services\\V1\342\002\'" +
-      "Udb\\GPBMetadata\\Core\\Search\\Services\\V1\352" +
-      "\002\037Udb::Core::Search::Services::V1b\006proto" +
-      "3"
+      "GRPC_TARGET\370\363\030\001\202\323\344\223\002\024\022\022/v1/search/indexe" +
+      "s\022\260\002\n\006Search\022*.udb.core.search.services." +
+      "v1.SearchRequest\032+.udb.core.search.servi" +
+      "ces.v1.SearchResponse\"\314\001\312\363\030.\010\002\032\021udb:sear" +
+      "ch:search \001J\003\001\002\004j\rsearch.Search\220\001\001\322\363\030\006\010\001" +
+      "\020\001 \001\332\363\030)\010\001\022\006search\032\003udb(\260\352\0010\003@\001J\006searchP" +
+      "\001Z\006search\362\363\030@\n\006search\032\010postgres2\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
+      "\001\202\323\344\223\002\025\"\020/v1/search:query:\001*\022\264\003\n\007Reindex" +
+      "\022+.udb.core.search.services.v1.ReindexRe" +
+      "quest\032,.udb.core.search.services.v1.Rein" +
+      "dexResponse\"\315\002\312\363\0300\010\002\032\022udb:search:reindex" +
+      " \001J\003\001\002\004j\016search.Reindex\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306" +
+      "\010\001\022\007reindex\032\003udb(\260\352\0010\003@\001J\006searchP\001Z\022rein" +
+      "dexSearchIndex\352\363\030d\n\016search.Reindex\022%udb." +
+      "search.index.reindex.requested.v1\032\nindex" +
+      "_name\"\010standard*\rat_least_once2\006stable\362\363" +
+      "\030@\n\006search\032\010postgres2\033UDB_NATIVE_SERVICE" +
+      "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\037\"\032/v" +
+      "1/search/indexes:reindex:\001*\032\313\002\312\360\031X\n\006sear" +
+      "ch\022\006search\032\006search\"\006Search*\006search0\0018\001h\001" +
+      "z\006search\202\001\006search\212\001\006search\222\001\rnative.sear" +
+      "ch\322\360\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006searchP\001\332\360\031\211\001\n\006se" +
+      "arch\022\021udb/native/search\032\033UDB_NATIVE_SERV" +
+      "ICES_ENABLED\032\017UDB_GRPC_TARGET\"\030udb.nativ" +
+      "e.search.config:\006searchJ\013UDB_API_KEYZ\017ud" +
+      "b native lint\342\360\031@\n\006search\032\010postgres2\033UDB" +
+      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
+      "TB\221\002\n\037com.udb.core.search.services.v1B\022S" +
+      "earchServiceProtoP\001ZIgithub.com/fahara02" +
+      "/udb/sdk/go/gen/udb/core/search/services" +
+      "/v1;servicesv1\242\002\004UCSS\252\002\033Udb.Core.Search." +
+      "Services.V1\312\002\033Udb\\Core\\Search\\Services\\V" +
+      "1\342\002\'Udb\\GPBMetadata\\Core\\Search\\Services" +
+      "\\V1\352\002\037Udb::Core::Search::Services::V1b\006p" +
+      "roto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

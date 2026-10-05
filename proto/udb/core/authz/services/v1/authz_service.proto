@@ -63,6 +63,7 @@ service AuthzService {
       scopes: "udb:authz:authorize"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authz.Authorize"
       request_context_required: true
       tenant_required: true
@@ -121,6 +122,7 @@ service AuthzService {
       scopes: "udb:authz:check-access"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authz.CheckAccess"
       request_context_required: true
       tenant_required: true
@@ -353,6 +355,7 @@ service AuthzService {
       scopes: "udb:authz:list-user-permissions"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authz.ListUserPermissions"
       request_context_required: true
       tenant_required: true
@@ -691,6 +694,7 @@ service AuthzService {
       scopes: "udb:authz:batch-check-permissions"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authz.BatchCheckPermissions"
       request_context_required: true
       tenant_required: true
@@ -1032,6 +1036,7 @@ service AuthzService {
       scopes: "udb:authz:put-role-binding"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authz.PutRoleBinding"
       request_context_required: true
       tenant_required: true

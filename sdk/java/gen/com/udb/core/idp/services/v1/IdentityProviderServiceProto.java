@@ -39,7 +39,7 @@ public final class IdentityProviderServiceProto {
       "ider_service.proto\022\030udb.core.idp.service" +
       "s.v1\032\034google/api/annotations.proto\032#udb/" +
       "core/idp/services/v1/core.proto\032!udb/cor" +
-      "e/common/v1/security.proto2\333<\n\027IdentityP" +
+      "e/common/v1/security.proto2\347<\n\027IdentityP" +
       "roviderService\022\367\001\n\016CreateProvider\022/.udb." +
       "core.idp.services.v1.CreateProviderReque" +
       "st\0320.udb.core.idp.services.v1.CreateProv" +
@@ -145,102 +145,103 @@ public final class IdentityProviderServiceProto {
       ".SamlAcsResponse\"{\312\363\030*\010\002\032\020udb:idp:saml-a" +
       "cs \001J\002\001\002j\013idp.SamlAcs\220\001\001\332\363\030\023\022\010saml_acsZ\007" +
       "samlAcs\370\363\030\002\202\323\344\223\002,\"\'/v1/idp/providers/{pr" +
-      "ovider_id}:samlAcs:\001*\022\326\002\n\027ResolveExterna" +
+      "ovider_id}:samlAcs:\001*\022\327\002\n\027ResolveExterna" +
       "lIdentity\0228.udb.core.idp.services.v1.Res" +
       "olveExternalIdentityRequest\0329.udb.core.i" +
       "dp.services.v1.ResolveExternalIdentityRe" +
-      "sponse\"\305\001\312\363\030K\010\002\032!udb:idp:resolve-externa" +
-      "l-identity \001J\002\001\002j\033idp.ResolveExternalIde" +
-      "ntity\220\001\001\332\363\0304\022\031resolve_external_identityZ" +
-      "\027resolveExternalIdentity\370\363\030\002\202\323\344\223\0024\"//v1/" +
-      "idp/providers/{provider_id}:resolveIdent" +
-      "ity:\001*\022\210\002\n\016ScimCreateUser\022/.udb.core.idp" +
-      ".services.v1.ScimCreateUserRequest\0320.udb" +
-      ".core.idp.services.v1.ScimCreateUserResp" +
-      "onse\"\222\001\312\363\0309\010\002\032\030udb:idp:scim-create-user " +
-      "\001J\002\001\002j\022idp.ScimCreateUser\220\001\001\332\363\030\"\022\020scim_c" +
-      "reate_userZ\016scimCreateUser\370\363\030\002\202\323\344\223\002%\" /v" +
-      "1/idp/scim/{provider_id}/Users:\001*\022\377\001\n\013Sc" +
-      "imGetUser\022,.udb.core.idp.services.v1.Sci" +
-      "mGetUserRequest\032-.udb.core.idp.services." +
-      "v1.ScimGetUserResponse\"\222\001\312\363\0303\010\002\032\025udb:idp" +
-      ":scim-get-user \001J\002\001\002j\017idp.ScimGetUser\220\001\001" +
-      "\332\363\030\034\022\rscim_get_userZ\013scimGetUser\370\363\030\002\202\323\344\223" +
-      "\0021\022//v1/idp/scim/{provider_id}/Users/{sc" +
-      "im_user_id}\022\376\001\n\rScimListUsers\022..udb.core" +
-      ".idp.services.v1.ScimListUsersRequest\032/." +
-      "udb.core.idp.services.v1.ScimListUsersRe" +
-      "sponse\"\213\001\312\363\0307\010\002\032\027udb:idp:scim-list-users" +
-      " \001J\002\001\002j\021idp.ScimListUsers\220\001\001\332\363\030 \022\017scim_l" +
-      "ist_usersZ\rscimListUsers\370\363\030\002\202\323\344\223\002\"\022 /v1/" +
-      "idp/scim/{provider_id}/Users\022\236\002\n\017ScimRep" +
-      "laceUser\0220.udb.core.idp.services.v1.Scim" +
-      "ReplaceUserRequest\0321.udb.core.idp.servic" +
-      "es.v1.ScimReplaceUserResponse\"\245\001\312\363\030;\010\002\032\031" +
-      "udb:idp:scim-replace-user \001J\002\001\002j\023idp.Sci" +
-      "mReplaceUser\220\001\001\332\363\030$\022\021scim_replace_userZ\017" +
-      "scimReplaceUser\370\363\030\002\202\323\344\223\0024\032//v1/idp/scim/" +
-      "{provider_id}/Users/{scim_user_id}:\001*\022\220\002" +
-      "\n\rScimPatchUser\022..udb.core.idp.services." +
-      "v1.ScimPatchUserRequest\032/.udb.core.idp.s" +
-      "ervices.v1.ScimPatchUserResponse\"\235\001\312\363\0307\010" +
-      "\002\032\027udb:idp:scim-patch-user \001J\002\001\002j\021idp.Sc" +
-      "imPatchUser\220\001\001\332\363\030 \022\017scim_patch_userZ\rsci" +
-      "mPatchUser\370\363\030\002\202\323\344\223\00242//v1/idp/scim/{prov" +
-      "ider_id}/Users/{scim_user_id}:\001*\022\224\002\n\016Sci" +
-      "mDeleteUser\022/.udb.core.idp.services.v1.S" +
-      "cimDeleteUserRequest\0320.udb.core.idp.serv" +
-      "ices.v1.ScimDeleteUserResponse\"\236\001\312\363\0309\010\002\032" +
-      "\030udb:idp:scim-delete-user \001J\002\001\002j\022idp.Sci" +
-      "mDeleteUser\220\001\001\332\363\030\"\022\020scim_delete_userZ\016sc" +
-      "imDeleteUser\370\363\030\002\202\323\344\223\0021*//v1/idp/scim/{pr" +
-      "ovider_id}/Users/{scim_user_id}\022\220\002\n\017Scim" +
-      "CreateGroup\0220.udb.core.idp.services.v1.S" +
-      "cimCreateGroupRequest\0321.udb.core.idp.ser" +
-      "vices.v1.ScimCreateGroupResponse\"\227\001\312\363\030;\010" +
-      "\002\032\031udb:idp:scim-create-group \001J\002\001\002j\023idp." +
-      "ScimCreateGroup\220\001\001\332\363\030$\022\021scim_create_grou" +
-      "pZ\017scimCreateGroup\370\363\030\002\202\323\344\223\002&\"!/v1/idp/sc" +
-      "im/{provider_id}/Groups:\001*\022\210\002\n\014ScimGetGr" +
-      "oup\022-.udb.core.idp.services.v1.ScimGetGr" +
-      "oupRequest\032..udb.core.idp.services.v1.Sc" +
-      "imGetGroupResponse\"\230\001\312\363\0305\010\002\032\026udb:idp:sci" +
-      "m-get-group \001J\002\001\002j\020idp.ScimGetGroup\220\001\001\332\363" +
-      "\030\036\022\016scim_get_groupZ\014scimGetGroup\370\363\030\002\202\323\344\223" +
-      "\0023\0221/v1/idp/scim/{provider_id}/Groups/{s" +
-      "cim_group_id}\022\206\002\n\016ScimListGroups\022/.udb.c" +
-      "ore.idp.services.v1.ScimListGroupsReques" +
-      "t\0320.udb.core.idp.services.v1.ScimListGro" +
-      "upsResponse\"\220\001\312\363\0309\010\002\032\030udb:idp:scim-list-" +
-      "groups \001J\002\001\002j\022idp.ScimListGroups\220\001\001\332\363\030\"\022" +
-      "\020scim_list_groupsZ\016scimListGroups\370\363\030\002\202\323\344" +
-      "\223\002#\022!/v1/idp/scim/{provider_id}/Groups\022\231" +
-      "\002\n\016ScimPatchGroup\022/.udb.core.idp.service" +
-      "s.v1.ScimPatchGroupRequest\0320.udb.core.id" +
-      "p.services.v1.ScimPatchGroupResponse\"\243\001\312" +
-      "\363\0309\010\002\032\030udb:idp:scim-patch-group \001J\002\001\002j\022i" +
-      "dp.ScimPatchGroup\220\001\001\332\363\030\"\022\020scim_patch_gro" +
-      "upZ\016scimPatchGroup\370\363\030\002\202\323\344\223\002621/v1/idp/sc" +
-      "im/{provider_id}/Groups/{scim_group_id}:" +
-      "\001*\022\235\002\n\017ScimDeleteGroup\0220.udb.core.idp.se" +
-      "rvices.v1.ScimDeleteGroupRequest\0321.udb.c" +
-      "ore.idp.services.v1.ScimDeleteGroupRespo" +
-      "nse\"\244\001\312\363\030;\010\002\032\031udb:idp:scim-delete-group " +
-      "\001J\002\001\002j\023idp.ScimDeleteGroup\220\001\001\332\363\030$\022\021scim_" +
-      "delete_groupZ\017scimDeleteGroup\370\363\030\002\202\323\344\223\0023*" +
+      "sponse\"\306\001\312\363\030L\010\002\032!udb:idp:resolve-externa" +
+      "l-identity \001J\003\001\002\004j\033idp.ResolveExternalId" +
+      "entity\220\001\001\332\363\0304\022\031resolve_external_identity" +
+      "Z\027resolveExternalIdentity\370\363\030\002\202\323\344\223\0024\"//v1" +
+      "/idp/providers/{provider_id}:resolveIden" +
+      "tity:\001*\022\211\002\n\016ScimCreateUser\022/.udb.core.id" +
+      "p.services.v1.ScimCreateUserRequest\0320.ud" +
+      "b.core.idp.services.v1.ScimCreateUserRes" +
+      "ponse\"\223\001\312\363\030:\010\002\032\030udb:idp:scim-create-user" +
+      " \001J\003\001\002\004j\022idp.ScimCreateUser\220\001\001\332\363\030\"\022\020scim" +
+      "_create_userZ\016scimCreateUser\370\363\030\002\202\323\344\223\002%\" " +
+      "/v1/idp/scim/{provider_id}/Users:\001*\022\200\002\n\013" +
+      "ScimGetUser\022,.udb.core.idp.services.v1.S" +
+      "cimGetUserRequest\032-.udb.core.idp.service" +
+      "s.v1.ScimGetUserResponse\"\223\001\312\363\0304\010\002\032\025udb:i" +
+      "dp:scim-get-user \001J\003\001\002\004j\017idp.ScimGetUser" +
+      "\220\001\001\332\363\030\034\022\rscim_get_userZ\013scimGetUser\370\363\030\002\202" +
+      "\323\344\223\0021\022//v1/idp/scim/{provider_id}/Users/" +
+      "{scim_user_id}\022\377\001\n\rScimListUsers\022..udb.c" +
+      "ore.idp.services.v1.ScimListUsersRequest" +
+      "\032/.udb.core.idp.services.v1.ScimListUser" +
+      "sResponse\"\214\001\312\363\0308\010\002\032\027udb:idp:scim-list-us" +
+      "ers \001J\003\001\002\004j\021idp.ScimListUsers\220\001\001\332\363\030 \022\017sc" +
+      "im_list_usersZ\rscimListUsers\370\363\030\002\202\323\344\223\002\"\022 " +
+      "/v1/idp/scim/{provider_id}/Users\022\237\002\n\017Sci" +
+      "mReplaceUser\0220.udb.core.idp.services.v1." +
+      "ScimReplaceUserRequest\0321.udb.core.idp.se" +
+      "rvices.v1.ScimReplaceUserResponse\"\246\001\312\363\030<" +
+      "\010\002\032\031udb:idp:scim-replace-user \001J\003\001\002\004j\023id" +
+      "p.ScimReplaceUser\220\001\001\332\363\030$\022\021scim_replace_u" +
+      "serZ\017scimReplaceUser\370\363\030\002\202\323\344\223\0024\032//v1/idp/" +
+      "scim/{provider_id}/Users/{scim_user_id}:" +
+      "\001*\022\221\002\n\rScimPatchUser\022..udb.core.idp.serv" +
+      "ices.v1.ScimPatchUserRequest\032/.udb.core." +
+      "idp.services.v1.ScimPatchUserResponse\"\236\001" +
+      "\312\363\0308\010\002\032\027udb:idp:scim-patch-user \001J\003\001\002\004j\021" +
+      "idp.ScimPatchUser\220\001\001\332\363\030 \022\017scim_patch_use" +
+      "rZ\rscimPatchUser\370\363\030\002\202\323\344\223\00242//v1/idp/scim" +
+      "/{provider_id}/Users/{scim_user_id}:\001*\022\225" +
+      "\002\n\016ScimDeleteUser\022/.udb.core.idp.service" +
+      "s.v1.ScimDeleteUserRequest\0320.udb.core.id" +
+      "p.services.v1.ScimDeleteUserResponse\"\237\001\312" +
+      "\363\030:\010\002\032\030udb:idp:scim-delete-user \001J\003\001\002\004j\022" +
+      "idp.ScimDeleteUser\220\001\001\332\363\030\"\022\020scim_delete_u" +
+      "serZ\016scimDeleteUser\370\363\030\002\202\323\344\223\0021*//v1/idp/s" +
+      "cim/{provider_id}/Users/{scim_user_id}\022\221" +
+      "\002\n\017ScimCreateGroup\0220.udb.core.idp.servic" +
+      "es.v1.ScimCreateGroupRequest\0321.udb.core." +
+      "idp.services.v1.ScimCreateGroupResponse\"" +
+      "\230\001\312\363\030<\010\002\032\031udb:idp:scim-create-group \001J\003\001" +
+      "\002\004j\023idp.ScimCreateGroup\220\001\001\332\363\030$\022\021scim_cre" +
+      "ate_groupZ\017scimCreateGroup\370\363\030\002\202\323\344\223\002&\"!/v" +
+      "1/idp/scim/{provider_id}/Groups:\001*\022\211\002\n\014S" +
+      "cimGetGroup\022-.udb.core.idp.services.v1.S" +
+      "cimGetGroupRequest\032..udb.core.idp.servic" +
+      "es.v1.ScimGetGroupResponse\"\231\001\312\363\0306\010\002\032\026udb" +
+      ":idp:scim-get-group \001J\003\001\002\004j\020idp.ScimGetG" +
+      "roup\220\001\001\332\363\030\036\022\016scim_get_groupZ\014scimGetGrou" +
+      "p\370\363\030\002\202\323\344\223\0023\0221/v1/idp/scim/{provider_id}/" +
+      "Groups/{scim_group_id}\022\207\002\n\016ScimListGroup" +
+      "s\022/.udb.core.idp.services.v1.ScimListGro" +
+      "upsRequest\0320.udb.core.idp.services.v1.Sc" +
+      "imListGroupsResponse\"\221\001\312\363\030:\010\002\032\030udb:idp:s" +
+      "cim-list-groups \001J\003\001\002\004j\022idp.ScimListGrou" +
+      "ps\220\001\001\332\363\030\"\022\020scim_list_groupsZ\016scimListGro" +
+      "ups\370\363\030\002\202\323\344\223\002#\022!/v1/idp/scim/{provider_id" +
+      "}/Groups\022\232\002\n\016ScimPatchGroup\022/.udb.core.i" +
+      "dp.services.v1.ScimPatchGroupRequest\0320.u" +
+      "db.core.idp.services.v1.ScimPatchGroupRe" +
+      "sponse\"\244\001\312\363\030:\010\002\032\030udb:idp:scim-patch-grou" +
+      "p \001J\003\001\002\004j\022idp.ScimPatchGroup\220\001\001\332\363\030\"\022\020sci" +
+      "m_patch_groupZ\016scimPatchGroup\370\363\030\002\202\323\344\223\00262" +
       "1/v1/idp/scim/{provider_id}/Groups/{scim" +
-      "_group_id}\032\273\001\312\360\031\\\n\003idp\022\003idp\032\003idp\"\022Identi" +
-      "ty Providers*\004auth0\0018\001h\001z\021identityProvid" +
-      "ers\202\001\004auth\212\001\003idp\222\001\nnative.idp\322\360\031\026\010\001\032\003udb" +
-      "(\260\352\0010\003@\001J\003idpP\001\342\360\031=\n\003idp\032\010postgres2\033UDB_" +
-      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
-      "B\211\002\n\034com.udb.core.idp.services.v1B\034Ident" +
-      "ityProviderServiceProtoP\001ZFgithub.com/fa" +
-      "hara02/udb/sdk/go/gen/udb/core/idp/servi" +
-      "ces/v1;servicesv1\242\002\004UCIS\252\002\030Udb.Core.Idp." +
-      "Services.V1\312\002\030Udb\\Core\\Idp\\Services\\V1\342\002" +
-      "$Udb\\GPBMetadata\\Core\\Idp\\Services\\V1\352\002\034" +
-      "Udb::Core::Idp::Services::V1b\006proto3"
+      "_group_id}:\001*\022\236\002\n\017ScimDeleteGroup\0220.udb." +
+      "core.idp.services.v1.ScimDeleteGroupRequ" +
+      "est\0321.udb.core.idp.services.v1.ScimDelet" +
+      "eGroupResponse\"\245\001\312\363\030<\010\002\032\031udb:idp:scim-de" +
+      "lete-group \001J\003\001\002\004j\023idp.ScimDeleteGroup\220\001" +
+      "\001\332\363\030$\022\021scim_delete_groupZ\017scimDeleteGrou" +
+      "p\370\363\030\002\202\323\344\223\0023*1/v1/idp/scim/{provider_id}/" +
+      "Groups/{scim_group_id}\032\273\001\312\360\031\\\n\003idp\022\003idp\032" +
+      "\003idp\"\022Identity Providers*\004auth0\0018\001h\001z\021id" +
+      "entityProviders\202\001\004auth\212\001\003idp\222\001\nnative.id" +
+      "p\322\360\031\026\010\001\032\003udb(\260\352\0010\003@\001J\003idpP\001\342\360\031=\n\003idp\032\010po" +
+      "stgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
+      "_GRPC_TARGETB\211\002\n\034com.udb.core.idp.servic" +
+      "es.v1B\034IdentityProviderServiceProtoP\001ZFg" +
+      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
+      "re/idp/services/v1;servicesv1\242\002\004UCIS\252\002\030U" +
+      "db.Core.Idp.Services.V1\312\002\030Udb\\Core\\Idp\\S" +
+      "ervices\\V1\342\002$Udb\\GPBMetadata\\Core\\Idp\\Se" +
+      "rvices\\V1\352\002\034Udb::Core::Idp::Services::V1" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

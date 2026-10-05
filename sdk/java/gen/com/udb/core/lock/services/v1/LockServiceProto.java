@@ -152,69 +152,69 @@ public final class LockServiceProto {
       "tus\022(\n\020acquired_at_unix\030\010 \001(\003R\016acquiredA" +
       "tUnix\022&\n\017expires_at_unix\030\t \001(\003R\rexpiresA" +
       "tUnix\022#\n\rmetadata_json\030\n \001(\tR\014metadataJs" +
-      "on:\033\232\262\031\027\010\001\032\003udb(\260\352\0010\003@\001J\004lockP\0012\212\021\n\013Lock" +
-      "Service\022\246\003\n\013AcquireLock\022-.udb.core.lock." +
+      "on:\033\232\262\031\027\010\001\032\003udb(\260\352\0010\003@\001J\004lockP\0012\217\021\n\013Lock" +
+      "Service\022\247\003\n\013AcquireLock\022-.udb.core.lock." +
       "services.v1.AcquireLockRequest\032..udb.cor" +
-      "e.lock.services.v1.AcquireLockResponse\"\267" +
-      "\002\312\363\0304\010\002\032\025udb:lock:acquire-lock \001J\002\001\002j\020lo" +
-      "ck.AcquireLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014acqui" +
-      "re_lock\032\003udb(\260\352\0010\003@\001J\004lockP\001Z\013acquireLoc" +
-      "k\352\363\030Y\n\020lock.AcquireLock\022\031udb.lock.lock.a" +
-      "cquired.v1\032\tlock_name\"\010standard*\rat_leas" +
-      "t_once2\006stable\362\363\030>\n\004lock\032\010postgres2\033UDB_" +
-      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
-      "\370\363\030\002\202\323\344\223\002\026\"\021/v1/locks:acquire:\001*\022\223\003\n\tRen" +
-      "ewLock\022+.udb.core.lock.services.v1.Renew" +
-      "LockRequest\032,.udb.core.lock.services.v1." +
-      "RenewLockResponse\"\252\002\312\363\0300\010\002\032\023udb:lock:ren" +
-      "ew-lock \001J\002\001\002j\016lock.RenewLock\220\001\001\322\363\030\006\010\001\020\001" +
-      " \001\332\363\030.\010\001\022\nrenew_lock\032\003udb(\260\352\0010\003@\001J\004lockP" +
-      "\001Z\trenewLock\352\363\030V\n\016lock.RenewLock\022\030udb.lo" +
-      "ck.lock.renewed.v1\032\tlock_name\"\010standard*" +
-      "\rat_least_once2\006stable\362\363\030>\n\004lock\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\370\363\030\002\202\323\344\223\002\024\"\017/v1/locks:renew:\001*\022\246" +
-      "\003\n\013ReleaseLock\022-.udb.core.lock.services." +
-      "v1.ReleaseLockRequest\032..udb.core.lock.se" +
-      "rvices.v1.ReleaseLockResponse\"\267\002\312\363\0304\010\002\032\025" +
-      "udb:lock:release-lock \001J\002\001\002j\020lock.Releas" +
-      "eLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014release_lock\032\003" +
-      "udb(\260\352\0010\003@\001J\004lockP\001Z\013releaseLock\352\363\030Y\n\020lo" +
-      "ck.ReleaseLock\022\031udb.lock.lock.released.v" +
-      "1\032\tlock_name\"\010standard*\rat_least_once2\006s" +
-      "table\362\363\030>\n\004lock\032\010postgres2\033UDB_NATIVE_SE" +
-      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002" +
-      "\026\"\021/v1/locks:release:\001*\022\256\002\n\007GetLock\022).ud" +
-      "b.core.lock.services.v1.GetLockRequest\032*" +
-      ".udb.core.lock.services.v1.GetLockRespon" +
-      "se\"\313\001\312\363\030,\010\002\032\021udb:lock:get-lock \001J\002\001\002j\014lo" +
-      "ck.GetLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030*\010\001\022\010get_lock\032" +
-      "\003udb(\260\352\0010\003@\001J\004lockP\001Z\007getLock\362\363\030>\n\004lock\032" +
-      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
-      "UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/locks/{lo" +
-      "ck_name}\022\260\002\n\tListLocks\022+.udb.core.lock.s" +
-      "ervices.v1.ListLocksRequest\032,.udb.core.l" +
-      "ock.services.v1.ListLocksResponse\"\307\001\312\363\0300" +
-      "\010\002\032\023udb:lock:list-locks \001J\002\001\002j\016lock.List" +
-      "Locks\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001\022\nlist_locks\032\003ud" +
-      "b(\260\352\0010\003@\001J\004lockP\001Z\tlistLocks\362\363\030>\n\004lock\032\010" +
-      "postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017U" +
-      "DB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\013\022\t/v1/locks\032\256\002\312\360" +
-      "\031G\n\004lock\022\004lock\032\004lock\"\005Locks*\004lock0\0018\001h\001z" +
-      "\004lock\202\001\004lock\212\001\004lock\222\001\013native.lock\322\360\031\027\010\001\032" +
-      "\003udb(\260\352\0010\003@\001J\004lockP\001\332\360\031\201\001\n\004lock\022\017udb/nat" +
-      "ive/lock\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
-      "DB_GRPC_TARGET\"\026udb.native.lock.config:\004" +
-      "lockJ\013UDB_API_KEYZ\017udb native lint\342\360\031>\n\004" +
-      "lock\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED2\017UDB_GRPC_TARGETB\203\002\n\035com.udb.core.lo" +
-      "ck.services.v1B\020LockServiceProtoP\001ZGgith" +
-      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
-      "lock/services/v1;servicesv1\242\002\004UCLS\252\002\031Udb" +
-      ".Core.Lock.Services.V1\312\002\031Udb\\Core\\Lock\\S" +
-      "ervices\\V1\342\002%Udb\\GPBMetadata\\Core\\Lock\\S" +
-      "ervices\\V1\352\002\035Udb::Core::Lock::Services::" +
-      "V1b\006proto3"
+      "e.lock.services.v1.AcquireLockResponse\"\270" +
+      "\002\312\363\0305\010\002\032\025udb:lock:acquire-lock \001J\003\001\002\004j\020l" +
+      "ock.AcquireLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014acqu" +
+      "ire_lock\032\003udb(\260\352\0010\003@\001J\004lockP\001Z\013acquireLo" +
+      "ck\352\363\030Y\n\020lock.AcquireLock\022\031udb.lock.lock." +
+      "acquired.v1\032\tlock_name\"\010standard*\rat_lea" +
+      "st_once2\006stable\362\363\030>\n\004lock\032\010postgres2\033UDB" +
+      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
+      "T\370\363\030\002\202\323\344\223\002\026\"\021/v1/locks:acquire:\001*\022\224\003\n\tRe" +
+      "newLock\022+.udb.core.lock.services.v1.Rene" +
+      "wLockRequest\032,.udb.core.lock.services.v1" +
+      ".RenewLockResponse\"\253\002\312\363\0301\010\002\032\023udb:lock:re" +
+      "new-lock \001J\003\001\002\004j\016lock.RenewLock\220\001\001\322\363\030\006\010\001" +
+      "\020\001 \001\332\363\030.\010\001\022\nrenew_lock\032\003udb(\260\352\0010\003@\001J\004loc" +
+      "kP\001Z\trenewLock\352\363\030V\n\016lock.RenewLock\022\030udb." +
+      "lock.lock.renewed.v1\032\tlock_name\"\010standar" +
+      "d*\rat_least_once2\006stable\362\363\030>\n\004lock\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGET\370\363\030\002\202\323\344\223\002\024\"\017/v1/locks:renew:\001*" +
+      "\022\247\003\n\013ReleaseLock\022-.udb.core.lock.service" +
+      "s.v1.ReleaseLockRequest\032..udb.core.lock." +
+      "services.v1.ReleaseLockResponse\"\270\002\312\363\0305\010\002" +
+      "\032\025udb:lock:release-lock \001J\003\001\002\004j\020lock.Rel" +
+      "easeLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014release_loc" +
+      "k\032\003udb(\260\352\0010\003@\001J\004lockP\001Z\013releaseLock\352\363\030Y\n" +
+      "\020lock.ReleaseLock\022\031udb.lock.lock.release" +
+      "d.v1\032\tlock_name\"\010standard*\rat_least_once" +
+      "2\006stable\362\363\030>\n\004lock\032\010postgres2\033UDB_NATIVE" +
+      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323" +
+      "\344\223\002\026\"\021/v1/locks:release:\001*\022\257\002\n\007GetLock\022)" +
+      ".udb.core.lock.services.v1.GetLockReques" +
+      "t\032*.udb.core.lock.services.v1.GetLockRes" +
+      "ponse\"\314\001\312\363\030-\010\002\032\021udb:lock:get-lock \001J\003\001\002\004" +
+      "j\014lock.GetLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030*\010\001\022\010get_l" +
+      "ock\032\003udb(\260\352\0010\003@\001J\004lockP\001Z\007getLock\362\363\030>\n\004l" +
+      "ock\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/locks" +
+      "/{lock_name}\022\261\002\n\tListLocks\022+.udb.core.lo" +
+      "ck.services.v1.ListLocksRequest\032,.udb.co" +
+      "re.lock.services.v1.ListLocksResponse\"\310\001" +
+      "\312\363\0301\010\002\032\023udb:lock:list-locks \001J\003\001\002\004j\016lock" +
+      ".ListLocks\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001\022\nlist_lock" +
+      "s\032\003udb(\260\352\0010\003@\001J\004lockP\001Z\tlistLocks\362\363\030>\n\004l" +
+      "ock\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\013\022\t/v1/locks" +
+      "\032\256\002\312\360\031G\n\004lock\022\004lock\032\004lock\"\005Locks*\004lock0\001" +
+      "8\001h\001z\004lock\202\001\004lock\212\001\004lock\222\001\013native.lock\322\360" +
+      "\031\027\010\001\032\003udb(\260\352\0010\003@\001J\004lockP\001\332\360\031\201\001\n\004lock\022\017ud" +
+      "b/native/lock\032\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED\032\017UDB_GRPC_TARGET\"\026udb.native.lock.con" +
+      "fig:\004lockJ\013UDB_API_KEYZ\017udb native lint\342" +
+      "\360\031>\n\004lock\032\010postgres2\033UDB_NATIVE_SERVICES" +
+      "_ENABLED2\017UDB_GRPC_TARGETB\203\002\n\035com.udb.co" +
+      "re.lock.services.v1B\020LockServiceProtoP\001Z" +
+      "Ggithub.com/fahara02/udb/sdk/go/gen/udb/" +
+      "core/lock/services/v1;servicesv1\242\002\004UCLS\252" +
+      "\002\031Udb.Core.Lock.Services.V1\312\002\031Udb\\Core\\L" +
+      "ock\\Services\\V1\342\002%Udb\\GPBMetadata\\Core\\L" +
+      "ock\\Services\\V1\352\002\035Udb::Core::Lock::Servi" +
+      "ces::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

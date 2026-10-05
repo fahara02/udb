@@ -181,92 +181,92 @@ public final class CacheServiceProto {
       "bytes\030\003 \001(\003R\010maxBytes\022\035\n\nitem_count\030\004 \001(" +
       "\004R\titemCount\0222\n\005error\030\005 \001(\0132\034.udb.core.c" +
       "ommon.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005cacheP\0012\305\030\n\014CacheService\022\255\002\n\003Get\022" +
+      "\0010\003@\001J\005cacheP\0012\311\030\n\014CacheService\022\256\002\n\003Get\022" +
       "&.udb.core.cache.services.v1.GetRequest\032" +
       "\'.udb.core.cache.services.v1.GetResponse" +
-      "\"\324\001\312\363\030%\010\002\032\rudb:cache:get \001J\002\001\002j\tcache.Ge" +
-      "t\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\tcache_get\032\003udb(\260\352\001" +
-      "0\003@\001J\005cacheP\001Z\021cacheNamespaceGet\362\363\030<\n\005ca" +
+      "\"\325\001\312\363\030&\010\002\032\rudb:cache:get \001J\003\001\002\004j\tcache.G" +
+      "et\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\tcache_get\032\003udb(\260\352" +
+      "\0010\003@\001J\005cacheP\001Z\021cacheNamespaceGet\362\363\030<\n\005c" +
+      "ache\032\005redis2\033UDB_NATIVE_SERVICES_ENABLED" +
+      "2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/cache/{" +
+      "namespace}/{key}\022\204\003\n\003Set\022&.udb.core.cach" +
+      "e.services.v1.SetRequest\032\'.udb.core.cach" +
+      "e.services.v1.SetResponse\"\253\002\312\363\030&\010\002\032\rudb:" +
+      "cache:set \001J\003\001\002\004j\tcache.Set\220\001\001\322\363\030\006\010\001\020\001 \001" +
+      "\332\363\0306\010\001\022\tcache_set\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z" +
+      "\021cacheNamespaceSet\352\363\030O\n\tcache.Set\022\026udb.c" +
+      "ache.entry.set.v1\032\tnamespace\"\010standard*\r" +
+      "at_least_once2\006stable\362\363\030<\n\005cache\032\005redis2" +
+      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
+      "ARGET\370\363\030\002\202\323\344\223\002 \032\033/v1/cache/{namespace}/{" +
+      "key}:\001*\022\235\003\n\006Delete\022).udb.core.cache.serv" +
+      "ices.v1.DeleteRequest\032*.udb.core.cache.s" +
+      "ervices.v1.DeleteResponse\"\273\002\312\363\030,\010\002\032\020udb:" +
+      "cache:delete \001J\003\001\002\004j\014cache.Delete\220\001\001\322\363\030\006" +
+      "\010\001\020\001 \001\332\363\030<\010\001\022\014cache_delete\032\003udb(\260\352\0010\003@\001J" +
+      "\005cacheP\001Z\024cacheNamespaceDelete\352\363\030V\n\014cach" +
+      "e.Delete\022\032udb.cache.entry.deleted.v1\032\tna" +
+      "mespace\"\010standard*\rat_least_once2\006stable" +
+      "\362\363\030<\n\005cache\032\005redis2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035*\033/v1/" +
+      "cache/{namespace}/{key}\022\264\002\n\004Scan\022\'.udb.c" +
+      "ore.cache.services.v1.ScanRequest\032(.udb." +
+      "core.cache.services.v1.ScanResponse\"\330\001\312\363" +
+      "\030(\010\002\032\016udb:cache:scan \001J\003\001\002\004j\ncache.Scan\220" +
+      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\ncache_scan\032\003udb(\260\352\0010" +
+      "\003@\001J\005cacheP\001Z\022cacheNamespaceScan\362\363\030<\n\005ca" +
       "che\032\005redis2\033UDB_NATIVE_SERVICES_ENABLED2" +
-      "\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/cache/{n" +
-      "amespace}/{key}\022\203\003\n\003Set\022&.udb.core.cache" +
-      ".services.v1.SetRequest\032\'.udb.core.cache" +
-      ".services.v1.SetResponse\"\252\002\312\363\030%\010\002\032\rudb:c" +
-      "ache:set \001J\002\001\002j\tcache.Set\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\0306\010\001\022\tcache_set\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\021c" +
-      "acheNamespaceSet\352\363\030O\n\tcache.Set\022\026udb.cac" +
-      "he.entry.set.v1\032\tnamespace\"\010standard*\rat" +
-      "_least_once2\006stable\362\363\030<\n\005cache\032\005redis2\033U" +
-      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\370\363\030\002\202\323\344\223\002 \032\033/v1/cache/{namespace}/{ke" +
-      "y}:\001*\022\234\003\n\006Delete\022).udb.core.cache.servic" +
-      "es.v1.DeleteRequest\032*.udb.core.cache.ser" +
-      "vices.v1.DeleteResponse\"\272\002\312\363\030+\010\002\032\020udb:ca" +
-      "che:delete \001J\002\001\002j\014cache.Delete\220\001\001\322\363\030\006\010\001\020" +
-      "\001 \001\332\363\030<\010\001\022\014cache_delete\032\003udb(\260\352\0010\003@\001J\005ca" +
-      "cheP\001Z\024cacheNamespaceDelete\352\363\030V\n\014cache.D" +
-      "elete\022\032udb.cache.entry.deleted.v1\032\tnames" +
-      "pace\"\010standard*\rat_least_once2\006stable\362\363\030" +
-      "<\n\005cache\032\005redis2\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035*\033/v1/cac" +
-      "he/{namespace}/{key}\022\263\002\n\004Scan\022\'.udb.core" +
-      ".cache.services.v1.ScanRequest\032(.udb.cor" +
-      "e.cache.services.v1.ScanResponse\"\327\001\312\363\030\'\010" +
-      "\002\032\016udb:cache:scan \001J\002\001\002j\ncache.Scan\220\001\001\322\363" +
-      "\030\006\010\001\020\001 \001\332\363\0308\010\001\022\ncache_scan\032\003udb(\260\352\0010\003@\001J" +
-      "\005cacheP\001Z\022cacheNamespaceScan\362\363\030<\n\005cache\032" +
-      "\005redis2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
-      "_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\022\032/v1/cache/{names" +
-      "pace}:scan\022\335\003\n\017CreateNamespace\0222.udb.cor" +
-      "e.cache.services.v1.CreateNamespaceReque" +
-      "st\0323.udb.core.cache.services.v1.CreateNa" +
-      "mespaceResponse\"\340\002\312\363\030>\010\002\032\032udb:cache:crea" +
-      "te-namespace \001J\002\001\002j\025cache.CreateNamespac" +
-      "e\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\026create_cache_names" +
-      "pace\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\024createCacheN" +
-      "amespace\352\363\030c\n\025cache.CreateNamespace\022\036udb" +
-      ".cache.namespace.created.v1\032\tnamespace\"\010" +
-      "standard*\rat_least_once2\006stable\362\363\030<\n\005cac" +
-      "he\032\005redis2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
-      "UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\031\"\024/v1/cache/nam" +
-      "espaces:\001*\022\351\003\n\017DeleteNamespace\0222.udb.cor" +
-      "e.cache.services.v1.DeleteNamespaceReque" +
-      "st\0323.udb.core.cache.services.v1.DeleteNa" +
-      "mespaceResponse\"\354\002\312\363\030>\010\002\032\032udb:cache:dele" +
-      "te-namespace \001J\002\001\002j\025cache.DeleteNamespac" +
-      "e\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\026delete_cache_names" +
-      "pace\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\024deleteCacheN" +
-      "amespace\352\363\030]\n\025cache.DeleteNamespace\022\030udb" +
-      ".cache.invalidated.v1\032\tnamespace\"\010standa" +
-      "rd*\rat_least_once2\006stable\362\363\030<\n\005cache\032\005re" +
-      "dis2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
-      "PC_TARGET\370\363\030\003\202\323\344\223\002+\"&/v1/cache/namespace" +
-      "s/{namespace}:flush:\001*\022\225\003\n\021GetNamespaceS" +
-      "tats\0224.udb.core.cache.services.v1.GetNam" +
-      "espaceStatsRequest\0325.udb.core.cache.serv" +
-      "ices.v1.GetNamespaceStatsResponse\"\222\002\312\363\030C" +
-      "\010\002\032\035udb:cache:get-namespace-stats \001J\002\001\002j" +
-      "\027cache.GetNamespaceStats\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030" +
-      "K\010\001\022\031get_cache_namespace_stats\032\003udb(\260\352\0010" +
-      "\003@\001J\005cacheP\001Z\026getCacheNamespaceStats\362\363\030<" +
-      "\n\005cache\032\005redis2\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002(\022&/v1/cach" +
-      "e/namespaces/{namespace}/stats\032\305\002\312\360\031Q\n\005c" +
-      "ache\022\005cache\032\005cache\"\005Cache*\005cache0\0018\001@\001h\001" +
-      "z\005cache\202\001\005cache\212\001\005cache\222\001\014native.cache\322\360" +
-      "\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\332\360\031\205\001\n\005cache\022\020" +
-      "udb/native/cache\032\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED\032\017UDB_GRPC_TARGET\"\027udb.native.cache" +
-      ".config:\005cacheJ\013UDB_API_KEYZ\017udb native " +
-      "lint\342\360\031F\n\005cache\032\010postgres\032\005redis2\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGETB\212" +
-      "\002\n\036com.udb.core.cache.services.v1B\021Cache" +
-      "ServiceProtoP\001ZHgithub.com/fahara02/udb/" +
-      "sdk/go/gen/udb/core/cache/services/v1;se" +
-      "rvicesv1\242\002\004UCCS\252\002\032Udb.Core.Cache.Service" +
-      "s.V1\312\002\032Udb\\Core\\Cache\\Services\\V1\342\002&Udb\\" +
-      "GPBMetadata\\Core\\Cache\\Services\\V1\352\002\036Udb" +
-      "::Core::Cache::Services::V1b\006proto3"
+      "\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\022\032/v1/cache/{n" +
+      "amespace}:scan\022\335\003\n\017CreateNamespace\0222.udb" +
+      ".core.cache.services.v1.CreateNamespaceR" +
+      "equest\0323.udb.core.cache.services.v1.Crea" +
+      "teNamespaceResponse\"\340\002\312\363\030>\010\002\032\032udb:cache:" +
+      "create-namespace \001J\002\001\002j\025cache.CreateName" +
+      "space\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\026create_cache_n" +
+      "amespace\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\024createCa" +
+      "cheNamespace\352\363\030c\n\025cache.CreateNamespace\022" +
+      "\036udb.cache.namespace.created.v1\032\tnamespa" +
+      "ce\"\010standard*\rat_least_once2\006stable\362\363\030<\n" +
+      "\005cache\032\005redis2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\031\"\024/v1/cache" +
+      "/namespaces:\001*\022\351\003\n\017DeleteNamespace\0222.udb" +
+      ".core.cache.services.v1.DeleteNamespaceR" +
+      "equest\0323.udb.core.cache.services.v1.Dele" +
+      "teNamespaceResponse\"\354\002\312\363\030>\010\002\032\032udb:cache:" +
+      "delete-namespace \001J\002\001\002j\025cache.DeleteName" +
+      "space\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\026delete_cache_n" +
+      "amespace\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\024deleteCa" +
+      "cheNamespace\352\363\030]\n\025cache.DeleteNamespace\022" +
+      "\030udb.cache.invalidated.v1\032\tnamespace\"\010st" +
+      "andard*\rat_least_once2\006stable\362\363\030<\n\005cache" +
+      "\032\005redis2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
+      "B_GRPC_TARGET\370\363\030\003\202\323\344\223\002+\"&/v1/cache/names" +
+      "paces/{namespace}:flush:\001*\022\225\003\n\021GetNamesp" +
+      "aceStats\0224.udb.core.cache.services.v1.Ge" +
+      "tNamespaceStatsRequest\0325.udb.core.cache." +
+      "services.v1.GetNamespaceStatsResponse\"\222\002" +
+      "\312\363\030C\010\002\032\035udb:cache:get-namespace-stats \001J" +
+      "\002\001\002j\027cache.GetNamespaceStats\220\001\001\322\363\030\006\010\001\020\001 " +
+      "\001\332\363\030K\010\001\022\031get_cache_namespace_stats\032\003udb(" +
+      "\260\352\0010\003@\001J\005cacheP\001Z\026getCacheNamespaceStats" +
+      "\362\363\030<\n\005cache\032\005redis2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002(\022&/v1/" +
+      "cache/namespaces/{namespace}/stats\032\305\002\312\360\031" +
+      "Q\n\005cache\022\005cache\032\005cache\"\005Cache*\005cache0\0018\001" +
+      "@\001h\001z\005cache\202\001\005cache\212\001\005cache\222\001\014native.cac" +
+      "he\322\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\332\360\031\205\001\n\005cac" +
+      "he\022\020udb/native/cache\032\033UDB_NATIVE_SERVICE" +
+      "S_ENABLED\032\017UDB_GRPC_TARGET\"\027udb.native.c" +
+      "ache.config:\005cacheJ\013UDB_API_KEYZ\017udb nat" +
+      "ive lint\342\360\031F\n\005cache\032\010postgres\032\005redis2\033UD" +
+      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
+      "ETB\212\002\n\036com.udb.core.cache.services.v1B\021C" +
+      "acheServiceProtoP\001ZHgithub.com/fahara02/" +
+      "udb/sdk/go/gen/udb/core/cache/services/v" +
+      "1;servicesv1\242\002\004UCCS\252\002\032Udb.Core.Cache.Ser" +
+      "vices.V1\312\002\032Udb\\Core\\Cache\\Services\\V1\342\002&" +
+      "Udb\\GPBMetadata\\Core\\Cache\\Services\\V1\352\002" +
+      "\036Udb::Core::Cache::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

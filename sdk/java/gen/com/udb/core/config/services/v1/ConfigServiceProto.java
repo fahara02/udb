@@ -193,7 +193,7 @@ public final class ConfigServiceProto {
       "n.v1.ApiErrorR\005error\032a\n\013ValuesEntry\022\020\n\003k" +
       "ey\030\001 \001(\tR\003key\022<\n\005value\030\002 \001(\0132&.udb.core." +
       "config.services.v1.FlagValueR\005value:\0028\001:" +
-      "\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006configP\0012\243\021\n\rConfi" +
+      "\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006configP\0012\246\021\n\rConfi" +
       "gService\022\227\003\n\007PutFlag\022+.udb.core.config.s" +
       "ervices.v1.PutFlagRequest\032,.udb.core.con" +
       "fig.services.v1.PutFlagResponse\"\260\002\312\363\0300\010\002" +
@@ -204,59 +204,59 @@ public final class ConfigServiceProto {
       "ey\"\010standard*\rat_least_once2\006stable\362\363\030@\n" +
       "\006config\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
       "NABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\031\"\024/v1/c" +
-      "onfig/flags:put:\001*\022\300\002\n\007GetFlag\022+.udb.cor" +
+      "onfig/flags:put:\001*\022\301\002\n\007GetFlag\022+.udb.cor" +
       "e.config.services.v1.GetFlagRequest\032,.ud" +
       "b.core.config.services.v1.GetFlagRespons" +
-      "e\"\331\001\312\363\0300\010\002\032\023udb:config:get-flag \001J\002\001\002j\016c" +
-      "onfig.GetFlag\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030,\010\001\022\010get_fl" +
-      "ag\032\003udb(\260\352\0010\003@\001J\006configP\001Z\007getFlag\362\363\030@\n\006" +
-      "config\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/co" +
-      "nfig/flags/{flag_key}\022\303\002\n\tListFlags\022-.ud" +
-      "b.core.config.services.v1.ListFlagsReque" +
-      "st\032..udb.core.config.services.v1.ListFla" +
-      "gsResponse\"\326\001\312\363\0304\010\002\032\025udb:config:list-fla" +
-      "gs \001J\002\001\002j\020config.ListFlags\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
-      "\363\0300\010\001\022\nlist_flags\032\003udb(\260\352\0010\003@\001J\006configP\001" +
-      "Z\tlistFlags\362\363\030@\n\006config\032\010postgres2\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\001\202\323\344\223\002\022\022\020/v1/config/flags\022\262\003\n\nDeleteFl" +
-      "ag\022..udb.core.config.services.v1.DeleteF" +
-      "lagRequest\032/.udb.core.config.services.v1" +
-      ".DeleteFlagResponse\"\302\002\312\363\0306\010\002\032\026udb:config" +
-      ":delete-flag \001J\002\001\002j\021config.DeleteFlag\220\001\001" +
-      "\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\013delete_flag\032\003udb(\260\352\0010\003" +
-      "@\001J\006configP\001Z\ndeleteFlag\352\363\030Z\n\021config.Del" +
-      "eteFlag\022\032udb.config.flag.changed.v1\032\010fla" +
-      "g_key\"\010standard*\rat_least_once2\006stable\362\363" +
-      "\030@\n\006config\032\010postgres2\033UDB_NATIVE_SERVICE" +
-      "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002\034\"\027/v" +
-      "1/config/flags:delete:\001*\022\353\002\n\rEvaluateFla" +
-      "gs\0221.udb.core.config.services.v1.Evaluat" +
-      "eFlagsRequest\0322.udb.core.config.services" +
-      ".v1.EvaluateFlagsResponse\"\362\001\312\363\030<\010\002\032\031udb:" +
-      "config:evaluate-flags \001J\002\001\002j\024config.Eval" +
-      "uateFlags\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\016evaluate_f" +
-      "lags\032\003udb(\260\352\0010\003@\001J\006configP\001Z\revaluateFla" +
-      "gs\362\363\030@\n\006config\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\036" +
-      "\"\031/v1/config/flags:evaluate:\001*\032\313\002\312\360\031X\n\006c" +
-      "onfig\022\006config\032\006config\"\006Config*\006config0\0018" +
-      "\001h\001z\006config\202\001\006config\212\001\006config\222\001\rnative.c" +
-      "onfig\322\360\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006configP\001\332\360\031\211\001\n" +
-      "\006config\022\021udb/native/config\032\033UDB_NATIVE_S" +
-      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\030udb.na" +
-      "tive.config.config:\006configJ\013UDB_API_KEYZ" +
-      "\017udb native lint\342\360\031@\n\006config\032\010postgres2\033" +
-      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
-      "RGETB\221\002\n\037com.udb.core.config.services.v1" +
-      "B\022ConfigServiceProtoP\001ZIgithub.com/fahar" +
-      "a02/udb/sdk/go/gen/udb/core/config/servi" +
-      "ces/v1;servicesv1\242\002\004UCCS\252\002\033Udb.Core.Conf" +
-      "ig.Services.V1\312\002\033Udb\\Core\\Config\\Service" +
-      "s\\V1\342\002\'Udb\\GPBMetadata\\Core\\Config\\Servi" +
-      "ces\\V1\352\002\037Udb::Core::Config::Services::V1" +
-      "b\006proto3"
+      "e\"\332\001\312\363\0301\010\002\032\023udb:config:get-flag \001J\003\001\002\004j\016" +
+      "config.GetFlag\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030,\010\001\022\010get_f" +
+      "lag\032\003udb(\260\352\0010\003@\001J\006configP\001Z\007getFlag\362\363\030@\n" +
+      "\006config\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/c" +
+      "onfig/flags/{flag_key}\022\304\002\n\tListFlags\022-.u" +
+      "db.core.config.services.v1.ListFlagsRequ" +
+      "est\032..udb.core.config.services.v1.ListFl" +
+      "agsResponse\"\327\001\312\363\0305\010\002\032\025udb:config:list-fl" +
+      "ags \001J\003\001\002\004j\020config.ListFlags\220\001\001\322\363\030\006\010\001\020\001 " +
+      "\001\332\363\0300\010\001\022\nlist_flags\032\003udb(\260\352\0010\003@\001J\006config" +
+      "P\001Z\tlistFlags\362\363\030@\n\006config\032\010postgres2\033UDB" +
+      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
+      "T\370\363\030\001\202\323\344\223\002\022\022\020/v1/config/flags\022\262\003\n\nDelete" +
+      "Flag\022..udb.core.config.services.v1.Delet" +
+      "eFlagRequest\032/.udb.core.config.services." +
+      "v1.DeleteFlagResponse\"\302\002\312\363\0306\010\002\032\026udb:conf" +
+      "ig:delete-flag \001J\002\001\002j\021config.DeleteFlag\220" +
+      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\013delete_flag\032\003udb(\260\352\001" +
+      "0\003@\001J\006configP\001Z\ndeleteFlag\352\363\030Z\n\021config.D" +
+      "eleteFlag\022\032udb.config.flag.changed.v1\032\010f" +
+      "lag_key\"\010standard*\rat_least_once2\006stable" +
+      "\362\363\030@\n\006config\032\010postgres2\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002\034\"\027" +
+      "/v1/config/flags:delete:\001*\022\354\002\n\rEvaluateF" +
+      "lags\0221.udb.core.config.services.v1.Evalu" +
+      "ateFlagsRequest\0322.udb.core.config.servic" +
+      "es.v1.EvaluateFlagsResponse\"\363\001\312\363\030=\010\002\032\031ud" +
+      "b:config:evaluate-flags \001J\003\001\002\004j\024config.E" +
+      "valuateFlags\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\016evaluat" +
+      "e_flags\032\003udb(\260\352\0010\003@\001J\006configP\001Z\revaluate" +
+      "Flags\362\363\030@\n\006config\032\010postgres2\033UDB_NATIVE_" +
+      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344" +
+      "\223\002\036\"\031/v1/config/flags:evaluate:\001*\032\313\002\312\360\031X" +
+      "\n\006config\022\006config\032\006config\"\006Config*\006config" +
+      "0\0018\001h\001z\006config\202\001\006config\212\001\006config\222\001\rnativ" +
+      "e.config\322\360\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006configP\001\332\360\031" +
+      "\211\001\n\006config\022\021udb/native/config\032\033UDB_NATIV" +
+      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\030udb" +
+      ".native.config.config:\006configJ\013UDB_API_K" +
+      "EYZ\017udb native lint\342\360\031@\n\006config\032\010postgre" +
+      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
+      "_TARGETB\221\002\n\037com.udb.core.config.services" +
+      ".v1B\022ConfigServiceProtoP\001ZIgithub.com/fa" +
+      "hara02/udb/sdk/go/gen/udb/core/config/se" +
+      "rvices/v1;servicesv1\242\002\004UCCS\252\002\033Udb.Core.C" +
+      "onfig.Services.V1\312\002\033Udb\\Core\\Config\\Serv" +
+      "ices\\V1\342\002\'Udb\\GPBMetadata\\Core\\Config\\Se" +
+      "rvices\\V1\352\002\037Udb::Core::Config::Services:" +
+      ":V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

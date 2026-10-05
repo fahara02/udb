@@ -624,6 +624,13 @@ pub(crate) async fn ensure_pg_audit_sink_ready(
 }
 
 fn append_line(path: &str, line: &str) -> std::io::Result<()> {
+    // A relative/nested sink path (`logs/audit.log`) must not fail every event
+    // just because its directory does not exist yet.
+    if let Some(parent) = std::path::Path::new(path).parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
+    }
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)

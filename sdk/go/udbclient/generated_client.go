@@ -26,7 +26,7 @@ package udbclient
 // hatches for RPCs that don't yet have a typed helper.
 //
 // Covers 385 RPCs across 28 services
-// (UDB v0.5.24, wire protocol 1.0.0).
+// (UDB v0.5.25, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -63,7 +63,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.5.24"
+const SDKVersion = "0.5.25"
 
 // GeneratedProtocolVersion mirrors the wire protocol this layer targets. It is
 // the generated companion to the hand-written udbclient.ProtocolVersion and is
@@ -454,9 +454,11 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 
 // NewServerStream opens a server-streaming RPC. Streaming RPCs are NOT retried
 // here (the stream may have already produced data); retry is the caller's
-// decision. Metadata and per-call deadline still apply.
+// decision. Metadata still applies, but Options.CallTimeout does NOT: a server
+// stream (LiveQuery, PublishCDC, downloads) is long-lived and the unary call
+// budget would kill it. The caller's own context deadline still applies.
 func (g *GeneratedClient) NewServerStream(ctx context.Context, fullMethod string, desc *grpc.StreamDesc, req any, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
+	callCtx, cancel := g.outgoingContext(ctx), context.CancelFunc(func() {})
 	cs, err := g.conn.NewStream(callCtx, desc, fullMethod, opts...)
 	if err != nil {
 		cancel()
@@ -476,9 +478,16 @@ func (g *GeneratedClient) NewServerStream(ctx context.Context, fullMethod string
 }
 
 // NewClientStream opens a client-streaming or bidi RPC. Never retried (the body
-// is non-idempotent). Metadata and per-call deadline still apply.
+// is non-idempotent). Metadata always applies; Options.CallTimeout applies only
+// to client-streaming (unary-response) calls. A bidi stream (desc.ServerStreams,
+// e.g. WebRTC Signal) is long-lived and gets no implicit deadline; the caller's
+// own context deadline still applies.
 func (g *GeneratedClient) NewClientStream(ctx context.Context, fullMethod string, desc *grpc.StreamDesc, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
+	outCtx := g.outgoingContext(ctx)
+	callCtx, cancel := outCtx, context.CancelFunc(func() {})
+	if desc == nil || !desc.ServerStreams {
+		callCtx, cancel = g.withDeadline(outCtx)
+	}
 	cs, err := g.conn.NewStream(callCtx, desc, fullMethod, opts...)
 	if err != nil {
 		cancel()
@@ -574,7 +583,17 @@ func (g *GeneratedClient) streamInterceptor() grpc.StreamClientInterceptor {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 		// Streams are not retried (possibly mid-flight / non-idempotent); we
 		// only inject metadata + deadline + map dial errors.
-		callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
+		//
+		// Options.CallTimeout is a UNARY budget. A server-streaming or bidi RPC
+		// (PublishCDC, LiveQuery, signalling) is a long-lived subscription that
+		// the timeout would kill after a few seconds, so it gets no implicit
+		// deadline; the caller's own context deadline still applies.
+		// Client-streaming uploads (BeginTx, PutObject) keep the call timeout.
+		outCtx := g.outgoingContext(ctx)
+		callCtx, cancel := outCtx, context.CancelFunc(func() {})
+		if !desc.ServerStreams {
+			callCtx, cancel = g.withDeadline(outCtx)
+		}
 		cs, err := streamer(callCtx, desc, cc, method, opts...)
 		if err != nil {
 			cancel()

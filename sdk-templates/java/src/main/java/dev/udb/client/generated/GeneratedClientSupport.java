@@ -60,8 +60,10 @@ public final class GeneratedClientSupport {
       Metadata.Key.of("udb-error-detail-bin", Metadata.BINARY_BYTE_MARSHALLER);
 
   /**
-   * Per-call options. Immutable; use {@link Builder} to customise. Streaming
-   * calls honour {@code timeout} and metadata but are never retried mid-stream.
+   * Per-call options. Immutable; use {@link Builder} to customise. {@code timeout}
+   * applies to unary and client-streaming calls only; server-streaming and bidi
+   * calls get no implicit deadline (only an explicit per-call override). Streams
+   * are never retried mid-stream.
    */
   public static final class CallTuning {
     /** Default per-attempt deadline; {@code null} means no client-side deadline. */
@@ -286,6 +288,20 @@ public final class GeneratedClientSupport {
   }
 
   /**
+   * Call options for server-streaming and bidi RPCs. These streams are long-lived
+   * (LiveQuery subscribe, CDC, WebRTC signalling), so the default
+   * {@link CallTuning#timeout} would kill them; only an explicit per-call
+   * {@code deadlineOverride} bounds the stream.
+   */
+  private static CallOptions streamCallOptions(Duration deadlineOverride) {
+    CallOptions opts = CallOptions.DEFAULT;
+    if (deadlineOverride != null) {
+      opts = opts.withDeadline(Deadline.after(deadlineOverride.toNanos(), TimeUnit.NANOSECONDS));
+    }
+    return opts;
+  }
+
+  /**
    * Build a per-call channel view that attaches a fresh metadata snapshot (from
    * {@code headers}) and the effective deadline. A new view is produced for every
    * attempt so retries carry a fresh request-id / correlation set.
@@ -378,7 +394,7 @@ public final class GeneratedClientSupport {
       Duration deadlineOverride,
       Supplier<Metadata> headers) {
     String rpcPath = method.getFullMethodName();
-    CallOptions opts = callOptions(tuning, deadlineOverride);
+    CallOptions opts = streamCallOptions(deadlineOverride);
     try {
       Channel ch = attempt(channel, tuning, deadlineOverride, headers);
       Iterator<O> raw = ClientCalls.blockingServerStreamingCall(ch, method, opts, request);
@@ -416,7 +432,7 @@ public final class GeneratedClientSupport {
       Supplier<Metadata> headers,
       StreamObserver<O> responseObserver) {
     Channel ch = attempt(channel, tuning, deadlineOverride, headers);
-    ClientCall<I, O> call = ch.newCall(method, callOptions(tuning, deadlineOverride));
+    ClientCall<I, O> call = ch.newCall(method, streamCallOptions(deadlineOverride));
     return ClientCalls.asyncBidiStreamingCall(call, responseObserver);
   }
 

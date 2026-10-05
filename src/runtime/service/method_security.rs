@@ -318,13 +318,38 @@ fn direct_credential_type(headers: &http::HeaderMap) -> Option<CredentialType> {
 }
 
 fn declared_allows_credential(security: &MethodSecurity, credential: CredentialType) -> bool {
+    let allows = |kind: CredentialType| security.allowed_credential_types.contains(&(kind as i32));
     security.allowed_credential_types.is_empty()
-        || security
-            .allowed_credential_types
-            .contains(&(credential as i32))
+        || allows(credential)
+        // A service API key and the bearer it is exchanged for are the SAME
+        // workload principal: both carry the key's grant identity and the
+        // grant-attenuated scopes, and both are re-checked against the grant
+        // on use. A descriptor that admits either form admits the other, so
+        // a service is never stranded by which form it presents (Storage
+        // declared only API_KEY; most native services declare only
+        // SERVICE_ACCOUNT). Scope and tenant gates still apply to both.
+        || (matches!(
+            credential,
+            CredentialType::ApiKey | CredentialType::ServiceAccount
+        ) && (allows(CredentialType::ApiKey) || allows(CredentialType::ServiceAccount)))
 }
 
-fn credential_type_for_bearer_claims(claims: &SecurityClaims) -> CredentialType {
+/// Whether a bearer was minted for a service account: it names a service
+/// identity, or its `account_kind` claim is SERVICE_ACCOUNT / WORKLOAD.
+fn bearer_is_service_account(claims: &SecurityClaims) -> bool {
+    use crate::proto::udb::core::authn::entity::v1::AccountKind;
+    !claims
+        .service_identity
+        .as_deref()
+        .unwrap_or_default()
+        .trim()
+        .is_empty()
+        || claims.account_kind.is_some_and(|kind| {
+            kind == AccountKind::ServiceAccount as i32 || kind == AccountKind::Workload as i32
+        })
+}
+
+pub(crate) fn credential_type_for_bearer_claims(claims: &SecurityClaims) -> CredentialType {
     match claims
         .auth_method
         .as_deref()
@@ -333,8 +358,19 @@ fn credential_type_for_bearer_claims(claims: &SecurityClaims) -> CredentialType 
         .to_ascii_lowercase()
         .as_str()
     {
+        // A bearer minted by `Authenticate{api_key}` is the documented SERVICE
+        // credential: it carries the key's service-account grant identity, its
+        // scopes are attenuated to the key's granted scopes, and the grant is
+        // re-checked on use. Classifying it as a raw API key made every native
+        // method that admits bearer/service callers but not raw keys (Lock,
+        // Config, Authn CreateUser, Authz PutRoleBinding, ...) unreachable to
+        // services. Without a service identity it stays an API-key credential.
+        "api_key" | "apikey" | "api-key" if bearer_is_service_account(claims) => {
+            CredentialType::ServiceAccount
+        }
         "api_key" | "apikey" | "api-key" => CredentialType::ApiKey,
         "session" => CredentialType::Session,
+        "mtls" => CredentialType::Mtls,
         "service" | "service_account" | "service-account" | "client_credentials" => {
             CredentialType::ServiceAccount
         }
@@ -777,7 +813,10 @@ impl VerifiedClaimContext {
     fn has_any_scope(&self, required: &[&str]) -> bool {
         self.scopes.iter().any(|scope| {
             let scope = scope.trim();
-            ADMIN_SCOPES.contains(&scope) || required.contains(&scope)
+            ADMIN_SCOPES.contains(&scope)
+                || required
+                    .iter()
+                    .any(|required| required.eq_ignore_ascii_case(scope))
         })
     }
 }
@@ -1234,9 +1273,12 @@ fn enforce(
                 == tonic::Code::Unavailable
     );
     // Whether THIS method opts into scoped API-key workload credentials.
+    // A method that admits service accounts admits the raw service key too
+    // (see `declared_allows_credential`); an empty list is NOT an opt-in.
     let method_allows_api_key = matches!(
         declared,
-        Some(s) if s.allowed_credential_types.contains(&(CredentialType::ApiKey as i32))
+        Some(s) if !s.allowed_credential_types.is_empty()
+            && declared_allows_credential(s, CredentialType::ApiKey)
     );
     if let Some(credential) = direct_credential_type(headers) {
         if token.is_some() {
@@ -1383,15 +1425,27 @@ fn enforce(
     // RPC. A method may additionally declare narrower scopes; a least-privilege
     // service token carrying one of those is also accepted.
     let method_scopes = declared.map(|s| s.scopes.as_slice()).unwrap_or(&[]);
-    let has_declared_scope = scopes
-        .iter()
-        .any(|scope| method_scopes.iter().any(|declared| declared == scope));
+    // Scopes are compared case-insensitively: grant validation accepts any
+    // casing, so a grant written `udb:Lock:acquire-lock` must still satisfy
+    // `udb:lock:acquire-lock` instead of minting tokens that silently fail here.
+    let has_declared_scope = scopes.iter().any(|scope| {
+        method_scopes
+            .iter()
+            .any(|declared| declared.eq_ignore_ascii_case(scope.trim()))
+    });
     if !has_admin && !has_declared_scope {
+        // Name the method's own scope(s) so a least-privilege service knows
+        // exactly what to add to its grant (not only the admin scopes).
+        let message = if method_scopes.is_empty() {
+            "scope udb:admin or udb:auth:admin is required".to_string()
+        } else {
+            format!(
+                "scope {} is required (or udb:admin / udb:auth:admin)",
+                method_scopes.join(" or ")
+            )
+        };
         return Err((
-            method_security_policy_denied(
-                deny_reason::SCOPE,
-                "scope udb:admin or udb:auth:admin is required",
-            ),
+            method_security_policy_denied(deny_reason::SCOPE, message),
             deny_reason::SCOPE,
         ));
     }
@@ -2318,10 +2372,59 @@ mod tests {
             credential_type_for_bearer_claims(&claims_with("api_key", "")),
             CredentialType::ApiKey
         );
+        // The documented service path: `Authenticate{api_key}` mints a bearer
+        // carrying the grant's service identity. It is a service credential,
+        // not a raw API key, so service-callable native methods admit it.
+        assert_eq!(
+            credential_type_for_bearer_claims(&claims_with("api_key", "svc:gateway")),
+            CredentialType::ServiceAccount
+        );
+        let mut by_kind = claims_with("api_key", "");
+        by_kind.account_kind =
+            Some(crate::proto::udb::core::authn::entity::v1::AccountKind::ServiceAccount as i32);
+        assert_eq!(
+            credential_type_for_bearer_claims(&by_kind),
+            CredentialType::ServiceAccount
+        );
+        let mut person = claims_with("api_key", "");
+        person.account_kind =
+            Some(crate::proto::udb::core::authn::entity::v1::AccountKind::Person as i32);
+        assert_eq!(
+            credential_type_for_bearer_claims(&person),
+            CredentialType::ApiKey,
+            "a non-service exchanged key stays an API-key credential"
+        );
         assert_eq!(
             credential_type_for_bearer_claims(&claims_with("service_account", "svc:node")),
             CredentialType::ServiceAccount
         );
+    }
+
+    #[test]
+    fn service_key_and_exchanged_bearer_are_one_workload_principal() {
+        // Storage declares only API_KEY; most native services declare only
+        // SERVICE_ACCOUNT. Either declaration admits both forms of the key.
+        let key_only =
+            synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::ApiKey]);
+        enforce_bearer_credential_type(Some(&key_only), &claims_with("api_key", "svc:scanner"))
+            .expect("an exchanged service bearer must reach an API_KEY method");
+        let service_only =
+            synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::ServiceAccount]);
+        assert!(declared_allows_credential(
+            &service_only,
+            CredentialType::ApiKey
+        ));
+        // Neither form reaches a human-only method.
+        let human_only =
+            synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::Session]);
+        assert!(!declared_allows_credential(
+            &human_only,
+            CredentialType::ApiKey
+        ));
+        assert!(!declared_allows_credential(
+            &human_only,
+            CredentialType::ServiceAccount
+        ));
     }
 
     #[test]
@@ -2510,7 +2613,7 @@ mod tests {
         );
         let (err, reason) = enforce(
             &security,
-            &format!("{AUTHN}/CreateUser"),
+            "/udb.core.authz.services.v1.AuthzService/CreatePolicyRule",
             &headers,
             &TransportPeer::default(),
             None,

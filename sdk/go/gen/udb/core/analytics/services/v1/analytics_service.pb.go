@@ -26,9 +26,9 @@ var File_udb_core_analytics_services_v1_analytics_service_proto protoreflect.Fil
 
 const file_udb_core_analytics_services_v1_analytics_service_proto_rawDesc = "" +
 	"\n" +
-	"6udb/core/analytics/services/v1/analytics_service.proto\x12\x1eudb.core.analytics.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a)udb/core/analytics/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\xe2+\n" +
-	"\x10AnalyticsService\x12\xf5\x05\n" +
-	"\x14RecordPipelineMetric\x12;.udb.core.analytics.services.v1.RecordPipelineMetricRequest\x1a<.udb.core.analytics.services.v1.RecordPipelineMetricResponse\"\xe1\x04\xca\xf3\x18Q\b\x02\x1a$udb:analytics:record-pipeline-metric \x01J\x02\x01\x02j\x1eanalytics.RecordPipelineMetric\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18J\b\x01\x12\x16record_pipeline_metric\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01Z\x14recordPipelineMetric\xe2\xf3\x18\xd9\x01\n" +
+	"6udb/core/analytics/services/v1/analytics_service.proto\x12\x1eudb.core.analytics.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a)udb/core/analytics/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\xe3+\n" +
+	"\x10AnalyticsService\x12\xf6\x05\n" +
+	"\x14RecordPipelineMetric\x12;.udb.core.analytics.services.v1.RecordPipelineMetricRequest\x1a<.udb.core.analytics.services.v1.RecordPipelineMetricResponse\"\xe2\x04\xca\xf3\x18R\b\x02\x1a$udb:analytics:record-pipeline-metric \x01J\x03\x01\x02\x04j\x1eanalytics.RecordPipelineMetric\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18J\b\x01\x12\x16record_pipeline_metric\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01Z\x14recordPipelineMetric\xe2\xf3\x18\xd9\x01\n" +
 	"\tanalytics\x12\x14udb/native/analytics\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"7udb.native.analytics.record_pipeline_metric.boilerplate*\x16record_pipeline_metric2\rudb_analytics:\tanalyticsJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18^\n" +
 	"\x1eanalytics.RecordPipelineMetric\x12\x10analytics.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18C\n" +
 	"\tanalytics\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/analytics/pipeline-metrics\x12\xe0\x05\n" +

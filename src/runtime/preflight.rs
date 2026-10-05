@@ -94,6 +94,43 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
         });
     }
 
+    // (b2) API-key hash secret. API keys are stored as keyed hashes; the key
+    // falls back to UDB_SESSION_HASH_SECRET, so a deployment that regenerates
+    // the session secret on each start (or rotates it) invalidates every API
+    // key at once ("x-api-key is invalid, revoked, or expired").
+    if !env_present("UDB_API_KEY_HASH_SECRET") {
+        if env_present("UDB_SESSION_HASH_SECRET") {
+            out.push(PreflightFinding {
+                name: "api-key-hash-secret",
+                severity: PreflightSeverity::Warn,
+                detail: "API keys are hashed with UDB_SESSION_HASH_SECRET; changing that secret \
+                         (or generating it per start) invalidates every API key"
+                    .to_string(),
+                fix: "set a stable, dedicated UDB_API_KEY_HASH_SECRET",
+            });
+        } else {
+            out.push(PreflightFinding {
+                name: "api-key-hash-secret",
+                severity: PreflightSeverity::Fail,
+                detail: "API key create/validate will fail (no hash secret)".to_string(),
+                fix: "set a stable UDB_API_KEY_HASH_SECRET (or UDB_SESSION_HASH_SECRET)",
+            });
+        }
+    }
+
+    // (b3) Access-token signing key. Without it `Authenticate` (password AND
+    // `api_key` exchange) returns an empty access token: SDKs that exchange a
+    // service key for a bearer fail with "returned no access token".
+    if !env_present("UDB_JWT_PRIVATE_KEY") {
+        out.push(PreflightFinding {
+            name: "jwt-signing-key",
+            severity: PreflightSeverity::Fail,
+            detail: "Authenticate (login and API-key exchange) issues no access token:                      no UDB-issued JWT signing key is configured"
+                .to_string(),
+            fix: "set UDB_JWT_PRIVATE_KEY (RS256 PEM, inline or a file path) and                   UDB_JWT_PUBLIC_KEY so the broker can sign and verify its own bearers",
+        });
+    }
+
     // (c) Server-side sessions (login / Authenticate).
     if !env_truthy("UDB_SESSION_ENABLED") || !env_present("UDB_SESSION_HASH_SECRET") {
         out.push(PreflightFinding {
@@ -124,6 +161,24 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
                      remote clients calling login get UNIMPLEMENTED on the public port"
                 .to_string(),
             fix: "set UDB_AUTH_GRPC_ADDR=0.0.0.0:<public_port+10> to expose it on a trusted interface",
+        });
+    }
+
+    // (d2) WebRTC peer listener. Same loopback default (public_port+20), so a
+    // containerised broker serves no remote peer signalling unless exposed.
+    let webrtc = config.native_services.webrtc_peer_addr.trim();
+    let webrtc_loopback = webrtc.is_empty()
+        || webrtc
+            .parse::<SocketAddr>()
+            .map(|addr| addr.ip().is_loopback())
+            .unwrap_or(false);
+    if webrtc_loopback && !public_addr.ip().is_loopback() {
+        out.push(PreflightFinding {
+            name: "webrtc-plane-exposure",
+            severity: PreflightSeverity::Warn,
+            detail: "the WebRTC peer listener binds loopback by default; remote peers                      cannot reach it"
+                .to_string(),
+            fix: "set UDB_WEBRTC_GRPC_ADDR=0.0.0.0:<public_port+20> when WebRTC is used",
         });
     }
 

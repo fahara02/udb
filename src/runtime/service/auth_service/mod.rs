@@ -1045,7 +1045,9 @@ pub(crate) async fn seed_system_authz_defaults(pool: &sqlx::PgPool) -> Result<()
 }
 
 /// Canonical action tokens the DataBroker submits to the Casbin engine — the
-/// literal RPC method names, NOT a `data.*` alias. A `udb authz seed` that used
+/// literal RPC method names (plus the typed store RPCs' dotted tokens below),
+/// NOT a `data.*` alias. BatchSelect/BatchUpsert are authorized per item as
+/// Select/Upsert; their own tokens are accepted but never matched. A `udb authz seed` that used
 /// the wrong vocabulary would write policies that never match. `*` grants all.
 pub const DATA_PLANE_ACTION_TOKENS: &[&str] = &[
     "Select",
@@ -1056,6 +1058,35 @@ pub const DATA_PLANE_ACTION_TOKENS: &[&str] = &[
     "BulkCas",
     "BatchSelect",
     "BatchUpsert",
+    // The other verbs the data-plane handlers authorize by RPC name. PublishCDC
+    // is matched against the topic (pass the topic as `--entity`).
+    "PublishCDC",
+    "EnqueueOutboxEvent",
+    "VectorUpsert",
+    "VectorSearch",
+    "VectorHybridSearch",
+    "PutObject",
+    "GetObject",
+    "GeneratePresignedUrl",
+    "InitiateMultipartUpload",
+    "CompleteMultipartUpload",
+    "AbortMultipartUpload",
+    "CreateMaterializedView",
+    // The typed store RPCs authorize with dotted operation tokens rather than
+    // their RPC names; these are the literal strings their handlers submit.
+    "cache.get",
+    "cache.set",
+    "cache.delete",
+    "cache.scan",
+    "document.get",
+    "document.find",
+    "document.upsert",
+    "document.delete",
+    "graph.query",
+    "graph.mutate",
+    "timeseries.write",
+    "timeseries.query",
+    "analytical.query",
     "*",
 ];
 

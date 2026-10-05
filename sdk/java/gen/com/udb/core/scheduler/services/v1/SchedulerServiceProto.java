@@ -149,120 +149,120 @@ public final class SchedulerServiceProto {
       "\352\0010\003@\001J\tschedulerP\001\"\203\001\n\021ResumeJobRespons" +
       "e\022\030\n\007message\030\001 \001(\tR\007message\0222\n\005error\030\002 \001" +
       "(\0132\034.udb.core.common.v1.ApiErrorR\005error:" +
-      " \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tschedulerP\0012\337 \n\020Sc" +
-      "hedulerService\022\367\004\n\tCreateJob\0220.udb.core." +
+      " \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tschedulerP\0012\345 \n\020Sc" +
+      "hedulerService\022\370\004\n\tCreateJob\0220.udb.core." +
       "scheduler.services.v1.CreateJobRequest\0321" +
       ".udb.core.scheduler.services.v1.CreateJo" +
-      "bResponse\"\204\004\312\363\030:\010\002\032\030udb:scheduler:create" +
-      "-job \001J\002\001\002j\023scheduler.CreateJob\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\0303\010\001\022\ncreate_job\032\003udb(\260\352\0010\003@\001J\tsch" +
-      "edulerP\001Z\tcreateJob\342\363\030\301\001\n\tscheduler\022\024udb" +
+      "bResponse\"\205\004\312\363\030;\010\002\032\030udb:scheduler:create" +
+      "-job \001J\003\001\002\004j\023scheduler.CreateJob\220\001\001\322\363\030\006\010" +
+      "\001\020\001 \001\332\363\0303\010\001\022\ncreate_job\032\003udb(\260\352\0010\003@\001J\tsc" +
+      "hedulerP\001Z\tcreateJob\342\363\030\301\001\n\tscheduler\022\024ud" +
+      "b/native/scheduler\032\033UDB_NATIVE_SERVICES_" +
+      "ENABLED\032\017UDB_GRPC_TARGET\"+udb.native.sch" +
+      "eduler.create_job.boilerplate*\ncreate_jo" +
+      "b2\rudb_scheduler:\tschedulerJ\013UDB_API_KEY" +
+      "Z\020udb native smoke\352\363\030S\n\023scheduler.Create" +
+      "Job\022\020scheduler.events\032\ttenant_id\"\010standa" +
+      "rd*\rat_least_once2\006stable\362\363\030C\n\tscheduler" +
+      "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
+      "\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\027\"\022/v1/schedule" +
+      "r/jobs:\001*\022\340\004\n\006GetJob\022-.udb.core.schedule" +
+      "r.services.v1.GetJobRequest\032..udb.core.s" +
+      "cheduler.services.v1.GetJobResponse\"\366\003\312\363" +
+      "\0305\010\002\032\025udb:scheduler:get-job \001J\003\001\002\004j\020sche" +
+      "duler.GetJob\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030-\010\001\022\007get_job" +
+      "\032\003udb(\260\352\0010\003@\001J\tschedulerP\001Z\006getJob\342\363\030\273\001\n" +
+      "\tscheduler\022\024udb/native/scheduler\032\033UDB_NA" +
+      "TIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"(" +
+      "udb.native.scheduler.get_job.boilerplate" +
+      "*\007get_job2\rudb_scheduler:\tschedulerJ\013UDB" +
+      "_API_KEYZ\020udb native smoke\352\363\030P\n\020schedule" +
+      "r.GetJob\022\020scheduler.events\032\ttenant_id\"\010s" +
+      "tandard*\rat_least_once2\006stable\362\363\030C\n\tsche" +
+      "duler\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
+      "BLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/sch" +
+      "eduler/jobs/{job_id}\022\353\004\n\010ListJobs\022/.udb." +
+      "core.scheduler.services.v1.ListJobsReque" +
+      "st\0320.udb.core.scheduler.services.v1.List" +
+      "JobsResponse\"\373\003\312\363\0309\010\002\032\027udb:scheduler:lis" +
+      "t-jobs \001J\003\001\002\004j\022scheduler.ListJobs\220\001\001\322\363\030\006" +
+      "\010\001\020\001 \001\332\363\0301\010\001\022\tlist_jobs\032\003udb(\260\352\0010\003@\001J\tsc" +
+      "hedulerP\001Z\010listJobs\342\363\030\277\001\n\tscheduler\022\024udb" +
       "/native/scheduler\032\033UDB_NATIVE_SERVICES_E" +
-      "NABLED\032\017UDB_GRPC_TARGET\"+udb.native.sche" +
-      "duler.create_job.boilerplate*\ncreate_job" +
-      "2\rudb_scheduler:\tschedulerJ\013UDB_API_KEYZ" +
-      "\020udb native smoke\352\363\030S\n\023scheduler.CreateJ" +
-      "ob\022\020scheduler.events\032\ttenant_id\"\010standar" +
-      "d*\rat_least_once2\006stable\362\363\030C\n\tscheduler\032" +
-      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
-      "UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\027\"\022/v1/scheduler" +
-      "/jobs:\001*\022\337\004\n\006GetJob\022-.udb.core.scheduler" +
-      ".services.v1.GetJobRequest\032..udb.core.sc" +
-      "heduler.services.v1.GetJobResponse\"\365\003\312\363\030" +
-      "4\010\002\032\025udb:scheduler:get-job \001J\002\001\002j\020schedu" +
-      "ler.GetJob\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030-\010\001\022\007get_job\032\003" +
-      "udb(\260\352\0010\003@\001J\tschedulerP\001Z\006getJob\342\363\030\273\001\n\ts" +
-      "cheduler\022\024udb/native/scheduler\032\033UDB_NATI" +
-      "VE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"(ud" +
-      "b.native.scheduler.get_job.boilerplate*\007" +
-      "get_job2\rudb_scheduler:\tschedulerJ\013UDB_A" +
-      "PI_KEYZ\020udb native smoke\352\363\030P\n\020scheduler." +
-      "GetJob\022\020scheduler.events\032\ttenant_id\"\010sta" +
-      "ndard*\rat_least_once2\006stable\362\363\030C\n\tschedu" +
-      "ler\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/sched" +
-      "uler/jobs/{job_id}\022\352\004\n\010ListJobs\022/.udb.co" +
-      "re.scheduler.services.v1.ListJobsRequest" +
-      "\0320.udb.core.scheduler.services.v1.ListJo" +
-      "bsResponse\"\372\003\312\363\0308\010\002\032\027udb:scheduler:list-" +
-      "jobs \001J\002\001\002j\022scheduler.ListJobs\220\001\001\322\363\030\006\010\001\020" +
-      "\001 \001\332\363\0301\010\001\022\tlist_jobs\032\003udb(\260\352\0010\003@\001J\tsched" +
-      "ulerP\001Z\010listJobs\342\363\030\277\001\n\tscheduler\022\024udb/na" +
-      "tive/scheduler\032\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED\032\017UDB_GRPC_TARGET\"*udb.native.schedul" +
-      "er.list_jobs.boilerplate*\tlist_jobs2\rudb" +
-      "_scheduler:\tschedulerJ\013UDB_API_KEYZ\020udb " +
-      "native smoke\352\363\030R\n\022scheduler.ListJobs\022\020sc" +
-      "heduler.events\032\ttenant_id\"\010standard*\rat_" +
-      "least_once2\006stable\362\363\030C\n\tscheduler\032\010postg" +
-      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
-      "PC_TARGET\370\363\030\001\202\323\344\223\002\024\022\022/v1/scheduler/jobs\022" +
-      "\375\004\n\tDeleteJob\0220.udb.core.scheduler.servi" +
-      "ces.v1.DeleteJobRequest\0321.udb.core.sched" +
-      "uler.services.v1.DeleteJobResponse\"\212\004\312\363\030" +
-      ":\010\002\032\030udb:scheduler:delete-job \001J\002\001\002j\023sch" +
-      "eduler.DeleteJob\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\ndel" +
-      "ete_job\032\003udb(\260\352\0010\003@\001J\tschedulerP\001Z\tdelet" +
-      "eJob\342\363\030\301\001\n\tscheduler\022\024udb/native/schedul" +
-      "er\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRP" +
-      "C_TARGET\"+udb.native.scheduler.delete_jo" +
-      "b.boilerplate*\ndelete_job2\rudb_scheduler" +
-      ":\tschedulerJ\013UDB_API_KEYZ\020udb native smo" +
-      "ke\352\363\030S\n\023scheduler.DeleteJob\022\020scheduler.e" +
-      "vents\032\ttenant_id\"\010standard*\rat_least_onc" +
-      "e2\006stable\362\363\030C\n\tscheduler\032\010postgres2\033UDB_" +
-      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
-      "\370\363\030\003\202\323\344\223\002\035*\033/v1/scheduler/jobs/{job_id}\022" +
-      "\374\004\n\010PauseJob\022/.udb.core.scheduler.servic" +
-      "es.v1.PauseJobRequest\0320.udb.core.schedul" +
-      "er.services.v1.PauseJobResponse\"\214\004\312\363\0308\010\002" +
-      "\032\027udb:scheduler:pause-job \001J\002\001\002j\022schedul" +
-      "er.PauseJob\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010\001\022\tpause_jo" +
-      "b\032\003udb(\260\352\0010\003@\001J\tschedulerP\001Z\010pauseJob\342\363\030" +
-      "\277\001\n\tscheduler\022\024udb/native/scheduler\032\033UDB" +
-      "_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGE" +
-      "T\"*udb.native.scheduler.pause_job.boiler" +
-      "plate*\tpause_job2\rudb_scheduler:\tschedul" +
-      "erJ\013UDB_API_KEYZ\020udb native smoke\352\363\030R\n\022s" +
-      "cheduler.PauseJob\022\020scheduler.events\032\tten" +
-      "ant_id\"\010standard*\rat_least_once2\006stable\362" +
-      "\363\030C\n\tscheduler\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002&" +
-      "\"!/v1/scheduler/jobs/{job_id}:pause:\001*\022\207" +
-      "\005\n\tResumeJob\0220.udb.core.scheduler.servic" +
-      "es.v1.ResumeJobRequest\0321.udb.core.schedu" +
-      "ler.services.v1.ResumeJobResponse\"\224\004\312\363\030:" +
-      "\010\002\032\030udb:scheduler:resume-job \001J\002\001\002j\023sche" +
-      "duler.ResumeJob\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\nresu" +
-      "me_job\032\003udb(\260\352\0010\003@\001J\tschedulerP\001Z\tresume" +
-      "Job\342\363\030\301\001\n\tscheduler\022\024udb/native/schedule" +
-      "r\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
-      "_TARGET\"+udb.native.scheduler.resume_job" +
-      ".boilerplate*\nresume_job2\rudb_scheduler:" +
-      "\tschedulerJ\013UDB_API_KEYZ\020udb native smok" +
-      "e\352\363\030S\n\023scheduler.ResumeJob\022\020scheduler.ev" +
-      "ents\032\ttenant_id\"\010standard*\rat_least_once" +
-      "2\006stable\362\363\030C\n\tscheduler\032\010postgres2\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\002\202\323\344\223\002\'\"\"/v1/scheduler/jobs/{job_id}:r" +
-      "esume:\001*\032\370\002\312\360\031s\n\tscheduler\022\tscheduler\032\ts" +
-      "cheduler\"\tScheduler*\tscheduler0\0018\001h\001z\tsc" +
-      "heduler\202\001\tscheduler\212\001\tscheduler\222\001\020native" +
-      ".scheduler\322\360\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tscheduler" +
-      "P\001\332\360\031\225\001\n\tscheduler\022\024udb/native/scheduler" +
+      "NABLED\032\017UDB_GRPC_TARGET\"*udb.native.sche" +
+      "duler.list_jobs.boilerplate*\tlist_jobs2\r" +
+      "udb_scheduler:\tschedulerJ\013UDB_API_KEYZ\020u" +
+      "db native smoke\352\363\030R\n\022scheduler.ListJobs\022" +
+      "\020scheduler.events\032\ttenant_id\"\010standard*\r" +
+      "at_least_once2\006stable\362\363\030C\n\tscheduler\032\010po" +
+      "stgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
+      "_GRPC_TARGET\370\363\030\001\202\323\344\223\002\024\022\022/v1/scheduler/jo" +
+      "bs\022\376\004\n\tDeleteJob\0220.udb.core.scheduler.se" +
+      "rvices.v1.DeleteJobRequest\0321.udb.core.sc" +
+      "heduler.services.v1.DeleteJobResponse\"\213\004" +
+      "\312\363\030;\010\002\032\030udb:scheduler:delete-job \001J\003\001\002\004j" +
+      "\023scheduler.DeleteJob\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022" +
+      "\ndelete_job\032\003udb(\260\352\0010\003@\001J\tschedulerP\001Z\td" +
+      "eleteJob\342\363\030\301\001\n\tscheduler\022\024udb/native/sch" +
+      "eduler\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB" +
+      "_GRPC_TARGET\"+udb.native.scheduler.delet" +
+      "e_job.boilerplate*\ndelete_job2\rudb_sched" +
+      "uler:\tschedulerJ\013UDB_API_KEYZ\020udb native" +
+      " smoke\352\363\030S\n\023scheduler.DeleteJob\022\020schedul" +
+      "er.events\032\ttenant_id\"\010standard*\rat_least" +
+      "_once2\006stable\362\363\030C\n\tscheduler\032\010postgres2\033" +
+      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
+      "RGET\370\363\030\003\202\323\344\223\002\035*\033/v1/scheduler/jobs/{job_" +
+      "id}\022\375\004\n\010PauseJob\022/.udb.core.scheduler.se" +
+      "rvices.v1.PauseJobRequest\0320.udb.core.sch" +
+      "eduler.services.v1.PauseJobResponse\"\215\004\312\363" +
+      "\0309\010\002\032\027udb:scheduler:pause-job \001J\003\001\002\004j\022sc" +
+      "heduler.PauseJob\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010\001\022\tpau" +
+      "se_job\032\003udb(\260\352\0010\003@\001J\tschedulerP\001Z\010pauseJ" +
+      "ob\342\363\030\277\001\n\tscheduler\022\024udb/native/scheduler" +
       "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
-      "TARGET\"\033udb.native.scheduler.config:\tsch" +
-      "edulerJ\013UDB_API_KEYZ\017udb native lint\342\360\031C" +
-      "\n\tscheduler\032\010postgres2\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED2\017UDB_GRPC_TARGETB\246\002\n\"com.udb." +
-      "core.scheduler.services.v1B\025SchedulerSer" +
-      "viceProtoP\001ZLgithub.com/fahara02/udb/sdk" +
-      "/go/gen/udb/core/scheduler/services/v1;s" +
-      "ervicesv1\242\002\004UCSS\252\002\036Udb.Core.Scheduler.Se" +
-      "rvices.V1\312\002\036Udb\\Core\\Scheduler\\Services\\" +
-      "V1\342\002*Udb\\GPBMetadata\\Core\\Scheduler\\Serv" +
-      "ices\\V1\352\002\"Udb::Core::Scheduler::Services" +
-      "::V1b\006proto3"
+      "TARGET\"*udb.native.scheduler.pause_job.b" +
+      "oilerplate*\tpause_job2\rudb_scheduler:\tsc" +
+      "hedulerJ\013UDB_API_KEYZ\020udb native smoke\352\363" +
+      "\030R\n\022scheduler.PauseJob\022\020scheduler.events" +
+      "\032\ttenant_id\"\010standard*\rat_least_once2\006st" +
+      "able\362\363\030C\n\tscheduler\032\010postgres2\033UDB_NATIV" +
+      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202" +
+      "\323\344\223\002&\"!/v1/scheduler/jobs/{job_id}:pause" +
+      ":\001*\022\210\005\n\tResumeJob\0220.udb.core.scheduler.s" +
+      "ervices.v1.ResumeJobRequest\0321.udb.core.s" +
+      "cheduler.services.v1.ResumeJobResponse\"\225" +
+      "\004\312\363\030;\010\002\032\030udb:scheduler:resume-job \001J\003\001\002\004" +
+      "j\023scheduler.ResumeJob\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001" +
+      "\022\nresume_job\032\003udb(\260\352\0010\003@\001J\tschedulerP\001Z\t" +
+      "resumeJob\342\363\030\301\001\n\tscheduler\022\024udb/native/sc" +
+      "heduler\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
+      "B_GRPC_TARGET\"+udb.native.scheduler.resu" +
+      "me_job.boilerplate*\nresume_job2\rudb_sche" +
+      "duler:\tschedulerJ\013UDB_API_KEYZ\020udb nativ" +
+      "e smoke\352\363\030S\n\023scheduler.ResumeJob\022\020schedu" +
+      "ler.events\032\ttenant_id\"\010standard*\rat_leas" +
+      "t_once2\006stable\362\363\030C\n\tscheduler\032\010postgres2" +
+      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
+      "ARGET\370\363\030\002\202\323\344\223\002\'\"\"/v1/scheduler/jobs/{job" +
+      "_id}:resume:\001*\032\370\002\312\360\031s\n\tscheduler\022\tschedu" +
+      "ler\032\tscheduler\"\tScheduler*\tscheduler0\0018\001" +
+      "h\001z\tscheduler\202\001\tscheduler\212\001\tscheduler\222\001\020" +
+      "native.scheduler\322\360\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tsch" +
+      "edulerP\001\332\360\031\225\001\n\tscheduler\022\024udb/native/sch" +
+      "eduler\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB" +
+      "_GRPC_TARGET\"\033udb.native.scheduler.confi" +
+      "g:\tschedulerJ\013UDB_API_KEYZ\017udb native li" +
+      "nt\342\360\031C\n\tscheduler\032\010postgres2\033UDB_NATIVE_" +
+      "SERVICES_ENABLED2\017UDB_GRPC_TARGETB\246\002\n\"co" +
+      "m.udb.core.scheduler.services.v1B\025Schedu" +
+      "lerServiceProtoP\001ZLgithub.com/fahara02/u" +
+      "db/sdk/go/gen/udb/core/scheduler/service" +
+      "s/v1;servicesv1\242\002\004UCSS\252\002\036Udb.Core.Schedu" +
+      "ler.Services.V1\312\002\036Udb\\Core\\Scheduler\\Ser" +
+      "vices\\V1\342\002*Udb\\GPBMetadata\\Core\\Schedule" +
+      "r\\Services\\V1\352\002\"Udb::Core::Scheduler::Se" +
+      "rvices::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

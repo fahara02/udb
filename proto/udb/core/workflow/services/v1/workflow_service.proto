@@ -71,6 +71,7 @@ service WorkflowService {
       scopes: "udb:workflow:start-workflow"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "workflow.StartWorkflow"
       request_context_required: true
       tenant_required: true
@@ -118,6 +119,7 @@ service WorkflowService {
       scopes: "udb:workflow:get-workflow"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "workflow.GetWorkflow"
       request_context_required: true
       tenant_required: true
@@ -156,6 +158,7 @@ service WorkflowService {
       scopes: "udb:workflow:list-workflows"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "workflow.ListWorkflows"
       request_context_required: true
       tenant_required: true
@@ -196,6 +199,7 @@ service WorkflowService {
       scopes: "udb:workflow:cancel-workflow"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "workflow.CancelWorkflow"
       request_context_required: true
       tenant_required: true
@@ -244,6 +248,7 @@ service WorkflowService {
       scopes: "udb:workflow:signal-workflow"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "workflow.SignalWorkflow"
       request_context_required: true
       tenant_required: true
@@ -297,6 +302,7 @@ service WorkflowService {
       scopes: "udb:workflow:ack-workflow-step"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "workflow.AckWorkflowStep"
       request_context_required: true
       tenant_required: true

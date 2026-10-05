@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.24 | protocol v1.0.0                                          │
+│    crate v0.5.25 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This page explains how UDB keeps data safe: who a request is, what it's allowed
@@ -128,7 +128,7 @@ Three tokens must be exact or a policy silently never matches:
 1. `action` is the **literal RPC method name** — `Select`, `Upsert`, `Delete`,
    `Update`, `BulkCas` (case-sensitive), or `*`. The intuitive `data.select` /
    `read` / `write` vocabulary does **not** match.
-2. `object` is the `message_type` (proto FQN), or a `keyMatch2` glob, or `*`.
+2. `object` is the `message_type` (proto FQN), or a package glob (`shop.v1.*` = `shop.v1` and `shop.v1.<anything>`; dots are literal), or `*`. A path-style object containing `/` uses `keyMatch2`.
 3. `tenant_id` is the caller's canonical **tenant UUID** (not the human code).
 
 Seed the standard set for a project in one idempotent, atomic command:

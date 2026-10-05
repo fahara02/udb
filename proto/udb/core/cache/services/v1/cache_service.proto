@@ -78,6 +78,7 @@ service CacheService {
       scopes: "udb:cache:get"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "cache.Get"
       request_context_required: true
       tenant_required: true
@@ -116,6 +117,7 @@ service CacheService {
       scopes: "udb:cache:set"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "cache.Set"
       request_context_required: true
       tenant_required: true
@@ -163,6 +165,7 @@ service CacheService {
       scopes: "udb:cache:delete"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "cache.Delete"
       request_context_required: true
       tenant_required: true
@@ -208,6 +211,7 @@ service CacheService {
       scopes: "udb:cache:scan"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "cache.Scan"
       request_context_required: true
       tenant_required: true

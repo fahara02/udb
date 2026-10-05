@@ -534,9 +534,9 @@ const file_udb_core_livequery_services_v1_livequery_service_proto_rawDesc = "" +
 	" LIVE_QUERY_CHANGE_OP_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bLIVE_QUERY_CHANGE_OP_INSERT\x10\x01\x12\x1f\n" +
 	"\x1bLIVE_QUERY_CHANGE_OP_UPDATE\x10\x02\x12\x1f\n" +
-	"\x1bLIVE_QUERY_CHANGE_OP_DELETE\x10\x032\xf9\x05\n" +
-	"\x10LiveQueryService\x12\xe8\x02\n" +
-	"\tSubscribe\x120.udb.core.livequery.services.v1.SubscribeRequest\x1a1.udb.core.livequery.services.v1.SubscribeResponse\"\xf3\x01\xca\xf3\x189\b\x02\x1a\x17udb:livequery:subscribe \x01J\x02\x01\x02j\x13livequery.Subscribe\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18;\b\x01\x12\tsubscribe\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tlivequeryP\x01Z\x12liveQuerySubscribe\xf2\xf3\x18C\n" +
+	"\x1bLIVE_QUERY_CHANGE_OP_DELETE\x10\x032\xfa\x05\n" +
+	"\x10LiveQueryService\x12\xe9\x02\n" +
+	"\tSubscribe\x120.udb.core.livequery.services.v1.SubscribeRequest\x1a1.udb.core.livequery.services.v1.SubscribeResponse\"\xf4\x01\xca\xf3\x18:\b\x02\x1a\x17udb:livequery:subscribe \x01J\x03\x01\x02\x04j\x13livequery.Subscribe\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18;\b\x01\x12\tsubscribe\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tlivequeryP\x01Z\x12liveQuerySubscribe\xf2\xf3\x18C\n" +
 	"\tlivequery\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/livequery:subscribe0\x01\x1a\xf9\x02\xca\xf0\x19t\n" +
 	"\tlivequery\x12\tlivequery\x1a\tlivequery\"\n" +
 	"Live Query*\tlivequery0\x018\x01h\x01z\tlivequery\x82\x01\tlivequery\x8a\x01\tlivequery\x92\x01\x10native.livequery\xd2\xf0\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tlivequeryP\x01\xda\xf0\x19\x95\x01\n" +

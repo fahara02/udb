@@ -237,12 +237,22 @@ impl ResourceRef {
     }
 
     /// Candidate strings a policy `resource_pattern` may match against.
+    ///
+    /// The generic `message` resource type is NOT a selector: every data
+    /// request carries it, so a policy whose object is the literal `message`
+    /// would otherwise grant (or deny) every data RPC on every resource, like
+    /// `*`. Specific resource types still match.
     fn selectors(&self) -> [&str; 4] {
+        let resource_type = if self.resource_type.trim() == "message" {
+            ""
+        } else {
+            self.resource_type.as_str()
+        };
         [
             self.resource_name.as_str(),
             self.message_type.as_str(),
             self.table.as_str(),
-            self.resource_type.as_str(),
+            resource_type,
         ]
     }
 }

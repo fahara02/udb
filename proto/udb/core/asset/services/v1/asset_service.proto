@@ -195,6 +195,7 @@ service AssetService {
       scopes: "udb:asset:register-asset"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "asset.RegisterAsset"
       request_context_required: true
       tenant_required: true
@@ -294,6 +295,7 @@ service AssetService {
       scopes: "udb:asset:start-pipeline"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "asset.StartPipeline"
       request_context_required: true
       tenant_required: true
@@ -355,6 +357,7 @@ service AssetService {
       scopes: "udb:asset:get-pipeline"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "asset.GetPipeline"
       request_context_required: true
       tenant_required: true
@@ -412,6 +415,7 @@ service AssetService {
       scopes: "udb:asset:complete-step"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "asset.CompleteStep"
       request_context_required: true
       tenant_required: true
@@ -475,6 +479,7 @@ service AssetService {
       scopes: "udb:asset:list-assets"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "asset.ListAssets"
       request_context_required: true
       tenant_required: true
@@ -532,6 +537,7 @@ service AssetService {
       scopes: "udb:asset:get-asset"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "asset.GetAsset"
       request_context_required: true
       tenant_required: true

@@ -1514,8 +1514,16 @@ These are what a startup verification would fail on. Reconcile the proto or the
                 .unwrap_or_else(|_| "udb_catalog_manifest.json".to_string());
             let json = serde_json::to_string_pretty(&manifest)
                 .unwrap_or_else(|err| fatal_json("failed to serialize manifest", err));
+            // `-` streams to stdout: the container's working directory is not
+            // writable by the runtime user, so a file default cannot be relied on.
+            if path.trim() == "-" {
+                println!("{json}");
+                return;
+            }
             fs::write(&path, json).unwrap_or_else(|err| {
-                eprintln!("failed to write manifest to {path}: {err}");
+                eprintln!(
+                    "failed to write manifest to {path}: {err} (set UDB_MANIFEST_EXPORT_PATH to a writable path, or to `-` for stdout)"
+                );
                 process::exit(1);
             });
             eprintln!("manifest exported to {path}");

@@ -232,7 +232,7 @@ setting the endpoint to a `unix:` URI:
 
 ```php
 $client = new UdbClient([
-    'endpoint' => 'unix:///var/run/udb.sock',   // <-- Unix domain socket
+    'endpoint' => 'unix:///var/lib/udb/run/udb.sock',   // <-- Unix domain socket
     'channel_options' => [ /* keepalive as above */ ],
 ]);
 ```
@@ -240,15 +240,15 @@ $client = new UdbClient([
 or via env:
 
 ```bash
-UDB_ENDPOINT=unix:///var/run/udb.sock
+UDB_ENDPOINT=unix:///var/lib/udb/run/udb.sock
 ```
 
 Accepted UDS target forms (all begin with the `unix:` scheme):
 
 | Form | Meaning |
 |---|---|
-| `unix:///var/run/udb.sock` | URI form, absolute path (recommended) |
-| `unix:/var/run/udb.sock`   | absolute path |
+| `unix:///var/lib/udb/run/udb.sock` | URI form, absolute path (recommended) |
+| `unix:/var/lib/udb/run/udb.sock`   | absolute path |
 | `unix:run/udb.sock`        | path relative to the worker's CWD |
 
 The PHP client recognizes a `unix:` endpoint and defaults the HTTP/2
@@ -269,12 +269,12 @@ additional DataBroker listener on that socket alongside its TCP listener:
 
 ```bash
 # broker (same host/pod as the PHP worker), Unix only:
-UDB_DATA_UDS_PATH=/var/run/udb.sock udb serve …
+UDB_DATA_UDS_PATH=/var/lib/udb/run/udb.sock udb serve …
 ```
 
 ```bash
 # PHP worker:
-UDB_ENDPOINT=unix:///var/run/udb.sock
+UDB_ENDPOINT=unix:///var/lib/udb/run/udb.sock
 ```
 
 Details of the broker behaviour:

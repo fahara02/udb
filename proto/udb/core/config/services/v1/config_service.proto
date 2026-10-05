@@ -117,6 +117,7 @@ service ConfigService {
       scopes: "udb:config:get-flag"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "config.GetFlag"
       request_context_required: true
       tenant_required: true
@@ -153,6 +154,7 @@ service ConfigService {
       scopes: "udb:config:list-flags"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "config.ListFlags"
       request_context_required: true
       tenant_required: true
@@ -240,6 +242,7 @@ service ConfigService {
       scopes: "udb:config:evaluate-flags"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "config.EvaluateFlags"
       request_context_required: true
       tenant_required: true

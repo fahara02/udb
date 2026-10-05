@@ -71,6 +71,7 @@ service MeteringService {
       scopes: "udb:metering:record-usage"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "metering.RecordUsage"
       request_context_required: true
       tenant_required: true
@@ -110,6 +111,7 @@ service MeteringService {
       scopes: "udb:metering:query-usage"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "metering.QueryUsage"
       request_context_required: true
       tenant_required: true
@@ -197,6 +199,7 @@ service MeteringService {
       scopes: "udb:metering:get-quota"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "metering.GetQuota"
       request_context_required: true
       tenant_required: true
@@ -233,6 +236,7 @@ service MeteringService {
       scopes: "udb:metering:list-quotas"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "metering.ListQuotas"
       request_context_required: true
       tenant_required: true
@@ -272,6 +276,7 @@ service MeteringService {
       scopes: "udb:metering:check-quota"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "metering.CheckQuota"
       request_context_required: true
       tenant_required: true

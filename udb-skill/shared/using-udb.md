@@ -142,7 +142,7 @@ silently never matches:**
    `write` vocab is DEAD (test-only code) and will never match.** This is the #1
    silent deny.
 2. **`object` = the `message_type`** (the proto FQN, e.g. `shop.v1.Customer`), or
-   `*`, or a `keyMatch2` glob like `shop.v1.*`.
+   `*`, or a package glob like `shop.v1.*` (dots are literal).
 3. **`tenant_id` (the column) = the caller's tenant UUID** (not the human code,
    not the `domain` column — the loader maps `policy.tenant ← tenant_id`). Empty
    or `*` = any tenant.
@@ -265,7 +265,7 @@ there but I'm still denied." Migrate those to `policy_rules` (Surface 1).
 
 Pick the developer's language. Default data target `localhost:50051` (plaintext
 in dev). **Set `authTarget` too whenever the app uses auth/native services.**
-Current published baseline is **UDB 0.5.24** with wire protocol **1.0.0**; keep
+Current published baseline is **UDB 0.5.25** with wire protocol **1.0.0**; keep
 the broker and SDK package on the same product version unless deliberately
 testing compatibility. The platform-service wave (Vault, Metering, Scheduler,
 Search, Webhook, Workflow, Lock, LiveQuery, Config, Backup, Embedding) and the
@@ -289,7 +289,7 @@ Inserting a new row*).
 
 ### TypeScript / Node — `@udb_plus/sdk`
 ```bash
-npm i @udb_plus/sdk@0.5.24
+npm i @udb_plus/sdk@0.5.25
 ```
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -311,7 +311,7 @@ Adapters for Express / Fastify / Next.js under `adapters/`.
 
 ### Python — `udb-client`
 ```bash
-pip install udb-client==0.5.24        # or: pip install "udb-client[pydantic]==0.5.24"
+pip install udb-client==0.5.25        # or: pip install "udb-client[pydantic]==0.5.25"
 ```
 ```python
 from udb_client import Metadata, UdbClient, decode_records
@@ -332,7 +332,7 @@ has `set_credentials()` hot-swap, and `login_and_adopt_tenant(user, pass)`.
 
 ### Go — `github.com/fahara02/udb/sdk/go`
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.5.24
+go get github.com/fahara02/udb/sdk/go@v0.5.25
 ```
 ```go
 cfg := udbclient.Config{Target: "localhost:50051", AuthTarget: "localhost:50061",
@@ -362,7 +362,7 @@ hot-swap.
 
 ### C# — `Udb.Client`
 ```bash
-dotnet add package Udb.Client --version 0.5.24
+dotnet add package Udb.Client --version 0.5.25
 ```
 ```csharp
 var meta = new UdbMetadata(TenantId:"acme", Purpose:"web.request",
@@ -374,7 +374,7 @@ var rows = await udb.SelectAsync(new SelectRequest { MessageType="shop.v1.Custom
 
 ### PHP / Laravel — `fahara02/udb-laravel`
 ```bash
-composer require fahara02/udb-laravel:^0.5.24   # needs PHP 8.1+, grpc PECL ext
+composer require fahara02/udb-laravel:^0.5.25   # needs PHP 8.1+, grpc PECL ext
 ```
 ```php
 $client = new UdbClient(['endpoint' => '127.0.0.1:50051', 'tls' => ['enabled' => false]]);
@@ -460,7 +460,25 @@ grant** — do not look for `client_id`/`client_secret`):
   - **Exchanged for a JWT** via `Authenticate{api_key}` → a short access token
     with `account_kind=SERVICE_ACCOUNT`, `auth_method="api_key"`, scopes
     re-attenuated to the *current* grant.
-  Requires `UDB_SESSION_HASH_SECRET` on the broker (API-key hashing reuses it).
+  Requires `UDB_API_KEY_HASH_SECRET` (falls back to `UDB_SESSION_HASH_SECRET`)
+  on the broker. Keep it **stable**: changing it — or generating it per start —
+  invalidates every API key.
+  **Native methods accept both forms** (from 0.5.25): the raw key and the
+  exchanged bearer are the same SERVICE_ACCOUNT principal, so a method that
+  admits service accounts admits either. Service-callable: Lock, Config flag
+  reads, Scheduler, Search, Workflow, Metering, Embedding ingest/retrieve,
+  Vault secret + crypto ops, LiveQuery, Storage, Cache data ops, Notification
+  send/get/retry, Asset pipeline ops, Authz `Authorize`/`CheckAccess`/
+  `PutRoleBinding`, Authn user/session/OTP ops + `ValidateToken`/
+  `IntrospectToken`, SCIM, `GetTenant`, WebRTC room orchestration — always
+  bounded by the grant's `approved_scopes`. Administrative methods (policy
+  writes, flag/quota writes, key/model/index administration, tenant lifecycle)
+  stay human-only (bearer JWT / session).
+  **Grant the per-method scopes.** Native methods check the exact scope from
+  `docs/generated/authn-authz-rpc-inventory.md` (e.g. `udb:lock:acquire-lock`,
+  `udb:config:evaluate-flags`). `udb:read`/`udb:write` confer NO native access,
+  and a `udb:<svc>:*` wildcard is not matched (and is rejected in a grant). A
+  scope denial names the scope the method needs.
 - **Password login of the service account:** `Login{username,password}` +
   requested scopes in `x-scopes` → short access token with
   `account_kind=SERVICE_ACCOUNT`. **Caveat: a service account gets NO refresh
@@ -625,7 +643,7 @@ as in the other options (`udb auth role bind --principal <id> --role app_rw
 
 The Casbin model is `r = sub, dom, obj, act`; `p = sub, dom, obj, act, eft`;
 `g = _, _` (role grouping). The matcher: subject via `g()` or `p.sub == "*"`;
-`dom` exact or `*`/empty; `obj` via `keyMatch2`; `act` exact / `keyMatch2` / `*`.
+`dom` exact or `*`/empty; `obj` via `udbMatch` (exact, `*`, or a `pkg.*` package glob; dots literal); `act` exact / `udbMatch` / `*`.
 Deny beats allow (deny-override). `policy_rules` columns map:
 `policy.tenant ← tenant_id`, `policy.resource ← object`, and `role`/`purpose`/
 `required_scopes`/`priority` live in `attributes_json`. Worked patterns
@@ -639,7 +657,7 @@ Deny beats allow (deny-override). `policy_rules` columns map:
   `action: *`.
 - **Per-entity least privilege:** `role:orders_writer | <T> | shop.v1.Order |
   Upsert | ALLOW`. Narrow `object` to the FQN.
-- **Package glob:** `role:shop_admin | <T> | shop.v1.* | * | ALLOW` (keyMatch2
+- **Package glob:** `role:shop_admin | <T> | shop.v1.* | * | ALLOW` (package glob
   on `object`).
 - **A specific service account, no role:** `svc-user-uuid | <T> | * | * | ALLOW`
   — or match by identity string with `service:billing.api`.
@@ -855,7 +873,7 @@ automatically).
 - **Key RPCs:** `EnsureTenant` (resolve-or-create; returns the canonical UUID —
   the idempotent one you want at bootstrap), `CreateTenant`, `GetTenant`,
   `ListTenants`, `OnboardTenant`, project CRUD.
-- **Scope:** `udb:tenant:*`. **Deps:** Postgres only.
+- **Scope:** per method (`udb:tenant:<method>`, see the RPC inventory). **Deps:** Postgres only.
 - **Gotcha:** `EnsureTenant` is how you turn a human code into the canonical
   UUID from code; never assume the UUID format — read it back.
 
@@ -866,7 +884,7 @@ automatically).
   `IntrospectToken`, `ForgotPassword`/`ResetPassword` (public), **service-account
   grants** (`CreateServiceAccountGrant`, `Get/List/Replace/Rotate/Transfer/
   RevokeServiceAccountGrant`), `CreateCertificateBinding` (mTLS→grant).
-- **Scope:** `udb:authn:*` (e.g. `udb:authn:create-user`).
+- **Scope:** per method, e.g. `udb:authn:create-user`.
 - **Gotcha:** a `SERVICE_ACCOUNT` User is inert without an ACTIVE
   `ServiceAccountGrant` (see *Authentication*). Public RPCs are rate-limited.
 
@@ -876,7 +894,7 @@ automatically).
   tuple), `Authorize`/`CheckAccess` (ask the engine), `GetNativeAccess`
   (Stage-2 fast-path grant), policy-bundle draft/approve/activate (governed
   mode), `ReloadPolicies` (audited no-op).
-- **Scope:** `udb:authz:*`. **Gotcha:** in governed mode direct writes are
+- **Scope:** per method (`udb:authz:<method>`, see the RPC inventory). **Gotcha:** in governed mode direct writes are
   blocked — use the bundle flow. `CheckAccess` returns a `cache_ttl_seconds`;
   `0` = don't cache.
 
@@ -884,14 +902,14 @@ automatically).
 - **Key RPCs:** `CreateApiKey` (owner must be an active service account + grant;
   returns one-time `udbk_…`), `RotateApiKey`, `RevokeApiKey`, `ListApiKeys`,
   `ValidateApiKey` (returns validity + scopes, **no token**), `GetApiKeyUsage`.
-- **Scope:** `udb:apikey:*`. **Deps:** `UDB_SESSION_HASH_SECRET`. **Gotcha:**
+- **Scope:** per method (`udb:apikey:<method>`, see the RPC inventory). **Deps:** `UDB_SESSION_HASH_SECRET`. **Gotcha:**
   the plain key is shown once; scopes are attenuated to the owner's grant on
   every use.
 
 ### IdentityProviderService — external IdP federation (27 RPCs)
 - **Key RPCs:** register/get/list OIDC & SAML providers, SCIM user/group
   provisioning, JIT mapping, metadata endpoints.
-- **Scope:** `udb:idp:*`. **Gotcha:** SAML/OIDC require provider config +
+- **Scope:** per method (`udb:idp:<method>`, see the RPC inventory). **Gotcha:** SAML/OIDC require provider config +
   correct redirect/metadata URLs; SCIM writes are tenant-scoped.
 
 ### VaultService — secrets, transit crypto, dynamic creds (22 RPCs)
@@ -899,7 +917,7 @@ automatically).
   CAS, soft-delete/destroy), transit `Encrypt`/`Decrypt`/`Sign`/`Verify`/`Hmac`
   by key name, dynamic DB credential `IssueDatabaseCredentials`/lease renew/
   revoke, seal/unseal admin.
-- **Scope:** `udb:vault:*`. **Deps:** Postgres + a **master key / unseal**.
+- **Scope:** per method (`udb:vault:<method>`, see the RPC inventory). **Deps:** Postgres + a **master key / unseal**.
 - **Gotcha:** **fail-closed when sealed** — every key-using op returns
   `FAILED_PRECONDITION (seal_gate)` until the master key is available. Dynamic
   creds need a role-mgmt config.
@@ -907,97 +925,97 @@ automatically).
 ### MeteringService — usage + quotas (6 RPCs)
 - **Key RPCs:** `RecordUsage` (append a usage event), `QueryUsage` (rollups),
   `PutQuota`/`GetQuota`/`CheckQuota`.
-- **Scope:** `udb:metering:*`. **Deps:** a **usage ledger pool** configured, else
+- **Scope:** per method (`udb:metering:<method>`, see the RPC inventory). **Deps:** a **usage ledger pool** configured, else
   `FAILED_PRECONDITION "metering usage pool is not configured"`.
 - **Gotcha:** quota refusals surface to callers as typed `RESOURCE_EXHAUSTED`;
   rollups run on a leader worker.
 
 ### SchedulerService — durable cron / one-shot jobs (6 RPCs)
 - **Key RPCs:** `CreateJob`, `PauseJob`, `ResumeJob`, `DeleteJob`, `ListJobs`.
-- **Scope:** `udb:scheduler:*`. **Gotcha:** jobs only *execute* when worker/leader
+- **Scope:** per method (`udb:scheduler:<method>`, see the RPC inventory). **Gotcha:** jobs only *execute* when worker/leader
   election is running; creating a job on a broker with workers off just persists
   it.
 
 ### SearchService — managed search indexes (5 RPCs)
 - **Key RPCs:** `CreateIndex`, `Reindex`, `Search` (rank fusion, tenant-filtered
   server-side), `DeleteIndex`, `GetIndex`.
-- **Scope:** `udb:search:*`. **Deps:** an active catalog / native-entity
+- **Scope:** per method (`udb:search:<method>`, see the RPC inventory). **Deps:** an active catalog / native-entity
   dispatch; supply a `query_vector` (full-text-only path is still pending →
   `FAILED_PRECONDITION`).
 
 ### WebhookService — outbound webhooks (6 RPCs)
 - **Key RPCs:** `RegisterEndpoint`, `ListEndpoints`, `DeleteEndpoint`,
   `GetDeliveries`, retry/replay.
-- **Scope:** `udb:webhook:*`. **Gotcha:** **SSRF-guarded** — private/loopback
+- **Scope:** per method (`udb:webhook:<method>`, see the RPC inventory). **Gotcha:** **SSRF-guarded** — private/loopback
   target ranges are denied and DNS is re-checked at delivery time.
 
 ### WorkflowService — long-running workflows / sagas (5 RPCs)
 - **Key RPCs:** `StartWorkflow`, `SignalWorkflow`, `CancelWorkflow`,
   `GetWorkflow`, `ListWorkflows` — with compensation on failure.
-- **Scope:** `udb:workflow:*`. **Gotcha:** needs workers to advance; a started
+- **Scope:** per method (`udb:workflow:<method>`, see the RPC inventory). **Gotcha:** needs workers to advance; a started
   workflow with workers off is durable but inert.
 
 ### LockService — distributed locks with fencing (5 RPCs)
 - **Key RPCs:** `AcquireLock`, `RenewLock`, `ReleaseLock`, `GetLock`.
-- **Scope:** `udb:lock:*`. **Gotcha:** each acquire returns a **monotonic fencing
+- **Scope:** per method (`udb:lock:<method>`, see the RPC inventory). **Gotcha:** each acquire returns a **monotonic fencing
   token**; pass it to fenced writes (`UpsertRequest.lock_name`/`fencing_token`) —
   a stale token (you outlived your lease) is rejected `FAILED_PRECONDITION` with
   no side effects. Renew before the TTL.
 
 ### LiveQueryService — streaming change subscriptions (1 RPC)
 - **Key RPC:** `Subscribe` (server-stream of live data changes, tenant-scoped).
-- **Scope:** `udb:livequery:*`. **Gotcha:** saturated subscribers are closed with
+- **Scope:** per method (`udb:livequery:<method>`, see the RPC inventory). **Gotcha:** saturated subscribers are closed with
   `RESOURCE_EXHAUSTED` — never buffered unboundedly; handle reconnect.
 
 ### ConfigService — feature flags (5 RPCs)
 - **Key RPCs:** `PutFlag`, `GetFlag`, `DeleteFlag`, `ListFlags`, `EvaluateFlags`
   (deterministic percentage rollout by a stable key).
-- **Scope:** `udb:config:*`. **Gotcha:** rollout is deterministic per entity id;
+- **Scope:** per method (`udb:config:<method>`, see the RPC inventory). **Gotcha:** rollout is deterministic per entity id;
   the same id always lands the same bucket.
 
 ### BackupService — tenant backup/restore (8 RPCs)
 - **Key RPCs:** `StartTenantBackup`, `RestoreTenant`, `GetBackup`, `ListBackups`,
   job status.
-- **Scope:** `udb:backup:*`. **Gotcha:** `RestoreTenant` only restores into a
+- **Scope:** per method (`udb:backup:<method>`, see the RPC inventory). **Gotcha:** `RestoreTenant` only restores into a
   **fresh** target — it won't overwrite a live tenant.
 
 ### EmbeddingService — vectors (19 RPCs)
 - **Key RPCs:** register embedding sources, backfill enumeration,
   `ReportEmbedding` (write a vector), `Retrieve` (query), delete.
-- **Scope:** `udb:embedding:*`. **Deps:** a vector backend. **Gotcha:** a
+- **Scope:** per method (`udb:embedding:<method>`, see the RPC inventory). **Deps:** a vector backend. **Gotcha:** a
   process-local fresh buffer serves read-your-writes for just-written vectors.
 
 ### NotificationService — multi-channel notifications (12 RPCs)
 - **Key RPCs:** `SendNotification`, `GetNotification`, list/query, user
   preferences (opt-out → status `SUPPRESSED`), tenant templates,
   `RetryNotification` (re-queues AND re-emits the delivery event).
-- **Scope:** `udb:notification:*`. **Deps:** **Kafka** + delivery config.
+- **Scope:** per method (`udb:notification:<method>`, see the RPC inventory). **Deps:** **Kafka** + delivery config.
 
 ### AnalyticsService — pipeline metrics (7 RPCs)
 - **Key RPCs:** throughput/SLA/reconciliation queries.
-- **Scope:** `udb:analytics:*`.
+- **Scope:** per method (`udb:analytics:<method>`, see the RPC inventory).
 
 ### StorageService — object storage (9 RPCs)
 - **Key RPCs:** `RegisterUpload` (→ file_id + presigned PUT), `FinalizeUpload`,
   `GetFile`, `DownloadFile`, `UpdateFile` (partial), `DeleteFile`
   (`SOFT`/`HARD`), quota, orphan GC.
-- **Scope:** `udb:storage:*`. **Deps:** an **object store** (S3/MinIO).
+- **Scope:** per method (`udb:storage:<method>`, see the RPC inventory). **Deps:** an **object store** (S3/MinIO).
 - **Gotcha:** `is_public`/size are immutable once registered; `project_id` is
   UUID-only; see the storage flow in the tour.
 
 ### AssetService — processing pipelines (8 RPCs)
 - **Key RPCs:** `RegisterAsset`, run/get pipeline, pipeline steps (incl. vector
   `EMBED` → Qdrant), status.
-- **Scope:** `udb:asset:*`. **Deps:** object store; **kafka + CDC** for the
+- **Scope:** per method (`udb:asset:<method>`, see the RPC inventory). **Deps:** object store; **kafka + CDC** for the
   finalize→pipeline auto-trigger.
 
 ### CacheService — managed cache (7 RPCs)
 - **Key RPCs:** get/set/delete/scan/increment/TTL.
-- **Scope:** `udb:cache:*`. **Deps:** **Redis** (else degraded/unmounted).
+- **Scope:** per method (`udb:cache:<method>`, see the RPC inventory). **Deps:** **Redis** (else degraded/unmounted).
 
 ### ControlPlaneService — config/policy distribution (6 RPCs)
 - **Key RPCs:** xDS-style push/watch of config + policy to PEPs.
-- **Scope:** `udb:control:*`. **Gotcha:** for fleet/sidecar distribution, not
+- **Scope:** per method (`udb:control:<method>`, see the RPC inventory). **Gotcha:** for fleet/sidecar distribution, not
   everyday app use.
 
 ### WebRTC (Room/Peer/Track/Turn/Signaling — 20 RPCs, two planes)
@@ -1005,7 +1023,7 @@ automatically).
   room/membership admin.
 - **Peer RPCs** (peer plane `:50071`, peer-token): `JoinRoom`, `Signal`
   (SDP/ICE), `IssueCredentials` (TURN), track ops, `LeaveRoom`.
-- **Scope:** `udb:webrtc:*`. **Deps:** peer listener enabled; TURN secret for
+- **Scope:** per method (`udb:webrtc:<method>`, see the RPC inventory). **Deps:** peer listener enabled; TURN secret for
   credentials. **Gotcha:** peer calls go to `:50071`, admin to `:50061`.
 
 ---
@@ -1217,6 +1235,18 @@ outbox→Kafka pipeline. Consume via Kafka directly, or via the broker's CDC
 subscription stream (`PublishCDC`): **tenant-scoped server-side** (you only ever
 see your tenant), resumable via `since_event_id` from a durable journal (survives
 acked deliveries). Use it for projections, cache invalidation, and integrations.
+
+`PublishCDC` has three prerequisites, all required:
+1. **Kafka** configured on the broker (`UDB_KAFKA_BROKERS`) — otherwise it fails
+   with "CDC tailer is not configured".
+2. The **`udb:cdc:read`** scope on the caller.
+3. A Casbin **`PublishCDC` allow rule per topic** (object = the topic). Seed it
+   offline with `udb authz seed --action PublishCDC --entity <topic> ...`, or
+   online with `AuthzService.CreatePolicyRule{object: <topic>, action: PublishCDC}`.
+
+Go SDK: from 0.5.25 server streams (PublishCDC, LiveQuery) no longer inherit
+`Options.CallTimeout`/`UDB_DEADLINE`; give the stream context its own deadline
+if you want one.
 
 ---
 
@@ -1665,6 +1695,12 @@ authz, and events apply **uniformly** across all backends.
 ---
 
 ## Gotchas catalog (the ones that cost hours)
+
+- **`udb migrate` does not activate a catalog.** Migrating creates the tables;
+  the broker still serves the previously ACTIVE catalog until you call
+  `DataBroker.StageCatalog` then `DataBroker.ActivateCatalog` for that
+  project. Skipping it → the new entities are not routable even though the
+  tables exist.
 
 - **`data.select` doesn't exist.** Data-plane Casbin actions are the RPC method
   names (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas`). The `data.*` vocab is

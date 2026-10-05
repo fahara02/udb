@@ -67,6 +67,7 @@ service LockService {
       scopes: "udb:lock:acquire-lock"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "lock.AcquireLock"
       request_context_required: true
       tenant_required: true
@@ -115,6 +116,7 @@ service LockService {
       scopes: "udb:lock:renew-lock"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "lock.RenewLock"
       request_context_required: true
       tenant_required: true
@@ -163,6 +165,7 @@ service LockService {
       scopes: "udb:lock:release-lock"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "lock.ReleaseLock"
       request_context_required: true
       tenant_required: true
@@ -211,6 +214,7 @@ service LockService {
       scopes: "udb:lock:get-lock"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "lock.GetLock"
       request_context_required: true
       tenant_required: true
@@ -248,6 +252,7 @@ service LockService {
       scopes: "udb:lock:list-locks"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "lock.ListLocks"
       request_context_required: true
       tenant_required: true

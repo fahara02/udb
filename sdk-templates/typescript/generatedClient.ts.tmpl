@@ -611,8 +611,12 @@ export class UdbCore {
     return md;
   }
 
-  private callMeta(call?: CallOptions): grpc.CallOptions {
-    const deadlineMs = call?.deadlineMs ?? this.opts.deadlineMs;
+  /** gRPC call options. `applyDefaultDeadline` is false for server-streaming and
+   *  bidi calls: those streams are long-lived (LiveQuery subscribe, CDC, WebRTC
+   *  signalling) and the client-wide `deadlineMs` would kill them, so only an
+   *  explicit per-call `deadlineMs` bounds a stream. */
+  private callMeta(call?: CallOptions, applyDefaultDeadline = true): grpc.CallOptions {
+    const deadlineMs = call?.deadlineMs ?? (applyDefaultDeadline ? this.opts.deadlineMs : undefined);
     const options: grpc.CallOptions = {};
     if (deadlineMs && deadlineMs > 0) options.deadline = new Date(Date.now() + deadlineMs);
     return options;
@@ -734,7 +738,7 @@ export class UdbCore {
     const stream = stub[method](
       request,
       this.metadataFor(call),
-      this.callMeta(call),
+      this.callMeta(call, false),
     ) as grpc.ClientReadableStream<any>;
     stream.on("error", (err: grpc.ServiceError) => {
       (err as any).udb = new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));
@@ -775,7 +779,7 @@ export class UdbCore {
     const stub = this.stub(fullName);
     const stream = stub[method](
       this.metadataFor(call),
-      this.callMeta(call),
+      this.callMeta(call, false),
     ) as grpc.ClientDuplexStream<any, any>;
     stream.on("error", (err: grpc.ServiceError) => {
       (err as any).udb = new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));

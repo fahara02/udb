@@ -5,6 +5,72 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.25] - 2026-10-06
+
+### Fixed
+
+- **Services could not call most native methods.** A bearer exchanged from an
+  API key (`Authenticate{api_key}`) was classified `API_KEY`, which almost no
+  native method accepted, so a service following the documented path was
+  denied (`reason=credential_type`) on Lock, Config `EvaluateFlags`, Authn
+  `CreateUser`, Authz `PutRoleBinding` and more. Now:
+  - a raw service API key and the bearer it is exchanged for are one
+    SERVICE_ACCOUNT principal: a method that admits either admits both
+    (Storage declared only `API_KEY`; most services only `SERVICE_ACCOUNT`);
+  - `account_kind` and `acr` survive the server's preresolved-credential path
+    (they were dropped, so classification only worked in unit tests), and the
+    two credential classifiers are now one;
+  - about 130 service-callable native methods allow SERVICE_ACCOUNT (Lock,
+    Config reads, Scheduler, Search, Workflow, Metering, Embedding, Vault
+    secret/crypto, LiveQuery, Storage, Cache data ops, Notification send /
+    delivery report, Asset pipeline, Authz `Authorize`/`CheckAccess`/
+    `PutRoleBinding`, Authn user/session/OTP/`IntrospectToken`, SCIM,
+    `GetTenant`, WebRTC room orchestration). Administrative writes stay
+    human-only;
+  - `CreateUser`/`UpdateUser`/`ChangeUserStatus` accept the method's own
+    descriptor scope (they also demanded an `authn.user.*` scope a service
+    grant could not carry);
+  - scope checks are case-insensitive, and a scope denial names the scope the
+    method needs instead of always `udb:admin`.
+- **14 data-plane actions could not be granted.** `udb authz seed` rejected
+  PublishCDC, EnqueueOutboxEvent, the vector and object RPCs, the typed store
+  tokens (`cache.*`, `document.*`, `graph.*`, `timeseries.*`,
+  `analytical.query`) and `CreateMaterializedView`. The Casbin deny message
+  names the exact `--action` to seed.
+- **SDK streams were cut off by the call timeout** (Go, Python, Java, C#, PHP,
+  TypeScript). Server and bidi streams (LiveQuery, PublishCDC, Signal) no
+  longer inherit the default deadline; a per-call deadline is still honored.
+- **TS/Python API-key sessions died after ~15 minutes.** The key was discarded
+  after the exchange and the bearer has no refresh token. The SDKs keep the key
+  privately and re-exchange before expiry, falling back to raw `x-api-key`.
+- **Container paths.** `udb manifest-export` accepts `UDB_MANIFEST_EXPORT_PATH=-`;
+  `udb authz seed --emit` writes before seeding (and `--emit -` returns the
+  policies); the image creates `db_ops`, `audit` and `run` dirs under
+  `/var/lib/udb` and sets `UDB_DB_OPS_ROOT`; the audit file sink creates its
+  directory; the image exposes 50061/50071.
+- **Preflight** flags a missing `UDB_JWT_PRIVATE_KEY` (Authenticate issues no
+  token), a session-secret-derived API-key hash secret (rotating it invalidates
+  every key), and an unexposed WebRTC listener.
+
+### Security
+
+- **Casbin object globs over-matched.** Allow policies were matched with
+  `keyMatch2`, an unescaped regex: `acme.hr.v1.*` also granted
+  `acme.hr.v10.Secret`, and every `.` matched any character, while the same
+  text as an explicit deny did not. Allow and deny now share one matcher
+  (`udbMatch`): exact, `*`, or a `pkg.*` package glob with literal dots.
+  Path-style objects containing `/` keep `keyMatch2`.
+- **A policy on the object `message` acted like `*`.** Every data request
+  carried the generic `message` resource type as a match candidate. It is no
+  longer a selector.
+
+### Documentation
+
+- Service auth (both key forms, per-method scopes; `udb:<svc>:*` does not
+  match), PublishCDC prerequisites (Kafka, `udb:cdc:read`, per-topic Casbin
+  rule), the migrate → StageCatalog → ActivateCatalog step, and corrected
+  container port / socket / audit-path examples.
+
 ## [0.5.24] - 2026-10-05
 
 A security and correctness release. A full audit of the native features found

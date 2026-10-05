@@ -3,7 +3,7 @@
 //! The [`AuthzSnapshot`] is enforced through an actual [`casbin::Enforcer`]
 //! running an advanced **PERM** model (request / policy / role / effect /
 //! matchers): RBAC with tenant domains and glob resource/action matching via
-//! `keyMatch2`. Deny override is enforced before Casbin because Rust Casbin's
+//! the registered `udbMatch` function (see [`udb_match`]). Deny override is enforced before Casbin because Rust Casbin's
 //! built-in effector does not reliably apply the combined deny/allow expression
 //! when deny lines are loaded into the enforcer (verified: doing so lets a broad
 //! allow win over an explicit deny). Only Allow lines enter the enforcer; an
@@ -19,8 +19,8 @@
 //! `model.conf` via `UDB_AUTHZ_CASBIN_MODEL_PATH` (file) or `UDB_AUTHZ_CASBIN_MODEL`
 //! (inline text); absent both, the embedded [`CASBIN_MODEL`] default is used.
 //! Any Casbin matcher / effect / role-definition and any built-in function
-//! (`keyMatch`, `keyMatch2/3/4`, `regexMatch`, `globMatch`, `ipMatch`) are
-//! honored. The **request/policy token contract** the loader maps UDB rows onto
+//! (`keyMatch`, `keyMatch2/3/4`, `regexMatch`, `globMatch`, `ipMatch`, plus
+//! UDB's `udbMatch`) are honored. The **request/policy token contract** the loader maps UDB rows onto
 //! is fixed: requests are `r = sub, dom, obj, act`; DB-derived policy lines are
 //! `p = sub, dom, obj, act, eft`; the role grouping is `g = _, _`
 //! (subject → role). Custom models must keep this token shape; everything else
@@ -30,13 +30,15 @@
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
+use casbin::function_map::OperatorFunction;
+use casbin::rhai::Dynamic;
 use casbin::{CoreApi, DefaultModel, Enforcer, MemoryAdapter, MgmtApi};
 use sha2::{Digest, Sha256};
 
 use super::{AuthzPolicy, AuthzQuery, AuthzSnapshot, Decision, Effect, conditions_match, wildcard};
 
 /// The Casbin PERM model. RBAC-with-domains request + policy, a `g` role
-/// grouping, allow effect, and `keyMatch2` glob matching for resources and
+/// grouping, allow effect, and `udbMatch` glob matching for resources and
 /// actions. Explicit deny is checked before enforcement. `p.sub == "*"`
 /// (wildcard subject) and empty/`*` domains are honored in the matcher so
 /// legacy broad policies keep working.
@@ -53,8 +55,26 @@ g = _, _
 e = some(where (p_eft == allow)) && !some(where (p_eft == deny))
 
 [matchers]
-m = (p.sub == "*" || r.sub == p.sub || g(r.sub, p.sub)) && (p.dom == "*" || p.dom == "" || r.dom == p.dom) && (p.obj == "*" || keyMatch2(r.obj, p.obj)) && (p.act == "*" || r.act == p.act || keyMatch2(r.act, p.act))
+m = (p.sub == "*" || r.sub == p.sub || g(r.sub, p.sub)) && (p.dom == "*" || p.dom == "" || r.dom == p.dom) && (p.obj == "*" || udbMatch(r.obj, p.obj)) && (p.act == "*" || r.act == p.act || udbMatch(r.act, p.act))
 "#;
+
+/// Name of the UDB object/action matcher registered on every enforcer.
+const UDB_MATCH_FN: &str = "udbMatch";
+
+/// The object/action matcher the default model uses (`udbMatch`). It applies
+/// the SAME rule as the explicit-deny path (`pattern_match`): exact, `*`, or a
+/// `prefix.*` package glob that matches `prefix` and `prefix.<anything>` only.
+/// `keyMatch2` treated the policy as an unescaped regex, so an allow on
+/// `acme.hr.v1.*` also granted `acme.hr.v10.Secret` and every `.` matched any
+/// character, while the same text as a deny did not. Path-style patterns
+/// (containing `/`) keep `keyMatch2` semantics.
+pub(crate) fn udb_match(value: &str, pattern: &str) -> bool {
+    let pattern = pattern.trim();
+    if pattern.contains('/') {
+        return casbin::function_map::key_match2(value, pattern);
+    }
+    super::pattern_match(pattern, value)
+}
 
 /// Empty selector → Casbin wildcard token.
 fn slot(value: &str) -> String {
@@ -308,16 +328,14 @@ impl AuthzSnapshot {
         // selector and allow if any enforce() succeeds, so the two engines agree
         // (the prior single-`obj` check could deny a request the snapshot engine
         // would allow via a different selector).
-        let mut selectors: Vec<String> = [
-            req.resource.resource_name.trim(),
-            req.resource.message_type.trim(),
-            req.resource.table.trim(),
-            req.resource.resource_type.trim(),
-        ]
-        .into_iter()
-        .filter(|s| !s.is_empty())
-        .map(str::to_string)
-        .collect();
+        let mut selectors: Vec<String> = req
+            .resource
+            .selectors()
+            .into_iter()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .collect();
         if selectors.is_empty() {
             selectors.push("*".to_string());
         }
@@ -363,11 +381,13 @@ impl AuthzSnapshot {
                 // (their action/resource/tenant) plus counts — never another
                 // principal's policies.
                 format!(
-                    "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the action must be the RPC method name (Select/Upsert/Delete/Update/BulkCas — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the message type. Seed it with `udb authz seed --tenant {} --role app_rw` (+ bind this principal to the role)",
+                    "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the policy action must be exactly '{}' (the RPC method name, or the typed store RPC's dotted token — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the resource. Seed it with `udb authz seed --tenant {} --role app_rw --action {}` (+ bind this principal to the role)",
                     req.action,
                     selectors.join("|"),
                     principal.tenant_id,
+                    req.action,
                     principal.tenant_id,
+                    req.action,
                 )
             } else {
                 format!(
@@ -494,6 +514,12 @@ async fn cached_enforcer(
     let mut enforcer = Enforcer::new(model, MemoryAdapter::default())
         .await
         .map_err(|err| format!("enforcer init: {err}"))?;
+    enforcer.add_function(
+        UDB_MATCH_FN,
+        OperatorFunction::Arg2(|value: Dynamic, pattern: Dynamic| {
+            udb_match(&value.to_string(), &pattern.to_string()).into()
+        }),
+    );
     for p in applicable.iter().filter(|p| p.effect == Effect::Allow) {
         let sub = if !p.role.trim().is_empty() {
             p.role.clone()
@@ -554,6 +580,29 @@ fn casbin_policy_set_hash(model_text: &str, applicable: &[&AuthzPolicy]) -> Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn udb_match_treats_dots_literally_and_globs_on_package_boundaries() {
+        assert!(udb_match("acme.hr.v1.Employee", "acme.hr.v1.*"));
+        assert!(udb_match("acme.hr.v1", "acme.hr.v1.*"));
+        assert!(
+            !udb_match("acme.hr.v10.Secret", "acme.hr.v1.*"),
+            "a package glob must not spill into a sibling package"
+        );
+        assert!(
+            !udb_match("udbXcdcXorders", "udb.cdc.orders"),
+            "a dot must match only a dot"
+        );
+        assert!(udb_match("udb.cdc.orders", "udb.cdc.orders"));
+        assert!(udb_match("/api/items/7", "/api/items/*"));
+    }
+
+    #[test]
+    fn generic_message_resource_type_is_not_a_selector() {
+        let resource = ResourceRef::message("acme.billing.v1.Invoice");
+        assert!(!resource.selectors().contains(&"message"));
+        assert!(resource.selectors().contains(&"acme.billing.v1.Invoice"));
+    }
     use crate::runtime::authz::{Principal, ResourceRef, RoleBinding};
     use std::collections::BTreeMap;
 

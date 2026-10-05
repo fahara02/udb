@@ -66,6 +66,7 @@ service SchedulerService {
       scopes: "udb:scheduler:create-job"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "scheduler.CreateJob"
       request_context_required: true
       tenant_required: true
@@ -125,6 +126,7 @@ service SchedulerService {
       scopes: "udb:scheduler:get-job"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "scheduler.GetJob"
       request_context_required: true
       tenant_required: true
@@ -181,6 +183,7 @@ service SchedulerService {
       scopes: "udb:scheduler:list-jobs"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "scheduler.ListJobs"
       request_context_required: true
       tenant_required: true
@@ -237,6 +240,7 @@ service SchedulerService {
       scopes: "udb:scheduler:delete-job"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "scheduler.DeleteJob"
       request_context_required: true
       tenant_required: true
@@ -293,6 +297,7 @@ service SchedulerService {
       scopes: "udb:scheduler:pause-job"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "scheduler.PauseJob"
       request_context_required: true
       tenant_required: true
@@ -352,6 +357,7 @@ service SchedulerService {
       scopes: "udb:scheduler:resume-job"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "scheduler.ResumeJob"
       request_context_required: true
       tenant_required: true

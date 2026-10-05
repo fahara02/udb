@@ -18,7 +18,7 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.5.24
+ *   UDB version ...... 0.5.25
  *   Protocol version . 1.0.0
  *   Services ......... 28
  *   RPCs ............. 385
@@ -39,7 +39,9 @@ use Grpc\ChannelCredentials;
  *
  * Streaming RPCs are exposed as accessors returning the live gRPC call object
  * (metadata + deadline already applied); retry is intentionally not applied to
- * streams because re-driving a half-consumed stream is unsafe.
+ * streams because re-driving a half-consumed stream is unsafe. The configured
+ * `deadline_ms` applies to unary and client-streaming calls only; server-streaming
+ * and bidi calls get no implicit deadline (pass `$deadlineMs` per call instead).
  *
  * Channel sharing: one gRPC channel per (host, credentials, options) tuple is
  * created lazily and shared across every service stub, matching the
@@ -10814,13 +10816,16 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: /udb.core.livequery.services.v1.LiveQueryService/Subscribe
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function subscribe($request, ?UdbMetadata $metadata = null)
+    public function subscribe($request, ?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('LiveQueryService', 'udb.core.livequery.services.v1');
-        return $stub->Subscribe($request, $this->headers($metadata), $this->callOptions());
+        return $stub->Subscribe($request, $this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.core.storage.services.v1.StorageService / DownloadFile (server_streaming), public alias download_file.
@@ -10828,13 +10833,16 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: /udb.core.storage.services.v1.StorageService/DownloadFile
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function downloadFile($request, ?UdbMetadata $metadata = null)
+    public function downloadFile($request, ?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('StorageService', 'udb.core.storage.services.v1');
-        return $stub->DownloadFile($request, $this->headers($metadata), $this->callOptions());
+        return $stub->DownloadFile($request, $this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.services.v1.DataBroker / GetObject (server_streaming), public alias get_object.
@@ -10842,13 +10850,16 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: /udb.services.v1.DataBroker/GetObject
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function getObject($request, ?UdbMetadata $metadata = null)
+    public function getObject($request, ?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
-        return $stub->GetObject($request, $this->headers($metadata), $this->callOptions());
+        return $stub->GetObject($request, $this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.services.v1.DataBroker / PublishCDC (server_streaming), public alias publish_cdc.
@@ -10856,13 +10867,16 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: /udb.services.v1.DataBroker/PublishCDC
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function publishCdc($request, ?UdbMetadata $metadata = null)
+    public function publishCdc($request, ?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
-        return $stub->PublishCDC($request, $this->headers($metadata), $this->callOptions());
+        return $stub->PublishCDC($request, $this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.services.v1.DataBroker / SelectV2 (server_streaming), public alias select_v_2.
@@ -10870,13 +10884,16 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: /udb.services.v1.DataBroker/SelectV2
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function selectV2($request, ?UdbMetadata $metadata = null)
+    public function selectV2($request, ?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
-        return $stub->SelectV2($request, $this->headers($metadata), $this->callOptions());
+        return $stub->SelectV2($request, $this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
 
     /**
@@ -10900,12 +10917,15 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.core.control.services.v1.ControlPlaneService/DeltaResources
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @return \Grpc\BidiStreamingCall
      */
-    public function deltaResources(?UdbMetadata $metadata = null)
+    public function deltaResources(?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('ControlPlaneService', 'udb.core.control.services.v1');
-        return $stub->DeltaResources($this->headers($metadata), $this->callOptions());
+        return $stub->DeltaResources($this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.core.control.services.v1.ControlPlaneService / StreamResources (bidi), public alias stream_resources.
@@ -10913,12 +10933,15 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.core.control.services.v1.ControlPlaneService/StreamResources
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @return \Grpc\BidiStreamingCall
      */
-    public function streamResources(?UdbMetadata $metadata = null)
+    public function streamResources(?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('ControlPlaneService', 'udb.core.control.services.v1');
-        return $stub->StreamResources($this->headers($metadata), $this->callOptions());
+        return $stub->StreamResources($this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.core.webrtc.services.v1.SignalingService / Signal (bidi), public alias signal.
@@ -10926,12 +10949,15 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.core.webrtc.services.v1.SignalingService/Signal
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @return \Grpc\BidiStreamingCall
      */
-    public function signal(?UdbMetadata $metadata = null)
+    public function signal(?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('SignalingService', 'udb.core.webrtc.services.v1');
-        return $stub->Signal($this->headers($metadata), $this->callOptions());
+        return $stub->Signal($this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.services.v1.DataBroker / BatchSelect (bidi), public alias batch_select.
@@ -10939,12 +10965,15 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.services.v1.DataBroker/BatchSelect
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @return \Grpc\BidiStreamingCall
      */
-    public function batchSelect(?UdbMetadata $metadata = null)
+    public function batchSelect(?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
-        return $stub->BatchSelect($this->headers($metadata), $this->callOptions());
+        return $stub->BatchSelect($this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.services.v1.DataBroker / BatchUpsert (bidi), public alias batch_upsert.
@@ -10952,12 +10981,15 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.services.v1.DataBroker/BatchUpsert
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @return \Grpc\BidiStreamingCall
      */
-    public function batchUpsert(?UdbMetadata $metadata = null)
+    public function batchUpsert(?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
-        return $stub->BatchUpsert($this->headers($metadata), $this->callOptions());
+        return $stub->BatchUpsert($this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.services.v1.DataBroker / BeginTx (bidi), public alias begin_tx.
@@ -10965,12 +10997,15 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.services.v1.DataBroker/BeginTx
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @return \Grpc\BidiStreamingCall
      */
-    public function beginTx(?UdbMetadata $metadata = null)
+    public function beginTx(?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
-        return $stub->BeginTx($this->headers($metadata), $this->callOptions());
+        return $stub->BeginTx($this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
      * udb.services.v1.DataBroker / VectorBatchUpsert (bidi), public alias vector_batch_upsert.
@@ -10978,12 +11013,15 @@ final class GeneratedClient
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.services.v1.DataBroker/VectorBatchUpsert
      *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
      * @return \Grpc\BidiStreamingCall
      */
-    public function vectorBatchUpsert(?UdbMetadata $metadata = null)
+    public function vectorBatchUpsert(?UdbMetadata $metadata = null, ?int $deadlineMs = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
-        return $stub->VectorBatchUpsert($this->headers($metadata), $this->callOptions());
+        return $stub->VectorBatchUpsert($this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
 
     // ── Per-service stub accessors ──────────────────────────────────────────
@@ -11358,6 +11396,23 @@ final class GeneratedClient
         $opts = [];
         $deadlineMs = (int) ($this->config['deadline_ms'] ?? 30_000);
         if ($deadlineMs > 0) {
+            $opts['timeout'] = $deadlineMs * 1000;
+        }
+        return $opts;
+    }
+
+    /**
+     * Per-call gRPC options for server-streaming and bidi calls. These streams
+     * are long-lived (LiveQuery subscribe, CDC, WebRTC signalling), so the
+     * configured `deadline_ms` default would kill them; only an explicit
+     * per-call `$deadlineMs` bounds the stream.
+     *
+     * @return array<string,mixed>
+     */
+    private function streamCallOptions(?int $deadlineMs): array
+    {
+        $opts = [];
+        if ($deadlineMs !== null && $deadlineMs > 0) {
             $opts['timeout'] = $deadlineMs * 1000;
         }
         return $opts;

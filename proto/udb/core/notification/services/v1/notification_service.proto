@@ -88,6 +88,7 @@ service NotificationService {
       scopes: "udb:notification:send-notification"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "notification.SendNotification"
       request_context_required: true
       tenant_required: true
@@ -150,6 +151,7 @@ service NotificationService {
       scopes: "udb:notification:get-notification"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "notification.GetNotification"
       request_context_required: true
       tenant_required: true
@@ -278,6 +280,7 @@ service NotificationService {
       scopes: "udb:notification:retry-notification"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "notification.RetryNotification"
       request_context_required: true
       tenant_required: true
@@ -349,6 +352,7 @@ service NotificationService {
       scopes: "udb:notification:report-delivery"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "notification.ReportDelivery"
       request_context_required: true
       tenant_required: true
@@ -707,6 +711,7 @@ service NotificationService {
       scopes: "udb:notification:get-preference"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "notification.GetPreference"
       request_context_required: true
       tenant_required: true

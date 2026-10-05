@@ -16,6 +16,7 @@ interface StoredToken {
   refreshToken?: string;
   sessionId?: string;
   expiresAt: number;
+  issuedAt?: number;
 }
 
 // Minimal in-memory token store matching the SDK's TokenStore contract.
@@ -252,4 +253,151 @@ test("background refresh recovers: a successful refresh clears poison", async ()
   assert.equal(project.poisoned, false, "poison cleared after a successful refresh");
   assert.equal(project.refreshError(), null, "refreshError() cleared after success");
   assert.equal(store.current()?.accessToken, "token-2", "refreshed token persisted");
+});
+
+// ── API-key bearer lifecycle ────────────────────────────────────────────────
+// An API key is exchanged (AuthnService.Authenticate) for a short-lived bearer
+// that carries NO refresh token. The SDK must retain the key and re-exchange it
+// before expiry, fall back to the raw x-api-key header when no bearer can be
+// obtained, and stop the refresher on close().
+
+function apiKeyAuth(responses: Array<() => any>) {
+  const keys: string[] = [];
+  let i = 0;
+  const auth: any = {
+    ...credSpy(),
+    keys,
+    authenticateApiKey: async (key: string) => {
+      keys.push(key);
+      const next = responses[Math.min(i, responses.length - 1)];
+      i += 1;
+      return next();
+    },
+    refreshToken: async () => {
+      throw new Error("RefreshToken must not be called for an API-key bearer");
+    },
+  };
+  return auth;
+}
+
+function apiKeyProject(auth: any, core: any, store = memoryStore(null)) {
+  const project = bareProject({ store, auth, core }) as any;
+  project.sharedMeta = { tenantId: "t" };
+  project.poisoned = false;
+  project.refreshFailures = 0;
+  project.closed = true; // tests drive ticks by hand; no real timers
+  return { project, store };
+}
+
+const minted = (token: string, ttlSec: number) => () => ({
+  access_token: token,
+  expires_at_unix: String(Math.floor(Date.now() / 1000) + ttlSec),
+  principal: { tenant_id: "tenant-uuid" },
+});
+
+test("API-key bearer is re-exchanged with the retained key at ~80% of its lifetime", async () => {
+  const auth = apiKeyAuth([minted("bearer-1", 900), minted("bearer-2", 900)]);
+  const core = credSpy();
+  const { project, store } = apiKeyProject(auth, core);
+
+  await project.authenticateApiKeyAndAdopt("svc-key");
+  assert.equal(store.current()?.accessToken, "bearer-1");
+  assert.equal(core.calls.at(-1)?.bearerToken, "bearer-1");
+
+  // 170s left of a 900s lifetime: past the 80% mark (180s before expiry) but
+  // outside the plain 60s skew — the refresher must already renew.
+  const now = Date.now();
+  store.current()!.issuedAt = now - 730_000;
+  store.current()!.expiresAt = now + 170_000;
+  await project.backgroundRefreshTick();
+
+  assert.deepEqual(auth.keys, ["svc-key", "svc-key"], "re-exchanged with the retained key");
+  assert.equal(store.current()?.accessToken, "bearer-2");
+  const last = core.calls.at(-1)!;
+  assert.equal(last.bearerToken, "bearer-2", "new bearer hot-swapped in");
+  assert.equal(last.apiKey, undefined, "raw key not sent while a bearer is held");
+});
+
+test("empty access token falls back to raw x-api-key instead of throwing", async () => {
+  const auth = apiKeyAuth([() => ({ access_token: "", principal: { tenant_id: "tenant-uuid" } })]);
+  const core = credSpy();
+  const { project } = apiKeyProject(auth, core);
+  const warn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (m: string) => void warnings.push(m);
+  try {
+    await project.authenticateApiKeyAndAdopt("svc-key");
+  } finally {
+    console.warn = warn;
+  }
+  const last = core.calls.at(-1)!;
+  assert.equal(last.apiKey, "svc-key", "raw key installed");
+  assert.equal(last.bearerToken, undefined);
+  assert.equal(warnings.length, 1, "warned once");
+  assert.ok(!warnings[0].includes("svc-key"), "warning must not leak the key");
+});
+
+test("failing re-exchange near expiry falls back to raw key, then recovers to a bearer", async () => {
+  let fail = true;
+  const auth = apiKeyAuth([
+    minted("bearer-1", 900),
+    () => {
+      if (fail) throw new Error("authn unavailable");
+      return minted("bearer-2", 900)();
+    },
+  ]);
+  const core = credSpy();
+  const { project, store } = apiKeyProject(auth, core);
+  await project.authenticateApiKeyAndAdopt("svc-key");
+
+  store.current()!.issuedAt = Date.now() - 890_000;
+  store.current()!.expiresAt = Date.now() + 10_000; // inside the final skew window
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    await project.backgroundRefreshTick();
+  } finally {
+    console.warn = warn;
+  }
+  assert.equal(project.refreshFailures, 1, "failure counted for backoff");
+  assert.equal(project.poisoned, false, "API-key session must not fail closed");
+  assert.equal(core.calls.at(-1)?.apiKey, "svc-key", "raw key fallback installed");
+  assert.equal(core.calls.at(-1)?.bearerToken, undefined);
+
+  fail = false;
+  await project.backgroundRefreshTick();
+  assert.equal(project.refreshFailures, 0);
+  assert.equal(core.calls.at(-1)?.bearerToken, "bearer-2", "bearer swapped back in");
+  assert.equal(core.calls.at(-1)?.apiKey, undefined, "raw key dropped again");
+});
+
+test("a re-exchange blip while the bearer is still well within life keeps the bearer", async () => {
+  const auth = apiKeyAuth([
+    minted("bearer-1", 900),
+    () => {
+      throw new Error("blip");
+    },
+  ]);
+  const core = credSpy();
+  const { project, store } = apiKeyProject(auth, core);
+  await project.authenticateApiKeyAndAdopt("svc-key");
+  store.current()!.issuedAt = Date.now() - 800_000;
+  store.current()!.expiresAt = Date.now() + 150_000; // due for renewal, not near expiry
+  await project.backgroundRefreshTick();
+  assert.equal(core.calls.at(-1)?.bearerToken, "bearer-1", "still-valid bearer kept");
+  assert.equal(core.calls.at(-1)?.apiKey, undefined);
+});
+
+test("close() cancels the API-key re-exchange timer", async () => {
+  const auth = apiKeyAuth([minted("bearer-1", 900)]);
+  const core = credSpy();
+  const { project } = apiKeyProject(auth, core);
+  project.closed = false;
+  project.generated = { close() {} };
+  await project.authenticateApiKeyAndAdopt("svc-key");
+  // scheduleRefresh arms the timer after an async token-store load.
+  await new Promise((r) => setImmediate(r));
+  assert.ok(project.refreshTimer, "refresher armed after the API-key exchange");
+  project.close();
+  assert.equal(project.refreshTimer, null, "timer cancelled on close");
 });

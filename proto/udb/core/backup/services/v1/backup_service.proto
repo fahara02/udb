@@ -71,6 +71,7 @@ service BackupService {
       scopes: "udb:backup:start-tenant-backup"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "backup.StartTenantBackup"
       request_context_required: true
       tenant_required: true
