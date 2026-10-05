@@ -329,6 +329,14 @@ pub struct RelationshipTuple {
     pub project: String,
 }
 
+/// `deny_reason` prefix of a decision denied by an EXPLICIT matched Deny
+/// policy. `matched_policy_ids` cannot tell the two apart: a default-deny also
+/// lists every candidate policy it evaluated.
+pub const EXPLICIT_DENY_REASON_PREFIX: &str = "denied by policy ";
+
+/// `deny_reason` prefix of a decision the engine could not evaluate.
+pub const ENGINE_ERROR_REASON_PREFIX: &str = "casbin engine error: ";
+
 /// The structured authorization result. Mapped to a gRPC status only at the
 /// service boundary.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -347,6 +355,16 @@ pub struct Decision {
     /// direct subject match). Drives the `ROLE_POLICY` decision-source audit
     /// classification. Only meaningful when `allowed`.
     pub via_role: bool,
+}
+
+impl Decision {
+    /// Denied by an explicit matched Deny policy, or by an engine failure
+    /// (fail closed) — as opposed to a default-deny where no Allow matched.
+    pub fn is_explicit_deny(&self) -> bool {
+        !self.allowed
+            && (self.deny_reason.starts_with(EXPLICIT_DENY_REASON_PREFIX)
+                || self.deny_reason.starts_with(ENGINE_ERROR_REASON_PREFIX))
+    }
 }
 
 /// A single authorization question.

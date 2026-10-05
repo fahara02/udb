@@ -2032,7 +2032,10 @@ impl AuthnServiceImpl {
         // for ungoverned deployments). So we only DENY on an EXPLICIT matched deny;
         // a bare default-deny falls through, still recording the engine decision_id
         // for the audit envelope (the action-scope authorization stands).
-        if decision.matched_policy_ids.is_empty() {
+        // `matched_policy_ids` is NOT that signal: a default-deny lists every
+        // candidate it evaluated, which denied every non-admin admin mutation
+        // once any data-plane policy existed. An engine error stays a deny.
+        if !decision.is_explicit_deny() {
             tracing::debug!(
                 target: "udb.audit.authz",
                 subject = %ctx.subject,

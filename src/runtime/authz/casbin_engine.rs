@@ -249,7 +249,7 @@ impl AuthzSnapshot {
                 decision_id,
                 allowed: false,
                 effect: Effect::Deny,
-                deny_reason: format!("denied by policy {}", policy.id),
+                deny_reason: format!("{}{}", super::EXPLICIT_DENY_REASON_PREFIX, policy.id),
                 matched_policy_ids: deny_matches.iter().map(|p| p.id.clone()).collect(),
                 required_scopes: policy.required_scopes.clone(),
                 policy_version: self.version.clone(),
@@ -418,7 +418,7 @@ impl AuthzSnapshot {
             decision_id,
             allowed: false,
             effect: Effect::Deny,
-            deny_reason: format!("casbin engine error: {reason}"),
+            deny_reason: format!("{}{reason}", super::ENGINE_ERROR_REASON_PREFIX),
             policy_version: self.version.clone(),
             audit_required: true,
             ..Default::default()
@@ -595,6 +595,25 @@ mod tests {
         );
         assert!(udb_match("udb.cdc.orders", "udb.cdc.orders"));
         assert!(udb_match("/api/items/7", "/api/items/*"));
+    }
+
+    #[test]
+    fn explicit_deny_is_distinguishable_from_default_deny() {
+        let explicit = Decision {
+            deny_reason: format!("{}p-1", crate::runtime::authz::EXPLICIT_DENY_REASON_PREFIX),
+            matched_policy_ids: vec!["p-1".to_string()],
+            ..Decision::default()
+        };
+        assert!(explicit.is_explicit_deny());
+        let default_deny = Decision {
+            deny_reason: "denied by Casbin PERM model: 3 candidate policies evaluated".to_string(),
+            matched_policy_ids: vec!["a".into(), "b".into(), "c".into()],
+            ..Decision::default()
+        };
+        assert!(
+            !default_deny.is_explicit_deny(),
+            "evaluated candidates are not a matched deny"
+        );
     }
 
     #[test]

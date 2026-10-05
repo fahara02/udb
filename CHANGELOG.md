@@ -32,6 +32,12 @@ release line was tagged.
     grant could not carry);
   - scope checks are case-insensitive, and a scope denial names the scope the
     method needs instead of always `udb:admin`.
+- **Native admin mutations were denied for every non-admin once any policy
+  existed.** CreateUser / UpdateUser / ChangeUserStatus / AdminResetPassword
+  consult the authz engine and are meant to refuse only on an EXPLICIT matched
+  Deny, but they treated the default-deny's evaluated candidates as a match.
+  A default-deny now falls through to the method-scope authorization; an
+  explicit Deny or an engine error still refuses.
 - **14 data-plane actions could not be granted.** `udb authz seed` rejected
   PublishCDC, EnqueueOutboxEvent, the vector and object RPCs, the typed store
   tokens (`cache.*`, `document.*`, `graph.*`, `timeseries.*`,

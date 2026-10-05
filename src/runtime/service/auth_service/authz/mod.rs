@@ -1240,7 +1240,11 @@ impl AuthzServiceImpl {
         };
         let user_uuid = stable_audit_user_uuid(principal);
         let effect = if decision.allowed { "ALLOW" } else { "DENY" };
-        let source = if decision.matched_policy_ids.is_empty() {
+        // A default-deny lists its candidates in `matched_policy_ids`, so
+        // that field alone cannot classify a deny as a policy match.
+        let source = if decision.matched_policy_ids.is_empty()
+            || (!decision.allowed && !decision.is_explicit_deny())
+        {
             "NO_MATCH"
         } else if decision.allowed && decision.via_role {
             "ROLE_POLICY"
