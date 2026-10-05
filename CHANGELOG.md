@@ -76,6 +76,8 @@ what that audit found and adds the seam tests that were missing.
   preventing fixed host ports from colliding between smoke scenarios.
 - Provisioned benchmark buckets with the pinned MinIO container's bundled client,
   replacing the retired client download endpoint.
+- Allowed backend provisioning recovery for older releases while keeping their
+  SDK and protobuf benchmark harness pinned to the released tag.
 - Allowed npm publishing recovery from immutable release tags and added an
   authenticated-account diagnostic for publishing permission failures.
 - Replaced the retired OpenAI Assistants publisher with downloadable Responses

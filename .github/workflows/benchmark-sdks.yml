@@ -55,6 +55,10 @@ on:
         description: "Harness ref override; leave empty to pin the released tag"
         default: ""
         required: false
+      backend_bootstrap_ref:
+        description: "Backend provisioning recovery ref; defaults to this workflow commit"
+        default: ""
+        required: false
   workflow_run:
     workflows: ["Release"]
     types: [completed]
@@ -148,5 +152,9 @@ jobs:
       # binary. A manual, explicit checkout_ref may select a reviewed harness-only
       # correction while release-tag continues to select the immutable binary.
       checkout-ref: ${{ inputs.checkout_ref || github.event.workflow_run.head_branch || (inputs.release_tag != 'latest' && inputs.release_tag) || '' }}
+      # External backend provisioning can outlive vendor download endpoints.
+      # Keep the SDK/protobuf harness pinned to the release while provisioning
+      # follows this reviewed workflow commit; record that separate provenance.
+      backend-bootstrap-ref: ${{ inputs.backend_bootstrap_ref || github.sha }}
       release-asset: ${{ inputs.release_asset || 'udb-linux-amd64-full' }}
     secrets: inherit

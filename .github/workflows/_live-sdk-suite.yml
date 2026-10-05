@@ -41,6 +41,11 @@ on:
         required: false
         type: string
         default: udb-linux-amd64-full
+      backend-bootstrap-ref:
+        description: "Reviewed backend provisioning ref; does not replace the released SDK/protobuf harness"
+        required: false
+        type: string
+        default: ""
     secrets:
       # The live/bench harness uses only test-fixture secrets baked into
       # broker-env; no real secrets are required. Declared (optional) so a caller
@@ -210,6 +215,27 @@ jobs:
         run: |
           set -euo pipefail
           echo "path=${UDB_BENCH_BIN}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out backend provisioning recovery
+        if: inputs.backend-bootstrap-ref != ''
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.backend-bootstrap-ref }}
+          path: benchmark-backend-bootstrap
+          sparse-checkout: .github/actions/start-backends
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Apply backend provisioning recovery
+        if: inputs.backend-bootstrap-ref != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -R benchmark-backend-bootstrap/.github/actions/start-backends/. \
+            .github/actions/start-backends/
+          bootstrap_sha="$(git -C benchmark-backend-bootstrap rev-parse HEAD)"
+          printf '{"commit":"%s"}\n' "$bootstrap_sha" > bench-output/backend-bootstrap.json
+          echo "Backend provisioning commit: $bootstrap_sha"
 
       # ── Backend stack (docker-run backends; pg/mongo are services above) ──
       - name: Start backends
@@ -535,6 +561,7 @@ jobs:
             sdk/php/perf_report_php.md
             bench-output/logs/**
             bench-output/status/**
+            bench-output/backend-bootstrap.json
             /tmp/udb-bench.log
           if-no-files-found: ignore
 
