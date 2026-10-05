@@ -92,6 +92,9 @@ async fn live_postgres_cdc_control_preserves_slot_ownership() {
             .metadata_mut()
             .insert("x-purpose", "cdc.live".parse().unwrap());
         request
+            .metadata_mut()
+            .insert("x-correlation-id", slot.parse().unwrap());
+        request
     };
     let claim = |tenant: &str, project: &str| {
         test_claim_context("cdc-operator", tenant, project, &["udb:admin"], &[])
