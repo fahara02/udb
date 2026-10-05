@@ -64,7 +64,11 @@ pub(super) async fn cleanup_native_auth_db(pool: &sqlx::PgPool) {
     // holds only these native tables, so dropping all of them is safe and avoids
     // hardcoding their names.
     let public_tables: Vec<String> =
-        sqlx::query_scalar("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+        sqlx::query_scalar(
+        // Extension-owned tables (PostGIS's `spatial_ref_sys`) are not test
+        // residue and cannot be dropped; skip them.
+        "SELECT t.tablename FROM pg_tables t          JOIN pg_class c ON c.relname = t.tablename          JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = t.schemaname          WHERE t.schemaname = 'public'            AND NOT EXISTS (              SELECT 1 FROM pg_depend d              WHERE d.objid = c.oid AND d.classid = 'pg_class'::regclass AND d.deptype = 'e'            )",
+    )
             .fetch_all(pool)
             .await
             .expect("list public tables");

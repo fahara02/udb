@@ -104,9 +104,15 @@ fn install_dp_security() {
 async fn dp_service(dsn: &str, mut manifest: CatalogManifest) -> DataBrokerService {
     // A real catalog always carries its checksum, and the idempotency replay
     // receipt records it (and refuses an empty one); hand-built test manifests
-    // need one too.
+    // need one too. It must be a real digest of THIS manifest: catalog-derived
+    // caches are keyed by checksum, so a shared constant would serve one test's
+    // tables to another.
     if manifest.checksum_sha256.trim().is_empty() {
-        manifest.checksum_sha256 = "data-plane-live-test-manifest".to_string();
+        use sha2::Digest as _;
+        let digest = sha2::Sha256::digest(
+            serde_json::to_vec(&manifest.tables).expect("serialize test manifest tables"),
+        );
+        manifest.checksum_sha256 = format!("sha256:{digest:x}");
     }
     let mut config = UdbConfig::from_env();
     config.primary.direct_dsn = dsn.to_string();
