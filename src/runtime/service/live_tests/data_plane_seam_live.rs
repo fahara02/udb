@@ -1084,7 +1084,7 @@ async fn served_begin_tx_and_put_object_authorize_every_target_live() {
     let chunks = vec![Chunk {
         bucket: format!("b2-ungranted-{}", Uuid::new_v4().simple()),
         object_key: "b2/object.bin".to_string(),
-        data: b"never stored".to_vec(),
+        data: b"never stored".to_vec().into(),
         final_chunk: true,
         content_type: "application/octet-stream".to_string(),
         ..Chunk::default()

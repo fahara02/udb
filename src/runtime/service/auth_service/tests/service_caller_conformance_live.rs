@@ -110,7 +110,7 @@ enum CallOutcome {
 
 /// Issue one gRPC call to `path` with an EMPTY request message. Every protobuf
 /// message decodes from an empty body (all fields default), and the response is
-/// decoded as `Empty`, which skips every unknown field, so one codec fits every
+/// decoded as `()` (google.protobuf.Empty), which skips every unknown field, so one codec fits every
 /// method. `streaming` covers unary, server-, client- and bidi-streaming
 /// methods alike: one request message is sent, then the request stream ends.
 async fn call_native(
@@ -121,7 +121,7 @@ async fn call_native(
     project_id: &str,
     request_id: Option<&str>,
 ) -> CallOutcome {
-    let mut request = Request::new(futures::stream::iter(vec![prost_types::Empty {}]));
+    let mut request = Request::new(futures::stream::iter(vec![()]));
     let metadata = request.metadata_mut();
     match credential {
         Credential::Bearer(token) => {
@@ -150,7 +150,7 @@ async fn call_native(
         if let Err(err) = grpc.ready().await {
             return CallOutcome::Transport(format!("test channel not ready: {err}"));
         }
-        let codec = tonic::codec::ProstCodec::<prost_types::Empty, prost_types::Empty>::default();
+        let codec = tonic::codec::ProstCodec::<(), ()>::default();
         match grpc.streaming(request, path_and_query, codec).await {
             Err(status) => CallOutcome::Failed(status),
             Ok(response) => {
