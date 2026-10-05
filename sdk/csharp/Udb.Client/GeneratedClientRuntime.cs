@@ -47,6 +47,36 @@ public sealed record UdbCallOptions
 }
 
 /// <summary>
+/// Request-context guarantee for outbound metadata. Native broker RPCs declare
+/// <c>request_context_required</c> and fail closed (PERMISSION_DENIED) unless the
+/// call carries <c>x-request-id</c>, <c>x-correlation-id</c> or <c>traceparent</c>.
+/// </summary>
+public static class UdbRequestContext
+{
+    private static readonly string[] ContextHeaders = { "x-request-id", "x-correlation-id", "traceparent" };
+
+    /// <summary>
+    /// Add a fresh random <c>x-request-id</c> when <paramref name="headers"/> carries
+    /// none of the request-context headers (with a non-empty value). A
+    /// caller-supplied header is never overridden. Returns the same instance.
+    /// </summary>
+    public static Metadata Ensure(Metadata headers)
+    {
+        foreach (var entry in headers)
+        {
+            if (!entry.IsBinary
+                && Array.IndexOf(ContextHeaders, entry.Key) >= 0
+                && !string.IsNullOrWhiteSpace(entry.Value))
+            {
+                return headers;
+            }
+        }
+        headers.Add("x-request-id", Guid.NewGuid().ToString());
+        return headers;
+    }
+}
+
+/// <summary>
 /// Structured error raised by the generated wrappers. Carries the gRPC status
 /// plus the UDB <c>ErrorDetail</c> bytes and decoded message from the
 /// <c>udb-error-detail-bin</c> trailer, when the server attached one.
@@ -208,7 +238,7 @@ public abstract class GeneratedServiceBase
     {
         var effective = deadline ?? (applyDefaultTimeout ? Options.Timeout : null);
         DateTime? when = effective.HasValue ? DateTime.UtcNow.Add(effective.Value) : null;
-        return new CallOptions(HeadersFactory(), when, ct);
+        return new CallOptions(UdbRequestContext.Ensure(HeadersFactory()), when, ct);
     }
 
     /// <summary>

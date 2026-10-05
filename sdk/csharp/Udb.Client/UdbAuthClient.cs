@@ -106,7 +106,7 @@ public sealed class UdbAuthClient : IAsyncDisposable
         {
             headers.Add("x-api-key", apiKey);
         }
-        return headers;
+        return global::Udb.Client.Generated.UdbRequestContext.Ensure(headers);
     }
 
     /// <summary>The shared credentials holder backing this client's outbound auth headers.</summary>

@@ -35,6 +35,31 @@ final class UdbClientTest {
   }
 
   @Test
+  void headersAlwaysCarryARequestContext() {
+    UdbMetadata metadata =
+        new UdbMetadata("tenant-a", "read", "", List.of(), "orders.service", "", "project-a", "");
+
+    Metadata first = UdbClient.headers(metadata);
+    Metadata second = UdbClient.headers(metadata);
+
+    String requestId = header(first, "x-request-id");
+    assertEquals(36, requestId.length());
+    assertEquals(requestId, header(first, "x-correlation-id"));
+    org.junit.jupiter.api.Assertions.assertNotEquals(requestId, header(second, "x-request-id"));
+
+    Metadata callerSupplied = new Metadata();
+    callerSupplied.put(
+        Metadata.Key.of("x-request-id", Metadata.ASCII_STRING_MARSHALLER), "caller-req");
+    Metadata merged = UdbClient.withoutRequestContextOverride(callerSupplied, UdbClient.headers(metadata));
+    callerSupplied.merge(merged);
+    List<String> ids = new java.util.ArrayList<>();
+    callerSupplied
+        .getAll(Metadata.Key.of("x-request-id", Metadata.ASCII_STRING_MARSHALLER))
+        .forEach(ids::add);
+    assertEquals(List.of("caller-req"), ids);
+  }
+
+  @Test
   void afterWriteInstallsGoldenReadFenceHeader() throws Exception {
     String golden = Files.readString(Path.of("..", "..", "docs", "generated", "consistency-golden.json"));
     WriteReceipt receipt = WriteReceipt.fromJson(golden);

@@ -400,6 +400,12 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 		// m is the MERGED metadata, so a per-request correlation id also
 		// satisfies the server's request-context requirement here.
 		add("x-request-id", m.CorrelationID)
+	} else if len(existing.Get("x-request-id")) == 0 &&
+		len(existing.Get("x-correlation-id")) == 0 &&
+		len(existing.Get("traceparent")) == 0 {
+		// Native methods require request context; a caller that set no id
+		// still gets a fresh per-call one instead of a PERMISSION_DENIED.
+		add("x-request-id", fmt.Sprintf("%016x%016x", rand.Uint64(), rand.Uint64()))
 	}
 	if len(pairs) == 0 {
 		return ctx

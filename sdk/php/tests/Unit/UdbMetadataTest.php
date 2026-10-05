@@ -71,3 +71,13 @@ it('withProjectId overrides the project header', function () {
     expect($meta->projectId)->toBe('proj-x')
         ->and($meta->toGrpcMetadata()['x-udb-project-id'])->toBe(['proj-x']);
 });
+
+it('sends a fresh x-request-id only when no correlation id is set', function () {
+    $bare = new UdbMetadata('t', 'u', 'p', '', [], 'svc', 'proj', '1.0.0');
+    $first = $bare->toGrpcMetadata()['x-request-id'][0];
+    expect($first)->toMatch('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/')
+        ->and($bare->toGrpcMetadata()['x-request-id'][0])->not->toBe($first);
+
+    $correlated = new UdbMetadata('t', 'u', 'p', 'corr-1', [], 'svc', 'proj', '1.0.0');
+    expect($correlated->toGrpcMetadata())->not->toHaveKey('x-request-id');
+});

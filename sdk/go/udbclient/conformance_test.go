@@ -227,6 +227,37 @@ func TestGeneratedClientAPIKeyHeader(t *testing.T) {
 	}
 }
 
+// TestGeneratedClientAlwaysSendsRequestContext: native methods deny a call
+// with no x-request-id / x-correlation-id / traceparent, so a client with no
+// configured id must still send a fresh per-call x-request-id.
+func TestGeneratedClientAlwaysSendsRequestContext(t *testing.T) {
+	g := NewGenerated(nil, Options{Meta: Metadata{TenantID: "t-1"}})
+	first := metadata.ValueFromIncomingContext(
+		metadata.NewIncomingContext(context.Background(), mustOutgoing(t, g.outgoingContext(context.Background()))),
+		"x-request-id")
+	second := metadata.ValueFromIncomingContext(
+		metadata.NewIncomingContext(context.Background(), mustOutgoing(t, g.outgoingContext(context.Background()))),
+		"x-request-id")
+	if len(first) != 1 || first[0] == "" || len(second) != 1 || first[0] == second[0] {
+		t.Fatalf("want a fresh x-request-id per call, got %v then %v", first, second)
+	}
+	// A caller-supplied traceparent already satisfies the requirement.
+	traced := metadata.AppendToOutgoingContext(context.Background(), "traceparent", "00-abc-def-01")
+	md := mustOutgoing(t, g.outgoingContext(traced))
+	if got := md.Get("x-request-id"); len(got) != 0 {
+		t.Fatalf("traceparent present: no x-request-id expected, got %v", got)
+	}
+}
+
+func mustOutgoing(t *testing.T, ctx context.Context) metadata.MD {
+	t.Helper()
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		t.Fatal("expected outgoing metadata")
+	}
+	return md
+}
+
 func TestAuthzCacheTTLHitAndExpiry(t *testing.T) {
 	fake := &fakeAuthz{decision: &authzv1.Decision{Allowed: true, CacheTtlSeconds: 60}}
 	c := newTestAuthClient(fake)

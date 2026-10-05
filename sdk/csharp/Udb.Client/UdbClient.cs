@@ -184,7 +184,7 @@ public sealed class UdbClient : IAsyncDisposable
         {
             headers.Add("x-udb-read-fence", _metadata.ReadFenceJson);
         }
-        return headers;
+        return global::Udb.Client.Generated.UdbRequestContext.Ensure(headers);
     }
 
     public Task<RecordSet> SelectAsync(SelectRequest request, CancellationToken cancellationToken = default)

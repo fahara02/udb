@@ -127,8 +127,25 @@ final class UdbMetadata
         if ($this->eventualConsistencyAllowed) {
             $metadata['x-udb-eventual-consistency-allowed'] = ['true'];
         }
+        // Native RPCs require a request context (x-request-id /
+        // x-correlation-id / traceparent) and fail closed without one. When
+        // the caller set no correlation id, send a fresh random request id
+        // per call so a plain call is never denied.
+        if (trim($this->correlationId) === '') {
+            $metadata['x-request-id'] = [self::newRequestId()];
+        }
 
         return $metadata;
+    }
+
+    /** A random RFC 4122 v4 UUID string (one per outbound call). */
+    private static function newRequestId(): string
+    {
+        $bytes = random_bytes(16);
+        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
     }
 
     /**

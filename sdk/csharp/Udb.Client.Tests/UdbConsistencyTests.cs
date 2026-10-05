@@ -26,6 +26,25 @@ public sealed class UdbConsistencyTests
     }
 
     [Fact]
+    public async Task Headers_Always_Carry_A_Request_Context()
+    {
+        var bare = new UdbMetadata(
+            TenantId: "tenant-a",
+            Purpose: "read",
+            CorrelationId: "",
+            Scopes: Array.Empty<string>(),
+            ServiceIdentity: "orders.service");
+        await using var client = new UdbClient("http://127.0.0.1:1", bare);
+        var first = client.Headers().GetValue("x-request-id");
+        Assert.True(Guid.TryParse(first, out _));
+        Assert.NotEqual(first, client.Headers().GetValue("x-request-id"));
+
+        var callerSupplied = new Grpc.Core.Metadata { { "traceparent", "00-abc-def-01" } };
+        Udb.Client.Generated.UdbRequestContext.Ensure(callerSupplied);
+        Assert.Null(callerSupplied.GetValue("x-request-id"));
+    }
+
+    [Fact]
     public async Task Optional_Consistency_Headers_Are_Omitted_When_Unset()
     {
         var metadata = new UdbMetadata(

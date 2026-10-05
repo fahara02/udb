@@ -175,7 +175,7 @@ public sealed class UdbProject : IAsyncDisposable, IDisposable
         {
             headers.Add("x-api-key", apiKey);
         }
-        return headers;
+        return global::Udb.Client.Generated.UdbRequestContext.Ensure(headers);
     }
 
     /// <summary>The shared credentials holder; mutating it hot-swaps creds on every client.</summary>

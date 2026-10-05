@@ -30,6 +30,8 @@ public final class UdbClient implements AutoCloseable {
       Metadata.Key.of("x-purpose", Metadata.ASCII_STRING_MARSHALLER);
   private static final Metadata.Key<String> CORRELATION_ID =
       Metadata.Key.of("x-correlation-id", Metadata.ASCII_STRING_MARSHALLER);
+  private static final Metadata.Key<String> REQUEST_ID =
+      Metadata.Key.of("x-request-id", Metadata.ASCII_STRING_MARSHALLER);
   private static final Metadata.Key<String> SCOPES =
       Metadata.Key.of("x-scopes", Metadata.ASCII_STRING_MARSHALLER);
   private static final Metadata.Key<String> SERVICE_IDENTITY =
@@ -154,10 +156,19 @@ public final class UdbClient implements AutoCloseable {
    */
   public static Metadata headers(UdbMetadata meta, String bearerToken, String apiKey) {
     Metadata headers = new Metadata();
+    // Native RPCs require a request context (x-request-id / x-correlation-id /
+    // traceparent) and fail closed without one. Always send a fresh request id,
+    // and fall back to it for the correlation id when the caller set none.
+    String requestId = java.util.UUID.randomUUID().toString();
+    String correlationId = meta.correlationId();
+    if (correlationId == null || correlationId.isBlank()) {
+      correlationId = requestId;
+    }
     headers.put(TENANT_ID, meta.tenantId());
     headers.put(USER_ID, meta.userId());
     headers.put(PURPOSE, meta.purpose());
-    headers.put(CORRELATION_ID, meta.correlationId());
+    headers.put(CORRELATION_ID, correlationId);
+    headers.put(REQUEST_ID, requestId);
     headers.put(SCOPES, String.join(",", meta.scopes()));
     headers.put(SERVICE_IDENTITY, meta.serviceIdentity());
     headers.put(PROJECT_ID, meta.projectId());
@@ -187,6 +198,22 @@ public final class UdbClient implements AutoCloseable {
   }
 
   /**
+   * Drop the generated request-context headers from {@code generated} when the
+   * outgoing call already carries a caller-supplied {@code x-request-id},
+   * {@code x-correlation-id} or {@code traceparent}, so the SDK never overrides
+   * (or duplicates) a request context the caller set explicitly.
+   */
+  static Metadata withoutRequestContextOverride(Metadata existing, Metadata generated) {
+    if (existing.containsKey(REQUEST_ID)) {
+      generated.discardAll(REQUEST_ID);
+    }
+    if (existing.containsKey(CORRELATION_ID)) {
+      generated.discardAll(CORRELATION_ID);
+    }
+    return generated;
+  }
+
+  /**
    * A {@link ClientInterceptor} that attaches the caller identity headers plus
    * the <em>current</em> credentials from {@code credentials} on every call.
    * Because it reads the holder per-RPC, mutating the holder (e.g. after a token
@@ -208,7 +235,9 @@ public final class UdbClient implements AutoCloseable {
           @Override
           public void start(Listener<RespT> responseListener, Metadata headers) {
             headers.merge(
-                headers(metadata.current(), credentials.bearerToken(), credentials.apiKey()));
+                withoutRequestContextOverride(
+                    headers,
+                    headers(metadata.current(), credentials.bearerToken(), credentials.apiKey())));
             super.start(responseListener, headers);
           }
         };

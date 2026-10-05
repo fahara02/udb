@@ -2891,7 +2891,14 @@ class _ServiceClientBase:
         headers: list[tuple[str, str]] = []
         effective = self._effective_metadata(metadata)
         if effective is not None:
-            headers.extend(effective.to_grpc_metadata())
+            # Metadata always emits its own fresh x-request-id; replace it with
+            # this call's id (stable across retry attempts) so the broker never
+            # sees two request-context values.
+            headers.extend(
+                (key, value)
+                for key, value in effective.to_grpc_metadata()
+                if key != "x-request-id"
+            )
         if self._bearer_token:
             headers.append(("authorization", f"Bearer {self._bearer_token}"))
         if self._api_key:

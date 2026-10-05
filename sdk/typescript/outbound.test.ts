@@ -220,3 +220,13 @@ test("authn/authz response JSON fixtures do not expose persisted credential mate
     assert.equal(json.includes(banned), false, `leaked ${banned}`);
   }
 });
+
+test("metadata() always carries a fresh request context (native RPCs fail closed without one)", () => {
+  const first = metadata(meta({ correlationId: "" }));
+  const second = metadata(meta({ correlationId: "" }));
+  const requestId = first.get("x-request-id")[0] as string;
+  assert.match(requestId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.equal(first.get("x-correlation-id")[0], requestId);
+  assert.notEqual(second.get("x-request-id")[0], requestId);
+  assert.equal(metadata(meta()).get("x-correlation-id")[0], "corr-123");
+});

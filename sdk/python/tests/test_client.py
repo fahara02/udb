@@ -53,3 +53,18 @@ def test_generated_client_uses_canonical_api_key_header() -> None:
     assert headers["x-api-key"] == "api-key-1"
     assert headers["x-request-id"] == "request-1"
     assert "x-udb-api-key" not in headers
+
+
+def test_every_call_carries_exactly_one_request_context_id() -> None:
+    meta = Metadata(tenant_id="t", purpose="p", correlation_id="")
+    plain = dict(meta.to_grpc_metadata())
+    assert len(plain["x-request-id"]) == 32
+    assert plain["x-correlation-id"] == plain["x-request-id"]
+    assert dict(meta.to_grpc_metadata())["x-request-id"] != plain["x-request-id"]
+
+    client = DataBrokerClient("unused", metadata=meta)
+    try:
+        headers = client._call_metadata(None, "request-1")
+    finally:
+        client.close()
+    assert [v for k, v in headers if k == "x-request-id"] == ["request-1"]
