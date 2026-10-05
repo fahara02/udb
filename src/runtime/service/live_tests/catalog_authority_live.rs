@@ -75,6 +75,27 @@ async fn live_postgres_cdc_control_preserves_slot_ownership() {
     let service = catalog_live_service(&catalog_live_dsn().expect("live Postgres DSN")).await;
     let tenant = Uuid::new_v4().to_string();
     let project = Uuid::new_v4().to_string();
+    let foreign_project = Uuid::new_v4().to_string();
+    // Every RPC passes the catalog-authority gate first, which refuses a project
+    // with no ACTIVE catalog. Give both test projects one, so the foreign-project
+    // calls below reach the slot-ownership check this test is about.
+    for project_id in [project.as_str(), foreign_project.as_str()] {
+        service
+            .catalog
+            .stage_catalog(
+                native_catalog::native_manifest().clone(),
+                project_id.to_string(),
+                String::new(),
+                String::new(),
+            )
+            .await
+            .expect("stage test project catalog");
+        service
+            .catalog
+            .activate_catalog_for(project_id, "")
+            .await
+            .expect("activate test project catalog");
+    }
     let slot = format!("control_{}", Uuid::new_v4().simple());
     let request = |tenant: &str, project: &str| {
         let mut request = Request::new(CdcControlRequest {
@@ -118,7 +139,6 @@ async fn live_postgres_cdc_control_preserves_slot_ownership() {
     assert_eq!(status.pause_reason, "operator pause");
 
     let foreign_tenant = Uuid::new_v4().to_string();
-    let foreign_project = Uuid::new_v4().to_string();
     for (other_tenant, other_project) in [
         (foreign_tenant.as_str(), project.as_str()),
         (tenant.as_str(), foreign_project.as_str()),
