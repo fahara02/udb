@@ -69,6 +69,10 @@ Reusable workflows (`workflow_call`, job-level reuse):
   by `benchmark-sdks.yml` after the top-level Release workflow or manually for
   diagnostics. It is intentionally not a CI conformance leg; CI owns only the
   offline SDK conformance/facade/scaffold gates.
+  The manual shadow caller can explicitly request a candidate correctness build
+  from its exact workflow commit. This lane records the candidate binary digest
+  separately and produces no release claim or Pages deployment; release-triggered
+  benchmarks continue to verify the immutable published binary and manifest.
 
 Self-test + lint:
 - `_selftest.yml` — `workflow_dispatch`; proves each composite on the runner

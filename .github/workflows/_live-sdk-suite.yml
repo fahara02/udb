@@ -536,6 +536,7 @@ jobs:
               echo '```'
             } > sdk/php/perf_report_php.md
           else
+            ( cd sdk/php && vendor/bin/pest tests/Live/GeneratedRpcSurfaceTest.php --filter 'keeps a successful broker policy seed independent' ) || exit $?
             ( cd sdk/php && vendor/bin/pest tests/Live/GeneratedRpcSurfaceTest.php --filter 'measures per-RPC latency' ) 2>&1 | tee bench-output/logs/php.log
             code=${PIPESTATUS[0]}
           fi

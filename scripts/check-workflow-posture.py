@@ -5652,7 +5652,28 @@ def check_benchmark_workflow_gate(root: Path = ROOT) -> list[str]:
     fail_block = text[fail_at:] if fail_at >= 0 else ""
     if "if: always()" not in fail_block:
         scoped.append("missing always-run final benchmark failure gate")
-    if "cargo build" in text:
+    # Release benchmarks always download immutable assets. The manual candidate
+    # lane may build only the exact workflow commit, without release provenance.
+    candidate_blocks = re.findall(
+        r"(?ms)^      - name: Build and identify candidate broker\n.*?(?=^      - |\Z)",
+        text,
+    )
+    release_text = text
+    if len(candidate_blocks) == 1:
+        candidate = candidate_blocks[0]
+        candidate_requirements = (
+            "if: inputs.candidate-build",
+            'if [ "$candidate_sha" != "$GITHUB_SHA" ]; then',
+            "cargo build --locked --bin udb --features oidc,webauthn",
+            "bench-output/candidate-provenance.json",
+        )
+        candidate_input = re.search(
+            r"(?ms)^      candidate-build:\n(?:(?!^      \S).)*type: boolean\n(?:(?!^      \S).)*default: false\n",
+            text,
+        )
+        if candidate_input and all(needle in candidate for needle in candidate_requirements) and "UDB_BENCH_RELEASE_" not in candidate:
+            release_text = text.replace(candidate, "")
+    if "cargo build" in release_text:
         scoped.append("benchmark suite must consume a release binary and not rebuild the broker")
     if "actions/deploy-pages" in text or "pages: write" in text:
         scoped.append("benchmark suite must not deploy Pages")
@@ -10484,6 +10505,26 @@ jobs:
         assert any("release asset download command" in failure for failure in failures), failures
         assert any("must consume a release binary" in failure for failure in failures), failures
 
+        candidate_suite_good = live_sdk_suite_good.replace(
+            "    inputs:\n",
+            "    inputs:\n      candidate-build:\n        type: boolean\n        default: false\n",
+        ) + r'''      - name: Build and identify candidate broker
+        if: inputs.candidate-build
+        run: |
+          candidate_sha="$(git rev-parse HEAD)"
+          if [ "$candidate_sha" != "$GITHUB_SHA" ]; then exit 1; fi
+          cargo build --locked --bin udb --features oidc,webauthn
+          echo '{}' > bench-output/candidate-provenance.json
+'''
+        (wf / "_live-sdk-suite.yml").write_text(candidate_suite_good, encoding="utf-8")
+        assert not check_benchmark_workflow_gate(root), check_benchmark_workflow_gate(root)
+        for before, after in [
+            ("default: false", "default: true"),
+            ("if: inputs.candidate-build", "if: always()"),
+            ('if [ "$candidate_sha" != "$GITHUB_SHA" ]; then', 'if false; then'),
+        ]:
+            (wf / "_live-sdk-suite.yml").write_text(candidate_suite_good.replace(before, after), encoding="utf-8")
+            assert any("must consume a release binary" in failure for failure in check_benchmark_workflow_gate(root))
         (wf / "_live-sdk-suite.yml").write_text(live_sdk_suite_good, encoding="utf-8")
         (wf / "_live-sdk-suite.yml").write_text(
             live_sdk_suite_good.replace(
