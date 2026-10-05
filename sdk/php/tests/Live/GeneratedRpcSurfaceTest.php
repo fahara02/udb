@@ -2908,6 +2908,15 @@ it('clears a PHP seed block when a later seed attempt succeeds', function () {
         ->and(phpBlockedManifestSeed('get_backup', $fix, 'BackupService'))->toBeNull();
 });
 
+it('keeps a successful broker policy seed independent of a failed authz policy seed', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->blockSeed('policy_id', 'AuthzService/CreatePolicyRule', 7, 'project mismatch');
+    $fix->set('ds_policy_id', '42');
+
+    expect(phpBlockedManifestSeed('DeletePolicy', $fix, 'DataBroker'))->toBeNull()
+        ->and(phpBlockedManifestSeed('GetPolicyRule', $fix, 'AuthzService')['grpc_code'])->toBe(7);
+});
+
 it('retains failed authz prerequisites and emits positive body-failure evidence', function () {
     $fix = new PerfFixturesPhp();
     $fix->set('tenant_id', 'tenant-php');
@@ -3454,6 +3463,9 @@ class PerfFixturesPhp
     public function blockedSeed(string $field): ?array
     {
         $field = strtolower($field);
+        if (isset($this->m[$field])) {
+            return null;
+        }
         if (isset($this->blocked[$field])) {
             return $this->blocked[$field];
         }
@@ -3896,28 +3908,6 @@ function perfSeedPhp(array $s): array
     if ($delRole) {
         $fix->set('delete_role_id', $delRole->getRole()->getRoleId());
     }
-    if ($uid !== '') {
-        // GetPolicyRule's CreatePolicyRule response id IS Get-queryable, BUT
-        // ActivatePolicyVersion/RollbackPolicyVersion DELETE+regenerate ALL policy_rules for the
-        // tenant/project and sort BEFORE GetPolicyRule — wiping a main-project rule. Seed the
-        // target in an ISOLATED project no version-activation touches (harness_correction.md).
-        $getPolProject = "$project-getpolrule";
-        $created = $try('CreatePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
-            ->setSubject($roleCode)->setDomain($tenant)->setObject('ledger')->setAction('data.update')
-            ->setEffect(1)->setDescription('perf seed rule (version-isolated)')->setCreatedBy($callerAttributionId)->setTenantId($tenant)->setProjectId($getPolProject), $meta),
-            $blockSeedsOnFailure('AuthzService/CreatePolicyRule', ['policy_id']));
-        if ($created && method_exists($created, 'getPolicy') && $created->getPolicy()) {
-            $fix->set('policy_id', $created->getPolicy()->getPolicyId());
-        }
-        // A SEPARATE disposable rule (same isolated project) for the destructive DeletePolicyRule.
-        $delRule = $try('CreateDeletePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
-            ->setSubject($roleCode)->setDomain($tenant)->setObject('ledger-disposable')->setAction('data.delete')
-            ->setEffect(1)->setDescription('disposable')->setCreatedBy($callerAttributionId)->setTenantId($tenant)->setProjectId($getPolProject), $meta),
-            $blockSeedsOnFailure('AuthzService/CreateDeletePolicyRule', ['delete_policy_id']));
-        if ($delRule && method_exists($delRule, 'getPolicy') && $delRule->getPolicy()) {
-            $fix->set('delete_policy_id', $delRule->getPolicy()->getPolicyId());
-        }
-    }
     $fix->set('relation', 'member');
     $fix->set('object', "group:sdk-perf-$suffix");
     $fix->set('resource', 'invoice');
@@ -4229,6 +4219,26 @@ function perfSeedPhp(array $s): array
     // break-glass bypass (<=900s, reason-bearing, audited). Set at seed time; the
     // governance RPCs measure shortly after.
     $fix->set('gov_exp', (string) (time() + 900));
+
+    // Seed policies after governance setup; reads/mutations precede activation.
+    if ($uid !== '') {
+        $getPolProject = $project;
+        $created = $try('CreatePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
+            ->setSubject($roleCode)->setDomain($tenant)->setObject('ledger')->setAction('data.update')
+            ->setEffect(1)->setDescription('perf seed rule')->setCreatedBy($callerAttributionId)->setTenantId($tenant)->setProjectId($getPolProject), $meta),
+            $blockSeedsOnFailure('AuthzService/CreatePolicyRule', ['policy_id']));
+        if ($created && method_exists($created, 'getPolicy') && $created->getPolicy()) {
+            $fix->set('policy_id', $created->getPolicy()->getPolicyId());
+        }
+        // A SEPARATE disposable rule (same project) for the destructive DeletePolicyRule.
+        $delRule = $try('CreateDeletePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
+            ->setSubject($roleCode)->setDomain($tenant)->setObject('ledger-disposable')->setAction('data.delete')
+            ->setEffect(1)->setDescription('disposable')->setCreatedBy($callerAttributionId)->setTenantId($tenant)->setProjectId($getPolProject), $meta),
+            $blockSeedsOnFailure('AuthzService/CreateDeletePolicyRule', ['delete_policy_id']));
+        if ($delRule && method_exists($delRule, 'getPolicy') && $delRule->getPolicy()) {
+            $fix->set('delete_policy_id', $delRule->getPolicy()->getPolicyId());
+        }
+    }
 
     // DataBroker: a dry-run migration plan -> migration_id (run_id).
     $rcSeed = (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf.seed');
@@ -4739,6 +4749,10 @@ function perfSeedPhp(array $s): array
     if ($dep) {
         $fix->set('delete_endpoint_id', $dep->getEndpointId());
     }
+
+    $try('ResumeCdc', fn () => $data->resume_cdc((new \Udb\Entity\V1\CdcControlRequest())
+        ->setContext((new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf.seed'))
+        ->setSlotName('udb_cdc'), $meta));
 
     // BackupService: a policy row + a started backup id (+ a restore target tenant).
     $backup = $authGen->BackupServiceStub();

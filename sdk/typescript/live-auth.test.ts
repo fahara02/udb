@@ -2440,19 +2440,6 @@ async function seedPerfFixtures(
   });
   const uidForPolicy = fix.lookup("user_id");
   if (uidForPolicy) {
-    // GetPolicyRule's CreatePolicyRule response id IS Get-queryable, BUT
-    // ActivatePolicyVersion/RollbackPolicyVersion DELETE+regenerate ALL policy_rules for the
-    // tenant/project and sort BEFORE GetPolicyRule — wiping a main-project rule. Seed the target
-    // in an ISOLATED project no version-activation touches (harness_correction.md GetPolicyRule).
-    const getPolProject = `${projectId}-getpolrule`;
-    await tryRun("CreatePolicyRule", async () => {
-      const created = (await gen.AuthzService.create_policy_rule({ subject: roleCode, domain: tenantId, object: "ledger", action: "data.update", effect: 1, description: "perf seed rule (version-isolated)", created_by: actorUserId, tenant_id: tenantId, project_id: getPolProject }, opts)).policy;
-      if (created?.policy_id) fix.set("policy_id", created.policy_id);
-    });
-    await tryRun("CreateDeletePolicyRule", async () => {
-      const dr = (await gen.AuthzService.create_policy_rule({ subject: roleCode, domain: tenantId, object: "ledger-disposable", action: "data.delete", effect: 1, description: "disposable", created_by: actorUserId, tenant_id: tenantId, project_id: getPolProject }, opts)).policy;
-      if (dr?.policy_id) fix.set("delete_policy_id", dr.policy_id);
-    });
     await tryRun("PutRoleBinding", async () => {
       await gen.AuthzService.put_role_binding({ binding: { subject: `user:${uidForPolicy}`, role: roleCode, tenant: tenantId, project: projectId, source: "sdk-perf" } }, opts);
     });
@@ -2734,6 +2721,19 @@ async function seedPerfFixtures(
       fix.set("rollback_policy_set_id", v2.policy_set_id);
       fix.set("rollback_target_version_id", v1.policy_version_id);
     }, ["rollback_policy_set_id", "rollback_target_version_id"]);
+  }
+
+  // Seed policies after governance setup; reads/mutations precede activation.
+  if (uidForPolicy) {
+    const getPolProject = projectId;
+    await tryRun("CreatePolicyRule", async () => {
+      const created = (await gen.AuthzService.create_policy_rule({ subject: roleCode, domain: tenantId, object: "ledger", action: "data.update", effect: 1, description: "perf seed rule", created_by: actorUserId, tenant_id: tenantId, project_id: getPolProject }, opts)).policy;
+      if (created?.policy_id) fix.set("policy_id", created.policy_id);
+    });
+    await tryRun("CreateDeletePolicyRule", async () => {
+      const dr = (await gen.AuthzService.create_policy_rule({ subject: roleCode, domain: tenantId, object: "ledger-disposable", action: "data.delete", effect: 1, description: "disposable", created_by: actorUserId, tenant_id: tenantId, project_id: getPolProject }, opts)).policy;
+      if (dr?.policy_id) fix.set("delete_policy_id", dr.policy_id);
+    });
   }
 
   // ── DataBroker migration: a real plan run → migration_id (run_id) ──────────────
@@ -3179,6 +3179,10 @@ async function seedPerfFixtures(
       setTimeout(fin, 3000);
       try { s.write?.({ node_id: nodeId, resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", context: { tenant: { tenant_id: tenantId, project_id: projectId } } }); } catch { fin(); }
     });
+  });
+
+  await tryRun("ResumeCdc", async () => {
+    await data.resume_cdc({ context: ctx, slot_name: "udb_cdc" }, opts);
   });
 
   // ── BackupService: a policy row + a started backup id for read/restore RPCs ──

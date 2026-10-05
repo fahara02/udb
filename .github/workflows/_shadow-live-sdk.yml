@@ -15,6 +15,11 @@ on:
         description: "Linux release asset to run"
         default: "udb-linux-amd64-full"
         required: true
+      candidate_build:
+        description: "Build the current commit in CI before publishing"
+        type: boolean
+        default: false
+        required: false
 
 permissions:
   contents: read
@@ -25,4 +30,6 @@ jobs:
     with:
       release-tag: ${{ inputs.release_tag }}
       release-asset: ${{ inputs.release_asset }}
+      checkout-ref: ${{ inputs.candidate_build && github.sha || (inputs.release_tag != 'latest' && inputs.release_tag) || '' }}
+      candidate-build: ${{ inputs.candidate_build }}
     secrets: inherit

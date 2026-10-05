@@ -198,8 +198,8 @@ active_cdc_owner() {
 holder_service_from_owner() {
   local owner="$1"
   case "$owner" in
-    udb-ha-a) echo "udb-ha-a" ;;
-    udb-ha-b) echo "udb-ha-b" ;;
+    udb-ha-a|udb-ha-a-????????-????-????-????-????????????) echo "udb-ha-a" ;;
+    udb-ha-b|udb-ha-b-????????-????-????-????-????????????) echo "udb-ha-b" ;;
     *)
       echo "unexpected CDC holder hostname: ${owner}" >&2
       exit 1
@@ -334,7 +334,7 @@ compose kill -s KILL "$holder_service" >/dev/null
 assert_service_stopped "$holder_service"
 assert_service_running_container "$peer_service" "$peer_cid"
 owner_after="$(wait_for_cdc_owner "peer takeover" "$owner_before")"
-if [[ "$owner_after" != "$peer_service" ]]; then
+if [[ "$(holder_service_from_owner "$owner_after")" != "$peer_service" ]]; then
   echo "expected CDC peer ${peer_service}, got ${owner_after}" >&2
   exit 1
 fi

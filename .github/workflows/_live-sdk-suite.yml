@@ -46,6 +46,11 @@ on:
         required: false
         type: string
         default: ""
+      candidate-build:
+        description: "Build this exact workflow commit in CI for pre-release correctness checks"
+        required: false
+        type: boolean
+        default: false
     secrets:
       # The live/bench harness uses only test-fixture secrets baked into
       # broker-env; no real secrets are required. Declared (optional) so a caller
@@ -126,6 +131,7 @@ jobs:
 
       # ── Broker binary (mode-dependent) ────────────────────────────────
       - name: Resolve release binary (perf)
+        if: '!inputs.candidate-build'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -208,6 +214,31 @@ jobs:
             echo "UDB_BENCH_BINARY_SHA256=${binary_sha256}"
             echo "UDB_BENCH_BIN=${GITHUB_WORKSPACE}/bench-output/bin/${RELEASE_ASSET}"
           } >> "$GITHUB_ENV"
+
+      - name: Set up candidate Rust build
+        if: inputs.candidate-build
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key: sdk-candidate-full
+
+      - name: Build and identify candidate broker
+        if: inputs.candidate-build
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate_sha="$(git rev-parse HEAD)"
+          if [ "$candidate_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate SDK harness must match the workflow commit"
+            exit 1
+          fi
+          cargo build --locked --bin udb --features oidc,webauthn
+          cp target/debug/udb bench-output/bin/udb-candidate
+          binary_sha256="$(sha256sum bench-output/bin/udb-candidate | cut -d' ' -f1)"
+          binary_version="$(bench-output/bin/udb-candidate --version)"
+          printf '{"commit":"%s","sha256":"%s","version":"%s","profile":"debug","purpose":"pre-release correctness"}\n' \
+            "$candidate_sha" "$binary_sha256" "$binary_version" > bench-output/candidate-provenance.json
+          echo "UDB_BENCH_BIN=${GITHUB_WORKSPACE}/bench-output/bin/udb-candidate" >> "$GITHUB_ENV"
+          echo "Candidate broker: $binary_version at $candidate_sha"
 
       - name: Resolve broker binary path
         id: bin
@@ -562,6 +593,7 @@ jobs:
             bench-output/logs/**
             bench-output/status/**
             bench-output/backend-bootstrap.json
+            bench-output/candidate-provenance.json
             /tmp/udb-bench.log
           if-no-files-found: ignore
 

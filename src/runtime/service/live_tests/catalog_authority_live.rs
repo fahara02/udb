@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 use crate::engine::FsmState;
 use crate::metrics::{MetricsRecorder, NoopMetrics};
+use crate::proto::CdcControlRequest;
 use crate::proto::StageCatalogRequest;
 use crate::runtime::config::UdbConfig;
 use crate::runtime::security::SecurityConfig;
@@ -62,6 +63,108 @@ async fn catalog_live_service(dsn: &str) -> DataBrokerService {
         None,
         true,
     )
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; run in the CI live lane"]
+async fn live_postgres_cdc_control_preserves_slot_ownership() {
+    use super::support::{live_native_service_db_lock, live_pg_pool, migrate_native_service_db};
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let service = catalog_live_service(&catalog_live_dsn().expect("live Postgres DSN")).await;
+    let tenant = Uuid::new_v4().to_string();
+    let project = Uuid::new_v4().to_string();
+    let slot = format!("control_{}", Uuid::new_v4().simple());
+    let request = |tenant: &str, project: &str| {
+        let mut request = Request::new(CdcControlRequest {
+            slot_name: slot.clone(),
+            reason: "operator pause".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", tenant.parse().unwrap());
+        request
+            .metadata_mut()
+            .insert("x-project-id", project.parse().unwrap());
+        request
+            .metadata_mut()
+            .insert("x-purpose", "cdc.live".parse().unwrap());
+        request
+    };
+    let claim = |tenant: &str, project: &str| {
+        test_claim_context("cdc-operator", tenant, project, &["udb:admin"], &[])
+    };
+    let paused = scope_claim_context_for_test(
+        claim(&tenant, &project),
+        service.pause_cdc_inner(request(&tenant, &project)),
+    )
+    .await
+    .expect("pause creates the owned control row")
+    .into_inner();
+    assert!(paused.paused);
+    let status = scope_claim_context_for_test(
+        claim(&tenant, &project),
+        service.get_cdc_status_inner(request(&tenant, &project)),
+    )
+    .await
+    .expect("read owned CDC status")
+    .into_inner();
+    assert!(status.paused);
+    assert_eq!(status.pause_reason, "operator pause");
+
+    let foreign_tenant = Uuid::new_v4().to_string();
+    let foreign_project = Uuid::new_v4().to_string();
+    for (other_tenant, other_project) in [
+        (foreign_tenant.as_str(), project.as_str()),
+        (tenant.as_str(), foreign_project.as_str()),
+    ] {
+        let pause = scope_claim_context_for_test(
+            claim(other_tenant, other_project),
+            service.pause_cdc_inner(request(other_tenant, other_project)),
+        )
+        .await
+        .expect_err("foreign slot cannot be paused");
+        assert_eq!(pause.code(), Code::NotFound);
+        let resume = scope_claim_context_for_test(
+            claim(other_tenant, other_project),
+            service.resume_cdc_inner(request(other_tenant, other_project)),
+        )
+        .await
+        .expect_err("foreign slot cannot be resumed");
+        assert_eq!(resume.code(), Code::NotFound);
+        let status = scope_claim_context_for_test(
+            claim(other_tenant, other_project),
+            service.get_cdc_status_inner(request(other_tenant, other_project)),
+        )
+        .await
+        .expect_err("foreign slot status is concealed");
+        assert_eq!(status.code(), Code::NotFound);
+    }
+    let unchanged = scope_claim_context_for_test(
+        claim(&tenant, &project),
+        service.get_cdc_status_inner(request(&tenant, &project)),
+    )
+    .await
+    .expect("foreign writes leave the owner paused")
+    .into_inner();
+    assert!(unchanged.paused);
+    scope_claim_context_for_test(
+        claim(&tenant, &project),
+        service.resume_cdc_inner(request(&tenant, &project)),
+    )
+    .await
+    .expect("owner can resume");
+    let resumed = scope_claim_context_for_test(
+        claim(&tenant, &project),
+        service.get_cdc_status_inner(request(&tenant, &project)),
+    )
+    .await
+    .expect("read resumed slot")
+    .into_inner();
+    assert!(!resumed.paused);
+    assert!(resumed.pause_reason.is_empty());
 }
 
 async fn durable_active(pool: &PgPool, project_id: &str) -> (String, String, i64) {

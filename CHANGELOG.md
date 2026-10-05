@@ -67,6 +67,14 @@ what that audit found and adds the seam tests that were missing.
 
 ### Fixed
 
+- Fixed `PauseCdc` SQL while retaining tenant/project ownership checks; SDK
+  benchmarks now register their owned control slot before reading its status.
+- Restored references to shared system roles only after verifying their live
+  global provenance. Cross-tenant role references still fail and roll back.
+- Seeded SDK policy fixtures after governance setup in the authenticated project,
+  and kept PHP broker-policy seeds independent of failed authz-policy seeds.
+- Updated the HA CDC smoke to recognize unique broker process identities.
+- Added a CI candidate benchmark lane for the complete SDK surface before release.
 - Restored the browser playground build by sharing Neo4j label resolution with
   the portable compiler; CI now tests the portable crate and the built WASM.
 - Rebound served auth-test tenant gates to each test's live Postgres pool,

@@ -3865,7 +3865,6 @@ impl DataBrokerRuntime {
              VALUES ($1, $2, $3, TRUE, $4)
              ON CONFLICT (slot_name) DO UPDATE
                 SET paused = TRUE, pause_reason = EXCLUDED.pause_reason, updated_at = NOW()
-                WHERE {ctrl_rel}.tenant_id = EXCLUDED.tenant_id AND {ctrl_rel}.project_id = EXCLUDED.project_id
                 WHERE {ctrl_rel}.tenant_id = EXCLUDED.tenant_id AND {ctrl_rel}.project_id = EXCLUDED.project_id"
         ))
         .bind(slot_name)

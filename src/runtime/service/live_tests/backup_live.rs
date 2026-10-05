@@ -372,6 +372,55 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
     .await
     .expect("make the first exported user reference the later self row");
 
+    // The same export contains an owned role and a shared system role binding,
+    // just like a bootstrapped tenant. Only the owned parent must be remapped.
+    crate::runtime::service::auth_service::seed_system_authz_defaults(&pool)
+        .await
+        .expect("seed real shared system roles");
+    let shared_role = crate::runtime::service::auth_service::SYSTEM_ORG_OWNER_ROLE_ID;
+    let owned_role = Uuid::new_v4().to_string();
+    let role = native_model(
+        "udb.core.authz.entity.v1.Role",
+        &["role_id", "name", "tenant_id", "project_id"],
+    );
+    let role_seed = format!(
+        "INSERT INTO {} ({}, {}, {}, {}) VALUES ($1::uuid, $2, $3, $4)",
+        role.relation,
+        role.q("role_id"),
+        role.q("name"),
+        role.q("tenant_id"),
+        role.q("project_id"),
+    );
+    sqlx::query(&role_seed)
+        .bind(&owned_role)
+        .bind("backup owned role")
+        .bind(&source_tenant)
+        .bind(&project_id)
+        .execute(&pool)
+        .await
+        .expect("seed owned role parent");
+    let assignment = native_model(
+        "udb.core.authz.entity.v1.UserRole",
+        &["user_id", "role_id", "domain", "tenant_id"],
+    );
+    let assignment_seed = format!(
+        "INSERT INTO {} ({}, {}, {}, {}) VALUES ($1::uuid, $2::uuid, '', $3)",
+        assignment.relation,
+        assignment.q("user_id"),
+        assignment.q("role_id"),
+        assignment.q("domain"),
+        assignment.q("tenant_id"),
+    );
+    for parent in [owned_role.as_str(), shared_role] {
+        sqlx::query(&assignment_seed)
+            .bind(&source_user_a)
+            .bind(parent)
+            .bind(&source_tenant)
+            .execute(&pool)
+            .await
+            .expect("seed shared and owned parent references");
+    }
+
     let svc = backup_service_for_projects(&[&project_id]).await;
     let backup = svc
         .start_tenant_backup(backup_request(
@@ -508,6 +557,105 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
         assert_eq!(restored_user.1.len(), 33);
         assert!(restored_user.1.starts_with('r'));
     }
+
+    let restored_roles: Vec<(String, String)> = sqlx::query_as(&format!(
+        "SELECT r.{}::text, r.{}::text FROM {} a JOIN {} r ON a.{} = r.{} WHERE a.{} = $1",
+        role.q("role_id"),
+        role.q("tenant_id"),
+        assignment.relation,
+        role.relation,
+        assignment.q("role_id"),
+        role.q("role_id"),
+        assignment.q("tenant_id"),
+    ))
+    .bind(&target_tenant)
+    .fetch_all(&pool)
+    .await
+    .expect("read restored role bindings");
+    assert_eq!(restored_roles.len(), 2);
+    assert!(
+        restored_roles
+            .iter()
+            .any(|row| row.0 == shared_role && row.1 == "*")
+    );
+    assert!(
+        restored_roles
+            .iter()
+            .any(|row| row.0 != owned_role && row.1 == target_tenant)
+    );
+
+    // An ordinary role belonging to another tenant must never become a shared
+    // reference. A real exported FK can be valid in SQL yet invalid to restore.
+    let foreign_role = Uuid::new_v4().to_string();
+    let foreign_tenant = Uuid::new_v4().to_string();
+    sqlx::query(&role_seed)
+        .bind(&foreign_role)
+        .bind("backup foreign role")
+        .bind(&foreign_tenant)
+        .bind(&project_id)
+        .execute(&pool)
+        .await
+        .expect("seed foreign role parent");
+    sqlx::query(&assignment_seed)
+        .bind(&source_user_a)
+        .bind(&foreign_role)
+        .bind(&source_tenant)
+        .execute(&pool)
+        .await
+        .expect("seed foreign role reference");
+    let foreign_backup = svc
+        .start_tenant_backup(backup_request(
+            backup_pb::StartTenantBackupRequest {
+                tenant_id: source_tenant.clone(),
+                object_backend: "minio".to_string(),
+                object_bucket: "udb-storage".to_string(),
+                ..Default::default()
+            },
+            &source_tenant,
+            &project_id,
+        ))
+        .await
+        .expect("export the foreign-parent fixture")
+        .into_inner();
+    let denied_target = Uuid::new_v4().to_string();
+    let denied = scope_claim_context_for_test(
+        test_claim_context(
+            "backup-platform-admin",
+            "",
+            "",
+            &["udb:platform_admin"],
+            &["platform_admin"],
+        ),
+        svc.restore_tenant(backup_request(
+            backup_pb::RestoreTenantRequest {
+                source_tenant_id: source_tenant.clone(),
+                target_tenant_id: denied_target.clone(),
+                backup_id: foreign_backup.backup_id,
+                confirmation_token: "confirm-cross-tenant-restore".to_string(),
+                allow_cross_tenant: true,
+                metadata_json: "{}".to_string(),
+            },
+            &denied_target,
+            &project_id,
+        )),
+    )
+    .await
+    .expect_err("foreign tenant role is not a shared system parent");
+    assert_eq!(denied.code(), Code::FailedPrecondition);
+    assert!(denied.message().contains("system-global role provenance"));
+    let denied_users: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {} WHERE {} = $1",
+        user.relation,
+        user.q("tenant_id"),
+    ))
+    .bind(&denied_target)
+    .fetch_one(&pool)
+    .await
+    .expect("read refused target");
+    assert_eq!(
+        denied_users, 0,
+        "failed restore must roll back earlier inserts"
+    );
 
     sqlx::query(&format!(
         "DROP INDEX IF EXISTS {}.{}",

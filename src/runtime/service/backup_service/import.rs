@@ -295,6 +295,84 @@ fn restore_remap_authority(
     ))
 }
 
+/// System-owned global roles are shared parents, so a tenant export does not
+/// contain them. Preserve their identity only after checking their durable
+/// provenance; an ordinary foreign tenant's role still requires an exact remap.
+async fn preallocate_shared_role_restore_refs(
+    conn: &mut PgConnection,
+    row: &serde_json::Map<String, serde_json::Value>,
+    table: &ManifestTable,
+    remaps: &mut RestoreValueRemaps,
+) -> Result<(), Status> {
+    let role = native_model(
+        "udb.core.authz.entity.v1.Role",
+        &["role_id", "tenant_id", "project_id", "is_system"],
+    );
+    for fk in &table.foreign_keys {
+        if qualified_relation(&fk.ref_schema, &fk.ref_table) != role.relation {
+            continue;
+        }
+        for (column, ref_column) in fk.columns.iter().zip(&fk.ref_columns) {
+            if ref_column != role.column("role_id") {
+                continue;
+            }
+            let Some(value) = row.get(column).filter(|value| !value.is_null()) else {
+                continue;
+            };
+            let key = RestoreColumnKey {
+                schema: fk.ref_schema.clone(),
+                table: fk.ref_table.clone(),
+                column: ref_column.clone(),
+            };
+            let old_key = restore_value_key(value).ok_or_else(|| {
+                backup_topology_mismatch_status("restore_tenant", "unsupported role reference")
+            })?;
+            if remaps
+                .get(&key)
+                .is_some_and(|values| values.contains_key(&old_key))
+            {
+                continue;
+            }
+            let role_id = value.as_str().ok_or_else(|| {
+                backup_topology_mismatch_status("restore_tenant", "role reference must be a UUID")
+            })?;
+            let shared: Option<String> = sqlx::query_scalar(&format!(
+                "SELECT {}::text FROM {} WHERE {} = $1::uuid AND {} = '*' \
+                 AND {} = '' AND {} = TRUE FOR SHARE",
+                role.q("role_id"),
+                role.relation,
+                role.q("role_id"),
+                role.q("tenant_id"),
+                role.q("project_id"),
+                role.q("is_system"),
+            ))
+            .bind(role_id)
+            .fetch_optional(&mut *conn)
+            .await
+            .map_err(|err| {
+                backup_internal_status(
+                    "restore_shared_role_probe",
+                    format!("shared role provenance probe failed: {err}"),
+                )
+            })?;
+            if shared.is_none() {
+                return Err(backup_topology_mismatch_status(
+                    "restore_tenant",
+                    format!(
+                        "foreign-key restore value for {}.{}.{} has no exact parent remap or system-global role provenance",
+                        table.schema, table.table, column
+                    ),
+                ));
+            }
+            remaps
+                .entry(key)
+                .or_default()
+                .insert(old_key, value.clone());
+        }
+    }
+    Ok(())
+}
+
 fn apply_parent_restore_remaps(
     row: &mut serde_json::Map<String, serde_json::Value>,
     table: &ManifestTable,
@@ -1654,6 +1732,13 @@ pub(crate) async fn restore_tenant(
                 &binding.project_id,
             )?;
             if cross_tenant_restore {
+                preallocate_shared_role_restore_refs(
+                    &mut *tx,
+                    &obj,
+                    manifest_table,
+                    &mut restore_remaps,
+                )
+                .await?;
                 apply_parent_restore_remaps(
                     &mut obj,
                     manifest_table,

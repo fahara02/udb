@@ -2768,36 +2768,6 @@ def perf_seed(
     except grpc.RpcError:
         pass
     if uid:
-        # ActivatePolicyVersion/RollbackPolicyVersion DELETE policy_rules WHERE tenant=$1 AND
-        # project=$2 for the activated (main) project and re-insert the version's rules with
-        # FRESH gen_random_uuid() ids (governance_activate.rs:236,274). Those measured RPCs sort
-        # BEFORE GetPolicyRule, so a main-project rule (and any captured id) is wiped before the
-        # read. GetPolicyRule reads by policy_id ALONE (no project filter; owner bypasses RLS),
-        # so seed its target in an ISOLATED project no version-activation touches → the row + its
-        # CreatePolicyRule response id survive the whole run and stay Get-queryable.
-        get_pol_project = f"{project}-getpolrule"
-        try:
-            created_rule = authz.CreatePolicyRule(
-                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger", action="data.update", effect=1, description="perf seed rule (version-isolated)", created_by=actor_user_id, tenant_id=tenant, project_id=get_pol_project),
-                metadata=md, timeout=8.0,
-            )
-            pid = getattr(getattr(created_rule, "policy", None), "policy_id", "")
-            if pid:
-                fix.set("policy_id", pid)
-        except (grpc.RpcError, AttributeError, ValueError):
-            pass
-        # A SEPARATE disposable rule (same isolated project) for the destructive DeletePolicyRule,
-        # so deleting it never touches the GetPolicyRule target.
-        try:
-            del_rule = authz.CreatePolicyRule(
-                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger-disposable", action="data.delete", effect=1, description="perf seed disposable rule", created_by=actor_user_id, tenant_id=tenant, project_id=get_pol_project),
-                metadata=md, timeout=8.0,
-            )
-            del_pid = getattr(getattr(del_rule, "policy", None), "policy_id", "")
-            if del_pid:
-                fix.set("delete_policy_id", del_pid)
-        except (grpc.RpcError, AttributeError, ValueError):
-            pass
         for fn in (
             lambda: authz.PutRoleBinding(authz_pb.PutRoleBindingRequest(binding=authz_pb.RoleBinding(subject=f"user:{uid}", role=role_code, tenant=tenant, project=project, source="sdk-perf")), metadata=md, timeout=8.0),
             lambda: authz.PutRelationship(authz_pb.PutRelationshipRequest(tuple=authz_pb.RelationshipTuple(subject=f"user:{uid}", relation="member", object=f"group:sdk-perf-{suffix}", tenant=tenant, project=project, source="sdk-perf")), metadata=md, timeout=8.0),
@@ -2955,6 +2925,32 @@ def perf_seed(
                 fix.set("rollback_target_version_id", rollback_v1.policy_version_id)
             except grpc.RpcError:
                 pass
+
+    # Seed policies after governance setup; reads/mutations precede activation.
+    if uid:
+        get_pol_project = project
+        try:
+            created_rule = authz.CreatePolicyRule(
+                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger", action="data.update", effect=1, description="perf seed rule", created_by=actor_user_id, tenant_id=tenant, project_id=get_pol_project),
+                metadata=md, timeout=8.0,
+            )
+            pid = getattr(getattr(created_rule, "policy", None), "policy_id", "")
+            if pid:
+                fix.set("policy_id", pid)
+        except (grpc.RpcError, AttributeError, ValueError):
+            pass
+        # A SEPARATE disposable rule (same project) for the destructive DeletePolicyRule,
+        # so deleting it never touches the GetPolicyRule target.
+        try:
+            del_rule = authz.CreatePolicyRule(
+                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger-disposable", action="data.delete", effect=1, description="perf seed disposable rule", created_by=actor_user_id, tenant_id=tenant, project_id=get_pol_project),
+                metadata=md, timeout=8.0,
+            )
+            del_pid = getattr(getattr(del_rule, "policy", None), "policy_id", "")
+            if del_pid:
+                fix.set("delete_policy_id", del_pid)
+        except (grpc.RpcError, AttributeError, ValueError):
+            pass
 
     # ── IdentityProviderService: a real OIDC provider -> provider_id ─────────────
     idp = clients[IdentityProviderServiceClient].stub
@@ -3640,6 +3636,12 @@ def perf_seed(
             fix.set(_ep_ref, ep.endpoint_id)
         except grpc.RpcError:
             pass
+
+    try:
+        from udb.entity.v1 import cdc_pb2
+        broker.ResumeCdc(cdc_pb2.CdcControlRequest(context=rc, slot_name="udb_cdc"), metadata=md, timeout=8.0)
+    except grpc.RpcError as exc:
+        print(f"perf seed: ResumeCdc failed: {exc}", flush=True)
 
     # BackupService: policy + a tenant backup → backup_id + restore_tenant_id.
     backup = clients[BackupServiceClient].stub

@@ -359,7 +359,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		seedDisposablePasskey := func(fixturePrefix, label string) {
 			seededUser, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
 				Username: "sdk-perf-webauthn-" + fixturePrefix + "-" + suffix,
-				Email: "sdk-perf-webauthn-" + fixturePrefix + "-" + suffix + "@example.com",
+				Email:    "sdk-perf-webauthn-" + fixturePrefix + "-" + suffix + "@example.com",
 				Password: pw, TenantId: tenant, ProjectId: project,
 				FullName: "SDK Perf WebAuthn " + fixturePrefix + " User",
 			})
@@ -545,31 +545,6 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		Role: roleCode, Action: "data.select", Resource: "invoice",
 	}})
 	if uid := fix.m["user_id"]; uid != "" {
-		// ActivatePolicyVersion/RollbackPolicyVersion DELETE policy_rules WHERE
-		// tenant=$1 AND project=$2 for the activated (main) project and re-insert the
-		// version's rules with FRESH gen_random_uuid() ids (governance_activate.rs:236,274).
-		// Those measured RPCs sort BEFORE GetPolicyRule, so a main-project rule (and any
-		// captured/seed-verified id) is wiped before the read. GetPolicyRule reads by
-		// policy_id ALONE (no project filter; owner bypasses RLS), so seed its target in
-		// an ISOLATED project no version-activation touches → the row survives the whole
-		// run and its CreatePolicyRule response id stays Get-queryable.
-		getPolProject := project + "-getpolrule"
-		if created, err := authz.CreatePolicyRule(base, &authzpb.CreatePolicyRuleRequest{
-			Subject: roleCode, Domain: tenant, Object: "ledger", Action: "data.update",
-			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed rule (version-isolated)", CreatedBy: actorUserID, TenantId: tenant, ProjectId: getPolProject,
-		}); err != nil {
-			t.Logf("perf seed: CreatePolicyRule (getpolrule) failed: %v", err)
-		} else {
-			fix.set("policy_id", created.GetPolicy().GetPolicyId())
-		}
-		// A SEPARATE disposable rule (same isolated project) for the destructive
-		// DeletePolicyRule, so deleting it never touches the GetPolicyRule target.
-		if delRule, err := authz.CreatePolicyRule(base, &authzpb.CreatePolicyRuleRequest{
-			Subject: roleCode, Domain: tenant, Object: "ledger-disposable", Action: "data.delete",
-			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed disposable rule", CreatedBy: actorUserID, TenantId: tenant, ProjectId: getPolProject,
-		}); err == nil {
-			fix.set("delete_policy_id", delRule.GetPolicy().GetPolicyId())
-		}
 		_, _ = authz.PutRoleBinding(base, &authzpb.PutRoleBindingRequest{Binding: &authzpb.RoleBinding{Subject: "user:" + uid, Role: roleCode, Tenant: tenant, Project: project, Source: "sdk-perf"}})
 		_, _ = authz.PutRelationship(base, &authzpb.PutRelationshipRequest{Tuple: &authzpb.RelationshipTuple{Subject: "user:" + uid, Relation: "member", Object: "group:sdk-perf-" + suffix, Tenant: tenant, Project: project, Source: "sdk-perf"}})
 	}
@@ -664,6 +639,28 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			_, _ = authz.ActivatePolicyVersion(platformBase, &authzpb.ActivatePolicyVersionRequest{Actor: gActor(), PolicyVersionId: v2.GetPolicyVersionId()})
 			fix.set("rollback_policy_set_id", v2.GetPolicySetId())
 			fix.set("rollback_target_version_id", v1.GetPolicyVersionId())
+		}
+	}
+
+	// Seed policy reads after governance setup replaces the active snapshot.
+	// Measurement orders reads/mutations before destructive activation.
+	if fix.m["user_id"] != "" {
+		getPolProject := project
+		if created, err := authz.CreatePolicyRule(base, &authzpb.CreatePolicyRuleRequest{
+			Subject: roleCode, Domain: tenant, Object: "ledger", Action: "data.update",
+			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed rule", CreatedBy: actorUserID, TenantId: tenant, ProjectId: getPolProject,
+		}); err != nil {
+			t.Logf("perf seed: CreatePolicyRule failed: %v", err)
+		} else {
+			fix.set("policy_id", created.GetPolicy().GetPolicyId())
+		}
+		// A SEPARATE disposable rule (same project) for the destructive
+		// DeletePolicyRule, so deleting it never touches the GetPolicyRule target.
+		if delRule, err := authz.CreatePolicyRule(base, &authzpb.CreatePolicyRuleRequest{
+			Subject: roleCode, Domain: tenant, Object: "ledger-disposable", Action: "data.delete",
+			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed disposable rule", CreatedBy: actorUserID, TenantId: tenant, ProjectId: getPolProject,
+		}); err == nil {
+			fix.set("delete_policy_id", delRule.GetPolicy().GetPolicyId())
 		}
 	}
 
@@ -922,6 +919,10 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	}
 
 	nctx := nativeCtxFn()
+
+	if _, err := broker.ResumeCdc(brokerCtx, &entityv1.CdcControlRequest{Context: rc, SlotName: "udb_cdc"}); err != nil {
+		t.Logf("perf seed: ResumeCdc failed: %v", err)
+	}
 
 	// ── BackupService: policy + backup id for read/restore fixtures ─────────────
 	backup := backuppb.NewBackupServiceClient(authConn)

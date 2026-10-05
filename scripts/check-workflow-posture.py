@@ -810,8 +810,8 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ("neo4j:5", "Neo4j image pin"),
         ("http://localhost:7474/db/neo4j/tx/commit", "Neo4j query readiness gate"),
         ("docker exec udb-bench-minio mc alias set", "MinIO client from the pinned server image"),
-        ("\"${mc_bin}\" mb --ignore-existing \"local/${MINIO_BUCKET}\"", "MinIO live SDK bucket"),
-        ("\"${mc_bin}\" mb --ignore-existing \"local/${MINIO_STORAGE_BUCKET}\"", "MinIO storage bucket"),
+        ("docker exec udb-bench-minio mc mb --ignore-existing \"local/${MINIO_BUCKET}\"", "MinIO live SDK bucket"),
+        ("docker exec udb-bench-minio mc mb --ignore-existing \"local/${MINIO_STORAGE_BUCKET}\"", "MinIO storage bucket"),
     ),
     ".github/actions/setup-rust/action.yml": (
         ("dtolnay/rust-toolchain@stable", "Rust toolchain action"),
