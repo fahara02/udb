@@ -29,6 +29,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Recovery dispatches publish the immutable release sources, even
+          # when main already contains the next product version.
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref }}
 
       # Node toolchain (with the npm registry wired for publishing) via the
       # single-source setup-sdk-toolchains composite. version-guard needs Node.
@@ -79,4 +83,14 @@ jobs:
         working-directory: sdk/typescript
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --ignore-scripts --access public
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::The production NPM_TOKEN secret is missing. Configure a granular token with write access to @udb_plus/sdk and bypass 2FA for CI publishing."
+            exit 1
+          fi
+          # An authorization failure can appear as E404 for a public package.
+          # Verify the token first so the publishing identity is visible.
+          npm whoami
+          npm publish --ignore-scripts --access public
