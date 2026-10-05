@@ -900,7 +900,7 @@ impl AuthnServiceImpl {
         let event = AuthEvent::new(
             topics::SESSION_REVOKED,
             format!("admin-revoke:{}", Uuid::new_v4().simple()),
-            String::new(),
+            crate::runtime::service::method_security::current_claim_context().tenant_id,
             serde_json::json!({ "user_id": req.user_id.clone(), "reason": req.reason.clone() }),
         );
         // Atomicity (§7): session revoke + family revoke + audit event commit together.
@@ -951,7 +951,7 @@ impl AuthnServiceImpl {
         let event = AuthEvent::new(
             topics::SESSION_REVOKED,
             format!("admin-revoke-all:{}", Uuid::new_v4().simple()),
-            String::new(),
+            crate::runtime::service::method_security::current_claim_context().tenant_id,
             serde_json::json!({ "user_id": req.user_id.clone(), "reason": req.reason.clone() }),
         );
         // Atomicity (§7): session revoke + family revoke + audit event commit together.

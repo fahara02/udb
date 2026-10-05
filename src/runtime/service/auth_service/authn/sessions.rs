@@ -891,7 +891,7 @@ impl AuthnServiceImpl {
             self.emit_event(AuthEvent::new(
                 topics::SESSION_REVOKED,
                 public_session_id.clone(),
-                String::new(),
+                claim_tenant.clone(),
                 serde_json::json!({
                     "session_public_id": public_session_id.clone(),
                     "revoke_reason": req.revoke_reason.clone(),

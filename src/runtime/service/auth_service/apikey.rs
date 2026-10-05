@@ -1090,7 +1090,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
         self.emit_event(AuthEvent::new(
             topics::API_KEY_UPDATED,
             rec.key_prefix.clone(),
-            String::new(),
+            rec.tenant_id.clone(),
             serde_json::json!({
                 "key_id": req.key_id.clone(),
                 "key_prefix": rec.key_prefix.clone(),
@@ -1136,7 +1136,9 @@ impl ApiKeyService for ApiKeyServiceImpl {
         self.emit_event(AuthEvent::new(
             topics::API_KEY_REVOKED,
             req.key_id.clone(),
-            String::new(),
+            // udb.* topics are tenant-scoped: an empty envelope tenant is
+            // rejected by CDC tenant-scope validation.
+            existing.tenant_id.clone(),
             serde_json::json!({
                 "key_id": req.key_id.clone(),
                 "key_prefix": req.key_id.clone(),

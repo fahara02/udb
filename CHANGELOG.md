@@ -38,6 +38,10 @@ release line was tagged.
   Deny, but they treated the default-deny's evaluated candidates as a match.
   A default-deny now falls through to the method-scope authorization; an
   explicit Deny or an engine error still refuses.
+- **API-key and session events had no envelope tenant.** `udb.apikey.revoked`
+  / `updated` and `udb.authn.session.revoked` were emitted with an empty
+  tenant, so CDC tenant-scope validation rejected them. They now carry the
+  key's / caller's tenant.
 - **14 data-plane actions could not be granted.** `udb authz seed` rejected
   PublishCDC, EnqueueOutboxEvent, the vector and object RPCs, the typed store
   tokens (`cache.*`, `document.*`, `graph.*`, `timeseries.*`,
