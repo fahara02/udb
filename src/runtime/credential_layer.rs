@@ -86,8 +86,9 @@ impl VerifiedPrincipal {
         // One classifier for both paths, so the principal's recorded
         // credential type always equals the type method security enforced.
         let credential_type =
-            crate::runtime::service::method_security::credential_type_for_bearer_claims(claims)
-                as i32;
+            crate::runtime::service::method_security::credential_type_code_for_bearer_claims(
+                claims,
+            );
 
         Self {
             credential_type,

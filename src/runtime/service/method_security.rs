@@ -349,7 +349,14 @@ fn bearer_is_service_account(claims: &SecurityClaims) -> bool {
         })
 }
 
-pub(crate) fn credential_type_for_bearer_claims(claims: &SecurityClaims) -> CredentialType {
+/// `udb.core.common.v1.CredentialType` value for verified bearer claims — the
+/// SAME classification [`enforce`] applies, exported so the credential layer
+/// records the type that was actually enforced.
+pub(crate) fn credential_type_code_for_bearer_claims(claims: &SecurityClaims) -> i32 {
+    credential_type_for_bearer_claims(claims) as i32
+}
+
+fn credential_type_for_bearer_claims(claims: &SecurityClaims) -> CredentialType {
     match claims
         .auth_method
         .as_deref()
