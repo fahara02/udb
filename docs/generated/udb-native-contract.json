@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "2b1a722bdd3062c2a863783ba63a75d9e09ea842cb4563fc1beb89827ab399f1",
+  "descriptor_sha256": "4f116d73ebf36891f9243032dc45daf3be0e59354bf5fb3ad73e95a586b656f6",
   "contract_version": "7.2.0",
   "udb_version": "0.5.29",
   "protocol_version": "1.0.0",
@@ -13406,7 +13406,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -13772,7 +13773,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
