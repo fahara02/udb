@@ -142,12 +142,14 @@ async fn live_served_tenant_suspension_revokes_live_bearer_until_reactivated() {
     .expect("sign tenant bearer")
     .expect("signing key configured")
     .0;
-    crate::runtime::security::SecurityConfig::install_global(security);
+    crate::runtime::security::SecurityConfig::install_global(security.clone());
 
     let served = tenant_service(pool.clone()).await;
-    // Installed AFTER the services are built: building auth services (via
-    // `build_auth_services`) re-installs the process-global resolvers with the
-    // broker's own config, which would silently replace the test's.
+    // Installed AFTER the services are built: building the runtime installs the
+    // process-global SecurityConfig from env, and `build_auth_services`
+    // re-installs the credential resolvers with the broker's own config; either
+    // would silently replace the test's (the served bearer then fails to verify).
+    crate::runtime::security::SecurityConfig::install_global(security);
     super::super::install_data_plane_credential_resolvers(
         pool.clone(),
         &crate::runtime::authn::AuthnConfig {

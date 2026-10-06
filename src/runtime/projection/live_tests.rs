@@ -812,10 +812,21 @@ async fn live_object_projection_keys_by_scope_and_delete_spares_other_tenant() {
                 .is_ok()
         }
     };
-    assert!(
-        exists(key_a.clone()).await,
-        "missing tenant A object {key_a}"
-    );
+    if !exists(key_a.clone()).await {
+        // Name the cause: the ledger row says whether the task was applied,
+        // dead-lettered, or never claimed.
+        let rel =
+            crate::runtime::system::SystemCatalogConfig::current().projection_tasks_relation();
+        let rows: Vec<(String, String, String, String)> = sqlx::query_as(&format!(
+            "SELECT target_backend, resource_name, status, last_error FROM {rel} \
+             WHERE resource_name = $1 ORDER BY updated_at DESC LIMIT 6"
+        ))
+        .bind(&bucket)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default();
+        panic!("missing tenant A object {key_a}; projection tasks for {bucket}: {rows:?}");
+    }
     assert!(
         exists(key_b.clone()).await,
         "missing tenant B object {key_b}"

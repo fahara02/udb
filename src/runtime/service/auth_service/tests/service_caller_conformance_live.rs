@@ -307,7 +307,7 @@ async fn live_service_account_reaches_every_service_callable_native_method() {
         jwt_public_key: Some(include_str!("../../../testdata/jwt_rs256_public.pem").to_string()),
         ..crate::runtime::security::SecurityConfig::default()
     };
-    crate::runtime::security::SecurityConfig::install_global(security);
+    crate::runtime::security::SecurityConfig::install_global(security.clone());
     let authn = authn_service_with_jwt(pool.clone());
     let apikey = api_key_service(pool.clone());
     let grant_scope_refs: Vec<&str> = grant_scopes.iter().map(String::as_str).collect();
@@ -382,9 +382,11 @@ async fn live_service_account_reaches_every_service_callable_native_method() {
     activate_live_project_catalog(&broker, &project_id, "service-caller-conformance").await;
     let routes = crate::runtime::service::NativeControlPlaneServices::from_broker(&broker)
         .into_routes(&MethodSecurityLayer::new());
-    // Installed AFTER the services are built: building auth services (via
-    // `build_auth_services`) re-installs the process-global resolvers with the
-    // broker's own config, which would silently replace the test's.
+    // Installed AFTER the services are built: building the runtime installs the
+    // process-global SecurityConfig from env, and `build_auth_services`
+    // re-installs the credential resolvers with the broker's own config; either
+    // would silently replace the test's (the served bearer then fails to verify).
+    crate::runtime::security::SecurityConfig::install_global(security.clone());
     crate::runtime::service::auth_service::install_data_plane_credential_resolvers(
         pool.clone(),
         &crate::runtime::authn::AuthnConfig {
