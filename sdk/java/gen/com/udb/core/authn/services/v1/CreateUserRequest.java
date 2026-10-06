@@ -518,6 +518,25 @@ java.lang.String defaultValue) {
     return map.get(key);
   }
 
+  public static final int PASSWORD_SETUP_REQUIRED_FIELD_NUMBER = 12;
+  private boolean passwordSetupRequired_ = false;
+  /**
+   * <pre>
+   * Invite instead of register: leave `password` empty. The account is created
+   * in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+   * password-reset code is sent to `email`; the user sets a password with
+   * ResetPassword(otp_id, code, new_password), which activates the account.
+   * `CreateUserResponse.otp_id` is that reset code's id.
+   * </pre>
+   *
+   * <code>bool password_setup_required = 12 [json_name = "passwordSetupRequired"];</code>
+   * @return The passwordSetupRequired.
+   */
+  @java.lang.Override
+  public boolean getPasswordSetupRequired() {
+    return passwordSetupRequired_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -568,6 +587,9 @@ java.lang.String defaultValue) {
         internalGetProfileAttributes(),
         ProfileAttributesDefaultEntryHolder.defaultEntry,
         11);
+    if (passwordSetupRequired_ != false) {
+      output.writeBool(12, passwordSetupRequired_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -619,6 +641,10 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(11, profileAttributes__);
     }
+    if (passwordSetupRequired_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(12, passwordSetupRequired_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -658,6 +684,8 @@ java.lang.String defaultValue) {
         .equals(other.getExternalSubject())) return false;
     if (!internalGetProfileAttributes().equals(
         other.internalGetProfileAttributes())) return false;
+    if (getPasswordSetupRequired()
+        != other.getPasswordSetupRequired()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -695,6 +723,9 @@ java.lang.String defaultValue) {
       hash = (37 * hash) + PROFILE_ATTRIBUTES_FIELD_NUMBER;
       hash = (53 * hash) + internalGetProfileAttributes().hashCode();
     }
+    hash = (37 * hash) + PASSWORD_SETUP_REQUIRED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getPasswordSetupRequired());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -869,6 +900,7 @@ java.lang.String defaultValue) {
       externalProviderId_ = "";
       externalSubject_ = "";
       internalGetMutableProfileAttributes().clear();
+      passwordSetupRequired_ = false;
       return this;
     }
 
@@ -940,6 +972,9 @@ java.lang.String defaultValue) {
         result.profileAttributes_ = internalGetProfileAttributes();
         result.profileAttributes_.makeImmutable();
       }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.passwordSetupRequired_ = passwordSetupRequired_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1004,6 +1039,9 @@ java.lang.String defaultValue) {
       internalGetMutableProfileAttributes().mergeFrom(
           other.internalGetProfileAttributes());
       bitField0_ |= 0x00000400;
+      if (other.getPasswordSetupRequired() != false) {
+        setPasswordSetupRequired(other.getPasswordSetupRequired());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1091,6 +1129,11 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000400;
               break;
             } // case 90
+            case 96: {
+              passwordSetupRequired_ = input.readBool();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 96
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2025,6 +2068,62 @@ java.lang.String defaultValue) {
       internalGetMutableProfileAttributes().getMutableMap()
           .putAll(values);
       bitField0_ |= 0x00000400;
+      return this;
+    }
+
+    private boolean passwordSetupRequired_ ;
+    /**
+     * <pre>
+     * Invite instead of register: leave `password` empty. The account is created
+     * in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+     * password-reset code is sent to `email`; the user sets a password with
+     * ResetPassword(otp_id, code, new_password), which activates the account.
+     * `CreateUserResponse.otp_id` is that reset code's id.
+     * </pre>
+     *
+     * <code>bool password_setup_required = 12 [json_name = "passwordSetupRequired"];</code>
+     * @return The passwordSetupRequired.
+     */
+    @java.lang.Override
+    public boolean getPasswordSetupRequired() {
+      return passwordSetupRequired_;
+    }
+    /**
+     * <pre>
+     * Invite instead of register: leave `password` empty. The account is created
+     * in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+     * password-reset code is sent to `email`; the user sets a password with
+     * ResetPassword(otp_id, code, new_password), which activates the account.
+     * `CreateUserResponse.otp_id` is that reset code's id.
+     * </pre>
+     *
+     * <code>bool password_setup_required = 12 [json_name = "passwordSetupRequired"];</code>
+     * @param value The passwordSetupRequired to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPasswordSetupRequired(boolean value) {
+
+      passwordSetupRequired_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Invite instead of register: leave `password` empty. The account is created
+     * in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+     * password-reset code is sent to `email`; the user sets a password with
+     * ResetPassword(otp_id, code, new_password), which activates the account.
+     * `CreateUserResponse.otp_id` is that reset code's id.
+     * </pre>
+     *
+     * <code>bool password_setup_required = 12 [json_name = "passwordSetupRequired"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPasswordSetupRequired() {
+      bitField0_ = (bitField0_ & ~0x00000800);
+      passwordSetupRequired_ = false;
+      onChanged();
       return this;
     }
 

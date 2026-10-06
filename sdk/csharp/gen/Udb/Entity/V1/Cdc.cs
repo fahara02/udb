@@ -25,28 +25,38 @@ namespace Udb.Entity.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "Chd1ZGIvZW50aXR5L3YxL2NkYy5wcm90bxINdWRiLmVudGl0eS52MRobdWRi",
-            "L2VudGl0eS92MS9jb250ZXh0LnByb3RvIpwBChZDRENTdWJzY3JpcHRpb25S",
+            "L2VudGl0eS92MS9jb250ZXh0LnByb3RvIsEBChZDRENTdWJzY3JpcHRpb25S",
             "ZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVl",
             "c3RDb250ZXh0Ugdjb250ZXh0EiMKDXRvcGljX3BhdHRlcm4YAiABKAlSDHRv",
             "cGljUGF0dGVybhIkCg5zaW5jZV9ldmVudF9pZBgDIAEoCVIMc2luY2VFdmVu",
-            "dElkIoEBChFDZGNDb250cm9sUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0u",
-            "dWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIbCglzbG90",
-            "X25hbWUYAiABKAlSCHNsb3ROYW1lEhYKBnJlYXNvbhgDIAEoCVIGcmVhc29u",
-            "IpgCChFDZGNTdGF0dXNSZXNwb25zZRIbCglzbG90X25hbWUYASABKAlSCHNs",
-            "b3ROYW1lEhsKCWlzX2xlYWRlchgCIAEoCFIIaXNMZWFkZXISFgoGcGF1c2Vk",
-            "GAMgASgIUgZwYXVzZWQSIQoMcGF1c2VfcmVhc29uGAQgASgJUgtwYXVzZVJl",
-            "YXNvbhIiCg1sYXN0X2V2ZW50X2lkGAUgASgJUgtsYXN0RXZlbnRJZBIfCgts",
-            "YWdfc2Vjb25kcxgGIAEoAVIKbGFnU2Vjb25kcxIhCgxvdXRib3hfZGVwdGgY",
-            "ByABKANSC291dGJveERlcHRoEiYKD3VwZGF0ZWRfYXRfdW5peBgIIAEoA1IN",
-            "dXBkYXRlZEF0VW5peEKuAQoRY29tLnVkYi5lbnRpdHkudjFCCENkY1Byb3Rv",
-            "UAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2Vu",
-            "dGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJc",
-            "RW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6",
-            "RW50aXR5OjpWMWIGcHJvdG8z"));
+            "dElkEiMKDWNvbnN1bWVyX25hbWUYBCABKAlSDGNvbnN1bWVyTmFtZSKzAQoT",
+            "QWNrQ2RjRXZlbnRzUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVu",
+            "dGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIjCg1jb25zdW1lcl9u",
+            "YW1lGAIgASgJUgxjb25zdW1lck5hbWUSIwoNdG9waWNfcGF0dGVybhgDIAEo",
+            "CVIMdG9waWNQYXR0ZXJuEhkKCGV2ZW50X2lkGAQgASgJUgdldmVudElkIp8B",
+            "ChRBY2tDZGNFdmVudHNSZXNwb25zZRIjCg1jb25zdW1lcl9uYW1lGAEgASgJ",
+            "Ugxjb25zdW1lck5hbWUSIwoNdG9waWNfcGF0dGVybhgCIAEoCVIMdG9waWNQ",
+            "YXR0ZXJuEhkKCGV2ZW50X2lkGAMgASgJUgdldmVudElkEiIKDWFja2VkX2F0",
+            "X3VuaXgYBCABKANSC2Fja2VkQXRVbml4IoEBChFDZGNDb250cm9sUmVxdWVz",
+            "dBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29u",
+            "dGV4dFIHY29udGV4dBIbCglzbG90X25hbWUYAiABKAlSCHNsb3ROYW1lEhYK",
+            "BnJlYXNvbhgDIAEoCVIGcmVhc29uIpgCChFDZGNTdGF0dXNSZXNwb25zZRIb",
+            "CglzbG90X25hbWUYASABKAlSCHNsb3ROYW1lEhsKCWlzX2xlYWRlchgCIAEo",
+            "CFIIaXNMZWFkZXISFgoGcGF1c2VkGAMgASgIUgZwYXVzZWQSIQoMcGF1c2Vf",
+            "cmVhc29uGAQgASgJUgtwYXVzZVJlYXNvbhIiCg1sYXN0X2V2ZW50X2lkGAUg",
+            "ASgJUgtsYXN0RXZlbnRJZBIfCgtsYWdfc2Vjb25kcxgGIAEoAVIKbGFnU2Vj",
+            "b25kcxIhCgxvdXRib3hfZGVwdGgYByABKANSC291dGJveERlcHRoEiYKD3Vw",
+            "ZGF0ZWRfYXRfdW5peBgIIAEoA1INdXBkYXRlZEF0VW5peEKuAQoRY29tLnVk",
+            "Yi5lbnRpdHkudjFCCENkY1Byb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIv",
+            "dWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoC",
+            "DVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFk",
+            "YXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Udb.Entity.V1.ContextReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CDCSubscriptionRequest), global::Udb.Entity.V1.CDCSubscriptionRequest.Parser, new[]{ "Context", "TopicPattern", "SinceEventId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CDCSubscriptionRequest), global::Udb.Entity.V1.CDCSubscriptionRequest.Parser, new[]{ "Context", "TopicPattern", "SinceEventId", "ConsumerName" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.AckCdcEventsRequest), global::Udb.Entity.V1.AckCdcEventsRequest.Parser, new[]{ "Context", "ConsumerName", "TopicPattern", "EventId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.AckCdcEventsResponse), global::Udb.Entity.V1.AckCdcEventsResponse.Parser, new[]{ "ConsumerName", "TopicPattern", "EventId", "AckedAtUnix" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CdcControlRequest), global::Udb.Entity.V1.CdcControlRequest.Parser, new[]{ "Context", "SlotName", "Reason" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CdcStatusResponse), global::Udb.Entity.V1.CdcStatusResponse.Parser, new[]{ "SlotName", "IsLeader", "Paused", "PauseReason", "LastEventId", "LagSeconds", "OutboxDepth", "UpdatedAtUnix" }, null, null, null, null)
           }));
@@ -93,6 +103,7 @@ namespace Udb.Entity.V1 {
       context_ = other.context_ != null ? other.context_.Clone() : null;
       topicPattern_ = other.topicPattern_;
       sinceEventId_ = other.sinceEventId_;
+      consumerName_ = other.consumerName_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -138,6 +149,25 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "consumer_name" field.</summary>
+    public const int ConsumerNameFieldNumber = 4;
+    private string consumerName_ = "";
+    /// <summary>
+    /// A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+    /// since_event_id is empty, the stream resumes after the last event this
+    /// consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+    /// restarted (or reconnected) consumer neither skips nor re-reads its place.
+    /// Cursors are scoped to the caller's verified tenant and project.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ConsumerName {
+      get { return consumerName_; }
+      set {
+        consumerName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -156,6 +186,7 @@ namespace Udb.Entity.V1 {
       if (!object.Equals(Context, other.Context)) return false;
       if (TopicPattern != other.TopicPattern) return false;
       if (SinceEventId != other.SinceEventId) return false;
+      if (ConsumerName != other.ConsumerName) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -166,6 +197,7 @@ namespace Udb.Entity.V1 {
       if (context_ != null) hash ^= Context.GetHashCode();
       if (TopicPattern.Length != 0) hash ^= TopicPattern.GetHashCode();
       if (SinceEventId.Length != 0) hash ^= SinceEventId.GetHashCode();
+      if (ConsumerName.Length != 0) hash ^= ConsumerName.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -196,6 +228,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(26);
         output.WriteString(SinceEventId);
       }
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ConsumerName);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -218,6 +254,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(26);
         output.WriteString(SinceEventId);
       }
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ConsumerName);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -236,6 +276,9 @@ namespace Udb.Entity.V1 {
       }
       if (SinceEventId.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(SinceEventId);
+      }
+      if (ConsumerName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ConsumerName);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -260,6 +303,9 @@ namespace Udb.Entity.V1 {
       }
       if (other.SinceEventId.Length != 0) {
         SinceEventId = other.SinceEventId;
+      }
+      if (other.ConsumerName.Length != 0) {
+        ConsumerName = other.ConsumerName;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -293,6 +339,10 @@ namespace Udb.Entity.V1 {
           }
           case 26: {
             SinceEventId = input.ReadString();
+            break;
+          }
+          case 34: {
+            ConsumerName = input.ReadString();
             break;
           }
         }
@@ -329,6 +379,650 @@ namespace Udb.Entity.V1 {
             SinceEventId = input.ReadString();
             break;
           }
+          case 34: {
+            ConsumerName = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// AckCdcEvents records how far a durable consumer has processed a stream.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class AckCdcEventsRequest : pb::IMessage<AckCdcEventsRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<AckCdcEventsRequest> _parser = new pb::MessageParser<AckCdcEventsRequest>(() => new AckCdcEventsRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<AckCdcEventsRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckCdcEventsRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckCdcEventsRequest(AckCdcEventsRequest other) : this() {
+      context_ = other.context_ != null ? other.context_.Clone() : null;
+      consumerName_ = other.consumerName_;
+      topicPattern_ = other.topicPattern_;
+      eventId_ = other.eventId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckCdcEventsRequest Clone() {
+      return new AckCdcEventsRequest(this);
+    }
+
+    /// <summary>Field number for the "context" field.</summary>
+    public const int ContextFieldNumber = 1;
+    private global::Udb.Entity.V1.RequestContext context_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.RequestContext Context {
+      get { return context_; }
+      set {
+        context_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "consumer_name" field.</summary>
+    public const int ConsumerNameFieldNumber = 2;
+    private string consumerName_ = "";
+    /// <summary>
+    /// The consumer named in CDCSubscriptionRequest.consumer_name.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ConsumerName {
+      get { return consumerName_; }
+      set {
+        consumerName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "topic_pattern" field.</summary>
+    public const int TopicPatternFieldNumber = 3;
+    private string topicPattern_ = "";
+    /// <summary>
+    /// The topic_pattern the consumer subscribed with.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TopicPattern {
+      get { return topicPattern_; }
+      set {
+        topicPattern_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 4;
+    private string eventId_ = "";
+    /// <summary>
+    /// The last event the consumer has fully handled. The next subscription
+    /// under this consumer name resumes after it.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as AckCdcEventsRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(AckCdcEventsRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Context, other.Context)) return false;
+      if (ConsumerName != other.ConsumerName) return false;
+      if (TopicPattern != other.TopicPattern) return false;
+      if (EventId != other.EventId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (context_ != null) hash ^= Context.GetHashCode();
+      if (ConsumerName.Length != 0) hash ^= ConsumerName.GetHashCode();
+      if (TopicPattern.Length != 0) hash ^= TopicPattern.GetHashCode();
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (context_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Context);
+      }
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TopicPattern);
+      }
+      if (EventId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(EventId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (context_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Context);
+      }
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TopicPattern);
+      }
+      if (EventId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(EventId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (context_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Context);
+      }
+      if (ConsumerName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TopicPattern);
+      }
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(AckCdcEventsRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.context_ != null) {
+        if (context_ == null) {
+          Context = new global::Udb.Entity.V1.RequestContext();
+        }
+        Context.MergeFrom(other.Context);
+      }
+      if (other.ConsumerName.Length != 0) {
+        ConsumerName = other.ConsumerName;
+      }
+      if (other.TopicPattern.Length != 0) {
+        TopicPattern = other.TopicPattern;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (context_ == null) {
+              Context = new global::Udb.Entity.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+          case 18: {
+            ConsumerName = input.ReadString();
+            break;
+          }
+          case 26: {
+            TopicPattern = input.ReadString();
+            break;
+          }
+          case 34: {
+            EventId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (context_ == null) {
+              Context = new global::Udb.Entity.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+          case 18: {
+            ConsumerName = input.ReadString();
+            break;
+          }
+          case 26: {
+            TopicPattern = input.ReadString();
+            break;
+          }
+          case 34: {
+            EventId = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class AckCdcEventsResponse : pb::IMessage<AckCdcEventsResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<AckCdcEventsResponse> _parser = new pb::MessageParser<AckCdcEventsResponse>(() => new AckCdcEventsResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<AckCdcEventsResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[2]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckCdcEventsResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckCdcEventsResponse(AckCdcEventsResponse other) : this() {
+      consumerName_ = other.consumerName_;
+      topicPattern_ = other.topicPattern_;
+      eventId_ = other.eventId_;
+      ackedAtUnix_ = other.ackedAtUnix_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AckCdcEventsResponse Clone() {
+      return new AckCdcEventsResponse(this);
+    }
+
+    /// <summary>Field number for the "consumer_name" field.</summary>
+    public const int ConsumerNameFieldNumber = 1;
+    private string consumerName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ConsumerName {
+      get { return consumerName_; }
+      set {
+        consumerName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "topic_pattern" field.</summary>
+    public const int TopicPatternFieldNumber = 2;
+    private string topicPattern_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TopicPattern {
+      get { return topicPattern_; }
+      set {
+        topicPattern_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 3;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "acked_at_unix" field.</summary>
+    public const int AckedAtUnixFieldNumber = 4;
+    private long ackedAtUnix_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long AckedAtUnix {
+      get { return ackedAtUnix_; }
+      set {
+        ackedAtUnix_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as AckCdcEventsResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(AckCdcEventsResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ConsumerName != other.ConsumerName) return false;
+      if (TopicPattern != other.TopicPattern) return false;
+      if (EventId != other.EventId) return false;
+      if (AckedAtUnix != other.AckedAtUnix) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ConsumerName.Length != 0) hash ^= ConsumerName.GetHashCode();
+      if (TopicPattern.Length != 0) hash ^= TopicPattern.GetHashCode();
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (AckedAtUnix != 0L) hash ^= AckedAtUnix.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TopicPattern);
+      }
+      if (EventId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(EventId);
+      }
+      if (AckedAtUnix != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(AckedAtUnix);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TopicPattern);
+      }
+      if (EventId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(EventId);
+      }
+      if (AckedAtUnix != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(AckedAtUnix);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ConsumerName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TopicPattern);
+      }
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (AckedAtUnix != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(AckedAtUnix);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(AckCdcEventsResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ConsumerName.Length != 0) {
+        ConsumerName = other.ConsumerName;
+      }
+      if (other.TopicPattern.Length != 0) {
+        TopicPattern = other.TopicPattern;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.AckedAtUnix != 0L) {
+        AckedAtUnix = other.AckedAtUnix;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ConsumerName = input.ReadString();
+            break;
+          }
+          case 18: {
+            TopicPattern = input.ReadString();
+            break;
+          }
+          case 26: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 32: {
+            AckedAtUnix = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ConsumerName = input.ReadString();
+            break;
+          }
+          case 18: {
+            TopicPattern = input.ReadString();
+            break;
+          }
+          case 26: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 32: {
+            AckedAtUnix = input.ReadInt64();
+            break;
+          }
         }
       }
     }
@@ -351,7 +1045,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -632,7 +1326,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

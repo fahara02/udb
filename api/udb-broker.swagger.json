@@ -10279,7 +10279,7 @@
           },
           {
             "name": "status",
-            "description": " - USER_STATUS_PENDING_VERIFICATION: Email not yet verified\n - USER_STATUS_SUSPENDED: Temporarily suspended by admin\n - USER_STATUS_LOCKED: Locked after repeated failed logins\n - USER_STATUS_DEACTIVATED: Permanently deactivated",
+            "description": " - USER_STATUS_PENDING_VERIFICATION: Email not yet verified\n - USER_STATUS_SUSPENDED: Temporarily suspended by admin\n - USER_STATUS_LOCKED: Locked after repeated failed logins\n - USER_STATUS_DEACTIVATED: Permanently deactivated\n - USER_STATUS_PASSWORD_SETUP_REQUIRED: Invited (CreateUser with password_setup_required): the account has no\nusable password until the user completes ResetPassword with the emailed\ncode, which also verifies the email and activates the account.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -10289,7 +10289,8 @@
               "USER_STATUS_ACTIVE",
               "USER_STATUS_SUSPENDED",
               "USER_STATUS_LOCKED",
-              "USER_STATUS_DEACTIVATED"
+              "USER_STATUS_DEACTIVATED",
+              "USER_STATUS_PASSWORD_SETUP_REQUIRED"
             ],
             "default": "USER_STATUS_UNSPECIFIED"
           },
@@ -50747,6 +50748,10 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "passwordSetupRequired": {
+          "type": "boolean",
+          "description": "Invite instead of register: leave `password` empty. The account is created\nin USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a\npassword-reset code is sent to `email`; the user sets a password with\nResetPassword(otp_id, code, new_password), which activates the account.\n`CreateUserResponse.otp_id` is that reset code's id."
         }
       }
     },
@@ -60070,10 +60075,11 @@
         "USER_STATUS_ACTIVE",
         "USER_STATUS_SUSPENDED",
         "USER_STATUS_LOCKED",
-        "USER_STATUS_DEACTIVATED"
+        "USER_STATUS_DEACTIVATED",
+        "USER_STATUS_PASSWORD_SETUP_REQUIRED"
       ],
       "default": "USER_STATUS_UNSPECIFIED",
-      "title": "- USER_STATUS_PENDING_VERIFICATION: Email not yet verified\n - USER_STATUS_SUSPENDED: Temporarily suspended by admin\n - USER_STATUS_LOCKED: Locked after repeated failed logins\n - USER_STATUS_DEACTIVATED: Permanently deactivated"
+      "description": " - USER_STATUS_PENDING_VERIFICATION: Email not yet verified\n - USER_STATUS_SUSPENDED: Temporarily suspended by admin\n - USER_STATUS_LOCKED: Locked after repeated failed logins\n - USER_STATUS_DEACTIVATED: Permanently deactivated\n - USER_STATUS_PASSWORD_SETUP_REQUIRED: Invited (CreateUser with password_setup_required): the account has no\nusable password until the user completes ResetPassword with the emailed\ncode, which also verifies the email and activates the account."
     },
     "v1ValidateApiKeyRequest": {
       "type": "object",

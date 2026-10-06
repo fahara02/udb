@@ -93,6 +93,10 @@ const (
 	UserStatus_USER_STATUS_SUSPENDED            UserStatus = 3 // Temporarily suspended by admin
 	UserStatus_USER_STATUS_LOCKED               UserStatus = 4 // Locked after repeated failed logins
 	UserStatus_USER_STATUS_DEACTIVATED          UserStatus = 5 // Permanently deactivated
+	// Invited (CreateUser with password_setup_required): the account has no
+	// usable password until the user completes ResetPassword with the emailed
+	// code, which also verifies the email and activates the account.
+	UserStatus_USER_STATUS_PASSWORD_SETUP_REQUIRED UserStatus = 6
 )
 
 // Enum value maps for UserStatus.
@@ -104,14 +108,16 @@ var (
 		3: "USER_STATUS_SUSPENDED",
 		4: "USER_STATUS_LOCKED",
 		5: "USER_STATUS_DEACTIVATED",
+		6: "USER_STATUS_PASSWORD_SETUP_REQUIRED",
 	}
 	UserStatus_value = map[string]int32{
-		"USER_STATUS_UNSPECIFIED":          0,
-		"USER_STATUS_PENDING_VERIFICATION": 1,
-		"USER_STATUS_ACTIVE":               2,
-		"USER_STATUS_SUSPENDED":            3,
-		"USER_STATUS_LOCKED":               4,
-		"USER_STATUS_DEACTIVATED":          5,
+		"USER_STATUS_UNSPECIFIED":             0,
+		"USER_STATUS_PENDING_VERIFICATION":    1,
+		"USER_STATUS_ACTIVE":                  2,
+		"USER_STATUS_SUSPENDED":               3,
+		"USER_STATUS_LOCKED":                  4,
+		"USER_STATUS_DEACTIVATED":             5,
+		"USER_STATUS_PASSWORD_SETUP_REQUIRED": 6,
 	}
 )
 
@@ -754,7 +760,7 @@ const file_udb_core_authn_entity_v1_enums_proto_rawDesc = "" +
 	"\x15ACCOUNT_KIND_WORKLOAD\x10\x03\x12\"\n" +
 	"\x1eACCOUNT_KIND_EXTERNAL_IDENTITY\x10\x04\x12\x17\n" +
 	"\x13ACCOUNT_KIND_SYSTEM\x10\x05\x12\x1a\n" +
-	"\x16ACCOUNT_KIND_ANONYMOUS\x10\x06*\xb7\x01\n" +
+	"\x16ACCOUNT_KIND_ANONYMOUS\x10\x06*\xe0\x01\n" +
 	"\n" +
 	"UserStatus\x12\x1b\n" +
 	"\x17USER_STATUS_UNSPECIFIED\x10\x00\x12$\n" +
@@ -762,7 +768,8 @@ const file_udb_core_authn_entity_v1_enums_proto_rawDesc = "" +
 	"\x12USER_STATUS_ACTIVE\x10\x02\x12\x19\n" +
 	"\x15USER_STATUS_SUSPENDED\x10\x03\x12\x16\n" +
 	"\x12USER_STATUS_LOCKED\x10\x04\x12\x1b\n" +
-	"\x17USER_STATUS_DEACTIVATED\x10\x05*\xab\x01\n" +
+	"\x17USER_STATUS_DEACTIVATED\x10\x05\x12'\n" +
+	"#USER_STATUS_PASSWORD_SETUP_REQUIRED\x10\x06*\xab\x01\n" +
 	"\vSessionType\x12\x1c\n" +
 	"\x18SESSION_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18SESSION_TYPE_SERVER_SIDE\x10\x01\x12\x14\n" +

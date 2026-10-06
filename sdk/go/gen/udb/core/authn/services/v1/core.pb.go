@@ -40,8 +40,14 @@ type CreateUserRequest struct {
 	ExternalProviderId string            `protobuf:"bytes,9,opt,name=external_provider_id,json=externalProviderId,proto3" json:"external_provider_id,omitempty"`
 	ExternalSubject    string            `protobuf:"bytes,10,opt,name=external_subject,json=externalSubject,proto3" json:"external_subject,omitempty"`
 	ProfileAttributes  map[string]string `protobuf:"bytes,11,rep,name=profile_attributes,json=profileAttributes,proto3" json:"profile_attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Invite instead of register: leave `password` empty. The account is created
+	// in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+	// password-reset code is sent to `email`; the user sets a password with
+	// ResetPassword(otp_id, code, new_password), which activates the account.
+	// `CreateUserResponse.otp_id` is that reset code's id.
+	PasswordSetupRequired bool `protobuf:"varint,12,opt,name=password_setup_required,json=passwordSetupRequired,proto3" json:"password_setup_required,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *CreateUserRequest) Reset() {
@@ -149,6 +155,13 @@ func (x *CreateUserRequest) GetProfileAttributes() map[string]string {
 		return x.ProfileAttributes
 	}
 	return nil
+}
+
+func (x *CreateUserRequest) GetPasswordSetupRequired() bool {
+	if x != nil {
+		return x.PasswordSetupRequired
+	}
+	return false
 }
 
 type CreateUserResponse struct {
@@ -6661,7 +6674,7 @@ var File_udb_core_authn_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a%udb/core/authn/entity/v1/device.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xf8\x04\n" +
+	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a%udb/core/authn/entity/v1/device.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xb0\x05\n" +
 	"\x11CreateUserRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
@@ -6675,7 +6688,8 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x14external_provider_id\x18\t \x01(\tR\x12externalProviderId\x12)\n" +
 	"\x10external_subject\x18\n" +
 	" \x01(\tR\x0fexternalSubject\x12s\n" +
-	"\x12profile_attributes\x18\v \x03(\v2D.udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntryR\x11profileAttributes\x1aD\n" +
+	"\x12profile_attributes\x18\v \x03(\v2D.udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntryR\x11profileAttributes\x126\n" +
+	"\x17password_setup_required\x18\f \x01(\bR\x15passwordSetupRequired\x1aD\n" +
 	"\x16ProfileAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"}\n" +

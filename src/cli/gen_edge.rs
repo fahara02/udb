@@ -68,7 +68,11 @@ fn pascal(text: &str) -> String {
             let mut chars = part.chars();
             match chars.next() {
                 Some(first) => {
-                    first.to_ascii_uppercase().to_string() + &chars.as_str().to_ascii_lowercase()
+                    format!(
+                        "{}{}",
+                        first.to_ascii_uppercase(),
+                        chars.as_str().to_ascii_lowercase()
+                    )
                 }
                 None => String::new(),
             }

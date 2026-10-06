@@ -8011,6 +8011,7 @@ mod setup_data_validation_tests {
     };
     use crate::proto::{ErrorDetail, ErrorKind, VectorPointMutation, VectorSearchRequest};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use serde_json::json;
 
     /// Pin: the PUT handler stamps `server_side_encryption: true` into the object
     /// request spec only when the plan requires it, without disturbing the other

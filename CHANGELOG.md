@@ -83,8 +83,9 @@ that replace hand-kept scripts.
   understands.
 - **`LiveQuery[T]`** delivers typed snapshots and changes, with reconnect and
   resume and the `LQIn`/`LQEq`/... filter helpers.
-- **Builders:** `GraphFrom[T](u, id).Out("REL").Depth(1, 2).Run(ctx)` and
-  `VectorsHybrid[T](u, coll).Text(q).Near(v).Run(ctx)`.
+- **Builders:** `GraphFrom[T]` starts a traversal at one node
+  (`.Out("REL").Depth(1, 2).Run(ctx)`), and `VectorsHybrid[T]` runs a hybrid
+  search (`.Text(q).Near(v).Run(ctx)`).
 - **`EncodeRecord`/`DecodeRecord` and `EncodeField`/`DecodeField`** convert
   messages and rows following the column annotations. The closed `ErrorCode`
   enum and `Inspect` replace message matching.

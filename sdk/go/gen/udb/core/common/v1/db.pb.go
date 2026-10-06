@@ -3122,9 +3122,28 @@ type GenericStoreOptions struct {
 	DsnEnvKey         string                 `protobuf:"bytes,7,opt,name=dsn_env_key,json=dsnEnvKey,proto3" json:"dsn_env_key,omitempty"`
 	Dsn               string                 `protobuf:"bytes,8,opt,name=dsn,proto3" json:"dsn,omitempty"`
 	PayloadSchemaJson string                 `protobuf:"bytes,9,opt,name=payload_schema_json,json=payloadSchemaJson,proto3" json:"payload_schema_json,omitempty"`
-	Options           map[string]string      `protobuf:"bytes,10,rep,name=options,proto3" json:"options,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Free-form backend options. Prefer the typed fields below for every key
+	// they cover: a misspelled typed field fails the proto build, while a
+	// misspelled map key is ignored at runtime (`udb check` warns about it).
+	Options map[string]string `protobuf:"bytes,10,rep,name=options,proto3" json:"options,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Qdrant/vector projections: comma list of fields or columns copied into
+	// each point's payload (plus the row identity and scope stamps). Empty: the
+	// whole row. Same as options["payload_fields"].
+	PayloadFields string `protobuf:"bytes,11,opt,name=payload_fields,json=payloadFields,proto3" json:"payload_fields,omitempty"`
+	// Hybrid search: comma list of columns searched with Postgres full-text
+	// search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+	FtsColumns string `protobuf:"bytes,12,opt,name=fts_columns,json=ftsColumns,proto3" json:"fts_columns,omitempty"`
+	// Text search configuration for fts_columns (default "simple").
+	FtsConfig string `protobuf:"bytes,13,opt,name=fts_config,json=ftsConfig,proto3" json:"fts_config,omitempty"`
+	// Graph edge projections: the source/target fields of the edge row and the
+	// node labels they point at. Same as options["edge_source_field"] etc.; the
+	// older "from_label"/"to_label" keys are deprecated aliases.
+	EdgeSourceField string `protobuf:"bytes,14,opt,name=edge_source_field,json=edgeSourceField,proto3" json:"edge_source_field,omitempty"`
+	EdgeTargetField string `protobuf:"bytes,15,opt,name=edge_target_field,json=edgeTargetField,proto3" json:"edge_target_field,omitempty"`
+	EdgeSourceLabel string `protobuf:"bytes,16,opt,name=edge_source_label,json=edgeSourceLabel,proto3" json:"edge_source_label,omitempty"`
+	EdgeTargetLabel string `protobuf:"bytes,17,opt,name=edge_target_label,json=edgeTargetLabel,proto3" json:"edge_target_label,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GenericStoreOptions) Reset() {
@@ -3225,6 +3244,55 @@ func (x *GenericStoreOptions) GetOptions() map[string]string {
 		return x.Options
 	}
 	return nil
+}
+
+func (x *GenericStoreOptions) GetPayloadFields() string {
+	if x != nil {
+		return x.PayloadFields
+	}
+	return ""
+}
+
+func (x *GenericStoreOptions) GetFtsColumns() string {
+	if x != nil {
+		return x.FtsColumns
+	}
+	return ""
+}
+
+func (x *GenericStoreOptions) GetFtsConfig() string {
+	if x != nil {
+		return x.FtsConfig
+	}
+	return ""
+}
+
+func (x *GenericStoreOptions) GetEdgeSourceField() string {
+	if x != nil {
+		return x.EdgeSourceField
+	}
+	return ""
+}
+
+func (x *GenericStoreOptions) GetEdgeTargetField() string {
+	if x != nil {
+		return x.EdgeTargetField
+	}
+	return ""
+}
+
+func (x *GenericStoreOptions) GetEdgeSourceLabel() string {
+	if x != nil {
+		return x.EdgeSourceLabel
+	}
+	return ""
+}
+
+func (x *GenericStoreOptions) GetEdgeTargetLabel() string {
+	if x != nil {
+		return x.EdgeTargetLabel
+	}
+	return ""
 }
 
 var file_udb_core_common_v1_db_proto_extTypes = []protoimpl.ExtensionInfo{
@@ -3679,7 +3747,7 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\vcompression\x18\x06 \x01(\tR\vcompression\x12\x1f\n" +
 	"\vttl_seconds\x18\a \x01(\x05R\n" +
 	"ttlSeconds\x12.\n" +
-	"\x13payload_schema_json\x18\b \x01(\tR\x11payloadSchemaJson\"\xc7\x03\n" +
+	"\x13payload_schema_json\x18\b \x01(\tR\x11payloadSchemaJson\"\xde\x05\n" +
 	"\x13GenericStoreOptions\x12\x1d\n" +
 	"\n" +
 	"store_kind\x18\x01 \x01(\tR\tstoreKind\x12\x18\n" +
@@ -3692,7 +3760,16 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\x03dsn\x18\b \x01(\tR\x03dsn\x12.\n" +
 	"\x13payload_schema_json\x18\t \x01(\tR\x11payloadSchemaJson\x12N\n" +
 	"\aoptions\x18\n" +
-	" \x03(\v24.udb.core.common.v1.GenericStoreOptions.OptionsEntryR\aoptions\x1a:\n" +
+	" \x03(\v24.udb.core.common.v1.GenericStoreOptions.OptionsEntryR\aoptions\x12%\n" +
+	"\x0epayload_fields\x18\v \x01(\tR\rpayloadFields\x12\x1f\n" +
+	"\vfts_columns\x18\f \x01(\tR\n" +
+	"ftsColumns\x12\x1d\n" +
+	"\n" +
+	"fts_config\x18\r \x01(\tR\tftsConfig\x12*\n" +
+	"\x11edge_source_field\x18\x0e \x01(\tR\x0fedgeSourceField\x12*\n" +
+	"\x11edge_target_field\x18\x0f \x01(\tR\x0fedgeTargetField\x12*\n" +
+	"\x11edge_source_label\x18\x10 \x01(\tR\x0fedgeSourceLabel\x12*\n" +
+	"\x11edge_target_label\x18\x11 \x01(\tR\x0fedgeTargetLabel\x1a:\n" +
 	"\fOptionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xd5\x01\n" +

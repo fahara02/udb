@@ -37,6 +37,13 @@ private static final long serialVersionUID = 0L;
     dsnEnvKey_ = "";
     dsn_ = "";
     payloadSchemaJson_ = "";
+    payloadFields_ = "";
+    ftsColumns_ = "";
+    ftsConfig_ = "";
+    edgeSourceField_ = "";
+    edgeTargetField_ = "";
+    edgeSourceLabel_ = "";
+    edgeTargetLabel_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -442,6 +449,12 @@ private static final long serialVersionUID = 0L;
     return internalGetOptions().getMap().size();
   }
   /**
+   * <pre>
+   * Free-form backend options. Prefer the typed fields below for every key
+   * they cover: a misspelled typed field fails the proto build, while a
+   * misspelled map key is ignored at runtime (`udb check` warns about it).
+   * </pre>
+   *
    * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
    */
   @java.lang.Override
@@ -459,6 +472,12 @@ private static final long serialVersionUID = 0L;
     return getOptionsMap();
   }
   /**
+   * <pre>
+   * Free-form backend options. Prefer the typed fields below for every key
+   * they cover: a misspelled typed field fails the proto build, while a
+   * misspelled map key is ignored at runtime (`udb check` warns about it).
+   * </pre>
+   *
    * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
    */
   @java.lang.Override
@@ -466,6 +485,12 @@ private static final long serialVersionUID = 0L;
     return internalGetOptions().getMap();
   }
   /**
+   * <pre>
+   * Free-form backend options. Prefer the typed fields below for every key
+   * they cover: a misspelled typed field fails the proto build, while a
+   * misspelled map key is ignored at runtime (`udb check` warns about it).
+   * </pre>
+   *
    * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
    */
   @java.lang.Override
@@ -480,6 +505,12 @@ java.lang.String defaultValue) {
     return map.containsKey(key) ? map.get(key) : defaultValue;
   }
   /**
+   * <pre>
+   * Free-form backend options. Prefer the typed fields below for every key
+   * they cover: a misspelled typed field fails the proto build, while a
+   * misspelled map key is ignored at runtime (`udb check` warns about it).
+   * </pre>
+   *
    * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
    */
   @java.lang.Override
@@ -492,6 +523,321 @@ java.lang.String defaultValue) {
       throw new java.lang.IllegalArgumentException();
     }
     return map.get(key);
+  }
+
+  public static final int PAYLOAD_FIELDS_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object payloadFields_ = "";
+  /**
+   * <pre>
+   * Qdrant/vector projections: comma list of fields or columns copied into
+   * each point's payload (plus the row identity and scope stamps). Empty: the
+   * whole row. Same as options["payload_fields"].
+   * </pre>
+   *
+   * <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+   * @return The payloadFields.
+   */
+  @java.lang.Override
+  public java.lang.String getPayloadFields() {
+    java.lang.Object ref = payloadFields_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      payloadFields_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Qdrant/vector projections: comma list of fields or columns copied into
+   * each point's payload (plus the row identity and scope stamps). Empty: the
+   * whole row. Same as options["payload_fields"].
+   * </pre>
+   *
+   * <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+   * @return The bytes for payloadFields.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPayloadFieldsBytes() {
+    java.lang.Object ref = payloadFields_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      payloadFields_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FTS_COLUMNS_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object ftsColumns_ = "";
+  /**
+   * <pre>
+   * Hybrid search: comma list of columns searched with Postgres full-text
+   * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+   * </pre>
+   *
+   * <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+   * @return The ftsColumns.
+   */
+  @java.lang.Override
+  public java.lang.String getFtsColumns() {
+    java.lang.Object ref = ftsColumns_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      ftsColumns_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Hybrid search: comma list of columns searched with Postgres full-text
+   * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+   * </pre>
+   *
+   * <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+   * @return The bytes for ftsColumns.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getFtsColumnsBytes() {
+    java.lang.Object ref = ftsColumns_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      ftsColumns_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FTS_CONFIG_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object ftsConfig_ = "";
+  /**
+   * <pre>
+   * Text search configuration for fts_columns (default "simple").
+   * </pre>
+   *
+   * <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+   * @return The ftsConfig.
+   */
+  @java.lang.Override
+  public java.lang.String getFtsConfig() {
+    java.lang.Object ref = ftsConfig_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      ftsConfig_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Text search configuration for fts_columns (default "simple").
+   * </pre>
+   *
+   * <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+   * @return The bytes for ftsConfig.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getFtsConfigBytes() {
+    java.lang.Object ref = ftsConfig_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      ftsConfig_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int EDGE_SOURCE_FIELD_FIELD_NUMBER = 14;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object edgeSourceField_ = "";
+  /**
+   * <pre>
+   * Graph edge projections: the source/target fields of the edge row and the
+   * node labels they point at. Same as options["edge_source_field"] etc.; the
+   * older "from_label"/"to_label" keys are deprecated aliases.
+   * </pre>
+   *
+   * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+   * @return The edgeSourceField.
+   */
+  @java.lang.Override
+  public java.lang.String getEdgeSourceField() {
+    java.lang.Object ref = edgeSourceField_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      edgeSourceField_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Graph edge projections: the source/target fields of the edge row and the
+   * node labels they point at. Same as options["edge_source_field"] etc.; the
+   * older "from_label"/"to_label" keys are deprecated aliases.
+   * </pre>
+   *
+   * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+   * @return The bytes for edgeSourceField.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEdgeSourceFieldBytes() {
+    java.lang.Object ref = edgeSourceField_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      edgeSourceField_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int EDGE_TARGET_FIELD_FIELD_NUMBER = 15;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object edgeTargetField_ = "";
+  /**
+   * <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+   * @return The edgeTargetField.
+   */
+  @java.lang.Override
+  public java.lang.String getEdgeTargetField() {
+    java.lang.Object ref = edgeTargetField_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      edgeTargetField_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+   * @return The bytes for edgeTargetField.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEdgeTargetFieldBytes() {
+    java.lang.Object ref = edgeTargetField_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      edgeTargetField_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int EDGE_SOURCE_LABEL_FIELD_NUMBER = 16;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object edgeSourceLabel_ = "";
+  /**
+   * <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+   * @return The edgeSourceLabel.
+   */
+  @java.lang.Override
+  public java.lang.String getEdgeSourceLabel() {
+    java.lang.Object ref = edgeSourceLabel_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      edgeSourceLabel_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+   * @return The bytes for edgeSourceLabel.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEdgeSourceLabelBytes() {
+    java.lang.Object ref = edgeSourceLabel_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      edgeSourceLabel_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int EDGE_TARGET_LABEL_FIELD_NUMBER = 17;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object edgeTargetLabel_ = "";
+  /**
+   * <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+   * @return The edgeTargetLabel.
+   */
+  @java.lang.Override
+  public java.lang.String getEdgeTargetLabel() {
+    java.lang.Object ref = edgeTargetLabel_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      edgeTargetLabel_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+   * @return The bytes for edgeTargetLabel.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEdgeTargetLabelBytes() {
+    java.lang.Object ref = edgeTargetLabel_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      edgeTargetLabel_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
   }
 
   private byte memoizedIsInitialized = -1;
@@ -541,6 +887,27 @@ java.lang.String defaultValue) {
         internalGetOptions(),
         OptionsDefaultEntryHolder.defaultEntry,
         10);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(payloadFields_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 11, payloadFields_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ftsColumns_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, ftsColumns_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ftsConfig_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, ftsConfig_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeSourceField_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 14, edgeSourceField_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeTargetField_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 15, edgeTargetField_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeSourceLabel_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 16, edgeSourceLabel_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeTargetLabel_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 17, edgeTargetLabel_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -587,6 +954,27 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(10, options__);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(payloadFields_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(11, payloadFields_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ftsColumns_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, ftsColumns_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ftsConfig_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, ftsConfig_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeSourceField_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(14, edgeSourceField_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeTargetField_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(15, edgeTargetField_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeSourceLabel_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(16, edgeSourceLabel_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeTargetLabel_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(17, edgeTargetLabel_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -622,6 +1010,20 @@ java.lang.String defaultValue) {
         .equals(other.getPayloadSchemaJson())) return false;
     if (!internalGetOptions().equals(
         other.internalGetOptions())) return false;
+    if (!getPayloadFields()
+        .equals(other.getPayloadFields())) return false;
+    if (!getFtsColumns()
+        .equals(other.getFtsColumns())) return false;
+    if (!getFtsConfig()
+        .equals(other.getFtsConfig())) return false;
+    if (!getEdgeSourceField()
+        .equals(other.getEdgeSourceField())) return false;
+    if (!getEdgeTargetField()
+        .equals(other.getEdgeTargetField())) return false;
+    if (!getEdgeSourceLabel()
+        .equals(other.getEdgeSourceLabel())) return false;
+    if (!getEdgeTargetLabel()
+        .equals(other.getEdgeTargetLabel())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -655,6 +1057,20 @@ java.lang.String defaultValue) {
       hash = (37 * hash) + OPTIONS_FIELD_NUMBER;
       hash = (53 * hash) + internalGetOptions().hashCode();
     }
+    hash = (37 * hash) + PAYLOAD_FIELDS_FIELD_NUMBER;
+    hash = (53 * hash) + getPayloadFields().hashCode();
+    hash = (37 * hash) + FTS_COLUMNS_FIELD_NUMBER;
+    hash = (53 * hash) + getFtsColumns().hashCode();
+    hash = (37 * hash) + FTS_CONFIG_FIELD_NUMBER;
+    hash = (53 * hash) + getFtsConfig().hashCode();
+    hash = (37 * hash) + EDGE_SOURCE_FIELD_FIELD_NUMBER;
+    hash = (53 * hash) + getEdgeSourceField().hashCode();
+    hash = (37 * hash) + EDGE_TARGET_FIELD_FIELD_NUMBER;
+    hash = (53 * hash) + getEdgeTargetField().hashCode();
+    hash = (37 * hash) + EDGE_SOURCE_LABEL_FIELD_NUMBER;
+    hash = (53 * hash) + getEdgeSourceLabel().hashCode();
+    hash = (37 * hash) + EDGE_TARGET_LABEL_FIELD_NUMBER;
+    hash = (53 * hash) + getEdgeTargetLabel().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -818,6 +1234,13 @@ java.lang.String defaultValue) {
       dsn_ = "";
       payloadSchemaJson_ = "";
       internalGetMutableOptions().clear();
+      payloadFields_ = "";
+      ftsColumns_ = "";
+      ftsConfig_ = "";
+      edgeSourceField_ = "";
+      edgeTargetField_ = "";
+      edgeSourceLabel_ = "";
+      edgeTargetLabel_ = "";
       return this;
     }
 
@@ -882,6 +1305,27 @@ java.lang.String defaultValue) {
         result.options_ = internalGetOptions();
         result.options_.makeImmutable();
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.payloadFields_ = payloadFields_;
+      }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.ftsColumns_ = ftsColumns_;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.ftsConfig_ = ftsConfig_;
+      }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.edgeSourceField_ = edgeSourceField_;
+      }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.edgeTargetField_ = edgeTargetField_;
+      }
+      if (((from_bitField0_ & 0x00008000) != 0)) {
+        result.edgeSourceLabel_ = edgeSourceLabel_;
+      }
+      if (((from_bitField0_ & 0x00010000) != 0)) {
+        result.edgeTargetLabel_ = edgeTargetLabel_;
+      }
     }
 
     @java.lang.Override
@@ -944,6 +1388,41 @@ java.lang.String defaultValue) {
       internalGetMutableOptions().mergeFrom(
           other.internalGetOptions());
       bitField0_ |= 0x00000200;
+      if (!other.getPayloadFields().isEmpty()) {
+        payloadFields_ = other.payloadFields_;
+        bitField0_ |= 0x00000400;
+        onChanged();
+      }
+      if (!other.getFtsColumns().isEmpty()) {
+        ftsColumns_ = other.ftsColumns_;
+        bitField0_ |= 0x00000800;
+        onChanged();
+      }
+      if (!other.getFtsConfig().isEmpty()) {
+        ftsConfig_ = other.ftsConfig_;
+        bitField0_ |= 0x00001000;
+        onChanged();
+      }
+      if (!other.getEdgeSourceField().isEmpty()) {
+        edgeSourceField_ = other.edgeSourceField_;
+        bitField0_ |= 0x00002000;
+        onChanged();
+      }
+      if (!other.getEdgeTargetField().isEmpty()) {
+        edgeTargetField_ = other.edgeTargetField_;
+        bitField0_ |= 0x00004000;
+        onChanged();
+      }
+      if (!other.getEdgeSourceLabel().isEmpty()) {
+        edgeSourceLabel_ = other.edgeSourceLabel_;
+        bitField0_ |= 0x00008000;
+        onChanged();
+      }
+      if (!other.getEdgeTargetLabel().isEmpty()) {
+        edgeTargetLabel_ = other.edgeTargetLabel_;
+        bitField0_ |= 0x00010000;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1024,6 +1503,41 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 90: {
+              payloadFields_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
+            case 98: {
+              ftsColumns_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
+            case 106: {
+              ftsConfig_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 106
+            case 114: {
+              edgeSourceField_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 114
+            case 122: {
+              edgeTargetField_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 122
+            case 130: {
+              edgeSourceLabel_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00008000;
+              break;
+            } // case 130
+            case 138: {
+              edgeTargetLabel_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00010000;
+              break;
+            } // case 138
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1716,6 +2230,12 @@ java.lang.String defaultValue) {
       return internalGetOptions().getMap().size();
     }
     /**
+     * <pre>
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     * </pre>
+     *
      * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
      */
     @java.lang.Override
@@ -1733,6 +2253,12 @@ java.lang.String defaultValue) {
       return getOptionsMap();
     }
     /**
+     * <pre>
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     * </pre>
+     *
      * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
      */
     @java.lang.Override
@@ -1740,6 +2266,12 @@ java.lang.String defaultValue) {
       return internalGetOptions().getMap();
     }
     /**
+     * <pre>
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     * </pre>
+     *
      * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
      */
     @java.lang.Override
@@ -1754,6 +2286,12 @@ java.lang.String defaultValue) {
       return map.containsKey(key) ? map.get(key) : defaultValue;
     }
     /**
+     * <pre>
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     * </pre>
+     *
      * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
      */
     @java.lang.Override
@@ -1774,6 +2312,12 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
+     * <pre>
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     * </pre>
+     *
      * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
      */
     public Builder removeOptions(
@@ -1793,6 +2337,12 @@ java.lang.String defaultValue) {
       return internalGetMutableOptions().getMutableMap();
     }
     /**
+     * <pre>
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     * </pre>
+     *
      * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
      */
     public Builder putOptions(
@@ -1806,6 +2356,12 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
+     * <pre>
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     * </pre>
+     *
      * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
      */
     public Builder putAllOptions(
@@ -1813,6 +2369,615 @@ java.lang.String defaultValue) {
       internalGetMutableOptions().getMutableMap()
           .putAll(values);
       bitField0_ |= 0x00000200;
+      return this;
+    }
+
+    private java.lang.Object payloadFields_ = "";
+    /**
+     * <pre>
+     * Qdrant/vector projections: comma list of fields or columns copied into
+     * each point's payload (plus the row identity and scope stamps). Empty: the
+     * whole row. Same as options["payload_fields"].
+     * </pre>
+     *
+     * <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+     * @return The payloadFields.
+     */
+    public java.lang.String getPayloadFields() {
+      java.lang.Object ref = payloadFields_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        payloadFields_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Qdrant/vector projections: comma list of fields or columns copied into
+     * each point's payload (plus the row identity and scope stamps). Empty: the
+     * whole row. Same as options["payload_fields"].
+     * </pre>
+     *
+     * <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+     * @return The bytes for payloadFields.
+     */
+    public com.google.protobuf.ByteString
+        getPayloadFieldsBytes() {
+      java.lang.Object ref = payloadFields_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        payloadFields_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Qdrant/vector projections: comma list of fields or columns copied into
+     * each point's payload (plus the row identity and scope stamps). Empty: the
+     * whole row. Same as options["payload_fields"].
+     * </pre>
+     *
+     * <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+     * @param value The payloadFields to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPayloadFields(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      payloadFields_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Qdrant/vector projections: comma list of fields or columns copied into
+     * each point's payload (plus the row identity and scope stamps). Empty: the
+     * whole row. Same as options["payload_fields"].
+     * </pre>
+     *
+     * <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPayloadFields() {
+      payloadFields_ = getDefaultInstance().getPayloadFields();
+      bitField0_ = (bitField0_ & ~0x00000400);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Qdrant/vector projections: comma list of fields or columns copied into
+     * each point's payload (plus the row identity and scope stamps). Empty: the
+     * whole row. Same as options["payload_fields"].
+     * </pre>
+     *
+     * <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+     * @param value The bytes for payloadFields to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPayloadFieldsBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      payloadFields_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object ftsColumns_ = "";
+    /**
+     * <pre>
+     * Hybrid search: comma list of columns searched with Postgres full-text
+     * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+     * </pre>
+     *
+     * <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+     * @return The ftsColumns.
+     */
+    public java.lang.String getFtsColumns() {
+      java.lang.Object ref = ftsColumns_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        ftsColumns_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Hybrid search: comma list of columns searched with Postgres full-text
+     * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+     * </pre>
+     *
+     * <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+     * @return The bytes for ftsColumns.
+     */
+    public com.google.protobuf.ByteString
+        getFtsColumnsBytes() {
+      java.lang.Object ref = ftsColumns_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        ftsColumns_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Hybrid search: comma list of columns searched with Postgres full-text
+     * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+     * </pre>
+     *
+     * <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+     * @param value The ftsColumns to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFtsColumns(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ftsColumns_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Hybrid search: comma list of columns searched with Postgres full-text
+     * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+     * </pre>
+     *
+     * <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFtsColumns() {
+      ftsColumns_ = getDefaultInstance().getFtsColumns();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Hybrid search: comma list of columns searched with Postgres full-text
+     * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+     * </pre>
+     *
+     * <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+     * @param value The bytes for ftsColumns to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFtsColumnsBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ftsColumns_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object ftsConfig_ = "";
+    /**
+     * <pre>
+     * Text search configuration for fts_columns (default "simple").
+     * </pre>
+     *
+     * <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+     * @return The ftsConfig.
+     */
+    public java.lang.String getFtsConfig() {
+      java.lang.Object ref = ftsConfig_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        ftsConfig_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Text search configuration for fts_columns (default "simple").
+     * </pre>
+     *
+     * <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+     * @return The bytes for ftsConfig.
+     */
+    public com.google.protobuf.ByteString
+        getFtsConfigBytes() {
+      java.lang.Object ref = ftsConfig_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        ftsConfig_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Text search configuration for fts_columns (default "simple").
+     * </pre>
+     *
+     * <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+     * @param value The ftsConfig to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFtsConfig(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ftsConfig_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Text search configuration for fts_columns (default "simple").
+     * </pre>
+     *
+     * <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFtsConfig() {
+      ftsConfig_ = getDefaultInstance().getFtsConfig();
+      bitField0_ = (bitField0_ & ~0x00001000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Text search configuration for fts_columns (default "simple").
+     * </pre>
+     *
+     * <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+     * @param value The bytes for ftsConfig to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFtsConfigBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ftsConfig_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object edgeSourceField_ = "";
+    /**
+     * <pre>
+     * Graph edge projections: the source/target fields of the edge row and the
+     * node labels they point at. Same as options["edge_source_field"] etc.; the
+     * older "from_label"/"to_label" keys are deprecated aliases.
+     * </pre>
+     *
+     * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+     * @return The edgeSourceField.
+     */
+    public java.lang.String getEdgeSourceField() {
+      java.lang.Object ref = edgeSourceField_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        edgeSourceField_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Graph edge projections: the source/target fields of the edge row and the
+     * node labels they point at. Same as options["edge_source_field"] etc.; the
+     * older "from_label"/"to_label" keys are deprecated aliases.
+     * </pre>
+     *
+     * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+     * @return The bytes for edgeSourceField.
+     */
+    public com.google.protobuf.ByteString
+        getEdgeSourceFieldBytes() {
+      java.lang.Object ref = edgeSourceField_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        edgeSourceField_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Graph edge projections: the source/target fields of the edge row and the
+     * node labels they point at. Same as options["edge_source_field"] etc.; the
+     * older "from_label"/"to_label" keys are deprecated aliases.
+     * </pre>
+     *
+     * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+     * @param value The edgeSourceField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEdgeSourceField(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      edgeSourceField_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Graph edge projections: the source/target fields of the edge row and the
+     * node labels they point at. Same as options["edge_source_field"] etc.; the
+     * older "from_label"/"to_label" keys are deprecated aliases.
+     * </pre>
+     *
+     * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEdgeSourceField() {
+      edgeSourceField_ = getDefaultInstance().getEdgeSourceField();
+      bitField0_ = (bitField0_ & ~0x00002000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Graph edge projections: the source/target fields of the edge row and the
+     * node labels they point at. Same as options["edge_source_field"] etc.; the
+     * older "from_label"/"to_label" keys are deprecated aliases.
+     * </pre>
+     *
+     * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+     * @param value The bytes for edgeSourceField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEdgeSourceFieldBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      edgeSourceField_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object edgeTargetField_ = "";
+    /**
+     * <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+     * @return The edgeTargetField.
+     */
+    public java.lang.String getEdgeTargetField() {
+      java.lang.Object ref = edgeTargetField_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        edgeTargetField_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+     * @return The bytes for edgeTargetField.
+     */
+    public com.google.protobuf.ByteString
+        getEdgeTargetFieldBytes() {
+      java.lang.Object ref = edgeTargetField_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        edgeTargetField_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+     * @param value The edgeTargetField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEdgeTargetField(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      edgeTargetField_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEdgeTargetField() {
+      edgeTargetField_ = getDefaultInstance().getEdgeTargetField();
+      bitField0_ = (bitField0_ & ~0x00004000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+     * @param value The bytes for edgeTargetField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEdgeTargetFieldBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      edgeTargetField_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object edgeSourceLabel_ = "";
+    /**
+     * <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+     * @return The edgeSourceLabel.
+     */
+    public java.lang.String getEdgeSourceLabel() {
+      java.lang.Object ref = edgeSourceLabel_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        edgeSourceLabel_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+     * @return The bytes for edgeSourceLabel.
+     */
+    public com.google.protobuf.ByteString
+        getEdgeSourceLabelBytes() {
+      java.lang.Object ref = edgeSourceLabel_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        edgeSourceLabel_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+     * @param value The edgeSourceLabel to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEdgeSourceLabel(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      edgeSourceLabel_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEdgeSourceLabel() {
+      edgeSourceLabel_ = getDefaultInstance().getEdgeSourceLabel();
+      bitField0_ = (bitField0_ & ~0x00008000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+     * @param value The bytes for edgeSourceLabel to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEdgeSourceLabelBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      edgeSourceLabel_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object edgeTargetLabel_ = "";
+    /**
+     * <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+     * @return The edgeTargetLabel.
+     */
+    public java.lang.String getEdgeTargetLabel() {
+      java.lang.Object ref = edgeTargetLabel_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        edgeTargetLabel_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+     * @return The bytes for edgeTargetLabel.
+     */
+    public com.google.protobuf.ByteString
+        getEdgeTargetLabelBytes() {
+      java.lang.Object ref = edgeTargetLabel_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        edgeTargetLabel_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+     * @param value The edgeTargetLabel to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEdgeTargetLabel(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      edgeTargetLabel_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEdgeTargetLabel() {
+      edgeTargetLabel_ = getDefaultInstance().getEdgeTargetLabel();
+      bitField0_ = (bitField0_ & ~0x00010000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+     * @param value The bytes for edgeTargetLabel to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEdgeTargetLabelBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      edgeTargetLabel_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
       return this;
     }
 

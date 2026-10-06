@@ -34,7 +34,7 @@ u, err := udbclient.ConnectFromEnv(ctx, "UDB_", udbclient.Expect{
 |---|---|
 | `EncodeRecord` / `DecodeRecord` driven by the column annotations | `udbclient.EncodeRecord` / `DecodeRecord` (same rules; enums in text columns use udb's short tokens both ways) |
 | Annotation readers (`PrimaryKeys`, `Topic`, `OwnerColumns`, `MaxLen`, ...) | `udbclient.PrimaryKeys`, `Topic`, `PartitionKeyField`, `EventType`, `OwnerColumns`, `TenantColumn`, `ExportEligible`, `RetentionClass`, `SoftDelete`, `MaxLen`, `ApplyColumnDefaults` |
-| A store type with `Get`/`Select`/`Upsert`/`Delete` over `map[string]any` | `udbclient.TableOf[*pb.Entity](u)`, or the generated `<Entity>Table(u)` |
+| A store type with `Get`/`Select`/`Upsert`/`Delete` over `map[string]any` | `udbclient.TableOf[*pb.Entity]` called with your `*Udb`, or the generated `<Entity>Table` |
 | Flattening `$and` groups into a primary-key equality for CAS | `RowKey{...}` or the generated `<Entity>Key{...}.Row()`; the broker also accepts nested equalities |
 | Stamping `tenant_id` on every filter and record | Nothing. The broker fills the caller's verified tenant in, and refuses a different one with `UDB_TENANT_MISMATCH` |
 | Read the whole row, merge, upsert (to avoid NOT NULL failures) | `table.Patch(ctx, key, udbclient.Record{"status": "DONE"})` |
@@ -60,7 +60,7 @@ _, err = notes.UpdateWithRetry(ctx, udbclient.RowKey{"note_id": id}, 5, func(n *
 |---|---|
 | Collect mutations, drive `BeginTx`, check for `COMMITTED`, guess conflicts from the message | `u.Tx(ctx, func(tx *udbclient.TxScope) error { ... })`; a lost CAS is `ErrConflict` |
 | Build the outbox envelope (`event_id`, `event_type`, `document_id`, `correlation_id`, `payload`) | `tx.Emit(event)` builds it from the event message's `message_event_contract` |
-| A consumer loop: load cursor, subscribe, handle, CAS-commit the cursor, reconnect, refresh credentials | `udbclient.Consume[*eventsv1.NoteCreated](ctx, u, "search-indexer", "notes.note.created.v1", handle)`; the broker stores the cursor |
+| A consumer loop: load cursor, subscribe, handle, CAS-commit the cursor, reconnect, refresh credentials | `udbclient.Consume[*eventsv1.NoteCreated]` with a consumer name such as `"search-indexer"`, the topic and your handler; the broker stores the cursor |
 
 ```go
 err := u.Tx(ctx, func(tx *udbclient.TxScope) error {

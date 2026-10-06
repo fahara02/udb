@@ -26,7 +26,7 @@ namespace Udb.Entity.V1 {
           string.Concat(
             "Chl1ZGIvZW50aXR5L3YxL2Vycm9yLnByb3RvEg11ZGIuZW50aXR5LnYxIk0K",
             "E0Vycm9yRmllbGRWaW9sYXRpb24SFAoFZmllbGQYASABKAlSBWZpZWxkEiAK",
-            "C2Rlc2NyaXB0aW9uGAIgASgJUgtkZXNjcmlwdGlvbiKMAwoLRXJyb3JEZXRh",
+            "C2Rlc2NyaXB0aW9uGAIgASgJUgtkZXNjcmlwdGlvbiL2BAoLRXJyb3JEZXRh",
             "aWwSGAoHYmFja2VuZBgBIAEoCVIHYmFja2VuZBIcCglvcGVyYXRpb24YAiAB",
             "KAlSCW9wZXJhdGlvbhIvChNjYXBhYmlsaXR5X3JlcXVpcmVkGAMgASgJUhJj",
             "YXBhYmlsaXR5UmVxdWlyZWQSHAoJcmV0cnlhYmxlGAQgASgIUglyZXRyeWFi",
@@ -35,21 +35,31 @@ namespace Udb.Entity.V1 {
             "Y29ycmVsYXRpb25faWQYByABKAlSDWNvcnJlbGF0aW9uSWQSLAoEa2luZBgI",
             "IAEoDjIYLnVkYi5lbnRpdHkudjEuRXJyb3JLaW5kUgRraW5kEk0KEGZpZWxk",
             "X3Zpb2xhdGlvbnMYCSADKAsyIi51ZGIuZW50aXR5LnYxLkVycm9yRmllbGRW",
-            "aW9sYXRpb25SD2ZpZWxkVmlvbGF0aW9ucyrUAQoJRXJyb3JLaW5kEhoKFkVS",
-            "Uk9SX0tJTkRfVU5TUEVDSUZJRUQQABIZChVFUlJPUl9LSU5EX0NBUEFCSUxJ",
-            "VFkQARIVChFFUlJPUl9LSU5EX1BPTElDWRACEhQKEEVSUk9SX0tJTkRfUVVP",
-            "VEEQAxIVChFFUlJPUl9LSU5EX1NDSEVNQRAEEhgKFEVSUk9SX0tJTkRfUkVU",
-            "UllBQkxFEAUSFwoTRVJST1JfS0lORF9JTlRFUk5BTBAGEhkKFUVSUk9SX0tJ",
-            "TkRfVkFMSURBVElPThAHQrABChFjb20udWRiLmVudGl0eS52MUIKRXJyb3JQ",
-            "cm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3Vk",
-            "Yi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygIN",
-            "VWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9V",
-            "ZGI6OkVudGl0eTo6VjFiBnByb3RvMw=="));
+            "aW9sYXRpb25SD2ZpZWxkVmlvbGF0aW9ucxIWCgZyZWFzb24YCiABKAlSBnJl",
+            "YXNvbhIeCgpjb25zdHJhaW50GAsgASgJUgpjb25zdHJhaW50EhYKBmNvbHVt",
+            "bhgMIAEoCVIGY29sdW1uEhkKCGZpeF9oaW50GA0gASgJUgdmaXhIaW50EkEK",
+            "B21pc3NpbmcYDiADKAsyJy51ZGIuZW50aXR5LnYxLkVycm9yRGV0YWlsLk1p",
+            "c3NpbmdFbnRyeVIHbWlzc2luZxo6CgxNaXNzaW5nRW50cnkSEAoDa2V5GAEg",
+            "ASgJUgNrZXkSFAoFdmFsdWUYAiABKAlSBXZhbHVlOgI4ASqkAwoJRXJyb3JL",
+            "aW5kEhoKFkVSUk9SX0tJTkRfVU5TUEVDSUZJRUQQABIZChVFUlJPUl9LSU5E",
+            "X0NBUEFCSUxJVFkQARIVChFFUlJPUl9LSU5EX1BPTElDWRACEhQKEEVSUk9S",
+            "X0tJTkRfUVVPVEEQAxIVChFFUlJPUl9LSU5EX1NDSEVNQRAEEhgKFEVSUk9S",
+            "X0tJTkRfUkVUUllBQkxFEAUSFwoTRVJST1JfS0lORF9JTlRFUk5BTBAGEhkK",
+            "FUVSUk9SX0tJTkRfVkFMSURBVElPThAHEhcKE0VSUk9SX0tJTkRfQ09ORkxJ",
+            "Q1QQCBIYChRFUlJPUl9LSU5EX05PVF9GT1VORBAJEhUKEUVSUk9SX0tJTkRf",
+            "VU5JUVVFEAoSFwoTRVJST1JfS0lORF9OT1RfTlVMTBALEhoKFkVSUk9SX0tJ",
+            "TkRfRk9SRUlHTl9LRVkQDBIZChVFUlJPUl9LSU5EX1BFUk1JU1NJT04QDRIX",
+            "ChNFUlJPUl9LSU5EX1JFREFDVEVEEA4SGwoXRVJST1JfS0lORF9SQVRFX0xJ",
+            "TUlURUQQD0KwAQoRY29tLnVkYi5lbnRpdHkudjFCCkVycm9yUHJvdG9QAVo5",
+            "Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5",
+            "L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRp",
+            "dHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRp",
+            "dHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Udb.Entity.V1.ErrorKind), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.ErrorFieldViolation), global::Udb.Entity.V1.ErrorFieldViolation.Parser, new[]{ "Field", "Description" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.ErrorDetail), global::Udb.Entity.V1.ErrorDetail.Parser, new[]{ "Backend", "Operation", "CapabilityRequired", "Retryable", "RetryAfterMs", "PolicyDecisionId", "CorrelationId", "Kind", "FieldViolations" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.ErrorDetail), global::Udb.Entity.V1.ErrorDetail.Parser, new[]{ "Backend", "Operation", "CapabilityRequired", "Retryable", "RetryAfterMs", "PolicyDecisionId", "CorrelationId", "Kind", "FieldViolations", "Reason", "Constraint", "Column", "FixHint", "Missing" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
     #endregion
@@ -97,6 +107,42 @@ namespace Udb.Entity.V1 {
     /// InvalidArgument and carries `field_violations`.
     /// </summary>
     [pbr::OriginalName("ERROR_KIND_VALIDATION")] Validation = 7,
+    /// <summary>
+    /// A compare-and-swap / revision precondition did not hold: the row changed
+    /// since the caller read it. Re-read and retry. Maps to FailedPrecondition.
+    /// </summary>
+    [pbr::OriginalName("ERROR_KIND_CONFLICT")] Conflict = 8,
+    /// <summary>
+    /// The addressed row or resource does not exist (or is not visible to the
+    /// caller). Maps to NotFound.
+    /// </summary>
+    [pbr::OriginalName("ERROR_KIND_NOT_FOUND")] NotFound = 9,
+    /// <summary>
+    /// A unique constraint was violated; `constraint` names it. Maps to
+    /// AlreadyExists.
+    /// </summary>
+    [pbr::OriginalName("ERROR_KIND_UNIQUE")] Unique = 10,
+    /// <summary>
+    /// A NOT NULL column received no value; `column` names it.
+    /// </summary>
+    [pbr::OriginalName("ERROR_KIND_NOT_NULL")] NotNull = 11,
+    /// <summary>
+    /// A foreign-key constraint was violated; `constraint` names it.
+    /// </summary>
+    [pbr::OriginalName("ERROR_KIND_FOREIGN_KEY")] ForeignKey = 12,
+    /// <summary>
+    /// The caller lacks a scope, grant or policy rule; `missing` names it.
+    /// </summary>
+    [pbr::OriginalName("ERROR_KIND_PERMISSION")] Permission = 13,
+    /// <summary>
+    /// A value was redacted for this caller (PII without the read scope), or a
+    /// write tried to store a redacted placeholder.
+    /// </summary>
+    [pbr::OriginalName("ERROR_KIND_REDACTED")] Redacted = 14,
+    /// <summary>
+    /// A rate limit was hit; `retry_after_ms` and `missing` describe the bucket.
+    /// </summary>
+    [pbr::OriginalName("ERROR_KIND_RATE_LIMITED")] RateLimited = 15,
   }
 
   #endregion
@@ -386,6 +432,11 @@ namespace Udb.Entity.V1 {
       correlationId_ = other.correlationId_;
       kind_ = other.kind_;
       fieldViolations_ = other.fieldViolations_.Clone();
+      reason_ = other.reason_;
+      constraint_ = other.constraint_;
+      column_ = other.column_;
+      fixHint_ = other.fixHint_;
+      missing_ = other.missing_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -536,6 +587,85 @@ namespace Udb.Entity.V1 {
       get { return fieldViolations_; }
     }
 
+    /// <summary>Field number for the "reason" field.</summary>
+    public const int ReasonFieldNumber = 10;
+    private string reason_ = "";
+    /// <summary>
+    /// Stable machine reason, `UDB_` + upper snake case (for example
+    /// `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+    /// listed in docs/error-reasons.md; a reason is never renamed once shipped.
+    /// Branch on this, never on the message text.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Reason {
+      get { return reason_; }
+      set {
+        reason_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "constraint" field.</summary>
+    public const int ConstraintFieldNumber = 11;
+    private string constraint_ = "";
+    /// <summary>
+    /// The constraint involved (unique, foreign key, check), when known.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Constraint {
+      get { return constraint_; }
+      set {
+        constraint_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "column" field.</summary>
+    public const int ColumnFieldNumber = 12;
+    private string column_ = "";
+    /// <summary>
+    /// The column involved (not null, coercion, decode), when known.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Column {
+      get { return column_; }
+      set {
+        column_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "fix_hint" field.</summary>
+    public const int FixHintFieldNumber = 13;
+    private string fixHint_ = "";
+    /// <summary>
+    /// One sentence telling the caller how to fix the request.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string FixHint {
+      get { return fixHint_; }
+      set {
+        fixHint_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "missing" field.</summary>
+    public const int MissingFieldNumber = 14;
+    private static readonly pbc::MapField<string, string>.Codec _map_missing_codec
+        = new pbc::MapField<string, string>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForString(18, ""), 114);
+    private readonly pbc::MapField<string, string> missing_ = new pbc::MapField<string, string>();
+    /// <summary>
+    /// What the caller is missing, as key/value pairs: for example
+    /// `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+    /// `{"rule": "Select acme.notes.v1.Note"}`.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::MapField<string, string> Missing {
+      get { return missing_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -560,6 +690,11 @@ namespace Udb.Entity.V1 {
       if (CorrelationId != other.CorrelationId) return false;
       if (Kind != other.Kind) return false;
       if(!fieldViolations_.Equals(other.fieldViolations_)) return false;
+      if (Reason != other.Reason) return false;
+      if (Constraint != other.Constraint) return false;
+      if (Column != other.Column) return false;
+      if (FixHint != other.FixHint) return false;
+      if (!Missing.Equals(other.Missing)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -576,6 +711,11 @@ namespace Udb.Entity.V1 {
       if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
       if (Kind != global::Udb.Entity.V1.ErrorKind.Unspecified) hash ^= Kind.GetHashCode();
       hash ^= fieldViolations_.GetHashCode();
+      if (Reason.Length != 0) hash ^= Reason.GetHashCode();
+      if (Constraint.Length != 0) hash ^= Constraint.GetHashCode();
+      if (Column.Length != 0) hash ^= Column.GetHashCode();
+      if (FixHint.Length != 0) hash ^= FixHint.GetHashCode();
+      hash ^= Missing.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -627,6 +767,23 @@ namespace Udb.Entity.V1 {
         output.WriteEnum((int) Kind);
       }
       fieldViolations_.WriteTo(output, _repeated_fieldViolations_codec);
+      if (Reason.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(Reason);
+      }
+      if (Constraint.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(Constraint);
+      }
+      if (Column.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(Column);
+      }
+      if (FixHint.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(FixHint);
+      }
+      missing_.WriteTo(output, _map_missing_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -670,6 +827,23 @@ namespace Udb.Entity.V1 {
         output.WriteEnum((int) Kind);
       }
       fieldViolations_.WriteTo(ref output, _repeated_fieldViolations_codec);
+      if (Reason.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(Reason);
+      }
+      if (Constraint.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(Constraint);
+      }
+      if (Column.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(Column);
+      }
+      if (FixHint.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(FixHint);
+      }
+      missing_.WriteTo(ref output, _map_missing_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -705,6 +879,19 @@ namespace Udb.Entity.V1 {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Kind);
       }
       size += fieldViolations_.CalculateSize(_repeated_fieldViolations_codec);
+      if (Reason.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Reason);
+      }
+      if (Constraint.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Constraint);
+      }
+      if (Column.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Column);
+      }
+      if (FixHint.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(FixHint);
+      }
+      size += missing_.CalculateSize(_map_missing_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -742,6 +929,19 @@ namespace Udb.Entity.V1 {
         Kind = other.Kind;
       }
       fieldViolations_.Add(other.fieldViolations_);
+      if (other.Reason.Length != 0) {
+        Reason = other.Reason;
+      }
+      if (other.Constraint.Length != 0) {
+        Constraint = other.Constraint;
+      }
+      if (other.Column.Length != 0) {
+        Column = other.Column;
+      }
+      if (other.FixHint.Length != 0) {
+        FixHint = other.FixHint;
+      }
+      missing_.MergeFrom(other.missing_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -797,6 +997,26 @@ namespace Udb.Entity.V1 {
             fieldViolations_.AddEntriesFrom(input, _repeated_fieldViolations_codec);
             break;
           }
+          case 82: {
+            Reason = input.ReadString();
+            break;
+          }
+          case 90: {
+            Constraint = input.ReadString();
+            break;
+          }
+          case 98: {
+            Column = input.ReadString();
+            break;
+          }
+          case 106: {
+            FixHint = input.ReadString();
+            break;
+          }
+          case 114: {
+            missing_.AddEntriesFrom(input, _map_missing_codec);
+            break;
+          }
         }
       }
     #endif
@@ -850,6 +1070,26 @@ namespace Udb.Entity.V1 {
           }
           case 74: {
             fieldViolations_.AddEntriesFrom(ref input, _repeated_fieldViolations_codec);
+            break;
+          }
+          case 82: {
+            Reason = input.ReadString();
+            break;
+          }
+          case 90: {
+            Constraint = input.ReadString();
+            break;
+          }
+          case 98: {
+            Column = input.ReadString();
+            break;
+          }
+          case 106: {
+            FixHint = input.ReadString();
+            break;
+          }
+          case 114: {
+            missing_.AddEntriesFrom(ref input, _map_missing_codec);
             break;
           }
         }

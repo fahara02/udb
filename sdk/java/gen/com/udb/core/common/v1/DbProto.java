@@ -555,7 +555,7 @@ public final class DbProto {
       "ortKey\022 \n\013compression\030\006 \001(\tR\013compression" +
       "\022\037\n\013ttl_seconds\030\007 \001(\005R\nttlSeconds\022.\n\023pay" +
       "load_schema_json\030\010 \001(\tR\021payloadSchemaJso" +
-      "n\"\307\003\n\023GenericStoreOptions\022\035\n\nstore_kind\030" +
+      "n\"\336\005\n\023GenericStoreOptions\022\035\n\nstore_kind\030" +
       "\001 \001(\tR\tstoreKind\022\030\n\007backend\030\002 \001(\tR\007backe" +
       "nd\022!\n\014logical_name\030\003 \001(\tR\013logicalName\022#\n" +
       "\rdatabase_name\030\004 \001(\tR\014databaseName\022\034\n\tna" +
@@ -564,113 +564,120 @@ public final class DbProto {
       "(\tR\tdsnEnvKey\022\020\n\003dsn\030\010 \001(\tR\003dsn\022.\n\023paylo" +
       "ad_schema_json\030\t \001(\tR\021payloadSchemaJson\022" +
       "N\n\007options\030\n \003(\01324.udb.core.common.v1.Ge" +
-      "nericStoreOptions.OptionsEntryR\007options\032" +
-      ":\n\014OptionsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005val" +
-      "ue\030\002 \001(\tR\005value:\0028\001*\325\001\n\021PartitionStrateg" +
-      "y\022\"\n\036PARTITION_STRATEGY_UNSPECIFIED\020\000\022\033\n" +
-      "\027PARTITION_STRATEGY_NONE\020\001\022!\n\035PARTITION_" +
-      "STRATEGY_RANGE_YEAR\020\002\022\"\n\036PARTITION_STRAT" +
-      "EGY_RANGE_MONTH\020\003\022\033\n\027PARTITION_STRATEGY_" +
-      "LIST\020\004\022\033\n\027PARTITION_STRATEGY_HASH\020\005*\337\001\n\021" +
-      "ReferentialAction\022\"\n\036REFERENTIAL_ACTION_" +
-      "UNSPECIFIED\020\000\022 \n\034REFERENTIAL_ACTION_NO_A" +
-      "CTION\020\001\022\037\n\033REFERENTIAL_ACTION_RESTRICT\020\002" +
-      "\022\036\n\032REFERENTIAL_ACTION_CASCADE\020\003\022\037\n\033REFE" +
-      "RENTIAL_ACTION_SET_NULL\020\004\022\"\n\036REFERENTIAL" +
-      "_ACTION_SET_DEFAULT\020\005*\344\001\n\tIndexType\022\032\n\026I" +
-      "NDEX_TYPE_UNSPECIFIED\020\000\022\023\n\017INDEX_TYPE_NO" +
-      "NE\020\001\022\024\n\020INDEX_TYPE_BTREE\020\002\022\023\n\017INDEX_TYPE" +
-      "_HASH\020\003\022\022\n\016INDEX_TYPE_GIN\020\004\022\023\n\017INDEX_TYP" +
-      "E_GIST\020\005\022\023\n\017INDEX_TYPE_BRIN\020\006\022\023\n\017INDEX_T" +
-      "YPE_HNSW\020\007\022\022\n\016INDEX_TYPE_IVF\020\010\022\024\n\020INDEX_" +
-      "TYPE_IVFPQ\020\t*\274\001\n\022StorageBackendType\022\037\n\033S" +
-      "TORAGE_BACKEND_UNSPECIFIED\020\000\022\026\n\022STORAGE_" +
-      "BACKEND_S3\020\001\022\031\n\025STORAGE_BACKEND_MINIO\020\002\022" +
-      "\027\n\023STORAGE_BACKEND_GCS\020\003\022\036\n\032STORAGE_BACK" +
-      "END_AZURE_BLOB\020\004\022\031\n\025STORAGE_BACKEND_LOCA" +
-      "L\020\005*\337\001\n\021VectorBackendType\022\036\n\032VECTOR_BACK" +
-      "END_UNSPECIFIED\020\000\022\031\n\025VECTOR_BACKEND_QDRA" +
-      "NT\020\001\022\031\n\025VECTOR_BACKEND_MILVUS\020\002\022\033\n\027VECTO" +
-      "R_BACKEND_WEAVIATE\020\003\022\033\n\027VECTOR_BACKEND_P" +
-      "GVECTOR\020\004\022\033\n\027VECTOR_BACKEND_PINECONE\020\005\022\035" +
-      "\n\031VECTOR_BACKEND_OPENSEARCH\020\006*\252\001\n\024Vector" +
-      "DistanceMetric\022\037\n\033VECTOR_DISTANCE_UNSPEC" +
-      "IFIED\020\000\022\032\n\026VECTOR_DISTANCE_COSINE\020\001\022\027\n\023V" +
-      "ECTOR_DISTANCE_DOT\020\002\022\035\n\031VECTOR_DISTANCE_" +
-      "EUCLIDEAN\020\003\022\035\n\031VECTOR_DISTANCE_MANHATTAN" +
-      "\020\004*\242\001\n\020CacheBackendType\022\035\n\031CACHE_BACKEND" +
-      "_UNSPECIFIED\020\000\022\027\n\023CACHE_BACKEND_REDIS\020\001\022" +
-      "\033\n\027CACHE_BACKEND_MEMCACHED\020\002\022\034\n\030CACHE_BA" +
-      "CKEND_IN_PROCESS\020\003\022\033\n\027CACHE_BACKEND_DRAG" +
-      "ONFLY\020\004*\202\001\n\020GraphBackendType\022\035\n\031GRAPH_BA" +
-      "CKEND_UNSPECIFIED\020\000\022\027\n\023GRAPH_BACKEND_NEO" +
-      "4J\020\001\022\032\n\026GRAPH_BACKEND_MEMGRAPH\020\002\022\032\n\026GRAP" +
-      "H_BACKEND_ARANGODB\020\003*\204\001\n\020NoSqlBackendTyp" +
-      "e\022\035\n\031NOSQL_BACKEND_UNSPECIFIED\020\000\022\031\n\025NOSQ" +
-      "L_BACKEND_MONGODB\020\001\022\032\n\026NOSQL_BACKEND_DYN" +
-      "AMODB\020\002\022\032\n\026NOSQL_BACKEND_COSMOSDB\020\003*\243\001\n\025" +
-      "TimeSeriesBackendType\022\"\n\036TIMESERIES_BACK" +
-      "END_UNSPECIFIED\020\000\022\"\n\036TIMESERIES_BACKEND_" +
-      "TIMESCALEDB\020\001\022\037\n\033TIMESERIES_BACKEND_INFL" +
-      "UXDB\020\002\022!\n\035TIMESERIES_BACKEND_CLICKHOUSE\020" +
-      "\003*\215\001\n\021ColumnBackendType\022\036\n\032COLUMN_BACKEN" +
-      "D_UNSPECIFIED\020\000\022\035\n\031COLUMN_BACKEND_CLICKH" +
-      "OUSE\020\001\022\034\n\030COLUMN_BACKEND_CASSANDRA\020\002\022\033\n\027" +
-      "COLUMN_BACKEND_BIGTABLE\020\003*\356\001\n\020ModelBacke" +
-      "ndType\022\035\n\031MODEL_BACKEND_UNSPECIFIED\020\000\022\030\n" +
-      "\024MODEL_BACKEND_MLFLOW\020\001\022\025\n\021MODEL_BACKEND" +
-      "_DVC\020\002\022\035\n\031MODEL_BACKEND_HUGGINGFACE\020\003\022\031\n" +
-      "\025MODEL_BACKEND_BENTOML\020\004\022\030\n\024MODEL_BACKEN" +
-      "D_TRITON\020\005\022\034\n\030MODEL_BACKEND_TORCHSERVE\020\006" +
-      "\022\030\n\024MODEL_BACKEND_CUSTOM\020\007:Y\n\005table\022\037.go" +
-      "ogle.protobuf.MessageOptions\030\321\206\003 \001(\0132 .u" +
-      "db.core.common.v1.TableOptionsR\005table:^\n" +
-      "\010pg_table\022\037.google.protobuf.MessageOptio" +
-      "ns\030\357\206\003 \001(\0132 .udb.core.common.v1.TableOpt" +
-      "ionsR\007pgTable:l\n\014vector_store\022\037.google.p" +
-      "rotobuf.MessageOptions\030\323\206\003 \001(\0132&.udb.cor" +
-      "e.common.v1.VectorStoreOptionsR\013vectorSt" +
-      "ore:Y\n\005cache\022\037.google.protobuf.MessageOp" +
-      "tions\030\324\206\003 \001(\0132 .udb.core.common.v1.Cache" +
-      "OptionsR\005cache:r\n\016model_registry\022\037.googl" +
-      "e.protobuf.MessageOptions\030\325\206\003 \001(\0132(.udb." +
-      "core.common.v1.ModelRegistryOptionsR\rmod" +
-      "elRegistry:i\n\013graph_store\022\037.google.proto" +
-      "buf.MessageOptions\030\327\206\003 \001(\0132%.udb.core.co" +
-      "mmon.v1.GraphStoreOptionsR\ngraphStore:r\n" +
-      "\016document_store\022\037.google.protobuf.Messag" +
-      "eOptions\030\330\206\003 \001(\0132(.udb.core.common.v1.Do" +
-      "cumentStoreOptionsR\rdocumentStore:l\n\013nos" +
-      "ql_store\022\037.google.protobuf.MessageOption" +
-      "s\030\331\206\003 \001(\0132(.udb.core.common.v1.DocumentS" +
-      "toreOptionsR\nnosqlStore:x\n\020timeseries_st" +
-      "ore\022\037.google.protobuf.MessageOptions\030\332\206\003" +
-      " \001(\0132*.udb.core.common.v1.TimeSeriesStor" +
-      "eOptionsR\017timeseriesStore:l\n\014column_stor" +
-      "e\022\037.google.protobuf.MessageOptions\030\333\206\003 \001" +
-      "(\0132&.udb.core.common.v1.ColumnStoreOptio" +
-      "nsR\013columnStore:i\n\ndata_store\022\037.google.p" +
-      "rotobuf.MessageOptions\030\334\206\003 \001(\0132\'.udb.cor" +
-      "e.common.v1.GenericStoreOptionsR\tdataSto" +
-      "re:b\n\010security\022\037.google.protobuf.Message" +
-      "Options\030\335\206\003 \001(\0132#.udb.core.common.v1.Sec" +
-      "urityOptionsR\010security:Z\n\006column\022\035.googl" +
-      "e.protobuf.FieldOptions\030\322\206\003 \001(\0132!.udb.co" +
-      "re.common.v1.ColumnOptionsR\006column:_\n\tpg" +
-      "_column\022\035.google.protobuf.FieldOptions\030\360" +
-      "\206\003 \001(\0132!.udb.core.common.v1.ColumnOption" +
-      "sR\010pgColumn:b\n\007storage\022\035.google.protobuf" +
-      ".FieldOptions\030\326\206\003 \001(\0132\'.udb.core.common." +
-      "v1.StorageFieldOptionsR\007storage:s\n\017colum" +
-      "n_security\022\035.google.protobuf.FieldOption" +
-      "s\030\345\206\003 \001(\0132).udb.core.common.v1.ColumnSec" +
-      "urityOptionsR\016columnSecurityB\314\001\n\026com.udb" +
-      ".core.common.v1B\007DbProtoP\001Z>github.com/f" +
-      "ahara02/udb/sdk/go/gen/udb/core/common/v" +
-      "1;commonv1\242\002\003UCC\252\002\022Udb.Core.Common.V1\312\002\022" +
-      "Udb\\Core\\Common\\V1\342\002\036Udb\\GPBMetadata\\Cor" +
-      "e\\Common\\V1\352\002\025Udb::Core::Common::V1b\006pro" +
-      "to3"
+      "nericStoreOptions.OptionsEntryR\007options\022" +
+      "%\n\016payload_fields\030\013 \001(\tR\rpayloadFields\022\037" +
+      "\n\013fts_columns\030\014 \001(\tR\nftsColumns\022\035\n\nfts_c" +
+      "onfig\030\r \001(\tR\tftsConfig\022*\n\021edge_source_fi" +
+      "eld\030\016 \001(\tR\017edgeSourceField\022*\n\021edge_targe" +
+      "t_field\030\017 \001(\tR\017edgeTargetField\022*\n\021edge_s" +
+      "ource_label\030\020 \001(\tR\017edgeSourceLabel\022*\n\021ed" +
+      "ge_target_label\030\021 \001(\tR\017edgeTargetLabel\032:" +
+      "\n\014OptionsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005valu" +
+      "e\030\002 \001(\tR\005value:\0028\001*\325\001\n\021PartitionStrategy" +
+      "\022\"\n\036PARTITION_STRATEGY_UNSPECIFIED\020\000\022\033\n\027" +
+      "PARTITION_STRATEGY_NONE\020\001\022!\n\035PARTITION_S" +
+      "TRATEGY_RANGE_YEAR\020\002\022\"\n\036PARTITION_STRATE" +
+      "GY_RANGE_MONTH\020\003\022\033\n\027PARTITION_STRATEGY_L" +
+      "IST\020\004\022\033\n\027PARTITION_STRATEGY_HASH\020\005*\337\001\n\021R" +
+      "eferentialAction\022\"\n\036REFERENTIAL_ACTION_U" +
+      "NSPECIFIED\020\000\022 \n\034REFERENTIAL_ACTION_NO_AC" +
+      "TION\020\001\022\037\n\033REFERENTIAL_ACTION_RESTRICT\020\002\022" +
+      "\036\n\032REFERENTIAL_ACTION_CASCADE\020\003\022\037\n\033REFER" +
+      "ENTIAL_ACTION_SET_NULL\020\004\022\"\n\036REFERENTIAL_" +
+      "ACTION_SET_DEFAULT\020\005*\344\001\n\tIndexType\022\032\n\026IN" +
+      "DEX_TYPE_UNSPECIFIED\020\000\022\023\n\017INDEX_TYPE_NON" +
+      "E\020\001\022\024\n\020INDEX_TYPE_BTREE\020\002\022\023\n\017INDEX_TYPE_" +
+      "HASH\020\003\022\022\n\016INDEX_TYPE_GIN\020\004\022\023\n\017INDEX_TYPE" +
+      "_GIST\020\005\022\023\n\017INDEX_TYPE_BRIN\020\006\022\023\n\017INDEX_TY" +
+      "PE_HNSW\020\007\022\022\n\016INDEX_TYPE_IVF\020\010\022\024\n\020INDEX_T" +
+      "YPE_IVFPQ\020\t*\274\001\n\022StorageBackendType\022\037\n\033ST" +
+      "ORAGE_BACKEND_UNSPECIFIED\020\000\022\026\n\022STORAGE_B" +
+      "ACKEND_S3\020\001\022\031\n\025STORAGE_BACKEND_MINIO\020\002\022\027" +
+      "\n\023STORAGE_BACKEND_GCS\020\003\022\036\n\032STORAGE_BACKE" +
+      "ND_AZURE_BLOB\020\004\022\031\n\025STORAGE_BACKEND_LOCAL" +
+      "\020\005*\337\001\n\021VectorBackendType\022\036\n\032VECTOR_BACKE" +
+      "ND_UNSPECIFIED\020\000\022\031\n\025VECTOR_BACKEND_QDRAN" +
+      "T\020\001\022\031\n\025VECTOR_BACKEND_MILVUS\020\002\022\033\n\027VECTOR" +
+      "_BACKEND_WEAVIATE\020\003\022\033\n\027VECTOR_BACKEND_PG" +
+      "VECTOR\020\004\022\033\n\027VECTOR_BACKEND_PINECONE\020\005\022\035\n" +
+      "\031VECTOR_BACKEND_OPENSEARCH\020\006*\252\001\n\024VectorD" +
+      "istanceMetric\022\037\n\033VECTOR_DISTANCE_UNSPECI" +
+      "FIED\020\000\022\032\n\026VECTOR_DISTANCE_COSINE\020\001\022\027\n\023VE" +
+      "CTOR_DISTANCE_DOT\020\002\022\035\n\031VECTOR_DISTANCE_E" +
+      "UCLIDEAN\020\003\022\035\n\031VECTOR_DISTANCE_MANHATTAN\020" +
+      "\004*\242\001\n\020CacheBackendType\022\035\n\031CACHE_BACKEND_" +
+      "UNSPECIFIED\020\000\022\027\n\023CACHE_BACKEND_REDIS\020\001\022\033" +
+      "\n\027CACHE_BACKEND_MEMCACHED\020\002\022\034\n\030CACHE_BAC" +
+      "KEND_IN_PROCESS\020\003\022\033\n\027CACHE_BACKEND_DRAGO" +
+      "NFLY\020\004*\202\001\n\020GraphBackendType\022\035\n\031GRAPH_BAC" +
+      "KEND_UNSPECIFIED\020\000\022\027\n\023GRAPH_BACKEND_NEO4" +
+      "J\020\001\022\032\n\026GRAPH_BACKEND_MEMGRAPH\020\002\022\032\n\026GRAPH" +
+      "_BACKEND_ARANGODB\020\003*\204\001\n\020NoSqlBackendType" +
+      "\022\035\n\031NOSQL_BACKEND_UNSPECIFIED\020\000\022\031\n\025NOSQL" +
+      "_BACKEND_MONGODB\020\001\022\032\n\026NOSQL_BACKEND_DYNA" +
+      "MODB\020\002\022\032\n\026NOSQL_BACKEND_COSMOSDB\020\003*\243\001\n\025T" +
+      "imeSeriesBackendType\022\"\n\036TIMESERIES_BACKE" +
+      "ND_UNSPECIFIED\020\000\022\"\n\036TIMESERIES_BACKEND_T" +
+      "IMESCALEDB\020\001\022\037\n\033TIMESERIES_BACKEND_INFLU" +
+      "XDB\020\002\022!\n\035TIMESERIES_BACKEND_CLICKHOUSE\020\003" +
+      "*\215\001\n\021ColumnBackendType\022\036\n\032COLUMN_BACKEND" +
+      "_UNSPECIFIED\020\000\022\035\n\031COLUMN_BACKEND_CLICKHO" +
+      "USE\020\001\022\034\n\030COLUMN_BACKEND_CASSANDRA\020\002\022\033\n\027C" +
+      "OLUMN_BACKEND_BIGTABLE\020\003*\356\001\n\020ModelBacken" +
+      "dType\022\035\n\031MODEL_BACKEND_UNSPECIFIED\020\000\022\030\n\024" +
+      "MODEL_BACKEND_MLFLOW\020\001\022\025\n\021MODEL_BACKEND_" +
+      "DVC\020\002\022\035\n\031MODEL_BACKEND_HUGGINGFACE\020\003\022\031\n\025" +
+      "MODEL_BACKEND_BENTOML\020\004\022\030\n\024MODEL_BACKEND" +
+      "_TRITON\020\005\022\034\n\030MODEL_BACKEND_TORCHSERVE\020\006\022" +
+      "\030\n\024MODEL_BACKEND_CUSTOM\020\007:Y\n\005table\022\037.goo" +
+      "gle.protobuf.MessageOptions\030\321\206\003 \001(\0132 .ud" +
+      "b.core.common.v1.TableOptionsR\005table:^\n\010" +
+      "pg_table\022\037.google.protobuf.MessageOption" +
+      "s\030\357\206\003 \001(\0132 .udb.core.common.v1.TableOpti" +
+      "onsR\007pgTable:l\n\014vector_store\022\037.google.pr" +
+      "otobuf.MessageOptions\030\323\206\003 \001(\0132&.udb.core" +
+      ".common.v1.VectorStoreOptionsR\013vectorSto" +
+      "re:Y\n\005cache\022\037.google.protobuf.MessageOpt" +
+      "ions\030\324\206\003 \001(\0132 .udb.core.common.v1.CacheO" +
+      "ptionsR\005cache:r\n\016model_registry\022\037.google" +
+      ".protobuf.MessageOptions\030\325\206\003 \001(\0132(.udb.c" +
+      "ore.common.v1.ModelRegistryOptionsR\rmode" +
+      "lRegistry:i\n\013graph_store\022\037.google.protob" +
+      "uf.MessageOptions\030\327\206\003 \001(\0132%.udb.core.com" +
+      "mon.v1.GraphStoreOptionsR\ngraphStore:r\n\016" +
+      "document_store\022\037.google.protobuf.Message" +
+      "Options\030\330\206\003 \001(\0132(.udb.core.common.v1.Doc" +
+      "umentStoreOptionsR\rdocumentStore:l\n\013nosq" +
+      "l_store\022\037.google.protobuf.MessageOptions" +
+      "\030\331\206\003 \001(\0132(.udb.core.common.v1.DocumentSt" +
+      "oreOptionsR\nnosqlStore:x\n\020timeseries_sto" +
+      "re\022\037.google.protobuf.MessageOptions\030\332\206\003 " +
+      "\001(\0132*.udb.core.common.v1.TimeSeriesStore" +
+      "OptionsR\017timeseriesStore:l\n\014column_store" +
+      "\022\037.google.protobuf.MessageOptions\030\333\206\003 \001(" +
+      "\0132&.udb.core.common.v1.ColumnStoreOption" +
+      "sR\013columnStore:i\n\ndata_store\022\037.google.pr" +
+      "otobuf.MessageOptions\030\334\206\003 \001(\0132\'.udb.core" +
+      ".common.v1.GenericStoreOptionsR\tdataStor" +
+      "e:b\n\010security\022\037.google.protobuf.MessageO" +
+      "ptions\030\335\206\003 \001(\0132#.udb.core.common.v1.Secu" +
+      "rityOptionsR\010security:Z\n\006column\022\035.google" +
+      ".protobuf.FieldOptions\030\322\206\003 \001(\0132!.udb.cor" +
+      "e.common.v1.ColumnOptionsR\006column:_\n\tpg_" +
+      "column\022\035.google.protobuf.FieldOptions\030\360\206" +
+      "\003 \001(\0132!.udb.core.common.v1.ColumnOptions" +
+      "R\010pgColumn:b\n\007storage\022\035.google.protobuf." +
+      "FieldOptions\030\326\206\003 \001(\0132\'.udb.core.common.v" +
+      "1.StorageFieldOptionsR\007storage:s\n\017column" +
+      "_security\022\035.google.protobuf.FieldOptions" +
+      "\030\345\206\003 \001(\0132).udb.core.common.v1.ColumnSecu" +
+      "rityOptionsR\016columnSecurityB\314\001\n\026com.udb." +
+      "core.common.v1B\007DbProtoP\001Z>github.com/fa" +
+      "hara02/udb/sdk/go/gen/udb/core/common/v1" +
+      ";commonv1\242\002\003UCC\252\002\022Udb.Core.Common.V1\312\002\022U" +
+      "db\\Core\\Common\\V1\342\002\036Udb\\GPBMetadata\\Core" +
+      "\\Common\\V1\352\002\025Udb::Core::Common::V1b\006prot" +
+      "o3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -808,7 +815,7 @@ public final class DbProto {
     internal_static_udb_core_common_v1_GenericStoreOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_GenericStoreOptions_descriptor,
-        new java.lang.String[] { "StoreKind", "Backend", "LogicalName", "DatabaseName", "Namespace", "ResourceName", "DsnEnvKey", "Dsn", "PayloadSchemaJson", "Options", });
+        new java.lang.String[] { "StoreKind", "Backend", "LogicalName", "DatabaseName", "Namespace", "ResourceName", "DsnEnvKey", "Dsn", "PayloadSchemaJson", "Options", "PayloadFields", "FtsColumns", "FtsConfig", "EdgeSourceField", "EdgeTargetField", "EdgeSourceLabel", "EdgeTargetLabel", });
     internal_static_udb_core_common_v1_GenericStoreOptions_OptionsEntry_descriptor =
       internal_static_udb_core_common_v1_GenericStoreOptions_descriptor.getNestedTypes().get(0);
     internal_static_udb_core_common_v1_GenericStoreOptions_OptionsEntry_fieldAccessorTable = new

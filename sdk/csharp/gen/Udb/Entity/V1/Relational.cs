@@ -33,90 +33,95 @@ namespace Udb.Entity.V1 {
             "ASgFUgp0dGxTZWNvbmRzIpABCgNSb3cSNgoGZmllbGRzGAEgAygLMh4udWRi",
             "LmVudGl0eS52MS5Sb3cuRmllbGRzRW50cnlSBmZpZWxkcxpRCgtGaWVsZHNF",
             "bnRyeRIQCgNrZXkYASABKAlSA2tleRIsCgV2YWx1ZRgCIAEoCzIWLmdvb2ds",
-            "ZS5wcm90b2J1Zi5WYWx1ZVIFdmFsdWU6AjgBIsoBCglSZWNvcmRTZXQSIQoM",
+            "ZS5wcm90b2J1Zi5WYWx1ZVIFdmFsdWU6AjgBIq8CCglSZWNvcmRTZXQSIQoM",
             "cmVjb3Jkc19qc29uGAEgAygMUgtyZWNvcmRzSnNvbhImCgRyb3dzGAIgAygL",
             "MhIudWRiLmVudGl0eS52MS5Sb3dSBHJvd3MSJgoPbmV4dF9wYWdlX3Rva2Vu",
             "GAMgASgJUg1uZXh0UGFnZVRva2VuEh8KC3RvdGFsX2NvdW50GAQgASgFUgp0",
             "b3RhbENvdW50EikKEHJlY29yZF9yZXZpc2lvbnMYBSADKAlSD3JlY29yZFJl",
-            "dmlzaW9ucyLwAgoNU2VsZWN0UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0u",
-            "dWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIhCgxtZXNz",
-            "YWdlX3R5cGUYAiABKAlSC21lc3NhZ2VUeXBlEi8KBmZpbHRlchgDIAEoCzIX",
-            "Lmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSBmZpbHRlchIWCgZmaWVsZHMYBCAD",
-            "KAlSBmZpZWxkcxIUCgVsaW1pdBgFIAEoBVIFbGltaXQSHQoKcGFnZV90b2tl",
-            "bhgGIAEoCVIJcGFnZVRva2VuEicKBHNvcnQYByADKAsyEy51ZGIuZW50aXR5",
-            "LnYxLlNvcnRSBHNvcnQSMQoFY2FjaGUYCCABKAsyGy51ZGIuZW50aXR5LnYx",
-            "LkNhY2hlT3B0aW9uc1IFY2FjaGUSKQoQaW5jbHVkZV9yZXZpc2lvbhgJIAEo",
-            "CFIPaW5jbHVkZVJldmlzaW9uIuADCg1VcHNlcnRSZXF1ZXN0EjcKB2NvbnRl",
+            "dmlzaW9ucxIZCghoYXNfbW9yZRgGIAEoCFIHaGFzTW9yZRIfCgtleGFjdF90",
+            "b3RhbBgHIAEoA1IKZXhhY3RUb3RhbBInCg9yZWRhY3RlZF9maWVsZHMYCCAD",
+            "KAlSDnJlZGFjdGVkRmllbGRzIpUDCg1TZWxlY3RSZXF1ZXN0EjcKB2NvbnRl",
             "eHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250",
-            "ZXh0EiEKDG1lc3NhZ2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUSHwoLcmVj",
-            "b3JkX2pzb24YAyABKAxSCnJlY29yZEpzb24SMQoHcGF5bG9hZBgEIAEoCzIX",
-            "Lmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSB3BheWxvYWQSJwoPY29uZmxpY3Rf",
-            "ZmllbGRzGAUgAygJUg5jb25mbGljdEZpZWxkcxIjCg1yZXR1cm5fcmVjb3Jk",
-            "GAYgASgIUgxyZXR1cm5SZWNvcmQSMQoFY2FjaGUYByABKAsyGy51ZGIuZW50",
-            "aXR5LnYxLkNhY2hlT3B0aW9uc1IFY2FjaGUSJwoPaWRlbXBvdGVuY3lfa2V5",
-            "GAggASgJUg5pZGVtcG90ZW5jeUtleRIzCghleHBlY3RlZBgJIAEoCzIXLmdv",
-            "b2dsZS5wcm90b2J1Zi5TdHJ1Y3RSCGV4cGVjdGVkEhsKCWxvY2tfbmFtZRgK",
-            "IAEoCVIIbG9ja05hbWUSIwoNZmVuY2luZ190b2tlbhgLIAEoA1IMZmVuY2lu",
-            "Z1Rva2VuIukCCg1EZWxldGVSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51",
-            "ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiEKDG1lc3Nh",
-            "Z2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUSLwoGZmlsdGVyGAMgASgLMhcu",
-            "Z29vZ2xlLnByb3RvYnVmLlN0cnVjdFIGZmlsdGVyEicKD2lkZW1wb3RlbmN5",
-            "X2tleRgEIAEoCVIOaWRlbXBvdGVuY3lLZXkSMwoIZXhwZWN0ZWQYBSABKAsy",
-            "Fy5nb29nbGUucHJvdG9idWYuU3RydWN0UghleHBlY3RlZBIrChFleHBlY3Rl",
-            "ZF9yZXZpc2lvbhgGIAEoCVIQZXhwZWN0ZWRSZXZpc2lvbhIbCglsb2NrX25h",
-            "bWUYByABKAlSCGxvY2tOYW1lEiMKDWZlbmNpbmdfdG9rZW4YCCABKANSDGZl",
-            "bmNpbmdUb2tlbiLEBAoNVXBkYXRlUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgL",
-            "Mh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIhCgxt",
-            "ZXNzYWdlX3R5cGUYAiABKAlSC21lc3NhZ2VUeXBlEi8KBmZpbHRlchgDIAEo",
-            "CzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSBmZpbHRlchIxCgdjaGFuZ2Vz",
-            "GAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIHY2hhbmdlcxIzCghl",
-            "eHBlY3RlZBgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSCGV4cGVj",
-            "dGVkEkYKCmluY3JlbWVudHMYBiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0",
-            "ZVJlcXVlc3QuSW5jcmVtZW50UgppbmNyZW1lbnRzEicKD2lkZW1wb3RlbmN5",
-            "X2tleRgHIAEoCVIOaWRlbXBvdGVuY3lLZXkSIwoNcmV0dXJuX3JlY29yZBgI",
-            "IAEoCFIMcmV0dXJuUmVjb3JkEisKEWV4cGVjdGVkX3JldmlzaW9uGAkgASgJ",
-            "UhBleHBlY3RlZFJldmlzaW9uEhsKCWxvY2tfbmFtZRgKIAEoCVIIbG9ja05h",
-            "bWUSIwoNZmVuY2luZ190b2tlbhgLIAEoA1IMZmVuY2luZ1Rva2VuGjkKCUlu",
-            "Y3JlbWVudBIWCgZjb2x1bW4YASABKAlSBmNvbHVtbhIUCgVkZWx0YRgCIAEo",
-            "AVIFZGVsdGEiwwEKDlZpZXdEZWZpbml0aW9uEjcKB2NvbnRleHQYASABKAsy",
-            "HS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EhYKBnNj",
-            "aGVtYRgCIAEoCVIGc2NoZW1hEhIKBG5hbWUYAyABKAlSBG5hbWUSFAoFcXVl",
-            "cnkYBCABKAlSBXF1ZXJ5EhsKCXdpdGhfZGF0YRgFIAEoCFIId2l0aERhdGES",
-            "GQoIdHRsX2RheXMYBiABKAVSB3R0bERheXMimwIKC0J1bGtDYXNJdGVtEi8K",
-            "BmZpbHRlchgBIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSBmZpbHRl",
-            "chIxCgdjaGFuZ2VzGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIH",
-            "Y2hhbmdlcxIrChFleHBlY3RlZF9yZXZpc2lvbhgDIAEoCVIQZXhwZWN0ZWRS",
-            "ZXZpc2lvbhIzCghleHBlY3RlZBgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5T",
-            "dHJ1Y3RSCGV4cGVjdGVkEkYKCmluY3JlbWVudHMYBSADKAsyJi51ZGIuZW50",
-            "aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50UgppbmNyZW1lbnRzIuIB",
-            "Cg5CdWxrQ2FzUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0",
-            "eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIhCgxtZXNzYWdlX3R5cGUY",
-            "AiABKAlSC21lc3NhZ2VUeXBlEjAKBWl0ZW1zGAMgAygLMhoudWRiLmVudGl0",
-            "eS52MS5CdWxrQ2FzSXRlbVIFaXRlbXMSJwoPaWRlbXBvdGVuY3lfa2V5GAQg",
-            "ASgJUg5pZGVtcG90ZW5jeUtleRIZCghtYXhfcm93cxgFIAEoBVIHbWF4Um93",
-            "cyKDAQoRQnVsa0Nhc0l0ZW1SZXN1bHQSGAoHbWF0Y2hlZBgBIAEoCFIHbWF0",
-            "Y2hlZBIYCgdjaGFuZ2VkGAIgASgIUgdjaGFuZ2VkEh4KCmNvbmZsaWN0ZWQY",
-            "AyABKAhSCmNvbmZsaWN0ZWQSGgoIcmV2aXNpb24YBCABKAlSCHJldmlzaW9u",
-            "Is8BCg9CdWxrQ2FzUmVzcG9uc2USGAoHbWF0Y2hlZBgBIAEoBVIHbWF0Y2hl",
-            "ZBIYCgdjaGFuZ2VkGAIgASgFUgdjaGFuZ2VkEh4KCmNvbmZsaWN0ZWQYAyAB",
-            "KAVSCmNvbmZsaWN0ZWQSLAoSd3JpdGVfcmVjZWlwdF9qc29uGAQgASgJUhB3",
-            "cml0ZVJlY2VpcHRKc29uEjoKB3Jlc3VsdHMYBSADKAsyIC51ZGIuZW50aXR5",
-            "LnYxLkJ1bGtDYXNJdGVtUmVzdWx0UgdyZXN1bHRzQrUBChFjb20udWRiLmVu",
-            "dGl0eS52MUIPUmVsYXRpb25hbFByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJh",
-            "MDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VF",
-            "WKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1l",
-            "dGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z"));
+            "ZXh0EiEKDG1lc3NhZ2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUSLwoGZmls",
+            "dGVyGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIGZmlsdGVyEhYK",
+            "BmZpZWxkcxgEIAMoCVIGZmllbGRzEhQKBWxpbWl0GAUgASgFUgVsaW1pdBId",
+            "CgpwYWdlX3Rva2VuGAYgASgJUglwYWdlVG9rZW4SJwoEc29ydBgHIAMoCzIT",
+            "LnVkYi5lbnRpdHkudjEuU29ydFIEc29ydBIxCgVjYWNoZRgIIAEoCzIbLnVk",
+            "Yi5lbnRpdHkudjEuQ2FjaGVPcHRpb25zUgVjYWNoZRIpChBpbmNsdWRlX3Jl",
+            "dmlzaW9uGAkgASgIUg9pbmNsdWRlUmV2aXNpb24SIwoNaW5jbHVkZV90b3Rh",
+            "bBgKIAEoCFIMaW5jbHVkZVRvdGFsIuADCg1VcHNlcnRSZXF1ZXN0EjcKB2Nv",
+            "bnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdj",
+            "b250ZXh0EiEKDG1lc3NhZ2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUSHwoL",
+            "cmVjb3JkX2pzb24YAyABKAxSCnJlY29yZEpzb24SMQoHcGF5bG9hZBgEIAEo",
+            "CzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSB3BheWxvYWQSJwoPY29uZmxp",
+            "Y3RfZmllbGRzGAUgAygJUg5jb25mbGljdEZpZWxkcxIjCg1yZXR1cm5fcmVj",
+            "b3JkGAYgASgIUgxyZXR1cm5SZWNvcmQSMQoFY2FjaGUYByABKAsyGy51ZGIu",
+            "ZW50aXR5LnYxLkNhY2hlT3B0aW9uc1IFY2FjaGUSJwoPaWRlbXBvdGVuY3lf",
+            "a2V5GAggASgJUg5pZGVtcG90ZW5jeUtleRIzCghleHBlY3RlZBgJIAEoCzIX",
+            "Lmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSCGV4cGVjdGVkEhsKCWxvY2tfbmFt",
+            "ZRgKIAEoCVIIbG9ja05hbWUSIwoNZmVuY2luZ190b2tlbhgLIAEoA1IMZmVu",
+            "Y2luZ1Rva2VuIpQDCg1EZWxldGVSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsy",
+            "HS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiEKDG1l",
+            "c3NhZ2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUSLwoGZmlsdGVyGAMgASgL",
+            "MhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIGZmlsdGVyEicKD2lkZW1wb3Rl",
+            "bmN5X2tleRgEIAEoCVIOaWRlbXBvdGVuY3lLZXkSMwoIZXhwZWN0ZWQYBSAB",
+            "KAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0UghleHBlY3RlZBIrChFleHBl",
+            "Y3RlZF9yZXZpc2lvbhgGIAEoCVIQZXhwZWN0ZWRSZXZpc2lvbhIbCglsb2Nr",
+            "X25hbWUYByABKAlSCGxvY2tOYW1lEiMKDWZlbmNpbmdfdG9rZW4YCCABKANS",
+            "DGZlbmNpbmdUb2tlbhIpChByZXF1aXJlX2FmZmVjdGVkGAkgASgNUg9yZXF1",
+            "aXJlQWZmZWN0ZWQi7wQKDVVwZGF0ZVJlcXVlc3QSNwoHY29udGV4dBgBIAEo",
+            "CzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQSIQoM",
+            "bWVzc2FnZV90eXBlGAIgASgJUgttZXNzYWdlVHlwZRIvCgZmaWx0ZXIYAyAB",
+            "KAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0UgZmaWx0ZXISMQoHY2hhbmdl",
+            "cxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSB2NoYW5nZXMSMwoI",
+            "ZXhwZWN0ZWQYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0UghleHBl",
+            "Y3RlZBJGCgppbmNyZW1lbnRzGAYgAygLMiYudWRiLmVudGl0eS52MS5VcGRh",
+            "dGVSZXF1ZXN0LkluY3JlbWVudFIKaW5jcmVtZW50cxInCg9pZGVtcG90ZW5j",
+            "eV9rZXkYByABKAlSDmlkZW1wb3RlbmN5S2V5EiMKDXJldHVybl9yZWNvcmQY",
+            "CCABKAhSDHJldHVyblJlY29yZBIrChFleHBlY3RlZF9yZXZpc2lvbhgJIAEo",
+            "CVIQZXhwZWN0ZWRSZXZpc2lvbhIbCglsb2NrX25hbWUYCiABKAlSCGxvY2tO",
+            "YW1lEiMKDWZlbmNpbmdfdG9rZW4YCyABKANSDGZlbmNpbmdUb2tlbhIpChBy",
+            "ZXF1aXJlX2FmZmVjdGVkGAwgASgNUg9yZXF1aXJlQWZmZWN0ZWQaOQoJSW5j",
+            "cmVtZW50EhYKBmNvbHVtbhgBIAEoCVIGY29sdW1uEhQKBWRlbHRhGAIgASgB",
+            "UgVkZWx0YSLDAQoOVmlld0RlZmluaXRpb24SNwoHY29udGV4dBgBIAEoCzId",
+            "LnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQSFgoGc2No",
+            "ZW1hGAIgASgJUgZzY2hlbWESEgoEbmFtZRgDIAEoCVIEbmFtZRIUCgVxdWVy",
+            "eRgEIAEoCVIFcXVlcnkSGwoJd2l0aF9kYXRhGAUgASgIUgh3aXRoRGF0YRIZ",
+            "Cgh0dGxfZGF5cxgGIAEoBVIHdHRsRGF5cyKbAgoLQnVsa0Nhc0l0ZW0SLwoG",
+            "ZmlsdGVyGAEgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIGZmlsdGVy",
+            "EjEKB2NoYW5nZXMYAiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Ugdj",
+            "aGFuZ2VzEisKEWV4cGVjdGVkX3JldmlzaW9uGAMgASgJUhBleHBlY3RlZFJl",
+            "dmlzaW9uEjMKCGV4cGVjdGVkGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0",
+            "cnVjdFIIZXhwZWN0ZWQSRgoKaW5jcmVtZW50cxgFIAMoCzImLnVkYi5lbnRp",
+            "dHkudjEuVXBkYXRlUmVxdWVzdC5JbmNyZW1lbnRSCmluY3JlbWVudHMi4gEK",
+            "DkJ1bGtDYXNSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5",
+            "LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiEKDG1lc3NhZ2VfdHlwZRgC",
+            "IAEoCVILbWVzc2FnZVR5cGUSMAoFaXRlbXMYAyADKAsyGi51ZGIuZW50aXR5",
+            "LnYxLkJ1bGtDYXNJdGVtUgVpdGVtcxInCg9pZGVtcG90ZW5jeV9rZXkYBCAB",
+            "KAlSDmlkZW1wb3RlbmN5S2V5EhkKCG1heF9yb3dzGAUgASgFUgdtYXhSb3dz",
+            "IoMBChFCdWxrQ2FzSXRlbVJlc3VsdBIYCgdtYXRjaGVkGAEgASgIUgdtYXRj",
+            "aGVkEhgKB2NoYW5nZWQYAiABKAhSB2NoYW5nZWQSHgoKY29uZmxpY3RlZBgD",
+            "IAEoCFIKY29uZmxpY3RlZBIaCghyZXZpc2lvbhgEIAEoCVIIcmV2aXNpb24i",
+            "zwEKD0J1bGtDYXNSZXNwb25zZRIYCgdtYXRjaGVkGAEgASgFUgdtYXRjaGVk",
+            "EhgKB2NoYW5nZWQYAiABKAVSB2NoYW5nZWQSHgoKY29uZmxpY3RlZBgDIAEo",
+            "BVIKY29uZmxpY3RlZBIsChJ3cml0ZV9yZWNlaXB0X2pzb24YBCABKAlSEHdy",
+            "aXRlUmVjZWlwdEpzb24SOgoHcmVzdWx0cxgFIAMoCzIgLnVkYi5lbnRpdHku",
+            "djEuQnVsa0Nhc0l0ZW1SZXN1bHRSB3Jlc3VsdHNCtQEKEWNvbS51ZGIuZW50",
+            "aXR5LnYxQg9SZWxhdGlvbmFsUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEw",
+            "Mi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVY",
+            "qgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0",
+            "YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Sort), global::Udb.Entity.V1.Sort.Parser, new[]{ "Field", "Descending" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CacheOptions), global::Udb.Entity.V1.CacheOptions.Parser, new[]{ "BypassRead", "BypassWrite", "TtlSeconds" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Row), global::Udb.Entity.V1.Row.Parser, new[]{ "Fields" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.RecordSet), global::Udb.Entity.V1.RecordSet.Parser, new[]{ "RecordsJson", "Rows", "NextPageToken", "TotalCount", "RecordRevisions" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.SelectRequest), global::Udb.Entity.V1.SelectRequest.Parser, new[]{ "Context", "MessageType", "Filter", "Fields", "Limit", "PageToken", "Sort", "Cache", "IncludeRevision" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.RecordSet), global::Udb.Entity.V1.RecordSet.Parser, new[]{ "RecordsJson", "Rows", "NextPageToken", "TotalCount", "RecordRevisions", "HasMore", "ExactTotal", "RedactedFields" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.SelectRequest), global::Udb.Entity.V1.SelectRequest.Parser, new[]{ "Context", "MessageType", "Filter", "Fields", "Limit", "PageToken", "Sort", "Cache", "IncludeRevision", "IncludeTotal" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpsertRequest), global::Udb.Entity.V1.UpsertRequest.Parser, new[]{ "Context", "MessageType", "RecordJson", "Payload", "ConflictFields", "ReturnRecord", "Cache", "IdempotencyKey", "Expected", "LockName", "FencingToken" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DeleteRequest), global::Udb.Entity.V1.DeleteRequest.Parser, new[]{ "Context", "MessageType", "Filter", "IdempotencyKey", "Expected", "ExpectedRevision", "LockName", "FencingToken" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpdateRequest), global::Udb.Entity.V1.UpdateRequest.Parser, new[]{ "Context", "MessageType", "Filter", "Changes", "Expected", "Increments", "IdempotencyKey", "ReturnRecord", "ExpectedRevision", "LockName", "FencingToken" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpdateRequest.Types.Increment), global::Udb.Entity.V1.UpdateRequest.Types.Increment.Parser, new[]{ "Column", "Delta" }, null, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DeleteRequest), global::Udb.Entity.V1.DeleteRequest.Parser, new[]{ "Context", "MessageType", "Filter", "IdempotencyKey", "Expected", "ExpectedRevision", "LockName", "FencingToken", "RequireAffected" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpdateRequest), global::Udb.Entity.V1.UpdateRequest.Parser, new[]{ "Context", "MessageType", "Filter", "Changes", "Expected", "Increments", "IdempotencyKey", "ReturnRecord", "ExpectedRevision", "LockName", "FencingToken", "RequireAffected" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpdateRequest.Types.Increment), global::Udb.Entity.V1.UpdateRequest.Types.Increment.Parser, new[]{ "Column", "Delta" }, null, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.ViewDefinition), global::Udb.Entity.V1.ViewDefinition.Parser, new[]{ "Context", "Schema", "Name", "Query", "WithData", "TtlDays" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.BulkCasItem), global::Udb.Entity.V1.BulkCasItem.Parser, new[]{ "Filter", "Changes", "ExpectedRevision", "Expected", "Increments" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.BulkCasRequest), global::Udb.Entity.V1.BulkCasRequest.Parser, new[]{ "Context", "MessageType", "Items", "IdempotencyKey", "MaxRows" }, null, null, null, null),
@@ -874,6 +879,9 @@ namespace Udb.Entity.V1 {
       nextPageToken_ = other.nextPageToken_;
       totalCount_ = other.totalCount_;
       recordRevisions_ = other.recordRevisions_.Clone();
+      hasMore_ = other.hasMore_;
+      exactTotal_ = other.exactTotal_;
+      redactedFields_ = other.redactedFields_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -945,6 +953,10 @@ namespace Udb.Entity.V1 {
     /// <summary>Field number for the "total_count" field.</summary>
     public const int TotalCountFieldNumber = 4;
     private int totalCount_;
+    /// <summary>
+    /// The number of records in THIS page (the length of `records_json`), not the
+    /// number of matching rows. Use `exact_total` for that.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int TotalCount {
@@ -976,6 +988,58 @@ namespace Udb.Entity.V1 {
       get { return recordRevisions_; }
     }
 
+    /// <summary>Field number for the "has_more" field.</summary>
+    public const int HasMoreFieldNumber = 6;
+    private bool hasMore_;
+    /// <summary>
+    /// True when the page is full (as many records as the request's limit, or the
+    /// default limit of 100 when none was given): more rows may match. A read that
+    /// was capped never looks like the complete result; page on with
+    /// `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasMore {
+      get { return hasMore_; }
+      set {
+        hasMore_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "exact_total" field.</summary>
+    public const int ExactTotalFieldNumber = 7;
+    private long exactTotal_;
+    /// <summary>
+    /// Every row the filter matches, ignoring the limit and the page position.
+    /// Set only when `SelectRequest.include_total` asked for it (it costs one
+    /// COUNT query); 0 otherwise.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long ExactTotal {
+      get { return exactTotal_; }
+      set {
+        exactTotal_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "redacted_fields" field.</summary>
+    public const int RedactedFieldsFieldNumber = 8;
+    private static readonly pb::FieldCodec<string> _repeated_redactedFields_codec
+        = pb::FieldCodec.ForString(66);
+    private readonly pbc::RepeatedField<string> redactedFields_ = new pbc::RepeatedField<string>();
+    /// <summary>
+    /// Columns that came back as the redaction placeholder because the caller
+    /// lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+    /// stored value: never write it back (the broker refuses that write with
+    /// reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> RedactedFields {
+      get { return redactedFields_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -996,6 +1060,9 @@ namespace Udb.Entity.V1 {
       if (NextPageToken != other.NextPageToken) return false;
       if (TotalCount != other.TotalCount) return false;
       if(!recordRevisions_.Equals(other.recordRevisions_)) return false;
+      if (HasMore != other.HasMore) return false;
+      if (ExactTotal != other.ExactTotal) return false;
+      if(!redactedFields_.Equals(other.redactedFields_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1008,6 +1075,9 @@ namespace Udb.Entity.V1 {
       if (NextPageToken.Length != 0) hash ^= NextPageToken.GetHashCode();
       if (TotalCount != 0) hash ^= TotalCount.GetHashCode();
       hash ^= recordRevisions_.GetHashCode();
+      if (HasMore != false) hash ^= HasMore.GetHashCode();
+      if (ExactTotal != 0L) hash ^= ExactTotal.GetHashCode();
+      hash ^= redactedFields_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1037,6 +1107,15 @@ namespace Udb.Entity.V1 {
         output.WriteInt32(TotalCount);
       }
       recordRevisions_.WriteTo(output, _repeated_recordRevisions_codec);
+      if (HasMore != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(HasMore);
+      }
+      if (ExactTotal != 0L) {
+        output.WriteRawTag(56);
+        output.WriteInt64(ExactTotal);
+      }
+      redactedFields_.WriteTo(output, _repeated_redactedFields_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1058,6 +1137,15 @@ namespace Udb.Entity.V1 {
         output.WriteInt32(TotalCount);
       }
       recordRevisions_.WriteTo(ref output, _repeated_recordRevisions_codec);
+      if (HasMore != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(HasMore);
+      }
+      if (ExactTotal != 0L) {
+        output.WriteRawTag(56);
+        output.WriteInt64(ExactTotal);
+      }
+      redactedFields_.WriteTo(ref output, _repeated_redactedFields_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1077,6 +1165,13 @@ namespace Udb.Entity.V1 {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(TotalCount);
       }
       size += recordRevisions_.CalculateSize(_repeated_recordRevisions_codec);
+      if (HasMore != false) {
+        size += 1 + 1;
+      }
+      if (ExactTotal != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ExactTotal);
+      }
+      size += redactedFields_.CalculateSize(_repeated_redactedFields_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -1098,6 +1193,13 @@ namespace Udb.Entity.V1 {
         TotalCount = other.TotalCount;
       }
       recordRevisions_.Add(other.recordRevisions_);
+      if (other.HasMore != false) {
+        HasMore = other.HasMore;
+      }
+      if (other.ExactTotal != 0L) {
+        ExactTotal = other.ExactTotal;
+      }
+      redactedFields_.Add(other.redactedFields_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -1137,6 +1239,18 @@ namespace Udb.Entity.V1 {
             recordRevisions_.AddEntriesFrom(input, _repeated_recordRevisions_codec);
             break;
           }
+          case 48: {
+            HasMore = input.ReadBool();
+            break;
+          }
+          case 56: {
+            ExactTotal = input.ReadInt64();
+            break;
+          }
+          case 66: {
+            redactedFields_.AddEntriesFrom(input, _repeated_redactedFields_codec);
+            break;
+          }
         }
       }
     #endif
@@ -1174,6 +1288,18 @@ namespace Udb.Entity.V1 {
           }
           case 42: {
             recordRevisions_.AddEntriesFrom(ref input, _repeated_recordRevisions_codec);
+            break;
+          }
+          case 48: {
+            HasMore = input.ReadBool();
+            break;
+          }
+          case 56: {
+            ExactTotal = input.ReadInt64();
+            break;
+          }
+          case 66: {
+            redactedFields_.AddEntriesFrom(ref input, _repeated_redactedFields_codec);
             break;
           }
         }
@@ -1227,6 +1353,7 @@ namespace Udb.Entity.V1 {
       sort_ = other.sort_.Clone();
       cache_ = other.cache_ != null ? other.cache_.Clone() : null;
       includeRevision_ = other.includeRevision_;
+      includeTotal_ = other.includeTotal_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1347,6 +1474,22 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "include_total" field.</summary>
+    public const int IncludeTotalFieldNumber = 10;
+    private bool includeTotal_;
+    /// <summary>
+    /// Also count every matching row into `RecordSet.exact_total` (one extra
+    /// COUNT over the same filter and scope; the read cache is skipped).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool IncludeTotal {
+      get { return includeTotal_; }
+      set {
+        includeTotal_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1371,6 +1514,7 @@ namespace Udb.Entity.V1 {
       if(!sort_.Equals(other.sort_)) return false;
       if (!object.Equals(Cache, other.Cache)) return false;
       if (IncludeRevision != other.IncludeRevision) return false;
+      if (IncludeTotal != other.IncludeTotal) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1387,6 +1531,7 @@ namespace Udb.Entity.V1 {
       hash ^= sort_.GetHashCode();
       if (cache_ != null) hash ^= Cache.GetHashCode();
       if (IncludeRevision != false) hash ^= IncludeRevision.GetHashCode();
+      if (IncludeTotal != false) hash ^= IncludeTotal.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1435,6 +1580,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(72);
         output.WriteBool(IncludeRevision);
       }
+      if (IncludeTotal != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(IncludeTotal);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1475,6 +1624,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(72);
         output.WriteBool(IncludeRevision);
       }
+      if (IncludeTotal != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(IncludeTotal);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1506,6 +1659,9 @@ namespace Udb.Entity.V1 {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Cache);
       }
       if (IncludeRevision != false) {
+        size += 1 + 1;
+      }
+      if (IncludeTotal != false) {
         size += 1 + 1;
       }
       if (_unknownFields != null) {
@@ -1551,6 +1707,9 @@ namespace Udb.Entity.V1 {
       }
       if (other.IncludeRevision != false) {
         IncludeRevision = other.IncludeRevision;
+      }
+      if (other.IncludeTotal != false) {
+        IncludeTotal = other.IncludeTotal;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1616,6 +1775,10 @@ namespace Udb.Entity.V1 {
             IncludeRevision = input.ReadBool();
             break;
           }
+          case 80: {
+            IncludeTotal = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -1678,6 +1841,10 @@ namespace Udb.Entity.V1 {
           }
           case 72: {
             IncludeRevision = input.ReadBool();
+            break;
+          }
+          case 80: {
+            IncludeTotal = input.ReadBool();
             break;
           }
         }
@@ -2362,6 +2529,7 @@ namespace Udb.Entity.V1 {
       expectedRevision_ = other.expectedRevision_;
       lockName_ = other.lockName_;
       fencingToken_ = other.fencingToken_;
+      requireAffected_ = other.requireAffected_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -2483,6 +2651,26 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "require_affected" field.</summary>
+    public const int RequireAffectedFieldNumber = 9;
+    private uint requireAffected_;
+    /// <summary>
+    /// Optional exact row count. When non-zero the write must change exactly this
+    /// many rows, checked inside the write transaction; any other count changes
+    /// nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+    /// single-row write that must not silently match nothing (an already-deleted
+    /// row, a key that drifted). 0 keeps today's behaviour: the count is reported
+    /// in MutationResponse.affected_rows and never checked.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint RequireAffected {
+      get { return requireAffected_; }
+      set {
+        requireAffected_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -2506,6 +2694,7 @@ namespace Udb.Entity.V1 {
       if (ExpectedRevision != other.ExpectedRevision) return false;
       if (LockName != other.LockName) return false;
       if (FencingToken != other.FencingToken) return false;
+      if (RequireAffected != other.RequireAffected) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -2521,6 +2710,7 @@ namespace Udb.Entity.V1 {
       if (ExpectedRevision.Length != 0) hash ^= ExpectedRevision.GetHashCode();
       if (LockName.Length != 0) hash ^= LockName.GetHashCode();
       if (FencingToken != 0L) hash ^= FencingToken.GetHashCode();
+      if (RequireAffected != 0) hash ^= RequireAffected.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -2571,6 +2761,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(64);
         output.WriteInt64(FencingToken);
       }
+      if (RequireAffected != 0) {
+        output.WriteRawTag(72);
+        output.WriteUInt32(RequireAffected);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -2613,6 +2807,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(64);
         output.WriteInt64(FencingToken);
       }
+      if (RequireAffected != 0) {
+        output.WriteRawTag(72);
+        output.WriteUInt32(RequireAffected);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -2646,6 +2844,9 @@ namespace Udb.Entity.V1 {
       }
       if (FencingToken != 0L) {
         size += 1 + pb::CodedOutputStream.ComputeInt64Size(FencingToken);
+      }
+      if (RequireAffected != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(RequireAffected);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2691,6 +2892,9 @@ namespace Udb.Entity.V1 {
       }
       if (other.FencingToken != 0L) {
         FencingToken = other.FencingToken;
+      }
+      if (other.RequireAffected != 0) {
+        RequireAffected = other.RequireAffected;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2750,6 +2954,10 @@ namespace Udb.Entity.V1 {
           }
           case 64: {
             FencingToken = input.ReadInt64();
+            break;
+          }
+          case 72: {
+            RequireAffected = input.ReadUInt32();
             break;
           }
         }
@@ -2812,6 +3020,10 @@ namespace Udb.Entity.V1 {
             FencingToken = input.ReadInt64();
             break;
           }
+          case 72: {
+            RequireAffected = input.ReadUInt32();
+            break;
+          }
         }
       }
     }
@@ -2871,6 +3083,7 @@ namespace Udb.Entity.V1 {
       expectedRevision_ = other.expectedRevision_;
       lockName_ = other.lockName_;
       fencingToken_ = other.fencingToken_;
+      requireAffected_ = other.requireAffected_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -3043,6 +3256,26 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "require_affected" field.</summary>
+    public const int RequireAffectedFieldNumber = 12;
+    private uint requireAffected_;
+    /// <summary>
+    /// Optional exact row count. When non-zero the write must change exactly this
+    /// many rows, checked inside the write transaction; any other count changes
+    /// nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+    /// single-row write that must not silently match nothing (an already-deleted
+    /// row, a key that drifted). 0 keeps today's behaviour: the count is reported
+    /// in MutationResponse.affected_rows and never checked.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint RequireAffected {
+      get { return requireAffected_; }
+      set {
+        requireAffected_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -3069,6 +3302,7 @@ namespace Udb.Entity.V1 {
       if (ExpectedRevision != other.ExpectedRevision) return false;
       if (LockName != other.LockName) return false;
       if (FencingToken != other.FencingToken) return false;
+      if (RequireAffected != other.RequireAffected) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -3087,6 +3321,7 @@ namespace Udb.Entity.V1 {
       if (ExpectedRevision.Length != 0) hash ^= ExpectedRevision.GetHashCode();
       if (LockName.Length != 0) hash ^= LockName.GetHashCode();
       if (FencingToken != 0L) hash ^= FencingToken.GetHashCode();
+      if (RequireAffected != 0) hash ^= RequireAffected.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3146,6 +3381,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(88);
         output.WriteInt64(FencingToken);
       }
+      if (RequireAffected != 0) {
+        output.WriteRawTag(96);
+        output.WriteUInt32(RequireAffected);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3197,6 +3436,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(88);
         output.WriteInt64(FencingToken);
       }
+      if (RequireAffected != 0) {
+        output.WriteRawTag(96);
+        output.WriteUInt32(RequireAffected);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -3237,6 +3480,9 @@ namespace Udb.Entity.V1 {
       }
       if (FencingToken != 0L) {
         size += 1 + pb::CodedOutputStream.ComputeInt64Size(FencingToken);
+      }
+      if (RequireAffected != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(RequireAffected);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -3292,6 +3538,9 @@ namespace Udb.Entity.V1 {
       }
       if (other.FencingToken != 0L) {
         FencingToken = other.FencingToken;
+      }
+      if (other.RequireAffected != 0) {
+        RequireAffected = other.RequireAffected;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -3368,6 +3617,10 @@ namespace Udb.Entity.V1 {
             FencingToken = input.ReadInt64();
             break;
           }
+          case 96: {
+            RequireAffected = input.ReadUInt32();
+            break;
+          }
         }
       }
     #endif
@@ -3441,6 +3694,10 @@ namespace Udb.Entity.V1 {
           }
           case 88: {
             FencingToken = input.ReadInt64();
+            break;
+          }
+          case 96: {
+            RequireAffected = input.ReadUInt32();
             break;
           }
         }

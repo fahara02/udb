@@ -41,6 +41,7 @@ USER_STATUS_ACTIVE: _enums_pb2.UserStatus
 USER_STATUS_SUSPENDED: _enums_pb2.UserStatus
 USER_STATUS_LOCKED: _enums_pb2.UserStatus
 USER_STATUS_DEACTIVATED: _enums_pb2.UserStatus
+USER_STATUS_PASSWORD_SETUP_REQUIRED: _enums_pb2.UserStatus
 SESSION_TYPE_UNSPECIFIED: _enums_pb2.SessionType
 SESSION_TYPE_SERVER_SIDE: _enums_pb2.SessionType
 SESSION_TYPE_JWT: _enums_pb2.SessionType

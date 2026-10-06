@@ -19,7 +19,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CreateUserRequest(_message.Message):
-    __slots__ = ("username", "email", "password", "tenant_id", "full_name", "context", "account_kind", "project_id", "external_provider_id", "external_subject", "profile_attributes")
+    __slots__ = ("username", "email", "password", "tenant_id", "full_name", "context", "account_kind", "project_id", "external_provider_id", "external_subject", "profile_attributes", "password_setup_required")
     class ProfileAttributesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -38,6 +38,7 @@ class CreateUserRequest(_message.Message):
     EXTERNAL_PROVIDER_ID_FIELD_NUMBER: _ClassVar[int]
     EXTERNAL_SUBJECT_FIELD_NUMBER: _ClassVar[int]
     PROFILE_ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
+    PASSWORD_SETUP_REQUIRED_FIELD_NUMBER: _ClassVar[int]
     username: str
     email: str
     password: str
@@ -49,7 +50,8 @@ class CreateUserRequest(_message.Message):
     external_provider_id: str
     external_subject: str
     profile_attributes: _containers.ScalarMap[str, str]
-    def __init__(self, username: _Optional[str] = ..., email: _Optional[str] = ..., password: _Optional[str] = ..., tenant_id: _Optional[str] = ..., full_name: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., account_kind: _Optional[_Union[_enums_pb2.AccountKind, str]] = ..., project_id: _Optional[str] = ..., external_provider_id: _Optional[str] = ..., external_subject: _Optional[str] = ..., profile_attributes: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    password_setup_required: bool
+    def __init__(self, username: _Optional[str] = ..., email: _Optional[str] = ..., password: _Optional[str] = ..., tenant_id: _Optional[str] = ..., full_name: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., account_kind: _Optional[_Union[_enums_pb2.AccountKind, str]] = ..., project_id: _Optional[str] = ..., external_provider_id: _Optional[str] = ..., external_subject: _Optional[str] = ..., profile_attributes: _Optional[_Mapping[str, str]] = ..., password_setup_required: bool = ...) -> None: ...
 
 class CreateUserResponse(_message.Message):
     __slots__ = ("user", "otp_id")

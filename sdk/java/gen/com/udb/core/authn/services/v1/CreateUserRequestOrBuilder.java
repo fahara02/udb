@@ -183,4 +183,18 @@ java.lang.String defaultValue);
    */
   java.lang.String getProfileAttributesOrThrow(
       java.lang.String key);
+
+  /**
+   * <pre>
+   * Invite instead of register: leave `password` empty. The account is created
+   * in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+   * password-reset code is sent to `email`; the user sets a password with
+   * ResetPassword(otp_id, code, new_password), which activates the account.
+   * `CreateUserResponse.otp_id` is that reset code's id.
+   * </pre>
+   *
+   * <code>bool password_setup_required = 12 [json_name = "passwordSetupRequired"];</code>
+   * @return The passwordSetupRequired.
+   */
+  boolean getPasswordSetupRequired();
 }

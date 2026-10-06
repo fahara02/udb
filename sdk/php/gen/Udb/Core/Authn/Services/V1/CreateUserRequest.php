@@ -63,6 +63,16 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>map<string, string> profile_attributes = 11 [json_name = "profileAttributes"];</code>
      */
     private $profile_attributes;
+    /**
+     * Invite instead of register: leave `password` empty. The account is created
+     * in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+     * password-reset code is sent to `email`; the user sets a password with
+     * ResetPassword(otp_id, code, new_password), which activates the account.
+     * `CreateUserResponse.otp_id` is that reset code's id.
+     *
+     * Generated from protobuf field <code>bool password_setup_required = 12 [json_name = "passwordSetupRequired"];</code>
+     */
+    protected $password_setup_required = false;
 
     /**
      * Constructor.
@@ -84,6 +94,12 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      *           bounded to 120 characters by the user store, and scoped by tenant.
      *     @type string $external_subject
      *     @type array|\Google\Protobuf\Internal\MapField $profile_attributes
+     *     @type bool $password_setup_required
+     *           Invite instead of register: leave `password` empty. The account is created
+     *           in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+     *           password-reset code is sent to `email`; the user sets a password with
+     *           ResetPassword(otp_id, code, new_password), which activates the account.
+     *           `CreateUserResponse.otp_id` is that reset code's id.
      * }
      */
     public function __construct($data = NULL) {
@@ -349,6 +365,40 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->profile_attributes = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Invite instead of register: leave `password` empty. The account is created
+     * in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+     * password-reset code is sent to `email`; the user sets a password with
+     * ResetPassword(otp_id, code, new_password), which activates the account.
+     * `CreateUserResponse.otp_id` is that reset code's id.
+     *
+     * Generated from protobuf field <code>bool password_setup_required = 12 [json_name = "passwordSetupRequired"];</code>
+     * @return bool
+     */
+    public function getPasswordSetupRequired()
+    {
+        return $this->password_setup_required;
+    }
+
+    /**
+     * Invite instead of register: leave `password` empty. The account is created
+     * in USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a
+     * password-reset code is sent to `email`; the user sets a password with
+     * ResetPassword(otp_id, code, new_password), which activates the account.
+     * `CreateUserResponse.otp_id` is that reset code's id.
+     *
+     * Generated from protobuf field <code>bool password_setup_required = 12 [json_name = "passwordSetupRequired"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setPasswordSetupRequired($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->password_setup_required = $var;
 
         return $this;
     }

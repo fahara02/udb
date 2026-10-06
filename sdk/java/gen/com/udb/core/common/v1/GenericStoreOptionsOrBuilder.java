@@ -119,10 +119,22 @@ public interface GenericStoreOptionsOrBuilder extends
       getPayloadSchemaJsonBytes();
 
   /**
+   * <pre>
+   * Free-form backend options. Prefer the typed fields below for every key
+   * they cover: a misspelled typed field fails the proto build, while a
+   * misspelled map key is ignored at runtime (`udb check` warns about it).
+   * </pre>
+   *
    * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
    */
   int getOptionsCount();
   /**
+   * <pre>
+   * Free-form backend options. Prefer the typed fields below for every key
+   * they cover: a misspelled typed field fails the proto build, while a
+   * misspelled map key is ignored at runtime (`udb check` warns about it).
+   * </pre>
+   *
    * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
    */
   boolean containsOptions(
@@ -134,11 +146,23 @@ public interface GenericStoreOptionsOrBuilder extends
   java.util.Map<java.lang.String, java.lang.String>
   getOptions();
   /**
+   * <pre>
+   * Free-form backend options. Prefer the typed fields below for every key
+   * they cover: a misspelled typed field fails the proto build, while a
+   * misspelled map key is ignored at runtime (`udb check` warns about it).
+   * </pre>
+   *
    * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
    */
   java.util.Map<java.lang.String, java.lang.String>
   getOptionsMap();
   /**
+   * <pre>
+   * Free-form backend options. Prefer the typed fields below for every key
+   * they cover: a misspelled typed field fails the proto build, while a
+   * misspelled map key is ignored at runtime (`udb check` warns about it).
+   * </pre>
+   *
    * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
    */
   /* nullable */
@@ -147,8 +171,140 @@ java.lang.String getOptionsOrDefault(
       /* nullable */
 java.lang.String defaultValue);
   /**
+   * <pre>
+   * Free-form backend options. Prefer the typed fields below for every key
+   * they cover: a misspelled typed field fails the proto build, while a
+   * misspelled map key is ignored at runtime (`udb check` warns about it).
+   * </pre>
+   *
    * <code>map&lt;string, string&gt; options = 10 [json_name = "options"];</code>
    */
   java.lang.String getOptionsOrThrow(
       java.lang.String key);
+
+  /**
+   * <pre>
+   * Qdrant/vector projections: comma list of fields or columns copied into
+   * each point's payload (plus the row identity and scope stamps). Empty: the
+   * whole row. Same as options["payload_fields"].
+   * </pre>
+   *
+   * <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+   * @return The payloadFields.
+   */
+  java.lang.String getPayloadFields();
+  /**
+   * <pre>
+   * Qdrant/vector projections: comma list of fields or columns copied into
+   * each point's payload (plus the row identity and scope stamps). Empty: the
+   * whole row. Same as options["payload_fields"].
+   * </pre>
+   *
+   * <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+   * @return The bytes for payloadFields.
+   */
+  com.google.protobuf.ByteString
+      getPayloadFieldsBytes();
+
+  /**
+   * <pre>
+   * Hybrid search: comma list of columns searched with Postgres full-text
+   * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+   * </pre>
+   *
+   * <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+   * @return The ftsColumns.
+   */
+  java.lang.String getFtsColumns();
+  /**
+   * <pre>
+   * Hybrid search: comma list of columns searched with Postgres full-text
+   * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+   * </pre>
+   *
+   * <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+   * @return The bytes for ftsColumns.
+   */
+  com.google.protobuf.ByteString
+      getFtsColumnsBytes();
+
+  /**
+   * <pre>
+   * Text search configuration for fts_columns (default "simple").
+   * </pre>
+   *
+   * <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+   * @return The ftsConfig.
+   */
+  java.lang.String getFtsConfig();
+  /**
+   * <pre>
+   * Text search configuration for fts_columns (default "simple").
+   * </pre>
+   *
+   * <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+   * @return The bytes for ftsConfig.
+   */
+  com.google.protobuf.ByteString
+      getFtsConfigBytes();
+
+  /**
+   * <pre>
+   * Graph edge projections: the source/target fields of the edge row and the
+   * node labels they point at. Same as options["edge_source_field"] etc.; the
+   * older "from_label"/"to_label" keys are deprecated aliases.
+   * </pre>
+   *
+   * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+   * @return The edgeSourceField.
+   */
+  java.lang.String getEdgeSourceField();
+  /**
+   * <pre>
+   * Graph edge projections: the source/target fields of the edge row and the
+   * node labels they point at. Same as options["edge_source_field"] etc.; the
+   * older "from_label"/"to_label" keys are deprecated aliases.
+   * </pre>
+   *
+   * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+   * @return The bytes for edgeSourceField.
+   */
+  com.google.protobuf.ByteString
+      getEdgeSourceFieldBytes();
+
+  /**
+   * <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+   * @return The edgeTargetField.
+   */
+  java.lang.String getEdgeTargetField();
+  /**
+   * <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+   * @return The bytes for edgeTargetField.
+   */
+  com.google.protobuf.ByteString
+      getEdgeTargetFieldBytes();
+
+  /**
+   * <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+   * @return The edgeSourceLabel.
+   */
+  java.lang.String getEdgeSourceLabel();
+  /**
+   * <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+   * @return The bytes for edgeSourceLabel.
+   */
+  com.google.protobuf.ByteString
+      getEdgeSourceLabelBytes();
+
+  /**
+   * <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+   * @return The edgeTargetLabel.
+   */
+  java.lang.String getEdgeTargetLabel();
+  /**
+   * <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+   * @return The bytes for edgeTargetLabel.
+   */
+  com.google.protobuf.ByteString
+      getEdgeTargetLabelBytes();
 }

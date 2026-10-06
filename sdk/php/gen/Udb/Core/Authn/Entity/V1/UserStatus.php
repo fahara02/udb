@@ -44,6 +44,14 @@ class UserStatus
      * Generated from protobuf enum <code>USER_STATUS_DEACTIVATED = 5;</code>
      */
     const USER_STATUS_DEACTIVATED = 5;
+    /**
+     * Invited (CreateUser with password_setup_required): the account has no
+     * usable password until the user completes ResetPassword with the emailed
+     * code, which also verifies the email and activates the account.
+     *
+     * Generated from protobuf enum <code>USER_STATUS_PASSWORD_SETUP_REQUIRED = 6;</code>
+     */
+    const USER_STATUS_PASSWORD_SETUP_REQUIRED = 6;
 
     private static $valueToName = [
         self::USER_STATUS_UNSPECIFIED => 'USER_STATUS_UNSPECIFIED',
@@ -52,6 +60,7 @@ class UserStatus
         self::USER_STATUS_SUSPENDED => 'USER_STATUS_SUSPENDED',
         self::USER_STATUS_LOCKED => 'USER_STATUS_LOCKED',
         self::USER_STATUS_DEACTIVATED => 'USER_STATUS_DEACTIVATED',
+        self::USER_STATUS_PASSWORD_SETUP_REQUIRED => 'USER_STATUS_PASSWORD_SETUP_REQUIRED',
     ];
 
     public static function name($value)

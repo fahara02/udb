@@ -142,6 +142,10 @@ namespace Udb.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Events.V1.CDCEnvelope> __Marshaller_udb_events_v1_CDCEnvelope = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Events.V1.CDCEnvelope.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.AckCdcEventsRequest> __Marshaller_udb_entity_v1_AckCdcEventsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.AckCdcEventsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.AckCdcEventsResponse> __Marshaller_udb_entity_v1_AckCdcEventsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.AckCdcEventsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.ViewDefinition> __Marshaller_udb_entity_v1_ViewDefinition = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.ViewDefinition.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.EnqueueOutboxEventRequest> __Marshaller_udb_entity_v1_EnqueueOutboxEventRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.EnqueueOutboxEventRequest.Parser));
@@ -525,6 +529,14 @@ namespace Udb.Services.V1 {
         "PublishCDC",
         __Marshaller_udb_entity_v1_CDCSubscriptionRequest,
         __Marshaller_udb_events_v1_CDCEnvelope);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.AckCdcEventsRequest, global::Udb.Entity.V1.AckCdcEventsResponse> __Method_AckCdcEvents = new grpc::Method<global::Udb.Entity.V1.AckCdcEventsRequest, global::Udb.Entity.V1.AckCdcEventsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AckCdcEvents",
+        __Marshaller_udb_entity_v1_AckCdcEventsRequest,
+        __Marshaller_udb_entity_v1_AckCdcEventsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.ViewDefinition, global::Udb.Entity.V1.MutationResponse> __Method_CreateMaterializedView = new grpc::Method<global::Udb.Entity.V1.ViewDefinition, global::Udb.Entity.V1.MutationResponse>(
@@ -1194,6 +1206,18 @@ namespace Udb.Services.V1 {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
+      /// <summary>
+      /// Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.AckCdcEventsResponse> AckCdcEvents(global::Udb.Entity.V1.AckCdcEventsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.MutationResponse> CreateMaterializedView(global::Udb.Entity.V1.ViewDefinition request, grpc::ServerCallContext context)
       {
@@ -1544,6 +1568,16 @@ namespace Udb.Services.V1 {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
+      /// <summary>
+      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+      /// requests. Authorization comes from the Casbin governance table: use
+      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.ObsoleteAttribute]
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.MutationResponse> PutPolicy(global::Udb.Entity.V1.PutPolicyRequest request, grpc::ServerCallContext context)
       {
@@ -2571,6 +2605,54 @@ namespace Udb.Services.V1 {
       public virtual grpc::AsyncServerStreamingCall<global::Udb.Events.V1.CDCEnvelope> PublishCDC(global::Udb.Entity.V1.CDCSubscriptionRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncServerStreamingCall(__Method_PublishCDC, null, options, request);
+      }
+      /// <summary>
+      /// Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.AckCdcEventsResponse AckCdcEvents(global::Udb.Entity.V1.AckCdcEventsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AckCdcEvents(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.AckCdcEventsResponse AckCdcEvents(global::Udb.Entity.V1.AckCdcEventsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AckCdcEvents, null, options, request);
+      }
+      /// <summary>
+      /// Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.AckCdcEventsResponse> AckCdcEventsAsync(global::Udb.Entity.V1.AckCdcEventsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AckCdcEventsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.AckCdcEventsResponse> AckCdcEventsAsync(global::Udb.Entity.V1.AckCdcEventsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AckCdcEvents, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Entity.V1.MutationResponse CreateMaterializedView(global::Udb.Entity.V1.ViewDefinition request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
@@ -3920,21 +4002,65 @@ namespace Udb.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListPolicies, null, options, request);
       }
+      /// <summary>
+      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+      /// requests. Authorization comes from the Casbin governance table: use
+      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.ObsoleteAttribute]
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Entity.V1.MutationResponse PutPolicy(global::Udb.Entity.V1.PutPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutPolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
+      /// <summary>
+      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+      /// requests. Authorization comes from the Casbin governance table: use
+      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.ObsoleteAttribute]
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Entity.V1.MutationResponse PutPolicy(global::Udb.Entity.V1.PutPolicyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_PutPolicy, null, options, request);
       }
+      /// <summary>
+      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+      /// requests. Authorization comes from the Casbin governance table: use
+      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.ObsoleteAttribute]
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MutationResponse> PutPolicyAsync(global::Udb.Entity.V1.PutPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return PutPolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
+      /// <summary>
+      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+      /// requests. Authorization comes from the Casbin governance table: use
+      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.ObsoleteAttribute]
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MutationResponse> PutPolicyAsync(global::Udb.Entity.V1.PutPolicyRequest request, grpc::CallOptions options)
       {
@@ -4471,6 +4597,7 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_AnalyticalQuery, serviceImpl.AnalyticalQuery)
           .AddMethod(__Method_BeginTx, serviceImpl.BeginTx)
           .AddMethod(__Method_PublishCDC, serviceImpl.PublishCDC)
+          .AddMethod(__Method_AckCdcEvents, serviceImpl.AckCdcEvents)
           .AddMethod(__Method_CreateMaterializedView, serviceImpl.CreateMaterializedView)
           .AddMethod(__Method_EnqueueOutboxEvent, serviceImpl.EnqueueOutboxEvent)
           .AddMethod(__Method_GenericDispatch, serviceImpl.GenericDispatch)
@@ -4561,6 +4688,7 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_AnalyticalQuery, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.AnalyticalQueryRequest, global::Udb.Entity.V1.AnalyticalQueryResponse>(serviceImpl.AnalyticalQuery));
       serviceBinder.AddMethod(__Method_BeginTx, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Entity.V1.Mutation, global::Udb.Entity.V1.TxStatus>(serviceImpl.BeginTx));
       serviceBinder.AddMethod(__Method_PublishCDC, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Udb.Entity.V1.CDCSubscriptionRequest, global::Udb.Events.V1.CDCEnvelope>(serviceImpl.PublishCDC));
+      serviceBinder.AddMethod(__Method_AckCdcEvents, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.AckCdcEventsRequest, global::Udb.Entity.V1.AckCdcEventsResponse>(serviceImpl.AckCdcEvents));
       serviceBinder.AddMethod(__Method_CreateMaterializedView, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.ViewDefinition, global::Udb.Entity.V1.MutationResponse>(serviceImpl.CreateMaterializedView));
       serviceBinder.AddMethod(__Method_EnqueueOutboxEvent, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.EnqueueOutboxEventRequest, global::Udb.Entity.V1.EnqueueOutboxEventResponse>(serviceImpl.EnqueueOutboxEvent));
       serviceBinder.AddMethod(__Method_GenericDispatch, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.GenericDispatchRequest, global::Udb.Entity.V1.GenericDispatchResponse>(serviceImpl.GenericDispatch));

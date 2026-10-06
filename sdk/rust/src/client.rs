@@ -224,6 +224,9 @@ impl UdbClient {
 /// tell "the broker refused" from "the broker answered with something this client
 /// could not trust" — they need different responses, and only the first is worth
 /// retrying.
+// `UdbError` carries the typed error detail (reason, constraint, column, fix
+// hint, missing); boxing it would change this public enum for a cold path.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum SelectError {
     /// The RPC failed.

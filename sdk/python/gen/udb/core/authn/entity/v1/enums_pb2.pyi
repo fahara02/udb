@@ -22,6 +22,7 @@ class UserStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     USER_STATUS_SUSPENDED: _ClassVar[UserStatus]
     USER_STATUS_LOCKED: _ClassVar[UserStatus]
     USER_STATUS_DEACTIVATED: _ClassVar[UserStatus]
+    USER_STATUS_PASSWORD_SETUP_REQUIRED: _ClassVar[UserStatus]
 
 class SessionType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -129,6 +130,7 @@ USER_STATUS_ACTIVE: UserStatus
 USER_STATUS_SUSPENDED: UserStatus
 USER_STATUS_LOCKED: UserStatus
 USER_STATUS_DEACTIVATED: UserStatus
+USER_STATUS_PASSWORD_SETUP_REQUIRED: UserStatus
 SESSION_TYPE_UNSPECIFIED: SessionType
 SESSION_TYPE_SERVER_SIDE: SessionType
 SESSION_TYPE_JWT: SessionType

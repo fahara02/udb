@@ -51,6 +51,16 @@ public enum UserStatus
    * <code>USER_STATUS_DEACTIVATED = 5;</code>
    */
   USER_STATUS_DEACTIVATED(5),
+  /**
+   * <pre>
+   * Invited (CreateUser with password_setup_required): the account has no
+   * usable password until the user completes ResetPassword with the emailed
+   * code, which also verifies the email and activates the account.
+   * </pre>
+   *
+   * <code>USER_STATUS_PASSWORD_SETUP_REQUIRED = 6;</code>
+   */
+  USER_STATUS_PASSWORD_SETUP_REQUIRED(6),
   UNRECOGNIZED(-1),
   ;
 
@@ -103,6 +113,16 @@ public enum UserStatus
    * <code>USER_STATUS_DEACTIVATED = 5;</code>
    */
   public static final int USER_STATUS_DEACTIVATED_VALUE = 5;
+  /**
+   * <pre>
+   * Invited (CreateUser with password_setup_required): the account has no
+   * usable password until the user completes ResetPassword with the emailed
+   * code, which also verifies the email and activates the account.
+   * </pre>
+   *
+   * <code>USER_STATUS_PASSWORD_SETUP_REQUIRED = 6;</code>
+   */
+  public static final int USER_STATUS_PASSWORD_SETUP_REQUIRED_VALUE = 6;
 
 
   public final int getNumber() {
@@ -135,6 +155,7 @@ public enum UserStatus
       case 3: return USER_STATUS_SUSPENDED;
       case 4: return USER_STATUS_LOCKED;
       case 5: return USER_STATUS_DEACTIVATED;
+      case 6: return USER_STATUS_PASSWORD_SETUP_REQUIRED;
       default: return null;
     }
   }

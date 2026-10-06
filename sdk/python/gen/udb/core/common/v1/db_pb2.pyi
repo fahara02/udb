@@ -704,7 +704,7 @@ class ColumnStoreOptions(_message.Message):
     def __init__(self, backend: _Optional[_Union[ColumnBackendType, str]] = ..., database_name: _Optional[str] = ..., table_name: _Optional[str] = ..., partition_key: _Optional[str] = ..., sort_key: _Optional[str] = ..., compression: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., payload_schema_json: _Optional[str] = ...) -> None: ...
 
 class GenericStoreOptions(_message.Message):
-    __slots__ = ("store_kind", "backend", "logical_name", "database_name", "namespace", "resource_name", "dsn_env_key", "dsn", "payload_schema_json", "options")
+    __slots__ = ("store_kind", "backend", "logical_name", "database_name", "namespace", "resource_name", "dsn_env_key", "dsn", "payload_schema_json", "options", "payload_fields", "fts_columns", "fts_config", "edge_source_field", "edge_target_field", "edge_source_label", "edge_target_label")
     class OptionsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -722,6 +722,13 @@ class GenericStoreOptions(_message.Message):
     DSN_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_SCHEMA_JSON_FIELD_NUMBER: _ClassVar[int]
     OPTIONS_FIELD_NUMBER: _ClassVar[int]
+    PAYLOAD_FIELDS_FIELD_NUMBER: _ClassVar[int]
+    FTS_COLUMNS_FIELD_NUMBER: _ClassVar[int]
+    FTS_CONFIG_FIELD_NUMBER: _ClassVar[int]
+    EDGE_SOURCE_FIELD_FIELD_NUMBER: _ClassVar[int]
+    EDGE_TARGET_FIELD_FIELD_NUMBER: _ClassVar[int]
+    EDGE_SOURCE_LABEL_FIELD_NUMBER: _ClassVar[int]
+    EDGE_TARGET_LABEL_FIELD_NUMBER: _ClassVar[int]
     store_kind: str
     backend: str
     logical_name: str
@@ -732,4 +739,11 @@ class GenericStoreOptions(_message.Message):
     dsn: str
     payload_schema_json: str
     options: _containers.ScalarMap[str, str]
-    def __init__(self, store_kind: _Optional[str] = ..., backend: _Optional[str] = ..., logical_name: _Optional[str] = ..., database_name: _Optional[str] = ..., namespace: _Optional[str] = ..., resource_name: _Optional[str] = ..., dsn_env_key: _Optional[str] = ..., dsn: _Optional[str] = ..., payload_schema_json: _Optional[str] = ..., options: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    payload_fields: str
+    fts_columns: str
+    fts_config: str
+    edge_source_field: str
+    edge_target_field: str
+    edge_source_label: str
+    edge_target_label: str
+    def __init__(self, store_kind: _Optional[str] = ..., backend: _Optional[str] = ..., logical_name: _Optional[str] = ..., database_name: _Optional[str] = ..., namespace: _Optional[str] = ..., resource_name: _Optional[str] = ..., dsn_env_key: _Optional[str] = ..., dsn: _Optional[str] = ..., payload_schema_json: _Optional[str] = ..., options: _Optional[_Mapping[str, str]] = ..., payload_fields: _Optional[str] = ..., fts_columns: _Optional[str] = ..., fts_config: _Optional[str] = ..., edge_source_field: _Optional[str] = ..., edge_target_field: _Optional[str] = ..., edge_source_label: _Optional[str] = ..., edge_target_label: _Optional[str] = ...) -> None: ...

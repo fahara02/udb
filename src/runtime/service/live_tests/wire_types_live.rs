@@ -13,6 +13,7 @@ use super::data_plane_live::{
     served_select_rows, served_upsert, teardown,
 };
 use crate::generation::{CatalogManifest, ManifestTable, ManifestTableSecurity};
+use crate::proto::data_broker_server::DataBroker;
 use crate::runtime::service::DataBrokerService;
 use crate::runtime::system::ensure_system_catalog;
 

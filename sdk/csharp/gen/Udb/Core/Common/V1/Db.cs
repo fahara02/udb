@@ -213,7 +213,7 @@ namespace Udb.Core.Common.V1 {
             "dGl0aW9uS2V5EhkKCHNvcnRfa2V5GAUgASgJUgdzb3J0S2V5EiAKC2NvbXBy",
             "ZXNzaW9uGAYgASgJUgtjb21wcmVzc2lvbhIfCgt0dGxfc2Vjb25kcxgHIAEo",
             "BVIKdHRsU2Vjb25kcxIuChNwYXlsb2FkX3NjaGVtYV9qc29uGAggASgJUhFw",
-            "YXlsb2FkU2NoZW1hSnNvbiLHAwoTR2VuZXJpY1N0b3JlT3B0aW9ucxIdCgpz",
+            "YXlsb2FkU2NoZW1hSnNvbiLeBQoTR2VuZXJpY1N0b3JlT3B0aW9ucxIdCgpz",
             "dG9yZV9raW5kGAEgASgJUglzdG9yZUtpbmQSGAoHYmFja2VuZBgCIAEoCVIH",
             "YmFja2VuZBIhCgxsb2dpY2FsX25hbWUYAyABKAlSC2xvZ2ljYWxOYW1lEiMK",
             "DWRhdGFiYXNlX25hbWUYBCABKAlSDGRhdGFiYXNlTmFtZRIcCgluYW1lc3Bh",
@@ -222,100 +222,106 @@ namespace Udb.Core.Common.V1 {
             "CgNkc24YCCABKAlSA2RzbhIuChNwYXlsb2FkX3NjaGVtYV9qc29uGAkgASgJ",
             "UhFwYXlsb2FkU2NoZW1hSnNvbhJOCgdvcHRpb25zGAogAygLMjQudWRiLmNv",
             "cmUuY29tbW9uLnYxLkdlbmVyaWNTdG9yZU9wdGlvbnMuT3B0aW9uc0VudHJ5",
-            "UgdvcHRpb25zGjoKDE9wdGlvbnNFbnRyeRIQCgNrZXkYASABKAlSA2tleRIU",
-            "CgV2YWx1ZRgCIAEoCVIFdmFsdWU6AjgBKtUBChFQYXJ0aXRpb25TdHJhdGVn",
-            "eRIiCh5QQVJUSVRJT05fU1RSQVRFR1lfVU5TUEVDSUZJRUQQABIbChdQQVJU",
-            "SVRJT05fU1RSQVRFR1lfTk9ORRABEiEKHVBBUlRJVElPTl9TVFJBVEVHWV9S",
-            "QU5HRV9ZRUFSEAISIgoeUEFSVElUSU9OX1NUUkFURUdZX1JBTkdFX01PTlRI",
-            "EAMSGwoXUEFSVElUSU9OX1NUUkFURUdZX0xJU1QQBBIbChdQQVJUSVRJT05f",
-            "U1RSQVRFR1lfSEFTSBAFKt8BChFSZWZlcmVudGlhbEFjdGlvbhIiCh5SRUZF",
-            "UkVOVElBTF9BQ1RJT05fVU5TUEVDSUZJRUQQABIgChxSRUZFUkVOVElBTF9B",
-            "Q1RJT05fTk9fQUNUSU9OEAESHwobUkVGRVJFTlRJQUxfQUNUSU9OX1JFU1RS",
-            "SUNUEAISHgoaUkVGRVJFTlRJQUxfQUNUSU9OX0NBU0NBREUQAxIfChtSRUZF",
-            "UkVOVElBTF9BQ1RJT05fU0VUX05VTEwQBBIiCh5SRUZFUkVOVElBTF9BQ1RJ",
-            "T05fU0VUX0RFRkFVTFQQBSrkAQoJSW5kZXhUeXBlEhoKFklOREVYX1RZUEVf",
-            "VU5TUEVDSUZJRUQQABITCg9JTkRFWF9UWVBFX05PTkUQARIUChBJTkRFWF9U",
-            "WVBFX0JUUkVFEAISEwoPSU5ERVhfVFlQRV9IQVNIEAMSEgoOSU5ERVhfVFlQ",
-            "RV9HSU4QBBITCg9JTkRFWF9UWVBFX0dJU1QQBRITCg9JTkRFWF9UWVBFX0JS",
-            "SU4QBhITCg9JTkRFWF9UWVBFX0hOU1cQBxISCg5JTkRFWF9UWVBFX0lWRhAI",
-            "EhQKEElOREVYX1RZUEVfSVZGUFEQCSq8AQoSU3RvcmFnZUJhY2tlbmRUeXBl",
-            "Eh8KG1NUT1JBR0VfQkFDS0VORF9VTlNQRUNJRklFRBAAEhYKElNUT1JBR0Vf",
-            "QkFDS0VORF9TMxABEhkKFVNUT1JBR0VfQkFDS0VORF9NSU5JTxACEhcKE1NU",
-            "T1JBR0VfQkFDS0VORF9HQ1MQAxIeChpTVE9SQUdFX0JBQ0tFTkRfQVpVUkVf",
-            "QkxPQhAEEhkKFVNUT1JBR0VfQkFDS0VORF9MT0NBTBAFKt8BChFWZWN0b3JC",
-            "YWNrZW5kVHlwZRIeChpWRUNUT1JfQkFDS0VORF9VTlNQRUNJRklFRBAAEhkK",
-            "FVZFQ1RPUl9CQUNLRU5EX1FEUkFOVBABEhkKFVZFQ1RPUl9CQUNLRU5EX01J",
-            "TFZVUxACEhsKF1ZFQ1RPUl9CQUNLRU5EX1dFQVZJQVRFEAMSGwoXVkVDVE9S",
-            "X0JBQ0tFTkRfUEdWRUNUT1IQBBIbChdWRUNUT1JfQkFDS0VORF9QSU5FQ09O",
-            "RRAFEh0KGVZFQ1RPUl9CQUNLRU5EX09QRU5TRUFSQ0gQBiqqAQoUVmVjdG9y",
-            "RGlzdGFuY2VNZXRyaWMSHwobVkVDVE9SX0RJU1RBTkNFX1VOU1BFQ0lGSUVE",
-            "EAASGgoWVkVDVE9SX0RJU1RBTkNFX0NPU0lORRABEhcKE1ZFQ1RPUl9ESVNU",
-            "QU5DRV9ET1QQAhIdChlWRUNUT1JfRElTVEFOQ0VfRVVDTElERUFOEAMSHQoZ",
-            "VkVDVE9SX0RJU1RBTkNFX01BTkhBVFRBThAEKqIBChBDYWNoZUJhY2tlbmRU",
-            "eXBlEh0KGUNBQ0hFX0JBQ0tFTkRfVU5TUEVDSUZJRUQQABIXChNDQUNIRV9C",
-            "QUNLRU5EX1JFRElTEAESGwoXQ0FDSEVfQkFDS0VORF9NRU1DQUNIRUQQAhIc",
-            "ChhDQUNIRV9CQUNLRU5EX0lOX1BST0NFU1MQAxIbChdDQUNIRV9CQUNLRU5E",
-            "X0RSQUdPTkZMWRAEKoIBChBHcmFwaEJhY2tlbmRUeXBlEh0KGUdSQVBIX0JB",
-            "Q0tFTkRfVU5TUEVDSUZJRUQQABIXChNHUkFQSF9CQUNLRU5EX05FTzRKEAES",
-            "GgoWR1JBUEhfQkFDS0VORF9NRU1HUkFQSBACEhoKFkdSQVBIX0JBQ0tFTkRf",
-            "QVJBTkdPREIQAyqEAQoQTm9TcWxCYWNrZW5kVHlwZRIdChlOT1NRTF9CQUNL",
-            "RU5EX1VOU1BFQ0lGSUVEEAASGQoVTk9TUUxfQkFDS0VORF9NT05HT0RCEAES",
-            "GgoWTk9TUUxfQkFDS0VORF9EWU5BTU9EQhACEhoKFk5PU1FMX0JBQ0tFTkRf",
-            "Q09TTU9TREIQAyqjAQoVVGltZVNlcmllc0JhY2tlbmRUeXBlEiIKHlRJTUVT",
-            "RVJJRVNfQkFDS0VORF9VTlNQRUNJRklFRBAAEiIKHlRJTUVTRVJJRVNfQkFD",
-            "S0VORF9USU1FU0NBTEVEQhABEh8KG1RJTUVTRVJJRVNfQkFDS0VORF9JTkZM",
-            "VVhEQhACEiEKHVRJTUVTRVJJRVNfQkFDS0VORF9DTElDS0hPVVNFEAMqjQEK",
-            "EUNvbHVtbkJhY2tlbmRUeXBlEh4KGkNPTFVNTl9CQUNLRU5EX1VOU1BFQ0lG",
-            "SUVEEAASHQoZQ09MVU1OX0JBQ0tFTkRfQ0xJQ0tIT1VTRRABEhwKGENPTFVN",
-            "Tl9CQUNLRU5EX0NBU1NBTkRSQRACEhsKF0NPTFVNTl9CQUNLRU5EX0JJR1RB",
-            "QkxFEAMq7gEKEE1vZGVsQmFja2VuZFR5cGUSHQoZTU9ERUxfQkFDS0VORF9V",
-            "TlNQRUNJRklFRBAAEhgKFE1PREVMX0JBQ0tFTkRfTUxGTE9XEAESFQoRTU9E",
-            "RUxfQkFDS0VORF9EVkMQAhIdChlNT0RFTF9CQUNLRU5EX0hVR0dJTkdGQUNF",
-            "EAMSGQoVTU9ERUxfQkFDS0VORF9CRU5UT01MEAQSGAoUTU9ERUxfQkFDS0VO",
-            "RF9UUklUT04QBRIcChhNT0RFTF9CQUNLRU5EX1RPUkNIU0VSVkUQBhIYChRN",
-            "T0RFTF9CQUNLRU5EX0NVU1RPTRAHOlkKBXRhYmxlEh8uZ29vZ2xlLnByb3Rv",
-            "YnVmLk1lc3NhZ2VPcHRpb25zGNGGAyABKAsyIC51ZGIuY29yZS5jb21tb24u",
-            "djEuVGFibGVPcHRpb25zUgV0YWJsZTpeCghwZ190YWJsZRIfLmdvb2dsZS5w",
-            "cm90b2J1Zi5NZXNzYWdlT3B0aW9ucxjvhgMgASgLMiAudWRiLmNvcmUuY29t",
-            "bW9uLnYxLlRhYmxlT3B0aW9uc1IHcGdUYWJsZTpsCgx2ZWN0b3Jfc3RvcmUS",
-            "Hy5nb29nbGUucHJvdG9idWYuTWVzc2FnZU9wdGlvbnMY04YDIAEoCzImLnVk",
-            "Yi5jb3JlLmNvbW1vbi52MS5WZWN0b3JTdG9yZU9wdGlvbnNSC3ZlY3RvclN0",
-            "b3JlOlkKBWNhY2hlEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25z",
-            "GNSGAyABKAsyIC51ZGIuY29yZS5jb21tb24udjEuQ2FjaGVPcHRpb25zUgVj",
-            "YWNoZTpyCg5tb2RlbF9yZWdpc3RyeRIfLmdvb2dsZS5wcm90b2J1Zi5NZXNz",
-            "YWdlT3B0aW9ucxjVhgMgASgLMigudWRiLmNvcmUuY29tbW9uLnYxLk1vZGVs",
-            "UmVnaXN0cnlPcHRpb25zUg1tb2RlbFJlZ2lzdHJ5OmkKC2dyYXBoX3N0b3Jl",
-            "Eh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGNeGAyABKAsyJS51",
-            "ZGIuY29yZS5jb21tb24udjEuR3JhcGhTdG9yZU9wdGlvbnNSCmdyYXBoU3Rv",
-            "cmU6cgoOZG9jdW1lbnRfc3RvcmUSHy5nb29nbGUucHJvdG9idWYuTWVzc2Fn",
-            "ZU9wdGlvbnMY2IYDIAEoCzIoLnVkYi5jb3JlLmNvbW1vbi52MS5Eb2N1bWVu",
-            "dFN0b3JlT3B0aW9uc1INZG9jdW1lbnRTdG9yZTpsCgtub3NxbF9zdG9yZRIf",
-            "Lmdvb2dsZS5wcm90b2J1Zi5NZXNzYWdlT3B0aW9ucxjZhgMgASgLMigudWRi",
-            "LmNvcmUuY29tbW9uLnYxLkRvY3VtZW50U3RvcmVPcHRpb25zUgpub3NxbFN0",
-            "b3JlOngKEHRpbWVzZXJpZXNfc3RvcmUSHy5nb29nbGUucHJvdG9idWYuTWVz",
-            "c2FnZU9wdGlvbnMY2oYDIAEoCzIqLnVkYi5jb3JlLmNvbW1vbi52MS5UaW1l",
-            "U2VyaWVzU3RvcmVPcHRpb25zUg90aW1lc2VyaWVzU3RvcmU6bAoMY29sdW1u",
-            "X3N0b3JlEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGNuGAyAB",
-            "KAsyJi51ZGIuY29yZS5jb21tb24udjEuQ29sdW1uU3RvcmVPcHRpb25zUgtj",
-            "b2x1bW5TdG9yZTppCgpkYXRhX3N0b3JlEh8uZ29vZ2xlLnByb3RvYnVmLk1l",
-            "c3NhZ2VPcHRpb25zGNyGAyABKAsyJy51ZGIuY29yZS5jb21tb24udjEuR2Vu",
-            "ZXJpY1N0b3JlT3B0aW9uc1IJZGF0YVN0b3JlOmIKCHNlY3VyaXR5Eh8uZ29v",
-            "Z2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGN2GAyABKAsyIy51ZGIuY29y",
-            "ZS5jb21tb24udjEuU2VjdXJpdHlPcHRpb25zUghzZWN1cml0eTpaCgZjb2x1",
-            "bW4SHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25zGNKGAyABKAsyIS51",
-            "ZGIuY29yZS5jb21tb24udjEuQ29sdW1uT3B0aW9uc1IGY29sdW1uOl8KCXBn",
-            "X2NvbHVtbhIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY8IYDIAEo",
-            "CzIhLnVkYi5jb3JlLmNvbW1vbi52MS5Db2x1bW5PcHRpb25zUghwZ0NvbHVt",
-            "bjpiCgdzdG9yYWdlEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjW",
-            "hgMgASgLMicudWRiLmNvcmUuY29tbW9uLnYxLlN0b3JhZ2VGaWVsZE9wdGlv",
-            "bnNSB3N0b3JhZ2U6cwoPY29sdW1uX3NlY3VyaXR5Eh0uZ29vZ2xlLnByb3Rv",
-            "YnVmLkZpZWxkT3B0aW9ucxjlhgMgASgLMikudWRiLmNvcmUuY29tbW9uLnYx",
-            "LkNvbHVtblNlY3VyaXR5T3B0aW9uc1IOY29sdW1uU2VjdXJpdHlCzAEKFmNv",
-            "bS51ZGIuY29yZS5jb21tb24udjFCB0RiUHJvdG9QAVo+Z2l0aHViLmNvbS9m",
-            "YWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9jb21tb24vdjE7Y29t",
-            "bW9udjGiAgNVQ0OqAhJVZGIuQ29yZS5Db21tb24uVjHKAhJVZGJcQ29yZVxD",
-            "b21tb25cVjHiAh5VZGJcR1BCTWV0YWRhdGFcQ29yZVxDb21tb25cVjHqAhVV",
-            "ZGI6OkNvcmU6OkNvbW1vbjo6VjFiBnByb3RvMw=="));
+            "UgdvcHRpb25zEiUKDnBheWxvYWRfZmllbGRzGAsgASgJUg1wYXlsb2FkRmll",
+            "bGRzEh8KC2Z0c19jb2x1bW5zGAwgASgJUgpmdHNDb2x1bW5zEh0KCmZ0c19j",
+            "b25maWcYDSABKAlSCWZ0c0NvbmZpZxIqChFlZGdlX3NvdXJjZV9maWVsZBgO",
+            "IAEoCVIPZWRnZVNvdXJjZUZpZWxkEioKEWVkZ2VfdGFyZ2V0X2ZpZWxkGA8g",
+            "ASgJUg9lZGdlVGFyZ2V0RmllbGQSKgoRZWRnZV9zb3VyY2VfbGFiZWwYECAB",
+            "KAlSD2VkZ2VTb3VyY2VMYWJlbBIqChFlZGdlX3RhcmdldF9sYWJlbBgRIAEo",
+            "CVIPZWRnZVRhcmdldExhYmVsGjoKDE9wdGlvbnNFbnRyeRIQCgNrZXkYASAB",
+            "KAlSA2tleRIUCgV2YWx1ZRgCIAEoCVIFdmFsdWU6AjgBKtUBChFQYXJ0aXRp",
+            "b25TdHJhdGVneRIiCh5QQVJUSVRJT05fU1RSQVRFR1lfVU5TUEVDSUZJRUQQ",
+            "ABIbChdQQVJUSVRJT05fU1RSQVRFR1lfTk9ORRABEiEKHVBBUlRJVElPTl9T",
+            "VFJBVEVHWV9SQU5HRV9ZRUFSEAISIgoeUEFSVElUSU9OX1NUUkFURUdZX1JB",
+            "TkdFX01PTlRIEAMSGwoXUEFSVElUSU9OX1NUUkFURUdZX0xJU1QQBBIbChdQ",
+            "QVJUSVRJT05fU1RSQVRFR1lfSEFTSBAFKt8BChFSZWZlcmVudGlhbEFjdGlv",
+            "bhIiCh5SRUZFUkVOVElBTF9BQ1RJT05fVU5TUEVDSUZJRUQQABIgChxSRUZF",
+            "UkVOVElBTF9BQ1RJT05fTk9fQUNUSU9OEAESHwobUkVGRVJFTlRJQUxfQUNU",
+            "SU9OX1JFU1RSSUNUEAISHgoaUkVGRVJFTlRJQUxfQUNUSU9OX0NBU0NBREUQ",
+            "AxIfChtSRUZFUkVOVElBTF9BQ1RJT05fU0VUX05VTEwQBBIiCh5SRUZFUkVO",
+            "VElBTF9BQ1RJT05fU0VUX0RFRkFVTFQQBSrkAQoJSW5kZXhUeXBlEhoKFklO",
+            "REVYX1RZUEVfVU5TUEVDSUZJRUQQABITCg9JTkRFWF9UWVBFX05PTkUQARIU",
+            "ChBJTkRFWF9UWVBFX0JUUkVFEAISEwoPSU5ERVhfVFlQRV9IQVNIEAMSEgoO",
+            "SU5ERVhfVFlQRV9HSU4QBBITCg9JTkRFWF9UWVBFX0dJU1QQBRITCg9JTkRF",
+            "WF9UWVBFX0JSSU4QBhITCg9JTkRFWF9UWVBFX0hOU1cQBxISCg5JTkRFWF9U",
+            "WVBFX0lWRhAIEhQKEElOREVYX1RZUEVfSVZGUFEQCSq8AQoSU3RvcmFnZUJh",
+            "Y2tlbmRUeXBlEh8KG1NUT1JBR0VfQkFDS0VORF9VTlNQRUNJRklFRBAAEhYK",
+            "ElNUT1JBR0VfQkFDS0VORF9TMxABEhkKFVNUT1JBR0VfQkFDS0VORF9NSU5J",
+            "TxACEhcKE1NUT1JBR0VfQkFDS0VORF9HQ1MQAxIeChpTVE9SQUdFX0JBQ0tF",
+            "TkRfQVpVUkVfQkxPQhAEEhkKFVNUT1JBR0VfQkFDS0VORF9MT0NBTBAFKt8B",
+            "ChFWZWN0b3JCYWNrZW5kVHlwZRIeChpWRUNUT1JfQkFDS0VORF9VTlNQRUNJ",
+            "RklFRBAAEhkKFVZFQ1RPUl9CQUNLRU5EX1FEUkFOVBABEhkKFVZFQ1RPUl9C",
+            "QUNLRU5EX01JTFZVUxACEhsKF1ZFQ1RPUl9CQUNLRU5EX1dFQVZJQVRFEAMS",
+            "GwoXVkVDVE9SX0JBQ0tFTkRfUEdWRUNUT1IQBBIbChdWRUNUT1JfQkFDS0VO",
+            "RF9QSU5FQ09ORRAFEh0KGVZFQ1RPUl9CQUNLRU5EX09QRU5TRUFSQ0gQBiqq",
+            "AQoUVmVjdG9yRGlzdGFuY2VNZXRyaWMSHwobVkVDVE9SX0RJU1RBTkNFX1VO",
+            "U1BFQ0lGSUVEEAASGgoWVkVDVE9SX0RJU1RBTkNFX0NPU0lORRABEhcKE1ZF",
+            "Q1RPUl9ESVNUQU5DRV9ET1QQAhIdChlWRUNUT1JfRElTVEFOQ0VfRVVDTElE",
+            "RUFOEAMSHQoZVkVDVE9SX0RJU1RBTkNFX01BTkhBVFRBThAEKqIBChBDYWNo",
+            "ZUJhY2tlbmRUeXBlEh0KGUNBQ0hFX0JBQ0tFTkRfVU5TUEVDSUZJRUQQABIX",
+            "ChNDQUNIRV9CQUNLRU5EX1JFRElTEAESGwoXQ0FDSEVfQkFDS0VORF9NRU1D",
+            "QUNIRUQQAhIcChhDQUNIRV9CQUNLRU5EX0lOX1BST0NFU1MQAxIbChdDQUNI",
+            "RV9CQUNLRU5EX0RSQUdPTkZMWRAEKoIBChBHcmFwaEJhY2tlbmRUeXBlEh0K",
+            "GUdSQVBIX0JBQ0tFTkRfVU5TUEVDSUZJRUQQABIXChNHUkFQSF9CQUNLRU5E",
+            "X05FTzRKEAESGgoWR1JBUEhfQkFDS0VORF9NRU1HUkFQSBACEhoKFkdSQVBI",
+            "X0JBQ0tFTkRfQVJBTkdPREIQAyqEAQoQTm9TcWxCYWNrZW5kVHlwZRIdChlO",
+            "T1NRTF9CQUNLRU5EX1VOU1BFQ0lGSUVEEAASGQoVTk9TUUxfQkFDS0VORF9N",
+            "T05HT0RCEAESGgoWTk9TUUxfQkFDS0VORF9EWU5BTU9EQhACEhoKFk5PU1FM",
+            "X0JBQ0tFTkRfQ09TTU9TREIQAyqjAQoVVGltZVNlcmllc0JhY2tlbmRUeXBl",
+            "EiIKHlRJTUVTRVJJRVNfQkFDS0VORF9VTlNQRUNJRklFRBAAEiIKHlRJTUVT",
+            "RVJJRVNfQkFDS0VORF9USU1FU0NBTEVEQhABEh8KG1RJTUVTRVJJRVNfQkFD",
+            "S0VORF9JTkZMVVhEQhACEiEKHVRJTUVTRVJJRVNfQkFDS0VORF9DTElDS0hP",
+            "VVNFEAMqjQEKEUNvbHVtbkJhY2tlbmRUeXBlEh4KGkNPTFVNTl9CQUNLRU5E",
+            "X1VOU1BFQ0lGSUVEEAASHQoZQ09MVU1OX0JBQ0tFTkRfQ0xJQ0tIT1VTRRAB",
+            "EhwKGENPTFVNTl9CQUNLRU5EX0NBU1NBTkRSQRACEhsKF0NPTFVNTl9CQUNL",
+            "RU5EX0JJR1RBQkxFEAMq7gEKEE1vZGVsQmFja2VuZFR5cGUSHQoZTU9ERUxf",
+            "QkFDS0VORF9VTlNQRUNJRklFRBAAEhgKFE1PREVMX0JBQ0tFTkRfTUxGTE9X",
+            "EAESFQoRTU9ERUxfQkFDS0VORF9EVkMQAhIdChlNT0RFTF9CQUNLRU5EX0hV",
+            "R0dJTkdGQUNFEAMSGQoVTU9ERUxfQkFDS0VORF9CRU5UT01MEAQSGAoUTU9E",
+            "RUxfQkFDS0VORF9UUklUT04QBRIcChhNT0RFTF9CQUNLRU5EX1RPUkNIU0VS",
+            "VkUQBhIYChRNT0RFTF9CQUNLRU5EX0NVU1RPTRAHOlkKBXRhYmxlEh8uZ29v",
+            "Z2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGNGGAyABKAsyIC51ZGIuY29y",
+            "ZS5jb21tb24udjEuVGFibGVPcHRpb25zUgV0YWJsZTpeCghwZ190YWJsZRIf",
+            "Lmdvb2dsZS5wcm90b2J1Zi5NZXNzYWdlT3B0aW9ucxjvhgMgASgLMiAudWRi",
+            "LmNvcmUuY29tbW9uLnYxLlRhYmxlT3B0aW9uc1IHcGdUYWJsZTpsCgx2ZWN0",
+            "b3Jfc3RvcmUSHy5nb29nbGUucHJvdG9idWYuTWVzc2FnZU9wdGlvbnMY04YD",
+            "IAEoCzImLnVkYi5jb3JlLmNvbW1vbi52MS5WZWN0b3JTdG9yZU9wdGlvbnNS",
+            "C3ZlY3RvclN0b3JlOlkKBWNhY2hlEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3Nh",
+            "Z2VPcHRpb25zGNSGAyABKAsyIC51ZGIuY29yZS5jb21tb24udjEuQ2FjaGVP",
+            "cHRpb25zUgVjYWNoZTpyCg5tb2RlbF9yZWdpc3RyeRIfLmdvb2dsZS5wcm90",
+            "b2J1Zi5NZXNzYWdlT3B0aW9ucxjVhgMgASgLMigudWRiLmNvcmUuY29tbW9u",
+            "LnYxLk1vZGVsUmVnaXN0cnlPcHRpb25zUg1tb2RlbFJlZ2lzdHJ5OmkKC2dy",
+            "YXBoX3N0b3JlEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGNeG",
+            "AyABKAsyJS51ZGIuY29yZS5jb21tb24udjEuR3JhcGhTdG9yZU9wdGlvbnNS",
+            "CmdyYXBoU3RvcmU6cgoOZG9jdW1lbnRfc3RvcmUSHy5nb29nbGUucHJvdG9i",
+            "dWYuTWVzc2FnZU9wdGlvbnMY2IYDIAEoCzIoLnVkYi5jb3JlLmNvbW1vbi52",
+            "MS5Eb2N1bWVudFN0b3JlT3B0aW9uc1INZG9jdW1lbnRTdG9yZTpsCgtub3Nx",
+            "bF9zdG9yZRIfLmdvb2dsZS5wcm90b2J1Zi5NZXNzYWdlT3B0aW9ucxjZhgMg",
+            "ASgLMigudWRiLmNvcmUuY29tbW9uLnYxLkRvY3VtZW50U3RvcmVPcHRpb25z",
+            "Ugpub3NxbFN0b3JlOngKEHRpbWVzZXJpZXNfc3RvcmUSHy5nb29nbGUucHJv",
+            "dG9idWYuTWVzc2FnZU9wdGlvbnMY2oYDIAEoCzIqLnVkYi5jb3JlLmNvbW1v",
+            "bi52MS5UaW1lU2VyaWVzU3RvcmVPcHRpb25zUg90aW1lc2VyaWVzU3RvcmU6",
+            "bAoMY29sdW1uX3N0b3JlEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRp",
+            "b25zGNuGAyABKAsyJi51ZGIuY29yZS5jb21tb24udjEuQ29sdW1uU3RvcmVP",
+            "cHRpb25zUgtjb2x1bW5TdG9yZTppCgpkYXRhX3N0b3JlEh8uZ29vZ2xlLnBy",
+            "b3RvYnVmLk1lc3NhZ2VPcHRpb25zGNyGAyABKAsyJy51ZGIuY29yZS5jb21t",
+            "b24udjEuR2VuZXJpY1N0b3JlT3B0aW9uc1IJZGF0YVN0b3JlOmIKCHNlY3Vy",
+            "aXR5Eh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGN2GAyABKAsy",
+            "Iy51ZGIuY29yZS5jb21tb24udjEuU2VjdXJpdHlPcHRpb25zUghzZWN1cml0",
+            "eTpaCgZjb2x1bW4SHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25zGNKG",
+            "AyABKAsyIS51ZGIuY29yZS5jb21tb24udjEuQ29sdW1uT3B0aW9uc1IGY29s",
+            "dW1uOl8KCXBnX2NvbHVtbhIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlv",
+            "bnMY8IYDIAEoCzIhLnVkYi5jb3JlLmNvbW1vbi52MS5Db2x1bW5PcHRpb25z",
+            "UghwZ0NvbHVtbjpiCgdzdG9yYWdlEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxk",
+            "T3B0aW9ucxjWhgMgASgLMicudWRiLmNvcmUuY29tbW9uLnYxLlN0b3JhZ2VG",
+            "aWVsZE9wdGlvbnNSB3N0b3JhZ2U6cwoPY29sdW1uX3NlY3VyaXR5Eh0uZ29v",
+            "Z2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjlhgMgASgLMikudWRiLmNvcmUu",
+            "Y29tbW9uLnYxLkNvbHVtblNlY3VyaXR5T3B0aW9uc1IOY29sdW1uU2VjdXJp",
+            "dHlCzAEKFmNvbS51ZGIuY29yZS5jb21tb24udjFCB0RiUHJvdG9QAVo+Z2l0",
+            "aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9jb21t",
+            "b24vdjE7Y29tbW9udjGiAgNVQ0OqAhJVZGIuQ29yZS5Db21tb24uVjHKAhJV",
+            "ZGJcQ29yZVxDb21tb25cVjHiAh5VZGJcR1BCTWV0YWRhdGFcQ29yZVxDb21t",
+            "b25cVjHqAhVVZGI6OkNvcmU6OkNvbW1vbjo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.Reflection.DescriptorReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Udb.Core.Common.V1.PartitionStrategy), typeof(global::Udb.Core.Common.V1.ReferentialAction), typeof(global::Udb.Core.Common.V1.IndexType), typeof(global::Udb.Core.Common.V1.StorageBackendType), typeof(global::Udb.Core.Common.V1.VectorBackendType), typeof(global::Udb.Core.Common.V1.VectorDistanceMetric), typeof(global::Udb.Core.Common.V1.CacheBackendType), typeof(global::Udb.Core.Common.V1.GraphBackendType), typeof(global::Udb.Core.Common.V1.NoSqlBackendType), typeof(global::Udb.Core.Common.V1.TimeSeriesBackendType), typeof(global::Udb.Core.Common.V1.ColumnBackendType), typeof(global::Udb.Core.Common.V1.ModelBackendType), }, new pb::Extension[] { DbExtensions.Table, DbExtensions.PgTable, DbExtensions.VectorStore, DbExtensions.Cache, DbExtensions.ModelRegistry, DbExtensions.GraphStore, DbExtensions.DocumentStore, DbExtensions.NosqlStore, DbExtensions.TimeseriesStore, DbExtensions.ColumnStore, DbExtensions.DataStore, DbExtensions.Security, DbExtensions.Column, DbExtensions.PgColumn, DbExtensions.Storage, DbExtensions.ColumnSecurity }, new pbr::GeneratedClrTypeInfo[] {
@@ -339,7 +345,7 @@ namespace Udb.Core.Common.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Common.V1.DocumentStoreOptions), global::Udb.Core.Common.V1.DocumentStoreOptions.Parser, new[]{ "Backend", "DatabaseName", "CollectionName", "PartitionKey", "IdField", "TenantField", "TtlSeconds", "PayloadSchemaJson" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Common.V1.TimeSeriesStoreOptions), global::Udb.Core.Common.V1.TimeSeriesStoreOptions.Parser, new[]{ "Backend", "DatabaseName", "MeasurementName", "TimeField", "TenantField", "TagFields", "ValueFields", "RetentionDays", "DownsamplePolicy" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Common.V1.ColumnStoreOptions), global::Udb.Core.Common.V1.ColumnStoreOptions.Parser, new[]{ "Backend", "DatabaseName", "TableName", "PartitionKey", "SortKey", "Compression", "TtlSeconds", "PayloadSchemaJson" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Common.V1.GenericStoreOptions), global::Udb.Core.Common.V1.GenericStoreOptions.Parser, new[]{ "StoreKind", "Backend", "LogicalName", "DatabaseName", "Namespace", "ResourceName", "DsnEnvKey", "Dsn", "PayloadSchemaJson", "Options" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Common.V1.GenericStoreOptions), global::Udb.Core.Common.V1.GenericStoreOptions.Parser, new[]{ "StoreKind", "Backend", "LogicalName", "DatabaseName", "Namespace", "ResourceName", "DsnEnvKey", "Dsn", "PayloadSchemaJson", "Options", "PayloadFields", "FtsColumns", "FtsConfig", "EdgeSourceField", "EdgeTargetField", "EdgeSourceLabel", "EdgeTargetLabel" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
     #endregion
@@ -11309,6 +11315,13 @@ namespace Udb.Core.Common.V1 {
       dsn_ = other.dsn_;
       payloadSchemaJson_ = other.payloadSchemaJson_;
       options_ = other.options_.Clone();
+      payloadFields_ = other.payloadFields_;
+      ftsColumns_ = other.ftsColumns_;
+      ftsConfig_ = other.ftsConfig_;
+      edgeSourceField_ = other.edgeSourceField_;
+      edgeTargetField_ = other.edgeTargetField_;
+      edgeSourceLabel_ = other.edgeSourceLabel_;
+      edgeTargetLabel_ = other.edgeTargetLabel_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -11431,10 +11444,116 @@ namespace Udb.Core.Common.V1 {
     private static readonly pbc::MapField<string, string>.Codec _map_options_codec
         = new pbc::MapField<string, string>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForString(18, ""), 82);
     private readonly pbc::MapField<string, string> options_ = new pbc::MapField<string, string>();
+    /// <summary>
+    /// Free-form backend options. Prefer the typed fields below for every key
+    /// they cover: a misspelled typed field fails the proto build, while a
+    /// misspelled map key is ignored at runtime (`udb check` warns about it).
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public pbc::MapField<string, string> Options {
       get { return options_; }
+    }
+
+    /// <summary>Field number for the "payload_fields" field.</summary>
+    public const int PayloadFieldsFieldNumber = 11;
+    private string payloadFields_ = "";
+    /// <summary>
+    /// Qdrant/vector projections: comma list of fields or columns copied into
+    /// each point's payload (plus the row identity and scope stamps). Empty: the
+    /// whole row. Same as options["payload_fields"].
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PayloadFields {
+      get { return payloadFields_; }
+      set {
+        payloadFields_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "fts_columns" field.</summary>
+    public const int FtsColumnsFieldNumber = 12;
+    private string ftsColumns_ = "";
+    /// <summary>
+    /// Hybrid search: comma list of columns searched with Postgres full-text
+    /// search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string FtsColumns {
+      get { return ftsColumns_; }
+      set {
+        ftsColumns_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "fts_config" field.</summary>
+    public const int FtsConfigFieldNumber = 13;
+    private string ftsConfig_ = "";
+    /// <summary>
+    /// Text search configuration for fts_columns (default "simple").
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string FtsConfig {
+      get { return ftsConfig_; }
+      set {
+        ftsConfig_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "edge_source_field" field.</summary>
+    public const int EdgeSourceFieldFieldNumber = 14;
+    private string edgeSourceField_ = "";
+    /// <summary>
+    /// Graph edge projections: the source/target fields of the edge row and the
+    /// node labels they point at. Same as options["edge_source_field"] etc.; the
+    /// older "from_label"/"to_label" keys are deprecated aliases.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EdgeSourceField {
+      get { return edgeSourceField_; }
+      set {
+        edgeSourceField_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "edge_target_field" field.</summary>
+    public const int EdgeTargetFieldFieldNumber = 15;
+    private string edgeTargetField_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EdgeTargetField {
+      get { return edgeTargetField_; }
+      set {
+        edgeTargetField_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "edge_source_label" field.</summary>
+    public const int EdgeSourceLabelFieldNumber = 16;
+    private string edgeSourceLabel_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EdgeSourceLabel {
+      get { return edgeSourceLabel_; }
+      set {
+        edgeSourceLabel_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "edge_target_label" field.</summary>
+    public const int EdgeTargetLabelFieldNumber = 17;
+    private string edgeTargetLabel_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EdgeTargetLabel {
+      get { return edgeTargetLabel_; }
+      set {
+        edgeTargetLabel_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11462,6 +11581,13 @@ namespace Udb.Core.Common.V1 {
       if (Dsn != other.Dsn) return false;
       if (PayloadSchemaJson != other.PayloadSchemaJson) return false;
       if (!Options.Equals(other.Options)) return false;
+      if (PayloadFields != other.PayloadFields) return false;
+      if (FtsColumns != other.FtsColumns) return false;
+      if (FtsConfig != other.FtsConfig) return false;
+      if (EdgeSourceField != other.EdgeSourceField) return false;
+      if (EdgeTargetField != other.EdgeTargetField) return false;
+      if (EdgeSourceLabel != other.EdgeSourceLabel) return false;
+      if (EdgeTargetLabel != other.EdgeTargetLabel) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -11479,6 +11605,13 @@ namespace Udb.Core.Common.V1 {
       if (Dsn.Length != 0) hash ^= Dsn.GetHashCode();
       if (PayloadSchemaJson.Length != 0) hash ^= PayloadSchemaJson.GetHashCode();
       hash ^= Options.GetHashCode();
+      if (PayloadFields.Length != 0) hash ^= PayloadFields.GetHashCode();
+      if (FtsColumns.Length != 0) hash ^= FtsColumns.GetHashCode();
+      if (FtsConfig.Length != 0) hash ^= FtsConfig.GetHashCode();
+      if (EdgeSourceField.Length != 0) hash ^= EdgeSourceField.GetHashCode();
+      if (EdgeTargetField.Length != 0) hash ^= EdgeTargetField.GetHashCode();
+      if (EdgeSourceLabel.Length != 0) hash ^= EdgeSourceLabel.GetHashCode();
+      if (EdgeTargetLabel.Length != 0) hash ^= EdgeTargetLabel.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -11534,6 +11667,34 @@ namespace Udb.Core.Common.V1 {
         output.WriteString(PayloadSchemaJson);
       }
       options_.WriteTo(output, _map_options_codec);
+      if (PayloadFields.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(PayloadFields);
+      }
+      if (FtsColumns.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(FtsColumns);
+      }
+      if (FtsConfig.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(FtsConfig);
+      }
+      if (EdgeSourceField.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(EdgeSourceField);
+      }
+      if (EdgeTargetField.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(EdgeTargetField);
+      }
+      if (EdgeSourceLabel.Length != 0) {
+        output.WriteRawTag(130, 1);
+        output.WriteString(EdgeSourceLabel);
+      }
+      if (EdgeTargetLabel.Length != 0) {
+        output.WriteRawTag(138, 1);
+        output.WriteString(EdgeTargetLabel);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -11581,6 +11742,34 @@ namespace Udb.Core.Common.V1 {
         output.WriteString(PayloadSchemaJson);
       }
       options_.WriteTo(ref output, _map_options_codec);
+      if (PayloadFields.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(PayloadFields);
+      }
+      if (FtsColumns.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(FtsColumns);
+      }
+      if (FtsConfig.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(FtsConfig);
+      }
+      if (EdgeSourceField.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(EdgeSourceField);
+      }
+      if (EdgeTargetField.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(EdgeTargetField);
+      }
+      if (EdgeSourceLabel.Length != 0) {
+        output.WriteRawTag(130, 1);
+        output.WriteString(EdgeSourceLabel);
+      }
+      if (EdgeTargetLabel.Length != 0) {
+        output.WriteRawTag(138, 1);
+        output.WriteString(EdgeTargetLabel);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -11619,6 +11808,27 @@ namespace Udb.Core.Common.V1 {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(PayloadSchemaJson);
       }
       size += options_.CalculateSize(_map_options_codec);
+      if (PayloadFields.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PayloadFields);
+      }
+      if (FtsColumns.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(FtsColumns);
+      }
+      if (FtsConfig.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(FtsConfig);
+      }
+      if (EdgeSourceField.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EdgeSourceField);
+      }
+      if (EdgeTargetField.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EdgeTargetField);
+      }
+      if (EdgeSourceLabel.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(EdgeSourceLabel);
+      }
+      if (EdgeTargetLabel.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(EdgeTargetLabel);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -11659,6 +11869,27 @@ namespace Udb.Core.Common.V1 {
         PayloadSchemaJson = other.PayloadSchemaJson;
       }
       options_.MergeFrom(other.options_);
+      if (other.PayloadFields.Length != 0) {
+        PayloadFields = other.PayloadFields;
+      }
+      if (other.FtsColumns.Length != 0) {
+        FtsColumns = other.FtsColumns;
+      }
+      if (other.FtsConfig.Length != 0) {
+        FtsConfig = other.FtsConfig;
+      }
+      if (other.EdgeSourceField.Length != 0) {
+        EdgeSourceField = other.EdgeSourceField;
+      }
+      if (other.EdgeTargetField.Length != 0) {
+        EdgeTargetField = other.EdgeTargetField;
+      }
+      if (other.EdgeSourceLabel.Length != 0) {
+        EdgeSourceLabel = other.EdgeSourceLabel;
+      }
+      if (other.EdgeTargetLabel.Length != 0) {
+        EdgeTargetLabel = other.EdgeTargetLabel;
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -11718,6 +11949,34 @@ namespace Udb.Core.Common.V1 {
             options_.AddEntriesFrom(input, _map_options_codec);
             break;
           }
+          case 90: {
+            PayloadFields = input.ReadString();
+            break;
+          }
+          case 98: {
+            FtsColumns = input.ReadString();
+            break;
+          }
+          case 106: {
+            FtsConfig = input.ReadString();
+            break;
+          }
+          case 114: {
+            EdgeSourceField = input.ReadString();
+            break;
+          }
+          case 122: {
+            EdgeTargetField = input.ReadString();
+            break;
+          }
+          case 130: {
+            EdgeSourceLabel = input.ReadString();
+            break;
+          }
+          case 138: {
+            EdgeTargetLabel = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -11775,6 +12034,34 @@ namespace Udb.Core.Common.V1 {
           }
           case 82: {
             options_.AddEntriesFrom(ref input, _map_options_codec);
+            break;
+          }
+          case 90: {
+            PayloadFields = input.ReadString();
+            break;
+          }
+          case 98: {
+            FtsColumns = input.ReadString();
+            break;
+          }
+          case 106: {
+            FtsConfig = input.ReadString();
+            break;
+          }
+          case 114: {
+            EdgeSourceField = input.ReadString();
+            break;
+          }
+          case 122: {
+            EdgeTargetField = input.ReadString();
+            break;
+          }
+          case 130: {
+            EdgeSourceLabel = input.ReadString();
+            break;
+          }
+          case 138: {
+            EdgeTargetLabel = input.ReadString();
             break;
           }
         }

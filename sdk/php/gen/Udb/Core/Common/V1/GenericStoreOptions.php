@@ -51,9 +51,54 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      */
     protected $payload_schema_json = '';
     /**
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     *
      * Generated from protobuf field <code>map<string, string> options = 10 [json_name = "options"];</code>
      */
     private $options;
+    /**
+     * Qdrant/vector projections: comma list of fields or columns copied into
+     * each point's payload (plus the row identity and scope stamps). Empty: the
+     * whole row. Same as options["payload_fields"].
+     *
+     * Generated from protobuf field <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+     */
+    protected $payload_fields = '';
+    /**
+     * Hybrid search: comma list of columns searched with Postgres full-text
+     * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+     *
+     * Generated from protobuf field <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+     */
+    protected $fts_columns = '';
+    /**
+     * Text search configuration for fts_columns (default "simple").
+     *
+     * Generated from protobuf field <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+     */
+    protected $fts_config = '';
+    /**
+     * Graph edge projections: the source/target fields of the edge row and the
+     * node labels they point at. Same as options["edge_source_field"] etc.; the
+     * older "from_label"/"to_label" keys are deprecated aliases.
+     *
+     * Generated from protobuf field <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+     */
+    protected $edge_source_field = '';
+    /**
+     * Generated from protobuf field <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+     */
+    protected $edge_target_field = '';
+    /**
+     * Generated from protobuf field <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+     */
+    protected $edge_source_label = '';
+    /**
+     * Generated from protobuf field <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+     */
+    protected $edge_target_label = '';
 
     /**
      * Constructor.
@@ -71,6 +116,25 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      *     @type string $dsn
      *     @type string $payload_schema_json
      *     @type array|\Google\Protobuf\Internal\MapField $options
+     *           Free-form backend options. Prefer the typed fields below for every key
+     *           they cover: a misspelled typed field fails the proto build, while a
+     *           misspelled map key is ignored at runtime (`udb check` warns about it).
+     *     @type string $payload_fields
+     *           Qdrant/vector projections: comma list of fields or columns copied into
+     *           each point's payload (plus the row identity and scope stamps). Empty: the
+     *           whole row. Same as options["payload_fields"].
+     *     @type string $fts_columns
+     *           Hybrid search: comma list of columns searched with Postgres full-text
+     *           search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+     *     @type string $fts_config
+     *           Text search configuration for fts_columns (default "simple").
+     *     @type string $edge_source_field
+     *           Graph edge projections: the source/target fields of the edge row and the
+     *           node labels they point at. Same as options["edge_source_field"] etc.; the
+     *           older "from_label"/"to_label" keys are deprecated aliases.
+     *     @type string $edge_target_field
+     *     @type string $edge_source_label
+     *     @type string $edge_target_label
      * }
      */
     public function __construct($data = NULL) {
@@ -277,6 +341,10 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     *
      * Generated from protobuf field <code>map<string, string> options = 10 [json_name = "options"];</code>
      * @return \Google\Protobuf\Internal\MapField
      */
@@ -286,6 +354,10 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Free-form backend options. Prefer the typed fields below for every key
+     * they cover: a misspelled typed field fails the proto build, while a
+     * misspelled map key is ignored at runtime (`udb check` warns about it).
+     *
      * Generated from protobuf field <code>map<string, string> options = 10 [json_name = "options"];</code>
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
@@ -294,6 +366,186 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->options = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Qdrant/vector projections: comma list of fields or columns copied into
+     * each point's payload (plus the row identity and scope stamps). Empty: the
+     * whole row. Same as options["payload_fields"].
+     *
+     * Generated from protobuf field <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+     * @return string
+     */
+    public function getPayloadFields()
+    {
+        return $this->payload_fields;
+    }
+
+    /**
+     * Qdrant/vector projections: comma list of fields or columns copied into
+     * each point's payload (plus the row identity and scope stamps). Empty: the
+     * whole row. Same as options["payload_fields"].
+     *
+     * Generated from protobuf field <code>string payload_fields = 11 [json_name = "payloadFields"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPayloadFields($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->payload_fields = $var;
+
+        return $this;
+    }
+
+    /**
+     * Hybrid search: comma list of columns searched with Postgres full-text
+     * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+     *
+     * Generated from protobuf field <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+     * @return string
+     */
+    public function getFtsColumns()
+    {
+        return $this->fts_columns;
+    }
+
+    /**
+     * Hybrid search: comma list of columns searched with Postgres full-text
+     * search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+     *
+     * Generated from protobuf field <code>string fts_columns = 12 [json_name = "ftsColumns"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setFtsColumns($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->fts_columns = $var;
+
+        return $this;
+    }
+
+    /**
+     * Text search configuration for fts_columns (default "simple").
+     *
+     * Generated from protobuf field <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+     * @return string
+     */
+    public function getFtsConfig()
+    {
+        return $this->fts_config;
+    }
+
+    /**
+     * Text search configuration for fts_columns (default "simple").
+     *
+     * Generated from protobuf field <code>string fts_config = 13 [json_name = "ftsConfig"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setFtsConfig($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->fts_config = $var;
+
+        return $this;
+    }
+
+    /**
+     * Graph edge projections: the source/target fields of the edge row and the
+     * node labels they point at. Same as options["edge_source_field"] etc.; the
+     * older "from_label"/"to_label" keys are deprecated aliases.
+     *
+     * Generated from protobuf field <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+     * @return string
+     */
+    public function getEdgeSourceField()
+    {
+        return $this->edge_source_field;
+    }
+
+    /**
+     * Graph edge projections: the source/target fields of the edge row and the
+     * node labels they point at. Same as options["edge_source_field"] etc.; the
+     * older "from_label"/"to_label" keys are deprecated aliases.
+     *
+     * Generated from protobuf field <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setEdgeSourceField($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->edge_source_field = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+     * @return string
+     */
+    public function getEdgeTargetField()
+    {
+        return $this->edge_target_field;
+    }
+
+    /**
+     * Generated from protobuf field <code>string edge_target_field = 15 [json_name = "edgeTargetField"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setEdgeTargetField($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->edge_target_field = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+     * @return string
+     */
+    public function getEdgeSourceLabel()
+    {
+        return $this->edge_source_label;
+    }
+
+    /**
+     * Generated from protobuf field <code>string edge_source_label = 16 [json_name = "edgeSourceLabel"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setEdgeSourceLabel($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->edge_source_label = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+     * @return string
+     */
+    public function getEdgeTargetLabel()
+    {
+        return $this->edge_target_label;
+    }
+
+    /**
+     * Generated from protobuf field <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setEdgeTargetLabel($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->edge_target_label = $var;
 
         return $this;
     }

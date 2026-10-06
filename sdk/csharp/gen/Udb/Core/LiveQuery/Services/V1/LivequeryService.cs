@@ -28,64 +28,74 @@ namespace Udb.Core.LiveQuery.Services.V1 {
             "cnZpY2UucHJvdG8SHnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MRoc",
             "Z29vZ2xlL2FwaS9hbm5vdGF0aW9ucy5wcm90bxocdWRiL2NvcmUvY29tbW9u",
             "L3YxL2R0by5wcm90bxohdWRiL2NvcmUvY29tbW9uL3YxL3NlY3VyaXR5LnBy",
-            "b3RvIoUBChJMaXZlUXVlcnlQcmVkaWNhdGUSFAoFZmllbGQYASABKAlSBWZp",
+            "b3RvIp0BChJMaXZlUXVlcnlQcmVkaWNhdGUSFAoFZmllbGQYASABKAlSBWZp",
             "ZWxkEkMKAm9wGAIgASgOMjMudWRiLmNvcmUubGl2ZXF1ZXJ5LnNlcnZpY2Vz",
             "LnYxLkxpdmVRdWVyeUNvbXBhcmlzb25SAm9wEhQKBXZhbHVlGAMgASgJUgV2",
-            "YWx1ZSKIAgoQU3Vic2NyaWJlUmVxdWVzdBIbCgl0ZW5hbnRfaWQYASABKAlS",
-            "CHRlbmFudElkEiEKDG1lc3NhZ2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUS",
-            "TAoHZmlsdGVycxgDIAMoCzIyLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNl",
-            "cy52MS5MaXZlUXVlcnlQcmVkaWNhdGVSB2ZpbHRlcnMSHQoKcHJvamVjdF9p",
-            "ZBgEIAEoCVIJcHJvamVjdElkEiUKDnNuYXBzaG90X2xpbWl0GAUgASgFUg1z",
-            "bmFwc2hvdExpbWl0OiCashkcCAEaA3VkYiiw6gEwA0ABSglsaXZlcXVlcnlQ",
-            "ASKQAgoRU3Vic2NyaWJlUmVzcG9uc2USTwoIc25hcHNob3QYASABKAsyMS51",
-            "ZGIuY29yZS5saXZlcXVlcnkuc2VydmljZXMudjEuTGl2ZVF1ZXJ5U25hcHNo",
-            "b3RIAFIIc25hcHNob3QSSQoGY2hhbmdlGAIgASgLMi8udWRiLmNvcmUubGl2",
-            "ZXF1ZXJ5LnNlcnZpY2VzLnYxLkxpdmVRdWVyeUNoYW5nZUgAUgZjaGFuZ2US",
-            "MgoFZXJyb3IYAyABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JS",
-            "BWVycm9yOiCashkcCAEaA3VkYiiw6gEwA0ABSglsaXZlcXVlcnlQAUIJCgdw",
-            "YXlsb2FkIk0KEUxpdmVRdWVyeVNuYXBzaG90EhsKCXJvd3NfanNvbhgBIAMo",
-            "CVIIcm93c0pzb24SGwoJcm93X2NvdW50GAIgASgDUghyb3dDb3VudCKKAQoP",
-            "TGl2ZVF1ZXJ5Q2hhbmdlEkEKAm9wGAEgASgOMjEudWRiLmNvcmUubGl2ZXF1",
-            "ZXJ5LnNlcnZpY2VzLnYxLkxpdmVRdWVyeUNoYW5nZU9wUgJvcBIZCghyb3df",
-            "anNvbhgCIAEoCVIHcm93SnNvbhIZCghldmVudF9pZBgDIAEoCVIHZXZlbnRJ",
-            "ZCrwAQoTTGl2ZVF1ZXJ5Q29tcGFyaXNvbhIlCiFMSVZFX1FVRVJZX0NPTVBB",
-            "UklTT05fVU5TUEVDSUZJRUQQABIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05f",
-            "RVEQARIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fTkUQAhIcChhMSVZFX1FV",
-            "RVJZX0NPTVBBUklTT05fTFQQAxIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05f",
-            "TEUQBBIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fR1QQBRIcChhMSVZFX1FV",
-            "RVJZX0NPTVBBUklTT05fR0UQBiqcAQoRTGl2ZVF1ZXJ5Q2hhbmdlT3ASJAog",
-            "TElWRV9RVUVSWV9DSEFOR0VfT1BfVU5TUEVDSUZJRUQQABIfChtMSVZFX1FV",
-            "RVJZX0NIQU5HRV9PUF9JTlNFUlQQARIfChtMSVZFX1FVRVJZX0NIQU5HRV9P",
-            "UF9VUERBVEUQAhIfChtMSVZFX1FVRVJZX0NIQU5HRV9PUF9ERUxFVEUQAzL6",
-            "BQoQTGl2ZVF1ZXJ5U2VydmljZRLpAgoJU3Vic2NyaWJlEjAudWRiLmNvcmUu",
-            "bGl2ZXF1ZXJ5LnNlcnZpY2VzLnYxLlN1YnNjcmliZVJlcXVlc3QaMS51ZGIu",
-            "Y29yZS5saXZlcXVlcnkuc2VydmljZXMudjEuU3Vic2NyaWJlUmVzcG9uc2Ui",
-            "9AHK8xg6CAIaF3VkYjpsaXZlcXVlcnk6c3Vic2NyaWJlIAFKAwECBGoTbGl2",
-            "ZXF1ZXJ5LlN1YnNjcmliZZABAdLzGAYIARABIAHa8xg7CAESCXN1YnNjcmli",
-            "ZRoDdWRiKLDqATADQAFKCWxpdmVxdWVyeVABWhJsaXZlUXVlcnlTdWJzY3Jp",
-            "YmXy8xhDCglsaXZlcXVlcnkaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJ",
-            "Q0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+STAhwiFy92MS9s",
-            "aXZlcXVlcnk6c3Vic2NyaWJlOgEqMAEa+QLK8Bl0CglsaXZlcXVlcnkSCWxp",
-            "dmVxdWVyeRoJbGl2ZXF1ZXJ5IgpMaXZlIFF1ZXJ5KglsaXZlcXVlcnkwATgB",
-            "aAF6CWxpdmVxdWVyeYIBCWxpdmVxdWVyeYoBCWxpdmVxdWVyeZIBEG5hdGl2",
-            "ZS5saXZlcXVlcnnS8BkcCAEaA3VkYiiw6gEwA0ABSglsaXZlcXVlcnlQAdrw",
-            "GZUBCglsaXZlcXVlcnkSFHVkYi9uYXRpdmUvbGl2ZXF1ZXJ5GhtVREJfTkFU",
-            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIbdWRiLm5h",
-            "dGl2ZS5saXZlcXVlcnkuY29uZmlnOglsaXZlcXVlcnlKC1VEQl9BUElfS0VZ",
-            "Wg91ZGIgbmF0aXZlIGxpbnTi8BlDCglsaXZlcXVlcnkaCHBvc3RncmVzMhtV",
-            "REJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVEKm",
-            "AgoiY29tLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MUIVTGl2ZXF1",
-            "ZXJ5U2VydmljZVByb3RvUAFaTGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nk",
-            "ay9nby9nZW4vdWRiL2NvcmUvbGl2ZXF1ZXJ5L3NlcnZpY2VzL3YxO3NlcnZp",
-            "Y2VzdjGiAgRVQ0xTqgIeVWRiLkNvcmUuTGl2ZVF1ZXJ5LlNlcnZpY2VzLlYx",
-            "ygIeVWRiXENvcmVcTGl2ZXF1ZXJ5XFNlcnZpY2VzXFYx4gIqVWRiXEdQQk1l",
-            "dGFkYXRhXENvcmVcTGl2ZXF1ZXJ5XFNlcnZpY2VzXFYx6gIiVWRiOjpDb3Jl",
-            "OjpMaXZlcXVlcnk6OlNlcnZpY2VzOjpWMWIGcHJvdG8z"));
+            "YWx1ZRIWCgZ2YWx1ZXMYBCADKAlSBnZhbHVlcyJkCg5MaXZlUXVlcnlBbnlP",
+            "ZhJSCgpwcmVkaWNhdGVzGAEgAygLMjIudWRiLmNvcmUubGl2ZXF1ZXJ5LnNl",
+            "cnZpY2VzLnYxLkxpdmVRdWVyeVByZWRpY2F0ZVIKcHJlZGljYXRlcyL1AgoQ",
+            "U3Vic2NyaWJlUmVxdWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFudElk",
+            "EiEKDG1lc3NhZ2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUSTAoHZmlsdGVy",
+            "cxgDIAMoCzIyLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZl",
+            "UXVlcnlQcmVkaWNhdGVSB2ZpbHRlcnMSHQoKcHJvamVjdF9pZBgEIAEoCVIJ",
+            "cHJvamVjdElkEiUKDnNuYXBzaG90X2xpbWl0GAUgASgFUg1zbmFwc2hvdExp",
+            "bWl0EkUKBmFueV9vZhgGIAMoCzIuLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2",
+            "aWNlcy52MS5MaXZlUXVlcnlBbnlPZlIFYW55T2YSJAoOc2luY2VfZXZlbnRf",
+            "aWQYByABKAlSDHNpbmNlRXZlbnRJZDogmrIZHAgBGgN1ZGIosOoBMANAAUoJ",
+            "bGl2ZXF1ZXJ5UAEikAIKEVN1YnNjcmliZVJlc3BvbnNlEk8KCHNuYXBzaG90",
+            "GAEgASgLMjEudWRiLmNvcmUubGl2ZXF1ZXJ5LnNlcnZpY2VzLnYxLkxpdmVR",
+            "dWVyeVNuYXBzaG90SABSCHNuYXBzaG90EkkKBmNoYW5nZRgCIAEoCzIvLnVk",
+            "Yi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlDaGFuZ2VI",
+            "AFIGY2hhbmdlEjIKBWVycm9yGAMgASgLMhwudWRiLmNvcmUuY29tbW9uLnYx",
+            "LkFwaUVycm9yUgVlcnJvcjogmrIZHAgBGgN1ZGIosOoBMANAAUoJbGl2ZXF1",
+            "ZXJ5UAFCCQoHcGF5bG9hZCJNChFMaXZlUXVlcnlTbmFwc2hvdBIbCglyb3dz",
+            "X2pzb24YASADKAlSCHJvd3NKc29uEhsKCXJvd19jb3VudBgCIAEoA1IIcm93",
+            "Q291bnQiigEKD0xpdmVRdWVyeUNoYW5nZRJBCgJvcBgBIAEoDjIxLnVkYi5j",
+            "b3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlDaGFuZ2VPcFIC",
+            "b3ASGQoIcm93X2pzb24YAiABKAlSB3Jvd0pzb24SGQoIZXZlbnRfaWQYAyAB",
+            "KAlSB2V2ZW50SWQq+gIKE0xpdmVRdWVyeUNvbXBhcmlzb24SJQohTElWRV9R",
+            "VUVSWV9DT01QQVJJU09OX1VOU1BFQ0lGSUVEEAASHAoYTElWRV9RVUVSWV9D",
+            "T01QQVJJU09OX0VREAESHAoYTElWRV9RVUVSWV9DT01QQVJJU09OX05FEAIS",
+            "HAoYTElWRV9RVUVSWV9DT01QQVJJU09OX0xUEAMSHAoYTElWRV9RVUVSWV9D",
+            "T01QQVJJU09OX0xFEAQSHAoYTElWRV9RVUVSWV9DT01QQVJJU09OX0dUEAUS",
+            "HAoYTElWRV9RVUVSWV9DT01QQVJJU09OX0dFEAYSHAoYTElWRV9RVUVSWV9D",
+            "T01QQVJJU09OX0lOEAcSIAocTElWRV9RVUVSWV9DT01QQVJJU09OX05PVF9J",
+            "ThAIEiEKHUxJVkVfUVVFUllfQ09NUEFSSVNPTl9JU19OVUxMEAkSJQohTElW",
+            "RV9RVUVSWV9DT01QQVJJU09OX0lTX05PVF9OVUxMEAoqnAEKEUxpdmVRdWVy",
+            "eUNoYW5nZU9wEiQKIExJVkVfUVVFUllfQ0hBTkdFX09QX1VOU1BFQ0lGSUVE",
+            "EAASHwobTElWRV9RVUVSWV9DSEFOR0VfT1BfSU5TRVJUEAESHwobTElWRV9R",
+            "VUVSWV9DSEFOR0VfT1BfVVBEQVRFEAISHwobTElWRV9RVUVSWV9DSEFOR0Vf",
+            "T1BfREVMRVRFEAMy+gUKEExpdmVRdWVyeVNlcnZpY2US6QIKCVN1YnNjcmli",
+            "ZRIwLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5TdWJzY3JpYmVS",
+            "ZXF1ZXN0GjEudWRiLmNvcmUubGl2ZXF1ZXJ5LnNlcnZpY2VzLnYxLlN1YnNj",
+            "cmliZVJlc3BvbnNlIvQByvMYOggCGhd1ZGI6bGl2ZXF1ZXJ5OnN1YnNjcmli",
+            "ZSABSgMBAgRqE2xpdmVxdWVyeS5TdWJzY3JpYmWQAQHS8xgGCAEQASAB2vMY",
+            "OwgBEglzdWJzY3JpYmUaA3VkYiiw6gEwA0ABSglsaXZlcXVlcnlQAVoSbGl2",
+            "ZVF1ZXJ5U3Vic2NyaWJl8vMYQwoJbGl2ZXF1ZXJ5Gghwb3N0Z3JlczIbVURC",
+            "X05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgB",
+            "gtPkkwIcIhcvdjEvbGl2ZXF1ZXJ5OnN1YnNjcmliZToBKjABGvkCyvAZdAoJ",
+            "bGl2ZXF1ZXJ5EglsaXZlcXVlcnkaCWxpdmVxdWVyeSIKTGl2ZSBRdWVyeSoJ",
+            "bGl2ZXF1ZXJ5MAE4AWgBeglsaXZlcXVlcnmCAQlsaXZlcXVlcnmKAQlsaXZl",
+            "cXVlcnmSARBuYXRpdmUubGl2ZXF1ZXJ50vAZHAgBGgN1ZGIosOoBMANAAUoJ",
+            "bGl2ZXF1ZXJ5UAHa8BmVAQoJbGl2ZXF1ZXJ5EhR1ZGIvbmF0aXZlL2xpdmVx",
+            "dWVyeRobVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEGg9VREJfR1JQQ19U",
+            "QVJHRVQiG3VkYi5uYXRpdmUubGl2ZXF1ZXJ5LmNvbmZpZzoJbGl2ZXF1ZXJ5",
+            "SgtVREJfQVBJX0tFWVoPdWRiIG5hdGl2ZSBsaW504vAZQwoJbGl2ZXF1ZXJ5",
+            "Gghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJf",
+            "R1JQQ19UQVJHRVRCpgIKImNvbS51ZGIuY29yZS5saXZlcXVlcnkuc2Vydmlj",
+            "ZXMudjFCFUxpdmVxdWVyeVNlcnZpY2VQcm90b1ABWkxnaXRodWIuY29tL2Zh",
+            "aGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2xpdmVxdWVyeS9zZXJ2",
+            "aWNlcy92MTtzZXJ2aWNlc3YxogIEVUNMU6oCHlVkYi5Db3JlLkxpdmVRdWVy",
+            "eS5TZXJ2aWNlcy5WMcoCHlVkYlxDb3JlXExpdmVxdWVyeVxTZXJ2aWNlc1xW",
+            "MeICKlVkYlxHUEJNZXRhZGF0YVxDb3JlXExpdmVxdWVyeVxTZXJ2aWNlc1xW",
+            "MeoCIlVkYjo6Q29yZTo6TGl2ZXF1ZXJ5OjpTZXJ2aWNlczo6VjFiBnByb3Rv",
+            "Mw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::Udb.Core.Common.V1.DtoReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryComparison), typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryChangeOp), }, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate), global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate.Parser, new[]{ "Field", "Op", "Value" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest), global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest.Parser, new[]{ "TenantId", "MessageType", "Filters", "ProjectId", "SnapshotLimit" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate), global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate.Parser, new[]{ "Field", "Op", "Value", "Values" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryAnyOf), global::Udb.Core.LiveQuery.Services.V1.LiveQueryAnyOf.Parser, new[]{ "Predicates" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest), global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest.Parser, new[]{ "TenantId", "MessageType", "Filters", "ProjectId", "SnapshotLimit", "AnyOf", "SinceEventId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse), global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse.Parser, new[]{ "Snapshot", "Change", "Error" }, new[]{ "Payload" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQuerySnapshot), global::Udb.Core.LiveQuery.Services.V1.LiveQuerySnapshot.Parser, new[]{ "RowsJson", "RowCount" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryChange), global::Udb.Core.LiveQuery.Services.V1.LiveQueryChange.Parser, new[]{ "Op", "RowJson", "EventId" }, null, null, null, null)
@@ -108,6 +118,23 @@ namespace Udb.Core.LiveQuery.Services.V1 {
     [pbr::OriginalName("LIVE_QUERY_COMPARISON_LE")] Le = 4,
     [pbr::OriginalName("LIVE_QUERY_COMPARISON_GT")] Gt = 5,
     [pbr::OriginalName("LIVE_QUERY_COMPARISON_GE")] Ge = 6,
+    /// <summary>
+    /// Membership: the field equals one of `LiveQueryPredicate.values`.
+    /// </summary>
+    [pbr::OriginalName("LIVE_QUERY_COMPARISON_IN")] In = 7,
+    /// <summary>
+    /// Non-membership: the field is present, non-null and equals none of `values`
+    /// (SQL NOT IN semantics, so the snapshot and the live deltas agree).
+    /// </summary>
+    [pbr::OriginalName("LIVE_QUERY_COMPARISON_NOT_IN")] NotIn = 8,
+    /// <summary>
+    /// The field is null or absent. `value`/`values` are ignored.
+    /// </summary>
+    [pbr::OriginalName("LIVE_QUERY_COMPARISON_IS_NULL")] IsNull = 9,
+    /// <summary>
+    /// The field is present and non-null. `value`/`values` are ignored.
+    /// </summary>
+    [pbr::OriginalName("LIVE_QUERY_COMPARISON_IS_NOT_NULL")] IsNotNull = 10,
   }
 
   /// <summary>
@@ -166,6 +193,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       field_ = other.field_;
       op_ = other.op_;
       value_ = other.value_;
+      values_ = other.values_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -214,6 +242,21 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "values" field.</summary>
+    public const int ValuesFieldNumber = 4;
+    private static readonly pb::FieldCodec<string> _repeated_values_codec
+        = pb::FieldCodec.ForString(34);
+    private readonly pbc::RepeatedField<string> values_ = new pbc::RepeatedField<string>();
+    /// <summary>
+    /// Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+    /// those operators and empty for every other operator.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> Values {
+      get { return values_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -232,6 +275,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       if (Field != other.Field) return false;
       if (Op != other.Op) return false;
       if (Value != other.Value) return false;
+      if(!values_.Equals(other.values_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -242,6 +286,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       if (Field.Length != 0) hash ^= Field.GetHashCode();
       if (Op != global::Udb.Core.LiveQuery.Services.V1.LiveQueryComparison.Unspecified) hash ^= Op.GetHashCode();
       if (Value.Length != 0) hash ^= Value.GetHashCode();
+      hash ^= values_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -272,6 +317,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
         output.WriteRawTag(26);
         output.WriteString(Value);
       }
+      values_.WriteTo(output, _repeated_values_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -294,6 +340,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
         output.WriteRawTag(26);
         output.WriteString(Value);
       }
+      values_.WriteTo(ref output, _repeated_values_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -313,6 +360,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       if (Value.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Value);
       }
+      size += values_.CalculateSize(_repeated_values_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -334,6 +382,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       if (other.Value.Length != 0) {
         Value = other.Value;
       }
+      values_.Add(other.values_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -363,6 +412,10 @@ namespace Udb.Core.LiveQuery.Services.V1 {
           }
           case 26: {
             Value = input.ReadString();
+            break;
+          }
+          case 34: {
+            values_.AddEntriesFrom(input, _repeated_values_codec);
             break;
           }
         }
@@ -396,6 +449,203 @@ namespace Udb.Core.LiveQuery.Services.V1 {
             Value = input.ReadString();
             break;
           }
+          case 34: {
+            values_.AddEntriesFrom(ref input, _repeated_values_codec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// A disjunction: the row matches when ANY of its predicates matches. Each group
+  /// in `SubscribeRequest.any_of` is AND-ed with `filters` and with the other
+  /// groups, so a filter is written in conjunctive normal form, e.g.
+  /// `status IN (open, held) AND (owner = me OR assignee = me)`.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class LiveQueryAnyOf : pb::IMessage<LiveQueryAnyOf>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<LiveQueryAnyOf> _parser = new pb::MessageParser<LiveQueryAnyOf>(() => new LiveQueryAnyOf());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<LiveQueryAnyOf> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public LiveQueryAnyOf() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public LiveQueryAnyOf(LiveQueryAnyOf other) : this() {
+      predicates_ = other.predicates_.Clone();
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public LiveQueryAnyOf Clone() {
+      return new LiveQueryAnyOf(this);
+    }
+
+    /// <summary>Field number for the "predicates" field.</summary>
+    public const int PredicatesFieldNumber = 1;
+    private static readonly pb::FieldCodec<global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate> _repeated_predicates_codec
+        = pb::FieldCodec.ForMessage(10, global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate.Parser);
+    private readonly pbc::RepeatedField<global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate> predicates_ = new pbc::RepeatedField<global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate> Predicates {
+      get { return predicates_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as LiveQueryAnyOf);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(LiveQueryAnyOf other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if(!predicates_.Equals(other.predicates_)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      hash ^= predicates_.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      predicates_.WriteTo(output, _repeated_predicates_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      predicates_.WriteTo(ref output, _repeated_predicates_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      size += predicates_.CalculateSize(_repeated_predicates_codec);
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(LiveQueryAnyOf other) {
+      if (other == null) {
+        return;
+      }
+      predicates_.Add(other.predicates_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            predicates_.AddEntriesFrom(input, _repeated_predicates_codec);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            predicates_.AddEntriesFrom(ref input, _repeated_predicates_codec);
+            break;
+          }
         }
       }
     }
@@ -418,7 +668,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[2]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -443,6 +693,8 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       filters_ = other.filters_.Clone();
       projectId_ = other.projectId_;
       snapshotLimit_ = other.snapshotLimit_;
+      anyOf_ = other.anyOf_.Clone();
+      sinceEventId_ = other.sinceEventId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -528,6 +780,39 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "any_of" field.</summary>
+    public const int AnyOfFieldNumber = 6;
+    private static readonly pb::FieldCodec<global::Udb.Core.LiveQuery.Services.V1.LiveQueryAnyOf> _repeated_anyOf_codec
+        = pb::FieldCodec.ForMessage(50, global::Udb.Core.LiveQuery.Services.V1.LiveQueryAnyOf.Parser);
+    private readonly pbc::RepeatedField<global::Udb.Core.LiveQuery.Services.V1.LiveQueryAnyOf> anyOf_ = new pbc::RepeatedField<global::Udb.Core.LiveQuery.Services.V1.LiveQueryAnyOf>();
+    /// <summary>
+    /// OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+    /// rejected rather than read as "matches nothing".
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Udb.Core.LiveQuery.Services.V1.LiveQueryAnyOf> AnyOf {
+      get { return anyOf_; }
+    }
+
+    /// <summary>Field number for the "since_event_id" field.</summary>
+    public const int SinceEventIdFieldNumber = 7;
+    private string sinceEventId_ = "";
+    /// <summary>
+    /// Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+    /// The broker replays the changes after it from the CDC journal before going
+    /// live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+    /// both are set they must name the same event.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string SinceEventId {
+      get { return sinceEventId_; }
+      set {
+        sinceEventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -548,6 +833,8 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       if(!filters_.Equals(other.filters_)) return false;
       if (ProjectId != other.ProjectId) return false;
       if (SnapshotLimit != other.SnapshotLimit) return false;
+      if(!anyOf_.Equals(other.anyOf_)) return false;
+      if (SinceEventId != other.SinceEventId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -560,6 +847,8 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       hash ^= filters_.GetHashCode();
       if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (SnapshotLimit != 0) hash ^= SnapshotLimit.GetHashCode();
+      hash ^= anyOf_.GetHashCode();
+      if (SinceEventId.Length != 0) hash ^= SinceEventId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -595,6 +884,11 @@ namespace Udb.Core.LiveQuery.Services.V1 {
         output.WriteRawTag(40);
         output.WriteInt32(SnapshotLimit);
       }
+      anyOf_.WriteTo(output, _repeated_anyOf_codec);
+      if (SinceEventId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(SinceEventId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -622,6 +916,11 @@ namespace Udb.Core.LiveQuery.Services.V1 {
         output.WriteRawTag(40);
         output.WriteInt32(SnapshotLimit);
       }
+      anyOf_.WriteTo(ref output, _repeated_anyOf_codec);
+      if (SinceEventId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(SinceEventId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -644,6 +943,10 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       }
       if (SnapshotLimit != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(SnapshotLimit);
+      }
+      size += anyOf_.CalculateSize(_repeated_anyOf_codec);
+      if (SinceEventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(SinceEventId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -669,6 +972,10 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       }
       if (other.SnapshotLimit != 0) {
         SnapshotLimit = other.SnapshotLimit;
+      }
+      anyOf_.Add(other.anyOf_);
+      if (other.SinceEventId.Length != 0) {
+        SinceEventId = other.SinceEventId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -707,6 +1014,14 @@ namespace Udb.Core.LiveQuery.Services.V1 {
           }
           case 40: {
             SnapshotLimit = input.ReadInt32();
+            break;
+          }
+          case 50: {
+            anyOf_.AddEntriesFrom(input, _repeated_anyOf_codec);
+            break;
+          }
+          case 58: {
+            SinceEventId = input.ReadString();
             break;
           }
         }
@@ -748,6 +1063,14 @@ namespace Udb.Core.LiveQuery.Services.V1 {
             SnapshotLimit = input.ReadInt32();
             break;
           }
+          case 50: {
+            anyOf_.AddEntriesFrom(ref input, _repeated_anyOf_codec);
+            break;
+          }
+          case 58: {
+            SinceEventId = input.ReadString();
+            break;
+          }
         }
       }
     }
@@ -773,7 +1096,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1116,7 +1439,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1343,7 +1666,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
