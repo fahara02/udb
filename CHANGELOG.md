@@ -54,7 +54,8 @@ that replace hand-kept scripts.
   identity another account holds is refused with `UDB_GRANT_OWNED_BY_OTHER`.
 - **`abuse_policy_ref` is enforced.** RPCs that name the same abuse policy, such
   as ForgotPassword and ResetPassword, share one per-client budget per minute:
-  `UDB_ABUSE_POLICY_<REF>`, default 30.
+  `UDB_ABUSE_POLICY_<REF>`, by default the public bootstrap limit, so the
+  sibling RPCs together get what one RPC gets.
 
 **Events and LiveQuery**
 - **Durable named consumers.** `PublishCDC` with a `consumer_name` resumes from
@@ -160,9 +161,10 @@ that replace hand-kept scripts.
   `ALREADY_EXISTS` or `FAILED_PRECONDITION`.
   - detect: code: codes.Internal
   - fix: branch on `ErrorDetail.reason` (Go: `udbclient.CodeOf(err)`) instead of the gRPC code.
-- **Public auth RPCs share a per-client abuse budget** (30 requests per minute
-  per policy by default). Load tests that hammer login or reset from one
-  address are throttled earlier.
+- **Public auth RPCs share a per-client abuse budget per policy** (by default
+  the public bootstrap limit, 60 per minute). Load tests that alternate
+  between sibling RPCs, such as ForgotPassword and ResetPassword, from one
+  address are throttled at the combined count.
   - detect: code: ForgotPassword
   - fix: raise `UDB_ABUSE_POLICY_<REF>` (for example `UDB_ABUSE_POLICY_AUTHN_PASSWORD_RESET_ABUSE`) for test environments.
 - **`udb sdk generate` refuses a message stored in a non-JSON column.** Such

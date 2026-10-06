@@ -1610,7 +1610,8 @@ mod tests {
             Some(&bytea),
             &serde_json::json!("not valid base64 !!!"),
         ));
-        assert_single_field_violation(&err, "value", "bytea value must be a base64-encoded string");
+        // The violation names the column (R4), not a generic "value".
+        assert_single_field_violation(&err, "blob", "bytea value must be a base64-encoded string");
     }
 
     #[test]
@@ -1637,7 +1638,7 @@ mod tests {
             &serde_json::json!([1]),
         ));
 
-        assert_single_field_violation(&err, "value", "UUID $in array values must be strings");
+        assert_single_field_violation(&err, "id", "UUID $in array values must be strings");
 
         let mut int_col = col("age");
         int_col.sql_type = "BIGINT".to_string();
@@ -1653,7 +1654,7 @@ mod tests {
         // non-numeric string is still refused.
         assert_single_field_violation(
             &err,
-            "value",
+            "age",
             "must be an integer, an integer string, or a whole number",
         );
     }

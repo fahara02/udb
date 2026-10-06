@@ -407,6 +407,7 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "AbortMultipartUpload",
     "BeginTx",
     "PublishCDC",
+    "AckCdcEvents",
     "EnqueueOutboxEvent",
     "StageCatalog",
     "ActivateCatalog",

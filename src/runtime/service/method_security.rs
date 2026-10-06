@@ -111,8 +111,9 @@ pub struct MethodSecurity {
     /// every RPC that names the same policy (e.g. ForgotPassword and
     /// ResetPassword both name `authn.password_reset.abuse`), so an attacker
     /// cannot spread one attack across sibling RPCs to multiply its per-RPC
-    /// rate limit. Ceiling: `UDB_ABUSE_POLICY_<REF>` requests per minute
-    /// (default 30).
+    /// rate limit. Ceiling: `UDB_ABUSE_POLICY_<REF>` requests per minute,
+    /// default the public bootstrap limit — the RPCs of one policy together
+    /// get what one RPC gets.
     pub abuse_policy_ref: Option<String>,
     /// `endpoint_security.audit_event_type` — the per-RPC audit event type the
     /// proto declares (C25).
@@ -754,16 +755,16 @@ fn check_public_bootstrap_rate_limit(
     Ok(())
 }
 
-/// Default per-client, per-minute budget of an `abuse_policy_ref`.
-const DEFAULT_ABUSE_POLICY_PER_MINUTE: u32 = 30;
-
 /// The per-minute budget for an abuse policy: `UDB_ABUSE_POLICY_<REF>`
-/// (uppercased, non-alphanumerics as `_`), else the default. Memoized per ref.
+/// (uppercased, non-alphanumerics as `_`), else the public bootstrap limit, so
+/// the RPCs sharing a policy together get what one RPC gets and the operator's
+/// `UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_PER_MINUTE` keeps its meaning. Memoized per
+/// ref.
 fn abuse_policy_limit(reference: &str) -> u32 {
     static CACHE: OnceLock<Mutex<HashMap<String, u32>>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     let Ok(mut map) = cache.lock() else {
-        return DEFAULT_ABUSE_POLICY_PER_MINUTE;
+        return public_bootstrap_rate_limit_per_minute();
     };
     if let Some(limit) = map.get(reference) {
         return *limit;
@@ -780,7 +781,7 @@ fn abuse_policy_limit(reference: &str) -> u32 {
         .ok()
         .and_then(|raw| raw.trim().parse::<u32>().ok())
         .filter(|&limit| limit > 0)
-        .unwrap_or(DEFAULT_ABUSE_POLICY_PER_MINUTE);
+        .unwrap_or_else(public_bootstrap_rate_limit_per_minute);
     map.insert(reference.to_string(), limit);
     limit
 }
@@ -1330,10 +1331,9 @@ fn enforce(
     }
     let declared = method_security(path);
 
-    // Shared abuse budget (public or not), before any credential work.
-    if let Some(reference) = declared.and_then(|s| s.abuse_policy_ref.as_deref()) {
-        check_abuse_policy(reference, headers, peer)?;
-    }
+    // The shared abuse budget of the RPC's policy, after the RPC's own
+    // public limit and before any credential work.
+    let abuse_ref = declared.and_then(|s| s.abuse_policy_ref.as_deref());
 
     // Public bootstrap RPCs need no control-plane bearer.
     if matches!(declared, Some(s) if s.mode == AuthMode::Public) {
@@ -1343,6 +1343,9 @@ fn enforce(
             peer,
             declared.and_then(|s| s.rate_limit_policy_ref.as_deref()),
         )?;
+        if let Some(reference) = abuse_ref {
+            check_abuse_policy(reference, headers, peer)?;
+        }
         if let Some(s) = declared {
             if !s.allowed_credential_types.is_empty()
                 && !s
@@ -1363,6 +1366,10 @@ fn enforce(
             crate::runtime::credential_layer::VerifiedPrincipal::default(),
             VerifiedClaimContext::default(),
         ));
+    }
+
+    if let Some(reference) = abuse_ref {
+        check_abuse_policy(reference, headers, peer)?;
     }
 
     // Annotated non-public, or unannotated (fail closed): require a valid bearer.
@@ -2204,6 +2211,38 @@ mod tests {
                 "public {method} must be reachable without a bearer"
             );
         }
+    }
+
+    /// ForgotPassword and ResetPassword name the same abuse policy, so a client
+    /// cannot double its budget by alternating between them.
+    #[test]
+    fn sibling_rpcs_share_one_abuse_budget() {
+        let headers = http::HeaderMap::new();
+        let peer = peer_from("203.0.113.77");
+        let limit = abuse_policy_limit("authn.password_reset.abuse");
+        // The bucket is keyed by the policy, never the RPC path, so the
+        // ForgotPassword/ResetPassword mix of a real attack lands in one bucket.
+        for _ in 0..limit {
+            check_abuse_policy("authn.password_reset.abuse", &headers, &peer)
+                .expect("within the shared budget");
+        }
+        let (err, reason) = check_abuse_policy("authn.password_reset.abuse", &headers, &peer)
+            .expect_err("the shared budget is exhausted");
+        assert_eq!(err.code(), tonic::Code::ResourceExhausted);
+        assert_eq!(reason, deny_reason::ABUSE_POLICY);
+        assert_eq!(
+            crate::runtime::error_reasons::reason_of(&err).as_deref(),
+            Some("UDB_RATE_LIMITED")
+        );
+        // Another client has its own budget.
+        assert!(
+            check_abuse_policy(
+                "authn.password_reset.abuse",
+                &headers,
+                &peer_from("203.0.113.78")
+            )
+            .is_ok()
+        );
     }
 
     #[test]
