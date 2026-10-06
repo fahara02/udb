@@ -1232,14 +1232,27 @@ impl AuthnServiceImpl {
                 // service account (UNSPECIFIED on legacy tokens minted before the
                 // claim existed).
                 let token_account_kind = claims.account_kind.unwrap_or(0);
+                // A login-minted access token's `jti` IS its session handle
+                // (`sess_…`): report it, as IntrospectToken does, so a caller can
+                // tie the token to the session login returned. Other tokens
+                // (refresh-family, API-key exchange) carry no session handle.
+                let jti = claims.jti.clone().unwrap_or_default();
+                let session_id = if jti.starts_with("sess_") {
+                    jti.clone()
+                } else {
+                    String::new()
+                };
                 authn_pb::ValidateTokenResponse {
                     valid: true,
                     user_id: subject,
-                    session_id: String::new(),
+                    session_id,
                     account_kind: token_account_kind,
                     tenant_id: principal.tenant_id.clone(),
                     roles: principal.roles.clone(),
-                    expires_at: None,
+                    expires_at: claims
+                        .exp
+                        .filter(|exp| *exp > 0)
+                        .and_then(|exp| super::super::mappings::timestamp_from_unix(exp as u64)),
                     access_surface: "jwt".to_string(),
                     device_id: String::new(),
                     token_id: claims.jti.clone().unwrap_or_default(),

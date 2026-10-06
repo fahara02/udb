@@ -20,6 +20,11 @@ release line was tagged.
   `DATE[]`, `TIMESTAMPTZ[]`, `TIMESTAMP[]` or `TIME[]` column failed with an
   INTERNAL "array decode failed" because the decoder fell back to `TEXT[]`.
   They now decode element-wise, rendered exactly like their scalar columns.
+- **ValidateToken dropped the session id and expiry of a JWT.** For a
+  login-minted access token it returned an empty `session_id` and no
+  `expires_at` (IntrospectToken reported both), so a caller could not tie a
+  token back to the session login returned. It now reports the `sess_…`
+  handle carried in the token and the token's expiry.
 - The SDK benchmark seeds its saga fixture into the unified saga relation
   (`udb_system.udb_saga_coordinator`).
 
