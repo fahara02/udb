@@ -853,7 +853,7 @@ fn baseline_generated_authn_authz_inventory_docs_are_present() {
     let fields =
         std::fs::read_to_string(root.join("docs/generated/authn-authz-sensitive-fields.md"))
             .expect("sensitive field inventory doc must be generated for Phase E");
-    assert!(fields.contains("- Sensitive-looking or annotated fields inventoried: 239"));
+    assert!(fields.contains("- Sensitive-looking or annotated fields inventoried: 240"));
     assert!(fields.contains("password_hash"));
     assert!(fields.contains("session_token_hash"));
     assert!(fields.contains("plain_key"));
