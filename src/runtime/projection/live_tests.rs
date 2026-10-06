@@ -776,7 +776,9 @@ async fn live_object_projection_keys_by_scope_and_delete_spares_other_tenant() {
             "object",
             "minio",
             &bucket,
-            vec![opt("key_prefix", "docs")],
+            // Composite (tenant_id, id) key: name objects by `id`, not by
+            // the JSON-encoded row key.
+            vec![opt("key_prefix", "docs"), opt("id_field", "id")],
         )],
         Vec::new(),
     ))

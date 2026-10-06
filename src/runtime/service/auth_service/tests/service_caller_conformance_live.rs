@@ -340,16 +340,6 @@ async fn live_service_account_reaches_every_service_callable_native_method() {
         "service principal must carry a tenant"
     );
 
-    crate::runtime::service::auth_service::install_data_plane_credential_resolvers(
-        pool.clone(),
-        &crate::runtime::authn::AuthnConfig {
-            session_enabled: true,
-            session_hash_secret: "live-auth-test-secret".to_string(),
-            ..crate::runtime::authn::AuthnConfig::default()
-        },
-        Arc::new(authn.clone()),
-    );
-
     // Precheck the two durable checks the credential resolver runs, with the
     // inputs in the message: the served gate reports only "invalid bearer
     // token", so a failure here names the actual cause.
@@ -392,6 +382,18 @@ async fn live_service_account_reaches_every_service_callable_native_method() {
     activate_live_project_catalog(&broker, &project_id, "service-caller-conformance").await;
     let routes = crate::runtime::service::NativeControlPlaneServices::from_broker(&broker)
         .into_routes(&MethodSecurityLayer::new());
+    // Installed AFTER the services are built: building auth services (via
+    // `build_auth_services`) re-installs the process-global resolvers with the
+    // broker's own config, which would silently replace the test's.
+    crate::runtime::service::auth_service::install_data_plane_credential_resolvers(
+        pool.clone(),
+        &crate::runtime::authn::AuthnConfig {
+            session_enabled: true,
+            session_hash_secret: "live-auth-test-secret".to_string(),
+            ..crate::runtime::authn::AuthnConfig::default()
+        },
+        Arc::new(authn.clone()),
+    );
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind native conformance listener");

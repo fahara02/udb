@@ -143,6 +143,11 @@ async fn live_served_tenant_suspension_revokes_live_bearer_until_reactivated() {
     .expect("signing key configured")
     .0;
     crate::runtime::security::SecurityConfig::install_global(security);
+
+    let served = tenant_service(pool.clone()).await;
+    // Installed AFTER the services are built: building auth services (via
+    // `build_auth_services`) re-installs the process-global resolvers with the
+    // broker's own config, which would silently replace the test's.
     super::super::install_data_plane_credential_resolvers(
         pool.clone(),
         &crate::runtime::authn::AuthnConfig {
@@ -152,8 +157,6 @@ async fn live_served_tenant_suspension_revokes_live_bearer_until_reactivated() {
         },
         Arc::new(authn),
     );
-
-    let served = tenant_service(pool.clone()).await;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind served tenant listener");
