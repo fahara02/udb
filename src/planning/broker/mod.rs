@@ -903,8 +903,28 @@ pub fn build_upsert_plan(
         })
         .cloned()
         .collect::<Vec<_>>();
-    let values = (1..=parameter_columns.len())
-        .map(|idx| format!("${idx}"))
+    // Array columns get the declared array cast (`$n::DATE[]`): BeginTx and the
+    // planner write path bind a JSON list as text[], which PostgreSQL will not
+    // assign to a date[] / time[] / inet[] column. Scalar placeholders stay
+    // bare here (their typed binds already match the column).
+    let casts_array_placeholders = effective_sql_backend(&request.context) == BackendKind::Postgres;
+    let values = parameter_columns
+        .iter()
+        .enumerate()
+        .map(|(offset, column)| {
+            let placeholder = format!("${}", offset + 1);
+            match column_sql_type(table, column) {
+                Some(sql_type)
+                    if casts_array_placeholders && sql_type.trim_end().ends_with("[]") =>
+                {
+                    crate::ir::compile::postgres::cast_placeholder_to_column_type(
+                        sql_type,
+                        &placeholder,
+                    )
+                }
+                _ => placeholder,
+            }
+        })
         .collect::<Vec<_>>()
         .join(", ");
     let mut assignments = update_columns

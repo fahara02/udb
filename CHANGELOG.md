@@ -5,6 +5,20 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.27] - 2026-10-06
+
+### Fixed
+
+- **Array columns of the remaining element types were unwritable.** 0.5.26
+  typed uuid / integer / float / bool / timestamptz arrays, but a `DATE[]`
+  (or `TIME[]`, `INET[]`, …) value still reached PostgreSQL as `text[]`
+  ("column … is of type date[] but expression is of type text[]") on the
+  BeginTx / planner Upsert and Update paths. Array placeholders now carry the
+  declared array cast (`$n::DATE[]`) on every write path, so the element
+  conversion applies for any element type.
+- The SDK benchmark seeds its saga fixture into the unified saga relation
+  (`udb_system.udb_saga_coordinator`).
+
 ## [0.5.26] - 2026-10-06
 
 Completes the 2026-10-05 enterprise-readiness audit. The 0.5.24 fixes were

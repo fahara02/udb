@@ -154,7 +154,14 @@ impl SqlDialect for Postgres {
     /// need the cast; this is the B8 native-write fix that pairs with B1's read fix.)
     fn cast_compare_placeholder(column_sql_type: &str, placeholder: &str) -> String {
         let ty = column_sql_type.trim();
-        if ty.eq_ignore_ascii_case("uuid") {
+        if ty.ends_with("[]")
+            && let Some(cast) = castable_column_type(ty)
+        {
+            // Array columns: a bound text[] has no assignment cast to date[],
+            // time[], inet[], uuid[], ... — cast to the declared array type so
+            // the explicit element conversion applies for EVERY element type.
+            format!("{placeholder}::{cast}")
+        } else if ty.eq_ignore_ascii_case("uuid") {
             format!("{placeholder}::UUID")
         } else if ty.eq_ignore_ascii_case("timestamptz")
             || ty.eq_ignore_ascii_case("timestamp with time zone")
@@ -1273,6 +1280,18 @@ mod tests {
             cast_write_placeholder("timestamptz[]", &stamps, "$2"),
             "$2::TIMESTAMPTZ[]"
         );
+        // Every array element type, including ones without a typed bind, gets
+        // the declared cast on every write path that shares this classifier.
+        for (declared, expected) in [
+            ("DATE[]", "$4::DATE[]"),
+            ("time[]", "$4::TIME[]"),
+            ("INET[]", "$4::INET[]"),
+        ] {
+            assert_eq!(
+                <Postgres as SqlDialect>::cast_compare_placeholder(declared, "$4"),
+                expected
+            );
+        }
         // A scalar column keeps its comparison cast; no array cast is invented.
         assert_eq!(
             cast_write_placeholder("UUID", &LogicalValue::String("x".into()), "$3"),
