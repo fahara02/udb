@@ -23,6 +23,60 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Direction a GraphTraversal follows relationships from its start node.
+type GraphTraversalDirection int32
+
+const (
+	// Treated as OUTGOING.
+	GraphTraversalDirection_GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED GraphTraversalDirection = 0
+	GraphTraversalDirection_GRAPH_TRAVERSAL_DIRECTION_OUTGOING    GraphTraversalDirection = 1
+	GraphTraversalDirection_GRAPH_TRAVERSAL_DIRECTION_INCOMING    GraphTraversalDirection = 2
+	GraphTraversalDirection_GRAPH_TRAVERSAL_DIRECTION_BOTH        GraphTraversalDirection = 3
+)
+
+// Enum value maps for GraphTraversalDirection.
+var (
+	GraphTraversalDirection_name = map[int32]string{
+		0: "GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED",
+		1: "GRAPH_TRAVERSAL_DIRECTION_OUTGOING",
+		2: "GRAPH_TRAVERSAL_DIRECTION_INCOMING",
+		3: "GRAPH_TRAVERSAL_DIRECTION_BOTH",
+	}
+	GraphTraversalDirection_value = map[string]int32{
+		"GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED": 0,
+		"GRAPH_TRAVERSAL_DIRECTION_OUTGOING":    1,
+		"GRAPH_TRAVERSAL_DIRECTION_INCOMING":    2,
+		"GRAPH_TRAVERSAL_DIRECTION_BOTH":        3,
+	}
+)
+
+func (x GraphTraversalDirection) Enum() *GraphTraversalDirection {
+	p := new(GraphTraversalDirection)
+	*p = x
+	return p
+}
+
+func (x GraphTraversalDirection) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GraphTraversalDirection) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_entity_v1_stores_proto_enumTypes[0].Descriptor()
+}
+
+func (GraphTraversalDirection) Type() protoreflect.EnumType {
+	return &file_udb_entity_v1_stores_proto_enumTypes[0]
+}
+
+func (x GraphTraversalDirection) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GraphTraversalDirection.Descriptor instead.
+func (GraphTraversalDirection) EnumDescriptor() ([]byte, []int) {
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{0}
+}
+
 type CacheGetRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Context       *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
@@ -952,14 +1006,19 @@ func (x *DocumentSet) GetStats() *OperationStats {
 }
 
 type GraphQueryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Context       *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	Resource      *StoreResource         `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
-	Query         string                 `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
-	Parameters    *structpb.Struct       `protobuf:"bytes,4,opt,name=parameters,proto3" json:"parameters,omitempty"`
-	Limit         int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
-	PageToken     string                 `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	ReadOnly      bool                   `protobuf:"varint,7,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Context    *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Resource   *StoreResource         `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
+	Query      string                 `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
+	Parameters *structpb.Struct       `protobuf:"bytes,4,opt,name=parameters,proto3" json:"parameters,omitempty"`
+	Limit      int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
+	PageToken  string                 `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	ReadOnly   bool                   `protobuf:"varint,7,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
+	// Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+	// itself (every node and relationship on a path must carry the caller's
+	// verified tenant/project scope) and `query` / `parameters` must be empty.
+	// It does not need the raw-dispatch opt-out that free-text `query` needs.
+	Traversal     *GraphTraversal `protobuf:"bytes,8,opt,name=traversal,proto3" json:"traversal,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1043,6 +1102,155 @@ func (x *GraphQueryRequest) GetReadOnly() bool {
 	return false
 }
 
+func (x *GraphQueryRequest) GetTraversal() *GraphTraversal {
+	if x != nil {
+		return x.Traversal
+	}
+	return nil
+}
+
+// A typed graph traversal: start from one node, follow relationships for
+// min_depth..max_depth hops, and return the reached nodes. Labels,
+// relationship types and property keys must be plain identifiers (ASCII
+// letters, digits, underscore; not starting with a digit); values are bound
+// as query parameters.
+type GraphTraversal struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Label of the start node (required).
+	StartLabel string `protobuf:"bytes,1,opt,name=start_label,json=startLabel,proto3" json:"start_label,omitempty"`
+	// `id` property of the start node (required).
+	StartId string `protobuf:"bytes,2,opt,name=start_id,json=startId,proto3" json:"start_id,omitempty"`
+	// Relationship types to follow; empty follows any type.
+	RelationshipTypes []string                `protobuf:"bytes,3,rep,name=relationship_types,json=relationshipTypes,proto3" json:"relationship_types,omitempty"`
+	Direction         GraphTraversalDirection `protobuf:"varint,4,opt,name=direction,proto3,enum=udb.entity.v1.GraphTraversalDirection" json:"direction,omitempty"`
+	// Minimum hops (0 = 1).
+	MinDepth int32 `protobuf:"varint,5,opt,name=min_depth,json=minDepth,proto3" json:"min_depth,omitempty"`
+	// Maximum hops (0 = 1). Values above the server cap (4) are rejected.
+	MaxDepth int32 `protobuf:"varint,6,opt,name=max_depth,json=maxDepth,proto3" json:"max_depth,omitempty"`
+	// Keep only reached nodes carrying at least one of these labels.
+	NodeLabels []string `protobuf:"bytes,7,rep,name=node_labels,json=nodeLabels,proto3" json:"node_labels,omitempty"`
+	// Keep only reached nodes whose property equals the given value
+	// (e.g. owner / audience filters).
+	NodePropertyEquals map[string]string `protobuf:"bytes,8,rep,name=node_property_equals,json=nodePropertyEquals,proto3" json:"node_property_equals,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Maximum rows (0 = 100; capped at 1000).
+	Limit int32 `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Return one row per path with its relationships instead of one row per
+	// distinct reached node.
+	ReturnRelationships bool `protobuf:"varint,10,opt,name=return_relationships,json=returnRelationships,proto3" json:"return_relationships,omitempty"`
+	// Follow only relationships whose property equals the given value (applied
+	// to EVERY relationship on the path, e.g. kind = "peer").
+	RelationshipPropertyEquals map[string]string `protobuf:"bytes,11,rep,name=relationship_property_equals,json=relationshipPropertyEquals,proto3" json:"relationship_property_equals,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *GraphTraversal) Reset() {
+	*x = GraphTraversal{}
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GraphTraversal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GraphTraversal) ProtoMessage() {}
+
+func (x *GraphTraversal) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GraphTraversal.ProtoReflect.Descriptor instead.
+func (*GraphTraversal) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GraphTraversal) GetStartLabel() string {
+	if x != nil {
+		return x.StartLabel
+	}
+	return ""
+}
+
+func (x *GraphTraversal) GetStartId() string {
+	if x != nil {
+		return x.StartId
+	}
+	return ""
+}
+
+func (x *GraphTraversal) GetRelationshipTypes() []string {
+	if x != nil {
+		return x.RelationshipTypes
+	}
+	return nil
+}
+
+func (x *GraphTraversal) GetDirection() GraphTraversalDirection {
+	if x != nil {
+		return x.Direction
+	}
+	return GraphTraversalDirection_GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED
+}
+
+func (x *GraphTraversal) GetMinDepth() int32 {
+	if x != nil {
+		return x.MinDepth
+	}
+	return 0
+}
+
+func (x *GraphTraversal) GetMaxDepth() int32 {
+	if x != nil {
+		return x.MaxDepth
+	}
+	return 0
+}
+
+func (x *GraphTraversal) GetNodeLabels() []string {
+	if x != nil {
+		return x.NodeLabels
+	}
+	return nil
+}
+
+func (x *GraphTraversal) GetNodePropertyEquals() map[string]string {
+	if x != nil {
+		return x.NodePropertyEquals
+	}
+	return nil
+}
+
+func (x *GraphTraversal) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GraphTraversal) GetReturnRelationships() bool {
+	if x != nil {
+		return x.ReturnRelationships
+	}
+	return false
+}
+
+func (x *GraphTraversal) GetRelationshipPropertyEquals() map[string]string {
+	if x != nil {
+		return x.RelationshipPropertyEquals
+	}
+	return nil
+}
+
 type GraphMutationRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Context        *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
@@ -1056,7 +1264,7 @@ type GraphMutationRequest struct {
 
 func (x *GraphMutationRequest) Reset() {
 	*x = GraphMutationRequest{}
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[13]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1068,7 +1276,7 @@ func (x *GraphMutationRequest) String() string {
 func (*GraphMutationRequest) ProtoMessage() {}
 
 func (x *GraphMutationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[13]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1081,7 +1289,7 @@ func (x *GraphMutationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphMutationRequest.ProtoReflect.Descriptor instead.
 func (*GraphMutationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{13}
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GraphMutationRequest) GetContext() *RequestContext {
@@ -1130,7 +1338,7 @@ type GraphResultSet struct {
 
 func (x *GraphResultSet) Reset() {
 	*x = GraphResultSet{}
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[14]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1142,7 +1350,7 @@ func (x *GraphResultSet) String() string {
 func (*GraphResultSet) ProtoMessage() {}
 
 func (x *GraphResultSet) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[14]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1155,7 +1363,7 @@ func (x *GraphResultSet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphResultSet.ProtoReflect.Descriptor instead.
 func (*GraphResultSet) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{14}
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GraphResultSet) GetRecords() []*structpb.Struct {
@@ -1191,7 +1399,7 @@ type TimeSeriesPoint struct {
 
 func (x *TimeSeriesPoint) Reset() {
 	*x = TimeSeriesPoint{}
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[15]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1203,7 +1411,7 @@ func (x *TimeSeriesPoint) String() string {
 func (*TimeSeriesPoint) ProtoMessage() {}
 
 func (x *TimeSeriesPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[15]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1216,7 +1424,7 @@ func (x *TimeSeriesPoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimeSeriesPoint.ProtoReflect.Descriptor instead.
 func (*TimeSeriesPoint) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{15}
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *TimeSeriesPoint) GetTimestamp() *timestamppb.Timestamp {
@@ -1259,7 +1467,7 @@ type TimeSeriesWriteRequest struct {
 
 func (x *TimeSeriesWriteRequest) Reset() {
 	*x = TimeSeriesWriteRequest{}
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[16]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1271,7 +1479,7 @@ func (x *TimeSeriesWriteRequest) String() string {
 func (*TimeSeriesWriteRequest) ProtoMessage() {}
 
 func (x *TimeSeriesWriteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[16]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1284,7 +1492,7 @@ func (x *TimeSeriesWriteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimeSeriesWriteRequest.ProtoReflect.Descriptor instead.
 func (*TimeSeriesWriteRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{16}
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *TimeSeriesWriteRequest) GetContext() *RequestContext {
@@ -1334,7 +1542,7 @@ type TimeSeriesQueryRequest struct {
 
 func (x *TimeSeriesQueryRequest) Reset() {
 	*x = TimeSeriesQueryRequest{}
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[17]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1346,7 +1554,7 @@ func (x *TimeSeriesQueryRequest) String() string {
 func (*TimeSeriesQueryRequest) ProtoMessage() {}
 
 func (x *TimeSeriesQueryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[17]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1359,7 +1567,7 @@ func (x *TimeSeriesQueryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimeSeriesQueryRequest.ProtoReflect.Descriptor instead.
 func (*TimeSeriesQueryRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{17}
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *TimeSeriesQueryRequest) GetContext() *RequestContext {
@@ -1450,7 +1658,7 @@ type TimeSeriesQueryResponse struct {
 
 func (x *TimeSeriesQueryResponse) Reset() {
 	*x = TimeSeriesQueryResponse{}
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[18]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1462,7 +1670,7 @@ func (x *TimeSeriesQueryResponse) String() string {
 func (*TimeSeriesQueryResponse) ProtoMessage() {}
 
 func (x *TimeSeriesQueryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[18]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1475,7 +1683,7 @@ func (x *TimeSeriesQueryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimeSeriesQueryResponse.ProtoReflect.Descriptor instead.
 func (*TimeSeriesQueryResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{18}
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TimeSeriesQueryResponse) GetPoints() []*TimeSeriesPoint {
@@ -1514,7 +1722,7 @@ type AnalyticalQueryRequest struct {
 
 func (x *AnalyticalQueryRequest) Reset() {
 	*x = AnalyticalQueryRequest{}
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[19]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1526,7 +1734,7 @@ func (x *AnalyticalQueryRequest) String() string {
 func (*AnalyticalQueryRequest) ProtoMessage() {}
 
 func (x *AnalyticalQueryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[19]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1539,7 +1747,7 @@ func (x *AnalyticalQueryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyticalQueryRequest.ProtoReflect.Descriptor instead.
 func (*AnalyticalQueryRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{19}
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AnalyticalQueryRequest) GetContext() *RequestContext {
@@ -1603,7 +1811,7 @@ type AnalyticalQueryResponse struct {
 
 func (x *AnalyticalQueryResponse) Reset() {
 	*x = AnalyticalQueryResponse{}
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[20]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1615,7 +1823,7 @@ func (x *AnalyticalQueryResponse) String() string {
 func (*AnalyticalQueryResponse) ProtoMessage() {}
 
 func (x *AnalyticalQueryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_stores_proto_msgTypes[20]
+	mi := &file_udb_entity_v1_stores_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1628,7 +1836,7 @@ func (x *AnalyticalQueryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyticalQueryResponse.ProtoReflect.Descriptor instead.
 func (*AnalyticalQueryResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{20}
+	return file_udb_entity_v1_stores_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AnalyticalQueryResponse) GetRows() []*Row {
@@ -1748,7 +1956,7 @@ const file_udb_entity_v1_stores_proto_rawDesc = "" +
 	"\vDocumentSet\x125\n" +
 	"\tdocuments\x18\x01 \x03(\v2\x17.google.protobuf.StructR\tdocuments\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x123\n" +
-	"\x05stats\x18\x03 \x01(\v2\x1d.udb.entity.v1.OperationStatsR\x05stats\"\xa7\x02\n" +
+	"\x05stats\x18\x03 \x01(\v2\x1d.udb.entity.v1.OperationStatsR\x05stats\"\xe4\x02\n" +
 	"\x11GraphQueryRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x128\n" +
 	"\bresource\x18\x02 \x01(\v2\x1c.udb.entity.v1.StoreResourceR\bresource\x12\x14\n" +
@@ -1759,7 +1967,29 @@ const file_udb_entity_v1_stores_proto_rawDesc = "" +
 	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x06 \x01(\tR\tpageToken\x12\x1b\n" +
-	"\tread_only\x18\a \x01(\bR\breadOnly\"\x81\x02\n" +
+	"\tread_only\x18\a \x01(\bR\breadOnly\x12;\n" +
+	"\ttraversal\x18\b \x01(\v2\x1d.udb.entity.v1.GraphTraversalR\ttraversal\"\xe5\x05\n" +
+	"\x0eGraphTraversal\x12\x1f\n" +
+	"\vstart_label\x18\x01 \x01(\tR\n" +
+	"startLabel\x12\x19\n" +
+	"\bstart_id\x18\x02 \x01(\tR\astartId\x12-\n" +
+	"\x12relationship_types\x18\x03 \x03(\tR\x11relationshipTypes\x12D\n" +
+	"\tdirection\x18\x04 \x01(\x0e2&.udb.entity.v1.GraphTraversalDirectionR\tdirection\x12\x1b\n" +
+	"\tmin_depth\x18\x05 \x01(\x05R\bminDepth\x12\x1b\n" +
+	"\tmax_depth\x18\x06 \x01(\x05R\bmaxDepth\x12\x1f\n" +
+	"\vnode_labels\x18\a \x03(\tR\n" +
+	"nodeLabels\x12g\n" +
+	"\x14node_property_equals\x18\b \x03(\v25.udb.entity.v1.GraphTraversal.NodePropertyEqualsEntryR\x12nodePropertyEquals\x12\x14\n" +
+	"\x05limit\x18\t \x01(\x05R\x05limit\x121\n" +
+	"\x14return_relationships\x18\n" +
+	" \x01(\bR\x13returnRelationships\x12\x7f\n" +
+	"\x1crelationship_property_equals\x18\v \x03(\v2=.udb.entity.v1.GraphTraversal.RelationshipPropertyEqualsEntryR\x1arelationshipPropertyEquals\x1aE\n" +
+	"\x17NodePropertyEqualsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aM\n" +
+	"\x1fRelationshipPropertyEqualsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x81\x02\n" +
 	"\x14GraphMutationRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x128\n" +
 	"\bresource\x18\x02 \x01(\v2\x1c.udb.entity.v1.StoreResourceR\bresource\x12\x14\n" +
@@ -1821,7 +2051,12 @@ const file_udb_entity_v1_stores_proto_rawDesc = "" +
 	"\x04rows\x18\x01 \x03(\v2\x12.udb.entity.v1.RowR\x04rows\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x123\n" +
 	"\x05stats\x18\x03 \x01(\v2\x1d.udb.entity.v1.OperationStatsR\x05stats\x12;\n" +
-	"\bwarnings\x18\x04 \x03(\v2\x1f.udb.entity.v1.OperationWarningR\bwarningsB\xb1\x01\n" +
+	"\bwarnings\x18\x04 \x03(\v2\x1f.udb.entity.v1.OperationWarningR\bwarnings*\xb8\x01\n" +
+	"\x17GraphTraversalDirection\x12)\n" +
+	"%GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"GRAPH_TRAVERSAL_DIRECTION_OUTGOING\x10\x01\x12&\n" +
+	"\"GRAPH_TRAVERSAL_DIRECTION_INCOMING\x10\x02\x12\"\n" +
+	"\x1eGRAPH_TRAVERSAL_DIRECTION_BOTH\x10\x03B\xb1\x01\n" +
 	"\x11com.udb.entity.v1B\vStoresProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3"
 
 var (
@@ -1836,101 +2071,110 @@ func file_udb_entity_v1_stores_proto_rawDescGZIP() []byte {
 	return file_udb_entity_v1_stores_proto_rawDescData
 }
 
-var file_udb_entity_v1_stores_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_udb_entity_v1_stores_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_udb_entity_v1_stores_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_udb_entity_v1_stores_proto_goTypes = []any{
-	(*CacheGetRequest)(nil),         // 0: udb.entity.v1.CacheGetRequest
-	(*CacheGetResponse)(nil),        // 1: udb.entity.v1.CacheGetResponse
-	(*CacheSetRequest)(nil),         // 2: udb.entity.v1.CacheSetRequest
-	(*CacheDeleteRequest)(nil),      // 3: udb.entity.v1.CacheDeleteRequest
-	(*CacheScanRequest)(nil),        // 4: udb.entity.v1.CacheScanRequest
-	(*CacheEntry)(nil),              // 5: udb.entity.v1.CacheEntry
-	(*CacheScanResponse)(nil),       // 6: udb.entity.v1.CacheScanResponse
-	(*DocumentGetRequest)(nil),      // 7: udb.entity.v1.DocumentGetRequest
-	(*DocumentFindRequest)(nil),     // 8: udb.entity.v1.DocumentFindRequest
-	(*DocumentUpsertRequest)(nil),   // 9: udb.entity.v1.DocumentUpsertRequest
-	(*DocumentDeleteRequest)(nil),   // 10: udb.entity.v1.DocumentDeleteRequest
-	(*DocumentSet)(nil),             // 11: udb.entity.v1.DocumentSet
-	(*GraphQueryRequest)(nil),       // 12: udb.entity.v1.GraphQueryRequest
-	(*GraphMutationRequest)(nil),    // 13: udb.entity.v1.GraphMutationRequest
-	(*GraphResultSet)(nil),          // 14: udb.entity.v1.GraphResultSet
-	(*TimeSeriesPoint)(nil),         // 15: udb.entity.v1.TimeSeriesPoint
-	(*TimeSeriesWriteRequest)(nil),  // 16: udb.entity.v1.TimeSeriesWriteRequest
-	(*TimeSeriesQueryRequest)(nil),  // 17: udb.entity.v1.TimeSeriesQueryRequest
-	(*TimeSeriesQueryResponse)(nil), // 18: udb.entity.v1.TimeSeriesQueryResponse
-	(*AnalyticalQueryRequest)(nil),  // 19: udb.entity.v1.AnalyticalQueryRequest
-	(*AnalyticalQueryResponse)(nil), // 20: udb.entity.v1.AnalyticalQueryResponse
-	nil,                             // 21: udb.entity.v1.TimeSeriesPoint.TagsEntry
-	nil,                             // 22: udb.entity.v1.TimeSeriesPoint.ValuesEntry
-	(*RequestContext)(nil),          // 23: udb.entity.v1.RequestContext
-	(*StoreResource)(nil),           // 24: udb.entity.v1.StoreResource
-	(*structpb.Struct)(nil),         // 25: google.protobuf.Struct
-	(*OperationStats)(nil),          // 26: udb.entity.v1.OperationStats
-	(*Sort)(nil),                    // 27: udb.entity.v1.Sort
-	(*timestamppb.Timestamp)(nil),   // 28: google.protobuf.Timestamp
-	(*Row)(nil),                     // 29: udb.entity.v1.Row
-	(*OperationWarning)(nil),        // 30: udb.entity.v1.OperationWarning
+	(GraphTraversalDirection)(0),    // 0: udb.entity.v1.GraphTraversalDirection
+	(*CacheGetRequest)(nil),         // 1: udb.entity.v1.CacheGetRequest
+	(*CacheGetResponse)(nil),        // 2: udb.entity.v1.CacheGetResponse
+	(*CacheSetRequest)(nil),         // 3: udb.entity.v1.CacheSetRequest
+	(*CacheDeleteRequest)(nil),      // 4: udb.entity.v1.CacheDeleteRequest
+	(*CacheScanRequest)(nil),        // 5: udb.entity.v1.CacheScanRequest
+	(*CacheEntry)(nil),              // 6: udb.entity.v1.CacheEntry
+	(*CacheScanResponse)(nil),       // 7: udb.entity.v1.CacheScanResponse
+	(*DocumentGetRequest)(nil),      // 8: udb.entity.v1.DocumentGetRequest
+	(*DocumentFindRequest)(nil),     // 9: udb.entity.v1.DocumentFindRequest
+	(*DocumentUpsertRequest)(nil),   // 10: udb.entity.v1.DocumentUpsertRequest
+	(*DocumentDeleteRequest)(nil),   // 11: udb.entity.v1.DocumentDeleteRequest
+	(*DocumentSet)(nil),             // 12: udb.entity.v1.DocumentSet
+	(*GraphQueryRequest)(nil),       // 13: udb.entity.v1.GraphQueryRequest
+	(*GraphTraversal)(nil),          // 14: udb.entity.v1.GraphTraversal
+	(*GraphMutationRequest)(nil),    // 15: udb.entity.v1.GraphMutationRequest
+	(*GraphResultSet)(nil),          // 16: udb.entity.v1.GraphResultSet
+	(*TimeSeriesPoint)(nil),         // 17: udb.entity.v1.TimeSeriesPoint
+	(*TimeSeriesWriteRequest)(nil),  // 18: udb.entity.v1.TimeSeriesWriteRequest
+	(*TimeSeriesQueryRequest)(nil),  // 19: udb.entity.v1.TimeSeriesQueryRequest
+	(*TimeSeriesQueryResponse)(nil), // 20: udb.entity.v1.TimeSeriesQueryResponse
+	(*AnalyticalQueryRequest)(nil),  // 21: udb.entity.v1.AnalyticalQueryRequest
+	(*AnalyticalQueryResponse)(nil), // 22: udb.entity.v1.AnalyticalQueryResponse
+	nil,                             // 23: udb.entity.v1.GraphTraversal.NodePropertyEqualsEntry
+	nil,                             // 24: udb.entity.v1.GraphTraversal.RelationshipPropertyEqualsEntry
+	nil,                             // 25: udb.entity.v1.TimeSeriesPoint.TagsEntry
+	nil,                             // 26: udb.entity.v1.TimeSeriesPoint.ValuesEntry
+	(*RequestContext)(nil),          // 27: udb.entity.v1.RequestContext
+	(*StoreResource)(nil),           // 28: udb.entity.v1.StoreResource
+	(*structpb.Struct)(nil),         // 29: google.protobuf.Struct
+	(*OperationStats)(nil),          // 30: udb.entity.v1.OperationStats
+	(*Sort)(nil),                    // 31: udb.entity.v1.Sort
+	(*timestamppb.Timestamp)(nil),   // 32: google.protobuf.Timestamp
+	(*Row)(nil),                     // 33: udb.entity.v1.Row
+	(*OperationWarning)(nil),        // 34: udb.entity.v1.OperationWarning
 }
 var file_udb_entity_v1_stores_proto_depIdxs = []int32{
-	23, // 0: udb.entity.v1.CacheGetRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 1: udb.entity.v1.CacheGetRequest.resource:type_name -> udb.entity.v1.StoreResource
-	25, // 2: udb.entity.v1.CacheGetResponse.metadata:type_name -> google.protobuf.Struct
-	23, // 3: udb.entity.v1.CacheSetRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 4: udb.entity.v1.CacheSetRequest.resource:type_name -> udb.entity.v1.StoreResource
-	25, // 5: udb.entity.v1.CacheSetRequest.metadata:type_name -> google.protobuf.Struct
-	23, // 6: udb.entity.v1.CacheDeleteRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 7: udb.entity.v1.CacheDeleteRequest.resource:type_name -> udb.entity.v1.StoreResource
-	23, // 8: udb.entity.v1.CacheScanRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 9: udb.entity.v1.CacheScanRequest.resource:type_name -> udb.entity.v1.StoreResource
-	25, // 10: udb.entity.v1.CacheEntry.metadata:type_name -> google.protobuf.Struct
-	5,  // 11: udb.entity.v1.CacheScanResponse.entries:type_name -> udb.entity.v1.CacheEntry
-	26, // 12: udb.entity.v1.CacheScanResponse.stats:type_name -> udb.entity.v1.OperationStats
-	23, // 13: udb.entity.v1.DocumentGetRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 14: udb.entity.v1.DocumentGetRequest.resource:type_name -> udb.entity.v1.StoreResource
-	23, // 15: udb.entity.v1.DocumentFindRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 16: udb.entity.v1.DocumentFindRequest.resource:type_name -> udb.entity.v1.StoreResource
-	25, // 17: udb.entity.v1.DocumentFindRequest.filter:type_name -> google.protobuf.Struct
-	27, // 18: udb.entity.v1.DocumentFindRequest.sort:type_name -> udb.entity.v1.Sort
-	23, // 19: udb.entity.v1.DocumentUpsertRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 20: udb.entity.v1.DocumentUpsertRequest.resource:type_name -> udb.entity.v1.StoreResource
-	25, // 21: udb.entity.v1.DocumentUpsertRequest.document:type_name -> google.protobuf.Struct
-	23, // 22: udb.entity.v1.DocumentDeleteRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 23: udb.entity.v1.DocumentDeleteRequest.resource:type_name -> udb.entity.v1.StoreResource
-	25, // 24: udb.entity.v1.DocumentDeleteRequest.filter:type_name -> google.protobuf.Struct
-	25, // 25: udb.entity.v1.DocumentSet.documents:type_name -> google.protobuf.Struct
-	26, // 26: udb.entity.v1.DocumentSet.stats:type_name -> udb.entity.v1.OperationStats
-	23, // 27: udb.entity.v1.GraphQueryRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 28: udb.entity.v1.GraphQueryRequest.resource:type_name -> udb.entity.v1.StoreResource
-	25, // 29: udb.entity.v1.GraphQueryRequest.parameters:type_name -> google.protobuf.Struct
-	23, // 30: udb.entity.v1.GraphMutationRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 31: udb.entity.v1.GraphMutationRequest.resource:type_name -> udb.entity.v1.StoreResource
-	25, // 32: udb.entity.v1.GraphMutationRequest.parameters:type_name -> google.protobuf.Struct
-	25, // 33: udb.entity.v1.GraphResultSet.records:type_name -> google.protobuf.Struct
-	26, // 34: udb.entity.v1.GraphResultSet.stats:type_name -> udb.entity.v1.OperationStats
-	28, // 35: udb.entity.v1.TimeSeriesPoint.timestamp:type_name -> google.protobuf.Timestamp
-	21, // 36: udb.entity.v1.TimeSeriesPoint.tags:type_name -> udb.entity.v1.TimeSeriesPoint.TagsEntry
-	22, // 37: udb.entity.v1.TimeSeriesPoint.values:type_name -> udb.entity.v1.TimeSeriesPoint.ValuesEntry
-	25, // 38: udb.entity.v1.TimeSeriesPoint.fields:type_name -> google.protobuf.Struct
-	23, // 39: udb.entity.v1.TimeSeriesWriteRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 40: udb.entity.v1.TimeSeriesWriteRequest.resource:type_name -> udb.entity.v1.StoreResource
-	15, // 41: udb.entity.v1.TimeSeriesWriteRequest.points:type_name -> udb.entity.v1.TimeSeriesPoint
-	23, // 42: udb.entity.v1.TimeSeriesQueryRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 43: udb.entity.v1.TimeSeriesQueryRequest.resource:type_name -> udb.entity.v1.StoreResource
-	28, // 44: udb.entity.v1.TimeSeriesQueryRequest.from:type_name -> google.protobuf.Timestamp
-	28, // 45: udb.entity.v1.TimeSeriesQueryRequest.to:type_name -> google.protobuf.Timestamp
-	25, // 46: udb.entity.v1.TimeSeriesQueryRequest.filter:type_name -> google.protobuf.Struct
-	15, // 47: udb.entity.v1.TimeSeriesQueryResponse.points:type_name -> udb.entity.v1.TimeSeriesPoint
-	26, // 48: udb.entity.v1.TimeSeriesQueryResponse.stats:type_name -> udb.entity.v1.OperationStats
-	23, // 49: udb.entity.v1.AnalyticalQueryRequest.context:type_name -> udb.entity.v1.RequestContext
-	24, // 50: udb.entity.v1.AnalyticalQueryRequest.resource:type_name -> udb.entity.v1.StoreResource
-	25, // 51: udb.entity.v1.AnalyticalQueryRequest.parameters:type_name -> google.protobuf.Struct
-	29, // 52: udb.entity.v1.AnalyticalQueryResponse.rows:type_name -> udb.entity.v1.Row
-	26, // 53: udb.entity.v1.AnalyticalQueryResponse.stats:type_name -> udb.entity.v1.OperationStats
-	30, // 54: udb.entity.v1.AnalyticalQueryResponse.warnings:type_name -> udb.entity.v1.OperationWarning
-	55, // [55:55] is the sub-list for method output_type
-	55, // [55:55] is the sub-list for method input_type
-	55, // [55:55] is the sub-list for extension type_name
-	55, // [55:55] is the sub-list for extension extendee
-	0,  // [0:55] is the sub-list for field type_name
+	27, // 0: udb.entity.v1.CacheGetRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 1: udb.entity.v1.CacheGetRequest.resource:type_name -> udb.entity.v1.StoreResource
+	29, // 2: udb.entity.v1.CacheGetResponse.metadata:type_name -> google.protobuf.Struct
+	27, // 3: udb.entity.v1.CacheSetRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 4: udb.entity.v1.CacheSetRequest.resource:type_name -> udb.entity.v1.StoreResource
+	29, // 5: udb.entity.v1.CacheSetRequest.metadata:type_name -> google.protobuf.Struct
+	27, // 6: udb.entity.v1.CacheDeleteRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 7: udb.entity.v1.CacheDeleteRequest.resource:type_name -> udb.entity.v1.StoreResource
+	27, // 8: udb.entity.v1.CacheScanRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 9: udb.entity.v1.CacheScanRequest.resource:type_name -> udb.entity.v1.StoreResource
+	29, // 10: udb.entity.v1.CacheEntry.metadata:type_name -> google.protobuf.Struct
+	6,  // 11: udb.entity.v1.CacheScanResponse.entries:type_name -> udb.entity.v1.CacheEntry
+	30, // 12: udb.entity.v1.CacheScanResponse.stats:type_name -> udb.entity.v1.OperationStats
+	27, // 13: udb.entity.v1.DocumentGetRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 14: udb.entity.v1.DocumentGetRequest.resource:type_name -> udb.entity.v1.StoreResource
+	27, // 15: udb.entity.v1.DocumentFindRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 16: udb.entity.v1.DocumentFindRequest.resource:type_name -> udb.entity.v1.StoreResource
+	29, // 17: udb.entity.v1.DocumentFindRequest.filter:type_name -> google.protobuf.Struct
+	31, // 18: udb.entity.v1.DocumentFindRequest.sort:type_name -> udb.entity.v1.Sort
+	27, // 19: udb.entity.v1.DocumentUpsertRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 20: udb.entity.v1.DocumentUpsertRequest.resource:type_name -> udb.entity.v1.StoreResource
+	29, // 21: udb.entity.v1.DocumentUpsertRequest.document:type_name -> google.protobuf.Struct
+	27, // 22: udb.entity.v1.DocumentDeleteRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 23: udb.entity.v1.DocumentDeleteRequest.resource:type_name -> udb.entity.v1.StoreResource
+	29, // 24: udb.entity.v1.DocumentDeleteRequest.filter:type_name -> google.protobuf.Struct
+	29, // 25: udb.entity.v1.DocumentSet.documents:type_name -> google.protobuf.Struct
+	30, // 26: udb.entity.v1.DocumentSet.stats:type_name -> udb.entity.v1.OperationStats
+	27, // 27: udb.entity.v1.GraphQueryRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 28: udb.entity.v1.GraphQueryRequest.resource:type_name -> udb.entity.v1.StoreResource
+	29, // 29: udb.entity.v1.GraphQueryRequest.parameters:type_name -> google.protobuf.Struct
+	14, // 30: udb.entity.v1.GraphQueryRequest.traversal:type_name -> udb.entity.v1.GraphTraversal
+	0,  // 31: udb.entity.v1.GraphTraversal.direction:type_name -> udb.entity.v1.GraphTraversalDirection
+	23, // 32: udb.entity.v1.GraphTraversal.node_property_equals:type_name -> udb.entity.v1.GraphTraversal.NodePropertyEqualsEntry
+	24, // 33: udb.entity.v1.GraphTraversal.relationship_property_equals:type_name -> udb.entity.v1.GraphTraversal.RelationshipPropertyEqualsEntry
+	27, // 34: udb.entity.v1.GraphMutationRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 35: udb.entity.v1.GraphMutationRequest.resource:type_name -> udb.entity.v1.StoreResource
+	29, // 36: udb.entity.v1.GraphMutationRequest.parameters:type_name -> google.protobuf.Struct
+	29, // 37: udb.entity.v1.GraphResultSet.records:type_name -> google.protobuf.Struct
+	30, // 38: udb.entity.v1.GraphResultSet.stats:type_name -> udb.entity.v1.OperationStats
+	32, // 39: udb.entity.v1.TimeSeriesPoint.timestamp:type_name -> google.protobuf.Timestamp
+	25, // 40: udb.entity.v1.TimeSeriesPoint.tags:type_name -> udb.entity.v1.TimeSeriesPoint.TagsEntry
+	26, // 41: udb.entity.v1.TimeSeriesPoint.values:type_name -> udb.entity.v1.TimeSeriesPoint.ValuesEntry
+	29, // 42: udb.entity.v1.TimeSeriesPoint.fields:type_name -> google.protobuf.Struct
+	27, // 43: udb.entity.v1.TimeSeriesWriteRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 44: udb.entity.v1.TimeSeriesWriteRequest.resource:type_name -> udb.entity.v1.StoreResource
+	17, // 45: udb.entity.v1.TimeSeriesWriteRequest.points:type_name -> udb.entity.v1.TimeSeriesPoint
+	27, // 46: udb.entity.v1.TimeSeriesQueryRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 47: udb.entity.v1.TimeSeriesQueryRequest.resource:type_name -> udb.entity.v1.StoreResource
+	32, // 48: udb.entity.v1.TimeSeriesQueryRequest.from:type_name -> google.protobuf.Timestamp
+	32, // 49: udb.entity.v1.TimeSeriesQueryRequest.to:type_name -> google.protobuf.Timestamp
+	29, // 50: udb.entity.v1.TimeSeriesQueryRequest.filter:type_name -> google.protobuf.Struct
+	17, // 51: udb.entity.v1.TimeSeriesQueryResponse.points:type_name -> udb.entity.v1.TimeSeriesPoint
+	30, // 52: udb.entity.v1.TimeSeriesQueryResponse.stats:type_name -> udb.entity.v1.OperationStats
+	27, // 53: udb.entity.v1.AnalyticalQueryRequest.context:type_name -> udb.entity.v1.RequestContext
+	28, // 54: udb.entity.v1.AnalyticalQueryRequest.resource:type_name -> udb.entity.v1.StoreResource
+	29, // 55: udb.entity.v1.AnalyticalQueryRequest.parameters:type_name -> google.protobuf.Struct
+	33, // 56: udb.entity.v1.AnalyticalQueryResponse.rows:type_name -> udb.entity.v1.Row
+	30, // 57: udb.entity.v1.AnalyticalQueryResponse.stats:type_name -> udb.entity.v1.OperationStats
+	34, // 58: udb.entity.v1.AnalyticalQueryResponse.warnings:type_name -> udb.entity.v1.OperationWarning
+	59, // [59:59] is the sub-list for method output_type
+	59, // [59:59] is the sub-list for method input_type
+	59, // [59:59] is the sub-list for extension type_name
+	59, // [59:59] is the sub-list for extension extendee
+	0,  // [0:59] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_stores_proto_init() }
@@ -1946,13 +2190,14 @@ func file_udb_entity_v1_stores_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_stores_proto_rawDesc), len(file_udb_entity_v1_stores_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   23,
+			NumEnums:      1,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_udb_entity_v1_stores_proto_goTypes,
 		DependencyIndexes: file_udb_entity_v1_stores_proto_depIdxs,
+		EnumInfos:         file_udb_entity_v1_stores_proto_enumTypes,
 		MessageInfos:      file_udb_entity_v1_stores_proto_msgTypes,
 	}.Build()
 	File_udb_entity_v1_stores_proto = out.File

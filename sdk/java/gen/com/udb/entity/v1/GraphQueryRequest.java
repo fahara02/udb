@@ -224,6 +224,53 @@ private static final long serialVersionUID = 0L;
     return readOnly_;
   }
 
+  public static final int TRAVERSAL_FIELD_NUMBER = 8;
+  private com.udb.entity.v1.GraphTraversal traversal_;
+  /**
+   * <pre>
+   * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+   * itself (every node and relationship on a path must carry the caller's
+   * verified tenant/project scope) and `query` / `parameters` must be empty.
+   * It does not need the raw-dispatch opt-out that free-text `query` needs.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+   * @return Whether the traversal field is set.
+   */
+  @java.lang.Override
+  public boolean hasTraversal() {
+    return ((bitField0_ & 0x00000008) != 0);
+  }
+  /**
+   * <pre>
+   * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+   * itself (every node and relationship on a path must carry the caller's
+   * verified tenant/project scope) and `query` / `parameters` must be empty.
+   * It does not need the raw-dispatch opt-out that free-text `query` needs.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+   * @return The traversal.
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.GraphTraversal getTraversal() {
+    return traversal_ == null ? com.udb.entity.v1.GraphTraversal.getDefaultInstance() : traversal_;
+  }
+  /**
+   * <pre>
+   * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+   * itself (every node and relationship on a path must carry the caller's
+   * verified tenant/project scope) and `query` / `parameters` must be empty.
+   * It does not need the raw-dispatch opt-out that free-text `query` needs.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.GraphTraversalOrBuilder getTraversalOrBuilder() {
+    return traversal_ == null ? com.udb.entity.v1.GraphTraversal.getDefaultInstance() : traversal_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -259,6 +306,9 @@ private static final long serialVersionUID = 0L;
     if (readOnly_ != false) {
       output.writeBool(7, readOnly_);
     }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      output.writeMessage(8, getTraversal());
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -293,6 +343,10 @@ private static final long serialVersionUID = 0L;
     if (readOnly_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(7, readOnly_);
+    }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(8, getTraversal());
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -332,6 +386,11 @@ private static final long serialVersionUID = 0L;
         .equals(other.getPageToken())) return false;
     if (getReadOnly()
         != other.getReadOnly()) return false;
+    if (hasTraversal() != other.hasTraversal()) return false;
+    if (hasTraversal()) {
+      if (!getTraversal()
+          .equals(other.getTraversal())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -364,6 +423,10 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + READ_ONLY_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getReadOnly());
+    if (hasTraversal()) {
+      hash = (37 * hash) + TRAVERSAL_FIELD_NUMBER;
+      hash = (53 * hash) + getTraversal().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -497,6 +560,7 @@ private static final long serialVersionUID = 0L;
         internalGetContextFieldBuilder();
         internalGetResourceFieldBuilder();
         internalGetParametersFieldBuilder();
+        internalGetTraversalFieldBuilder();
       }
     }
     @java.lang.Override
@@ -522,6 +586,11 @@ private static final long serialVersionUID = 0L;
       limit_ = 0;
       pageToken_ = "";
       readOnly_ = false;
+      traversal_ = null;
+      if (traversalBuilder_ != null) {
+        traversalBuilder_.dispose();
+        traversalBuilder_ = null;
+      }
       return this;
     }
 
@@ -586,6 +655,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000040) != 0)) {
         result.readOnly_ = readOnly_;
       }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.traversal_ = traversalBuilder_ == null
+            ? traversal_
+            : traversalBuilder_.build();
+        to_bitField0_ |= 0x00000008;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -625,6 +700,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getReadOnly() != false) {
         setReadOnly(other.getReadOnly());
+      }
+      if (other.hasTraversal()) {
+        mergeTraversal(other.getTraversal());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -693,6 +771,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 56
+            case 66: {
+              input.readMessage(
+                  internalGetTraversalFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 66
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1279,6 +1364,190 @@ private static final long serialVersionUID = 0L;
       readOnly_ = false;
       onChanged();
       return this;
+    }
+
+    private com.udb.entity.v1.GraphTraversal traversal_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.GraphTraversal, com.udb.entity.v1.GraphTraversal.Builder, com.udb.entity.v1.GraphTraversalOrBuilder> traversalBuilder_;
+    /**
+     * <pre>
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     * @return Whether the traversal field is set.
+     */
+    public boolean hasTraversal() {
+      return ((bitField0_ & 0x00000080) != 0);
+    }
+    /**
+     * <pre>
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     * @return The traversal.
+     */
+    public com.udb.entity.v1.GraphTraversal getTraversal() {
+      if (traversalBuilder_ == null) {
+        return traversal_ == null ? com.udb.entity.v1.GraphTraversal.getDefaultInstance() : traversal_;
+      } else {
+        return traversalBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     */
+    public Builder setTraversal(com.udb.entity.v1.GraphTraversal value) {
+      if (traversalBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        traversal_ = value;
+      } else {
+        traversalBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     */
+    public Builder setTraversal(
+        com.udb.entity.v1.GraphTraversal.Builder builderForValue) {
+      if (traversalBuilder_ == null) {
+        traversal_ = builderForValue.build();
+      } else {
+        traversalBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     */
+    public Builder mergeTraversal(com.udb.entity.v1.GraphTraversal value) {
+      if (traversalBuilder_ == null) {
+        if (((bitField0_ & 0x00000080) != 0) &&
+          traversal_ != null &&
+          traversal_ != com.udb.entity.v1.GraphTraversal.getDefaultInstance()) {
+          getTraversalBuilder().mergeFrom(value);
+        } else {
+          traversal_ = value;
+        }
+      } else {
+        traversalBuilder_.mergeFrom(value);
+      }
+      if (traversal_ != null) {
+        bitField0_ |= 0x00000080;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     */
+    public Builder clearTraversal() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      traversal_ = null;
+      if (traversalBuilder_ != null) {
+        traversalBuilder_.dispose();
+        traversalBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     */
+    public com.udb.entity.v1.GraphTraversal.Builder getTraversalBuilder() {
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return internalGetTraversalFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     */
+    public com.udb.entity.v1.GraphTraversalOrBuilder getTraversalOrBuilder() {
+      if (traversalBuilder_ != null) {
+        return traversalBuilder_.getMessageOrBuilder();
+      } else {
+        return traversal_ == null ?
+            com.udb.entity.v1.GraphTraversal.getDefaultInstance() : traversal_;
+      }
+    }
+    /**
+     * <pre>
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.GraphTraversal, com.udb.entity.v1.GraphTraversal.Builder, com.udb.entity.v1.GraphTraversalOrBuilder>
+        internalGetTraversalFieldBuilder() {
+      if (traversalBuilder_ == null) {
+        traversalBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.entity.v1.GraphTraversal, com.udb.entity.v1.GraphTraversal.Builder, com.udb.entity.v1.GraphTraversalOrBuilder>(
+                getTraversal(),
+                getParentForChildren(),
+                isClean());
+        traversal_ = null;
+      }
+      return traversalBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.GraphQueryRequest)

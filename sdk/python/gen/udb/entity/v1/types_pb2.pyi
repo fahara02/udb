@@ -64,6 +64,7 @@ from udb.entity.v1.stores_pb2 import DocumentUpsertRequest as DocumentUpsertRequ
 from udb.entity.v1.stores_pb2 import DocumentDeleteRequest as DocumentDeleteRequest
 from udb.entity.v1.stores_pb2 import DocumentSet as DocumentSet
 from udb.entity.v1.stores_pb2 import GraphQueryRequest as GraphQueryRequest
+from udb.entity.v1.stores_pb2 import GraphTraversal as GraphTraversal
 from udb.entity.v1.stores_pb2 import GraphMutationRequest as GraphMutationRequest
 from udb.entity.v1.stores_pb2 import GraphResultSet as GraphResultSet
 from udb.entity.v1.stores_pb2 import TimeSeriesPoint as TimeSeriesPoint
@@ -72,6 +73,7 @@ from udb.entity.v1.stores_pb2 import TimeSeriesQueryRequest as TimeSeriesQueryRe
 from udb.entity.v1.stores_pb2 import TimeSeriesQueryResponse as TimeSeriesQueryResponse
 from udb.entity.v1.stores_pb2 import AnalyticalQueryRequest as AnalyticalQueryRequest
 from udb.entity.v1.stores_pb2 import AnalyticalQueryResponse as AnalyticalQueryResponse
+from udb.entity.v1.stores_pb2 import GraphTraversalDirection as GraphTraversalDirection
 from udb.entity.v1.tx_pb2 import Mutation as Mutation
 from udb.entity.v1.tx_pb2 import TxStatus as TxStatus
 from udb.entity.v1.cdc_pb2 import CDCSubscriptionRequest as CDCSubscriptionRequest
@@ -157,3 +159,7 @@ VECTOR_FUSION_STRATEGY_UNSPECIFIED: _vector_pb2.VectorFusionStrategy
 VECTOR_FUSION_STRATEGY_RRF: _vector_pb2.VectorFusionStrategy
 VECTOR_FUSION_STRATEGY_WEIGHTED: _vector_pb2.VectorFusionStrategy
 VECTOR_FUSION_STRATEGY_DBSF: _vector_pb2.VectorFusionStrategy
+GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED: _stores_pb2.GraphTraversalDirection
+GRAPH_TRAVERSAL_DIRECTION_OUTGOING: _stores_pb2.GraphTraversalDirection
+GRAPH_TRAVERSAL_DIRECTION_INCOMING: _stores_pb2.GraphTraversalDirection
+GRAPH_TRAVERSAL_DIRECTION_BOTH: _stores_pb2.GraphTraversalDirection

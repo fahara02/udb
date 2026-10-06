@@ -1,0 +1,6 @@
+# Consumer mode (UDB_EMBEDDING_SIDECAR_MODE=consumer) only; HTTP mode is stdlib-only.
+# kafka-python is pure Python (no librdkafka build on Alpine/musl).
+kafka-python>=2.2,<4
+# udb-client ships the generated udb.* gRPC stubs (EmbeddingService) plus
+# grpcio/protobuf. Keep it on the broker's minor line.
+udb-client>=0.5.0,<0.6

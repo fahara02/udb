@@ -1448,6 +1448,13 @@ impl ProjectionWorker {
                 resource_name,
                 target_options,
             )
+        } else if normalized_backend == "qdrant" {
+            // `payload_fields` may name proto fields; the row carries columns.
+            with_manifest_payload_fields(
+                &self.catalog.active_for(project_id).manifest,
+                resource_name,
+                target_options,
+            )
         } else {
             target_options.clone()
         };
@@ -1694,13 +1701,7 @@ fn row_identity(
     source_payload: &serde_json::Value,
     target_options: &serde_json::Value,
 ) -> Result<String, String> {
-    for key in [
-        "id_field",
-        "point_id_field",
-        "document_id_field",
-        "primary_key",
-        "partition_key",
-    ] {
+    for key in ROW_IDENTITY_OPTION_KEYS {
         if let Some(field) = option_value(target_options, key)
             && let Some(value) = source_payload
                 .get(&field)
@@ -1935,11 +1936,7 @@ fn render_qdrant_projection(
     // hashes any non-UUID, non-integer id into a stable UUID), so two
     // tenants' rows with the same primary key are two points: neither tenant's
     // upsert replaces, nor its delete removes, the other's vector.
-    let id = scope.scoped_key(&row_identity(
-        source_row_key,
-        source_payload,
-        target_options,
-    )?);
+    let id = qdrant_point_key(source_row_key, target_options, source_payload, scope)?;
     if operation.eq_ignore_ascii_case("delete") {
         return Ok(serde_json::json!({
             "operation": "delete",
@@ -1963,9 +1960,177 @@ fn render_qdrant_projection(
         "points": [{
             "id": id,
             "vector": vector,
-            "payload": scope.stamp(source_payload),
+            "payload": qdrant_point_payload(source_row_key, target_options, source_payload, scope),
         }],
     }))
+}
+
+/// The un-hashed point id a projected row is written under: the row identity
+/// namespaced by tenant/project. The Qdrant executor hashes it into a UUID.
+fn qdrant_point_key(
+    source_row_key: &serde_json::Value,
+    target_options: &serde_json::Value,
+    source_payload: &serde_json::Value,
+    scope: &ProjectionScope,
+) -> Result<String, String> {
+    Ok(scope.scoped_key(&row_identity(
+        source_row_key,
+        source_payload,
+        target_options,
+    )?))
+}
+
+/// The point id key the projection worker writes a source row under, computed
+/// from the row itself: `source_row_key` must be the row's primary-key object in
+/// the same JSON shape the task ledger hands the worker (a JSONB value), and
+/// `source_row` must carry the row's tenant column and any declared id field.
+/// The Postgres full-text leg of a hybrid vector search maps every matching
+/// source row through this, so its hits and the dense leg's hits share ids.
+pub(crate) fn qdrant_projection_point_key(
+    project_id: &str,
+    source_row_key: &serde_json::Value,
+    target_options: &serde_json::Value,
+    source_row: &serde_json::Value,
+) -> Result<String, String> {
+    let scope = ProjectionScope::resolve(task_project_id(project_id), target_options, source_row);
+    scope.require_tenant("qdrant projection point id")?;
+    qdrant_point_key(source_row_key, target_options, source_row, &scope)
+}
+
+/// Target option keys that name the source row's identity field (the ones
+/// [`row_identity`] consults).
+pub(crate) const ROW_IDENTITY_OPTION_KEYS: [&str; 5] = [
+    "id_field",
+    "point_id_field",
+    "document_id_field",
+    "primary_key",
+    "partition_key",
+];
+
+/// The comma-separated names under `key`, trimmed, empties dropped.
+fn option_list(options: &serde_json::Value, key: &str) -> Vec<String> {
+    option_value(options, key)
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|name| !name.is_empty())
+                .map(ToString::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The payload a projected Qdrant point carries. Without a `payload_fields`
+/// option it is the whole source row. With one, it is ONLY the listed fields
+/// (a listed field the row does not carry is simply absent) plus the row's
+/// identity (its primary-key columns, any declared id field and the tenant
+/// column) so a point can always be traced back to its source row. Either way
+/// the scope stamp is applied last: a source column named `_tenant_id` or
+/// `_project_id` can never claim another scope.
+fn qdrant_point_payload(
+    source_row_key: &serde_json::Value,
+    target_options: &serde_json::Value,
+    source_payload: &serde_json::Value,
+    scope: &ProjectionScope,
+) -> serde_json::Value {
+    let mut keep = option_list(target_options, "payload_fields");
+    if keep.is_empty() {
+        return scope.stamp(source_payload);
+    }
+    let Some(source) = source_payload.as_object() else {
+        return scope.stamp(source_payload);
+    };
+    // An unknown primary key makes the row key the whole payload; only a real
+    // key subset is identity.
+    if source_row_key != source_payload
+        && let Some(row_key) = source_row_key.as_object()
+    {
+        keep.extend(row_key.keys().cloned());
+    }
+    for key in ROW_IDENTITY_OPTION_KEYS
+        .iter()
+        .chain(["tenant_field"].iter())
+    {
+        if let Some(field) = option_value(target_options, key)
+            && !field.trim().is_empty()
+        {
+            keep.push(field.trim().to_string());
+        }
+    }
+    let mut selected = serde_json::Map::new();
+    for name in &keep {
+        let found = source
+            .get(name.as_str())
+            .map(|value| (name.clone(), value))
+            .or_else(|| {
+                source
+                    .iter()
+                    .find(|(key, _)| key.eq_ignore_ascii_case(name))
+                    .map(|(key, value)| (key.clone(), value))
+            });
+        if let Some((key, value)) = found {
+            selected.insert(key, value.clone());
+        }
+    }
+    scope.stamp(&serde_json::Value::Object(selected))
+}
+
+/// `target_options` with a Qdrant target's `payload_fields` resolved to the
+/// source table's physical column names (the keys a projected row carries), so
+/// a list written in proto field names selects the right columns. Names the
+/// table does not know are kept as written.
+fn with_manifest_payload_fields(
+    manifest: &CatalogManifest,
+    resource_name: &str,
+    target_options: &serde_json::Value,
+) -> serde_json::Value {
+    let listed = option_list(target_options, "payload_fields");
+    if listed.is_empty() {
+        return target_options.clone();
+    }
+    let plans = ProjectionPlan::from_manifest(manifest);
+    let Some(table) = plans
+        .iter()
+        .find(|plan| {
+            plan.targets.iter().any(|target| {
+                normalize_backend(&target.backend) == "qdrant"
+                    && target.resource_name == resource_name
+            })
+        })
+        .and_then(|plan| manifest_table_named(manifest, &plan.source_schema, &plan.source_table))
+    else {
+        return target_options.clone();
+    };
+    let resolver = crate::planning::broker::column_resolver(table);
+    let resolved = listed
+        .iter()
+        .map(|name| {
+            resolver
+                .get(&name.to_ascii_lowercase())
+                .cloned()
+                .unwrap_or_else(|| name.clone())
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    let options = match target_options {
+        serde_json::Value::Array(entries) => entries
+            .iter()
+            .map(|entry| {
+                let is_payload_fields = entry
+                    .get("key")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|key| key.eq_ignore_ascii_case("payload_fields"));
+                if is_payload_fields {
+                    serde_json::json!({ "key": "payload_fields", "value": resolved })
+                } else {
+                    entry.clone()
+                }
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    serde_json::Value::Array(options)
 }
 
 /// Option keys an edge projection declares its endpoint labels under (first
@@ -2998,6 +3163,144 @@ mod tests {
         assert_eq!(point_id("t1", "upsert"), point_id("t1", "delete"));
     }
 
+    fn qdrant_payload(
+        options: &serde_json::Value,
+        payload: &serde_json::Value,
+    ) -> serde_json::Value {
+        let scope = ProjectionScope::resolve("proj-a", options, payload);
+        let rendered = render_projection_mutation(
+            "qdrant",
+            "vector",
+            "docs",
+            "upsert",
+            &json!({"id":"p1"}),
+            options,
+            payload,
+            &scope,
+        )
+        .unwrap();
+        rendered["points"][0]["payload"].clone()
+    }
+
+    /// `payload_fields` keeps only the listed fields plus the row identity and
+    /// the scope stamp; the vector and unlisted columns stay out of the point.
+    #[test]
+    fn qdrant_payload_fields_selects_listed_fields_and_identity() {
+        let options = json!([
+            {"key":"tenant_field","value":"tenant_id"},
+            {"key":"vector_field","value":"embedding"},
+            {"key":"payload_fields","value":"title, Body ,missing,topic_ids"}
+        ]);
+        let payload = json!({
+            "id":"p1","tenant_id":"t1","title":"Ada","body":"text",
+            "secret":"x","embedding":[0.1,0.2],"topic_ids":["a","b"]
+        });
+        let point = qdrant_payload(&options, &payload);
+        assert_eq!(
+            point,
+            json!({
+                "id":"p1","tenant_id":"t1","title":"Ada","body":"text",
+                "topic_ids":["a","b"],"_tenant_id":"t1","_project_id":"proj-a"
+            }),
+            "only listed fields (case-insensitive), identity and scope stamps; a missing listed field is absent"
+        );
+        // An array column stays a JSON array (never stringified) so a Qdrant
+        // match filter on one element matches the point.
+        assert!(point["topic_ids"].is_array(), "{point}");
+    }
+
+    /// A listed (or present) `_tenant_id`/`_project_id` source column can never
+    /// override the scope stamp.
+    #[test]
+    fn qdrant_payload_fields_cannot_spoof_the_scope_stamp() {
+        let options = json!([
+            {"key":"tenant_field","value":"tenant_id"},
+            {"key":"payload_fields","value":"_tenant_id,_project_id,title"}
+        ]);
+        let payload = json!({
+            "id":"p1","tenant_id":"t1","title":"Ada","vector":[0.1],
+            "_tenant_id":"victim","_project_id":"victim-project"
+        });
+        let point = qdrant_payload(&options, &payload);
+        assert_eq!(point["_tenant_id"], "t1");
+        assert_eq!(point["_project_id"], "proj-a");
+        assert_eq!(point["title"], "Ada");
+        assert!(point.get("vector").is_none(), "{point}");
+    }
+
+    /// Without `payload_fields` the point payload is the whole stamped row,
+    /// exactly as before.
+    #[test]
+    fn qdrant_payload_without_payload_fields_is_the_whole_row() {
+        let options = json!([{"key":"tenant_field","value":"tenant_id"}]);
+        let payload = json!({"id":"p1","tenant_id":"t1","title":"Ada","vector":[0.1]});
+        let scope = ProjectionScope::resolve("proj-a", &options, &payload);
+        assert_eq!(qdrant_payload(&options, &payload), scope.stamp(&payload));
+        let blank = json!([
+            {"key":"tenant_field","value":"tenant_id"},
+            {"key":"payload_fields","value":" , "}
+        ]);
+        assert_eq!(qdrant_payload(&blank, &payload), scope.stamp(&payload));
+    }
+
+    /// The row-side point key (used by the Postgres full-text hybrid leg) is
+    /// the id the projection renders for the same row.
+    #[test]
+    fn qdrant_projection_point_key_matches_the_rendered_point_id() {
+        let options = json!([{"key":"tenant_field","value":"tenant_id"}]);
+        let payload = json!({"id":"p1","tenant_id":"t1","vector":[0.1]});
+        let key = json!({"id":"p1"});
+        let scope = ProjectionScope::resolve("proj-a", &options, &payload);
+        let rendered = render_projection_mutation(
+            "qdrant", "vector", "docs", "upsert", &key, &options, &payload, &scope,
+        )
+        .unwrap();
+        let row = json!({"id":"p1","tenant_id":"t1"});
+        assert_eq!(
+            json!(qdrant_projection_point_key("proj-a", &key, &options, &row).unwrap()),
+            rendered["points"][0]["id"]
+        );
+        // An empty project resolves to the default project, as at enqueue.
+        assert_eq!(
+            qdrant_projection_point_key("", &key, &options, &row).unwrap(),
+            format!("t:t1/p:{}/p1", crate::runtime::catalog::DEFAULT_PROJECT_ID)
+        );
+        // A row without its tenant value is refused, never keyed unscoped.
+        assert!(
+            qdrant_projection_point_key("proj-a", &key, &options, &json!({"id":"p1"})).is_err()
+        );
+        let unresolved = json!({"id":"p1","tenant_id":{"$in":["t1"]}});
+        assert!(qdrant_projection_point_key("proj-a", &key, &options, &unresolved).is_err());
+    }
+
+    /// `payload_fields` written as proto field names resolve to the source
+    /// table's physical columns.
+    #[test]
+    fn qdrant_payload_fields_resolve_to_physical_columns() {
+        let mut manifest = tenanted_vector_manifest(
+            "payload-fields",
+            vec![opt("payload_fields", "displayName,id")],
+        );
+        manifest.tables[0]
+            .columns
+            .push(crate::generation::manifest::ManifestColumn {
+                field_name: "displayName".to_string(),
+                column_name: "display_name".to_string(),
+                ..Default::default()
+            });
+        let options = serde_json::to_value(&manifest.projections[0].options).unwrap();
+        let resolved = with_manifest_payload_fields(&manifest, "documents", &options);
+        assert_eq!(
+            option_value(&resolved, "payload_fields").as_deref(),
+            Some("display_name,id")
+        );
+        // Another collection's target is left untouched.
+        assert_eq!(
+            with_manifest_payload_fields(&manifest, "other", &options),
+            options
+        );
+    }
+
     #[test]
     fn scoped_key_escapes_separators_in_scope_ids() {
         let scope = ProjectionScope {
@@ -3333,7 +3636,7 @@ mod tests {
             {"key":"edge_source_field","value":"doctor_id"},
             {"key":"edge_target_field","value":"patient_id"}
         ]);
-        let payload = json!({"id":"e1","tenant_id":"t1","doctor_id":"d1","patient_id":"p1"});
+        let payload = json!({"id":"e1","tenant_id":"t1","doctor_id":"d1","patient_id":"p1","weight":0.5,"kind":"peer"});
         let scope = ProjectionScope::resolve("proj-a", &options, &payload);
         let key = json!({"id":"e1"});
         let upsert = render_projection_mutation(
@@ -3356,6 +3659,11 @@ mod tests {
             upsert["scope"],
             json!({"_tenant_id":"t1","_project_id":"proj-a"})
         );
+        // The edge row's non-endpoint columns become relationship properties
+        // (the executor applies them with `SET r += $props`), scope-stamped.
+        assert_eq!(upsert["properties"]["weight"], 0.5);
+        assert_eq!(upsert["properties"]["kind"], "peer");
+        assert_eq!(upsert["properties"]["_tenant_id"], "t1");
 
         let delete = render_projection_mutation(
             "neo4j",

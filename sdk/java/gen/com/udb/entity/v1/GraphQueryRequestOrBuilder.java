@@ -90,4 +90,40 @@ public interface GraphQueryRequestOrBuilder extends
    * @return The readOnly.
    */
   boolean getReadOnly();
+
+  /**
+   * <pre>
+   * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+   * itself (every node and relationship on a path must carry the caller's
+   * verified tenant/project scope) and `query` / `parameters` must be empty.
+   * It does not need the raw-dispatch opt-out that free-text `query` needs.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+   * @return Whether the traversal field is set.
+   */
+  boolean hasTraversal();
+  /**
+   * <pre>
+   * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+   * itself (every node and relationship on a path must carry the caller's
+   * verified tenant/project scope) and `query` / `parameters` must be empty.
+   * It does not need the raw-dispatch opt-out that free-text `query` needs.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+   * @return The traversal.
+   */
+  com.udb.entity.v1.GraphTraversal getTraversal();
+  /**
+   * <pre>
+   * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+   * itself (every node and relationship on a path must carry the caller's
+   * verified tenant/project scope) and `query` / `parameters` must be empty.
+   * It does not need the raw-dispatch opt-out that free-text `query` needs.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+   */
+  com.udb.entity.v1.GraphTraversalOrBuilder getTraversalOrBuilder();
 }

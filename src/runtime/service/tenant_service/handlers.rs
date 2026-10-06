@@ -375,7 +375,14 @@ pub(crate) async fn purge_tenant(
     // name the tenant's collections are relational rows the purge deletes, and
     // a hard purge that left the tenant's vectors (with their chunk text) behind
     // would not be an erasure.
-    let vectors = super::tenant_purge::purge_tenant_vector_stores(svc, manifest, &tenant_id).await;
+    let mut vectors =
+        super::tenant_purge::purge_tenant_vector_stores(svc, manifest, &tenant_id).await;
+    // The tenant's graph records (Neo4j nodes and relationships stamped with
+    // its `_tenant_id`) are erased in the same pass and reported alongside.
+    let graph = super::tenant_purge::purge_tenant_graph_stores(svc, manifest, &tenant_id).await;
+    let graph_deleted = graph.deleted_total();
+    vectors.purged.extend(graph.purged);
+    vectors.excluded.extend(graph.excluded);
     let report = {
         #[cfg(feature = "redis")]
         {
@@ -445,7 +452,7 @@ pub(crate) async fn purge_tenant(
                     }),
             )
             .collect(),
-        total_deleted: report.total_deleted,
+        total_deleted: report.total_deleted + graph_deleted,
         tenant_denylisted: report.tenant_denylisted,
         principals_denylisted: report.principals_denylisted as u32,
         message: "tenant purged".to_string(),

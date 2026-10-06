@@ -13,10 +13,10 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.27 | protocol v1.0.0                                          │
+│    crate v0.5.28 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-Alongside the data plane that reads and writes your app's tables, UDB 0.5.27 includes a native control plane
+Alongside the data plane that reads and writes your app's tables, UDB 0.5.28 includes a native control plane
 — a set of built-in gRPC services that handle the plumbing
 most applications end up building anyway. If you need login and access control, file
 storage, asset pipelines, realtime coordination, multi-tenancy, notifications,
@@ -172,6 +172,30 @@ UDB 0.5.7 tightens the operational boundary behind several of these surfaces:
 - Storage, Scheduler, and Workflow apply claim-first project ownership to
   creation, lookup, mutation, replay, and event lineage. Tenant-wide behavior is
   retained only for credentials that intentionally carry no project authority.
+
+`EmbeddingService` itself never runs inference. It emits `udb.embedding.work.v1`
+work items, and a sidecar computes the vectors and reports them back through the
+internal-only `ReportEmbedding`, `ReportEmbeddingBatch` and
+`ReportEmbeddingFailure` RPCs. Since 0.5.28, UDB ships that consumer. Set
+`UDB_EMBEDDING_SIDECAR_MODE=consumer` on the bundled embedding sidecar
+(`sidecars/embedding`) and it does the following:
+
+- reads the topic in a consumer group;
+- makes one batched provider call per (tenant, project, provider, model,
+  dimensions, endpoint) group;
+- retries 429, 5xx and timeouts with jittered backoff;
+- reports successes and failures to the broker;
+- commits offsets only after those reports are delivered, which gives
+  at-least-once delivery.
+
+The sidecar needs three things:
+
+- a loopback or mTLS path to the native listener;
+- a bearer for each tenant with scope `udb:embedding:report-embedding`;
+- `UDB_KAFKA_BROKERS` set on the broker.
+
+[`sidecars/embedding/README.md`](../sidecars/embedding/README.md) lists every
+setting.
 
 These services don't have `UdbProject` workflow facades yet. Until they do, call them
 through the **thin generated client** — the generated robustness layer

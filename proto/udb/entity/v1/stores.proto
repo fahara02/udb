@@ -120,6 +120,52 @@ message GraphQueryRequest {
   int32 limit = 5;
   string page_token = 6;
   bool read_only = 7;
+  // Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+  // itself (every node and relationship on a path must carry the caller's
+  // verified tenant/project scope) and `query` / `parameters` must be empty.
+  // It does not need the raw-dispatch opt-out that free-text `query` needs.
+  GraphTraversal traversal = 8;
+}
+
+// Direction a GraphTraversal follows relationships from its start node.
+enum GraphTraversalDirection {
+  // Treated as OUTGOING.
+  GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED = 0;
+  GRAPH_TRAVERSAL_DIRECTION_OUTGOING = 1;
+  GRAPH_TRAVERSAL_DIRECTION_INCOMING = 2;
+  GRAPH_TRAVERSAL_DIRECTION_BOTH = 3;
+}
+
+// A typed graph traversal: start from one node, follow relationships for
+// min_depth..max_depth hops, and return the reached nodes. Labels,
+// relationship types and property keys must be plain identifiers (ASCII
+// letters, digits, underscore; not starting with a digit); values are bound
+// as query parameters.
+message GraphTraversal {
+  // Label of the start node (required).
+  string start_label = 1;
+  // `id` property of the start node (required).
+  string start_id = 2;
+  // Relationship types to follow; empty follows any type.
+  repeated string relationship_types = 3;
+  GraphTraversalDirection direction = 4;
+  // Minimum hops (0 = 1).
+  int32 min_depth = 5;
+  // Maximum hops (0 = 1). Values above the server cap (4) are rejected.
+  int32 max_depth = 6;
+  // Keep only reached nodes carrying at least one of these labels.
+  repeated string node_labels = 7;
+  // Keep only reached nodes whose property equals the given value
+  // (e.g. owner / audience filters).
+  map<string, string> node_property_equals = 8;
+  // Maximum rows (0 = 100; capped at 1000).
+  int32 limit = 9;
+  // Return one row per path with its relationships instead of one row per
+  // distinct reached node.
+  bool return_relationships = 10;
+  // Follow only relationships whose property equals the given value (applied
+  // to EVERY relationship on the path, e.g. kind = "peer").
+  map<string, string> relationship_property_equals = 11;
 }
 
 message GraphMutationRequest {

@@ -945,6 +945,345 @@ impl GraphScope {
     }
 }
 
+// ── Typed tenant-scoped traversal ─────────────────────────────────────────────
+
+/// Deepest traversal a typed `GraphQuery.traversal` may request.
+pub const GRAPH_TRAVERSAL_MAX_DEPTH: i64 = 4;
+/// Rows returned when a traversal sets no limit.
+pub const GRAPH_TRAVERSAL_DEFAULT_LIMIT: i64 = 100;
+/// Largest row limit a traversal may use (larger limits are clamped).
+pub const GRAPH_TRAVERSAL_MAX_LIMIT: i64 = 1000;
+/// Most relationship types / node labels / property filters per traversal.
+const GRAPH_TRAVERSAL_MAX_LIST: usize = 32;
+
+/// The verified scope every node and relationship of a traversal must carry.
+/// Built by the dispatch core from the caller's verified context, never from
+/// request JSON.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GraphTraversalScope {
+    pub tenant_id: String,
+    pub project_id: String,
+    /// The default project also owns records written without a
+    /// `_project_id` (the IR writes none for an empty project).
+    pub unset_project_is_default: bool,
+}
+
+impl GraphTraversalScope {
+    /// Parse the broker-stamped `scope` of a traversal spec.
+    fn from_spec(scope: Option<&Json>) -> Result<Self, String> {
+        let scope = scope
+            .and_then(Json::as_object)
+            .ok_or_else(|| "graph traversal requires a broker-stamped scope".to_string())?;
+        let text = |key: &str| {
+            scope
+                .get(key)
+                .and_then(Json::as_str)
+                .map(str::trim)
+                .unwrap_or_default()
+                .to_string()
+        };
+        let parsed = Self {
+            tenant_id: text("_tenant_id"),
+            project_id: text("_project_id"),
+            unset_project_is_default: scope
+                .get("unset_project_is_default")
+                .and_then(Json::as_bool)
+                .unwrap_or(false),
+        };
+        if parsed.tenant_id.is_empty() {
+            return Err("graph traversal requires a verified tenant".to_string());
+        }
+        if parsed.project_id.is_empty() {
+            return Err("graph traversal requires a project".to_string());
+        }
+        Ok(parsed)
+    }
+
+    /// `x._tenant_id = $scope_tenant_id AND <project predicate on x>`.
+    fn predicate(&self, var: &str) -> String {
+        let project = if self.unset_project_is_default {
+            format!("({var}._project_id = $scope_project_id OR {var}._project_id IS NULL)")
+        } else {
+            format!("{var}._project_id = $scope_project_id")
+        };
+        format!("{var}._tenant_id = $scope_tenant_id AND {project}")
+    }
+}
+
+/// A typed traversal request (the `traversal` object of a query spec).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct GraphTraversalSpec {
+    pub start_label: String,
+    pub start_id: String,
+    pub relationship_types: Vec<String>,
+    /// `outgoing` (default), `incoming` or `both`.
+    pub direction: String,
+    pub min_depth: i64,
+    pub max_depth: i64,
+    pub node_labels: Vec<String>,
+    pub node_property_equals: Vec<(String, Json)>,
+    /// Equality filters every relationship on a path must satisfy.
+    pub relationship_property_equals: Vec<(String, Json)>,
+    pub limit: i64,
+    pub return_relationships: bool,
+}
+
+impl GraphTraversalSpec {
+    /// Parse the `traversal` object of a query spec. Unknown keys are refused
+    /// so a misspelt filter never silently widens the result.
+    pub fn from_json(value: &Json) -> Result<Self, String> {
+        let map = value
+            .as_object()
+            .ok_or_else(|| "graph traversal must be an object".to_string())?;
+        const KEYS: [&str; 11] = [
+            "start_label",
+            "start_id",
+            "relationship_types",
+            "direction",
+            "min_depth",
+            "max_depth",
+            "node_labels",
+            "node_property_equals",
+            "relationship_property_equals",
+            "limit",
+            "return_relationships",
+        ];
+        if let Some(unknown) = map.keys().find(|key| !KEYS.contains(&key.as_str())) {
+            return Err(format!(
+                "graph traversal field '{unknown}' is not recognised"
+            ));
+        }
+        let text = |key: &str| -> Result<String, String> {
+            match map.get(key) {
+                None | Some(Json::Null) => Ok(String::new()),
+                Some(Json::String(value)) => Ok(value.trim().to_string()),
+                Some(_) => Err(format!("graph traversal field '{key}' must be a string")),
+            }
+        };
+        let list = |key: &str| -> Result<Vec<String>, String> {
+            match map.get(key) {
+                None | Some(Json::Null) => Ok(Vec::new()),
+                Some(Json::Array(items)) => items
+                    .iter()
+                    .map(|item| {
+                        item.as_str().map(|s| s.trim().to_string()).ok_or_else(|| {
+                            format!("graph traversal field '{key}' must hold strings")
+                        })
+                    })
+                    .collect(),
+                Some(_) => Err(format!("graph traversal field '{key}' must be an array")),
+            }
+        };
+        let int = |key: &str| -> Result<i64, String> {
+            match map.get(key) {
+                None | Some(Json::Null) => Ok(0),
+                Some(value) => value
+                    .as_i64()
+                    .ok_or_else(|| format!("graph traversal field '{key}' must be an integer")),
+            }
+        };
+        let equality_filters = |key: &str| -> Result<Vec<(String, Json)>, String> {
+            match map.get(key) {
+                None | Some(Json::Null) => Ok(Vec::new()),
+                Some(Json::Object(props)) => props
+                    .iter()
+                    .map(|(prop, value)| match value {
+                        Json::String(_) | Json::Number(_) | Json::Bool(_) => {
+                            Ok((prop.clone(), value.clone()))
+                        }
+                        _ => Err(format!(
+                            "graph traversal {key} filter '{prop}' must be a string, number or boolean"
+                        )),
+                    })
+                    .collect(),
+                Some(_) => Err(format!("graph traversal field '{key}' must be an object")),
+            }
+        };
+        let node_property_equals = equality_filters("node_property_equals")?;
+        let relationship_property_equals = equality_filters("relationship_property_equals")?;
+        Ok(Self {
+            start_label: text("start_label")?,
+            start_id: text("start_id")?,
+            relationship_types: list("relationship_types")?,
+            direction: text("direction")?,
+            min_depth: int("min_depth")?,
+            max_depth: int("max_depth")?,
+            node_labels: list("node_labels")?,
+            node_property_equals,
+            relationship_property_equals,
+            limit: int("limit")?,
+            return_relationships: match map.get("return_relationships") {
+                None | Some(Json::Null) => false,
+                Some(Json::Bool(value)) => *value,
+                Some(_) => {
+                    return Err(
+                        "graph traversal field 'return_relationships' must be a boolean"
+                            .to_string(),
+                    );
+                }
+            },
+        })
+    }
+}
+
+/// Build the parameterized, tenant-scoped Cypher for a typed traversal.
+///
+/// Every node on each matched path (the start node included) and every
+/// relationship on it must carry the verified `_tenant_id` / `_project_id`,
+/// so a traversal can never step into, or through, another tenant's graph.
+/// Labels, relationship types and property keys are validated identifiers
+/// (backtick-quoted); every value is a parameter. Depth is bounded by
+/// [`GRAPH_TRAVERSAL_MAX_DEPTH`] and the row count by
+/// [`GRAPH_TRAVERSAL_MAX_LIMIT`].
+pub fn build_graph_traversal_cypher(
+    spec: &GraphTraversalSpec,
+    scope: &GraphTraversalScope,
+) -> Result<(String, Json), String> {
+    if scope.tenant_id.trim().is_empty() {
+        return Err("graph traversal requires a verified tenant".to_string());
+    }
+    if scope.project_id.trim().is_empty() {
+        return Err("graph traversal requires a project".to_string());
+    }
+    if spec.start_label.is_empty() {
+        return Err("graph traversal start_label is required".to_string());
+    }
+    validate_neo4j_identifier(&spec.start_label)?;
+    if spec.start_id.is_empty() {
+        return Err("graph traversal start_id is required".to_string());
+    }
+    for (name, items) in [
+        ("relationship_types", spec.relationship_types.len()),
+        ("node_labels", spec.node_labels.len()),
+        ("node_property_equals", spec.node_property_equals.len()),
+        (
+            "relationship_property_equals",
+            spec.relationship_property_equals.len(),
+        ),
+    ] {
+        if items > GRAPH_TRAVERSAL_MAX_LIST {
+            return Err(format!(
+                "graph traversal {name} has {items} entries; at most {GRAPH_TRAVERSAL_MAX_LIST} are allowed"
+            ));
+        }
+    }
+    for rel_type in &spec.relationship_types {
+        validate_neo4j_identifier(rel_type)?;
+    }
+    for label in &spec.node_labels {
+        validate_neo4j_identifier(label)?;
+    }
+    for (key, _) in spec
+        .node_property_equals
+        .iter()
+        .chain(spec.relationship_property_equals.iter())
+    {
+        validate_neo4j_identifier(key)?;
+    }
+    let min_depth = if spec.min_depth == 0 {
+        1
+    } else {
+        spec.min_depth
+    };
+    let max_depth = if spec.max_depth == 0 {
+        1
+    } else {
+        spec.max_depth
+    };
+    if min_depth < 0 || max_depth < 0 {
+        return Err("graph traversal depths must not be negative".to_string());
+    }
+    if max_depth > GRAPH_TRAVERSAL_MAX_DEPTH {
+        return Err(format!(
+            "graph traversal max_depth {max_depth} exceeds the server cap of {GRAPH_TRAVERSAL_MAX_DEPTH}"
+        ));
+    }
+    if min_depth > max_depth {
+        return Err(format!(
+            "graph traversal min_depth {min_depth} is greater than max_depth {max_depth}"
+        ));
+    }
+    let limit = if spec.limit <= 0 {
+        GRAPH_TRAVERSAL_DEFAULT_LIMIT
+    } else {
+        spec.limit.min(GRAPH_TRAVERSAL_MAX_LIMIT)
+    };
+    let rel_types = spec
+        .relationship_types
+        .iter()
+        .map(|rel_type| format!("`{rel_type}`"))
+        .collect::<Vec<_>>()
+        .join("|");
+    let rel_pattern = if rel_types.is_empty() {
+        format!("[*{min_depth}..{max_depth}]")
+    } else {
+        format!("[:{rel_types}*{min_depth}..{max_depth}]")
+    };
+    let (left, right) = match spec.direction.to_ascii_lowercase().as_str() {
+        "" | "outgoing" => ("-", "->"),
+        "incoming" => ("<-", "-"),
+        "both" => ("-", "-"),
+        other => {
+            return Err(format!(
+                "graph traversal direction '{other}' must be outgoing, incoming or both"
+            ));
+        }
+    };
+
+    let mut params = serde_json::Map::new();
+    params.insert("start_id".to_string(), Json::String(spec.start_id.clone()));
+    params.insert(
+        "scope_tenant_id".to_string(),
+        Json::String(scope.tenant_id.trim().to_string()),
+    );
+    params.insert(
+        "scope_project_id".to_string(),
+        Json::String(scope.project_id.trim().to_string()),
+    );
+    let mut rel_conditions = vec![scope.predicate("r")];
+    for (index, (key, value)) in spec.relationship_property_equals.iter().enumerate() {
+        let param = format!("rel_prop_{index}");
+        rel_conditions.push(format!("r.`{key}` = ${param}"));
+        params.insert(param, value.clone());
+    }
+    let mut conditions = vec![
+        format!("all(x IN nodes(p) WHERE {})", scope.predicate("x")),
+        format!(
+            "all(r IN relationships(p) WHERE {})",
+            rel_conditions.join(" AND ")
+        ),
+    ];
+    if !spec.node_labels.is_empty() {
+        let labels = spec
+            .node_labels
+            .iter()
+            .map(|label| format!("m:`{label}`"))
+            .collect::<Vec<_>>()
+            .join(" OR ");
+        conditions.push(format!("({labels})"));
+    }
+    for (index, (key, value)) in spec.node_property_equals.iter().enumerate() {
+        let param = format!("prop_{index}");
+        conditions.push(format!("m.`{key}` = ${param}"));
+        params.insert(param, value.clone());
+    }
+    let label = &spec.start_label;
+    let mut cypher = format!(
+        "MATCH p = (s:`{label}` {{id: $start_id, _tenant_id: $scope_tenant_id}}){left}{rel_pattern}{right}(m) WHERE {}",
+        conditions.join(" AND ")
+    );
+    if spec.return_relationships {
+        cypher.push_str(&format!(
+            " RETURN labels(m) AS labels, properties(m) AS properties, length(p) AS depth, [r IN relationships(p) | {{type: type(r), properties: properties(r), start_id: startNode(r).id, end_id: endNode(r).id}}] AS relationships ORDER BY depth LIMIT {limit}"
+        ));
+    } else {
+        cypher.push_str(&format!(
+            " WITH m, min(length(p)) AS depth RETURN labels(m) AS labels, properties(m) AS properties, depth ORDER BY depth, m.id LIMIT {limit}"
+        ));
+    }
+    Ok((cypher, Json::Object(params)))
+}
+
 /// One projected relationship.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GraphEdge {
@@ -1044,12 +1383,48 @@ impl BackendHealth for Neo4jExecutor {
 }
 
 impl QueryExecutor for Neo4jExecutor {
-    /// `{"cypher":"MATCH ...","parameters":{...}}` or
-    /// `{"label":"L","filter":{...},"limit":N}`.
+    /// `{"cypher":"MATCH ...","parameters":{...}}`,
+    /// `{"label":"L","filter":{...},"limit":N}`, or the typed
+    /// `{"traversal":{...},"scope":{...}}` whose scope the dispatch core stamps
+    /// from the caller's verified context.
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
         let spec: Json =
             serde_json::from_str(request_json).map_err(invalid_neo4j_request_json_status)?;
-        let rows = if let Some(cypher) = spec.get("cypher").and_then(Json::as_str) {
+        let rows = if let Some(traversal) = spec.get("traversal") {
+            let traversal = GraphTraversalSpec::from_json(traversal).map_err(|message| {
+                neo4j_invalid_field_status(
+                    "traversal",
+                    "must be a valid typed graph traversal",
+                    message,
+                )
+            })?;
+            let scope = GraphTraversalScope::from_spec(spec.get("scope")).map_err(|message| {
+                crate::runtime::executor_utils::policy_status(
+                    "graph_traversal",
+                    "tenant_scope_required",
+                    message,
+                )
+            })?;
+            let (cypher, params) =
+                build_graph_traversal_cypher(&traversal, &scope).map_err(|message| {
+                    neo4j_invalid_field_status(
+                        "traversal",
+                        "must be a valid typed graph traversal",
+                        message,
+                    )
+                })?;
+            let results = self
+                .post_statements(
+                    vec![json!({ "statement": cypher, "parameters": params })],
+                    Neo4jAccessMode::Read,
+                )
+                .await
+                .map_err(|err| neo4j_internal_status("query_traversal", err))?;
+            results
+                .first()
+                .map(Self::rows_from_result)
+                .unwrap_or_default()
+        } else if let Some(cypher) = spec.get("cypher").and_then(Json::as_str) {
             // The query path is read-only: refuse a write clause up front and
             // run the statement in a READ transaction so the server refuses
             // any write the lexical check could not see.
@@ -1725,5 +2100,271 @@ mod tests {
             env::remove_var("UDB_GRAPH_HTTP_URL");
         }
         assert!(Neo4jConfig::from_env().is_none());
+    }
+
+    fn traversal_scope() -> GraphTraversalScope {
+        GraphTraversalScope {
+            tenant_id: "t1".to_string(),
+            project_id: "p1".to_string(),
+            unset_project_is_default: false,
+        }
+    }
+
+    fn base_traversal() -> GraphTraversalSpec {
+        GraphTraversalSpec {
+            start_label: "Doc".to_string(),
+            start_id: "d1".to_string(),
+            ..GraphTraversalSpec::default()
+        }
+    }
+
+    #[test]
+    fn traversal_scopes_every_node_and_relationship_on_the_path() {
+        let (cypher, params) =
+            build_graph_traversal_cypher(&base_traversal(), &traversal_scope()).unwrap();
+        assert!(
+            cypher.starts_with(
+                "MATCH p = (s:`Doc` {id: $start_id, _tenant_id: $scope_tenant_id})-[*1..1]->(m)"
+            ),
+            "{cypher}"
+        );
+        assert!(
+            cypher.contains(
+                "all(x IN nodes(p) WHERE x._tenant_id = $scope_tenant_id AND x._project_id = $scope_project_id)"
+            ),
+            "{cypher}"
+        );
+        assert!(
+            cypher.contains(
+                "all(r IN relationships(p) WHERE r._tenant_id = $scope_tenant_id AND r._project_id = $scope_project_id)"
+            ),
+            "{cypher}"
+        );
+        assert!(cypher.ends_with("LIMIT 100"), "default limit: {cypher}");
+        assert_eq!(params["scope_tenant_id"], "t1");
+        assert_eq!(params["scope_project_id"], "p1");
+        assert_eq!(params["start_id"], "d1");
+        // Values never reach the Cypher text.
+        assert!(!cypher.contains("t1") && !cypher.contains("d1"), "{cypher}");
+        assert!(cypher_write_clause(&cypher).is_none(), "{cypher}");
+    }
+
+    #[test]
+    fn traversal_default_project_also_matches_unset_project() {
+        let scope = GraphTraversalScope {
+            project_id: "default".to_string(),
+            unset_project_is_default: true,
+            ..traversal_scope()
+        };
+        let (cypher, _) = build_graph_traversal_cypher(&base_traversal(), &scope).unwrap();
+        assert!(
+            cypher.contains("(x._project_id = $scope_project_id OR x._project_id IS NULL)"),
+            "{cypher}"
+        );
+        assert!(
+            cypher.contains("(r._project_id = $scope_project_id OR r._project_id IS NULL)"),
+            "{cypher}"
+        );
+    }
+
+    #[test]
+    fn traversal_requires_a_scope() {
+        let unscoped = GraphTraversalScope {
+            tenant_id: " ".to_string(),
+            ..traversal_scope()
+        };
+        assert!(build_graph_traversal_cypher(&base_traversal(), &unscoped).is_err());
+        assert!(GraphTraversalScope::from_spec(None).is_err());
+        assert!(GraphTraversalScope::from_spec(Some(&json!({"_project_id": "p1"}))).is_err());
+        let parsed =
+            GraphTraversalScope::from_spec(Some(&json!({"_tenant_id": "t1", "_project_id": "p1"})))
+                .unwrap();
+        assert_eq!(parsed, traversal_scope());
+    }
+
+    #[test]
+    fn traversal_direction_rel_types_labels_and_filters() {
+        let spec = GraphTraversalSpec {
+            relationship_types: vec!["RELATED".to_string(), "CITES".to_string()],
+            direction: "incoming".to_string(),
+            min_depth: 1,
+            max_depth: 3,
+            node_labels: vec!["Doc".to_string(), "Note".to_string()],
+            node_property_equals: vec![("owner".to_string(), json!("u1"))],
+            relationship_property_equals: vec![("kind".to_string(), json!("peer"))],
+            limit: 5,
+            ..base_traversal()
+        };
+        let (cypher, params) = build_graph_traversal_cypher(&spec, &traversal_scope()).unwrap();
+        assert!(
+            cypher.contains("<-[:`RELATED`|`CITES`*1..3]-(m)"),
+            "{cypher}"
+        );
+        assert!(cypher.contains("(m:`Doc` OR m:`Note`)"), "{cypher}");
+        assert!(cypher.contains("m.`owner` = $prop_0"), "{cypher}");
+        // The relationship filter applies to EVERY relationship on the path,
+        // inside the same all() as the scope predicate.
+        assert!(
+            cypher.contains(
+                "all(r IN relationships(p) WHERE r._tenant_id = $scope_tenant_id AND r._project_id = $scope_project_id AND r.`kind` = $rel_prop_0)"
+            ),
+            "{cypher}"
+        );
+        assert_eq!(params["prop_0"], "u1");
+        assert_eq!(params["rel_prop_0"], "peer");
+        assert!(cypher.ends_with("LIMIT 5"), "{cypher}");
+
+        let both = GraphTraversalSpec {
+            direction: "both".to_string(),
+            ..base_traversal()
+        };
+        let (cypher, _) = build_graph_traversal_cypher(&both, &traversal_scope()).unwrap();
+        assert!(cypher.contains("})-[*1..1]-(m)"), "{cypher}");
+        let sideways = GraphTraversalSpec {
+            direction: "sideways".to_string(),
+            ..base_traversal()
+        };
+        assert!(build_graph_traversal_cypher(&sideways, &traversal_scope()).is_err());
+    }
+
+    #[test]
+    fn traversal_rejects_identifier_injection() {
+        let injections = [
+            GraphTraversalSpec {
+                start_label: "Doc`) DETACH DELETE s //".to_string(),
+                ..base_traversal()
+            },
+            GraphTraversalSpec {
+                relationship_types: vec!["R]->() DELETE m //".to_string()],
+                ..base_traversal()
+            },
+            GraphTraversalSpec {
+                node_labels: vec!["Doc OR true".to_string()],
+                ..base_traversal()
+            },
+            GraphTraversalSpec {
+                node_property_equals: vec![("owner` = 1 OR m.`x".to_string(), json!("u"))],
+                ..base_traversal()
+            },
+            GraphTraversalSpec {
+                relationship_property_equals: vec![("kind = 1 OR true".to_string(), json!("u"))],
+                ..base_traversal()
+            },
+        ];
+        for spec in injections {
+            assert!(
+                build_graph_traversal_cypher(&spec, &traversal_scope()).is_err(),
+                "{spec:?} must be rejected"
+            );
+        }
+        // A hostile VALUE is harmless: it is a parameter.
+        let spec = GraphTraversalSpec {
+            start_id: "x' OR 1=1 //".to_string(),
+            ..base_traversal()
+        };
+        let (cypher, params) = build_graph_traversal_cypher(&spec, &traversal_scope()).unwrap();
+        assert!(!cypher.contains("OR 1=1"), "{cypher}");
+        assert_eq!(params["start_id"], "x' OR 1=1 //");
+        // Missing start node fields are refused.
+        for spec in [
+            GraphTraversalSpec {
+                start_label: String::new(),
+                ..base_traversal()
+            },
+            GraphTraversalSpec {
+                start_id: String::new(),
+                ..base_traversal()
+            },
+        ] {
+            assert!(build_graph_traversal_cypher(&spec, &traversal_scope()).is_err());
+        }
+    }
+
+    #[test]
+    fn traversal_caps_depth_and_limit() {
+        let deep = GraphTraversalSpec {
+            max_depth: GRAPH_TRAVERSAL_MAX_DEPTH + 1,
+            ..base_traversal()
+        };
+        assert!(build_graph_traversal_cypher(&deep, &traversal_scope()).is_err());
+        let at_cap = GraphTraversalSpec {
+            max_depth: GRAPH_TRAVERSAL_MAX_DEPTH,
+            ..base_traversal()
+        };
+        let (cypher, _) = build_graph_traversal_cypher(&at_cap, &traversal_scope()).unwrap();
+        assert!(cypher.contains("[*1..4]"), "{cypher}");
+        let inverted = GraphTraversalSpec {
+            min_depth: 3,
+            max_depth: 2,
+            ..base_traversal()
+        };
+        assert!(build_graph_traversal_cypher(&inverted, &traversal_scope()).is_err());
+        let negative = GraphTraversalSpec {
+            min_depth: -1,
+            ..base_traversal()
+        };
+        assert!(build_graph_traversal_cypher(&negative, &traversal_scope()).is_err());
+        let huge = GraphTraversalSpec {
+            limit: 1_000_000,
+            ..base_traversal()
+        };
+        let (cypher, _) = build_graph_traversal_cypher(&huge, &traversal_scope()).unwrap();
+        assert!(
+            cypher.ends_with(&format!("LIMIT {GRAPH_TRAVERSAL_MAX_LIMIT}")),
+            "{cypher}"
+        );
+    }
+
+    #[test]
+    fn traversal_return_shapes() {
+        let (distinct, _) =
+            build_graph_traversal_cypher(&base_traversal(), &traversal_scope()).unwrap();
+        assert!(
+            distinct.contains(
+                "WITH m, min(length(p)) AS depth RETURN labels(m) AS labels, properties(m) AS properties, depth"
+            ),
+            "{distinct}"
+        );
+        let with_rels = GraphTraversalSpec {
+            return_relationships: true,
+            ..base_traversal()
+        };
+        let (paths, _) = build_graph_traversal_cypher(&with_rels, &traversal_scope()).unwrap();
+        assert!(
+            paths.contains("properties: properties(r)") && paths.contains("AS relationships"),
+            "{paths}"
+        );
+    }
+
+    #[test]
+    fn traversal_spec_parses_and_refuses_unknown_fields() {
+        let spec = GraphTraversalSpec::from_json(&json!({
+            "start_label": "Doc",
+            "start_id": "d1",
+            "relationship_types": ["RELATED"],
+            "direction": "both",
+            "max_depth": 2,
+            "node_property_equals": {"owner": "u1"},
+            "relationship_property_equals": {"kind": "peer"},
+            "return_relationships": true,
+        }))
+        .unwrap();
+        assert_eq!(spec.relationship_types, vec!["RELATED".to_string()]);
+        assert_eq!(
+            spec.node_property_equals,
+            vec![("owner".to_string(), json!("u1"))]
+        );
+        assert_eq!(
+            spec.relationship_property_equals,
+            vec![("kind".to_string(), json!("peer"))]
+        );
+        assert!(spec.return_relationships);
+        assert!(
+            GraphTraversalSpec::from_json(&json!({"start_label": "Doc", "cypher": "x"})).is_err()
+        );
+        assert!(
+            GraphTraversalSpec::from_json(&json!({"node_property_equals": {"owner": {"$ne": 1}}}))
+                .is_err()
+        );
     }
 }

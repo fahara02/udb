@@ -514,6 +514,284 @@ async fn graph_uniqueness_is_tenant_composite_live() {
     drop_label(&label).await;
 }
 
+/// Write one scoped node or edge for `tenant` through the served raw-dispatch
+/// path (the broker stamps the verified scope).
+#[cfg(feature = "neo4j")]
+async fn graph_write(svc: &DataBrokerService, tenant: &str, spec: serde_json::Value) {
+    svc.generic_dispatch(store_ctx(
+        generic_dispatch("neo4j", "mutate", "", &spec.to_string()),
+        tenant,
+    ))
+    .await
+    .unwrap_or_else(|err| panic!("served graph write {spec} for tenant {tenant}: {err:?}"));
+}
+
+#[cfg(feature = "neo4j")]
+async fn traverse(
+    svc: &DataBrokerService,
+    tenant: &str,
+    traversal: crate::proto::GraphTraversal,
+) -> Result<Vec<serde_json::Value>, tonic::Status> {
+    svc.graph_query(store_ctx(
+        crate::proto::GraphQueryRequest {
+            resource: resource("neo4j", "", "sr_graph"),
+            traversal: Some(traversal),
+            ..crate::proto::GraphQueryRequest::default()
+        },
+        tenant,
+    ))
+    .await
+    .map(|response| {
+        response
+            .into_inner()
+            .records
+            .iter()
+            .map(crate::runtime::executor_utils::struct_to_json)
+            .collect()
+    })
+}
+
+/// The sorted `id`s of the reached nodes.
+#[cfg(feature = "neo4j")]
+fn reached_ids(rows: &[serde_json::Value]) -> Vec<String> {
+    let mut ids: Vec<String> = rows
+        .iter()
+        .filter_map(|row| row["properties"]["id"].as_str().map(str::to_string))
+        .collect();
+    ids.sort();
+    ids.dedup();
+    ids
+}
+
+/// E9: the typed GraphQuery.traversal is tenant-scoped on every node and
+/// relationship, honours relationship-type, depth, node-property and
+/// relationship-property filters, returns relationship properties, and caps
+/// depth. Both tenants hold nodes with the SAME ids.
+#[cfg(feature = "neo4j")]
+#[tokio::test]
+#[ignore = "requires live Postgres + Neo4j (UDB_GRAPH_HTTP_URL); runs in the CI --ignored live step"]
+async fn graph_traversal_is_tenant_scoped_live() {
+    let (Some(pg), Some(_)) = (store_live_pg_dsn(), require_live_dsn("UDB_GRAPH_HTTP_URL")) else {
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let svc = store_service(&pg, CatalogManifest::default()).await;
+    let label = format!("SrTrav{}", Uuid::new_v4().simple());
+    let (tenant_a, tenant_b) = (Uuid::new_v4().to_string(), Uuid::new_v4().to_string());
+
+    // Tenant A: a -RELATED{peer,0.9}-> b -RELATED{topic}-> c, a -CITES-> d.
+    // Tenant B: the same ids a..d plus x, and a -RELATED{peer}-> x.
+    for (tenant, ids) in [
+        (&tenant_a, vec!["a", "b", "c", "d"]),
+        (&tenant_b, vec!["a", "b", "c", "d", "x"]),
+    ] {
+        for id in ids {
+            let owner = if id == "b" { "u1" } else { "u2" };
+            graph_write(
+                &svc,
+                tenant,
+                json!({
+                    "operation": "create_node",
+                    "label": label,
+                    "id": id,
+                    "properties": { "owner": owner },
+                }),
+            )
+            .await;
+        }
+    }
+    let edge = |id: &str, rel: &str, from: &str, to: &str, props: serde_json::Value| {
+        json!({
+            "operation": "upsert_edge",
+            "rel_type": rel,
+            "id": id,
+            "from_id": from,
+            "to_id": to,
+            "from_label": label,
+            "to_label": label,
+            "properties": props,
+        })
+    };
+    graph_write(
+        &svc,
+        &tenant_a,
+        edge(
+            "e1",
+            "RELATED",
+            "a",
+            "b",
+            json!({"kind": "peer", "weight": 0.9}),
+        ),
+    )
+    .await;
+    graph_write(
+        &svc,
+        &tenant_a,
+        edge(
+            "e2",
+            "RELATED",
+            "b",
+            "c",
+            json!({"kind": "topic", "weight": 0.2}),
+        ),
+    )
+    .await;
+    graph_write(&svc, &tenant_a, edge("e3", "CITES", "a", "d", json!({}))).await;
+    graph_write(
+        &svc,
+        &tenant_b,
+        edge(
+            "e1",
+            "RELATED",
+            "a",
+            "x",
+            json!({"kind": "peer", "weight": 0.5}),
+        ),
+    )
+    .await;
+
+    let base = crate::proto::GraphTraversal {
+        start_label: label.clone(),
+        start_id: "a".to_string(),
+        relationship_types: vec!["RELATED".to_string()],
+        ..crate::proto::GraphTraversal::default()
+    };
+    let run = |tenant: String, traversal: crate::proto::GraphTraversal| {
+        let svc = &svc;
+        async move {
+            reached_ids(
+                &traverse(svc, &tenant, traversal)
+                    .await
+                    .unwrap_or_else(|err| panic!("served traversal: {err:?}")),
+            )
+        }
+    };
+
+    assert_eq!(
+        run(tenant_a.clone(), base.clone()).await,
+        vec!["b"],
+        "depth 1 over RELATED reaches only A's b (never B's x)"
+    );
+    assert_eq!(
+        run(
+            tenant_a.clone(),
+            crate::proto::GraphTraversal {
+                max_depth: 2,
+                ..base.clone()
+            }
+        )
+        .await,
+        vec!["b", "c"],
+        "depth 2 over RELATED"
+    );
+    assert_eq!(
+        run(
+            tenant_a.clone(),
+            crate::proto::GraphTraversal {
+                relationship_types: Vec::new(),
+                ..base.clone()
+            }
+        )
+        .await,
+        vec!["b", "d"],
+        "any relationship type at depth 1"
+    );
+    assert_eq!(
+        run(
+            tenant_a.clone(),
+            crate::proto::GraphTraversal {
+                max_depth: 2,
+                node_property_equals: [("owner".to_string(), "u1".to_string())]
+                    .into_iter()
+                    .collect(),
+                ..base.clone()
+            }
+        )
+        .await,
+        vec!["b"],
+        "node property filter"
+    );
+    assert_eq!(
+        run(
+            tenant_a.clone(),
+            crate::proto::GraphTraversal {
+                max_depth: 2,
+                relationship_property_equals: [("kind".to_string(), "peer".to_string())]
+                    .into_iter()
+                    .collect(),
+                ..base.clone()
+            }
+        )
+        .await,
+        vec!["b"],
+        "relationship property filter applies to every hop (b->c is a topic edge)"
+    );
+    assert_eq!(
+        run(tenant_b.clone(), base.clone()).await,
+        vec!["x"],
+        "tenant B sees only its own graph from the same start id"
+    );
+
+    // Relationship properties come back on the path rows.
+    let rows = traverse(
+        &svc,
+        &tenant_a,
+        crate::proto::GraphTraversal {
+            return_relationships: true,
+            ..base.clone()
+        },
+    )
+    .await
+    .expect("served traversal with relationships");
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    let rel = &rows[0]["relationships"][0];
+    assert_eq!(rel["type"], "RELATED", "{rel}");
+    assert_eq!(rel["properties"]["kind"], "peer", "{rel}");
+    assert_eq!(rel["properties"]["weight"], 0.9, "{rel}");
+    assert_eq!(rel["start_id"], "a", "{rel}");
+    assert_eq!(rel["end_id"], "b", "{rel}");
+
+    // Depth above the server cap and injected identifiers are refused.
+    let too_deep = traverse(
+        &svc,
+        &tenant_a,
+        crate::proto::GraphTraversal {
+            max_depth: 5,
+            ..base.clone()
+        },
+    )
+    .await
+    .expect_err("max_depth above the cap is refused");
+    assert_eq!(too_deep.code(), Code::InvalidArgument, "{too_deep:?}");
+    let injected = traverse(
+        &svc,
+        &tenant_a,
+        crate::proto::GraphTraversal {
+            relationship_types: vec!["RELATED]->() DETACH DELETE m //".to_string()],
+            ..base.clone()
+        },
+    )
+    .await
+    .expect_err("an injected relationship type is refused");
+    assert_eq!(injected.code(), Code::InvalidArgument, "{injected:?}");
+    // A traversal cannot be combined with a free-text query.
+    let mixed = svc
+        .graph_query(store_ctx(
+            crate::proto::GraphQueryRequest {
+                resource: resource("neo4j", "", "sr_graph"),
+                query: "MATCH (n) RETURN n".to_string(),
+                traversal: Some(base.clone()),
+                ..crate::proto::GraphQueryRequest::default()
+            },
+            &tenant_a,
+        ))
+        .await
+        .expect_err("query + traversal is refused");
+    assert_eq!(mixed.code(), Code::InvalidArgument, "{mixed:?}");
+
+    drop_label(&label).await;
+}
+
 // ── Time series / raw dispatch (Cassandra) ────────────────────────────────────
 
 #[cfg(feature = "cassandra")]

@@ -3350,6 +3350,30 @@ impl DataBrokerRuntime {
             let scoped_filter =
                 qdrant_and_tenant_filter(filter, &context.tenant_id, &context.project_id);
 
+            // Postgres full-text hybrid: when the collection's projection declares
+            // `fts_columns`, the text leg is Postgres FTS over the projection's
+            // source table (verified-tenant scoped) instead of a local re-rank of
+            // the dense candidates, RRF-fused with the Qdrant kNN leg.
+            if !request.text_query.trim().is_empty()
+                && let Some(source) =
+                    crate::runtime::executors::qdrant::pg_fts_hybrid::PgFtsHybridSource::for_collection(
+                        manifest,
+                        &request.collection,
+                    )
+                    .map_err(|message| {
+                        crate::runtime::executor_utils::failed_precondition_fields(
+                            format!("vector hybrid full-text source refused: {message}"),
+                            [("collection", message)],
+                        )
+                    })?
+            {
+                let qdrant =
+                    self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
+                return self
+                    .vector_hybrid_search_pg_fts(&source, &request, &context, qdrant, scoped_filter)
+                    .await;
+            }
+
             // When text_query is empty, delegate to standard dense search.
             if request.text_query.trim().is_empty() {
                 let dense = VectorSearchRequest {

@@ -660,6 +660,7 @@ async fn execute_hard_purge(
     // Vectors FIRST: the embedding/search registries that name the tenant's
     // collections are relational rows the ripple below deletes.
     let vectors = purge_tenant_vector_stores(svc, manifest, target).await;
+    let graph = purge_tenant_graph_stores(svc, manifest, target).await;
     let report = {
         #[cfg(feature = "redis")]
         {
@@ -711,22 +712,35 @@ async fn execute_hard_purge(
     let mut excluded = excluded;
     purged.extend(vectors.purged);
     excluded.extend(vectors.excluded);
+    let graph_deleted = graph.deleted_total();
+    purged.extend(graph.purged);
+    excluded.extend(graph.excluded);
     Ok(AdminPurgeExecOutcome {
         purged,
         excluded,
-        total_deleted: report.total_deleted,
+        total_deleted: report.total_deleted + graph_deleted,
         tenant_denylisted: report.tenant_denylisted,
         principals_denylisted: report.principals_denylisted as u32,
         soft_deactivated: false,
     })
 }
 
-/// Report of the vector-store leg of a hard tenant purge, in the same JSON shape
-/// as the relational `purged` / `excluded` entries.
+/// Report of a non-relational leg (vector or graph) of a hard tenant purge, in
+/// the same JSON shape as the relational `purged` / `excluded` entries.
 #[derive(Debug, Default)]
 pub(crate) struct TenantVectorPurgeReport {
     pub(crate) purged: Vec<serde_json::Value>,
     pub(crate) excluded: Vec<serde_json::Value>,
+}
+
+impl TenantVectorPurgeReport {
+    /// Sum of the `deleted` counts of the purged entries.
+    pub(crate) fn deleted_total(&self) -> u64 {
+        self.purged
+            .iter()
+            .filter_map(|entry| entry.get("deleted").and_then(serde_json::Value::as_u64))
+            .sum()
+    }
 }
 
 /// Erase the tenant's vectors from every vector collection it may occupy: the
@@ -910,6 +924,256 @@ fn tenant_vector_purge_targets(
         }
     }
     targets
+}
+
+/// Records deleted per graph-purge statement (one auto-commit transaction each,
+/// so a large tenant never builds one huge delete transaction).
+const GRAPH_PURGE_BATCH: u64 = 1000;
+/// Upper bound on batches per statement and Neo4j target (10M records), so a
+/// purge reports a remainder instead of spinning forever.
+const GRAPH_PURGE_MAX_BATCHES: u32 = 10_000;
+/// Relationships stamped with the tenant (edges between two of its nodes, or a
+/// stray scoped edge touching another tenant's node).
+const GRAPH_PURGE_RELATIONSHIPS_CYPHER: &str = "MATCH ()-[r]->() WHERE r._tenant_id = $tenant WITH r LIMIT $batch DELETE r RETURN count(*) AS deleted";
+/// The tenant's nodes, with any relationship still attached to them.
+const GRAPH_PURGE_NODES_CYPHER: &str = "MATCH (n) WHERE n._tenant_id = $tenant WITH n LIMIT $batch DETACH DELETE n RETURN count(*) AS deleted";
+
+/// A Neo4j instance the graph leg purges, routed under a project it serves.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct TenantGraphTarget {
+    project_id: String,
+    /// Empty = the project's default Neo4j route.
+    instance: String,
+}
+
+/// Erase the tenant's graph records (nodes and relationships carrying its
+/// server-stamped `_tenant_id`) from every Neo4j instance the broker can write:
+/// every configured writable Neo4j instance (for the default project and every
+/// registered project) plus the instances the manifest's graph stores and
+/// projections name. Deletes run in batches until none remain. A target that
+/// cannot be purged is REPORTED under `excluded`, never silently skipped.
+pub(crate) async fn purge_tenant_graph_stores(
+    svc: &TenantServiceImpl,
+    manifest: &CatalogManifest,
+    tenant_id: &str,
+) -> TenantVectorPurgeReport {
+    let mut report = TenantVectorPurgeReport::default();
+    let Some(runtime) = svc.runtime.as_ref() else {
+        report.excluded.push(serde_json::json!({
+            "schema": "graph",
+            "table": "*",
+            "reason": "graph purge skipped: no runtime graph dispatch is wired",
+        }));
+        return report;
+    };
+    let tenant_id = tenant_id.trim();
+    if tenant_id.is_empty() {
+        report.excluded.push(serde_json::json!({
+            "schema": "graph",
+            "table": "*",
+            "reason": "graph purge refused: no tenant",
+        }));
+        return report;
+    }
+    let mut projects = vec![crate::runtime::catalog::DEFAULT_PROJECT_ID.to_string()];
+    match runtime.list_projects().await {
+        Ok(registered) => {
+            for project in registered
+                .iter()
+                .filter_map(|project| project.get("project_id").and_then(|v| v.as_str()))
+                .map(str::trim)
+                .filter(|project| !project.is_empty())
+            {
+                if !projects.iter().any(|known| known == project) {
+                    projects.push(project.to_string());
+                }
+            }
+        }
+        // No project registry (non-Postgres system store): the default
+        // project's instances are still covered.
+        Err(err) if err.code() == tonic::Code::FailedPrecondition => {}
+        Err(err) => report.excluded.push(serde_json::json!({
+            "schema": "graph",
+            "table": "projects",
+            "reason": format!(
+                "graph purge could not enumerate projects (instances bound only to other projects are not covered): {}",
+                err.message()
+            ),
+        })),
+    }
+    let mut served = Vec::new();
+    for project in &projects {
+        for instance in runtime.backend_instances_for_project(project) {
+            if instance.backend == "neo4j"
+                && instance.enabled
+                && instance.configured
+                && matches!(instance.role.as_str(), "write" | "read_write" | "admin")
+                && instance.write_weight > 0
+            {
+                served.push((project.clone(), instance.name.clone()));
+            }
+        }
+    }
+    for target in tenant_graph_purge_targets(manifest, &served) {
+        let table = if target.instance.is_empty() {
+            "default".to_string()
+        } else {
+            target.instance.clone()
+        };
+        match purge_tenant_graph_target(runtime, &target, tenant_id).await {
+            Ok((nodes, relationships)) => report.purged.push(serde_json::json!({
+                "schema": "graph:neo4j",
+                "table": table,
+                "tenant_column": "_tenant_id",
+                "deleted": nodes + relationships,
+                "nodes_deleted": nodes,
+                "relationships_deleted": relationships,
+            })),
+            Err(message) => {
+                tracing::warn!(
+                    instance = %table,
+                    project = %target.project_id,
+                    error = %message,
+                    "tenant purge: graph delete failed; the tenant's graph records remain"
+                );
+                report.excluded.push(serde_json::json!({
+                    "schema": "graph:neo4j",
+                    "table": table,
+                    "reason": format!("graph purge failed (tenant graph records remain): {message}"),
+                }));
+            }
+        }
+    }
+    report
+}
+
+/// The Neo4j targets of the graph leg. `served` lists `(project, instance)`
+/// for each writable Neo4j instance, default project first; each instance is
+/// purged once (the delete is tenant-wide, not per project). Instances only
+/// the manifest names are routed under the default project; when nothing is
+/// configured but the manifest declares a graph store, the default route is
+/// tried so a missing backend is reported instead of silently skipped. Pure.
+fn tenant_graph_purge_targets(
+    manifest: &CatalogManifest,
+    served: &[(String, String)],
+) -> BTreeSet<TenantGraphTarget> {
+    let mut by_instance: std::collections::BTreeMap<String, String> =
+        std::collections::BTreeMap::new();
+    for (project, instance) in served {
+        by_instance
+            .entry(instance.trim().to_string())
+            .or_insert_with(|| project.clone());
+    }
+    let option = |options: &[crate::generation::ManifestStoreOption], key: &str| {
+        options
+            .iter()
+            .find(|o| o.key.eq_ignore_ascii_case(key))
+            .map(|o| o.value.trim().to_string())
+            .filter(|value| !value.is_empty())
+    };
+    let mut manifest_instances: Vec<String> = Vec::new();
+    for projection in &manifest.projections {
+        if projection.backend.eq_ignore_ascii_case("neo4j") || projection.projection_kind == "graph"
+        {
+            manifest_instances.push(projection.instance.trim().to_string());
+        }
+    }
+    for store in &manifest.stores {
+        if store.backend.eq_ignore_ascii_case("neo4j") || store.store_kind == "graph" {
+            manifest_instances.push(
+                option(&store.options, "instance")
+                    .or_else(|| option(&store.options, "target_instance"))
+                    .unwrap_or_default(),
+            );
+        }
+    }
+    let default_project = crate::runtime::catalog::DEFAULT_PROJECT_ID.to_string();
+    for instance in manifest_instances.iter().filter(|i| !i.is_empty()) {
+        by_instance
+            .entry(instance.clone())
+            .or_insert_with(|| default_project.clone());
+    }
+    if by_instance.is_empty() && !manifest_instances.is_empty() {
+        by_instance.insert(String::new(), default_project);
+    }
+    by_instance
+        .into_iter()
+        .map(|(instance, project_id)| TenantGraphTarget {
+            project_id,
+            instance,
+        })
+        .collect()
+}
+
+/// Run the batched relationship then node deletes on one Neo4j target until
+/// nothing of the tenant remains. Returns `(nodes, relationships)` deleted.
+async fn purge_tenant_graph_target(
+    runtime: &crate::runtime::DataBrokerRuntime,
+    target: &TenantGraphTarget,
+    tenant_id: &str,
+) -> Result<(u64, u64), String> {
+    let instance = (!target.instance.is_empty()).then_some(target.instance.as_str());
+    let mut totals = [0u64; 2];
+    for (slot, cypher) in [GRAPH_PURGE_RELATIONSHIPS_CYPHER, GRAPH_PURGE_NODES_CYPHER]
+        .into_iter()
+        .enumerate()
+    {
+        let spec = graph_purge_spec(cypher, tenant_id);
+        let mut batches = 0u32;
+        loop {
+            let result = runtime
+                .mutate_backend_target_for_project("neo4j", instance, &target.project_id, &spec)
+                .await
+                .map_err(|status| status.message().to_string())?;
+            let deleted = graph_purge_batch_deleted(&result)?;
+            totals[slot] += deleted;
+            if deleted == 0 {
+                break;
+            }
+            batches += 1;
+            if batches >= GRAPH_PURGE_MAX_BATCHES {
+                return Err(format!(
+                    "stopped after {GRAPH_PURGE_MAX_BATCHES} batches of {GRAPH_PURGE_BATCH}; records may remain"
+                ));
+            }
+        }
+    }
+    Ok((totals[1], totals[0]))
+}
+
+/// The Neo4j `cypher` mutation spec for one purge batch. Pure.
+fn graph_purge_spec(cypher: &str, tenant_id: &str) -> String {
+    serde_json::json!({
+        "operation": "cypher",
+        "cypher": cypher,
+        "parameters": { "tenant": tenant_id, "batch": GRAPH_PURGE_BATCH },
+    })
+    .to_string()
+}
+
+/// The `deleted` count of one purge batch, read from the Neo4j executor's
+/// `cypher` mutation result (`{"results":[{"columns":[...],"data":[{"row":[...]}]}]}`).
+/// Pure.
+fn graph_purge_batch_deleted(result_json: &str) -> Result<u64, String> {
+    let value: serde_json::Value = serde_json::from_str(result_json)
+        .map_err(|err| format!("graph purge result is not JSON: {err}"))?;
+    let first = value.get("results").and_then(|results| results.get(0));
+    let column = first
+        .and_then(|result| result.get("columns"))
+        .and_then(serde_json::Value::as_array)
+        .and_then(|columns| {
+            columns
+                .iter()
+                .position(|column| column.as_str() == Some("deleted"))
+        })
+        .unwrap_or(0);
+    first
+        .and_then(|result| result.get("data"))
+        .and_then(|data| data.get(0))
+        .and_then(|row| row.get("row"))
+        .and_then(|row| row.get(column))
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| "graph purge result carries no deleted count".to_string())
 }
 
 /// SOFT: no physical deletes. Deactivate the tenant control record (soft-delete +
@@ -1209,6 +1473,123 @@ mod tests {
             admin_purge_ledger_relation(),
             "\"udb_tenant\".\"tenant_admin_purge_outcomes\""
         );
+    }
+
+    #[test]
+    fn graph_purge_targets_dedupe_instances_and_cover_the_manifest() {
+        use crate::generation::manifest::{ManifestProjection, ManifestStore, ManifestStoreOption};
+        let manifest = CatalogManifest {
+            stores: vec![
+                ManifestStore {
+                    store_kind: "graph".to_string(),
+                    backend: "neo4j".to_string(),
+                    resource_name: "Doc".to_string(),
+                    options: vec![ManifestStoreOption {
+                        key: "instance".to_string(),
+                        value: "graph_b".to_string(),
+                    }],
+                    ..ManifestStore::default()
+                },
+                // A non-graph store is not a graph purge target.
+                ManifestStore {
+                    store_kind: "vector".to_string(),
+                    backend: "qdrant".to_string(),
+                    resource_name: "docs".to_string(),
+                    ..ManifestStore::default()
+                },
+            ],
+            projections: vec![ManifestProjection {
+                projection_kind: "graph".to_string(),
+                backend: "neo4j".to_string(),
+                instance: "graph_a".to_string(),
+                ..ManifestProjection::default()
+            }],
+            ..CatalogManifest::default()
+        };
+        // graph_a is served by the default project AND p1: purged once, under
+        // the first (default) project.
+        let served = vec![
+            ("default".to_string(), "graph_a".to_string()),
+            ("p1".to_string(), "graph_a".to_string()),
+            ("p1".to_string(), "graph_p1".to_string()),
+        ];
+        let targets: Vec<_> = tenant_graph_purge_targets(&manifest, &served)
+            .into_iter()
+            .map(|t| (t.project_id, t.instance))
+            .collect();
+        assert_eq!(
+            targets,
+            vec![
+                ("default".to_string(), "graph_a".to_string()),
+                ("default".to_string(), "graph_b".to_string()),
+                ("p1".to_string(), "graph_p1".to_string()),
+            ]
+        );
+
+        // Nothing configured but a graph store declared: the default route is
+        // tried, so a missing backend is reported rather than skipped.
+        let unrouted = CatalogManifest {
+            stores: vec![ManifestStore {
+                store_kind: "graph".to_string(),
+                backend: "neo4j".to_string(),
+                ..ManifestStore::default()
+            }],
+            ..CatalogManifest::default()
+        };
+        let targets = tenant_graph_purge_targets(&unrouted, &[]);
+        assert_eq!(targets.len(), 1);
+        let only = targets.into_iter().next().unwrap();
+        assert_eq!(only.project_id, "default");
+        assert_eq!(only.instance, "");
+        // No graph anywhere: nothing to purge.
+        assert!(tenant_graph_purge_targets(&CatalogManifest::default(), &[]).is_empty());
+    }
+
+    #[test]
+    fn graph_purge_statements_are_tenant_keyed_and_batched() {
+        for cypher in [GRAPH_PURGE_RELATIONSHIPS_CYPHER, GRAPH_PURGE_NODES_CYPHER] {
+            assert!(cypher.contains("._tenant_id = $tenant"), "{cypher}");
+            assert!(cypher.contains("LIMIT $batch"), "{cypher}");
+            assert!(cypher.contains("AS deleted"), "{cypher}");
+        }
+        assert!(GRAPH_PURGE_NODES_CYPHER.contains("DETACH DELETE n"));
+        let spec: serde_json::Value =
+            serde_json::from_str(&graph_purge_spec(GRAPH_PURGE_NODES_CYPHER, "t1")).unwrap();
+        assert_eq!(spec["operation"], "cypher");
+        assert_eq!(spec["parameters"]["tenant"], "t1");
+        assert_eq!(spec["parameters"]["batch"], GRAPH_PURGE_BATCH);
+    }
+
+    #[test]
+    fn graph_purge_batch_deleted_reads_the_cypher_result() {
+        let result = serde_json::json!({
+            "affected_rows": 3,
+            "results": [{"columns": ["deleted"], "data": [{"row": [3]}]}],
+        })
+        .to_string();
+        assert_eq!(graph_purge_batch_deleted(&result), Ok(3));
+        let empty = serde_json::json!({
+            "results": [{"columns": ["deleted"], "data": [{"row": [0]}]}],
+        })
+        .to_string();
+        assert_eq!(graph_purge_batch_deleted(&empty), Ok(0));
+        // A result without the count is an error, never a silent 0 (which
+        // would end the loop and claim the tenant was erased).
+        assert!(graph_purge_batch_deleted(r#"{"results":[]}"#).is_err());
+        assert!(graph_purge_batch_deleted("not json").is_err());
+    }
+
+    #[test]
+    fn purge_report_sums_deleted_counts() {
+        let report = TenantVectorPurgeReport {
+            purged: vec![
+                serde_json::json!({"deleted": 4}),
+                serde_json::json!({"deleted": 0}),
+                serde_json::json!({"table": "no count"}),
+            ],
+            excluded: Vec::new(),
+        };
+        assert_eq!(report.deleted_total(), 4);
     }
 
     #[test]

@@ -42,6 +42,15 @@ class GraphQueryRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool read_only = 7 [json_name = "readOnly"];</code>
      */
     protected $read_only = false;
+    /**
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     */
+    protected $traversal = null;
 
     /**
      * Constructor.
@@ -56,6 +65,11 @@ class GraphQueryRequest extends \Google\Protobuf\Internal\Message
      *     @type int $limit
      *     @type string $page_token
      *     @type bool $read_only
+     *     @type \Udb\Entity\V1\GraphTraversal $traversal
+     *           Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     *           itself (every node and relationship on a path must carry the caller's
+     *           verified tenant/project scope) and `query` / `parameters` must be empty.
+     *           It does not need the raw-dispatch opt-out that free-text `query` needs.
      * }
      */
     public function __construct($data = NULL) {
@@ -243,6 +257,48 @@ class GraphQueryRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->read_only = $var;
+
+        return $this;
+    }
+
+    /**
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     * @return \Udb\Entity\V1\GraphTraversal|null
+     */
+    public function getTraversal()
+    {
+        return $this->traversal;
+    }
+
+    public function hasTraversal()
+    {
+        return isset($this->traversal);
+    }
+
+    public function clearTraversal()
+    {
+        unset($this->traversal);
+    }
+
+    /**
+     * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+     * itself (every node and relationship on a path must carry the caller's
+     * verified tenant/project scope) and `query` / `parameters` must be empty.
+     * It does not need the raw-dispatch opt-out that free-text `query` needs.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.GraphTraversal traversal = 8 [json_name = "traversal"];</code>
+     * @param \Udb\Entity\V1\GraphTraversal $var
+     * @return $this
+     */
+    public function setTraversal($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\GraphTraversal::class);
+        $this->traversal = $var;
 
         return $this;
     }

@@ -5,6 +5,105 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.28] - 2026-10-07
+
+### Added
+
+- **The embedding sidecar now ships a ready `udb.embedding.work.v1` consumer.**
+  Projects no longer have to write one. Set
+  `UDB_EMBEDDING_SIDECAR_MODE=consumer` on `sidecars/embedding`; the default,
+  `http`, keeps the HTTP contract unchanged. In consumer mode the sidecar:
+  - reads the topic in a Kafka consumer group;
+  - groups work by tenant, project, provider, model, dimensions and endpoint,
+    making one provider call per group with up to
+    `UDB_EMBEDDING_BATCH_MAX_SIZE` inputs or after
+    `UDB_EMBEDDING_BATCH_MAX_WAIT_MS`;
+  - retries 408/425/429, 5xx and timeouts with bounded exponential backoff and
+    jitter;
+  - reports successes through `ReportEmbeddingBatch` and failures through
+    `ReportEmbeddingFailure`, setting `retryable` on each failure;
+  - commits offsets only after the reports are delivered, so delivery is
+    at-least-once. Only a transient broker failure (unavailable or timeout)
+    rewinds a window. When a tenant has no bearer token, or the broker refuses
+    a report for a non-transient reason, the consumer logs the tenant, counts
+    the items, skips them and commits past them, so one tenant never stalls a
+    partition. The broker's retry sweep then re-sends or dead-letters that
+    work.
+
+  The broker connection is either plaintext to a loopback target or mTLS, and
+  bearers are configured per tenant. The new dependencies (`kafka-python`,
+  `udb-client`) are listed in `sidecars/embedding/requirements.txt`, which the
+  image installs. Provider HTTP errors are now classified as retryable or
+  permanent.
+
+- **Qdrant projections can choose their point payload (`payload_fields`).**
+  A Qdrant projection option `payload_fields` (comma list of field or column
+  names) limits each projected point's payload to those fields plus the row
+  identity (primary-key columns, any declared id field, the tenant column).
+  The `_tenant_id`/`_project_id` scope stamps are always written and always
+  win over a source column of the same name. A listed field the row lacks is
+  simply absent. Array columns (JSONB arrays, `TEXT[]`/`UUID[]` read back as
+  JSON arrays) stay JSON arrays in the payload, never stringified, so a Qdrant
+  `match` filter on one element matches the point. Without the option the
+  payload is the whole row, as before.
+- **Hybrid vector search can use Postgres full-text search as its text leg.**
+  When the Qdrant projection that fills a collection declares `fts_columns`
+  (comma list; optional `fts_config`, default `simple`), `VectorHybridSearch`
+  with a `text_query` runs Postgres full-text search (`to_tsvector` /
+  `plainto_tsquery`, ranked by `ts_rank`) over the projection's source table,
+  scoped to the verified tenant/project with the request's session settings
+  installed, and excluding soft-deleted rows. It also runs the Qdrant kNN leg
+  and fuses the two with weighted reciprocal-rank fusion (`k` = 60;
+  `fusion_weights` are `[dense, text]`, uniform when unset). In this mode
+  `fusion_strategy` is ignored: weighted RRF is always used. The tenant and
+  project predicates cast the bound value to the column's declared type
+  (for example `= $3::UUID`), so indexes on those columns stay usable. Text-only hits are fetched from
+  Qdrant by point id under the same tenant and caller filter, and come back
+  with their payloads. Without `fts_columns`, hybrid search is unchanged; no
+  proto field was added. Encrypted columns are refused as `fts_columns`, and a
+  collection whose projections declare `fts_columns` more than once is
+  refused with `FAILED_PRECONDITION`.
+
+- **`GraphQuery` takes a typed, tenant-scoped traversal (`traversal`).**
+  The new `GraphQueryRequest.traversal` field (`GraphTraversal`, field 8)
+  describes the walk instead of carrying Cypher. It has a start label and id,
+  `relationship_types` (empty means any), a direction (outgoing, incoming or
+  both), `min_depth`/`max_depth`, `node_labels`, `node_property_equals`,
+  `relationship_property_equals`, `limit` and `return_relationships`. The
+  broker builds parameterized Cypher in which every node and every
+  relationship on each path must carry the caller's verified `_tenant_id` and
+  `_project_id`. `relationship_property_equals` (for example `kind = "peer"`)
+  is also applied to every relationship on the path. Labels, relationship
+  types and property keys must be plain identifiers; anything else is
+  refused with `INVALID_ARGUMENT`. All values are sent as parameters.
+  `max_depth` above 4 is refused, and `limit` defaults to 100 and is capped
+  at 1000. The query runs in a READ transaction and still needs the
+  `graph.query` permission on the store. Because the broker writes the
+  Cypher, a traversal does not need the raw-dispatch opt-out that free-text
+  `query` needs in production. A request that sets both `traversal` and
+  `query`, or has no verified tenant, is refused. Rows hold `labels`,
+  `properties` and `depth`. With `return_relationships`, each row is one path
+  and also holds `relationships`: type, properties, start id and end id.
+- **Edge projections keep the row's columns on the relationship.** An
+  edge-table graph projection (`edge_source_field`/`edge_target_field`) puts
+  the row's other columns, such as `weight` or `kind`, on the relationship
+  as properties. The broker's scope stamps are added to them. A traversal
+  with `return_relationships` returns these properties.
+
+### Fixed
+
+- **A hard tenant purge now erases the tenant's Neo4j graph.** Both
+  `PurgeTenant` and `AdminPurgeTenant` (HARD) now delete every node and
+  relationship stamped with the tenant's `_tenant_id`. This covers every
+  writable Neo4j instance configured for the default project or any
+  registered project, plus the instances that the manifest's graph stores and
+  projections name. Deletes run in batches of 1000, each batch in its own
+  transaction, until none remain. Each instance is reported under `purged`
+  (`schema` `graph:neo4j`) with node and relationship counts, and these
+  counts are added to `total_deleted`. An instance that cannot be purged is
+  reported under `excluded` with the reason. Before this, the tenant's graph
+  records were left in place.
+
 ## [0.5.27] - 2026-10-06
 
 ### Added

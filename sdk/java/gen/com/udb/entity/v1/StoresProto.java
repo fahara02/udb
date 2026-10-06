@@ -92,6 +92,21 @@ public final class StoresProto {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_GraphQueryRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_GraphTraversal_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_GraphTraversal_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_GraphTraversal_NodePropertyEqualsEntry_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_GraphTraversal_NodePropertyEqualsEntry_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_GraphTraversal_RelationshipPropertyEqualsEntry_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_GraphTraversal_RelationshipPropertyEqualsEntry_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_entity_v1_GraphMutationRequest_descriptor;
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -224,7 +239,7 @@ public final class StoresProto {
       "mentSet\0225\n\tdocuments\030\001 \003(\0132\027.google.prot" +
       "obuf.StructR\tdocuments\022&\n\017next_page_toke" +
       "n\030\002 \001(\tR\rnextPageToken\0223\n\005stats\030\003 \001(\0132\035." +
-      "udb.entity.v1.OperationStatsR\005stats\"\247\002\n\021" +
+      "udb.entity.v1.OperationStatsR\005stats\"\344\002\n\021" +
       "GraphQueryRequest\0227\n\007context\030\001 \001(\0132\035.udb" +
       ".entity.v1.RequestContextR\007context\0228\n\010re" +
       "source\030\002 \001(\0132\034.udb.entity.v1.StoreResour" +
@@ -232,66 +247,91 @@ public final class StoresProto {
       "rameters\030\004 \001(\0132\027.google.protobuf.StructR" +
       "\nparameters\022\024\n\005limit\030\005 \001(\005R\005limit\022\035\n\npag" +
       "e_token\030\006 \001(\tR\tpageToken\022\033\n\tread_only\030\007 " +
-      "\001(\010R\010readOnly\"\201\002\n\024GraphMutationRequest\0227" +
-      "\n\007context\030\001 \001(\0132\035.udb.entity.v1.RequestC" +
-      "ontextR\007context\0228\n\010resource\030\002 \001(\0132\034.udb." +
-      "entity.v1.StoreResourceR\010resource\022\024\n\005que" +
-      "ry\030\003 \001(\tR\005query\0227\n\nparameters\030\004 \001(\0132\027.go" +
-      "ogle.protobuf.StructR\nparameters\022\'\n\017idem" +
-      "potency_key\030\005 \001(\tR\016idempotencyKey\"\240\001\n\016Gr" +
-      "aphResultSet\0221\n\007records\030\001 \003(\0132\027.google.p" +
-      "rotobuf.StructR\007records\022&\n\017next_page_tok" +
-      "en\030\002 \001(\tR\rnextPageToken\0223\n\005stats\030\003 \001(\0132\035" +
-      ".udb.entity.v1.OperationStatsR\005stats\"\362\002\n" +
-      "\017TimeSeriesPoint\0228\n\ttimestamp\030\001 \001(\0132\032.go" +
-      "ogle.protobuf.TimestampR\ttimestamp\022<\n\004ta" +
-      "gs\030\002 \003(\0132(.udb.entity.v1.TimeSeriesPoint" +
-      ".TagsEntryR\004tags\022B\n\006values\030\003 \003(\0132*.udb.e" +
-      "ntity.v1.TimeSeriesPoint.ValuesEntryR\006va" +
-      "lues\022/\n\006fields\030\004 \001(\0132\027.google.protobuf.S" +
-      "tructR\006fields\0327\n\tTagsEntry\022\020\n\003key\030\001 \001(\tR" +
-      "\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\0329\n\013Values" +
-      "Entry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\001R\005" +
-      "value:\0028\001\"\354\001\n\026TimeSeriesWriteRequest\0227\n\007" +
-      "context\030\001 \001(\0132\035.udb.entity.v1.RequestCon" +
-      "textR\007context\0228\n\010resource\030\002 \001(\0132\034.udb.en" +
-      "tity.v1.StoreResourceR\010resource\0226\n\006point" +
-      "s\030\003 \003(\0132\036.udb.entity.v1.TimeSeriesPointR" +
-      "\006points\022\'\n\017idempotency_key\030\004 \001(\tR\016idempo" +
-      "tencyKey\"\266\003\n\026TimeSeriesQueryRequest\0227\n\007c" +
-      "ontext\030\001 \001(\0132\035.udb.entity.v1.RequestCont" +
-      "extR\007context\0228\n\010resource\030\002 \001(\0132\034.udb.ent" +
-      "ity.v1.StoreResourceR\010resource\022.\n\004from\030\003" +
-      " \001(\0132\032.google.protobuf.TimestampR\004from\022*" +
-      "\n\002to\030\004 \001(\0132\032.google.protobuf.TimestampR\002" +
-      "to\022/\n\006filter\030\005 \001(\0132\027.google.protobuf.Str" +
-      "uctR\006filter\022\026\n\006fields\030\006 \003(\tR\006fields\022\031\n\010g" +
-      "roup_by\030\007 \001(\tR\007groupBy\022\034\n\taggregate\030\010 \001(" +
-      "\tR\taggregate\022\026\n\006window\030\t \001(\tR\006window\022\024\n\005" +
-      "limit\030\n \001(\005R\005limit\022\035\n\npage_token\030\013 \001(\tR\t" +
-      "pageToken\"\256\001\n\027TimeSeriesQueryResponse\0226\n" +
-      "\006points\030\001 \003(\0132\036.udb.entity.v1.TimeSeries" +
-      "PointR\006points\022&\n\017next_page_token\030\002 \001(\tR\r" +
-      "nextPageToken\0223\n\005stats\030\003 \001(\0132\035.udb.entit" +
-      "y.v1.OperationStatsR\005stats\"\250\002\n\026Analytica" +
-      "lQueryRequest\0227\n\007context\030\001 \001(\0132\035.udb.ent" +
-      "ity.v1.RequestContextR\007context\0228\n\010resour" +
-      "ce\030\002 \001(\0132\034.udb.entity.v1.StoreResourceR\010" +
-      "resource\022\024\n\005query\030\003 \001(\tR\005query\0227\n\nparame" +
-      "ters\030\004 \001(\0132\027.google.protobuf.StructR\npar" +
-      "ameters\022\024\n\005limit\030\005 \001(\005R\005limit\022\035\n\npage_to" +
-      "ken\030\006 \001(\tR\tpageToken\022\027\n\007dry_run\030\007 \001(\010R\006d" +
-      "ryRun\"\333\001\n\027AnalyticalQueryResponse\022&\n\004row" +
-      "s\030\001 \003(\0132\022.udb.entity.v1.RowR\004rows\022&\n\017nex" +
-      "t_page_token\030\002 \001(\tR\rnextPageToken\0223\n\005sta" +
-      "ts\030\003 \001(\0132\035.udb.entity.v1.OperationStatsR" +
-      "\005stats\022;\n\010warnings\030\004 \003(\0132\037.udb.entity.v1" +
-      ".OperationWarningR\010warningsB\261\001\n\021com.udb." +
-      "entity.v1B\013StoresProtoP\001Z9github.com/fah" +
-      "ara02/udb/sdk/go/gen/udb/entity/v1;entit" +
-      "yv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V" +
-      "1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Ent" +
-      "ity::V1b\006proto3"
+      "\001(\010R\010readOnly\022;\n\ttraversal\030\010 \001(\0132\035.udb.e" +
+      "ntity.v1.GraphTraversalR\ttraversal\"\345\005\n\016G" +
+      "raphTraversal\022\037\n\013start_label\030\001 \001(\tR\nstar" +
+      "tLabel\022\031\n\010start_id\030\002 \001(\tR\007startId\022-\n\022rel" +
+      "ationship_types\030\003 \003(\tR\021relationshipTypes" +
+      "\022D\n\tdirection\030\004 \001(\0162&.udb.entity.v1.Grap" +
+      "hTraversalDirectionR\tdirection\022\033\n\tmin_de" +
+      "pth\030\005 \001(\005R\010minDepth\022\033\n\tmax_depth\030\006 \001(\005R\010" +
+      "maxDepth\022\037\n\013node_labels\030\007 \003(\tR\nnodeLabel" +
+      "s\022g\n\024node_property_equals\030\010 \003(\01325.udb.en" +
+      "tity.v1.GraphTraversal.NodePropertyEqual" +
+      "sEntryR\022nodePropertyEquals\022\024\n\005limit\030\t \001(" +
+      "\005R\005limit\0221\n\024return_relationships\030\n \001(\010R\023" +
+      "returnRelationships\022\177\n\034relationship_prop" +
+      "erty_equals\030\013 \003(\0132=.udb.entity.v1.GraphT" +
+      "raversal.RelationshipPropertyEqualsEntry" +
+      "R\032relationshipPropertyEquals\032E\n\027NodeProp" +
+      "ertyEqualsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005val" +
+      "ue\030\002 \001(\tR\005value:\0028\001\032M\n\037RelationshipPrope" +
+      "rtyEqualsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005valu" +
+      "e\030\002 \001(\tR\005value:\0028\001\"\201\002\n\024GraphMutationRequ" +
+      "est\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Req" +
+      "uestContextR\007context\0228\n\010resource\030\002 \001(\0132\034" +
+      ".udb.entity.v1.StoreResourceR\010resource\022\024" +
+      "\n\005query\030\003 \001(\tR\005query\0227\n\nparameters\030\004 \001(\013" +
+      "2\027.google.protobuf.StructR\nparameters\022\'\n" +
+      "\017idempotency_key\030\005 \001(\tR\016idempotencyKey\"\240" +
+      "\001\n\016GraphResultSet\0221\n\007records\030\001 \003(\0132\027.goo" +
+      "gle.protobuf.StructR\007records\022&\n\017next_pag" +
+      "e_token\030\002 \001(\tR\rnextPageToken\0223\n\005stats\030\003 " +
+      "\001(\0132\035.udb.entity.v1.OperationStatsR\005stat" +
+      "s\"\362\002\n\017TimeSeriesPoint\0228\n\ttimestamp\030\001 \001(\013" +
+      "2\032.google.protobuf.TimestampR\ttimestamp\022" +
+      "<\n\004tags\030\002 \003(\0132(.udb.entity.v1.TimeSeries" +
+      "Point.TagsEntryR\004tags\022B\n\006values\030\003 \003(\0132*." +
+      "udb.entity.v1.TimeSeriesPoint.ValuesEntr" +
+      "yR\006values\022/\n\006fields\030\004 \001(\0132\027.google.proto" +
+      "buf.StructR\006fields\0327\n\tTagsEntry\022\020\n\003key\030\001" +
+      " \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\0329\n\013V" +
+      "aluesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 " +
+      "\001(\001R\005value:\0028\001\"\354\001\n\026TimeSeriesWriteReques" +
+      "t\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reque" +
+      "stContextR\007context\0228\n\010resource\030\002 \001(\0132\034.u" +
+      "db.entity.v1.StoreResourceR\010resource\0226\n\006" +
+      "points\030\003 \003(\0132\036.udb.entity.v1.TimeSeriesP" +
+      "ointR\006points\022\'\n\017idempotency_key\030\004 \001(\tR\016i" +
+      "dempotencyKey\"\266\003\n\026TimeSeriesQueryRequest" +
+      "\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reques" +
+      "tContextR\007context\0228\n\010resource\030\002 \001(\0132\034.ud" +
+      "b.entity.v1.StoreResourceR\010resource\022.\n\004f" +
+      "rom\030\003 \001(\0132\032.google.protobuf.TimestampR\004f" +
+      "rom\022*\n\002to\030\004 \001(\0132\032.google.protobuf.Timest" +
+      "ampR\002to\022/\n\006filter\030\005 \001(\0132\027.google.protobu" +
+      "f.StructR\006filter\022\026\n\006fields\030\006 \003(\tR\006fields" +
+      "\022\031\n\010group_by\030\007 \001(\tR\007groupBy\022\034\n\taggregate" +
+      "\030\010 \001(\tR\taggregate\022\026\n\006window\030\t \001(\tR\006windo" +
+      "w\022\024\n\005limit\030\n \001(\005R\005limit\022\035\n\npage_token\030\013 " +
+      "\001(\tR\tpageToken\"\256\001\n\027TimeSeriesQueryRespon" +
+      "se\0226\n\006points\030\001 \003(\0132\036.udb.entity.v1.TimeS" +
+      "eriesPointR\006points\022&\n\017next_page_token\030\002 " +
+      "\001(\tR\rnextPageToken\0223\n\005stats\030\003 \001(\0132\035.udb." +
+      "entity.v1.OperationStatsR\005stats\"\250\002\n\026Anal" +
+      "yticalQueryRequest\0227\n\007context\030\001 \001(\0132\035.ud" +
+      "b.entity.v1.RequestContextR\007context\0228\n\010r" +
+      "esource\030\002 \001(\0132\034.udb.entity.v1.StoreResou" +
+      "rceR\010resource\022\024\n\005query\030\003 \001(\tR\005query\0227\n\np" +
+      "arameters\030\004 \001(\0132\027.google.protobuf.Struct" +
+      "R\nparameters\022\024\n\005limit\030\005 \001(\005R\005limit\022\035\n\npa" +
+      "ge_token\030\006 \001(\tR\tpageToken\022\027\n\007dry_run\030\007 \001" +
+      "(\010R\006dryRun\"\333\001\n\027AnalyticalQueryResponse\022&" +
+      "\n\004rows\030\001 \003(\0132\022.udb.entity.v1.RowR\004rows\022&" +
+      "\n\017next_page_token\030\002 \001(\tR\rnextPageToken\0223" +
+      "\n\005stats\030\003 \001(\0132\035.udb.entity.v1.OperationS" +
+      "tatsR\005stats\022;\n\010warnings\030\004 \003(\0132\037.udb.enti" +
+      "ty.v1.OperationWarningR\010warnings*\270\001\n\027Gra" +
+      "phTraversalDirection\022)\n%GRAPH_TRAVERSAL_" +
+      "DIRECTION_UNSPECIFIED\020\000\022&\n\"GRAPH_TRAVERS" +
+      "AL_DIRECTION_OUTGOING\020\001\022&\n\"GRAPH_TRAVERS" +
+      "AL_DIRECTION_INCOMING\020\002\022\"\n\036GRAPH_TRAVERS" +
+      "AL_DIRECTION_BOTH\020\003B\261\001\n\021com.udb.entity.v" +
+      "1B\013StoresProtoP\001Z9github.com/fahara02/ud" +
+      "b/sdk/go/gen/udb/entity/v1;entityv1\242\002\003UE" +
+      "X\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\" +
+      "GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V1b" +
+      "\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -379,21 +419,39 @@ public final class StoresProto {
     internal_static_udb_entity_v1_GraphQueryRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_GraphQueryRequest_descriptor,
-        new java.lang.String[] { "Context", "Resource", "Query", "Parameters", "Limit", "PageToken", "ReadOnly", });
-    internal_static_udb_entity_v1_GraphMutationRequest_descriptor =
+        new java.lang.String[] { "Context", "Resource", "Query", "Parameters", "Limit", "PageToken", "ReadOnly", "Traversal", });
+    internal_static_udb_entity_v1_GraphTraversal_descriptor =
       getDescriptor().getMessageTypes().get(13);
+    internal_static_udb_entity_v1_GraphTraversal_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_GraphTraversal_descriptor,
+        new java.lang.String[] { "StartLabel", "StartId", "RelationshipTypes", "Direction", "MinDepth", "MaxDepth", "NodeLabels", "NodePropertyEquals", "Limit", "ReturnRelationships", "RelationshipPropertyEquals", });
+    internal_static_udb_entity_v1_GraphTraversal_NodePropertyEqualsEntry_descriptor =
+      internal_static_udb_entity_v1_GraphTraversal_descriptor.getNestedTypes().get(0);
+    internal_static_udb_entity_v1_GraphTraversal_NodePropertyEqualsEntry_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_GraphTraversal_NodePropertyEqualsEntry_descriptor,
+        new java.lang.String[] { "Key", "Value", });
+    internal_static_udb_entity_v1_GraphTraversal_RelationshipPropertyEqualsEntry_descriptor =
+      internal_static_udb_entity_v1_GraphTraversal_descriptor.getNestedTypes().get(1);
+    internal_static_udb_entity_v1_GraphTraversal_RelationshipPropertyEqualsEntry_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_GraphTraversal_RelationshipPropertyEqualsEntry_descriptor,
+        new java.lang.String[] { "Key", "Value", });
+    internal_static_udb_entity_v1_GraphMutationRequest_descriptor =
+      getDescriptor().getMessageTypes().get(14);
     internal_static_udb_entity_v1_GraphMutationRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_GraphMutationRequest_descriptor,
         new java.lang.String[] { "Context", "Resource", "Query", "Parameters", "IdempotencyKey", });
     internal_static_udb_entity_v1_GraphResultSet_descriptor =
-      getDescriptor().getMessageTypes().get(14);
+      getDescriptor().getMessageTypes().get(15);
     internal_static_udb_entity_v1_GraphResultSet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_GraphResultSet_descriptor,
         new java.lang.String[] { "Records", "NextPageToken", "Stats", });
     internal_static_udb_entity_v1_TimeSeriesPoint_descriptor =
-      getDescriptor().getMessageTypes().get(15);
+      getDescriptor().getMessageTypes().get(16);
     internal_static_udb_entity_v1_TimeSeriesPoint_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_TimeSeriesPoint_descriptor,
@@ -411,31 +469,31 @@ public final class StoresProto {
         internal_static_udb_entity_v1_TimeSeriesPoint_ValuesEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_udb_entity_v1_TimeSeriesWriteRequest_descriptor =
-      getDescriptor().getMessageTypes().get(16);
+      getDescriptor().getMessageTypes().get(17);
     internal_static_udb_entity_v1_TimeSeriesWriteRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_TimeSeriesWriteRequest_descriptor,
         new java.lang.String[] { "Context", "Resource", "Points", "IdempotencyKey", });
     internal_static_udb_entity_v1_TimeSeriesQueryRequest_descriptor =
-      getDescriptor().getMessageTypes().get(17);
+      getDescriptor().getMessageTypes().get(18);
     internal_static_udb_entity_v1_TimeSeriesQueryRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_TimeSeriesQueryRequest_descriptor,
         new java.lang.String[] { "Context", "Resource", "From", "To", "Filter", "Fields", "GroupBy", "Aggregate", "Window", "Limit", "PageToken", });
     internal_static_udb_entity_v1_TimeSeriesQueryResponse_descriptor =
-      getDescriptor().getMessageTypes().get(18);
+      getDescriptor().getMessageTypes().get(19);
     internal_static_udb_entity_v1_TimeSeriesQueryResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_TimeSeriesQueryResponse_descriptor,
         new java.lang.String[] { "Points", "NextPageToken", "Stats", });
     internal_static_udb_entity_v1_AnalyticalQueryRequest_descriptor =
-      getDescriptor().getMessageTypes().get(19);
+      getDescriptor().getMessageTypes().get(20);
     internal_static_udb_entity_v1_AnalyticalQueryRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AnalyticalQueryRequest_descriptor,
         new java.lang.String[] { "Context", "Resource", "Query", "Parameters", "Limit", "PageToken", "DryRun", });
     internal_static_udb_entity_v1_AnalyticalQueryResponse_descriptor =
-      getDescriptor().getMessageTypes().get(20);
+      getDescriptor().getMessageTypes().get(21);
     internal_static_udb_entity_v1_AnalyticalQueryResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AnalyticalQueryResponse_descriptor,

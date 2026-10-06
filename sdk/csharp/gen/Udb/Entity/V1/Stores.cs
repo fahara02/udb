@@ -90,69 +90,91 @@ namespace Udb.Entity.V1 {
             "C0RvY3VtZW50U2V0EjUKCWRvY3VtZW50cxgBIAMoCzIXLmdvb2dsZS5wcm90",
             "b2J1Zi5TdHJ1Y3RSCWRvY3VtZW50cxImCg9uZXh0X3BhZ2VfdG9rZW4YAiAB",
             "KAlSDW5leHRQYWdlVG9rZW4SMwoFc3RhdHMYAyABKAsyHS51ZGIuZW50aXR5",
-            "LnYxLk9wZXJhdGlvblN0YXRzUgVzdGF0cyKnAgoRR3JhcGhRdWVyeVJlcXVl",
+            "LnYxLk9wZXJhdGlvblN0YXRzUgVzdGF0cyLkAgoRR3JhcGhRdWVyeVJlcXVl",
             "c3QSNwoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENv",
             "bnRleHRSB2NvbnRleHQSOAoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5",
             "LnYxLlN0b3JlUmVzb3VyY2VSCHJlc291cmNlEhQKBXF1ZXJ5GAMgASgJUgVx",
             "dWVyeRI3CgpwYXJhbWV0ZXJzGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0",
             "cnVjdFIKcGFyYW1ldGVycxIUCgVsaW1pdBgFIAEoBVIFbGltaXQSHQoKcGFn",
             "ZV90b2tlbhgGIAEoCVIJcGFnZVRva2VuEhsKCXJlYWRfb25seRgHIAEoCFII",
-            "cmVhZE9ubHkigQIKFEdyYXBoTXV0YXRpb25SZXF1ZXN0EjcKB2NvbnRleHQY",
-            "ASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0",
-            "EjgKCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291",
-            "cmNlUghyZXNvdXJjZRIUCgVxdWVyeRgDIAEoCVIFcXVlcnkSNwoKcGFyYW1l",
-            "dGVycxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSCnBhcmFtZXRl",
-            "cnMSJwoPaWRlbXBvdGVuY3lfa2V5GAUgASgJUg5pZGVtcG90ZW5jeUtleSKg",
-            "AQoOR3JhcGhSZXN1bHRTZXQSMQoHcmVjb3JkcxgBIAMoCzIXLmdvb2dsZS5w",
-            "cm90b2J1Zi5TdHJ1Y3RSB3JlY29yZHMSJgoPbmV4dF9wYWdlX3Rva2VuGAIg",
-            "ASgJUg1uZXh0UGFnZVRva2VuEjMKBXN0YXRzGAMgASgLMh0udWRiLmVudGl0",
-            "eS52MS5PcGVyYXRpb25TdGF0c1IFc3RhdHMi8gIKD1RpbWVTZXJpZXNQb2lu",
-            "dBI4Cgl0aW1lc3RhbXAYASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0",
-            "YW1wUgl0aW1lc3RhbXASPAoEdGFncxgCIAMoCzIoLnVkYi5lbnRpdHkudjEu",
-            "VGltZVNlcmllc1BvaW50LlRhZ3NFbnRyeVIEdGFncxJCCgZ2YWx1ZXMYAyAD",
-            "KAsyKi51ZGIuZW50aXR5LnYxLlRpbWVTZXJpZXNQb2ludC5WYWx1ZXNFbnRy",
-            "eVIGdmFsdWVzEi8KBmZpZWxkcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5T",
-            "dHJ1Y3RSBmZpZWxkcxo3CglUYWdzRW50cnkSEAoDa2V5GAEgASgJUgNrZXkS",
-            "FAoFdmFsdWUYAiABKAlSBXZhbHVlOgI4ARo5CgtWYWx1ZXNFbnRyeRIQCgNr",
-            "ZXkYASABKAlSA2tleRIUCgV2YWx1ZRgCIAEoAVIFdmFsdWU6AjgBIuwBChZU",
-            "aW1lU2VyaWVzV3JpdGVSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIu",
-            "ZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EjgKCHJlc291cmNl",
-            "GAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlUghyZXNvdXJj",
-            "ZRI2CgZwb2ludHMYAyADKAsyHi51ZGIuZW50aXR5LnYxLlRpbWVTZXJpZXNQ",
-            "b2ludFIGcG9pbnRzEicKD2lkZW1wb3RlbmN5X2tleRgEIAEoCVIOaWRlbXBv",
-            "dGVuY3lLZXkitgMKFlRpbWVTZXJpZXNRdWVyeVJlcXVlc3QSNwoHY29udGV4",
-            "dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRl",
-            "eHQSOAoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVz",
-            "b3VyY2VSCHJlc291cmNlEi4KBGZyb20YAyABKAsyGi5nb29nbGUucHJvdG9i",
-            "dWYuVGltZXN0YW1wUgRmcm9tEioKAnRvGAQgASgLMhouZ29vZ2xlLnByb3Rv",
-            "YnVmLlRpbWVzdGFtcFICdG8SLwoGZmlsdGVyGAUgASgLMhcuZ29vZ2xlLnBy",
-            "b3RvYnVmLlN0cnVjdFIGZmlsdGVyEhYKBmZpZWxkcxgGIAMoCVIGZmllbGRz",
-            "EhkKCGdyb3VwX2J5GAcgASgJUgdncm91cEJ5EhwKCWFnZ3JlZ2F0ZRgIIAEo",
-            "CVIJYWdncmVnYXRlEhYKBndpbmRvdxgJIAEoCVIGd2luZG93EhQKBWxpbWl0",
-            "GAogASgFUgVsaW1pdBIdCgpwYWdlX3Rva2VuGAsgASgJUglwYWdlVG9rZW4i",
-            "rgEKF1RpbWVTZXJpZXNRdWVyeVJlc3BvbnNlEjYKBnBvaW50cxgBIAMoCzIe",
-            "LnVkYi5lbnRpdHkudjEuVGltZVNlcmllc1BvaW50UgZwb2ludHMSJgoPbmV4",
-            "dF9wYWdlX3Rva2VuGAIgASgJUg1uZXh0UGFnZVRva2VuEjMKBXN0YXRzGAMg",
-            "ASgLMh0udWRiLmVudGl0eS52MS5PcGVyYXRpb25TdGF0c1IFc3RhdHMiqAIK",
-            "FkFuYWx5dGljYWxRdWVyeVJlcXVlc3QSNwoHY29udGV4dBgBIAEoCzIdLnVk",
-            "Yi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQSOAoIcmVzb3Vy",
-            "Y2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2VSCHJlc291",
-            "cmNlEhQKBXF1ZXJ5GAMgASgJUgVxdWVyeRI3CgpwYXJhbWV0ZXJzGAQgASgL",
-            "MhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIKcGFyYW1ldGVycxIUCgVsaW1p",
-            "dBgFIAEoBVIFbGltaXQSHQoKcGFnZV90b2tlbhgGIAEoCVIJcGFnZVRva2Vu",
-            "EhcKB2RyeV9ydW4YByABKAhSBmRyeVJ1biLbAQoXQW5hbHl0aWNhbFF1ZXJ5",
-            "UmVzcG9uc2USJgoEcm93cxgBIAMoCzISLnVkYi5lbnRpdHkudjEuUm93UgRy",
-            "b3dzEiYKD25leHRfcGFnZV90b2tlbhgCIAEoCVINbmV4dFBhZ2VUb2tlbhIz",
-            "CgVzdGF0cxgDIAEoCzIdLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uU3RhdHNS",
-            "BXN0YXRzEjsKCHdhcm5pbmdzGAQgAygLMh8udWRiLmVudGl0eS52MS5PcGVy",
-            "YXRpb25XYXJuaW5nUgh3YXJuaW5nc0KxAQoRY29tLnVkYi5lbnRpdHkudjFC",
-            "C1N0b3Jlc1Byb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9n",
-            "by9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRp",
-            "dHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0",
-            "eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z"));
+            "cmVhZE9ubHkSOwoJdHJhdmVyc2FsGAggASgLMh0udWRiLmVudGl0eS52MS5H",
+            "cmFwaFRyYXZlcnNhbFIJdHJhdmVyc2FsIuUFCg5HcmFwaFRyYXZlcnNhbBIf",
+            "CgtzdGFydF9sYWJlbBgBIAEoCVIKc3RhcnRMYWJlbBIZCghzdGFydF9pZBgC",
+            "IAEoCVIHc3RhcnRJZBItChJyZWxhdGlvbnNoaXBfdHlwZXMYAyADKAlSEXJl",
+            "bGF0aW9uc2hpcFR5cGVzEkQKCWRpcmVjdGlvbhgEIAEoDjImLnVkYi5lbnRp",
+            "dHkudjEuR3JhcGhUcmF2ZXJzYWxEaXJlY3Rpb25SCWRpcmVjdGlvbhIbCglt",
+            "aW5fZGVwdGgYBSABKAVSCG1pbkRlcHRoEhsKCW1heF9kZXB0aBgGIAEoBVII",
+            "bWF4RGVwdGgSHwoLbm9kZV9sYWJlbHMYByADKAlSCm5vZGVMYWJlbHMSZwoU",
+            "bm9kZV9wcm9wZXJ0eV9lcXVhbHMYCCADKAsyNS51ZGIuZW50aXR5LnYxLkdy",
+            "YXBoVHJhdmVyc2FsLk5vZGVQcm9wZXJ0eUVxdWFsc0VudHJ5UhJub2RlUHJv",
+            "cGVydHlFcXVhbHMSFAoFbGltaXQYCSABKAVSBWxpbWl0EjEKFHJldHVybl9y",
+            "ZWxhdGlvbnNoaXBzGAogASgIUhNyZXR1cm5SZWxhdGlvbnNoaXBzEn8KHHJl",
+            "bGF0aW9uc2hpcF9wcm9wZXJ0eV9lcXVhbHMYCyADKAsyPS51ZGIuZW50aXR5",
+            "LnYxLkdyYXBoVHJhdmVyc2FsLlJlbGF0aW9uc2hpcFByb3BlcnR5RXF1YWxz",
+            "RW50cnlSGnJlbGF0aW9uc2hpcFByb3BlcnR5RXF1YWxzGkUKF05vZGVQcm9w",
+            "ZXJ0eUVxdWFsc0VudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIg",
+            "ASgJUgV2YWx1ZToCOAEaTQofUmVsYXRpb25zaGlwUHJvcGVydHlFcXVhbHNF",
+            "bnRyeRIQCgNrZXkYASABKAlSA2tleRIUCgV2YWx1ZRgCIAEoCVIFdmFsdWU6",
+            "AjgBIoECChRHcmFwaE11dGF0aW9uUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgL",
+            "Mh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBI4Cghy",
+            "ZXNvdXJjZRgCIAEoCzIcLnVkYi5lbnRpdHkudjEuU3RvcmVSZXNvdXJjZVII",
+            "cmVzb3VyY2USFAoFcXVlcnkYAyABKAlSBXF1ZXJ5EjcKCnBhcmFtZXRlcnMY",
+            "BCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0UgpwYXJhbWV0ZXJzEicK",
+            "D2lkZW1wb3RlbmN5X2tleRgFIAEoCVIOaWRlbXBvdGVuY3lLZXkioAEKDkdy",
+            "YXBoUmVzdWx0U2V0EjEKB3JlY29yZHMYASADKAsyFy5nb29nbGUucHJvdG9i",
+            "dWYuU3RydWN0UgdyZWNvcmRzEiYKD25leHRfcGFnZV90b2tlbhgCIAEoCVIN",
+            "bmV4dFBhZ2VUb2tlbhIzCgVzdGF0cxgDIAEoCzIdLnVkYi5lbnRpdHkudjEu",
+            "T3BlcmF0aW9uU3RhdHNSBXN0YXRzIvICCg9UaW1lU2VyaWVzUG9pbnQSOAoJ",
+            "dGltZXN0YW1wGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJ",
+            "dGltZXN0YW1wEjwKBHRhZ3MYAiADKAsyKC51ZGIuZW50aXR5LnYxLlRpbWVT",
+            "ZXJpZXNQb2ludC5UYWdzRW50cnlSBHRhZ3MSQgoGdmFsdWVzGAMgAygLMiou",
+            "dWRiLmVudGl0eS52MS5UaW1lU2VyaWVzUG9pbnQuVmFsdWVzRW50cnlSBnZh",
+            "bHVlcxIvCgZmaWVsZHMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0",
+            "UgZmaWVsZHMaNwoJVGFnc0VudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQKBXZh",
+            "bHVlGAIgASgJUgV2YWx1ZToCOAEaOQoLVmFsdWVzRW50cnkSEAoDa2V5GAEg",
+            "ASgJUgNrZXkSFAoFdmFsdWUYAiABKAFSBXZhbHVlOgI4ASLsAQoWVGltZVNl",
+            "cmllc1dyaXRlUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0",
+            "eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBI4CghyZXNvdXJjZRgCIAEo",
+            "CzIcLnVkYi5lbnRpdHkudjEuU3RvcmVSZXNvdXJjZVIIcmVzb3VyY2USNgoG",
+            "cG9pbnRzGAMgAygLMh4udWRiLmVudGl0eS52MS5UaW1lU2VyaWVzUG9pbnRS",
+            "BnBvaW50cxInCg9pZGVtcG90ZW5jeV9rZXkYBCABKAlSDmlkZW1wb3RlbmN5",
+            "S2V5IrYDChZUaW1lU2VyaWVzUXVlcnlSZXF1ZXN0EjcKB2NvbnRleHQYASAB",
+            "KAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EjgK",
+            "CHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNl",
+            "UghyZXNvdXJjZRIuCgRmcm9tGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRp",
+            "bWVzdGFtcFIEZnJvbRIqCgJ0bxgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5U",
+            "aW1lc3RhbXBSAnRvEi8KBmZpbHRlchgFIAEoCzIXLmdvb2dsZS5wcm90b2J1",
+            "Zi5TdHJ1Y3RSBmZpbHRlchIWCgZmaWVsZHMYBiADKAlSBmZpZWxkcxIZCghn",
+            "cm91cF9ieRgHIAEoCVIHZ3JvdXBCeRIcCglhZ2dyZWdhdGUYCCABKAlSCWFn",
+            "Z3JlZ2F0ZRIWCgZ3aW5kb3cYCSABKAlSBndpbmRvdxIUCgVsaW1pdBgKIAEo",
+            "BVIFbGltaXQSHQoKcGFnZV90b2tlbhgLIAEoCVIJcGFnZVRva2VuIq4BChdU",
+            "aW1lU2VyaWVzUXVlcnlSZXNwb25zZRI2CgZwb2ludHMYASADKAsyHi51ZGIu",
+            "ZW50aXR5LnYxLlRpbWVTZXJpZXNQb2ludFIGcG9pbnRzEiYKD25leHRfcGFn",
+            "ZV90b2tlbhgCIAEoCVINbmV4dFBhZ2VUb2tlbhIzCgVzdGF0cxgDIAEoCzId",
+            "LnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uU3RhdHNSBXN0YXRzIqgCChZBbmFs",
+            "eXRpY2FsUXVlcnlSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50",
+            "aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EjgKCHJlc291cmNlGAIg",
+            "ASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlUghyZXNvdXJjZRIU",
+            "CgVxdWVyeRgDIAEoCVIFcXVlcnkSNwoKcGFyYW1ldGVycxgEIAEoCzIXLmdv",
+            "b2dsZS5wcm90b2J1Zi5TdHJ1Y3RSCnBhcmFtZXRlcnMSFAoFbGltaXQYBSAB",
+            "KAVSBWxpbWl0Eh0KCnBhZ2VfdG9rZW4YBiABKAlSCXBhZ2VUb2tlbhIXCgdk",
+            "cnlfcnVuGAcgASgIUgZkcnlSdW4i2wEKF0FuYWx5dGljYWxRdWVyeVJlc3Bv",
+            "bnNlEiYKBHJvd3MYASADKAsyEi51ZGIuZW50aXR5LnYxLlJvd1IEcm93cxIm",
+            "Cg9uZXh0X3BhZ2VfdG9rZW4YAiABKAlSDW5leHRQYWdlVG9rZW4SMwoFc3Rh",
+            "dHMYAyABKAsyHS51ZGIuZW50aXR5LnYxLk9wZXJhdGlvblN0YXRzUgVzdGF0",
+            "cxI7Cgh3YXJuaW5ncxgEIAMoCzIfLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9u",
+            "V2FybmluZ1IId2FybmluZ3MquAEKF0dyYXBoVHJhdmVyc2FsRGlyZWN0aW9u",
+            "EikKJUdSQVBIX1RSQVZFUlNBTF9ESVJFQ1RJT05fVU5TUEVDSUZJRUQQABIm",
+            "CiJHUkFQSF9UUkFWRVJTQUxfRElSRUNUSU9OX09VVEdPSU5HEAESJgoiR1JB",
+            "UEhfVFJBVkVSU0FMX0RJUkVDVElPTl9JTkNPTUlORxACEiIKHkdSQVBIX1RS",
+            "QVZFUlNBTF9ESVJFQ1RJT05fQk9USBADQrEBChFjb20udWRiLmVudGl0eS52",
+            "MUILU3RvcmVzUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2Rr",
+            "L2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVu",
+            "dGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50",
+            "aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, global::Udb.Entity.V1.OperationReflection.Descriptor, global::Udb.Entity.V1.RelationalReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Udb.Entity.V1.GraphTraversalDirection), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CacheGetRequest), global::Udb.Entity.V1.CacheGetRequest.Parser, new[]{ "Context", "Resource", "Key", "Touch" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CacheGetResponse), global::Udb.Entity.V1.CacheGetResponse.Parser, new[]{ "Found", "Value", "ContentType", "TtlSeconds", "Metadata" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CacheSetRequest), global::Udb.Entity.V1.CacheSetRequest.Parser, new[]{ "Context", "Resource", "Key", "Value", "ContentType", "TtlSeconds", "OnlyIfAbsent", "OnlyIfPresent", "IdempotencyKey", "Metadata" }, null, null, null, null),
@@ -165,7 +187,8 @@ namespace Udb.Entity.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DocumentUpsertRequest), global::Udb.Entity.V1.DocumentUpsertRequest.Parser, new[]{ "Context", "Resource", "DocumentId", "Document", "MergeFields", "Replace", "IdempotencyKey" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DocumentDeleteRequest), global::Udb.Entity.V1.DocumentDeleteRequest.Parser, new[]{ "Context", "Resource", "DocumentId", "Filter", "IdempotencyKey" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DocumentSet), global::Udb.Entity.V1.DocumentSet.Parser, new[]{ "Documents", "NextPageToken", "Stats" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.GraphQueryRequest), global::Udb.Entity.V1.GraphQueryRequest.Parser, new[]{ "Context", "Resource", "Query", "Parameters", "Limit", "PageToken", "ReadOnly" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.GraphQueryRequest), global::Udb.Entity.V1.GraphQueryRequest.Parser, new[]{ "Context", "Resource", "Query", "Parameters", "Limit", "PageToken", "ReadOnly", "Traversal" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.GraphTraversal), global::Udb.Entity.V1.GraphTraversal.Parser, new[]{ "StartLabel", "StartId", "RelationshipTypes", "Direction", "MinDepth", "MaxDepth", "NodeLabels", "NodePropertyEquals", "Limit", "ReturnRelationships", "RelationshipPropertyEquals" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.GraphMutationRequest), global::Udb.Entity.V1.GraphMutationRequest.Parser, new[]{ "Context", "Resource", "Query", "Parameters", "IdempotencyKey" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.GraphResultSet), global::Udb.Entity.V1.GraphResultSet.Parser, new[]{ "Records", "NextPageToken", "Stats" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.TimeSeriesPoint), global::Udb.Entity.V1.TimeSeriesPoint.Parser, new[]{ "Timestamp", "Tags", "Values", "Fields" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, }),
@@ -179,6 +202,22 @@ namespace Udb.Entity.V1 {
     #endregion
 
   }
+  #region Enums
+  /// <summary>
+  /// Direction a GraphTraversal follows relationships from its start node.
+  /// </summary>
+  public enum GraphTraversalDirection {
+    /// <summary>
+    /// Treated as OUTGOING.
+    /// </summary>
+    [pbr::OriginalName("GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("GRAPH_TRAVERSAL_DIRECTION_OUTGOING")] Outgoing = 1,
+    [pbr::OriginalName("GRAPH_TRAVERSAL_DIRECTION_INCOMING")] Incoming = 2,
+    [pbr::OriginalName("GRAPH_TRAVERSAL_DIRECTION_BOTH")] Both = 3,
+  }
+
+  #endregion
+
   #region Messages
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class CacheGetRequest : pb::IMessage<CacheGetRequest>
@@ -4598,6 +4637,7 @@ namespace Udb.Entity.V1 {
       limit_ = other.limit_;
       pageToken_ = other.pageToken_;
       readOnly_ = other.readOnly_;
+      traversal_ = other.traversal_ != null ? other.traversal_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -4691,6 +4731,24 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "traversal" field.</summary>
+    public const int TraversalFieldNumber = 8;
+    private global::Udb.Entity.V1.GraphTraversal traversal_;
+    /// <summary>
+    /// Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+    /// itself (every node and relationship on a path must carry the caller's
+    /// verified tenant/project scope) and `query` / `parameters` must be empty.
+    /// It does not need the raw-dispatch opt-out that free-text `query` needs.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.GraphTraversal Traversal {
+      get { return traversal_; }
+      set {
+        traversal_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -4713,6 +4771,7 @@ namespace Udb.Entity.V1 {
       if (Limit != other.Limit) return false;
       if (PageToken != other.PageToken) return false;
       if (ReadOnly != other.ReadOnly) return false;
+      if (!object.Equals(Traversal, other.Traversal)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -4727,6 +4786,7 @@ namespace Udb.Entity.V1 {
       if (Limit != 0) hash ^= Limit.GetHashCode();
       if (PageToken.Length != 0) hash ^= PageToken.GetHashCode();
       if (ReadOnly != false) hash ^= ReadOnly.GetHashCode();
+      if (traversal_ != null) hash ^= Traversal.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -4773,6 +4833,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(56);
         output.WriteBool(ReadOnly);
       }
+      if (traversal_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(Traversal);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -4811,6 +4875,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(56);
         output.WriteBool(ReadOnly);
       }
+      if (traversal_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(Traversal);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -4841,6 +4909,9 @@ namespace Udb.Entity.V1 {
       }
       if (ReadOnly != false) {
         size += 1 + 1;
+      }
+      if (traversal_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Traversal);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -4883,6 +4954,12 @@ namespace Udb.Entity.V1 {
       }
       if (other.ReadOnly != false) {
         ReadOnly = other.ReadOnly;
+      }
+      if (other.traversal_ != null) {
+        if (traversal_ == null) {
+          Traversal = new global::Udb.Entity.V1.GraphTraversal();
+        }
+        Traversal.MergeFrom(other.Traversal);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -4938,6 +5015,13 @@ namespace Udb.Entity.V1 {
           }
           case 56: {
             ReadOnly = input.ReadBool();
+            break;
+          }
+          case 66: {
+            if (traversal_ == null) {
+              Traversal = new global::Udb.Entity.V1.GraphTraversal();
+            }
+            input.ReadMessage(Traversal);
             break;
           }
         }
@@ -4996,6 +5080,577 @@ namespace Udb.Entity.V1 {
             ReadOnly = input.ReadBool();
             break;
           }
+          case 66: {
+            if (traversal_ == null) {
+              Traversal = new global::Udb.Entity.V1.GraphTraversal();
+            }
+            input.ReadMessage(Traversal);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// A typed graph traversal: start from one node, follow relationships for
+  /// min_depth..max_depth hops, and return the reached nodes. Labels,
+  /// relationship types and property keys must be plain identifiers (ASCII
+  /// letters, digits, underscore; not starting with a digit); values are bound
+  /// as query parameters.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class GraphTraversal : pb::IMessage<GraphTraversal>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<GraphTraversal> _parser = new pb::MessageParser<GraphTraversal>(() => new GraphTraversal());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<GraphTraversal> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[13]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public GraphTraversal() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public GraphTraversal(GraphTraversal other) : this() {
+      startLabel_ = other.startLabel_;
+      startId_ = other.startId_;
+      relationshipTypes_ = other.relationshipTypes_.Clone();
+      direction_ = other.direction_;
+      minDepth_ = other.minDepth_;
+      maxDepth_ = other.maxDepth_;
+      nodeLabels_ = other.nodeLabels_.Clone();
+      nodePropertyEquals_ = other.nodePropertyEquals_.Clone();
+      limit_ = other.limit_;
+      returnRelationships_ = other.returnRelationships_;
+      relationshipPropertyEquals_ = other.relationshipPropertyEquals_.Clone();
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public GraphTraversal Clone() {
+      return new GraphTraversal(this);
+    }
+
+    /// <summary>Field number for the "start_label" field.</summary>
+    public const int StartLabelFieldNumber = 1;
+    private string startLabel_ = "";
+    /// <summary>
+    /// Label of the start node (required).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string StartLabel {
+      get { return startLabel_; }
+      set {
+        startLabel_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "start_id" field.</summary>
+    public const int StartIdFieldNumber = 2;
+    private string startId_ = "";
+    /// <summary>
+    /// `id` property of the start node (required).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string StartId {
+      get { return startId_; }
+      set {
+        startId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "relationship_types" field.</summary>
+    public const int RelationshipTypesFieldNumber = 3;
+    private static readonly pb::FieldCodec<string> _repeated_relationshipTypes_codec
+        = pb::FieldCodec.ForString(26);
+    private readonly pbc::RepeatedField<string> relationshipTypes_ = new pbc::RepeatedField<string>();
+    /// <summary>
+    /// Relationship types to follow; empty follows any type.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> RelationshipTypes {
+      get { return relationshipTypes_; }
+    }
+
+    /// <summary>Field number for the "direction" field.</summary>
+    public const int DirectionFieldNumber = 4;
+    private global::Udb.Entity.V1.GraphTraversalDirection direction_ = global::Udb.Entity.V1.GraphTraversalDirection.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.GraphTraversalDirection Direction {
+      get { return direction_; }
+      set {
+        direction_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "min_depth" field.</summary>
+    public const int MinDepthFieldNumber = 5;
+    private int minDepth_;
+    /// <summary>
+    /// Minimum hops (0 = 1).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int MinDepth {
+      get { return minDepth_; }
+      set {
+        minDepth_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "max_depth" field.</summary>
+    public const int MaxDepthFieldNumber = 6;
+    private int maxDepth_;
+    /// <summary>
+    /// Maximum hops (0 = 1). Values above the server cap (4) are rejected.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int MaxDepth {
+      get { return maxDepth_; }
+      set {
+        maxDepth_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "node_labels" field.</summary>
+    public const int NodeLabelsFieldNumber = 7;
+    private static readonly pb::FieldCodec<string> _repeated_nodeLabels_codec
+        = pb::FieldCodec.ForString(58);
+    private readonly pbc::RepeatedField<string> nodeLabels_ = new pbc::RepeatedField<string>();
+    /// <summary>
+    /// Keep only reached nodes carrying at least one of these labels.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> NodeLabels {
+      get { return nodeLabels_; }
+    }
+
+    /// <summary>Field number for the "node_property_equals" field.</summary>
+    public const int NodePropertyEqualsFieldNumber = 8;
+    private static readonly pbc::MapField<string, string>.Codec _map_nodePropertyEquals_codec
+        = new pbc::MapField<string, string>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForString(18, ""), 66);
+    private readonly pbc::MapField<string, string> nodePropertyEquals_ = new pbc::MapField<string, string>();
+    /// <summary>
+    /// Keep only reached nodes whose property equals the given value
+    /// (e.g. owner / audience filters).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::MapField<string, string> NodePropertyEquals {
+      get { return nodePropertyEquals_; }
+    }
+
+    /// <summary>Field number for the "limit" field.</summary>
+    public const int LimitFieldNumber = 9;
+    private int limit_;
+    /// <summary>
+    /// Maximum rows (0 = 100; capped at 1000).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int Limit {
+      get { return limit_; }
+      set {
+        limit_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "return_relationships" field.</summary>
+    public const int ReturnRelationshipsFieldNumber = 10;
+    private bool returnRelationships_;
+    /// <summary>
+    /// Return one row per path with its relationships instead of one row per
+    /// distinct reached node.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool ReturnRelationships {
+      get { return returnRelationships_; }
+      set {
+        returnRelationships_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "relationship_property_equals" field.</summary>
+    public const int RelationshipPropertyEqualsFieldNumber = 11;
+    private static readonly pbc::MapField<string, string>.Codec _map_relationshipPropertyEquals_codec
+        = new pbc::MapField<string, string>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForString(18, ""), 90);
+    private readonly pbc::MapField<string, string> relationshipPropertyEquals_ = new pbc::MapField<string, string>();
+    /// <summary>
+    /// Follow only relationships whose property equals the given value (applied
+    /// to EVERY relationship on the path, e.g. kind = "peer").
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::MapField<string, string> RelationshipPropertyEquals {
+      get { return relationshipPropertyEquals_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as GraphTraversal);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(GraphTraversal other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (StartLabel != other.StartLabel) return false;
+      if (StartId != other.StartId) return false;
+      if(!relationshipTypes_.Equals(other.relationshipTypes_)) return false;
+      if (Direction != other.Direction) return false;
+      if (MinDepth != other.MinDepth) return false;
+      if (MaxDepth != other.MaxDepth) return false;
+      if(!nodeLabels_.Equals(other.nodeLabels_)) return false;
+      if (!NodePropertyEquals.Equals(other.NodePropertyEquals)) return false;
+      if (Limit != other.Limit) return false;
+      if (ReturnRelationships != other.ReturnRelationships) return false;
+      if (!RelationshipPropertyEquals.Equals(other.RelationshipPropertyEquals)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (StartLabel.Length != 0) hash ^= StartLabel.GetHashCode();
+      if (StartId.Length != 0) hash ^= StartId.GetHashCode();
+      hash ^= relationshipTypes_.GetHashCode();
+      if (Direction != global::Udb.Entity.V1.GraphTraversalDirection.Unspecified) hash ^= Direction.GetHashCode();
+      if (MinDepth != 0) hash ^= MinDepth.GetHashCode();
+      if (MaxDepth != 0) hash ^= MaxDepth.GetHashCode();
+      hash ^= nodeLabels_.GetHashCode();
+      hash ^= NodePropertyEquals.GetHashCode();
+      if (Limit != 0) hash ^= Limit.GetHashCode();
+      if (ReturnRelationships != false) hash ^= ReturnRelationships.GetHashCode();
+      hash ^= RelationshipPropertyEquals.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (StartLabel.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(StartLabel);
+      }
+      if (StartId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(StartId);
+      }
+      relationshipTypes_.WriteTo(output, _repeated_relationshipTypes_codec);
+      if (Direction != global::Udb.Entity.V1.GraphTraversalDirection.Unspecified) {
+        output.WriteRawTag(32);
+        output.WriteEnum((int) Direction);
+      }
+      if (MinDepth != 0) {
+        output.WriteRawTag(40);
+        output.WriteInt32(MinDepth);
+      }
+      if (MaxDepth != 0) {
+        output.WriteRawTag(48);
+        output.WriteInt32(MaxDepth);
+      }
+      nodeLabels_.WriteTo(output, _repeated_nodeLabels_codec);
+      nodePropertyEquals_.WriteTo(output, _map_nodePropertyEquals_codec);
+      if (Limit != 0) {
+        output.WriteRawTag(72);
+        output.WriteInt32(Limit);
+      }
+      if (ReturnRelationships != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(ReturnRelationships);
+      }
+      relationshipPropertyEquals_.WriteTo(output, _map_relationshipPropertyEquals_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (StartLabel.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(StartLabel);
+      }
+      if (StartId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(StartId);
+      }
+      relationshipTypes_.WriteTo(ref output, _repeated_relationshipTypes_codec);
+      if (Direction != global::Udb.Entity.V1.GraphTraversalDirection.Unspecified) {
+        output.WriteRawTag(32);
+        output.WriteEnum((int) Direction);
+      }
+      if (MinDepth != 0) {
+        output.WriteRawTag(40);
+        output.WriteInt32(MinDepth);
+      }
+      if (MaxDepth != 0) {
+        output.WriteRawTag(48);
+        output.WriteInt32(MaxDepth);
+      }
+      nodeLabels_.WriteTo(ref output, _repeated_nodeLabels_codec);
+      nodePropertyEquals_.WriteTo(ref output, _map_nodePropertyEquals_codec);
+      if (Limit != 0) {
+        output.WriteRawTag(72);
+        output.WriteInt32(Limit);
+      }
+      if (ReturnRelationships != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(ReturnRelationships);
+      }
+      relationshipPropertyEquals_.WriteTo(ref output, _map_relationshipPropertyEquals_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (StartLabel.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(StartLabel);
+      }
+      if (StartId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(StartId);
+      }
+      size += relationshipTypes_.CalculateSize(_repeated_relationshipTypes_codec);
+      if (Direction != global::Udb.Entity.V1.GraphTraversalDirection.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Direction);
+      }
+      if (MinDepth != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(MinDepth);
+      }
+      if (MaxDepth != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(MaxDepth);
+      }
+      size += nodeLabels_.CalculateSize(_repeated_nodeLabels_codec);
+      size += nodePropertyEquals_.CalculateSize(_map_nodePropertyEquals_codec);
+      if (Limit != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Limit);
+      }
+      if (ReturnRelationships != false) {
+        size += 1 + 1;
+      }
+      size += relationshipPropertyEquals_.CalculateSize(_map_relationshipPropertyEquals_codec);
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(GraphTraversal other) {
+      if (other == null) {
+        return;
+      }
+      if (other.StartLabel.Length != 0) {
+        StartLabel = other.StartLabel;
+      }
+      if (other.StartId.Length != 0) {
+        StartId = other.StartId;
+      }
+      relationshipTypes_.Add(other.relationshipTypes_);
+      if (other.Direction != global::Udb.Entity.V1.GraphTraversalDirection.Unspecified) {
+        Direction = other.Direction;
+      }
+      if (other.MinDepth != 0) {
+        MinDepth = other.MinDepth;
+      }
+      if (other.MaxDepth != 0) {
+        MaxDepth = other.MaxDepth;
+      }
+      nodeLabels_.Add(other.nodeLabels_);
+      nodePropertyEquals_.MergeFrom(other.nodePropertyEquals_);
+      if (other.Limit != 0) {
+        Limit = other.Limit;
+      }
+      if (other.ReturnRelationships != false) {
+        ReturnRelationships = other.ReturnRelationships;
+      }
+      relationshipPropertyEquals_.MergeFrom(other.relationshipPropertyEquals_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            StartLabel = input.ReadString();
+            break;
+          }
+          case 18: {
+            StartId = input.ReadString();
+            break;
+          }
+          case 26: {
+            relationshipTypes_.AddEntriesFrom(input, _repeated_relationshipTypes_codec);
+            break;
+          }
+          case 32: {
+            Direction = (global::Udb.Entity.V1.GraphTraversalDirection) input.ReadEnum();
+            break;
+          }
+          case 40: {
+            MinDepth = input.ReadInt32();
+            break;
+          }
+          case 48: {
+            MaxDepth = input.ReadInt32();
+            break;
+          }
+          case 58: {
+            nodeLabels_.AddEntriesFrom(input, _repeated_nodeLabels_codec);
+            break;
+          }
+          case 66: {
+            nodePropertyEquals_.AddEntriesFrom(input, _map_nodePropertyEquals_codec);
+            break;
+          }
+          case 72: {
+            Limit = input.ReadInt32();
+            break;
+          }
+          case 80: {
+            ReturnRelationships = input.ReadBool();
+            break;
+          }
+          case 90: {
+            relationshipPropertyEquals_.AddEntriesFrom(input, _map_relationshipPropertyEquals_codec);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            StartLabel = input.ReadString();
+            break;
+          }
+          case 18: {
+            StartId = input.ReadString();
+            break;
+          }
+          case 26: {
+            relationshipTypes_.AddEntriesFrom(ref input, _repeated_relationshipTypes_codec);
+            break;
+          }
+          case 32: {
+            Direction = (global::Udb.Entity.V1.GraphTraversalDirection) input.ReadEnum();
+            break;
+          }
+          case 40: {
+            MinDepth = input.ReadInt32();
+            break;
+          }
+          case 48: {
+            MaxDepth = input.ReadInt32();
+            break;
+          }
+          case 58: {
+            nodeLabels_.AddEntriesFrom(ref input, _repeated_nodeLabels_codec);
+            break;
+          }
+          case 66: {
+            nodePropertyEquals_.AddEntriesFrom(ref input, _map_nodePropertyEquals_codec);
+            break;
+          }
+          case 72: {
+            Limit = input.ReadInt32();
+            break;
+          }
+          case 80: {
+            ReturnRelationships = input.ReadBool();
+            break;
+          }
+          case 90: {
+            relationshipPropertyEquals_.AddEntriesFrom(ref input, _map_relationshipPropertyEquals_codec);
+            break;
+          }
         }
       }
     }
@@ -5018,7 +5673,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[13]; }
+      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[14]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -5391,7 +6046,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[14]; }
+      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[15]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -5661,7 +6316,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[15]; }
+      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[16]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -5966,7 +6621,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[16]; }
+      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[17]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6282,7 +6937,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[17]; }
+      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[18]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6884,7 +7539,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[18]; }
+      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[19]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -7154,7 +7809,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[19]; }
+      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[20]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -7601,7 +8256,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[20]; }
+      get { return global::Udb.Entity.V1.StoresReflection.Descriptor.MessageTypes[21]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

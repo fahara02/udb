@@ -557,6 +557,200 @@ async fn live_served_writes_project_tenant_scoped_points_into_qdrant() {
     drop_schema(&pool, &schema).await;
 }
 
+// ── Postgres full-text + Qdrant dense hybrid over a projected collection ──────
+
+/// Payload ids of a served hybrid/vector result, in result order.
+fn payload_ids(set: &crate::proto::VectorSet) -> Vec<String> {
+    set.points
+        .iter()
+        .map(|point| {
+            point
+                .payload
+                .as_ref()
+                .map(struct_to_json)
+                .and_then(|payload| {
+                    payload
+                        .get("id")
+                        .and_then(|id| id.as_str())
+                        .map(str::to_string)
+                })
+                .unwrap_or_default()
+        })
+        .collect()
+}
+
+/// A projection declaring `fts_columns` makes served `VectorHybridSearch` fuse
+/// Postgres full-text search over the SOURCE table with the Qdrant kNN leg:
+/// each tenant gets only its own documents, and a document that matches the
+/// text but is not among the dense candidates (prefetch 1) still comes back,
+/// with its Qdrant payload. `payload_fields` keeps the vector out of the point
+/// payload and an array column stays a JSON array a match filter can hit.
+#[tokio::test]
+#[ignore = "requires live Postgres+Qdrant (UDB_INTEGRATION_PG_DSN + UDB_QDRANT_URL); runs in the CI --ignored live lane"]
+async fn live_pg_fts_hybrid_search_fuses_own_tenant_text_and_dense_hits() {
+    let _guard = crate::runtime::service::live_tests::support::live_native_service_db_lock()
+        .lock()
+        .await;
+    let qdrant = qdrant_url();
+    let pool = ledger_pool().await;
+    let store = ledger_store(&pool).await;
+
+    let schema = format!("udb_proj_{}", Uuid::new_v4().simple());
+    let collection = format!("udb_fts_hybrid_{}", Uuid::new_v4().simple());
+    const MSG: &str = "acme.proj.v1.FtsDoc";
+    create_source_table(
+        &pool,
+        &schema,
+        "fts_docs",
+        ", vector JSONB, body TEXT, topic_ids JSONB",
+    )
+    .await;
+    create_qdrant_collection(&qdrant, &collection).await;
+
+    let mut vector = text_col("vector", false);
+    vector.sql_type = "JSONB".to_string();
+    vector.is_jsonb = true;
+    let mut topic_ids = text_col("topic_ids", false);
+    topic_ids.sql_type = "JSONB".to_string();
+    topic_ids.is_jsonb = true;
+    let svc = served_service(served_manifest(
+        &schema,
+        "fts_docs",
+        "FtsDoc",
+        vec![vector, text_col("body", false), topic_ids],
+        vec![projection(
+            "FtsDoc",
+            "vector",
+            "qdrant",
+            &collection,
+            vec![
+                opt("vector_field", "vector"),
+                opt("fts_columns", "body"),
+                opt("fts_config", "english"),
+                opt("payload_fields", "body,topic_ids"),
+            ],
+        )],
+        vec![ManifestStore {
+            store_kind: "vector".to_string(),
+            backend: "qdrant".to_string(),
+            resource_name: collection.clone(),
+            options: vec![opt("dimension", "4")],
+            ..ManifestStore::default()
+        }],
+    ))
+    .await;
+    let worker = worker(store, svc.runtime_snapshot(), svc.catalog.clone());
+
+    let tenant_a = Uuid::new_v4().to_string();
+    let tenant_b = Uuid::new_v4().to_string();
+    // a-lex matches the text but is the dense FAR neighbour; a-dense is the
+    // dense nearest neighbour with no text match; b-lex is tenant B's document
+    // that matches both (it must never reach tenant A).
+    for (tenant, id, body, vector, topics) in [
+        (
+            &tenant_a,
+            "a-lex",
+            "Zebra crossings explained",
+            json!([0.0, 0.0, 0.0, 1.0]),
+            json!(["t-zebra", "t-roads"]),
+        ),
+        (
+            &tenant_a,
+            "a-dense",
+            "Quarterly revenue report",
+            json!([1.0, 0.0, 0.0, 0.0]),
+            json!(["t-finance"]),
+        ),
+        (
+            &tenant_b,
+            "b-lex",
+            "Zebra herds on the move",
+            json!([1.0, 0.0, 0.0, 0.0]),
+            json!(["t-zebra"]),
+        ),
+    ] {
+        served_upsert(
+            &svc,
+            tenant,
+            MSG,
+            json!({"id": id, "tenant_id": tenant, "body": body, "vector": vector, "topic_ids": topics}),
+        )
+        .await;
+    }
+    worker.run_once().await;
+
+    let hybrid = |tenant: &str| {
+        with_ctx(
+            crate::proto::VectorHybridSearchRequest {
+                collection: collection.clone(),
+                vector: vec![1.0, 0.0, 0.0, 0.0],
+                text_query: "zebra".to_string(),
+                limit: 10,
+                prefetch_limit: 1,
+                with_payload: true,
+                ..crate::proto::VectorHybridSearchRequest::default()
+            },
+            tenant,
+        )
+    };
+    let a_hits = svc
+        .vector_hybrid_search(hybrid(&tenant_a))
+        .await
+        .unwrap_or_else(|err| panic!("served full-text hybrid for tenant A: {err:?}"))
+        .into_inner();
+    let mut a_ids = payload_ids(&a_hits);
+    a_ids.sort();
+    assert_eq!(
+        a_ids,
+        vec!["a-dense", "a-lex"],
+        "tenant A gets its dense neighbour AND its text-only match, never tenant B's: {a_hits:?}"
+    );
+    let a_lex = a_hits
+        .points
+        .iter()
+        .filter_map(|point| point.payload.as_ref().map(struct_to_json))
+        .find(|payload| payload["id"] == "a-lex")
+        .expect("the text-only hit carries its Qdrant payload");
+    assert_eq!(a_lex["_tenant_id"], tenant_a.as_str(), "{a_lex}");
+    assert_eq!(a_lex["body"], "Zebra crossings explained", "{a_lex}");
+    assert!(
+        a_lex.get("vector").is_none(),
+        "payload_fields keeps the vector out: {a_lex}"
+    );
+    assert_eq!(a_lex["topic_ids"], json!(["t-zebra", "t-roads"]), "{a_lex}");
+
+    let b_hits = svc
+        .vector_hybrid_search(hybrid(&tenant_b))
+        .await
+        .unwrap_or_else(|err| panic!("served full-text hybrid for tenant B: {err:?}"))
+        .into_inner();
+    assert_eq!(payload_ids(&b_hits), vec!["b-lex"], "{b_hits:?}");
+
+    // An array payload field is a JSON array: a match on ONE element hits.
+    let by_topic = svc
+        .vector_search(with_ctx(
+            crate::proto::VectorSearchRequest {
+                collection: collection.clone(),
+                vector: vec![1.0, 0.0, 0.0, 0.0],
+                filter: json_to_struct(
+                    &json!({"must": [{"key": "topic_ids", "match": {"value": "t-roads"}}]}),
+                ),
+                limit: 10,
+                with_payload: true,
+                ..crate::proto::VectorSearchRequest::default()
+            },
+            &tenant_a,
+        ))
+        .await
+        .unwrap_or_else(|err| panic!("served VectorSearch on an array element: {err:?}"))
+        .into_inner();
+    assert_eq!(payload_ids(&by_topic), vec!["a-lex"], "{by_topic:?}");
+
+    delete_tasks_for_resource(&pool, &collection).await;
+    drop_qdrant_collection(&qdrant, &collection).await;
+    drop_schema(&pool, &schema).await;
+}
+
 // ── D1: projection + CDC carry the bytes the database holds ───────────────────
 
 /// D1: an encrypted column reaches the projection task and the CDC outbox as

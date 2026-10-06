@@ -2,8 +2,8 @@
 // @generated from file udb/entity/v1/stores.proto (package udb.entity.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { RequestContext } from "./context_pb";
@@ -18,7 +18,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/stores.proto.
  */
 export const file_udb_entity_v1_stores: GenFile = /*@__PURE__*/
-  fileDesc("Chp1ZGIvZW50aXR5L3YxL3N0b3Jlcy5wcm90bxINdWRiLmVudGl0eS52MSKNAQoPQ2FjaGVHZXRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEgsKA2tleRgDIAEoCRINCgV0b3VjaBgEIAEoCCKGAQoQQ2FjaGVHZXRSZXNwb25zZRINCgVmb3VuZBgBIAEoCBINCgV2YWx1ZRgCIAEoDBIUCgxjb250ZW50X3R5cGUYAyABKAkSEwoLdHRsX3NlY29uZHMYBCABKAMSKQoIbWV0YWRhdGEYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Iq0CCg9DYWNoZVNldFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USCwoDa2V5GAMgASgJEg0KBXZhbHVlGAQgASgMEhQKDGNvbnRlbnRfdHlwZRgFIAEoCRITCgt0dGxfc2Vjb25kcxgGIAEoAxIWCg5vbmx5X2lmX2Fic2VudBgHIAEoCBIXCg9vbmx5X2lmX3ByZXNlbnQYCCABKAgSFwoPaWRlbXBvdGVuY3lfa2V5GAkgASgJEikKCG1ldGFkYXRhGAogASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdCKaAQoSQ2FjaGVEZWxldGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEgsKA2tleRgDIAEoCRIXCg9pZGVtcG90ZW5jeV9rZXkYBCABKAkiqgEKEENhY2hlU2NhblJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USEwoLa2V5X3BhdHRlcm4YAyABKAkSDQoFbGltaXQYBCABKAUSEgoKcGFnZV90b2tlbhgFIAEoCSJ+CgpDYWNoZUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoDBIUCgxjb250ZW50X3R5cGUYAyABKAkSEwoLdHRsX3NlY29uZHMYBCABKAMSKQoIbWV0YWRhdGEYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IoYBChFDYWNoZVNjYW5SZXNwb25zZRIqCgdlbnRyaWVzGAEgAygLMhkudWRiLmVudGl0eS52MS5DYWNoZUVudHJ5EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIsCgVzdGF0cxgDIAEoCzIdLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uU3RhdHMimQEKEkRvY3VtZW50R2V0UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIuCghyZXNvdXJjZRgCIAEoCzIcLnVkYi5lbnRpdHkudjEuU3RvcmVSZXNvdXJjZRITCgtkb2N1bWVudF9pZBgDIAEoCRIOCgZmaWVsZHMYBCADKAki9AEKE0RvY3VtZW50RmluZFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USJwoGZmlsdGVyGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIOCgZmaWVsZHMYBCADKAkSDQoFbGltaXQYBSABKAUSEgoKcGFnZV90b2tlbhgGIAEoCRIhCgRzb3J0GAcgAygLMhMudWRiLmVudGl0eS52MS5Tb3J0IvcBChVEb2N1bWVudFVwc2VydFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USEwoLZG9jdW1lbnRfaWQYAyABKAkSKQoIZG9jdW1lbnQYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhQKDG1lcmdlX2ZpZWxkcxgFIAMoCRIPCgdyZXBsYWNlGAYgASgIEhcKD2lkZW1wb3RlbmN5X2tleRgHIAEoCSLOAQoVRG9jdW1lbnREZWxldGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEhMKC2RvY3VtZW50X2lkGAMgASgJEicKBmZpbHRlchgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPaWRlbXBvdGVuY3lfa2V5GAUgASgJIoABCgtEb2N1bWVudFNldBIqCglkb2N1bWVudHMYASADKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIsCgVzdGF0cxgDIAEoCzIdLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uU3RhdHMi5QEKEUdyYXBoUXVlcnlSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEg0KBXF1ZXJ5GAMgASgJEisKCnBhcmFtZXRlcnMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg0KBWxpbWl0GAUgASgFEhIKCnBhZ2VfdG9rZW4YBiABKAkSEQoJcmVhZF9vbmx5GAcgASgIIssBChRHcmFwaE11dGF0aW9uUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIuCghyZXNvdXJjZRgCIAEoCzIcLnVkYi5lbnRpdHkudjEuU3RvcmVSZXNvdXJjZRINCgVxdWVyeRgDIAEoCRIrCgpwYXJhbWV0ZXJzGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIXCg9pZGVtcG90ZW5jeV9rZXkYBSABKAkigQEKDkdyYXBoUmVzdWx0U2V0EigKB3JlY29yZHMYASADKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIsCgVzdGF0cxgDIAEoCzIdLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uU3RhdHMiuQIKD1RpbWVTZXJpZXNQb2ludBItCgl0aW1lc3RhbXAYASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjYKBHRhZ3MYAiADKAsyKC51ZGIuZW50aXR5LnYxLlRpbWVTZXJpZXNQb2ludC5UYWdzRW50cnkSOgoGdmFsdWVzGAMgAygLMioudWRiLmVudGl0eS52MS5UaW1lU2VyaWVzUG9pbnQuVmFsdWVzRW50cnkSJwoGZmllbGRzGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBorCglUYWdzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ARotCgtWYWx1ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBIsEBChZUaW1lU2VyaWVzV3JpdGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEi4KBnBvaW50cxgDIAMoCzIeLnVkYi5lbnRpdHkudjEuVGltZVNlcmllc1BvaW50EhcKD2lkZW1wb3RlbmN5X2tleRgEIAEoCSLbAgoWVGltZVNlcmllc1F1ZXJ5UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIuCghyZXNvdXJjZRgCIAEoCzIcLnVkYi5lbnRpdHkudjEuU3RvcmVSZXNvdXJjZRIoCgRmcm9tGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBImCgJ0bxgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJwoGZmlsdGVyGAUgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIOCgZmaWVsZHMYBiADKAkSEAoIZ3JvdXBfYnkYByABKAkSEQoJYWdncmVnYXRlGAggASgJEg4KBndpbmRvdxgJIAEoCRINCgVsaW1pdBgKIAEoBRISCgpwYWdlX3Rva2VuGAsgASgJIpABChdUaW1lU2VyaWVzUXVlcnlSZXNwb25zZRIuCgZwb2ludHMYASADKAsyHi51ZGIuZW50aXR5LnYxLlRpbWVTZXJpZXNQb2ludBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkSLAoFc3RhdHMYAyABKAsyHS51ZGIuZW50aXR5LnYxLk9wZXJhdGlvblN0YXRzIugBChZBbmFseXRpY2FsUXVlcnlSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEg0KBXF1ZXJ5GAMgASgJEisKCnBhcmFtZXRlcnMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg0KBWxpbWl0GAUgASgFEhIKCnBhZ2VfdG9rZW4YBiABKAkSDwoHZHJ5X3J1bhgHIAEoCCK1AQoXQW5hbHl0aWNhbFF1ZXJ5UmVzcG9uc2USIAoEcm93cxgBIAMoCzISLnVkYi5lbnRpdHkudjEuUm93EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIsCgVzdGF0cxgDIAEoCzIdLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uU3RhdHMSMQoId2FybmluZ3MYBCADKAsyHy51ZGIuZW50aXR5LnYxLk9wZXJhdGlvbldhcm5pbmdCsQEKEWNvbS51ZGIuZW50aXR5LnYxQgtTdG9yZXNQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_google_protobuf_timestamp, file_udb_entity_v1_context, file_udb_entity_v1_operation, file_udb_entity_v1_relational]);
+  fileDesc("Chp1ZGIvZW50aXR5L3YxL3N0b3Jlcy5wcm90bxINdWRiLmVudGl0eS52MSKNAQoPQ2FjaGVHZXRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEgsKA2tleRgDIAEoCRINCgV0b3VjaBgEIAEoCCKGAQoQQ2FjaGVHZXRSZXNwb25zZRINCgVmb3VuZBgBIAEoCBINCgV2YWx1ZRgCIAEoDBIUCgxjb250ZW50X3R5cGUYAyABKAkSEwoLdHRsX3NlY29uZHMYBCABKAMSKQoIbWV0YWRhdGEYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Iq0CCg9DYWNoZVNldFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USCwoDa2V5GAMgASgJEg0KBXZhbHVlGAQgASgMEhQKDGNvbnRlbnRfdHlwZRgFIAEoCRITCgt0dGxfc2Vjb25kcxgGIAEoAxIWCg5vbmx5X2lmX2Fic2VudBgHIAEoCBIXCg9vbmx5X2lmX3ByZXNlbnQYCCABKAgSFwoPaWRlbXBvdGVuY3lfa2V5GAkgASgJEikKCG1ldGFkYXRhGAogASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdCKaAQoSQ2FjaGVEZWxldGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEgsKA2tleRgDIAEoCRIXCg9pZGVtcG90ZW5jeV9rZXkYBCABKAkiqgEKEENhY2hlU2NhblJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USEwoLa2V5X3BhdHRlcm4YAyABKAkSDQoFbGltaXQYBCABKAUSEgoKcGFnZV90b2tlbhgFIAEoCSJ+CgpDYWNoZUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoDBIUCgxjb250ZW50X3R5cGUYAyABKAkSEwoLdHRsX3NlY29uZHMYBCABKAMSKQoIbWV0YWRhdGEYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IoYBChFDYWNoZVNjYW5SZXNwb25zZRIqCgdlbnRyaWVzGAEgAygLMhkudWRiLmVudGl0eS52MS5DYWNoZUVudHJ5EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIsCgVzdGF0cxgDIAEoCzIdLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uU3RhdHMimQEKEkRvY3VtZW50R2V0UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIuCghyZXNvdXJjZRgCIAEoCzIcLnVkYi5lbnRpdHkudjEuU3RvcmVSZXNvdXJjZRITCgtkb2N1bWVudF9pZBgDIAEoCRIOCgZmaWVsZHMYBCADKAki9AEKE0RvY3VtZW50RmluZFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USJwoGZmlsdGVyGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIOCgZmaWVsZHMYBCADKAkSDQoFbGltaXQYBSABKAUSEgoKcGFnZV90b2tlbhgGIAEoCRIhCgRzb3J0GAcgAygLMhMudWRiLmVudGl0eS52MS5Tb3J0IvcBChVEb2N1bWVudFVwc2VydFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USEwoLZG9jdW1lbnRfaWQYAyABKAkSKQoIZG9jdW1lbnQYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhQKDG1lcmdlX2ZpZWxkcxgFIAMoCRIPCgdyZXBsYWNlGAYgASgIEhcKD2lkZW1wb3RlbmN5X2tleRgHIAEoCSLOAQoVRG9jdW1lbnREZWxldGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEhMKC2RvY3VtZW50X2lkGAMgASgJEicKBmZpbHRlchgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPaWRlbXBvdGVuY3lfa2V5GAUgASgJIoABCgtEb2N1bWVudFNldBIqCglkb2N1bWVudHMYASADKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIsCgVzdGF0cxgDIAEoCzIdLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uU3RhdHMilwIKEUdyYXBoUXVlcnlSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEg0KBXF1ZXJ5GAMgASgJEisKCnBhcmFtZXRlcnMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg0KBWxpbWl0GAUgASgFEhIKCnBhZ2VfdG9rZW4YBiABKAkSEQoJcmVhZF9vbmx5GAcgASgIEjAKCXRyYXZlcnNhbBgIIAEoCzIdLnVkYi5lbnRpdHkudjEuR3JhcGhUcmF2ZXJzYWwirgQKDkdyYXBoVHJhdmVyc2FsEhMKC3N0YXJ0X2xhYmVsGAEgASgJEhAKCHN0YXJ0X2lkGAIgASgJEhoKEnJlbGF0aW9uc2hpcF90eXBlcxgDIAMoCRI5CglkaXJlY3Rpb24YBCABKA4yJi51ZGIuZW50aXR5LnYxLkdyYXBoVHJhdmVyc2FsRGlyZWN0aW9uEhEKCW1pbl9kZXB0aBgFIAEoBRIRCgltYXhfZGVwdGgYBiABKAUSEwoLbm9kZV9sYWJlbHMYByADKAkSUwoUbm9kZV9wcm9wZXJ0eV9lcXVhbHMYCCADKAsyNS51ZGIuZW50aXR5LnYxLkdyYXBoVHJhdmVyc2FsLk5vZGVQcm9wZXJ0eUVxdWFsc0VudHJ5Eg0KBWxpbWl0GAkgASgFEhwKFHJldHVybl9yZWxhdGlvbnNoaXBzGAogASgIEmMKHHJlbGF0aW9uc2hpcF9wcm9wZXJ0eV9lcXVhbHMYCyADKAsyPS51ZGIuZW50aXR5LnYxLkdyYXBoVHJhdmVyc2FsLlJlbGF0aW9uc2hpcFByb3BlcnR5RXF1YWxzRW50cnkaOQoXTm9kZVByb3BlcnR5RXF1YWxzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ARpBCh9SZWxhdGlvbnNoaXBQcm9wZXJ0eUVxdWFsc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiywEKFEdyYXBoTXV0YXRpb25SZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEg0KBXF1ZXJ5GAMgASgJEisKCnBhcmFtZXRlcnMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhcKD2lkZW1wb3RlbmN5X2tleRgFIAEoCSKBAQoOR3JhcGhSZXN1bHRTZXQSKAoHcmVjb3JkcxgBIAMoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJEiwKBXN0YXRzGAMgASgLMh0udWRiLmVudGl0eS52MS5PcGVyYXRpb25TdGF0cyK5AgoPVGltZVNlcmllc1BvaW50Ei0KCXRpbWVzdGFtcBgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNgoEdGFncxgCIAMoCzIoLnVkYi5lbnRpdHkudjEuVGltZVNlcmllc1BvaW50LlRhZ3NFbnRyeRI6CgZ2YWx1ZXMYAyADKAsyKi51ZGIuZW50aXR5LnYxLlRpbWVTZXJpZXNQb2ludC5WYWx1ZXNFbnRyeRInCgZmaWVsZHMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0GisKCVRhZ3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGi0KC1ZhbHVlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiwQEKFlRpbWVTZXJpZXNXcml0ZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USLgoGcG9pbnRzGAMgAygLMh4udWRiLmVudGl0eS52MS5UaW1lU2VyaWVzUG9pbnQSFwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJItsCChZUaW1lU2VyaWVzUXVlcnlSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ei4KCHJlc291cmNlGAIgASgLMhwudWRiLmVudGl0eS52MS5TdG9yZVJlc291cmNlEigKBGZyb20YAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiYKAnRvGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBInCgZmaWx0ZXIYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg4KBmZpZWxkcxgGIAMoCRIQCghncm91cF9ieRgHIAEoCRIRCglhZ2dyZWdhdGUYCCABKAkSDgoGd2luZG93GAkgASgJEg0KBWxpbWl0GAogASgFEhIKCnBhZ2VfdG9rZW4YCyABKAkikAEKF1RpbWVTZXJpZXNRdWVyeVJlc3BvbnNlEi4KBnBvaW50cxgBIAMoCzIeLnVkYi5lbnRpdHkudjEuVGltZVNlcmllc1BvaW50EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIsCgVzdGF0cxgDIAEoCzIdLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uU3RhdHMi6AEKFkFuYWx5dGljYWxRdWVyeVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSLgoIcmVzb3VyY2UYAiABKAsyHC51ZGIuZW50aXR5LnYxLlN0b3JlUmVzb3VyY2USDQoFcXVlcnkYAyABKAkSKwoKcGFyYW1ldGVycxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSDQoFbGltaXQYBSABKAUSEgoKcGFnZV90b2tlbhgGIAEoCRIPCgdkcnlfcnVuGAcgASgIIrUBChdBbmFseXRpY2FsUXVlcnlSZXNwb25zZRIgCgRyb3dzGAEgAygLMhIudWRiLmVudGl0eS52MS5Sb3cSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJEiwKBXN0YXRzGAMgASgLMh0udWRiLmVudGl0eS52MS5PcGVyYXRpb25TdGF0cxIxCgh3YXJuaW5ncxgEIAMoCzIfLnVkYi5lbnRpdHkudjEuT3BlcmF0aW9uV2FybmluZyq4AQoXR3JhcGhUcmF2ZXJzYWxEaXJlY3Rpb24SKQolR1JBUEhfVFJBVkVSU0FMX0RJUkVDVElPTl9VTlNQRUNJRklFRBAAEiYKIkdSQVBIX1RSQVZFUlNBTF9ESVJFQ1RJT05fT1VUR09JTkcQARImCiJHUkFQSF9UUkFWRVJTQUxfRElSRUNUSU9OX0lOQ09NSU5HEAISIgoeR1JBUEhfVFJBVkVSU0FMX0RJUkVDVElPTl9CT1RIEANCsQEKEWNvbS51ZGIuZW50aXR5LnYxQgtTdG9yZXNQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_google_protobuf_timestamp, file_udb_entity_v1_context, file_udb_entity_v1_operation, file_udb_entity_v1_relational]);
 
 /**
  * @generated from message udb.entity.v1.CacheGetRequest
@@ -512,6 +512,16 @@ export type GraphQueryRequest = Message<"udb.entity.v1.GraphQueryRequest"> & {
    * @generated from field: bool read_only = 7;
    */
   readOnly: boolean;
+
+  /**
+   * Typed, tenant-scoped traversal. When set, the broker builds the Cypher
+   * itself (every node and relationship on a path must carry the caller's
+   * verified tenant/project scope) and `query` / `parameters` must be empty.
+   * It does not need the raw-dispatch opt-out that free-text `query` needs.
+   *
+   * @generated from field: udb.entity.v1.GraphTraversal traversal = 8;
+   */
+  traversal?: GraphTraversal | undefined;
 };
 
 /**
@@ -520,6 +530,102 @@ export type GraphQueryRequest = Message<"udb.entity.v1.GraphQueryRequest"> & {
  */
 export const GraphQueryRequestSchema: GenMessage<GraphQueryRequest> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_stores, 12);
+
+/**
+ * A typed graph traversal: start from one node, follow relationships for
+ * min_depth..max_depth hops, and return the reached nodes. Labels,
+ * relationship types and property keys must be plain identifiers (ASCII
+ * letters, digits, underscore; not starting with a digit); values are bound
+ * as query parameters.
+ *
+ * @generated from message udb.entity.v1.GraphTraversal
+ */
+export type GraphTraversal = Message<"udb.entity.v1.GraphTraversal"> & {
+  /**
+   * Label of the start node (required).
+   *
+   * @generated from field: string start_label = 1;
+   */
+  startLabel: string;
+
+  /**
+   * `id` property of the start node (required).
+   *
+   * @generated from field: string start_id = 2;
+   */
+  startId: string;
+
+  /**
+   * Relationship types to follow; empty follows any type.
+   *
+   * @generated from field: repeated string relationship_types = 3;
+   */
+  relationshipTypes: string[];
+
+  /**
+   * @generated from field: udb.entity.v1.GraphTraversalDirection direction = 4;
+   */
+  direction: GraphTraversalDirection;
+
+  /**
+   * Minimum hops (0 = 1).
+   *
+   * @generated from field: int32 min_depth = 5;
+   */
+  minDepth: number;
+
+  /**
+   * Maximum hops (0 = 1). Values above the server cap (4) are rejected.
+   *
+   * @generated from field: int32 max_depth = 6;
+   */
+  maxDepth: number;
+
+  /**
+   * Keep only reached nodes carrying at least one of these labels.
+   *
+   * @generated from field: repeated string node_labels = 7;
+   */
+  nodeLabels: string[];
+
+  /**
+   * Keep only reached nodes whose property equals the given value
+   * (e.g. owner / audience filters).
+   *
+   * @generated from field: map<string, string> node_property_equals = 8;
+   */
+  nodePropertyEquals: { [key: string]: string };
+
+  /**
+   * Maximum rows (0 = 100; capped at 1000).
+   *
+   * @generated from field: int32 limit = 9;
+   */
+  limit: number;
+
+  /**
+   * Return one row per path with its relationships instead of one row per
+   * distinct reached node.
+   *
+   * @generated from field: bool return_relationships = 10;
+   */
+  returnRelationships: boolean;
+
+  /**
+   * Follow only relationships whose property equals the given value (applied
+   * to EVERY relationship on the path, e.g. kind = "peer").
+   *
+   * @generated from field: map<string, string> relationship_property_equals = 11;
+   */
+  relationshipPropertyEquals: { [key: string]: string };
+};
+
+/**
+ * Describes the message udb.entity.v1.GraphTraversal.
+ * Use `create(GraphTraversalSchema)` to create a new message.
+ */
+export const GraphTraversalSchema: GenMessage<GraphTraversal> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_stores, 13);
 
 /**
  * @generated from message udb.entity.v1.GraphMutationRequest
@@ -556,7 +662,7 @@ export type GraphMutationRequest = Message<"udb.entity.v1.GraphMutationRequest">
  * Use `create(GraphMutationRequestSchema)` to create a new message.
  */
 export const GraphMutationRequestSchema: GenMessage<GraphMutationRequest> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_stores, 13);
+  messageDesc(file_udb_entity_v1_stores, 14);
 
 /**
  * @generated from message udb.entity.v1.GraphResultSet
@@ -583,7 +689,7 @@ export type GraphResultSet = Message<"udb.entity.v1.GraphResultSet"> & {
  * Use `create(GraphResultSetSchema)` to create a new message.
  */
 export const GraphResultSetSchema: GenMessage<GraphResultSet> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_stores, 14);
+  messageDesc(file_udb_entity_v1_stores, 15);
 
 /**
  * @generated from message udb.entity.v1.TimeSeriesPoint
@@ -615,7 +721,7 @@ export type TimeSeriesPoint = Message<"udb.entity.v1.TimeSeriesPoint"> & {
  * Use `create(TimeSeriesPointSchema)` to create a new message.
  */
 export const TimeSeriesPointSchema: GenMessage<TimeSeriesPoint> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_stores, 15);
+  messageDesc(file_udb_entity_v1_stores, 16);
 
 /**
  * @generated from message udb.entity.v1.TimeSeriesWriteRequest
@@ -647,7 +753,7 @@ export type TimeSeriesWriteRequest = Message<"udb.entity.v1.TimeSeriesWriteReque
  * Use `create(TimeSeriesWriteRequestSchema)` to create a new message.
  */
 export const TimeSeriesWriteRequestSchema: GenMessage<TimeSeriesWriteRequest> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_stores, 16);
+  messageDesc(file_udb_entity_v1_stores, 17);
 
 /**
  * @generated from message udb.entity.v1.TimeSeriesQueryRequest
@@ -714,7 +820,7 @@ export type TimeSeriesQueryRequest = Message<"udb.entity.v1.TimeSeriesQueryReque
  * Use `create(TimeSeriesQueryRequestSchema)` to create a new message.
  */
 export const TimeSeriesQueryRequestSchema: GenMessage<TimeSeriesQueryRequest> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_stores, 17);
+  messageDesc(file_udb_entity_v1_stores, 18);
 
 /**
  * @generated from message udb.entity.v1.TimeSeriesQueryResponse
@@ -741,7 +847,7 @@ export type TimeSeriesQueryResponse = Message<"udb.entity.v1.TimeSeriesQueryResp
  * Use `create(TimeSeriesQueryResponseSchema)` to create a new message.
  */
 export const TimeSeriesQueryResponseSchema: GenMessage<TimeSeriesQueryResponse> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_stores, 18);
+  messageDesc(file_udb_entity_v1_stores, 19);
 
 /**
  * @generated from message udb.entity.v1.AnalyticalQueryRequest
@@ -788,7 +894,7 @@ export type AnalyticalQueryRequest = Message<"udb.entity.v1.AnalyticalQueryReque
  * Use `create(AnalyticalQueryRequestSchema)` to create a new message.
  */
 export const AnalyticalQueryRequestSchema: GenMessage<AnalyticalQueryRequest> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_stores, 19);
+  messageDesc(file_udb_entity_v1_stores, 20);
 
 /**
  * @generated from message udb.entity.v1.AnalyticalQueryResponse
@@ -820,4 +926,39 @@ export type AnalyticalQueryResponse = Message<"udb.entity.v1.AnalyticalQueryResp
  * Use `create(AnalyticalQueryResponseSchema)` to create a new message.
  */
 export const AnalyticalQueryResponseSchema: GenMessage<AnalyticalQueryResponse> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_stores, 20);
+  messageDesc(file_udb_entity_v1_stores, 21);
+
+/**
+ * Direction a GraphTraversal follows relationships from its start node.
+ *
+ * @generated from enum udb.entity.v1.GraphTraversalDirection
+ */
+export enum GraphTraversalDirection {
+  /**
+   * Treated as OUTGOING.
+   *
+   * @generated from enum value: GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: GRAPH_TRAVERSAL_DIRECTION_OUTGOING = 1;
+   */
+  OUTGOING = 1,
+
+  /**
+   * @generated from enum value: GRAPH_TRAVERSAL_DIRECTION_INCOMING = 2;
+   */
+  INCOMING = 2,
+
+  /**
+   * @generated from enum value: GRAPH_TRAVERSAL_DIRECTION_BOTH = 3;
+   */
+  BOTH = 3,
+}
+
+/**
+ * Describes the enum udb.entity.v1.GraphTraversalDirection.
+ */
+export const GraphTraversalDirectionSchema: GenEnum<GraphTraversalDirection> = /*@__PURE__*/
+  enumDesc(file_udb_entity_v1_stores, 0);

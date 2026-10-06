@@ -6,12 +6,24 @@ from udb.entity.v1 import context_pb2 as _context_pb2
 from udb.entity.v1 import operation_pb2 as _operation_pb2
 from udb.entity.v1 import relational_pb2 as _relational_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class GraphTraversalDirection(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED: _ClassVar[GraphTraversalDirection]
+    GRAPH_TRAVERSAL_DIRECTION_OUTGOING: _ClassVar[GraphTraversalDirection]
+    GRAPH_TRAVERSAL_DIRECTION_INCOMING: _ClassVar[GraphTraversalDirection]
+    GRAPH_TRAVERSAL_DIRECTION_BOTH: _ClassVar[GraphTraversalDirection]
+GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED: GraphTraversalDirection
+GRAPH_TRAVERSAL_DIRECTION_OUTGOING: GraphTraversalDirection
+GRAPH_TRAVERSAL_DIRECTION_INCOMING: GraphTraversalDirection
+GRAPH_TRAVERSAL_DIRECTION_BOTH: GraphTraversalDirection
 
 class CacheGetRequest(_message.Message):
     __slots__ = ("context", "resource", "key", "touch")
@@ -186,7 +198,7 @@ class DocumentSet(_message.Message):
     def __init__(self, documents: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., stats: _Optional[_Union[_operation_pb2.OperationStats, _Mapping]] = ...) -> None: ...
 
 class GraphQueryRequest(_message.Message):
-    __slots__ = ("context", "resource", "query", "parameters", "limit", "page_token", "read_only")
+    __slots__ = ("context", "resource", "query", "parameters", "limit", "page_token", "read_only", "traversal")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     RESOURCE_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
@@ -194,6 +206,7 @@ class GraphQueryRequest(_message.Message):
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     READ_ONLY_FIELD_NUMBER: _ClassVar[int]
+    TRAVERSAL_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     resource: _operation_pb2.StoreResource
     query: str
@@ -201,7 +214,48 @@ class GraphQueryRequest(_message.Message):
     limit: int
     page_token: str
     read_only: bool
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., query: _Optional[str] = ..., parameters: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ..., read_only: bool = ...) -> None: ...
+    traversal: GraphTraversal
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., query: _Optional[str] = ..., parameters: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ..., read_only: bool = ..., traversal: _Optional[_Union[GraphTraversal, _Mapping]] = ...) -> None: ...
+
+class GraphTraversal(_message.Message):
+    __slots__ = ("start_label", "start_id", "relationship_types", "direction", "min_depth", "max_depth", "node_labels", "node_property_equals", "limit", "return_relationships", "relationship_property_equals")
+    class NodePropertyEqualsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    class RelationshipPropertyEqualsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    START_LABEL_FIELD_NUMBER: _ClassVar[int]
+    START_ID_FIELD_NUMBER: _ClassVar[int]
+    RELATIONSHIP_TYPES_FIELD_NUMBER: _ClassVar[int]
+    DIRECTION_FIELD_NUMBER: _ClassVar[int]
+    MIN_DEPTH_FIELD_NUMBER: _ClassVar[int]
+    MAX_DEPTH_FIELD_NUMBER: _ClassVar[int]
+    NODE_LABELS_FIELD_NUMBER: _ClassVar[int]
+    NODE_PROPERTY_EQUALS_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    RETURN_RELATIONSHIPS_FIELD_NUMBER: _ClassVar[int]
+    RELATIONSHIP_PROPERTY_EQUALS_FIELD_NUMBER: _ClassVar[int]
+    start_label: str
+    start_id: str
+    relationship_types: _containers.RepeatedScalarFieldContainer[str]
+    direction: GraphTraversalDirection
+    min_depth: int
+    max_depth: int
+    node_labels: _containers.RepeatedScalarFieldContainer[str]
+    node_property_equals: _containers.ScalarMap[str, str]
+    limit: int
+    return_relationships: bool
+    relationship_property_equals: _containers.ScalarMap[str, str]
+    def __init__(self, start_label: _Optional[str] = ..., start_id: _Optional[str] = ..., relationship_types: _Optional[_Iterable[str]] = ..., direction: _Optional[_Union[GraphTraversalDirection, str]] = ..., min_depth: _Optional[int] = ..., max_depth: _Optional[int] = ..., node_labels: _Optional[_Iterable[str]] = ..., node_property_equals: _Optional[_Mapping[str, str]] = ..., limit: _Optional[int] = ..., return_relationships: bool = ..., relationship_property_equals: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class GraphMutationRequest(_message.Message):
     __slots__ = ("context", "resource", "query", "parameters", "idempotency_key")

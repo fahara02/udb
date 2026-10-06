@@ -106,6 +106,9 @@ use crate::runtime::executors::{
 
 const QDRANT_DEFAULT_SEARCH_LIMIT: i32 = 10;
 
+/// Postgres full-text text leg for hybrid search over a projected collection.
+pub(crate) mod pg_fts_hybrid;
+
 // ── Collection name validation (GAP 27) ────────────────────────────────
 
 fn qdrant_invalid_field_status(
@@ -863,6 +866,52 @@ impl QdrantHttpClient {
             .map_err(|err| backend_transport_status("Qdrant", "payload patch", err))?;
         qdrant_status(response.status())?;
         Ok(())
+    }
+
+    /// The points among `point_ids` (ids in Qdrant's own text form) that also
+    /// match `filter` (the tenant/project-scoped caller filter), fetched with a
+    /// `has_id` scroll so a point outside the caller's scope is never returned
+    /// even when its id is known.
+    pub(crate) async fn points_by_ids(
+        &self,
+        collection: &str,
+        point_ids: &[String],
+        filter: JsonValue,
+        with_payload: bool,
+        with_vector: bool,
+    ) -> Result<Vec<VectorPoint>, tonic::Status> {
+        validate_collection_name(collection)?;
+        if point_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut must = vec![json!({
+            "has_id": point_ids.iter().map(|id| qdrant_point_id(id)).collect::<Vec<_>>()
+        })];
+        if !filter.is_null() {
+            must.push(filter);
+        }
+        let url = format!(
+            "{}/collections/{}/points/scroll",
+            self.base_url,
+            encode_collection(collection)
+        );
+        let response = self
+            .auth(self.http.post(url))
+            .json(&json!({
+                "filter": { "must": must },
+                "limit": point_ids.len(),
+                "with_payload": with_payload,
+                "with_vector": with_vector,
+            }))
+            .send()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "points by id", err))?;
+        qdrant_status(response.status())?;
+        let payload: JsonValue = response
+            .json()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "response decode", err))?;
+        Ok(query_result_points(payload))
     }
 
     /// True hybrid search using Qdrant's `/points/query` RRF API (Qdrant ≥ v1.7).

@@ -879,7 +879,10 @@ impl DataBrokerService {
     // Free-text Cypher cannot be lowered to the IR, so these stay on the raw
     // path behind the dispatch core's raw-dispatch gate. GraphQuery is
     // additionally read-only: the Neo4j executor's query path refuses write
-    // clauses and runs the statement in a READ transaction.
+    // clauses and runs the statement in a READ transaction. A typed
+    // `GraphQuery.traversal` is the mediated alternative: the broker builds
+    // the Cypher with the verified scope on every node and relationship, so it
+    // is not subject to the raw-dispatch gate.
 
     pub(crate) async fn graph_query_inner(
         &self,
@@ -902,11 +905,54 @@ impl DataBrokerService {
         {
             return self.record_grpc("GraphQuery", started, Err(e));
         }
-        let spec = serde_json::json!({
-            "cypher": req.query,
-            "parameters": struct_field(&req.parameters),
-            "limit": req.limit,
-        });
+        let spec = match req.traversal.as_ref() {
+            // Typed traversal: the dispatch core stamps the verified scope and
+            // the Neo4j executor builds the scoped Cypher (no raw gate).
+            Some(traversal) => {
+                if !req.query.trim().is_empty()
+                    || req
+                        .parameters
+                        .as_ref()
+                        .is_some_and(|params| !params.fields.is_empty())
+                {
+                    return self.record_grpc(
+                        "GraphQuery",
+                        started,
+                        Err(store_rpc_invalid_fields(
+                            "GraphQuery takes either a free-text query or a typed traversal, not both",
+                            [(
+                                "traversal",
+                                "must not be combined with query or parameters",
+                            )],
+                        )),
+                    );
+                }
+                if self.store_backend_kind(&security, &req.resource)
+                    != Some(crate::backend::BackendKind::Neo4j)
+                {
+                    return self.record_grpc(
+                        "GraphQuery",
+                        started,
+                        Err(store_rpc_invalid_fields(
+                            "GraphQuery.traversal is served by a neo4j graph store only",
+                            [(
+                                "resource.backend",
+                                "must resolve to a neo4j backend for a typed traversal",
+                            )],
+                        )),
+                    );
+                }
+                match graph_traversal_json(traversal, req.limit) {
+                    Ok(traversal) => serde_json::json!({ "traversal": traversal }),
+                    Err(e) => return self.record_grpc("GraphQuery", started, Err(e)),
+                }
+            }
+            None => serde_json::json!({
+                "cypher": req.query,
+                "parameters": struct_field(&req.parameters),
+                "limit": req.limit,
+            }),
+        };
         let out = self
             .run_store_op(&security, req.resource.as_ref(), false, "query", spec)
             .await
@@ -1187,6 +1233,49 @@ impl DataBrokerService {
 
 // ── Shared mapping helpers ──────────────────────────────────────────────────
 
+/// The typed `GraphTraversal` as the executor's `traversal` JSON. Map filters
+/// are emitted in key order so the built Cypher is deterministic. The request
+/// `limit` is the fallback when the traversal sets none.
+fn graph_traversal_json(
+    traversal: &crate::proto::GraphTraversal,
+    request_limit: i32,
+) -> Result<serde_json::Value, Status> {
+    let direction = match traversal.direction {
+        0 | 1 => "outgoing",
+        2 => "incoming",
+        3 => "both",
+        other => {
+            return Err(store_rpc_invalid_fields(
+                format!("GraphTraversal.direction {other} is not a known direction"),
+                [("traversal.direction", "must be OUTGOING, INCOMING or BOTH")],
+            ));
+        }
+    };
+    let sorted = |map: &std::collections::HashMap<String, String>| {
+        map.iter()
+            .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
+            .collect::<std::collections::BTreeMap<_, _>>()
+    };
+    let limit = if traversal.limit > 0 {
+        traversal.limit
+    } else {
+        request_limit.max(0)
+    };
+    Ok(serde_json::json!({
+        "start_label": traversal.start_label,
+        "start_id": traversal.start_id,
+        "relationship_types": traversal.relationship_types,
+        "direction": direction,
+        "min_depth": traversal.min_depth,
+        "max_depth": traversal.max_depth,
+        "node_labels": traversal.node_labels,
+        "node_property_equals": sorted(&traversal.node_property_equals),
+        "relationship_property_equals": sorted(&traversal.relationship_property_equals),
+        "limit": limit,
+        "return_relationships": traversal.return_relationships,
+    }))
+}
+
 fn parse_json(s: &str) -> serde_json::Value {
     serde_json::from_str(s).unwrap_or(serde_json::Value::Null)
 }
@@ -1317,6 +1406,41 @@ mod tests {
             .get_bin(ERROR_DETAIL_METADATA_KEY)
             .expect("typed detail trailer is present");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn graph_traversal_json_maps_the_typed_request() {
+        let traversal = crate::proto::GraphTraversal {
+            start_label: "Doc".to_string(),
+            start_id: "d1".to_string(),
+            relationship_types: vec!["RELATED".to_string()],
+            direction: 3,
+            min_depth: 1,
+            max_depth: 2,
+            node_labels: vec!["Doc".to_string()],
+            node_property_equals: [("owner".to_string(), "u1".to_string())]
+                .into_iter()
+                .collect(),
+            relationship_property_equals: [("kind".to_string(), "peer".to_string())]
+                .into_iter()
+                .collect(),
+            limit: 0,
+            return_relationships: true,
+        };
+        let json = graph_traversal_json(&traversal, 25).expect("valid traversal");
+        assert_eq!(json["direction"], "both");
+        assert_eq!(json["limit"], 25, "the request limit is the fallback");
+        assert_eq!(json["node_property_equals"]["owner"], "u1");
+        assert_eq!(json["relationship_property_equals"]["kind"], "peer");
+        assert_eq!(json["relationship_types"][0], "RELATED");
+        assert_eq!(json["return_relationships"], true);
+
+        let unknown = crate::proto::GraphTraversal {
+            direction: 9,
+            ..traversal
+        };
+        let err = graph_traversal_json(&unknown, 0).expect_err("unknown direction");
+        assert_eq!(err.code(), Code::InvalidArgument);
     }
 
     fn assert_validation_fields(status: &Status, expected: &[(&str, &str)]) {

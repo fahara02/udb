@@ -832,7 +832,17 @@ impl DataBrokerService {
         // straight to the executor with no tenant/predicate injection. For backends
         // that HAVE a neutral-IR compiler this raw fall-through is now the gated
         // exception: blocked (fail-closed) in production, counted in dev.
-        let spec_json = if compiled_dispatch.is_none() {
+        let traversal_spec = if compiled_dispatch.is_none() {
+            scoped_graph_traversal_spec(&resolved_backend.backend, &operation, context, &spec_json)?
+        } else {
+            None
+        };
+        let spec_json = if let Some(traversal_spec) = traversal_spec {
+            // A typed graph traversal is broker-built Cypher scoped to the
+            // verified tenant/project on every node and relationship, so it
+            // is mediated and skips the raw-dispatch gate.
+            traversal_spec
+        } else if compiled_dispatch.is_none() {
             enforce_raw_dispatch_gate(&resolved_backend.backend, self.metrics.as_ref())?;
             // Raw specs never carry the broker-internal `compiler_mediated`
             // marker, and raw KV/object keys are forced under the caller's
@@ -1269,6 +1279,62 @@ fn harden_raw_dispatch_spec_with(
         }
     }
     Ok(spec.to_string())
+}
+
+/// The typed, tenant-scoped graph traversal (`GraphQuery.traversal`): a Neo4j
+/// `query` spec carrying a `traversal` object. The spec is rebuilt from the
+/// traversal alone plus the broker-stamped scope (the verified tenant and the
+/// caller's project), so a caller can neither choose the scope nor smuggle a
+/// free-text `cypher` past the raw-dispatch gate alongside it. `Ok(None)` means
+/// the spec is not a traversal. A traversal always requires a verified tenant.
+fn scoped_graph_traversal_spec(
+    backend: &str,
+    operation: &str,
+    context: &crate::RequestContext,
+    spec_json: &str,
+) -> Result<Option<String>, Status> {
+    if !matches!(
+        crate::backend::BackendKind::from_token(backend),
+        Some(crate::backend::BackendKind::Neo4j)
+    ) || operation != "query"
+    {
+        return Ok(None);
+    }
+    let Ok(serde_json::Value::Object(spec)) = serde_json::from_str::<serde_json::Value>(spec_json)
+    else {
+        return Ok(None);
+    };
+    let Some(traversal) = spec.get("traversal") else {
+        return Ok(None);
+    };
+    if spec.contains_key("cypher") || spec.contains_key("label") {
+        return Err(handlers_data_invalid_field(
+            "spec_json",
+            "a graph traversal must not also carry cypher or label",
+            "graph traversal spec must not also carry a free-text cypher or label query",
+        ));
+    }
+    let tenant_id = context.tenant_id.trim();
+    if tenant_id.is_empty() {
+        return Err(crate::runtime::executor_utils::policy_status(
+            "graph_traversal",
+            "tenant_scope_required",
+            "graph traversal requires a verified tenant: every node and relationship it reaches is filtered by tenant",
+        ));
+    }
+    let project_id = crate::runtime::projection::task_project_id(&context.project_id);
+    Ok(Some(
+        serde_json::json!({
+            "traversal": traversal,
+            "scope": {
+                "_tenant_id": tenant_id,
+                "_project_id": project_id,
+                "unset_project_is_default":
+                    project_id == crate::runtime::catalog::DEFAULT_PROJECT_ID,
+            },
+        })
+        .to_string(),
+    ))
 }
 
 /// `udb:{project}:{tenant}:` — the key namespace the Redis / Memcached IR
@@ -2676,6 +2742,73 @@ mod tests {
             tenant_id: tenant.into(),
             project_id: project.into(),
             ..Default::default()
+        }
+    }
+
+    #[test]
+    fn graph_traversal_spec_is_rescoped_from_the_verified_context() {
+        let spec = serde_json::json!({
+            "traversal": {"start_label": "Doc", "start_id": "d1"},
+            "scope": {"_tenant_id": "forged", "_project_id": "other"},
+            "parameters": {"x": 1},
+        })
+        .to_string();
+        let out = scoped_graph_traversal_spec("neo4j", "query", &raw_ctx("t1", "p1"), &spec)
+            .unwrap()
+            .expect("a neo4j traversal is routed around the raw gate");
+        let out: serde_json::Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(out["scope"]["_tenant_id"], "t1", "caller scope is replaced");
+        assert_eq!(out["scope"]["_project_id"], "p1");
+        assert_eq!(out["scope"]["unset_project_is_default"], false);
+        assert_eq!(out["traversal"]["start_id"], "d1");
+        assert!(
+            out.get("parameters").is_none(),
+            "only the traversal survives"
+        );
+
+        // An empty project is the default project, which also owns records
+        // written without a `_project_id`.
+        let out = scoped_graph_traversal_spec("neo4j", "query", &raw_ctx("t1", ""), &spec)
+            .unwrap()
+            .unwrap();
+        let out: serde_json::Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(
+            out["scope"]["_project_id"],
+            crate::runtime::catalog::DEFAULT_PROJECT_ID
+        );
+        assert_eq!(out["scope"]["unset_project_is_default"], true);
+    }
+
+    #[test]
+    fn graph_traversal_spec_fails_closed_and_never_carries_raw_cypher() {
+        let traversal = serde_json::json!({"start_label": "Doc", "start_id": "d1"});
+        // No verified tenant: refused.
+        let spec = serde_json::json!({ "traversal": traversal }).to_string();
+        let err = scoped_graph_traversal_spec("neo4j", "query", &raw_ctx("", "p1"), &spec)
+            .expect_err("a tenant-less traversal is refused");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition, "{err:?}");
+        // A free-text cypher alongside a traversal cannot bypass the gate.
+        let smuggled = serde_json::json!({
+            "traversal": traversal,
+            "cypher": "MATCH (n) RETURN n",
+        })
+        .to_string();
+        let err = scoped_graph_traversal_spec("neo4j", "query", &raw_ctx("t1", "p1"), &smuggled)
+            .expect_err("cypher + traversal is refused");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument, "{err:?}");
+        // Not a traversal / not neo4j / not a query: untouched (normal path).
+        let plain = serde_json::json!({"cypher": "MATCH (n) RETURN n"}).to_string();
+        for (backend, operation, body) in [
+            ("neo4j", "query", plain.as_str()),
+            ("mongodb", "query", spec.as_str()),
+            ("neo4j", "mutate", spec.as_str()),
+        ] {
+            assert!(
+                scoped_graph_traversal_spec(backend, operation, &raw_ctx("t1", "p1"), body)
+                    .unwrap()
+                    .is_none(),
+                "{backend}/{operation} must not be treated as a traversal"
+            );
         }
     }
 

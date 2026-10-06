@@ -20,6 +20,7 @@ import json
 import math
 import os
 import re
+import socket
 import sys
 import threading
 import time
@@ -49,9 +50,29 @@ FORBIDDEN_WORK_KEYS = {
 
 
 class SidecarError(Exception):
-    def __init__(self, message: str, status: int = 400) -> None:
+    def __init__(self, message: str, status: int = 400, retryable: bool = False) -> None:
         super().__init__(message)
         self.status = status
+        # Whether repeating the same call could succeed. Only the consumer mode
+        # acts on it (bounded backoff); the HTTP mode maps every error to its
+        # status as before.
+        self.retryable = retryable
+
+
+class ProviderError(SidecarError):
+    """A provider/resolver HTTP call failed. `retryable` is True for 408, 425,
+    429, 5xx, connection failures and timeouts; any other 4xx is permanent."""
+
+    def __init__(self, message: str, http_status: int = 0, retryable: bool = False) -> None:
+        super().__init__(message, 502, retryable)
+        self.http_status = http_status
+
+
+RETRYABLE_HTTP_STATUSES = {408, 425, 429}
+
+
+def http_status_retryable(status: int) -> bool:
+    return status in RETRYABLE_HTTP_STATUSES or status >= 500
 
 
 @dataclass(frozen=True)
@@ -128,6 +149,11 @@ def parse_work(raw: bytes) -> WorkItem:
         value = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise SidecarError(f"request body must be JSON: {exc}") from exc
+    return work_from_value(value)
+
+
+def work_from_value(value: Any) -> WorkItem:
+    """Validate one decoded `udb.embedding.work.v1` payload into a WorkItem."""
     if not isinstance(value, dict):
         raise SidecarError("request body must be a JSON object")
     check_no_credentials(value)
@@ -188,6 +214,15 @@ def deterministic_embed(text: str, model_id: str, dims: int, normalize: bool = T
     return normalize_vector(values) if normalize else [round(value, 8) for value in values]
 
 
+def provider_timeout_seconds() -> float:
+    raw = os.environ.get("UDB_EMBED_PROVIDER_TIMEOUT_SECONDS", "30").strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        return 30.0
+    return value if value > 0 else 30.0
+
+
 def post_json(url: str, body: dict[str, Any], headers: dict[str, str] | None = None) -> dict[str, Any]:
     request = urllib.request.Request(
         url,
@@ -196,10 +231,18 @@ def post_json(url: str, body: dict[str, Any], headers: dict[str, str] | None = N
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=provider_timeout_seconds()) as response:
             decoded = json.loads(response.read().decode("utf-8") or "{}")
-    except (urllib.error.URLError, json.JSONDecodeError) as exc:
-        raise SidecarError(f"provider request failed: {exc}", 502) from exc
+    except urllib.error.HTTPError as exc:
+        raise ProviderError(
+            f"provider request failed: HTTP {exc.code}",
+            exc.code,
+            http_status_retryable(exc.code),
+        ) from exc
+    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError) as exc:
+        raise ProviderError(f"provider request failed: {exc}", 0, True) from exc
+    except json.JSONDecodeError as exc:
+        raise ProviderError(f"provider request failed: {exc}", 0, False) from exc
     if not isinstance(decoded, dict):
         raise SidecarError("provider response must be a JSON object", 502)
     return decoded
@@ -350,6 +393,109 @@ def embed_work(work: WorkItem) -> list[float]:
     return normalize_vector(values) if work.normalize else values
 
 
+def provider_batch_key(work: WorkItem) -> tuple[str, ...]:
+    """Work items that may share ONE provider call.
+
+    Tenant and project are part of the key on purpose: the endpoint and API key
+    come from a tenant-and-project-scoped Vault resolution, so two tenants never
+    share a provider request even when they point at the same endpoint ref.
+    """
+    return (
+        work.tenant_id,
+        work.project_id,
+        work.provider,
+        work.model_name,
+        str(work.dimensions),
+        work.provider_endpoint_ref,
+        work.task_type,
+        work.output_dtype,
+    )
+
+
+def embed_work_batch(works: list[WorkItem]) -> list[list[float]]:
+    """Embed items sharing one `provider_batch_key` with ONE provider call.
+
+    Late-chunking items need their own boundary request and are embedded one by
+    one; every other item goes into a single `{endpoint}/embeddings` call whose
+    `data[].index` splits the results back out in input order.
+    """
+    if not works:
+        return []
+    if len({provider_batch_key(work) for work in works}) != 1:
+        raise SidecarError("embed_work_batch requires items with one provider batch key", 500)
+    head = works[0]
+    if head.provider == "deterministic":
+        return [embed_work(work) for work in works]
+    if head.provider not in {"openai", "openai-compatible", "azure-openai"}:
+        raise SidecarError(f"unsupported embedding provider {head.provider!r}", 422)
+    secret = resolve_vault_reference(
+        head.provider_endpoint_ref,
+        head.tenant_id,
+        head.project_id,
+    )
+    endpoint = str(secret.get("endpoint", "")).rstrip("/")
+    api_key = str(secret.get("api_key", ""))
+    if not endpoint or not api_key:
+        raise SidecarError("vault secret must contain endpoint and api_key", 502)
+    vectors: list[list[float] | None] = [None] * len(works)
+    pooled_indexes: list[int] = []
+    pooled_inputs: list[str] = []
+    for index, work in enumerate(works):
+        if work.late_chunking:
+            vectors[index] = late_chunk_vector(work, secret)
+        else:
+            pooled_indexes.append(index)
+            pooled_inputs.append(contextualized_input(work, secret))
+    if pooled_inputs:
+        response = post_json(
+            f"{endpoint}/embeddings",
+            {
+                "model": head.model_name,
+                "input": pooled_inputs,
+                "dimensions": head.dimensions,
+                "encoding_format": "float",
+                "input_type": head.task_type.lower(),
+                "output_dtype": head.output_dtype.lower(),
+            },
+            {"Authorization": f"Bearer {api_key}"},
+        )
+        data = response.get("data")
+        if not isinstance(data, list) or len(data) != len(pooled_inputs):
+            raise SidecarError("provider returned a different number of embeddings than inputs", 502)
+        ordered: list[Any] = [None] * len(pooled_inputs)
+        for position, entry in enumerate(data):
+            if not isinstance(entry, dict):
+                raise SidecarError("provider returned a malformed embedding entry", 502)
+            slot = int(entry.get("index", position))
+            if slot < 0 or slot >= len(ordered) or ordered[slot] is not None:
+                raise SidecarError("provider returned an invalid embedding index", 502)
+            ordered[slot] = entry.get("embedding")
+        for slot, work_index in enumerate(pooled_indexes):
+            vector = ordered[slot]
+            work = works[work_index]
+            if not isinstance(vector, list) or len(vector) != work.dimensions:
+                raise SidecarError("provider returned a vector with the wrong dimensions", 502)
+            values = [float(value) for value in vector]
+            vectors[work_index] = normalize_vector(values) if work.normalize else values
+    return [vector for vector in vectors if vector is not None]
+
+
+def report_from_vector(work: WorkItem, vector: list[float]) -> dict[str, Any]:
+    """The ReportEmbedding request body for an already-computed vector."""
+    return {
+        "tenant_id": work.tenant_id,
+        "source_name": work.source,
+        "row_pk": work.row_pk,
+        "vector": vector,
+        "model": work.model_id,
+        "dims": work.dimensions,
+        "work_item_id": work.work_item_id,
+        "chunk_hash": work.chunk_hash,
+        "token_count": work.token_count,
+        "vector_name": work.vector_name,
+    }
+
+
 def build_report(work: WorkItem) -> dict[str, Any]:
     return {
         "tenant_id": work.tenant_id,
@@ -492,7 +638,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return
             self.write_json(
                 200,
-                {"ok": True, "provider": provider_name(), "dims": dims},
+                {"ok": True, "provider": provider_name(), "dims": dims, "mode": sidecar_mode()},
             )
             return
         self.write_json(404, {"error": "not found"})
@@ -548,7 +694,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.write_json(502, {"error": f"embedding failed: {exc}"})
 
 
+def sidecar_mode() -> str:
+    """`http` (default): the request/response inference contract only.
+    `consumer`: additionally consume `udb.embedding.work.v1` and report results
+    to the broker (embedding_consumer.py). The HTTP server keeps running in
+    consumer mode so the container healthcheck and manual endpoints still work."""
+    mode = os.environ.get("UDB_EMBEDDING_SIDECAR_MODE", "http").strip().lower() or "http"
+    if mode not in {"http", "consumer"}:
+        raise SidecarError(f"UDB_EMBEDDING_SIDECAR_MODE must be http or consumer, got {mode!r}", 500)
+    return mode
+
+
 def main() -> None:
+    mode = sidecar_mode()
     port = int(os.environ.get("PORT", str(DEFAULT_PORT)))
     bind = os.environ.get("HOST", "0.0.0.0")
     httpd = http.server.ThreadingHTTPServer((bind, port), Handler)
@@ -559,12 +717,23 @@ def main() -> None:
                 "provider": provider_name(),
                 "dims": configured_dims(),
                 "port": port,
+                "mode": mode,
             },
             separators=(",", ":"),
         ),
         flush=True,
     )
-    httpd.serve_forever()
+    if mode == "http":
+        httpd.serve_forever()
+        return
+    import embedding_consumer
+
+    server_thread = threading.Thread(target=httpd.serve_forever, name="udb-embedding-http", daemon=True)
+    server_thread.start()
+    try:
+        embedding_consumer.main()
+    finally:
+        httpd.shutdown()
 
 
 if __name__ == "__main__":
