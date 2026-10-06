@@ -2765,6 +2765,24 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             ));
         }
 
+        fn wrap_rendered<T>(
+            items: Option<Vec<Option<T>>>,
+            render: impl Fn(T) -> String,
+        ) -> JsonValue {
+            match items {
+                Some(items) => JsonValue::Array(
+                    items
+                        .into_iter()
+                        .map(|item| {
+                            item.map(|value| JsonValue::String(render(value)))
+                                .unwrap_or(JsonValue::Null)
+                        })
+                        .collect(),
+                ),
+                None => JsonValue::Null,
+            }
+        }
+
         fn wrap<T: Into<JsonValue>>(items: Option<Vec<Option<T>>>) -> JsonValue {
             match items {
                 Some(items) => JsonValue::Array(
@@ -2801,6 +2819,26 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
                         None => JsonValue::Null,
                     })
             }
+            // Temporal arrays: sqlx's String decoder is TEXT-family-only and
+            // refuses date[] / timestamp[] / time[] OIDs, which failed every
+            // Select returning such a column. Render each element exactly like
+            // the scalar branches below so arrays and scalars round-trip alike.
+            "DATE" => row
+                .try_get::<Option<Vec<Option<NaiveDate>>>, _>(idx)
+                .map(|items| wrap_rendered(items, |value| value.to_string())),
+            "TIMESTAMPTZ" | "TIMESTAMP WITH TIME ZONE" => row
+                .try_get::<Option<Vec<Option<DateTime<Utc>>>>, _>(idx)
+                .map(|items| {
+                    wrap_rendered(items, |value| {
+                        value.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true)
+                    })
+                }),
+            "TIMESTAMP" | "TIMESTAMP WITHOUT TIME ZONE" => row
+                .try_get::<Option<Vec<Option<NaiveDateTime>>>, _>(idx)
+                .map(|items| wrap_rendered(items, |value| value.to_string())),
+            "TIME" | "TIME WITHOUT TIME ZONE" => row
+                .try_get::<Option<Vec<Option<chrono::NaiveTime>>>, _>(idx)
+                .map(|items| wrap_rendered(items, |value| value.to_string())),
             _ => row.try_get::<Option<Vec<Option<String>>>, _>(idx).map(wrap),
         }
         .map_err(|err| {

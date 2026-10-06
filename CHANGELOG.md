@@ -16,6 +16,10 @@ release line was tagged.
   BeginTx / planner Upsert and Update paths. Array placeholders now carry the
   declared array cast (`$n::DATE[]`) on every write path, so the element
   conversion applies for any element type.
+- **Temporal array columns could not be read.** A Select returning a
+  `DATE[]`, `TIMESTAMPTZ[]`, `TIMESTAMP[]` or `TIME[]` column failed with an
+  INTERNAL "array decode failed" because the decoder fell back to `TEXT[]`.
+  They now decode element-wise, rendered exactly like their scalar columns.
 - The SDK benchmark seeds its saga fixture into the unified saga relation
   (`udb_system.udb_saga_coordinator`).
 
