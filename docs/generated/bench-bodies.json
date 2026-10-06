@@ -1825,6 +1825,18 @@
   },
   {
     "file": "data_broker.md",
+    "rpc": "AckCdcEvents",
+    "service": "DataBroker",
+    "wire_rpc": "DataBroker/AckCdcEvents",
+    "api_alias": "ack_cdc_events",
+    "operation_id": "ackCdcEvents",
+    "op_kind": "MUTATION",
+    "request_msg": "AckCdcEventsRequest",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"consumer_name\": \"sdk-perf-consumer\", \"topic_pattern\": \"<seed:event_type>\", \"event_id\": \"00000000-0000-4000-8000-000000000001\" }`",
+    "notes": "records the consumer position; `event_id` is any delivered event UUID (not checked against the journal). Same authorization as PublishCDC on the topic pattern."
+  },
+  {
+    "file": "data_broker.md",
     "rpc": "ActivateCatalog",
     "service": "DataBroker",
     "wire_rpc": "DataBroker/ActivateCatalog",

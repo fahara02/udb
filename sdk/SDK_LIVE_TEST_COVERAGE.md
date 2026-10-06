@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 385 RPCs across 28 services.
+Current generated RPC surface: 386 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -41,7 +41,7 @@ do not yet publish per-RPC live benchmark results.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 81 | 35 | 39 | 7 | 0 |
+| DataBroker | 82 | 35 | 40 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -220,6 +220,7 @@ benchmark harnesses.
 | ControlPlaneService | `ControlPlaneService/RollbackResources` | `rollback_resources` | `rollbackResources` | MUTATION | control_plane.md |
 | ControlPlaneService | `ControlPlaneService/StreamResources` | `stream_resources` | `streamResources` | MUTATION | control_plane.md |
 | DataBroker | `DataBroker/AbortMultipartUpload` | `abort_multipart_upload` | `abortMultipartUpload` | MUTATION | data_broker.md |
+| DataBroker | `DataBroker/AckCdcEvents` | `ack_cdc_events` | `ackCdcEvents` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/ActivateCatalog` | `activate_catalog` | `activateCatalog` | DESTRUCTIVE | data_broker.md |
 | DataBroker | `DataBroker/AnalyticalQuery` | `analytical_query` | `analyticalQuery` | READ_ONLY | data_broker.md |
 | DataBroker | `DataBroker/ApplyMigration` | `apply_migration` | `applyMigration` | MUTATION | data_broker.md |

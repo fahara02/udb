@@ -705,7 +705,7 @@ def parse_generated_go_rpcs(root: Path) -> dict[str, GeneratedRpc]:
     row_re = re.compile(
         r"\{Service: \"[^\"]+\", ServicePkg: \"[^\"]+\", "
         r"FullMethod: \"([^\"]+)\", Name: \"[^\"]+\".*?"
-        r"OperationKind: \"([^\"]+)\", ReplaySafe: (true|false)\}",
+        r"OperationKind: \"([^\"]+)\", ReplaySafe: (true|false)[,}]",
         re.DOTALL,
     )
     return {

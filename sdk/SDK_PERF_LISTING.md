@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 385 RPCs across 28 services.
+Current generated RPC surface: 386 RPCs across 28 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -57,7 +57,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 81 | 35 | 39 | 7 | 0 |
+| DataBroker | 82 | 35 | 40 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -237,6 +237,7 @@ identity surface available to benchmark reports.
 | `ControlPlaneService/RollbackResources` | `rollback_resources` | `rollbackResources` | MUTATION |
 | `ControlPlaneService/StreamResources` | `stream_resources` | `streamResources` | MUTATION |
 | `DataBroker/AbortMultipartUpload` | `abort_multipart_upload` | `abortMultipartUpload` | MUTATION |
+| `DataBroker/AckCdcEvents` | `ack_cdc_events` | `ackCdcEvents` | MUTATION |
 | `DataBroker/ActivateCatalog` | `activate_catalog` | `activateCatalog` | DESTRUCTIVE |
 | `DataBroker/AnalyticalQuery` | `analytical_query` | `analyticalQuery` | READ_ONLY |
 | `DataBroker/ApplyMigration` | `apply_migration` | `applyMigration` | MUTATION |

@@ -49,6 +49,9 @@ that replace hand-kept scripts.
   without a password and sends a password-reset code. `ResetPassword` with that
   code sets the password, verifies the email and activates the account.
 - **`GetNativeAccess` accepts service accounts.**
+- **`PutFlag` and `DeleteFlag` accept service accounts** holding the explicit
+  `udb:config:put-flag` / `udb:config:delete-flag` scope, so a backend admin
+  service can change flags on a staff member's behalf.
 - **`udb auth grant transfer`** moves a grant and its service identity to
   another service account. It is the only way to do so: creating a grant for an
   identity another account holds is refused with `UDB_GRANT_OWNED_BY_OTHER`.

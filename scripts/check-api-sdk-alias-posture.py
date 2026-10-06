@@ -246,8 +246,8 @@ def check_data_broker_aliases(root: Path) -> list[str]:
 
     text = _read(path)
     blocks = list(RPC_BLOCK.finditer(text))
-    if (root / ".git").exists() and len(blocks) != 81:
-        failures.append(f"DataBroker explicit SDK aliases: expected 81 RPC blocks, found {len(blocks)}")
+    if (root / ".git").exists() and len(blocks) != 82:
+        failures.append(f"DataBroker explicit SDK aliases: expected 82 RPC blocks, found {len(blocks)}")
 
     for block in blocks:
         name = block.group("name")

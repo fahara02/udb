@@ -6,7 +6,7 @@
 //   UDB version:      0.5.29
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             385
+//   RPCs:             386
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -368,6 +368,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow", "WorkflowService", "SignalWorkflow", "signal_workflow", "signalWorkflow", "mutation", "post", "/v1/workflows/{workflow_id}:signal");
         map["/udb.core.workflow.services.v1.WorkflowService/StartWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/StartWorkflow", "WorkflowService", "StartWorkflow", "start_workflow", "startWorkflow", "mutation", "post", "/v1/workflows:start");
         map["/udb.services.v1.DataBroker/AbortMultipartUpload"] = new RpcIdentity("/udb.services.v1.DataBroker/AbortMultipartUpload", "DataBroker", "AbortMultipartUpload", "abort_multipart_upload", "abortMultipartUpload", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/AckCdcEvents"] = new RpcIdentity("/udb.services.v1.DataBroker/AckCdcEvents", "DataBroker", "AckCdcEvents", "ack_cdc_events", "ackCdcEvents", "mutation", "", "");
         map["/udb.services.v1.DataBroker/ActivateCatalog"] = new RpcIdentity("/udb.services.v1.DataBroker/ActivateCatalog", "DataBroker", "ActivateCatalog", "activate_catalog", "activateCatalog", "destructive", "", "");
         map["/udb.services.v1.DataBroker/AnalyticalQuery"] = new RpcIdentity("/udb.services.v1.DataBroker/AnalyticalQuery", "DataBroker", "AnalyticalQuery", "analytical_query", "analyticalQuery", "read_only", "", "");
         map["/udb.services.v1.DataBroker/ApplyMigration"] = new RpcIdentity("/udb.services.v1.DataBroker/ApplyMigration", "DataBroker", "ApplyMigration", "apply_migration", "applyMigration", "mutation", "", "");
@@ -1189,7 +1190,7 @@ public sealed partial class GeneratedWorkflowServiceClient : GeneratedServiceBas
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.services.v1.DataBroker</c> service
-/// (81 RPCs). Forwards to the buf-generated
+/// (82 RPCs). Forwards to the buf-generated
 /// <c>DataBrokerClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedDataBrokerClient : GeneratedServiceBase
@@ -8109,6 +8110,29 @@ public sealed partial class GeneratedDataBrokerClient
         return InvokeUnaryAsync(
             "/udb.services.v1.DataBroker/AbortMultipartUpload",
             co => (object)_stub.AbortMultipartUploadAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedDataBrokerClient
+{
+    /// <summary>
+    /// <c>ack_cdc_events</c> (unary) — forwards to <c>DataBrokerClient.AckCdcEventsAsync</c>.
+    /// gRPC path: <c>/udb.services.v1.DataBroker/AckCdcEvents</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> AckCdcEventsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.AckCdcEventsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.services.v1.DataBroker/AckCdcEvents",
+            co => (object)_stub.AckCdcEventsAsync(request, co),
             deadline,
             cancellationToken,
             "mutation" == "read_only",

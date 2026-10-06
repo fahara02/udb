@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.5.29
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 385
+ *   RPCs ............. 386
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -369,6 +369,7 @@ final class GeneratedClient
         "SignalWorkflow" => "mutation",
         "StartWorkflow" => "mutation",
         "AbortMultipartUpload" => "mutation",
+        "AckCdcEvents" => "mutation",
         "ActivateCatalog" => "destructive",
         "AnalyticalQuery" => "read_only",
         "ApplyMigration" => "mutation",
@@ -763,6 +764,7 @@ final class GeneratedClient
         "WorkflowService/SignalWorkflow" => "mutation",
         "WorkflowService/StartWorkflow" => "mutation",
         "DataBroker/AbortMultipartUpload" => "mutation",
+        "DataBroker/AckCdcEvents" => "mutation",
         "DataBroker/ActivateCatalog" => "destructive",
         "DataBroker/AnalyticalQuery" => "read_only",
         "DataBroker/ApplyMigration" => "mutation",
@@ -1157,6 +1159,7 @@ final class GeneratedClient
         "WorkflowService/SignalWorkflow" => "signal_workflow",
         "WorkflowService/StartWorkflow" => "start_workflow",
         "DataBroker/AbortMultipartUpload" => "abort_multipart_upload",
+        "DataBroker/AckCdcEvents" => "ack_cdc_events",
         "DataBroker/ActivateCatalog" => "activate_catalog",
         "DataBroker/AnalyticalQuery" => "analytical_query",
         "DataBroker/ApplyMigration" => "apply_migration",
@@ -1550,6 +1553,7 @@ final class GeneratedClient
         "WorkflowService/SignalWorkflow" => "signalWorkflow",
         "WorkflowService/StartWorkflow" => "startWorkflow",
         "DataBroker/AbortMultipartUpload" => "abortMultipartUpload",
+        "DataBroker/AckCdcEvents" => "ackCdcEvents",
         "DataBroker/ActivateCatalog" => "activateCatalog",
         "DataBroker/AnalyticalQuery" => "analyticalQuery",
         "DataBroker/ApplyMigration" => "applyMigration",
@@ -1943,6 +1947,7 @@ final class GeneratedClient
         "WorkflowService/SignalWorkflow" => "post",
         "WorkflowService/StartWorkflow" => "post",
         "DataBroker/AbortMultipartUpload" => "",
+        "DataBroker/AckCdcEvents" => "",
         "DataBroker/ActivateCatalog" => "",
         "DataBroker/AnalyticalQuery" => "",
         "DataBroker/ApplyMigration" => "",
@@ -2336,6 +2341,7 @@ final class GeneratedClient
         "WorkflowService/SignalWorkflow" => "/v1/workflows/{workflow_id}:signal",
         "WorkflowService/StartWorkflow" => "/v1/workflows:start",
         "DataBroker/AbortMultipartUpload" => "",
+        "DataBroker/AckCdcEvents" => "",
         "DataBroker/ActivateCatalog" => "",
         "DataBroker/AnalyticalQuery" => "",
         "DataBroker/ApplyMigration" => "",
@@ -2833,6 +2839,7 @@ final class GeneratedClient
         "signal_workflow" => "signalWorkflow",
         "start_workflow" => "startWorkflow",
         "abort_multipart_upload" => "abortMultipartUpload",
+        "ack_cdc_events" => "ackCdcEvents",
         "activate_catalog" => "activateCatalog",
         "analytical_query" => "analyticalQuery",
         "apply_migration" => "applyMigration",
@@ -9298,6 +9305,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.services.v1.DataBroker / AckCdcEvents (unary), public alias ack_cdc_events.
+     *
+     * Forwards to {@see stubFor()}->AckCdcEvents(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/AckCdcEvents
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AckCdcEventsResponse
+     */
+    public function ackCdcEvents($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AckCdcEvents',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AckCdcEvents($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.services.v1.DataBroker / ActivateCatalog (unary), public alias activate_catalog.
      *
      * Forwards to {@see stubFor()}->ActivateCatalog(); retries transient codes.
@@ -11300,7 +11328,7 @@ final class GeneratedClient
         return $this->stubFor('WorkflowService', 'udb.core.workflow.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.services.v1.DataBroker (81 RPC(s)).
+     * Underlying buf-generated stub for udb.services.v1.DataBroker (82 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a DataBrokerClient

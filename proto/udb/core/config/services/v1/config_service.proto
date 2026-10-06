@@ -69,6 +69,9 @@ service ConfigService {
       scopes: "udb:config:put-flag"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      // A backend admin service changes flags on a staff member's behalf
+      // with its own grant; the explicit scope is still required.
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "config.PutFlag"
       request_context_required: true
       tenant_required: true
@@ -192,6 +195,9 @@ service ConfigService {
       scopes: "udb:config:delete-flag"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      // A backend admin service changes flags on a staff member's behalf
+      // with its own grant; the explicit scope is still required.
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "config.DeleteFlag"
       request_context_required: true
       tenant_required: true
