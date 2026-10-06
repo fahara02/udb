@@ -199,6 +199,9 @@ fn gate_denial(status: &tonic::Status) -> Option<&'static str> {
     }
     let message = status.message().to_ascii_lowercase();
     match status.code() {
+        // RefreshSession authenticates the refresh token in its BODY: an empty
+        // request is correctly refused by the handler (the gates admitted it).
+        tonic::Code::Unauthenticated if message.starts_with("session is not active") => None,
         // Every gate-raised Unauthenticated is a plain status without a typed
         // detail; a handler's own authentication answer carries one.
         tonic::Code::Unauthenticated if detail.is_none() => Some("unauthenticated"),

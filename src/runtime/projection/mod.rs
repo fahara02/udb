@@ -1525,9 +1525,24 @@ impl ProjectionWorker {
     ) -> Result<(), String> {
         let object_key =
             object_projection_key(source_row_key, source_payload, target_options, scope)?;
+        // `normalize_backend` folds `minio` into `s3`, but the env-configured
+        // MinIO instance registers as `minio:<name>`: resolving only `s3`
+        // failed every object projection with "s3:default is not configured".
+        // Try the S3-compatible aliases the way the object data path does.
         let target = self
             .runtime
             .resolve_projection_write_target_for_project(backend, instance, project_id)
+            .or_else(|first| match backend {
+                "s3" => self
+                    .runtime
+                    .resolve_projection_write_target_for_project("minio", instance, project_id)
+                    .map_err(|_| first),
+                "minio" => self
+                    .runtime
+                    .resolve_projection_write_target_for_project("s3", instance, project_id)
+                    .map_err(|_| first),
+                _ => Err(first),
+            })
             .map_err(|status| status.message().to_string())?;
         if operation.eq_ignore_ascii_case("delete") {
             // A projected delete must remove the object, not write a tombstone

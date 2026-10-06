@@ -352,6 +352,10 @@ fn startup_lock_held_in_process() -> bool {
 /// replica's identical DDL (only reachable when the lock could not be taken).
 const STARTUP_DDL_COLLISION_ATTEMPTS: u32 = 3;
 
+/// Upper bound on waiting for the startup advisory lock before running the
+/// (idempotent, collision-retrying) system DDL unlocked.
+const STARTUP_DDL_LOCK_MAX_WAIT_SECS: u64 = 30;
+
 /// H4: a Postgres error raised when two sessions run the same idempotent DDL at
 /// once: `42P07 duplicate_table` / `42P06 duplicate_schema` / `42710
 /// duplicate_object` ("... already exists"), or the `pg_type` / `pg_namespace`
@@ -451,7 +455,11 @@ async fn acquire_startup_ddl_lock(
     // the session lock server-side instead of stranding it on a pooled
     // connection.
     conn.close_on_drop();
-    let wait_secs = crate::lifecycle::startup_lock_wait_secs();
+    // Bounded well below the lifecycle's own startup-lock wait: a peer's
+    // startup can hold the lock for its whole migration, and this DDL is
+    // idempotent and collision-retrying, so waiting minutes here would only
+    // stall callers (any runtime path that ensures the catalog) for nothing.
+    let wait_secs = crate::lifecycle::startup_lock_wait_secs().min(STARTUP_DDL_LOCK_MAX_WAIT_SECS);
     let poll = std::time::Duration::from_millis(crate::lifecycle::force_sync_lock_poll_ms());
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(wait_secs);
     let mut announced = false;

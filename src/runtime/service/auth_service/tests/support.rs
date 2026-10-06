@@ -410,15 +410,27 @@ pub(super) async fn create_verified_user(
     prefix: &str,
     password: &str,
 ) -> authn_entity_pb::User {
+    create_verified_user_in(svc, prefix, password, "acme", "billing").await
+}
+
+/// [`create_verified_user`] in an explicit tenant/project (e.g. a canonical
+/// tenant UUID, which UUID-keyed native services such as TenantService require).
+pub(super) async fn create_verified_user_in(
+    svc: &AuthnServiceImpl,
+    prefix: &str,
+    password: &str,
+    tenant_id: &str,
+    project_id: &str,
+) -> authn_entity_pb::User {
     let suffix = Uuid::new_v4().simple().to_string();
     let created = svc
         .create_user(Request::new(authn_pb::CreateUserRequest {
             username: format!("{prefix}_{suffix}"),
             email: format!("{prefix}_{suffix}@example.com"),
             password: password.to_string(),
-            tenant_id: "acme".to_string(),
+            tenant_id: tenant_id.to_string(),
             full_name: format!("{prefix} Live"),
-            project_id: "billing".to_string(),
+            project_id: project_id.to_string(),
             ..Default::default()
         }))
         .await

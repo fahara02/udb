@@ -114,12 +114,19 @@ async fn live_served_tenant_suspension_revokes_live_bearer_until_reactivated() {
     migrate_native_auth_db(&pool).await;
 
     let admin = tenant_service(pool.clone()).await;
-    // The bearer must belong to a real ACTIVE user: durable bearer validation
-    // rejects a token whose subject is not an active account. Suspend the
-    // user's own (canonical) tenant.
+    // The bearer must belong to a real ACTIVE user (durable bearer validation
+    // rejects an unknown subject) in a canonical UUID tenant (TenantService
+    // refuses a non-UUID tenant id). Suspend that tenant.
+    let tenant_id = seed_default_tenant(&pool).await;
     let authn = authn_service(pool.clone());
-    let user = create_verified_user(&authn, "tenant_suspension", "CorrectHorse1!").await;
-    let tenant_id = user.tenant_id.clone();
+    let user = create_verified_user_in(
+        &authn,
+        "tenant_suspension",
+        "CorrectHorse1!",
+        &tenant_id,
+        "default",
+    )
+    .await;
 
     let security = crate::runtime::security::SecurityConfig {
         jwt_private_key: Some(include_str!("../../../testdata/jwt_rs256_private.pem").to_string()),

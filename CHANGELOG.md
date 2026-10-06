@@ -41,6 +41,11 @@ it on a real backend.
 - **JSONB arrays were unwritable through Upsert.** A non-empty array of
   numbers or strings bound for a JSONB column was sent as a Postgres array
   under a `::jsonb` cast (42846). Such arrays now bind as JSON.
+- **Object projections to MinIO never applied.** Projection targets normalize
+  `minio` to `s3`, but the env-configured MinIO instance registers as
+  `minio:<name>`, so every object projection failed with "backend instance
+  's3:default' is not configured". The target now resolves through the
+  S3-compatible alias.
 - **Typed array columns were unwritable.** A `UUID[]` / `TIMESTAMPTZ[]` value
   was bound as `text[]` ("is of type uuid[] but expression is of type text[]")
   on both write paths (BeginTx/Update planner bind and the bridged Upsert
