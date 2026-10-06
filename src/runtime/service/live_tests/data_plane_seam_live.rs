@@ -1104,3 +1104,95 @@ async fn served_begin_tx_and_put_object_authorize_every_target_live() {
     let _ = handle.await;
     teardown(&pool, &schema, &tenant).await;
 }
+
+/// An Update keyed by a UNIQUE NON-PRIMARY-KEY column set (consumer report:
+/// event-cursor CAS on `(tenant_id, consumer, topic_pattern)` returned
+/// `affected_rows=0` with no error while a PK-keyed CAS on the same row
+/// succeeded). A plain update by the unique key must apply; a CAS update by the
+/// unique key must either apply or be REFUSED — never a silent zero.
+#[tokio::test]
+#[ignore = "requires live Postgres; run in the CI live lane"]
+async fn served_update_by_unique_non_pk_key_never_silently_affects_zero_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool)
+        .await
+        .expect("bootstrap system catalog");
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".cursors \
+         (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, status TEXT, slug TEXT NOT NULL, \
+          UNIQUE (tenant_id, slug))"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create cursors");
+    const CURSOR: &str = "acme.dp.v1.Cursor";
+    let mut manifest = widget_manifest(&schema, "cursors", "Cursor", false);
+    manifest.tables[0].columns.push(col("slug", "TEXT", false));
+    let svc = dp_service(&dsn, manifest).await;
+    let tenant = Uuid::new_v4().to_string();
+    let id = format!("cursor-{}", Uuid::new_v4().simple());
+    served_upsert(
+        &svc,
+        &tenant,
+        CURSOR,
+        json!({"id": id, "tenant_id": tenant, "status": "A", "slug": "notes.consent"}),
+        "",
+    )
+    .await
+    .expect("seed cursor");
+
+    let by_unique = json!({"tenant_id": tenant, "slug": "notes.consent"});
+    let plain = svc
+        .update(with_ctx(
+            crate::proto::UpdateRequest {
+                message_type: CURSOR.to_string(),
+                filter: json_to_struct(&by_unique),
+                changes: json_to_struct(&json!({"status": "B"})),
+                ..crate::proto::UpdateRequest::default()
+            },
+            &tenant,
+        ))
+        .await
+        .expect("plain update by unique key")
+        .into_inner();
+    assert_eq!(
+        plain.affected_rows, 1,
+        "plain update by the unique key must apply"
+    );
+
+    let cas = svc
+        .update(with_ctx(
+            crate::proto::UpdateRequest {
+                message_type: CURSOR.to_string(),
+                filter: json_to_struct(&by_unique),
+                changes: json_to_struct(&json!({"status": "C"})),
+                expected: json_to_struct(&json!({"status": "B"})),
+                idempotency_key: format!("cas-{}", Uuid::new_v4().simple()),
+                return_record: true,
+                ..crate::proto::UpdateRequest::default()
+            },
+            &tenant,
+        ))
+        .await;
+    match cas {
+        Ok(response) => assert_eq!(
+            response.into_inner().affected_rows,
+            1,
+            "a CAS update by the unique key whose expectation holds must apply, not silently \
+             affect zero rows"
+        ),
+        Err(status) => assert_eq!(
+            status.code(),
+            Code::FailedPrecondition,
+            "a refused unique-key CAS must say so: {status:?}"
+        ),
+    }
+    teardown(&pool, &schema, &tenant).await;
+}
