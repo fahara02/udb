@@ -1600,6 +1600,7 @@ mod tests {
             "src/runtime/service/workflow_service/",
             // `#[cfg(test)]` live seam test: reads its backend DSNs from env.
             "src/runtime/service/tenant_service/vector_purge_live.rs",
+            "src/runtime/service/tenant_service/graph_purge_live.rs",
         ];
         let mut stack = vec![runtime_dir];
         let mut violations = Vec::new();
